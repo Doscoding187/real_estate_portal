@@ -48,7 +48,10 @@ import {
   developmentPhases,
   partners as services, // Alias partners as services to match db usage
   reviews,
-  exploreVideos,
+  exploreContent,
+  exploreEngagements,
+  exploreFeedSessions,
+  exploreSavedProperties,
   locations,
   partners,
   explorePartners,
@@ -876,36 +879,6 @@ export async function getLeadsByAgent(agentId: number) {
 
   // leads already imported at top
   return await db.select().from(leads).where(eq(leads.agentId, agentId));
-}
-
-// ==================== EXPLORE VIDEOS ====================
-
-export async function getAllExploreVideos(limit: number = 20) {
-  const db = await getDb();
-  if (!db) return [];
-
-  // exploreVideos table would need to be imported at top if used
-  return await db.select().from(exploreVideos).where(eq(exploreVideos.isPublished, 1)).limit(limit);
-}
-
-export async function getExploreVideoById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-
-  // exploreVideos table would need to be imported at top if used
-  const result = await db.select().from(exploreVideos).where(eq(exploreVideos.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function incrementVideoViews(id: number) {
-  const db = await getDb();
-  if (!db) return;
-
-  // exploreVideos table would need to be imported at top if used
-  await db
-    .update(exploreVideos)
-    .set({ views: sql`views + 1` })
-    .where(eq(exploreVideos.id, id));
 }
 
 // ==================== LOCATIONS ====================

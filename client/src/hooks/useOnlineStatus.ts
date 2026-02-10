@@ -1,40 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-/**
- * Hook to detect online/offline status
- *
- * Listens to browser online/offline events and provides current connection status.
- * Useful for showing offline indicators and enabling offline-first features.
- *
- * @returns {boolean} isOnline - Current online status
- *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const isOnline = useOnlineStatus();
- *
- *   return (
- *     <div>
- *       {!isOnline && <OfflineBanner />}
- *       <Content />
- *     </div>
- *   );
- * }
- * ```
- */
-export function useOnlineStatus(): boolean {
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+export function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    if (typeof navigator === 'undefined') return true;
+    return navigator.onLine;
+  });
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
     };
   }, []);
 

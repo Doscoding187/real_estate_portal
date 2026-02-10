@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { db } from '../../db';
-import { exploreShorts, exploreUserPreferences } from '../../../drizzle/schema';
+import { exploreContent } from '../../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import fc from 'fast-check';
 import { exploreFeedService } from '../exploreFeedService';
@@ -14,15 +14,17 @@ import { exploreFeedService } from '../exploreFeedService';
  *
  * This test verifies that the feed service correctly generates feeds based on type
  * and returns appropriate results.
+ *
+ * UPDATED: Now uses unified exploreContent table instead of legacy exploreShorts
  */
 
 describe('Explore Feed Service', () => {
-  let testShortIds: number[] = [];
+  let testContentIds: number[] = [];
 
   beforeAll(async () => {
     // Ensure tables exist
     try {
-      await db.execute(sql`SELECT 1 FROM explore_shorts LIMIT 1`);
+      await db.execute(sql`SELECT 1 FROM explore_content LIMIT 1`);
     } catch (error) {
       console.error('Tables not found. Run migration first:', error);
       throw error;
@@ -31,23 +33,22 @@ describe('Explore Feed Service', () => {
 
   beforeEach(async () => {
     // Clean up test data before each test
-    await db.execute(sql`DELETE FROM explore_shorts WHERE title LIKE 'TEST:%'`);
-    testShortIds = [];
+    await db.execute(sql`DELETE FROM explore_content WHERE title LIKE 'TEST:%'`);
+    testContentIds = [];
   });
 
   afterAll(async () => {
     // Final cleanup
-    await db.execute(sql`DELETE FROM explore_shorts WHERE title LIKE 'TEST:%'`);
-    await db.execute(sql`DELETE FROM explore_user_preferences WHERE user_id > 1000000`);
+    await db.execute(sql`DELETE FROM explore_content WHERE title LIKE 'TEST:%'`);
   });
 
   /**
-   * Property-Based Test: Recommended feed returns published shorts
+   * Property-Based Test: Recommended feed returns active content
    *
    * For any valid limit and offset, the recommended feed should return
-   * published shorts ordered by boost priority and performance score
+   * active content ordered by featured status and engagement
    */
-  it('should return published shorts in recommended feed', async () => {
+  it('should return active content in recommended feed', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.record({
@@ -55,18 +56,19 @@ describe('Explore Feed Service', () => {
           offset: fc.integer({ min: 0, max: 100 }),
         }),
         async ({ limit, offset }) => {
-          // Create test shorts
-          const testShort = await db.insert(exploreShorts).values({
+          // Create test content
+          const testContent = await db.insert(exploreContent).values({
+            contentType: 'video',
+            referenceId: 1,
             title: 'TEST: Recommended Feed Test',
-            primaryMediaId: 1,
-            mediaIds: JSON.stringify([1, 2, 3]),
-            performanceScore: '75.50',
-            boostPriority: 10,
-            isPublished: 1,
+            creatorType: 'user',
+            viewCount: 100,
+            engagementScore: '75.50',
+            isActive: 1,
             isFeatured: 0,
           });
 
-          testShortIds.push(Number(testShort.insertId));
+          testContentIds.push(Number(testContent.insertId));
 
           // Get recommended feed
           const result = await exploreFeedService.getRecommendedFeed({
@@ -83,7 +85,7 @@ describe('Explore Feed Service', () => {
           expect(result.shorts.length).toBeLessThanOrEqual(limit);
 
           // Clean up
-          await db.execute(sql`DELETE FROM explore_shorts WHERE id = ${testShort.insertId}`);
+          await db.execute(sql`DELETE FROM explore_content WHERE id = ${testContent.insertId}`);
         },
       ),
       { numRuns: 100 },
@@ -93,10 +95,10 @@ describe('Explore Feed Service', () => {
   /**
    * Property-Based Test: Area feed filters by location
    *
-   * For any location string, the area feed should return shorts
+   * For any location string, the area feed should return content
    * that match the location in city, suburb, or province
    */
-  it('should filter shorts by location in area feed', async () => {
+  it('should filter content by location in area feed', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.record({

@@ -1008,4 +1008,34 @@ export const adminRouter = router({
   /*
   getDevelopmentAuditLogs: superAdminProcedure.query(async () => { throw new Error("Unavailable"); }),
   */
+
+  /**
+   * =====================================================
+   * COMPATIBILITY STUBS (API CONTRACT STABILIZATION)
+   * These exist to satisfy frontend expectations.
+   * Real implementations will replace these later.
+   * =====================================================
+   */
+
+  getPlatformSettings: superAdminProcedure.query(async () => {
+    // Temporary stub – frontend expects this
+    return {};
+  }),
+
+  updatePlatformSetting: superAdminProcedure.input(z.any()).mutation(async () => {
+    throw new Error('NOT_IMPLEMENTED');
+  }),
+
+  getRevenueAnalytics: superAdminProcedure.query(async () => {
+    // Frontend expects revenue analytics object
+    return {};
+  }),
+
+  /**
+   * Frontend expects `getSystemStats`
+   * Map it to existing ecosystem stats for now
+   */
+  getSystemStats: superAdminProcedure.query(async () => {
+    return await getEcosystemStats();
+  }),
 });

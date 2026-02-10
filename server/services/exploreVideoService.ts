@@ -9,11 +9,12 @@ import crypto from 'crypto';
 import { db } from '../db';
 import {
   exploreContent,
-  exploreDiscoveryVideos,
   properties,
   developments,
+  agents,
+  developers,
 } from '../../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -50,16 +51,8 @@ export interface VideoUploadResult {
   thumbnailUrl: string;
 }
 
-export interface ProcessedVideo {
-  exploreContentId: number;
-  exploreVideoId: number;
-  videoUrl: string;
-  thumbnailUrl: string;
-}
-
 /**
  * Validate video metadata according to requirements
- * Requirements 8.1: Must include property metadata (price, location, property type, tags)
  */
 export function validateVideoMetadata(metadata: VideoMetadata): {
   valid: boolean;
@@ -67,60 +60,40 @@ export function validateVideoMetadata(metadata: VideoMetadata): {
 } {
   const errors: string[] = [];
 
-  // Required fields
   if (!metadata.title || metadata.title.trim().length === 0) {
     errors.push('Title is required');
   }
-
   if (!metadata.tags || metadata.tags.length === 0) {
     errors.push('At least one tag is required');
   }
-
   if (!metadata.propertyId && !metadata.developmentId) {
     errors.push('Video must be linked to a property or development');
   }
 
-  // If property ID is provided, validate it exists
-  // If development ID is provided, validate it exists
-  // These will be checked in the database during upload
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+  return { valid: errors.length === 0, errors };
 }
 
 /**
  * Validate video duration
- * Requirements 8.4: Duration must be between 8 and 60 seconds
  */
 export function validateVideoDuration(duration: number): { valid: boolean; error?: string } {
-  if (duration < 8) {
-    return { valid: false, error: 'Video duration must be at least 8 seconds' };
-  }
-
-  if (duration > 60) {
-    return { valid: false, error: 'Video duration must not exceed 60 seconds' };
-  }
-
+  if (duration < 8) return { valid: false, error: 'Video duration must be at least 8 seconds' };
+  if (duration > 60) return { valid: false, error: 'Video duration must not exceed 60 seconds' };
   return { valid: true };
 }
 
 /**
  * Generate presigned URLs for video and thumbnail upload
- * Returns URLs for direct S3 upload from client
  */
 export async function generateVideoUploadUrls(
   creatorId: number,
   filename: string,
   contentType: string,
 ): Promise<VideoUploadResult> {
-  // Validate AWS credentials
   if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
     throw new Error('AWS credentials not configured');
   }
 
-  // Generate unique keys
   const timestamp = Date.now();
   const fileId = crypto.randomUUID();
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -128,187 +101,63 @@ export async function generateVideoUploadUrls(
   const videoKey = `explore/videos/${creatorId}/${timestamp}-${fileId}-${sanitizedFilename}`;
   const thumbnailKey = `explore/thumbnails/${creatorId}/${timestamp}-${fileId}.jpg`;
 
-  try {
-    // Generate presigned URL for video upload
-    const videoCommand = new PutObjectCommand({
-      Bucket: S3_BUCKET_NAME,
-      Key: videoKey,
-      ContentType: contentType,
-    });
+  const videoCommand = new PutObjectCommand({
+    Bucket: S3_BUCKET_NAME,
+    Key: videoKey,
+    ContentType: contentType,
+  });
 
-    const videoUploadUrl = await getSignedUrl(s3Client, videoCommand, { expiresIn: 3600 }); // 1 hour
+  const thumbnailCommand = new PutObjectCommand({
+    Bucket: S3_BUCKET_NAME,
+    Key: thumbnailKey,
+    ContentType: 'image/jpeg',
+  });
 
-    // Generate presigned URL for thumbnail upload
-    const thumbnailCommand = new PutObjectCommand({
-      Bucket: S3_BUCKET_NAME,
-      Key: thumbnailKey,
-      ContentType: 'image/jpeg',
-    });
+  const uploadUrl = await getSignedUrl(s3Client, videoCommand, { expiresIn: 3600 });
+  const thumbnailUploadUrl = await getSignedUrl(s3Client, thumbnailCommand, { expiresIn: 3600 });
 
-    const thumbnailUploadUrl = await getSignedUrl(s3Client, thumbnailCommand, { expiresIn: 3600 });
-
-    const videoUrl = `${CDN_URL}/${videoKey}`;
-    const thumbnailUrl = `${CDN_URL}/${thumbnailKey}`;
-
-    console.log(`[ExploreVideo] Generated presigned URLs for creator ${creatorId}`);
-    console.log(`  Video key: ${videoKey}`);
-    console.log(`  Thumbnail key: ${thumbnailKey}`);
-
-    return {
-      uploadUrl: videoUploadUrl,
-      videoKey,
-      thumbnailKey,
-      videoUrl,
-      thumbnailUrl,
-    };
-  } catch (error: any) {
-    console.error('[ExploreVideo] Failed to generate presigned URLs:', error);
-    throw new Error(`Failed to generate upload URLs: ${error.message}`);
-  }
+  return {
+    uploadUrl,
+    videoKey,
+    thumbnailKey,
+    videoUrl: `${CDN_URL}/${videoKey}`,
+    thumbnailUrl: `${CDN_URL}/${thumbnailKey}`,
+  };
 }
 
 /**
- * Validate agency attribution
- * Requirements 10.5, 4.4: Verify agency relationships and prevent invalid attribution
- */
-async function validateAgencyAttribution(
-  agentId: number | null,
-  agencyId: number | null,
-): Promise<{ valid: boolean; error?: string }> {
-  // If no agency attribution, validation passes
-  if (!agencyId) {
-    return { valid: true };
-  }
-
-  // If agency is specified, agent must also be specified
-  if (!agentId) {
-    return {
-      valid: false,
-      error: 'Agency attribution requires an agent',
-    };
-  }
-
-  const { agencies, agents } = await import('../../drizzle/schema');
-
-  // Verify agency exists and is active
-  const agencyRecord = await db
-    .select({
-      id: agencies.id,
-      name: agencies.name,
-    })
-    .from(agencies)
-    .where(eq(agencies.id, agencyId))
-    .limit(1);
-
-  if (!agencyRecord[0]) {
-    return {
-      valid: false,
-      error: `Agency with ID ${agencyId} does not exist`,
-    };
-  }
-
-  // Verify agent belongs to the specified agency
-  const agentRecord = await db
-    .select({
-      id: agents.id,
-      agencyId: agents.agencyId,
-    })
-    .from(agents)
-    .where(eq(agents.id, agentId))
-    .limit(1);
-
-  if (!agentRecord[0]) {
-    return {
-      valid: false,
-      error: `Agent with ID ${agentId} does not exist`,
-    };
-  }
-
-  if (agentRecord[0].agencyId !== agencyId) {
-    return {
-      valid: false,
-      error: `Agent ${agentId} does not belong to agency ${agencyId}`,
-    };
-  }
-
-  console.log(
-    `[ExploreVideo] Agency attribution validated: agent ${agentId} belongs to agency ${agencyId}`,
-  );
-
-  return { valid: true };
-}
-
-/**
- * Detect agent's agency affiliation
- * Requirements 10.1, 10.2: Auto-detect and populate agency attribution
+ * Detect agent's agency affiliation (best-effort)
  */
 async function detectAgencyAffiliation(creatorId: number): Promise<{
   agencyId: number | null;
   agentId: number | null;
   creatorType: 'user' | 'agent' | 'developer' | 'agency';
 }> {
-  const { agents, users } = await import('../../drizzle/schema');
-
-  // Check if creator is an agent
   const agentRecord = await db
-    .select({
-      id: agents.id,
-      agencyId: agents.agencyId,
-      userId: agents.userId,
-    })
+    .select({ id: agents.id, agencyId: agents.agencyId, userId: agents.userId })
     .from(agents)
     .where(eq(agents.userId, creatorId))
     .limit(1);
 
   if (agentRecord[0]) {
-    const agencyId = agentRecord[0].agencyId;
-    const agentId = agentRecord[0].id;
-
-    console.log(
-      `[ExploreVideo] Detected agent ${agentId} with agency ${agencyId || 'none'} for user ${creatorId}`,
-    );
-
-    return {
-      agencyId,
-      agentId,
-      creatorType: 'agent',
-    };
+    return { agencyId: agentRecord[0].agencyId, agentId: agentRecord[0].id, creatorType: 'agent' };
   }
 
-  // Check if creator is a developer
-  const { developers } = await import('../../drizzle/schema');
   const developerRecord = await db
-    .select({
-      id: developers.id,
-    })
+    .select({ id: developers.id })
     .from(developers)
     .where(eq(developers.userId, creatorId))
     .limit(1);
 
   if (developerRecord[0]) {
-    console.log(`[ExploreVideo] Detected developer ${developerRecord[0].id} for user ${creatorId}`);
-
-    return {
-      agencyId: null,
-      agentId: null,
-      creatorType: 'developer',
-    };
+    return { agencyId: null, agentId: null, creatorType: 'developer' };
   }
 
-  // Default to regular user
-  console.log(`[ExploreVideo] User ${creatorId} is a regular user (not agent or developer)`);
-
-  return {
-    agencyId: null,
-    agentId: null,
-    creatorType: 'user',
-  };
+  return { agencyId: null, agentId: null, creatorType: 'user' };
 }
 
 /**
- * Create explore content and video records after successful upload
- * Requirements 8.1, 8.2: Store video metadata and make available in feed
- * Requirements 10.1, 10.2: Auto-populate agency attribution
+ * Create a video entry in explore_content
  */
 export async function createExploreVideo(
   creatorId: number,
@@ -316,90 +165,67 @@ export async function createExploreVideo(
   thumbnailUrl: string,
   metadata: VideoMetadata,
   duration: number,
-): Promise<ProcessedVideo> {
-  // Validate metadata
-  const metadataValidation = validateVideoMetadata(metadata);
-  if (!metadataValidation.valid) {
-    throw new Error(`Invalid metadata: ${metadataValidation.errors.join(', ')}`);
-  }
+): Promise<{
+  contentId: number;
+  videoUrl: string;
+  thumbnailUrl: string;
+}> {
+  const mv = validateVideoMetadata(metadata);
+  if (!mv.valid) throw new Error(`Invalid metadata: ${mv.errors.join(', ')}`);
 
-  // Validate duration
-  const durationValidation = validateVideoDuration(duration);
-  if (!durationValidation.valid) {
-    throw new Error(durationValidation.error);
-  }
+  const dv = validateVideoDuration(duration);
+  if (!dv.valid) throw new Error(dv.error);
 
-  // Detect agency affiliation
   const affiliation = await detectAgencyAffiliation(creatorId);
 
-  // Validate agency attribution
-  // Requirements 10.5, 4.4: Prevent invalid agency attribution
-  const attributionValidation = await validateAgencyAttribution(
-    affiliation.agentId,
-    affiliation.agencyId,
-  );
-
-  if (!attributionValidation.valid) {
-    throw new Error(`Invalid agency attribution: ${attributionValidation.error}`);
-  }
-
-  console.log(`[ExploreVideo] Agency attribution decision:`, {
-    creatorId,
-    agencyId: affiliation.agencyId,
-    agentId: affiliation.agentId,
-    creatorType: affiliation.creatorType,
-  });
-
-  // Verify property or development exists
+  // Extract location & price info
   let locationLat: number | null = null;
   let locationLng: number | null = null;
   let priceMin: number | null = null;
   let priceMax: number | null = null;
 
   if (metadata.propertyId) {
-    const property = await db
+    const [property] = await db
       .select()
       .from(properties)
       .where(eq(properties.id, metadata.propertyId))
       .limit(1);
 
-    if (!property[0]) {
-      throw new Error('Property not found');
-    }
+    if (!property) throw new Error('Property not found');
 
-    locationLat = property[0].latitude ? parseFloat(property[0].latitude.toString()) : null;
-    locationLng = property[0].longitude ? parseFloat(property[0].longitude.toString()) : null;
-    priceMin = property[0].price || null;
-    priceMax = property[0].price || null;
+    locationLat = property.latitude ? Number(property.latitude) : null;
+    locationLng = property.longitude ? Number(property.longitude) : null;
+    priceMin = property.price ?? null;
+    priceMax = property.price ?? null;
   } else if (metadata.developmentId) {
-    const development = await db
+    const [development] = await db
       .select()
       .from(developments)
       .where(eq(developments.id, metadata.developmentId))
       .limit(1);
 
-    if (!development[0]) {
-      throw new Error('Development not found');
-    }
+    if (!development) throw new Error('Development not found');
 
-    locationLat = development[0].latitude ? parseFloat(development[0].latitude.toString()) : null;
-    locationLng = development[0].longitude ? parseFloat(development[0].longitude.toString()) : null;
-    priceMin = development[0].priceFrom || null;
-    priceMax = development[0].priceTo || null;
+    locationLat = development.latitude ? Number(development.latitude) : null;
+    locationLng = development.longitude ? Number(development.longitude) : null;
+    priceMin = (development as any).priceFrom ?? null;
+    priceMax = (development as any).priceTo ?? null;
   }
 
-  try {
-    // Create explore_content record with agency attribution
-    const contentResult = await db.insert(exploreContent).values({
+  const [result] = await db
+    .insert(exploreContent)
+    .values({
       contentType: 'video',
-      referenceId: metadata.propertyId || metadata.developmentId || 0,
+      videoFormat: 'short', // change to 'walkthrough', 'ad', etc. when needed
+      referenceId: metadata.propertyId ?? metadata.developmentId ?? null,
       creatorId,
       creatorType: affiliation.creatorType,
       agencyId: affiliation.agencyId,
       title: metadata.title,
-      description: metadata.description || null,
-      thumbnailUrl,
+      description: metadata.description ?? null,
       videoUrl,
+      thumbnailUrl,
+      durationSeconds: duration,
       metadata: JSON.stringify({
         beds: metadata.beds,
         baths: metadata.baths,
@@ -415,54 +241,23 @@ export async function createExploreVideo(
       engagementScore: 0,
       isActive: true,
       isFeatured: false,
-    });
+    })
+    .returning({ id: exploreContent.id });
 
-    const exploreContentId = Number(contentResult.insertId);
+  const contentId = result.id;
 
-    // Create explore_discovery_videos record
-    const videoResult = await db.insert(exploreDiscoveryVideos).values({
-      exploreContentId,
-      propertyId: metadata.propertyId || null,
-      developmentId: metadata.developmentId || null,
-      videoUrl,
-      thumbnailUrl,
-      duration,
-      transcodedUrls: null, // Will be populated by transcoding service
-      musicTrack: null,
-      hasSubtitles: false,
-      subtitleUrl: null,
-      totalViews: 0,
-      totalWatchTime: 0,
-      completionRate: 0,
-      saveCount: 0,
-      shareCount: 0,
-      clickThroughCount: 0,
-    });
-
-    const exploreVideoId = Number(videoResult.insertId);
-
-    console.log(
-      `[ExploreVideo] Created video record: content=${exploreContentId}, video=${exploreVideoId}`,
-    );
-
-    return {
-      exploreContentId,
-      exploreVideoId,
-      videoUrl,
-      thumbnailUrl,
-    };
-  } catch (error: any) {
-    console.error('[ExploreVideo] Failed to create video records:', error);
-    throw new Error(`Failed to create video: ${error.message}`);
-  }
+  return {
+    contentId,
+    videoUrl,
+    thumbnailUrl,
+  };
 }
 
 /**
- * Update video analytics
- * Requirements 8.6: Provide analytics on views, watch time, saves, and click-throughs
+ * Update video analytics (now stored directly on explore_content)
  */
 export async function updateVideoAnalytics(
-  exploreVideoId: number,
+  contentId: number,
   analytics: {
     views?: number;
     watchTime?: number;
@@ -472,36 +267,24 @@ export async function updateVideoAnalytics(
     clickThroughs?: number;
   },
 ): Promise<void> {
-  try {
-    const updates: any = {};
+  const updates: Record<string, any> = {};
 
-    if (analytics.views !== undefined) {
-      updates.totalViews = analytics.views;
-    }
-    if (analytics.watchTime !== undefined) {
-      updates.totalWatchTime = analytics.watchTime;
-    }
-    if (analytics.completionRate !== undefined) {
-      updates.completionRate = analytics.completionRate;
-    }
-    if (analytics.saves !== undefined) {
-      updates.saveCount = analytics.saves;
-    }
-    if (analytics.shares !== undefined) {
-      updates.shareCount = analytics.shares;
-    }
-    if (analytics.clickThroughs !== undefined) {
-      updates.clickThroughCount = analytics.clickThroughs;
-    }
+  if (analytics.views !== undefined) updates.viewCount = analytics.views;
+  if (analytics.watchTime !== undefined) updates.totalWatchTime = analytics.watchTime;
+  if (analytics.completionRate !== undefined) updates.completionRate = analytics.completionRate;
+  if (analytics.saves !== undefined) updates.saveCount = analytics.saves;
+  if (analytics.shares !== undefined) updates.shareCount = analytics.shares;
+  if (analytics.clickThroughs !== undefined) updates.clickThroughCount = analytics.clickThroughs;
 
-    await db
-      .update(exploreDiscoveryVideos)
-      .set(updates)
-      .where(eq(exploreDiscoveryVideos.id, exploreVideoId));
+  if (Object.keys(updates).length === 0) return;
 
-    console.log(`[ExploreVideo] Updated analytics for video ${exploreVideoId}`);
-  } catch (error: any) {
-    console.error('[ExploreVideo] Failed to update analytics:', error);
-    throw new Error(`Failed to update video analytics: ${error.message}`);
-  }
+  await db
+    .update(exploreContent)
+    .set(updates)
+    .where(
+      and(
+        eq(exploreContent.id, contentId),
+        eq(exploreContent.contentType, 'video')
+      )
+    );
 }

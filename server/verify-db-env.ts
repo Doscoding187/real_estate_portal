@@ -26,7 +26,7 @@ async function verify() {
     const _drizzle = await getDb(); // This triggers the [Database] Connected to... log internally
 
     // Manual SQL verify
-    // @ts-ignore
+    // @ts-expect-error
     const pool = _drizzle.session.client;
     // Drizzle mysql2 pool access might differ, but getDb uses the pool.
     // actually getDb returns the drizzle instance.

@@ -11,12 +11,11 @@ type UseAuthOptions = {
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } = options ?? {};
 
-  // Add a check for trpc availability
+  // Safety: trpc should always exist, but keep guard to avoid hard crashes if provider breaks
   if (!trpc) {
     console.warn(
       'TRPC context not found in useAuth hook. Ensure trpc.Provider is correctly set up.',
     );
-    // Return a minimal state to prevent further errors
     return {
       user: null,
       loading: false,
@@ -29,14 +28,22 @@ export function useAuth(options?: UseAuthOptions) {
 
   const utils = trpc.useUtils();
 
-  const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: false,
+  /**
+   * IMPORTANT:
+   * Call auth.me with NO input argument at all.
+   * Passing `undefined` as an input causes tRPC batching metadata like meta.values:["undefined"]
+   * and can break validation when server expects required input shapes.
+   */
+  const meQuery = trpc.auth.me.useQuery({
+    retry: 0,
     refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
-      utils.auth.me.setData(undefined, null);
+      // IMPORTANT: Use `null` key instead of `undefined` so cache ops match the no-input query.
+      utils.auth.me.setData(null, null);
     },
   });
 
@@ -49,7 +56,8 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      utils.auth.me.setData(undefined, null);
+      // Clear cached user and invalidate the no-input query
+      utils.auth.me.setData(null, null);
       await utils.auth.me.invalidate();
 
       // Clear brand emulation context on logout

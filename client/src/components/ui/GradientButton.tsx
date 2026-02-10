@@ -74,7 +74,8 @@ const gradientButtonVariants = cva(
 );
 
 export interface GradientButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof gradientButtonVariants> {
   /**
    * Show loading spinner

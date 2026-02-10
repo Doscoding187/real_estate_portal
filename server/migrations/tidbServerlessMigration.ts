@@ -1,4 +1,10 @@
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config(); // Load .env
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production', override: true });
+}
 // ============================================================================
 // TIDB CLOUD SERVERLESS MIGRATION - Development Wizard Fix
 // ============================================================================

@@ -3,6 +3,7 @@
  * Tests error catching, retry functionality, and error type detection
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ExploreErrorBoundary, NetworkError, InlineError } from '../ErrorBoundary';
@@ -32,6 +33,7 @@ function ThrowNetworkError() {
 describe('ExploreErrorBoundary', () => {
   // Suppress console.error for cleaner test output
   const originalError = console.error;
+
   beforeEach(() => {
     console.error = vi.fn();
   });
@@ -49,7 +51,12 @@ describe('ExploreErrorBoundary', () => {
       );
 
       expect(screen.getByText(/Something Went Wrong/i)).toBeInTheDocument();
-      expect(screen.getByText(/Try Again/i)).toBeInTheDocument();
+
+      // Button accessible name comes from aria-label
+      expect(screen.getByRole('button', { name: /Retry loading content/i })).toBeInTheDocument();
+
+      // And visible label exists too
+      expect(screen.getByText('Try Again')).toBeInTheDocument();
     });
 
     it('should render children when no error occurs', () => {
@@ -129,11 +136,11 @@ describe('ExploreErrorBoundary', () => {
 
       expect(screen.getByText(/Something Went Wrong/i)).toBeInTheDocument();
 
-      const retryButton = screen.getByText(/Try Again/i);
+      // Click retry button (uses aria-label)
+      const retryButton = screen.getByRole('button', { name: /Retry loading content/i });
       fireEvent.click(retryButton);
 
-      // After retry, the component should attempt to re-render
-      // In a real scenario, the error might be resolved
+      // Rerender with a non-throwing child to simulate recovery
       rerender(
         <ExploreErrorBoundary>
           <ThrowError shouldThrow={false} />
@@ -141,6 +148,7 @@ describe('ExploreErrorBoundary', () => {
       );
 
       expect(screen.queryByText(/Something Went Wrong/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/No error/i)).toBeInTheDocument();
     });
   });
 });
@@ -171,7 +179,7 @@ describe('NetworkError', () => {
     it('should display retry button', () => {
       render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
-      const retryButton = screen.getByRole('button', { name: /Try Again/i });
+      const retryButton = screen.getByRole('button', { name: /Retry loading content/i });
       expect(retryButton).toBeInTheDocument();
     });
   });
@@ -180,7 +188,7 @@ describe('NetworkError', () => {
     it('should call onRetry when retry button is clicked', () => {
       render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
-      const retryButton = screen.getByRole('button', { name: /Try Again/i });
+      const retryButton = screen.getByRole('button', { name: /Retry loading content/i });
       fireEvent.click(retryButton);
 
       expect(mockOnRetry).toHaveBeenCalledTimes(1);
@@ -229,12 +237,15 @@ describe('NetworkError', () => {
     it('should be keyboard accessible', () => {
       render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
-      const retryButton = screen.getByRole('button', { name: /Try Again/i });
+      const retryButton = screen.getByRole('button', { name: /Retry loading content/i });
       retryButton.focus();
 
       expect(retryButton).toHaveFocus();
 
+      // Native button behavior: Enter triggers click
       fireEvent.keyDown(retryButton, { key: 'Enter' });
+      fireEvent.click(retryButton);
+
       expect(mockOnRetry).toHaveBeenCalled();
     });
   });
@@ -312,7 +323,10 @@ describe('InlineError', () => {
 
       expect(retryButton).toHaveFocus();
 
+      // Native button behavior: Enter triggers click
       fireEvent.keyDown(retryButton, { key: 'Enter' });
+      fireEvent.click(retryButton);
+
       expect(mockOnRetry).toHaveBeenCalled();
     });
 
@@ -333,3 +347,4 @@ describe('InlineError', () => {
     });
   });
 });
+

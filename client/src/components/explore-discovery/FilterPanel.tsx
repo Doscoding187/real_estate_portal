@@ -55,8 +55,11 @@ export function FilterPanel({ isOpen, onClose, onApply }: FilterPanelProps) {
   const filterCount = getFilterCount();
 
   const handleApply = () => {
-    onApply?.();
-    onClose();
+    if (onApply) {
+      onApply();
+    } else {
+      onClose();
+    }
   };
 
   const handleReset = () => {

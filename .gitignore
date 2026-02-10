@@ -110,3 +110,18 @@ dist/
 
 # Vitest timestamp artifacts
 vitest.config.ts.timestamp-*.mjs
+
+# Local / production env files
+.env.production
+.env.local
+
+# Build output
+dist/
+
+# Local backups
+backups/
+
+# Local debug artifacts
+_WIP_*.patch
+rg-meta-output*.txt
+vitest.*.timestamp-*.mjs

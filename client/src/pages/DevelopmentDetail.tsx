@@ -391,9 +391,15 @@ export default function DevelopmentDetail() {
 
   // Fetch real development by slug or ID
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
-    { slugOrId: slug || '' },
-    { enabled: !!slug },
-  );
+  { slugOrId: slug || '' },
+  { enabled: !!slug },
+);
+
+console.log('[DevelopmentDetail] dev =', dev);
+console.log('[DevelopmentDetail] dev.developer =', dev?.developer);
+console.log('[DevelopmentDetail] dev.publisher =', (dev as any)?.publisher);
+console.log('[DevelopmentDetail] dev.brandProfile =', (dev as any)?.brandProfile);
+
 
   // Fetch other developments from same developer
   const { data: allDevelopments } = trpc.developer.listPublicDevelopments.useQuery(
@@ -669,67 +675,75 @@ export default function DevelopmentDetail() {
     return { soldPct, total: totals.total, available: clampedAvailable };
   })();
 
-  // ... (Update development object)
-  const development = {
-    // ... existing fields ...
-    id: dev.id,
-    name: dev.name,
-    developer: dev.developer?.name || 'Unknown Developer',
-    developerLogo: dev.developer?.logo || null,
-    developerDescription:
-      dev.developer?.description ||
-      'Professional property developer committed to quality and excellence.',
-    developerWebsite: dev.developer?.website || null,
-    developerSlug: dev.developer?.slug || null,
-    location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
-    address: dev.address || '',
-    description: dev.description || '',
-    completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : null,
-    totalUnits: dev.totalUnits || 0,
-    availableUnits: dev.availableUnits || 0,
-    startingPrice: Number(dev.priceFrom) || 0,
-    developmentType: dev.developmentType || 'residential',
-    status: dev.status,
+  // ✅ Prefer publisher / brand profile over legacy developer
+const publisher =
+  (dev as any).publisher ||
+  (dev as any).brandProfile ||
+  (dev as any).developerBrandProfile ||
+  null;
 
-    // Media Props
-    heroMedia: heroMedia,
-    galleryImages: galleryImages,
+// ... (Update development object)
+const development = {
+  // ... existing fields ...
+  id: dev.id,
+  name: dev.name,
 
-    // Tiles
-    amenityTile: amenityTile,
-    outdoorTile: outdoorTile,
-    viewGalleryTile: viewGalleryTile,
+  // ✅ Publisher-first developer identity
+  developer: publisher?.name || dev.developer?.name || 'Unknown Developer',
+  developerLogo: publisher?.logoUrl || publisher?.logo || dev.developer?.logo || null,
+  developerDescription:
+    publisher?.description ||
+    dev.developer?.description ||
+    'Professional property developer committed to quality and excellence.',
+  developerWebsite: publisher?.websiteUrl || publisher?.website || dev.developer?.website || null,
+  developerSlug: publisher?.slug || dev.developer?.slug || null,
 
-    // Counts & Lists
-    totalPhotos: galleryImages.length,
-    totalVideos: normalizedVideos.length,
-    videoList: normalizedVideos,
-    floorPlans: floorPlans, // Kept separate for now
+  location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
+  address: dev.address || '',
+  description: dev.description || '',
+  completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : null,
+  totalUnits: dev.totalUnits || 0,
+  availableUnits: dev.availableUnits || 0,
+  startingPrice: Number(dev.priceFrom) || 0,
+  developmentType: dev.developmentType || 'residential',
+  status: dev.status,
 
-    indices: galleryIndices,
-    amenities: amenities,
-    // CRITICAL: Ensure we rely on unitTypes, not mixed sources
-    units: units.map((u: any) => {
-      // Debug source for ownership
-      const rawOwnership = u.ownershipType;
-      const estateOwnership = estateSpecs.ownershipType;
-      const structural = u.structuralType || u.type;
-      const inferred = inferOwnership(structural);
+  // Media Props
+  heroMedia: heroMedia,
+  galleryImages: galleryImages,
 
-      const source = rawOwnership ? 'Unit' : estateOwnership ? 'Estate' : `Derived(${structural})`;
-      const finalLabel = formatLabel(rawOwnership || estateOwnership || inferred);
+  // Tiles
+  amenityTile: amenityTile,
+  outdoorTile: outdoorTile,
+  viewGalleryTile: viewGalleryTile,
 
-      return {
-        ...u,
-        // Normalize upfront for easier consumption
-        normalizedImage: getPrimaryUnitImage(u, heroMedia.image?.url),
-        normalizedOwnership: finalLabel,
-        normalizedType: formatLabel(u.structuralType || u.type || 'Apartment'),
-        floorSize: u.unitSize,
-        landSize: u.erfSize || u.yardSize,
-      };
-    }),
-  };
+  // Counts & Lists
+  totalPhotos: galleryImages.length,
+  totalVideos: normalizedVideos.length,
+  videoList: normalizedVideos,
+  floorPlans: floorPlans, // Kept separate for now
+
+  indices: galleryIndices,
+  amenities: amenities,
+
+  // CRITICAL: Ensure we rely on unitTypes, not mixed sources
+  units: units.map((u: any) => {
+    const rawOwnership = u.ownershipType;
+    const estateOwnership = (estateSpecs as any)?.ownershipType;
+    const structural = u.structuralType || u.type;
+    const inferred = inferOwnership(structural);
+    const finalLabel = formatLabel(rawOwnership || estateOwnership || inferred);
+
+    return {
+      ...u,
+      normalizedImage: getPrimaryUnitImage(u, heroMedia?.type === 'image' ? heroMedia.image?.url : undefined),
+      normalizedOwnership: finalLabel,
+      normalizedType: formatLabel(u.structuralType || u.type || 'Apartment'),
+      floorSize: u.unitSize,
+      landSize: u.erfSize || u.yardSize,
+    };
+  }),
+};
 
   return (
     <>

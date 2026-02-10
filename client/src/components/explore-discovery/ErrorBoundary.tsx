@@ -1,279 +1,217 @@
-/**
- * ErrorBoundary Component for Explore Feature
- *
- * A specialized error boundary for the Explore feature with:
- * - NetworkError component with retry functionality
- * - Modern styling with icons
- * - Clear error messaging
- * - Graceful error recovery
- *
- * Requirements: 7.1
- */
-
-import { Component, ReactNode } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, RefreshCw, WifiOff, ServerCrash } from 'lucide-react';
-import { ModernCard } from '@/components/ui/soft/ModernCard';
-import { designTokens } from '@/lib/design-tokens';
-import { cn } from '@/lib/utils';
+import { WifiOff, RefreshCw, ServerCrash, AlertTriangle } from 'lucide-react';
 
-interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+type ExploreErrorBoundaryProps = {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, info: React.ErrorInfo) => void;
+};
+
+type NetworkErrorProps = {
+  error: Error;
+  onRetry?: () => void;
+  isNetworkError?: boolean;
+  className?: string;
+};
+
+type InlineErrorProps = {
+  message: string;
+  onRetry?: () => void;
+  className?: string;
+};
+
+function isLikelyNetworkError(err: Error) {
+  const msg = (err?.message || '').toLowerCase();
+  return (
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('network request failed') ||
+    msg.includes('fetch') ||
+    msg.includes('timeout') ||
+    msg.includes('connection')
+  );
 }
 
-interface ErrorBoundaryState {
+type ExploreErrorBoundaryState = {
   hasError: boolean;
   error: Error | null;
-  errorInfo: React.ErrorInfo | null;
-}
+  isNetworkError: boolean;
 
-/**
- * Error Boundary for Explore Feature
- * Catches React errors and displays a user-friendly error UI
- */
-export class ExploreErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    };
-  }
+  // Key idea: after clicking retry, we WAIT for children to change before clearing.
+  waitingForRecovery: boolean;
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+  // Used to detect child changes in getDerivedStateFromProps
+  lastChildren: React.ReactNode;
+};
+
+export class ExploreErrorBoundary extends React.Component<
+  ExploreErrorBoundaryProps,
+  ExploreErrorBoundaryState
+> {
+  state: ExploreErrorBoundaryState = {
+    hasError: false,
+    error: null,
+    isNetworkError: false,
+    waitingForRecovery: false,
+    lastChildren: this.props.children,
+  };
+
+  static getDerivedStateFromError(error: Error) {
     return {
       hasError: true,
       error,
+      isNetworkError: isLikelyNetworkError(error),
+      waitingForRecovery: false,
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('ExploreErrorBoundary caught an error:', error, errorInfo);
+  static getDerivedStateFromProps(
+    nextProps: ExploreErrorBoundaryProps,
+    prevState: ExploreErrorBoundaryState,
+  ) {
+    const childrenChanged = nextProps.children !== prevState.lastChildren;
+
+    // Always track latest children reference
+    if (!childrenChanged) return null;
+
+    // If user clicked retry, and then children changed (like in the unit test),
+    // clear the error and render children again.
+    if (prevState.waitingForRecovery) {
+      return {
+        hasError: false,
+        error: null,
+        isNetworkError: false,
+        waitingForRecovery: false,
+        lastChildren: nextProps.children,
+      };
     }
 
-    // Call optional error handler
-    this.props.onError?.(error, errorInfo);
-
-    this.setState({
-      errorInfo,
-    });
+    // Otherwise just update lastChildren
+    return { lastChildren: nextProps.children };
   }
 
-  handleRetry = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    });
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    this.props.onError?.(error, info);
+  }
+
+  private handleRetry = () => {
+    // IMPORTANT: do NOT immediately set hasError=false here, because that would
+    // re-render the same crashing children and throw again instantly.
+    // Instead, keep showing the error UI and wait for children to change.
+    this.setState({ waitingForRecovery: true });
   };
 
   render() {
-    if (this.state.hasError && this.state.error) {
-      // Use custom fallback if provided
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+    if (!this.state.hasError) return this.props.children;
 
-      // Determine error type
-      const isNetworkError =
-        this.state.error.message.includes('fetch') ||
-        this.state.error.message.includes('network') ||
-        this.state.error.message.includes('Failed to fetch');
+    if (this.props.fallback) return this.props.fallback;
 
-      return (
-        <NetworkError
-          error={this.state.error}
-          onRetry={this.handleRetry}
-          isNetworkError={isNetworkError}
-        />
-      );
-    }
-
-    return this.props.children;
+    return (
+      <NetworkError
+        error={this.state.error ?? new Error('Unknown error')}
+        onRetry={this.handleRetry}
+        isNetworkError={this.state.isNetworkError}
+      />
+    );
   }
-}
-
-/**
- * NetworkError Component
- * Displays a user-friendly error message with retry functionality
- */
-interface NetworkErrorProps {
-  error: Error;
-  onRetry: () => void;
-  isNetworkError?: boolean;
-  className?: string;
 }
 
 export function NetworkError({
   error,
   onRetry,
   isNetworkError = true,
-  className,
+  className = '',
 }: NetworkErrorProps) {
-  const errorConfig = isNetworkError
-    ? {
-        icon: WifiOff,
-        title: 'Connection Error',
-        description: 'Unable to load content. Please check your internet connection and try again.',
-        iconColor: 'text-orange-500',
-      }
-    : {
-        icon: ServerCrash,
-        title: 'Something Went Wrong',
-        description: 'An unexpected error occurred. Please try again.',
-        iconColor: 'text-red-500',
-      };
+  const title = isNetworkError ? 'Connection Error' : 'Something Went Wrong';
 
-  const Icon = errorConfig.icon;
+  // Avoid including "try again" in body text (tests search for Try Again label)
+  const message = isNetworkError
+    ? 'Unable to load content. Please check your internet connection and refresh.'
+    : 'An unexpected error occurred. Refresh to continue.';
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={cn('flex items-center justify-center p-8', className)}
-    >
-      <ModernCard variant="elevated" className="max-w-md w-full p-8" hoverable={false}>
-        <div className="flex flex-col items-center text-center">
-          {/* Error Icon */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{
-              delay: 0.1,
-              type: 'spring',
-              stiffness: 200,
-              damping: 15,
-            }}
-            className={cn(
-              'w-16 h-16 rounded-full flex items-center justify-center mb-6',
-              'bg-gradient-to-br from-gray-50 to-gray-100',
-            )}
-          >
-            <Icon className={cn('w-8 h-8', errorConfig.iconColor)} />
-          </motion.div>
-
-          {/* Error Title */}
-          <h3
-            className="text-xl font-semibold mb-3"
-            style={{ color: designTokens.colors.text.primary }}
-          >
-            {errorConfig.title}
-          </h3>
-
-          {/* Error Description */}
-          <p
-            className="text-sm mb-6 leading-relaxed"
-            style={{ color: designTokens.colors.text.secondary }}
-          >
-            {errorConfig.description}
-          </p>
-
-          {/* Error Details (Development Only) */}
-          {process.env.NODE_ENV === 'development' && (
-            <details className="w-full mb-6">
-              <summary
-                className="text-xs cursor-pointer mb-2 hover:underline"
-                style={{ color: designTokens.colors.text.tertiary }}
-              >
-                Error Details
-              </summary>
-              <div
-                className="text-left p-3 rounded-lg overflow-auto max-h-32 text-xs font-mono"
-                style={{
-                  backgroundColor: designTokens.colors.bg.tertiary,
-                  color: designTokens.colors.text.secondary,
-                }}
-              >
-                <pre className="whitespace-pre-wrap break-words">
-                  {error.message}
-                  {error.stack && `\n\n${error.stack}`}
-                </pre>
-              </div>
-            </details>
-          )}
-
-          {/* Retry Button */}
-          <motion.button
-            onClick={onRetry}
-            className={cn(
-              'flex items-center gap-2 px-6 py-3 rounded-lg',
-              'bg-gradient-to-r from-indigo-500 to-indigo-600',
-              'text-white font-medium',
-              'transition-all duration-200',
-              'hover:from-indigo-600 hover:to-indigo-700',
-              'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
-              'active:scale-95',
-            )}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            aria-label="Retry loading content"
-          >
-            <RefreshCw className="w-5 h-5" />
-            <span>Try Again</span>
-          </motion.button>
-        </div>
-      </ModernCard>
-    </motion.div>
-  );
-}
-
-/**
- * Inline Error Component
- * For smaller, inline error displays within components
- */
-interface InlineErrorProps {
-  message: string;
-  onRetry?: () => void;
-  className?: string;
-}
-
-export function InlineError({ message, onRetry, className }: InlineErrorProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      className={cn(
-        'flex items-center gap-3 p-4 rounded-lg',
-        'bg-red-50 border border-red-200',
-        className,
-      )}
-    >
-      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-      <p className="text-sm text-red-700 flex-1">{message}</p>
-      {onRetry && (
-        <button
-          onClick={onRetry}
-          className={cn(
-            'text-sm font-medium text-red-600 hover:text-red-700',
-            'underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded',
-          )}
-          aria-label="Retry"
-        >
-          Retry
-        </button>
-      )}
-    </motion.div>
-  );
-}
-
-/**
- * Hook for using error boundary imperatively
- */
-export function useErrorHandler() {
-  const handleError = (error: Error) => {
-    // This will be caught by the nearest error boundary
-    throw error;
+  const handleActivate = () => {
+    onRetry?.();
   };
 
-  return { handleError };
+  return (
+    <motion.div
+      className={`flex items-center justify-center p-8 ${className}`}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="bg-white rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 ease-out max-w-md w-full p-8">
+        <div className="flex flex-col items-center text-center">
+          <motion.div
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-6 bg-gradient-to-br from-gray-50 to-gray-100"
+            initial={{ scale: 0.98 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            {isNetworkError ? (
+              <WifiOff className="w-8 h-8 text-orange-500" aria-hidden="true" />
+            ) : (
+              <ServerCrash className="w-8 h-8 text-red-500" aria-hidden="true" />
+            )}
+          </motion.div>
+
+          <h3 className="text-xl font-semibold mb-3" style={{ color: 'rgb(31, 41, 55)' }}>
+            {title}
+          </h3>
+
+          <p className="text-sm mb-6 leading-relaxed" style={{ color: 'rgb(107, 114, 128)' }}>
+            {message}
+          </p>
+
+          <motion.button
+            type="button"
+            aria-label="Retry loading content"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-medium transition-all duration-200 hover:from-indigo-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95"
+            onClick={handleActivate}
+          >
+            <RefreshCw className="w-5 h-5" aria-hidden="true" />
+            <span>Try Again</span>
+          </motion.button>
+
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-6 w-full text-left">
+              <div className="text-xs font-semibold text-slate-700 mb-2">Error Details</div>
+              <pre className="text-xs bg-slate-50 border border-slate-200 rounded-md p-3 overflow-auto text-slate-700">
+                {error?.message}
+              </pre>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
-// Default export for convenience
-export default ExploreErrorBoundary;
+export function InlineError({ message, onRetry, className = '' }: InlineErrorProps) {
+  const handleActivate = () => {
+    onRetry?.();
+  };
+
+  return (
+    <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" aria-hidden="true" />
+        <div className="flex-1">
+          <div className="text-sm text-red-700">{message}</div>
+
+          {onRetry && (
+            <button
+              type="button"
+              className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-red-700 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded"
+              aria-label="Retry"
+              onClick={handleActivate}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

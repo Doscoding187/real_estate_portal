@@ -57,12 +57,19 @@ export default function ExploreFeed() {
     userId: user?.id,
   });
 
+  // Debug logging for feed verification
+  useEffect(() => {
+    if (feedData) {
+      console.log('FEED DATA:', feedData);
+    }
+  }, [feedData]);
+
   // Mutation for recording interactions
   const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
 
-  // Use placeholder videos if no data available
-  const videos =
-    feedData?.shorts && feedData.shorts.length > 0 ? feedData.shorts : PLACEHOLDER_VIDEOS;
+  // Use canonical `items` when available, fall back to legacy `shorts`, then placeholders
+  const items = feedData?.items ?? feedData?.shorts ?? [];
+  const videos = items.length > 0 ? items : PLACEHOLDER_VIDEOS;
 
   // Filter videos based on search query
   const filteredVideos = searchQuery

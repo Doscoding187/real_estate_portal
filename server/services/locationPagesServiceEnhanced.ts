@@ -11,7 +11,7 @@
 
 import { getDb } from '../db';
 import { locations, provinces, cities, suburbs } from '../../drizzle/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { PlaceDetails, extractHierarchy } from './googlePlacesService';
 
 // ============================================================================
@@ -108,7 +108,6 @@ export function generateSEOContent(
 ): SEOContent {
   const { name, type } = location;
 
-  // Generate title based on location type
   let title: string;
   let description: string;
 
@@ -118,19 +117,21 @@ export function generateSEOContent(
       description = `Discover properties for sale and rent in ${name}. Browse houses, apartments, and new developments across ${name}'s cities and suburbs. Find your dream property today.`;
       break;
 
-    case 'city':
+    case 'city': {
       const provinceName = hierarchy?.province || name;
       title = `${name} Properties for Sale & Rent | ${provinceName}`;
       description = `Explore properties in ${name}, ${provinceName}. Find houses, apartments, and new developments in ${name}'s best suburbs. View listings, prices, and market insights.`;
       break;
+    }
 
     case 'suburb':
-    case 'neighborhood':
+    case 'neighborhood': {
       const cityName = hierarchy?.city || 'the area';
       const provinceContext = hierarchy?.province ? `, ${hierarchy.province}` : '';
       title = `${name} Properties for Sale & Rent | ${cityName}${provinceContext}`;
       description = `Find properties in ${name}, ${cityName}. Browse houses, apartments, and new developments in ${name}. View current listings, average prices, and neighborhood insights.`;
       break;
+    }
 
     default:
       title = `${name} Properties | Property Listify`;
@@ -163,7 +164,7 @@ export const locationPagesServiceEnhanced = {
   async findOrCreateLocation(input: LocationInput): Promise<Location> {
     const db = await getDb();
 
-    // Check if location already exists by Place ID (if provided)
+    // 1) Check if location exists by Place ID (if provided)
     if (input.placeId) {
       const [existing] = await db
         .select()
@@ -179,20 +180,20 @@ export const locationPagesServiceEnhanced = {
       }
     }
 
-    // Generate slug
+    // 2) Generate slug
     const slug = generateSlug(input.name);
 
-    // Check if slug already exists within the same parent
-    // Property 39: Slug uniqueness within parent
-    const existingBySlug = await db
-      .select()
-      .from(locations)
-      .where(
-        input.parentId
-          ? and(eq(locations.slug, slug), eq(locations.parentId, input.parentId))
-          : eq(locations.slug, slug),
-      )
-      .limit(1);
+    // 3) Check if slug already exists within the same parent + same type
+    // (More correct than slug-only; prevents province/city/suburb collisions)
+    const slugWhere = input.parentId
+      ? and(
+          eq(locations.slug, slug),
+          eq(locations.parentId, input.parentId),
+          eq(locations.type, input.type),
+        )
+      : and(eq(locations.slug, slug), eq(locations.parentId, null), eq(locations.type, input.type));
+
+    const existingBySlug = await db.select().from(locations).where(slugWhere).limit(1);
 
     if (existingBySlug.length > 0) {
       console.log(
@@ -201,10 +202,10 @@ export const locationPagesServiceEnhanced = {
       return existingBySlug[0] as Location;
     }
 
-    // Generate SEO content
+    // 4) Generate SEO content
     const seoContent = generateSEOContent(input);
 
-    // Create new location record
+    // 5) Create new location record
     const [newLocation] = await db
       .insert(locations)
       .values({
@@ -227,14 +228,30 @@ export const locationPagesServiceEnhanced = {
       })
       .$returningId();
 
-    // Fetch the created location
+    // ✅ Guard: returning id must exist (prevents Vitest/mock crashes & real DB surprises)
+    if (!newLocation?.id) {
+      throw new Error(
+        `[LocationPagesEnhanced] Insert failed: returning id missing for location "${input.name}"`,
+      );
+    }
+
+    // 6) Fetch the created row
     const [created] = await db
       .select()
       .from(locations)
       .where(eq(locations.id, newLocation.id))
       .limit(1);
 
-    console.log(`[LocationPagesEnhanced] Created new location: ${created.name} (${created.type})`);
+    // ✅ Guard: must be able to re-fetch
+    if (!created) {
+      throw new Error(
+        `[LocationPagesEnhanced] Inserted location id=${newLocation.id} but could not re-fetch row`,
+      );
+    }
+
+    console.log(
+      `[LocationPagesEnhanced] Created new location: ${created.name} (${created.type})`,
+    );
 
     return created as Location;
   },
@@ -318,22 +335,15 @@ export const locationPagesServiceEnhanced = {
   async syncLegacyTables(locationId: number): Promise<void> {
     const db = await getDb();
 
-    // Get the location
-    const [location] = await db
-      .select()
-      .from(locations)
-      .where(eq(locations.id, locationId))
-      .limit(1);
+    const [location] = await db.select().from(locations).where(eq(locations.id, locationId)).limit(1);
 
     if (!location) {
       console.warn(`[LocationPagesEnhanced] Location ${locationId} not found for sync`);
       return;
     }
 
-    // Sync based on location type
     switch (location.type) {
-      case 'province':
-        // Check if province exists
+      case 'province': {
         const [existingProvince] = await db
           .select()
           .from(provinces)
@@ -351,91 +361,85 @@ export const locationPagesServiceEnhanced = {
           console.log(`[LocationPagesEnhanced] Synced province: ${location.name}`);
         }
         break;
+      }
 
-      case 'city':
-        // Get parent province
-        if (location.parentId) {
-          const [parentLocation] = await db
-            .select()
-            .from(locations)
-            .where(eq(locations.id, location.parentId))
-            .limit(1);
+      case 'city': {
+        if (!location.parentId) return;
 
-          if (parentLocation) {
-            const [province] = await db
-              .select()
-              .from(provinces)
-              .where(eq(provinces.name, parentLocation.name))
-              .limit(1);
+        const [parentLocation] = await db
+          .select()
+          .from(locations)
+          .where(eq(locations.id, location.parentId))
+          .limit(1);
 
-            if (province) {
-              // Check if city exists
-              const [existingCity] = await db
-                .select()
-                .from(cities)
-                .where(and(eq(cities.name, location.name), eq(cities.provinceId, province.id)))
-                .limit(1);
+        if (!parentLocation) return;
 
-              if (!existingCity) {
-                await db.insert(cities).values({
-                  name: location.name,
-                  slug: location.slug,
-                  provinceId: province.id,
-                  placeId: location.placeId,
-                  latitude: location.latitude,
-                  longitude: location.longitude,
-                  seoTitle: location.seoTitle,
-                  seoDescription: location.seoDescription,
-                  isMetro: 0,
-                });
-                console.log(`[LocationPagesEnhanced] Synced city: ${location.name}`);
-              }
-            }
-          }
+        const [province] = await db
+          .select()
+          .from(provinces)
+          .where(eq(provinces.name, parentLocation.name))
+          .limit(1);
+
+        if (!province) return;
+
+        const [existingCity] = await db
+          .select()
+          .from(cities)
+          .where(and(eq(cities.name, location.name), eq(cities.provinceId, province.id)))
+          .limit(1);
+
+        if (!existingCity) {
+          await db.insert(cities).values({
+            name: location.name,
+            slug: location.slug,
+            provinceId: province.id,
+            placeId: location.placeId,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            seoTitle: location.seoTitle,
+            seoDescription: location.seoDescription,
+            isMetro: 0,
+          });
+          console.log(`[LocationPagesEnhanced] Synced city: ${location.name}`);
         }
         break;
+      }
 
-      case 'suburb':
-        // Get parent city
-        if (location.parentId) {
-          const [parentLocation] = await db
-            .select()
-            .from(locations)
-            .where(eq(locations.id, location.parentId))
-            .limit(1);
+      case 'suburb': {
+        if (!location.parentId) return;
 
-          if (parentLocation) {
-            const [city] = await db
-              .select()
-              .from(cities)
-              .where(eq(cities.name, parentLocation.name))
-              .limit(1);
+        const [parentLocation] = await db
+          .select()
+          .from(locations)
+          .where(eq(locations.id, location.parentId))
+          .limit(1);
 
-            if (city) {
-              // Check if suburb exists
-              const [existingSuburb] = await db
-                .select()
-                .from(suburbs)
-                .where(and(eq(suburbs.name, location.name), eq(suburbs.cityId, city.id)))
-                .limit(1);
+        if (!parentLocation) return;
 
-              if (!existingSuburb) {
-                await db.insert(suburbs).values({
-                  name: location.name,
-                  slug: location.slug,
-                  cityId: city.id,
-                  placeId: location.placeId,
-                  latitude: location.latitude,
-                  longitude: location.longitude,
-                  seoTitle: location.seoTitle,
-                  seoDescription: location.seoDescription,
-                });
-                console.log(`[LocationPagesEnhanced] Synced suburb: ${location.name}`);
-              }
-            }
-          }
+        const [city] = await db.select().from(cities).where(eq(cities.name, parentLocation.name)).limit(1);
+        if (!city) return;
+
+        const [existingSuburb] = await db
+          .select()
+          .from(suburbs)
+          .where(and(eq(suburbs.name, location.name), eq(suburbs.cityId, city.id)))
+          .limit(1);
+
+        if (!existingSuburb) {
+          await db.insert(suburbs).values({
+            name: location.name,
+            slug: location.slug,
+            cityId: city.id,
+            placeId: location.placeId,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            seoTitle: location.seoTitle,
+            seoDescription: location.seoDescription,
+          });
+          console.log(`[LocationPagesEnhanced] Synced suburb: ${location.name}`);
         }
         break;
+      }
     }
   },
 
@@ -448,14 +452,9 @@ export const locationPagesServiceEnhanced = {
    * @param suburb - Suburb slug (optional)
    * @returns Location record
    */
-  async getLocationByPath(
-    province: string,
-    city?: string,
-    suburb?: string,
-  ): Promise<Location | null> {
+  async getLocationByPath(province: string, city?: string, suburb?: string): Promise<Location | null> {
     const db = await getDb();
 
-    // If suburb is provided, find it
     if (suburb) {
       const [location] = await db
         .select()
@@ -466,7 +465,6 @@ export const locationPagesServiceEnhanced = {
       return (location as Location) || null;
     }
 
-    // If city is provided, find it
     if (city) {
       const [location] = await db
         .select()
@@ -477,7 +475,6 @@ export const locationPagesServiceEnhanced = {
       return (location as Location) || null;
     }
 
-    // Otherwise, find province
     const [location] = await db
       .select()
       .from(locations)
@@ -492,12 +489,7 @@ export const locationPagesServiceEnhanced = {
    * Requirements 16.1-16.5: Link listings to locations via location_id
    * Requirements 25.1: Store Place ID with listing data
    *
-   * This is the main integration point for listing/development creation.
-   * It takes location data from the autocomplete and creates/finds the
-   * appropriate location record with full hierarchy.
-   *
-   * Property 32: Place ID storage on selection
-   * For any location selected from autocomplete, the Place ID should be stored
+   * Main integration point for listing/development creation.
    *
    * @param locationData - Location data from autocomplete or manual entry
    * @returns Location record with ID for foreign key reference
@@ -514,7 +506,7 @@ export const locationPagesServiceEnhanced = {
   }): Promise<Location> {
     console.log('[LocationPagesEnhanced] Resolving location:', locationData);
 
-    // If we have a Place ID, try to fetch full details from Google Places
+    // If we have a Place ID, try Google Places details first
     if (locationData.placeId) {
       try {
         const { googlePlacesService } = await import('./googlePlacesService');
@@ -525,18 +517,13 @@ export const locationPagesServiceEnhanced = {
         );
         googlePlacesService.terminateSessionToken(sessionToken);
 
-        if (!placeDetails) {
-          throw new Error('Place details not found');
-        }
+        if (!placeDetails) throw new Error('Place details not found');
 
-        // Resolve full hierarchy from Place Details
         const hierarchy = await this.resolveLocationHierarchy(placeDetails);
 
-        // Return the most specific location (suburb > city > province)
         const targetLocation = hierarchy.suburb || hierarchy.city || hierarchy.province;
 
         if (targetLocation) {
-          // Sync to legacy tables
           await this.syncLegacyTables(targetLocation.id);
           return targetLocation;
         }
@@ -545,18 +532,14 @@ export const locationPagesServiceEnhanced = {
           '[LocationPagesEnhanced] Failed to fetch Place Details, falling back to manual data:',
           error,
         );
-        // Fall through to manual creation
       }
     }
 
-    // Fallback: Create location from manual data
-    // This handles cases where Place ID is not available or API call failed
-
+    // Fallback: Create from manual data
     let provinceLocation: Location | null = null;
     let cityLocation: Location | null = null;
     let suburbLocation: Location | null = null;
 
-    // Create/find province
     if (locationData.province) {
       provinceLocation = await this.findOrCreateLocation({
         name: locationData.province,
@@ -568,7 +551,6 @@ export const locationPagesServiceEnhanced = {
       await this.syncLegacyTables(provinceLocation.id);
     }
 
-    // Create/find city
     if (locationData.city && provinceLocation) {
       cityLocation = await this.findOrCreateLocation({
         name: locationData.city,
@@ -581,7 +563,6 @@ export const locationPagesServiceEnhanced = {
       await this.syncLegacyTables(cityLocation.id);
     }
 
-    // Create/find suburb (if provided)
     if (locationData.suburb && cityLocation) {
       suburbLocation = await this.findOrCreateLocation({
         name: locationData.suburb,
@@ -595,7 +576,6 @@ export const locationPagesServiceEnhanced = {
       await this.syncLegacyTables(suburbLocation.id);
     }
 
-    // Return the most specific location
     const targetLocation = suburbLocation || cityLocation || provinceLocation;
 
     if (!targetLocation) {

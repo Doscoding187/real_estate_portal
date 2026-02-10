@@ -2,18 +2,45 @@ import { Request, Response, NextFunction } from 'express';
 import { developerSubscriptionService } from '../services/developerSubscriptionService';
 
 /**
+ * Helper to get developer ID ONLY from authenticated user context.
+ * NEVER trusts req.body, req.params, or any client-controlled input.
+ */
+function getAuthedDeveloperId(req: Request): number | null {
+  // Adjust these paths to match your actual auth middleware payload
+  // Common variations — pick / combine the ones that exist in your req.user
+  const possibleIds = [
+    req.user?.developerProfileId,
+    req.user?.developerId,
+    req.user?.developer?.id,
+    req.user?.id,                    // sometimes the developer row ID is the user ID
+    req.user?.profile?.developerId,
+  ];
+
+  for (const id of possibleIds) {
+    if (id != null) {
+      const parsed = typeof id === 'string' ? parseInt(id, 10) : Number(id);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Middleware to check if developer can create a development based on tier limits
  * Validates: Requirements 13.1, 13.4
  */
 export async function checkDevelopmentLimit(req: Request, res: Response, next: NextFunction) {
   try {
-    const developerId = parseInt(req.body.developerId || req.params.developerId);
+    const developerId = getAuthedDeveloperId(req);
 
     if (!developerId) {
-      return res.status(400).json({
+      return res.status(401).json({
         error: {
-          code: 'MISSING_DEVELOPER_ID',
-          message: 'Developer ID is required',
+          code: 'UNAUTHENTICATED_DEVELOPER',
+          message: 'Developer authentication required',
         },
       });
     }
@@ -52,13 +79,13 @@ export async function checkDevelopmentLimit(req: Request, res: Response, next: N
  */
 export async function checkLeadLimit(req: Request, res: Response, next: NextFunction) {
   try {
-    const developerId = parseInt(req.body.developerId || req.params.developerId);
+    const developerId = getAuthedDeveloperId(req);
 
     if (!developerId) {
-      return res.status(400).json({
+      return res.status(401).json({
         error: {
-          code: 'MISSING_DEVELOPER_ID',
-          message: 'Developer ID is required',
+          code: 'UNAUTHENTICATED_DEVELOPER',
+          message: 'Developer authentication required',
         },
       });
     }
@@ -97,13 +124,13 @@ export async function checkLeadLimit(req: Request, res: Response, next: NextFunc
  */
 export async function checkTeamMemberLimit(req: Request, res: Response, next: NextFunction) {
   try {
-    const developerId = parseInt(req.body.developerId || req.params.developerId);
+    const developerId = getAuthedDeveloperId(req);
 
     if (!developerId) {
-      return res.status(400).json({
+      return res.status(401).json({
         error: {
-          code: 'MISSING_DEVELOPER_ID',
-          message: 'Developer ID is required',
+          code: 'UNAUTHENTICATED_DEVELOPER',
+          message: 'Developer authentication required',
         },
       });
     }
@@ -137,20 +164,20 @@ export async function checkTeamMemberLimit(req: Request, res: Response, next: Ne
 }
 
 /**
- * Middleware to check if developer has access to a feature based on tier
+ * Middleware factory to check access to premium features based on tier
  */
-export async function checkFeatureAccess(
+export function checkFeatureAccess(
   feature: 'crm' | 'advanced_analytics' | 'bond_integration',
 ) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const developerId = parseInt(req.body.developerId || req.params.developerId);
+      const developerId = getAuthedDeveloperId(req);
 
       if (!developerId) {
-        return res.status(400).json({
+        return res.status(401).json({
           error: {
-            code: 'MISSING_DEVELOPER_ID',
-            message: 'Developer ID is required',
+            code: 'UNAUTHENTICATED_DEVELOPER',
+            message: 'Developer authentication required',
           },
         });
       }
@@ -171,15 +198,15 @@ export async function checkFeatureAccess(
 
       switch (feature) {
         case 'crm':
-          hasAccess = subscription.limits.crmIntegrationEnabled;
+          hasAccess = subscription.limits.crmIntegrationEnabled ?? false;
           featureName = 'CRM Integration';
           break;
         case 'advanced_analytics':
-          hasAccess = subscription.limits.advancedAnalyticsEnabled;
+          hasAccess = subscription.limits.advancedAnalyticsEnabled ?? false;
           featureName = 'Advanced Analytics';
           break;
         case 'bond_integration':
-          hasAccess = subscription.limits.bondIntegrationEnabled;
+          hasAccess = subscription.limits.bondIntegrationEnabled ?? false;
           featureName = 'Bond Originator Integration';
           break;
       }

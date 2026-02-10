@@ -15,9 +15,9 @@
  * Requirements: 1.2, 2.1
  */
 
-import { Play, Eye, Heart, Loader2, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
+import { Play, Eye, Heart } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { cardVariants, buttonVariants } from '@/lib/animations/exploreAnimations';
 import { designTokens } from '@/lib/design-tokens';
@@ -57,17 +57,14 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
   };
 
   const formatViews = (views: number) => {
-    if (views >= 1000000) {
-      return `${(views / 1000000).toFixed(1)}M`;
-    } else if (views >= 1000) {
-      return `${(views / 1000).toFixed(1)}K`;
-    }
+    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
+    if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
     return views.toString();
   };
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsSaved(!isSaved);
+    setIsSaved(prev => !prev);
     onSave();
   };
 
@@ -97,17 +94,9 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
         {!imageLoaded && (
           <motion.div
             className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200"
-            animate={{
-              backgroundPosition: ['0% 0%', '100% 0%'],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: 'linear',
-            }}
-            style={{
-              backgroundSize: '200% 100%',
-            }}
+            animate={{ backgroundPosition: ['0% 0%', '100% 0%'] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+            style={{ backgroundSize: '200% 100%' }}
           />
         )}
 
@@ -118,13 +107,8 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
           className={cn('w-full h-full object-cover', imageLoaded ? 'opacity-100' : 'opacity-0')}
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
-          animate={{
-            scale: isHovered ? 1.05 : 1,
-          }}
-          transition={{
-            duration: 0.5,
-            ease: 'easeOut',
-          }}
+          animate={{ scale: isHovered ? 1.05 : 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
         />
 
         {/* Glass overlay with play button */}
@@ -161,6 +145,7 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
         {/* Save button - glass overlay */}
         <motion.button
           onClick={handleSave}
+          type="button"
           className="absolute top-3 right-3 w-10 h-10 glass-overlay rounded-full flex items-center justify-center z-10"
           variants={buttonVariants}
           whileHover="hover"
@@ -169,11 +154,10 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.15 }}
           aria-label={isSaved ? 'Unsave video' : 'Save video'}
+          aria-pressed={isSaved}
         >
           <motion.div
-            animate={{
-              scale: isSaved ? [1, 1.2, 1] : 1,
-            }}
+            animate={{ scale: isSaved ? [1, 1.2, 1] : 1 }}
             transition={{ duration: 0.3 }}
           >
             <Heart

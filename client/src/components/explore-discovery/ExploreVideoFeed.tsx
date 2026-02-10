@@ -45,32 +45,36 @@ export function ExploreVideoFeed({ categoryId }: ExploreVideoFeedProps) {
     );
   }
 
-  // Error state
-  if (error && videos.length === 0) {
+  // Error or Empty state - Graceful fallback
+  if ((error && videos.length === 0) || videos.length === 0) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black">
-        <div className="flex flex-col items-center gap-4 px-6 text-center">
-          <div className="text-red-500 text-6xl">⚠️</div>
-          <p className="text-white text-lg">{error}</p>
-          <button
-            onClick={() => refetch()}
-            className="px-6 py-3 bg-white text-black rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Empty state
-  if (videos.length === 0) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black">
-        <div className="flex flex-col items-center gap-4 px-6 text-center">
+        <div className="flex flex-col items-center gap-6 px-6 text-center max-w-md">
           <div className="text-gray-400 text-6xl">🎥</div>
-          <p className="text-white text-lg">No videos found</p>
-          <p className="text-gray-400">Check back later for new content</p>
+
+          <div className="space-y-2">
+            <h3 className="text-white text-xl font-semibold">No videos yet</h3>
+            <p className="text-gray-400">
+              {error
+                ? 'We encountered an error loading the video feed.'
+                : 'We are still curating the best property videos for you.'}
+            </p>
+          </div>
+
+          <div className="flex flex-col w-full gap-3">
+            <button
+              onClick={() => (window.location.href = '/explore/map')}
+              className="w-full px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-gray-100 transition-colors"
+            >
+              Browse Properties on Map
+            </button>
+            <button
+              onClick={() => (window.location.href = '/explore/home')}
+              className="w-full px-6 py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-colors backdrop-blur-sm"
+            >
+              Back to Explore Home
+            </button>
+          </div>
         </div>
       </div>
     );

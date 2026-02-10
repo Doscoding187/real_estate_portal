@@ -96,30 +96,36 @@ export const exploreRouter = router({
   // Record interaction
   recordInteraction: publicProcedure
     .input(
-      z.object({
-        shortId: z.number(),
-        interactionType: z.enum([
-          'impression',
-          'view',
-          'skip',
-          'save',
-          'share',
-          'contact',
-          'whatsapp',
-          'book_viewing',
-        ]),
-        duration: z.number().optional(),
-        feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer', 'agency']),
-        feedContext: z.record(z.string(), z.any()).optional(),
-        deviceType: z.enum(['mobile', 'tablet', 'desktop']).default('mobile'),
-      }),
+      z
+        .object({
+          contentId: z.number().optional(),
+          shortId: z.number().optional(),
+          interactionType: z.enum([
+            'impression',
+            'view',
+            'skip',
+            'save',
+            'share',
+            'contact',
+            'whatsapp',
+            'book_viewing',
+          ]),
+          duration: z.number().optional(),
+          feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer', 'agency']),
+          feedContext: z.record(z.string(), z.any()).optional(),
+          deviceType: z.enum(['mobile', 'tablet', 'desktop']).default('mobile'),
+        })
+        .refine(data => data.contentId || data.shortId, {
+          message: 'Either contentId or shortId must be provided',
+        }),
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user?.id;
       const sessionId = `session-${Date.now()}`; // Generate session ID
+      const resolvedContentId = input.contentId ?? input.shortId!;
 
       await exploreInteractionService.recordInteraction({
-        shortId: input.shortId,
+        contentId: resolvedContentId,
         userId,
         sessionId,
         interactionType: input.interactionType,
@@ -137,29 +143,41 @@ export const exploreRouter = router({
   // Save property
   saveProperty: protectedProcedure
     .input(
-      z.object({
-        shortId: z.number(),
-      }),
+      z
+        .object({
+          contentId: z.number().optional(),
+          shortId: z.number().optional(),
+        })
+        .refine(data => data.contentId || data.shortId, {
+          message: 'Either contentId or shortId must be provided',
+        }),
     )
     .mutation(async ({ input, ctx }) => {
-      await exploreInteractionService.saveProperty(input.shortId, ctx.user.id);
+      const resolvedContentId = input.contentId ?? input.shortId!;
+      await exploreInteractionService.saveProperty(resolvedContentId, ctx.user.id);
       return { success: true };
     }),
 
   // Share property
   shareProperty: publicProcedure
     .input(
-      z.object({
-        shortId: z.number(),
-        platform: z.string().optional(),
-      }),
+      z
+        .object({
+          contentId: z.number().optional(),
+          shortId: z.number().optional(),
+          platform: z.string().optional(),
+        })
+        .refine(data => data.contentId || data.shortId, {
+          message: 'Either contentId or shortId must be provided',
+        }),
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user?.id;
       const sessionId = `session-${Date.now()}`;
+      const resolvedContentId = input.contentId ?? input.shortId!;
 
       await exploreInteractionService.shareProperty(
-        input.shortId,
+        resolvedContentId,
         userId,
         sessionId,
         input.platform,
@@ -208,7 +226,7 @@ export const exploreRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { db } = await import('./db');
-      const { exploreShorts, agents, developers } = await import('../drizzle/schema');
+      const { exploreContent, agents, developers } = await import('../drizzle/schema');
       const { eq } = await import('drizzle-orm');
 
       // Get user's agent or developer ID and detect agency affiliation
@@ -216,6 +234,7 @@ export const exploreRouter = router({
       let agentId: number | null = null;
       let developerId: number | null = null;
       let agencyId: number | null = null;
+      let creatorType: 'user' | 'agent' | 'developer' | 'agency' = 'user';
 
       if (ctx.user.role === 'agent') {
         const agent = await db
@@ -229,6 +248,7 @@ export const exploreRouter = router({
 
         if (agent[0]) {
           agentId = agent[0].id;
+          creatorType = 'agent';
 
           // Only attribute to agency if agent opted in and has an agency
           // Requirements 10.4: Allow agents to opt-out of agency attribution
@@ -248,6 +268,7 @@ export const exploreRouter = router({
           .where(eq(developers.userId, ctx.user.id))
           .limit(1);
         developerId = developer[0]?.id || null;
+        creatorType = 'developer';
 
         console.log(`[ExploreUpload] Developer ${developerId} uploading`);
       }
@@ -289,30 +310,33 @@ export const exploreRouter = router({
         agencyId,
       });
 
-      // Create the explore short with agency attribution
-      const result = await db.insert(exploreShorts).values({
-        listingId: input.listingId || null,
-        developmentId: input.developmentId || null,
-        agentId,
-        developerId,
-        agencyId, // NEW: Agency attribution
+      // Create the explore content (unified system - no more exploreShorts)
+      const result = await db.insert(exploreContent).values({
+        contentType: 'video',
+        referenceId: input.listingId || input.developmentId || 0,
+        creatorId: ctx.user.id,
+        creatorType,
+        agencyId,
         title: input.title,
-        caption: input.caption || null,
-        primaryMediaId: 1, // Placeholder - would be actual media ID in production
-        mediaIds: JSON.stringify(input.mediaUrls),
-        highlights: input.highlights
-          ? JSON.stringify(input.highlights.filter(h => h.trim()))
-          : null,
-        performanceScore: 0,
-        boostPriority: 0,
-        isPublished: 1,
+        description: input.caption || null,
+        videoUrl: input.mediaUrls[0] || null,
+        thumbnailUrl: input.mediaUrls[1] || null,
+        metadata: {
+          highlights: input.highlights?.filter(h => h.trim()) || [],
+          listingId: input.listingId,
+          developmentId: input.developmentId,
+          agentId,
+          developerId,
+          mediaUrls: input.mediaUrls,
+        },
+        isActive: 1,
         isFeatured: 0,
-        publishedAt: new Date().toISOString(),
       });
 
       return {
         success: true,
         shortId: Number(result.insertId),
+        contentId: Number(result.insertId), // Return both for compatibility
       };
     }),
 });

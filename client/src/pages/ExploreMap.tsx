@@ -1,27 +1,18 @@
 /**
- * ExploreMap Page
+ * ExploreMap Page (Aligned with simplified filter API)
  *
- * Map-centric view for exploring properties with synchronized feed.
- * Features modern design with clean map pins, glass overlays, and smooth interactions.
- *
- * Requirements: 3.1, 3.2, 3.3
- *
- * Features:
- * - Map/feed synchronization with throttling and debouncing
- * - Modern category filter bar with pill design
- * - Clean map pins with subtle shadows
- * - Glass overlay controls
- * - Integrated with useExploreCommonState for consistency
+ * - Keeps: category selector + map hybrid view + filter badge
+ * - Uses ResponsiveFilterPanel with simplified API (Zustand-backed)
+ * - Removes legacy prop-heavy filter wiring
  */
 
 import { motion } from 'framer-motion';
 import { SlidersHorizontal, MapPin } from 'lucide-react';
+
 import { MapHybridView } from '@/components/explore-discovery/MapHybridView';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
-import { FilterPanel } from '@/components/explore-discovery/FilterPanel';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
-import { IconButton } from '@/components/ui/soft/IconButton';
 
 export default function ExploreMap() {
   const {
@@ -32,9 +23,7 @@ export default function ExploreMap() {
     toggleFilters,
     filters,
     filterActions,
-  } = useExploreCommonState({
-    initialViewMode: 'map',
-  });
+  } = useExploreCommonState({ initialViewMode: 'map' });
 
   const handlePropertyClick = (propertyId: number) => {
     console.log('Navigate to property:', propertyId);
@@ -43,7 +32,7 @@ export default function ExploreMap() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Modern category filter bar with glass effect */}
+      {/* Top bar */}
       <motion.div
         className="bg-white/95 backdrop-blur-md border-b border-gray-200/50 px-4 py-3 z-20 shadow-sm"
         initial={{ y: -20, opacity: 0 }}
@@ -51,13 +40,11 @@ export default function ExploreMap() {
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <div className="flex items-center gap-3">
-          {/* Map icon indicator */}
           <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-full">
             <MapPin className="w-4 h-4 text-indigo-600" />
             <span className="text-sm font-medium text-indigo-900">Map View</span>
           </div>
 
-          {/* Category selector with modern styling */}
           <div className="flex-1 overflow-hidden">
             <LifestyleCategorySelector
               selectedCategoryId={selectedCategoryId}
@@ -66,7 +53,6 @@ export default function ExploreMap() {
             />
           </div>
 
-          {/* Modern filter button with accent gradient */}
           <motion.button
             onClick={toggleFilters}
             className="relative flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
@@ -89,7 +75,7 @@ export default function ExploreMap() {
         </div>
       </motion.div>
 
-      {/* Map hybrid view with modern design */}
+      {/* Map view */}
       <motion.div
         className="flex-1 overflow-hidden"
         initial={{ opacity: 0 }}
@@ -103,25 +89,11 @@ export default function ExploreMap() {
         />
       </motion.div>
 
-      {/* Responsive Filter Panel with modern design */}
+      {/* Filters (simplified API) */}
       <ResponsiveFilterPanel
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
-        propertyType={filters.propertyType}
-        onPropertyTypeChange={filterActions.setPropertyType}
-        priceMin={filters.priceMin}
-        priceMax={filters.priceMax}
-        onPriceChange={(min, max) =>
-          filterActions.updateCommonFilters({ priceMin: min, priceMax: max })
-        }
-        residentialFilters={filters.residential}
-        onResidentialFiltersChange={filterActions.updateResidentialFilters}
-        developmentFilters={filters.development}
-        onDevelopmentFiltersChange={filterActions.updateDevelopmentFilters}
-        landFilters={filters.land}
-        onLandFiltersChange={filterActions.updateLandFilters}
-        filterCount={filterActions.getFilterCount()}
-        onClearAll={filterActions.clearFilters}
+        onApply={() => setShowFilters(false)}
       />
     </div>
   );
