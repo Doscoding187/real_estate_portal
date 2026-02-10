@@ -1,169 +1,153 @@
-import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
-import { render } from '../../../test-utils/render';
-import { OfflineIndicator } from '../OfflineIndicator';
-import * as useOnlineStatusModule from '@/hooks/useOnlineStatus';
-import { vi } from 'vitest';
+import React from "react";
+import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 
-// Mock Framer Motion to avoid animation issues in tests
-vi.mock('framer-motion', () => ({
+// Stable module mock (avoids ESM spy issues + hook-order crashes)
+const useOnlineStatusMock = vi.fn<boolean, []>();
+
+vi.mock("@/hooks/useOnlineStatus", () => ({
+  useOnlineStatus: () => useOnlineStatusMock(),
+}));
+
+vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: (props: any) => <div {...props} />,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
-describe('OfflineIndicator', () => {
-  let useOnlineStatusSpy: any;
+import { OfflineIndicator } from "../OfflineIndicator";
 
+describe("OfflineIndicator", () => {
   beforeEach(() => {
-    useOnlineStatusSpy = vi.spyOn(useOnlineStatusModule, 'useOnlineStatus');
     vi.useFakeTimers();
+    useOnlineStatusMock.mockReset();
   });
 
   afterEach(() => {
-    useOnlineStatusSpy.mockRestore();
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
   });
 
-  it('should show offline banner when offline', () => {
-    useOnlineStatusSpy.mockReturnValue(false);
-
+  it("should show offline banner when offline", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     render(<OfflineIndicator />);
 
     expect(screen.getByText(/you're offline/i)).toBeInTheDocument();
     expect(screen.getByText(/showing cached content/i)).toBeInTheDocument();
   });
 
-  it('should not show banner when online', () => {
-    useOnlineStatusSpy.mockReturnValue(true);
-
+  it("should not show banner when online", () => {
+    useOnlineStatusMock.mockReturnValue(true);
     render(<OfflineIndicator />);
 
     expect(screen.queryByText(/you're offline/i)).not.toBeInTheDocument();
   });
 
-  it('should show reconnection message when coming back online', () => {
+  it("should show reconnection message when coming back online", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     const { rerender } = render(<OfflineIndicator />);
 
-    // Start offline
-    useOnlineStatusSpy.mockReturnValue(false);
-    rerender(<OfflineIndicator />);
-
-    // Come back online
-    useOnlineStatusSpy.mockReturnValue(true);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      useOnlineStatusMock.mockReturnValue(true);
+      rerender(<OfflineIndicator />);
+    });
 
     expect(screen.getByText(/back online/i)).toBeInTheDocument();
     expect(screen.getByText(/content updated/i)).toBeInTheDocument();
   });
 
-  it('should auto-dismiss reconnection message after 3 seconds', async () => {
+  it("should auto-dismiss reconnection message after 3 seconds", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     const { rerender } = render(<OfflineIndicator />);
 
-    // Start offline
-    useOnlineStatusSpy.mockReturnValue(false);
-    rerender(<OfflineIndicator />);
-
-    // Come back online
-    useOnlineStatusSpy.mockReturnValue(true);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      useOnlineStatusMock.mockReturnValue(true);
+      rerender(<OfflineIndicator />);
+    });
 
     expect(screen.getByText(/back online/i)).toBeInTheDocument();
 
-    // Fast-forward 3 seconds
-    vi.advanceTimersByTime(3000);
-    rerender(<OfflineIndicator />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/back online/i)).not.toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(3000);
     });
+
+    expect(screen.queryByText(/back online/i)).not.toBeInTheDocument();
   });
 
-  it('should have proper ARIA attributes for offline banner', () => {
-    useOnlineStatusSpy.mockReturnValue(false);
-
+  it("should have proper ARIA attributes for offline banner", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     render(<OfflineIndicator />);
 
-    const banner = screen.getByRole('alert');
-    expect(banner).toHaveAttribute('aria-live', 'assertive');
+    const banner = screen.getByRole("alert");
+    expect(banner).toHaveAttribute("aria-live", "assertive");
   });
 
-  it('should have proper ARIA attributes for reconnection banner', () => {
+  it("should have proper ARIA attributes for reconnection banner", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     const { rerender } = render(<OfflineIndicator />);
 
-    // Start offline
-    useOnlineStatusSpy.mockReturnValue(false);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      useOnlineStatusMock.mockReturnValue(true);
+      rerender(<OfflineIndicator />);
+    });
 
-    // Come back online
-    useOnlineStatusSpy.mockReturnValue(true);
-    rerender(<OfflineIndicator />);
-
-    const banner = screen.getByRole('alert');
-    expect(banner).toHaveAttribute('aria-live', 'polite');
+    const banner = screen.getByRole("alert");
+    expect(banner).toHaveAttribute("aria-live", "polite");
   });
 
-  it('should show WifiOff icon when offline', () => {
-    useOnlineStatusSpy.mockReturnValue(false);
-
+  it("should show WifiOff icon when offline", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     const { container } = render(<OfflineIndicator />);
 
-    // Check for WifiOff icon (lucide-react renders as svg)
-    const icon = container.querySelector('svg');
-    expect(icon).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
-  it('should show Wifi icon when reconnected', () => {
+  it("should show Wifi icon when reconnected", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     const { rerender, container } = render(<OfflineIndicator />);
 
-    // Start offline
-    useOnlineStatusSpy.mockReturnValue(false);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      useOnlineStatusMock.mockReturnValue(true);
+      rerender(<OfflineIndicator />);
+    });
 
-    // Come back online
-    useOnlineStatusSpy.mockReturnValue(true);
-    rerender(<OfflineIndicator />);
-
-    // Check for Wifi icon
-    const icon = container.querySelector('svg');
-    expect(icon).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
-  it('should not show reconnection message if never went offline', () => {
-    useOnlineStatusSpy.mockReturnValue(true);
-
+  it("should not show reconnection message if never went offline", () => {
+    useOnlineStatusMock.mockReturnValue(true);
     render(<OfflineIndicator />);
 
     expect(screen.queryByText(/back online/i)).not.toBeInTheDocument();
   });
 
-  it('should handle multiple offline/online cycles', () => {
+  it("should handle multiple offline/online cycles", () => {
+    useOnlineStatusMock.mockReturnValue(false);
     const { rerender } = render(<OfflineIndicator />);
 
-    // First offline
-    useOnlineStatusSpy.mockReturnValue(false);
-    rerender(<OfflineIndicator />);
     expect(screen.getByText(/you're offline/i)).toBeInTheDocument();
 
-    // First online
-    useOnlineStatusSpy.mockReturnValue(true);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      useOnlineStatusMock.mockReturnValue(true);
+      rerender(<OfflineIndicator />);
+    });
     expect(screen.getByText(/back online/i)).toBeInTheDocument();
 
-    // Wait for auto-dismiss
-    vi.advanceTimersByTime(3000);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
 
-    // Second offline
-    useOnlineStatusSpy.mockReturnValue(false);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      useOnlineStatusMock.mockReturnValue(false);
+      rerender(<OfflineIndicator />);
+    });
     expect(screen.getByText(/you're offline/i)).toBeInTheDocument();
 
-    // Second online
-    useOnlineStatusSpy.mockReturnValue(true);
-    rerender(<OfflineIndicator />);
+    act(() => {
+      useOnlineStatusMock.mockReturnValue(true);
+      rerender(<OfflineIndicator />);
+    });
     expect(screen.getByText(/back online/i)).toBeInTheDocument();
   });
 });
