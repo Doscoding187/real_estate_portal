@@ -6,6 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { EmptyState, EmptyStateCard, InlineEmptyState, useEmptyState } from '../EmptyState';
 import { renderHook } from '@testing-library/react';
 
@@ -158,17 +159,20 @@ describe('EmptyState', () => {
       expect(icon).toBeInTheDocument();
     });
 
-    it('supports keyboard navigation', () => {
+    it('supports keyboard navigation', async () => {
       const handleAction = vi.fn();
+      const user = userEvent.setup();
 
       render(<EmptyState type="noResults" onAction={handleAction} />);
 
       const button = screen.getByText('Clear Filters');
+      
+      // Focus the button
       button.focus();
-
       expect(document.activeElement).toBe(button);
 
-      fireEvent.keyDown(button, { key: 'Enter', code: 'Enter', charCode: 13 });
+      // Press Enter key
+      await user.keyboard('{Enter}');
       expect(handleAction).toHaveBeenCalled();
     });
   });

@@ -1,10 +1,6 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { vi } from 'vitest';
-
-// ✅ adjust this import to your project
-import { trpc } from '@/lib/trpc';
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -14,22 +10,11 @@ const createTestQueryClient = () =>
     },
   });
 
-function createMockTrpcClient() {
-  return {
-    query: vi.fn(),
-    mutation: vi.fn(),
-    subscription: vi.fn(),
-  } as any;
-}
-
 const customRender = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) => {
   const queryClient = createTestQueryClient();
-  const trpcClient = createMockTrpcClient();
 
   const AllTheProviders = ({ children }: { children: React.ReactNode }) => (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </trpc.Provider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
   return render(ui, { wrapper: AllTheProviders, ...options });
@@ -37,4 +22,3 @@ const customRender = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>
 
 export * from '@testing-library/react';
 export { customRender as render };
-

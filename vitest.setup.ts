@@ -18,27 +18,97 @@ import { cleanup } from '@testing-library/react';
 // ✅ tRPC mock (prevents "Unable to find tRPC Context" in unit tests)
 const trpcMock = {
   trpc: {
+    properties: {
+      search: {
+        useQuery: vi.fn(() => ({
+          data: [],
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+        })),
+      },
+      getById: {
+        useQuery: vi.fn(() => ({
+          data: null,
+          isLoading: false,
+          error: null,
+        })),
+      },
+      getAll: {
+        useQuery: vi.fn(() => ({
+          data: [],
+          isLoading: false,
+          error: null,
+        })),
+      },
+      getFilterCounts: {
+        useQuery: vi.fn(() => ({
+          data: {},
+          isLoading: false,
+          error: null,
+        })),
+      },
+      myProperties: {
+        useQuery: vi.fn(() => ({
+          data: [],
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+        })),
+      },
+      delete: {
+        useMutation: vi.fn(() => ({
+          mutate: vi.fn(),
+          mutateAsync: vi.fn(),
+        })),
+      },
+    },
     exploreApi: {
       toggleSaveProperty: {
-        useMutation: () => ({
+        useMutation: vi.fn(() => ({
           mutate: vi.fn(),
-          mutateAsync: vi.fn(async () => ({ data: { saved: false } })),
+          mutateAsync: vi.fn(async () => ({ data: { saved: true } })),
           isPending: false,
           isLoading: false,
           error: null,
-          data: { data: { saved: false } },
-        }),
+          reset: vi.fn(),
+        })),
+      },
+      getFeed: {
+        useQuery: vi.fn(() => ({
+          data: { 
+            items: [], 
+            shorts: [], 
+            hasMore: false, 
+            offset: 0, 
+            feedType: "recommended" 
+          },
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+        })),
+      },
+      recordInteraction: {
+        useMutation: vi.fn(() => ({
+          mutate: vi.fn(),
+          mutateAsync: vi.fn(),
+        })),
       },
     },
     explore: {
       getFeed: {
-        useQuery: () => ({
-          data: { data: { items: [] } },
+        useQuery: vi.fn(() => ({
+          data: { items: [], totalCount: 0 },
           isLoading: false,
-          isFetching: false,
-          isError: false,
           error: null,
-        }),
+          refetch: vi.fn(),
+        })),
+      },
+      recordInteraction: {
+        useMutation: vi.fn(() => ({
+          mutate: vi.fn(),
+          mutateAsync: vi.fn(),
+        })),
       },
     },
   },
@@ -203,7 +273,7 @@ beforeEach(() => {
       value: typeof window.dispatchEvent === 'function' ? window.dispatchEvent : (_: Event) => true,
     });
 
-    // Many “online/offline” components rely on these
+    // Many "online/offline" components rely on these
     if (typeof window.addEventListener !== 'function') {
       window.addEventListener = vi.fn() as any;
     }
