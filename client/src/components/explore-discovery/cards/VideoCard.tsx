@@ -156,10 +156,7 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
           aria-label={isSaved ? 'Unsave video' : 'Save video'}
           aria-pressed={isSaved}
         >
-          <motion.div
-            animate={{ scale: isSaved ? [1, 1.2, 1] : 1 }}
-            transition={{ duration: 0.3 }}
-          >
+          <motion.div animate={{ scale: isSaved ? [1, 1.2, 1] : 1 }} transition={{ duration: 0.3 }}>
             <Heart
               className={cn(
                 'w-5 h-5 transition-all duration-300',

@@ -38,11 +38,7 @@ async function insertTestUser(email: string) {
     lastName: 'User',
   });
 
-  const row = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, email))
-    .get();
+  const row = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).get();
 
   if (!row) throw new Error(`Failed to create test user email=${email}`);
   return row.id as number;
@@ -98,7 +94,10 @@ describe.skip('Trending Suburbs PBT', () => {
         .select({ id: locationSearches.id })
         .from(locationSearches)
         .where(
-          and(eq(locationSearches.locationId, testLocationId), sql`${locationSearches.userId} IS NULL`),
+          and(
+            eq(locationSearches.locationId, testLocationId),
+            sql`${locationSearches.userId} IS NULL`,
+          ),
         )
         .get();
 

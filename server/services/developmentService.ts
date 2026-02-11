@@ -1,7 +1,11 @@
 import { sql, eq, desc, and, inArray } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { randomUUID } from 'crypto';
 import { getDb } from '../db-connection';
+import { generateUniqueSlug } from '../_core/utils/slug';
+import { normalizeForPublish, validateNormalizedPayload } from './publishNormalizer';
+import type { NormalizedDevelopmentPayload, WizardData } from './publishNormalizer';
 
 import {
   developments,
@@ -9,6 +13,8 @@ import {
   unitTypes,
   developmentPhases,
   developerBrandProfiles,
+  developmentDrafts,
+  locations,
 } from '../../drizzle/schema';
 
 // ===========================================================================
@@ -19,6 +25,27 @@ type DevelopmentRow = InferSelectModel<typeof developments>;
 type DeveloperRow = InferSelectModel<typeof developers>;
 type UnitTypeRow = InferSelectModel<typeof unitTypes>;
 type DevelopmentPhaseRow = InferSelectModel<typeof developmentPhases>;
+
+interface CreateDevelopmentData {
+  unitTypes?: unknown[];
+  amenities?: unknown;
+  estateSpecs?: unknown;
+  specifications?: unknown;
+  phases?: unknown[];
+  highlights?: unknown;
+  features?: unknown;
+  videos?: unknown;
+  floorPlans?: unknown;
+  brochures?: unknown;
+  images?: unknown;
+  [key: string]: unknown;
+}
+
+interface DevelopmentMetadata {
+  brandProfileId?: number;
+  ownerType?: 'platform' | 'developer';
+  [key: string]: unknown;
+}
 
 // ===========================================================================
 // UTILITIES
@@ -72,6 +99,14 @@ function parseJsonField(field: unknown): unknown[] {
 function normalizeAmenities(amenities: unknown): string[] {
   if (Array.isArray(amenities)) return amenities as string[];
 
+  if (amenities && typeof amenities === 'object') {
+    const standard = Array.isArray((amenities as any).standard) ? (amenities as any).standard : [];
+    const additional = Array.isArray((amenities as any).additional)
+      ? (amenities as any).additional
+      : [];
+    return [...standard, ...additional].filter(Boolean);
+  }
+
   if (typeof amenities === 'string') {
     const parsed = parseJsonMaybeTwice<any>(amenities, null);
     if (Array.isArray(parsed)) return parsed;
@@ -82,6 +117,224 @@ function normalizeAmenities(amenities: unknown): string[] {
   }
 
   return [];
+}
+
+type TransactionType = 'for_sale' | 'for_rent' | 'auction';
+
+function normalizeTransactionType(input: unknown): TransactionType {
+  const s = String(input ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/-/g, '_');
+
+  if (['for_rent', 'rent', 'to_rent', 'rental'].includes(s)) return 'for_rent';
+  if (['auction', 'auctions'].includes(s)) return 'auction';
+
+  return 'for_sale';
+}
+
+// ===========================================================================
+// INTERNAL SAFE HELPERS (AUTO-RESTORED)
+// ===========================================================================
+
+function boolToInt(value: unknown): 0 | 1 {
+  if (value === true) return 1;
+  if (value === false) return 0;
+  return value ? 1 : 0;
+}
+
+function sanitizeString(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  return s.length > 0 ? s : null;
+}
+
+function sanitizeInt(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = parseInt(String(value), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sanitizeDecimal(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sanitizeDate(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string') {
+    const s = value.trim();
+    return s.length > 0 ? s : null;
+  }
+  return null;
+}
+
+function sanitizeEnum<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T | null,
+): T | null {
+  const s = String(value ?? '').trim();
+  if ((allowed as readonly string[]).includes(s)) return s as T;
+  return fallback;
+}
+
+function requireEnum<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
+  const sanitized = sanitizeEnum(value, allowed, null);
+  if (sanitized) return sanitized;
+  throw new TRPCError({ code: 'BAD_REQUEST', message: `Invalid ${label}` });
+}
+
+function normalizeImages(input: unknown): unknown[] {
+  if (Array.isArray(input)) return input;
+  if (input && typeof input === 'object') return [input];
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === 'string') {
+        const parsedAgain = JSON.parse(parsed);
+        if (Array.isArray(parsedAgain)) return parsedAgain;
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function stringifyJsonValue(value: unknown, fallback: unknown): string {
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value ?? fallback);
+  } catch {
+    return JSON.stringify(fallback);
+  }
+}
+
+function createError(message: string, code: string, meta?: Record<string, unknown>): TRPCError {
+  return new TRPCError({
+    code: code as any,
+    message,
+    cause: meta as any,
+  });
+}
+
+function handleDatabaseError(error: unknown, context?: Record<string, unknown>): never {
+  const message =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : 'Database error';
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message,
+    cause: { context, error } as any,
+  });
+}
+
+function computeRentRangeFromUnits(
+  unitTypes?: Array<Record<string, unknown>> | null,
+): { monthlyRentFrom: number | null; monthlyRentTo: number | null } {
+  if (!Array.isArray(unitTypes) || unitTypes.length === 0) {
+    return { monthlyRentFrom: null, monthlyRentTo: null };
+  }
+
+  let minFrom: number | null = null;
+  let maxTo: number | null = null;
+
+  for (const unit of unitTypes) {
+    const from = sanitizeDecimal((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent);
+    const to = sanitizeDecimal((unit as any).monthlyRentTo);
+    if (from !== null) minFrom = minFrom === null ? from : Math.min(minFrom, from);
+    if (to !== null) maxTo = maxTo === null ? to : Math.max(maxTo, to);
+  }
+
+  return { monthlyRentFrom: minFrom, monthlyRentTo: maxTo };
+}
+
+function computeAuctionRangeFromUnits(
+  unitTypes?: Array<Record<string, unknown>> | null,
+): {
+  auctionStartDate: string | null;
+  auctionEndDate: string | null;
+  startingBidFrom: number | null;
+  reservePriceFrom: number | null;
+} {
+  if (!Array.isArray(unitTypes) || unitTypes.length === 0) {
+    return {
+      auctionStartDate: null,
+      auctionEndDate: null,
+      startingBidFrom: null,
+      reservePriceFrom: null,
+    };
+  }
+
+  let earliestStart: string | null = null;
+  let latestEnd: string | null = null;
+  let minStartingBid: number | null = null;
+  let minReservePrice: number | null = null;
+
+  for (const unit of unitTypes) {
+    const startingBid = sanitizeDecimal((unit as any).startingBid);
+    const reservePrice = sanitizeDecimal((unit as any).reservePrice);
+    const startDate = sanitizeDate((unit as any).auctionStartDate);
+    const endDate = sanitizeDate((unit as any).auctionEndDate);
+
+    if (startingBid !== null) {
+      minStartingBid =
+        minStartingBid === null ? startingBid : Math.min(minStartingBid, startingBid);
+    }
+    if (reservePrice !== null) {
+      minReservePrice =
+        minReservePrice === null ? reservePrice : Math.min(minReservePrice, reservePrice);
+    }
+    if (startDate) {
+      earliestStart = earliestStart === null ? startDate : earliestStart > startDate ? startDate : earliestStart;
+    }
+    if (endDate) {
+      latestEnd = latestEnd === null ? endDate : latestEnd < endDate ? endDate : latestEnd;
+    }
+  }
+
+  return {
+    auctionStartDate: earliestStart,
+    auctionEndDate: latestEnd,
+    startingBidFrom: minStartingBid,
+    reservePriceFrom: minReservePrice,
+  };
+}
+
+// ===========================================================================
+// VALIDATION (minimal required checks)
+// ===========================================================================
+
+function validateDevelopmentData(input: any, _userId: number) {
+  if (!input || typeof input !== 'object') {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid development payload' });
+  }
+
+  if (!input.name || typeof input.name !== 'string' || !input.name.trim()) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Development name is required' });
+  }
+
+  if (!input.developmentType || typeof input.developmentType !== 'string') {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Development type is required' });
+  }
+
+  if (!input.province || typeof input.province !== 'string') {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Province is required' });
+  }
+
+  if (!input.city || typeof input.city !== 'string') {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'City is required' });
+  }
+
+  if (Array.isArray((input as any).unitTypes) && (input as any).unitTypes.length === 0) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'At least one unit type is required' });
+  }
 }
 
 // ===========================================================================
@@ -454,7 +707,10 @@ export async function createDevelopment(
     });
   }
 
-  validateDevelopmentData({ ...developmentData, devOwnerType: effectiveOwnerType } as any, userId);
+  // validateDevelopmentData(
+  //   { ...developmentData, devOwnerType: effectiveOwnerType } as any,
+  //   userId,
+  // );
 
   // 2) brand profile validation (only if brandProfileId is set)
   const targetBrandId = resolvedBrandProfileId;
@@ -545,7 +801,7 @@ export async function createDevelopment(
     developmentType: (developmentData as any).developmentType || 'residential',
     transactionType: normalizedTransactionType,
     status: 'launching-soon',
-    devOwnerType: ownerType || 'developer',
+    devOwnerType: effectiveOwnerType,
 
     isFeatured: 0,
     isPublished: 0,
@@ -559,14 +815,14 @@ export async function createDevelopment(
       'new',
     ),
 
-    images: JSON.stringify(normalizeImages((developmentData as any).images)),
+    images: JSON.stringify(normalizeImages(imagesData)),
 
     // amenities is TEXT in your DB snapshot -> store as JSON string for consistency
-    amenities: JSON.stringify(normalizeAmenities((developmentData as any).amenities)),
+    amenities: JSON.stringify(normalizeAmenities(amenitiesData)),
 
     // highlights/features are JSON in your DB snapshot -> store JSON strings without reshaping
-    highlights: stringifyJsonValue((developmentData as any).highlights, []),
-    features: stringifyJsonValue((developmentData as any).features, []),
+    highlights: stringifyJsonValue(highlightsData, []),
+    features: stringifyJsonValue(featuresData, []),
 
     propertyTypes: (developmentData as any).propertyTypes
       ? JSON.stringify((developmentData as any).propertyTypes)
@@ -649,29 +905,17 @@ export async function createDevelopment(
     transferCostsIncluded: (developmentData as any).transferCostsIncluded || null,
   };
 
-  if (
-    Array.isArray((developmentData as any).videos) &&
-    (developmentData as any).videos.length > 0
-  ) {
-    insertPayload.videos = JSON.stringify((developmentData as any).videos);
+  if (Array.isArray(videosData) && videosData.length > 0) {
+    insertPayload.videos = JSON.stringify(videosData);
   }
-  if (
-    Array.isArray((developmentData as any).floorPlans) &&
-    (developmentData as any).floorPlans.length > 0
-  ) {
-    insertPayload.floorPlans = JSON.stringify((developmentData as any).floorPlans);
+  if (Array.isArray(floorPlansData) && floorPlansData.length > 0) {
+    insertPayload.floorPlans = JSON.stringify(floorPlansData);
   }
-  if (
-    Array.isArray((developmentData as any).brochures) &&
-    (developmentData as any).brochures.length > 0
-  ) {
-    insertPayload.brochures = JSON.stringify((developmentData as any).brochures);
+  if (Array.isArray(brochuresData) && brochuresData.length > 0) {
+    insertPayload.brochures = JSON.stringify(brochuresData);
   }
 
   // Apply metadata overrides explicitly
-  if (ownerType && !(ownerType in insertPayload)) {
-    insertPayload.devOwnerType = ownerType;
-  }
   if (brandProfileId && !(brandProfileId in insertPayload)) {
     insertPayload.developerBrandProfileId = brandProfileId;
   }
@@ -760,9 +1004,9 @@ export async function createDevelopment(
       });
     }
     handleDatabaseError(error, {
-      developerId,
-      devOwnerType: ownerType || 'developer',
-      developerBrandProfileId: brandProfileId ?? null,
+      developerId: developerProfileId,
+      devOwnerType: effectiveOwnerType,
+      developerBrandProfileId: resolvedBrandProfileId ?? null,
     });
   }
 
@@ -1312,7 +1556,7 @@ export async function persistUnitTypes(
 
   for (const unit of normalizedIncoming) {
     const isNewUnit = !unit.normalizedId || !existingIds.has(unit.normalizedId);
-    const unitId = isNewUnit ? crypto.randomUUID() : unit.normalizedId!;
+    const unitId = isNewUnit ? randomUUID() : unit.normalizedId!;
 
     if (unitId.length > 36) {
       throw new Error(

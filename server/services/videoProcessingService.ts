@@ -1,7 +1,7 @@
 /**
  * Video Processing Service
  * Handles video transcoding, thumbnail generation, and metadata extraction
- * 
+ *
  * Phase 1: most processing is gated – only basic validation and thumbnails are active
  */
 
@@ -67,7 +67,9 @@ export async function queueVideoForTranscoding(
   videoUrl: string,
 ): Promise<{ jobId?: string; status: string }> {
   if (!VIDEO_PIPELINE_ENABLED) {
-    console.warn('[VideoProcessing] Pipeline disabled in Phase 1 – marking as completed with original');
+    console.warn(
+      '[VideoProcessing] Pipeline disabled in Phase 1 – marking as completed with original',
+    );
     return { status: 'completed' };
   }
 
@@ -88,12 +90,7 @@ export async function queueVideoForTranscoding(
         }),
         processingStatus: 'queued', // optional – add this column if you want
       })
-      .where(
-        and(
-          eq(exploreContent.id, contentId),
-          eq(exploreContent.contentType, 'video'),
-        ),
-      );
+      .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
 
     // Try MediaConvert if configured
     if (MEDIACONVERT_ENDPOINT && MEDIACONVERT_ROLE_ARN) {
@@ -112,12 +109,7 @@ export async function queueVideoForTranscoding(
             }),
             processingStatus: 'processing',
           })
-          .where(
-            and(
-              eq(exploreContent.id, contentId),
-              eq(exploreContent.contentType, 'video'),
-            ),
-          );
+          .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
 
         return { jobId, status: 'processing' };
       } catch (err: any) {
@@ -140,12 +132,7 @@ export async function queueVideoForTranscoding(
         }),
         processingStatus: 'completed',
       })
-      .where(
-        and(
-          eq(exploreContent.id, contentId),
-          eq(exploreContent.contentType, 'video'),
-        ),
-      );
+      .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
 
     return { status: 'completed' };
   } catch (error: any) {
@@ -161,12 +148,7 @@ export async function queueVideoForTranscoding(
         }),
         processingStatus: 'failed',
       })
-      .where(
-        and(
-          eq(exploreContent.id, contentId),
-          eq(exploreContent.contentType, 'video'),
-        ),
-      )
+      .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')))
       .catch(() => {});
 
     throw error;
@@ -207,12 +189,7 @@ export async function updateTranscodedUrls(
       transcodedUrls: JSON.stringify(map),
       processingStatus: 'completed',
     })
-    .where(
-      and(
-        eq(exploreContent.id, contentId),
-        eq(exploreContent.contentType, 'video'),
-      ),
-    );
+    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
 }
 
 /**
@@ -419,12 +396,7 @@ export async function handleTranscodingComplete(
       }),
       processingStatus: 'completed',
     })
-    .where(
-      and(
-        eq(exploreContent.id, contentId),
-        eq(exploreContent.contentType, 'video'),
-      ),
-    );
+    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
 }
 
 /**
@@ -440,12 +412,7 @@ export async function getTranscodingStatus(contentId: number): Promise<{
   const rows = await db
     .select({ transcodedUrls: exploreContent.transcodedUrls })
     .from(exploreContent)
-    .where(
-      and(
-        eq(exploreContent.id, contentId),
-        eq(exploreContent.contentType, 'video'),
-      ),
-    )
+    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')))
     .limit(1);
 
   const record = rows[0];

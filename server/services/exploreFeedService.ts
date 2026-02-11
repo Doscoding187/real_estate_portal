@@ -59,8 +59,7 @@ function transformShort(row: any) {
     mediaUrls.push(...metaUrls.filter((u: any) => typeof u === 'string' && u));
   }
 
-  const primaryMediaUrl =
-    safeRow.videoUrl || safeRow.thumbnailUrl || mediaUrls[0] || null;
+  const primaryMediaUrl = safeRow.videoUrl || safeRow.thumbnailUrl || mediaUrls[0] || null;
 
   return {
     ...safeRow,
@@ -114,7 +113,18 @@ async function logRecommendedEmptyDiagnostics(params: {
   newWhere: any[];
   rankedWhere: any[];
 }) {
-  const { tag, location, seed, limit, offset, baseWhere, commonWhere, featuredWhere, newWhere, rankedWhere } = params;
+  const {
+    tag,
+    location,
+    seed,
+    limit,
+    offset,
+    baseWhere,
+    commonWhere,
+    featuredWhere,
+    newWhere,
+    rankedWhere,
+  } = params;
 
   const safeCount = async (q: any) => {
     try {
@@ -225,8 +235,7 @@ export class ExploreFeedService {
       if (cached) return cached;
     }
 
-    const debugTag =
-      process.env.NODE_ENV !== 'production' ? makeEmptyFeedDebugTag() : null;
+    const debugTag = process.env.NODE_ENV !== 'production' ? makeEmptyFeedDebugTag() : null;
 
     const baseWhere: any[] = [
       eq(exploreContent.contentType, 'video'),
@@ -511,7 +520,11 @@ export class ExploreFeedService {
     };
   }
 
-  async getDeveloperFeed({ developerId, limit = 20, offset = 0 }: FeedOptions): Promise<FeedResult> {
+  async getDeveloperFeed({
+    developerId,
+    limit = 20,
+    offset = 0,
+  }: FeedOptions): Promise<FeedResult> {
     if (!developerId) throw new Error('Developer ID required');
 
     const rows = await db

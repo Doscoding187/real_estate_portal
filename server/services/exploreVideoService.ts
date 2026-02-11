@@ -5,15 +5,9 @@
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import crypto from 'crypto';
+import { randomUUID } from 'crypto';
 import { db } from '../db';
-import {
-  exploreContent,
-  properties,
-  developments,
-  agents,
-  developers,
-} from '../../drizzle/schema';
+import { exploreContent, properties, developments, agents, developers } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 
 // Initialize S3 client
@@ -95,7 +89,7 @@ export async function generateVideoUploadUrls(
   }
 
   const timestamp = Date.now();
-  const fileId = crypto.randomUUID();
+  const fileId = randomUUID();
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
 
   const videoKey = `explore/videos/${creatorId}/${timestamp}-${fileId}-${sanitizedFilename}`;
@@ -281,10 +275,5 @@ export async function updateVideoAnalytics(
   await db
     .update(exploreContent)
     .set(updates)
-    .where(
-      and(
-        eq(exploreContent.id, contentId),
-        eq(exploreContent.contentType, 'video')
-      )
-    );
+    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
 }

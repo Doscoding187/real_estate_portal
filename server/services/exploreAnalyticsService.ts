@@ -5,10 +5,7 @@
  */
 
 import { db } from '../db';
-import {
-  exploreContent,
-  exploreEngagements,
-} from '../../drizzle/schema';
+import { exploreContent, exploreEngagements } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 
 interface VideoAnalytics {

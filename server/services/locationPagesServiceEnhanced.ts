@@ -249,9 +249,7 @@ export const locationPagesServiceEnhanced = {
       );
     }
 
-    console.log(
-      `[LocationPagesEnhanced] Created new location: ${created.name} (${created.type})`,
-    );
+    console.log(`[LocationPagesEnhanced] Created new location: ${created.name} (${created.type})`);
 
     return created as Location;
   },
@@ -335,7 +333,11 @@ export const locationPagesServiceEnhanced = {
   async syncLegacyTables(locationId: number): Promise<void> {
     const db = await getDb();
 
-    const [location] = await db.select().from(locations).where(eq(locations.id, locationId)).limit(1);
+    const [location] = await db
+      .select()
+      .from(locations)
+      .where(eq(locations.id, locationId))
+      .limit(1);
 
     if (!location) {
       console.warn(`[LocationPagesEnhanced] Location ${locationId} not found for sync`);
@@ -416,7 +418,11 @@ export const locationPagesServiceEnhanced = {
 
         if (!parentLocation) return;
 
-        const [city] = await db.select().from(cities).where(eq(cities.name, parentLocation.name)).limit(1);
+        const [city] = await db
+          .select()
+          .from(cities)
+          .where(eq(cities.name, parentLocation.name))
+          .limit(1);
         if (!city) return;
 
         const [existingSuburb] = await db
@@ -452,7 +458,11 @@ export const locationPagesServiceEnhanced = {
    * @param suburb - Suburb slug (optional)
    * @returns Location record
    */
-  async getLocationByPath(province: string, city?: string, suburb?: string): Promise<Location | null> {
+  async getLocationByPath(
+    province: string,
+    city?: string,
+    suburb?: string,
+  ): Promise<Location | null> {
     const db = await getDb();
 
     if (suburb) {

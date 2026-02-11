@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { eq, and, desc, asc } from 'drizzle-orm';
-import * as crypto from 'crypto';
+import { randomUUID } from 'crypto';
 
 type EqFn = typeof eq;
 type DescFn = typeof desc;
@@ -252,7 +252,7 @@ class LaunchService {
     }
 
     // Create new phase
-    const newPhaseId = crypto.randomUUID();
+    const newPhaseId = randomUUID();
     await db.insert(db.schema.launchPhases).values({
       id: newPhaseId,
       phase: config.phase,
@@ -341,7 +341,7 @@ class LaunchService {
     weeklyVisitsPerUser: number;
     algorithmConfidenceScore: number;
   }): Promise<void> {
-    const id = crypto.randomUUID();
+    const id = randomUUID();
 
     await db.insert(db.schema.launchMetrics).values({
       id,

@@ -26,12 +26,12 @@ vi.mock('@/lib/trpc', () => ({
       },
       getFeed: {
         useQuery: vi.fn(() => ({
-          data: { 
-            items: [], 
-            shorts: [], 
-            hasMore: false, 
-            offset: 0, 
-            feedType: "recommended" 
+          data: {
+            items: [],
+            shorts: [],
+            hasMore: false,
+            offset: 0,
+            feedType: 'recommended',
           },
           isLoading: false,
           error: null,
@@ -294,14 +294,14 @@ describe('ARIA Compliance - Feed Components', () => {
     // Currently the component shows placeholder data even when error is present
     it.skip('should have alert role for errors', async () => {
       const { trpc } = await import('@/lib/trpc');
-      
+
       vi.mocked(trpc.properties.search.useQuery).mockReturnValueOnce({
         data: null,
         isLoading: false,
         error: new Error('Failed to load'),
         refetch: vi.fn(),
       } as any);
-      
+
       vi.mocked(trpc.explore.getFeed.useQuery).mockReturnValueOnce({
         data: null,
         isLoading: false,
@@ -368,14 +368,14 @@ describe('ARIA Compliance - Live Regions', () => {
   // Currently the component shows placeholder data even when error is present
   it.skip('should use aria-live="assertive" for critical updates', async () => {
     const { trpc } = await import('@/lib/trpc');
-    
+
     vi.mocked(trpc.properties.search.useQuery).mockReturnValueOnce({
       data: null,
       isLoading: false,
       error: new Error('Failed to load'),
       refetch: vi.fn(),
     } as any);
-    
+
     vi.mocked(trpc.explore.getFeed.useQuery).mockReturnValueOnce({
       data: null,
       isLoading: false,

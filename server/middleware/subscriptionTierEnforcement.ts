@@ -12,7 +12,7 @@ function getAuthedDeveloperId(req: Request): number | null {
     req.user?.developerProfileId,
     req.user?.developerId,
     req.user?.developer?.id,
-    req.user?.id,                    // sometimes the developer row ID is the user ID
+    req.user?.id, // sometimes the developer row ID is the user ID
     req.user?.profile?.developerId,
   ];
 
@@ -166,9 +166,7 @@ export async function checkTeamMemberLimit(req: Request, res: Response, next: Ne
 /**
  * Middleware factory to check access to premium features based on tier
  */
-export function checkFeatureAccess(
-  feature: 'crm' | 'advanced_analytics' | 'bond_integration',
-) {
+export function checkFeatureAccess(feature: 'crm' | 'advanced_analytics' | 'bond_integration') {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const developerId = getAuthedDeveloperId(req);

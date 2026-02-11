@@ -78,6 +78,7 @@ import {
   getDevelopmentViewGalleryTileImage,
   type DevelopmentMedia,
 } from '@/lib/media-logic';
+import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { formatPriceCompact } from '@/lib/formatPrice';
 
 type AmenityTabKey = AmenityCategory | 'other';
@@ -226,7 +227,7 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
             const parkingLabel = formatParkingLabel(unit.parkingType, unit.parkingBays);
 
             return (
-              <CarouselItem key={unit.id} className="pl-4 md:basis-5/12 lg:basis-5/12">
+              <CarouselItem key={unit.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/3">
                 <Card className="overflow-hidden hover:shadow-md transition-all duration-300 border-slate-200 h-full flex flex-col">
                   {/* Image with fixed aspect ratio */}
                   <div className="relative w-full aspect-[4/3] bg-slate-200 overflow-hidden group">
@@ -260,7 +261,7 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1 py-2 border-t border-b border-slate-100 mt-auto min-h-[50px]">
+                    <div className="flex items-center justify-between gap-1 py-2 border-t border-b border-slate-100 mt-auto min-h-[52px]">
                       {/* 1. House Size */}
                       <div className="flex flex-col items-center justify-center text-center px-1">
                         <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400 mb-1" />
@@ -391,15 +392,14 @@ export default function DevelopmentDetail() {
 
   // Fetch real development by slug or ID
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
-  { slugOrId: slug || '' },
-  { enabled: !!slug },
-);
+    { slugOrId: slug || '' },
+    { enabled: !!slug },
+  );
 
-console.log('[DevelopmentDetail] dev =', dev);
-console.log('[DevelopmentDetail] dev.developer =', dev?.developer);
-console.log('[DevelopmentDetail] dev.publisher =', (dev as any)?.publisher);
-console.log('[DevelopmentDetail] dev.brandProfile =', (dev as any)?.brandProfile);
-
+  console.log('[DevelopmentDetail] dev =', dev);
+  console.log('[DevelopmentDetail] dev.developer =', dev?.developer);
+  console.log('[DevelopmentDetail] dev.publisher =', (dev as any)?.publisher);
+  console.log('[DevelopmentDetail] dev.brandProfile =', (dev as any)?.brandProfile);
 
   // Fetch other developments from same developer
   const { data: allDevelopments } = trpc.developer.listPublicDevelopments.useQuery(
@@ -597,11 +597,15 @@ console.log('[DevelopmentDetail] dev.brandProfile =', (dev as any)?.brandProfile
   // Convert DB format to our typed ImageMedia/VideoMedia
   const normalizeImage = (img: any): any => {
     // Using any temporarily to bridge types, verified below
-    if (typeof img === 'string') return { url: img, category: 'featured' };
+    if (typeof img === 'string') {
+      return { url: resolveMediaUrl(img), category: 'featured' };
+    }
+
+    const candidate = img?.url ?? img?.key ?? img?.src ?? null;
     return {
-      url: img.url,
-      category: img.category || 'general',
-      isPrimary: img.isPrimary,
+      url: typeof candidate === 'string' ? resolveMediaUrl(candidate) : null,
+      category: img?.category || 'general',
+      isPrimary: img?.isPrimary,
     };
   };
 
@@ -666,84 +670,99 @@ console.log('[DevelopmentDetail] dev.brandProfile =', (dev as any)?.brandProfile
       { total: 0, available: 0 },
     );
 
-    if (totals.total <= 0) return { soldPct: null, total: 0, available: 0 };
+    let totalUnits = totals.total;
+    let availableUnits = totals.available;
 
-    const clampedAvailable = Math.min(Math.max(totals.available, 0), totals.total);
-    const sold = totals.total - clampedAvailable;
-    const soldPct = Math.round((sold / totals.total) * 100);
+    if (totalUnits <= 0) {
+      totalUnits = Number(dev.totalUnits || 0);
+      availableUnits = Number(
+        dev.availableUnits !== undefined && dev.availableUnits !== null
+          ? dev.availableUnits
+          : totalUnits,
+      );
+    }
 
-    return { soldPct, total: totals.total, available: clampedAvailable };
+    if (totalUnits <= 0) return { soldPct: null, total: 0, available: 0 };
+
+    const clampedAvailable = Math.min(Math.max(availableUnits, 0), totalUnits);
+    const sold = totalUnits - clampedAvailable;
+    const soldPct = Math.round((sold / totalUnits) * 100);
+
+    return { soldPct, total: totalUnits, available: clampedAvailable };
   })();
 
   // ✅ Prefer publisher / brand profile over legacy developer
-const publisher =
-  (dev as any).publisher ||
-  (dev as any).brandProfile ||
-  (dev as any).developerBrandProfile ||
-  null;
+  const publisher =
+    (dev as any).publisher ||
+    (dev as any).brandProfile ||
+    (dev as any).developerBrandProfile ||
+    null;
 
-// ... (Update development object)
-const development = {
-  // ... existing fields ...
-  id: dev.id,
-  name: dev.name,
+  // ... (Update development object)
+  const development = {
+    // ... existing fields ...
+    id: dev.id,
+    name: dev.name,
 
-  // ✅ Publisher-first developer identity
-  developer: publisher?.name || dev.developer?.name || 'Unknown Developer',
-  developerLogo: publisher?.logoUrl || publisher?.logo || dev.developer?.logo || null,
-  developerDescription:
-    publisher?.description ||
-    dev.developer?.description ||
-    'Professional property developer committed to quality and excellence.',
-  developerWebsite: publisher?.websiteUrl || publisher?.website || dev.developer?.website || null,
-  developerSlug: publisher?.slug || dev.developer?.slug || null,
+    // ✅ Publisher-first developer identity
+    developer: publisher?.name || dev.developer?.name || 'Unknown Developer',
+    developerLogo: publisher?.logoUrl || publisher?.logo || dev.developer?.logo || null,
+    developerDescription:
+      publisher?.description ||
+      dev.developer?.description ||
+      'Professional property developer committed to quality and excellence.',
+    developerWebsite: publisher?.websiteUrl || publisher?.website || dev.developer?.website || null,
+    developerSlug: publisher?.slug || dev.developer?.slug || null,
 
-  location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
-  address: dev.address || '',
-  description: dev.description || '',
-  completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : null,
-  totalUnits: dev.totalUnits || 0,
-  availableUnits: dev.availableUnits || 0,
-  startingPrice: Number(dev.priceFrom) || 0,
-  developmentType: dev.developmentType || 'residential',
-  status: dev.status,
+    location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
+    address: dev.address || '',
+    description: dev.description || '',
+    completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : null,
+    totalUnits: dev.totalUnits || 0,
+    availableUnits: dev.availableUnits || 0,
+    startingPrice: Number(dev.priceFrom) || 0,
+    developmentType: dev.developmentType || 'residential',
+    status: dev.status,
 
-  // Media Props
-  heroMedia: heroMedia,
-  galleryImages: galleryImages,
+    // Media Props
+    heroMedia: heroMedia,
+    galleryImages: galleryImages,
 
-  // Tiles
-  amenityTile: amenityTile,
-  outdoorTile: outdoorTile,
-  viewGalleryTile: viewGalleryTile,
+    // Tiles
+    amenityTile: amenityTile,
+    outdoorTile: outdoorTile,
+    viewGalleryTile: viewGalleryTile,
 
-  // Counts & Lists
-  totalPhotos: galleryImages.length,
-  totalVideos: normalizedVideos.length,
-  videoList: normalizedVideos,
-  floorPlans: floorPlans, // Kept separate for now
+    // Counts & Lists
+    totalPhotos: galleryImages.length,
+    totalVideos: normalizedVideos.length,
+    videoList: normalizedVideos,
+    floorPlans: floorPlans, // Kept separate for now
 
-  indices: galleryIndices,
-  amenities: amenities,
+    indices: galleryIndices,
+    amenities: amenities,
 
-  // CRITICAL: Ensure we rely on unitTypes, not mixed sources
-  units: units.map((u: any) => {
-    const rawOwnership = u.ownershipType;
-    const estateOwnership = (estateSpecs as any)?.ownershipType;
-    const structural = u.structuralType || u.type;
-    const inferred = inferOwnership(structural);
-    const finalLabel = formatLabel(rawOwnership || estateOwnership || inferred);
+    // CRITICAL: Ensure we rely on unitTypes, not mixed sources
+    units: units.map((u: any) => {
+      const rawOwnership = u.ownershipType;
+      const estateOwnership = (estateSpecs as any)?.ownershipType;
+      const structural = u.structuralType || u.type;
+      const inferred = inferOwnership(structural);
+      const finalLabel = formatLabel(rawOwnership || estateOwnership || inferred);
 
-    return {
-      ...u,
-      normalizedImage: getPrimaryUnitImage(u, heroMedia?.type === 'image' ? heroMedia.image?.url : undefined),
-      normalizedOwnership: finalLabel,
-      normalizedType: formatLabel(u.structuralType || u.type || 'Apartment'),
-      floorSize: u.unitSize,
-      landSize: u.erfSize || u.yardSize,
-    };
-  }),
-};
+      return {
+        ...u,
+        normalizedImage: getPrimaryUnitImage(
+          u,
+          heroMedia?.type === 'image' ? heroMedia.image?.url : undefined,
+        ),
+        normalizedOwnership: finalLabel,
+        normalizedType: formatLabel(u.structuralType || u.type || 'Apartment'),
+        floorSize: u.unitSize,
+        landSize: u.erfSize || u.yardSize,
+      };
+    }),
+  };
 
   return (
     <>

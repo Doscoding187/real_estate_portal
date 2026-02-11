@@ -182,7 +182,9 @@ export const useExploreFiltersStore = create<FilterState>()(
         const hasPrice =
           s.priceMin !== null ||
           s.priceMax !== null ||
-          (s.priceMin === null && s.priceMax === null && (s.minPrice !== null || s.maxPrice !== null));
+          (s.priceMin === null &&
+            s.priceMax === null &&
+            (s.minPrice !== null || s.maxPrice !== null));
         if (hasPrice) count++;
 
         // Bedrooms (prefer newer)
@@ -193,8 +195,7 @@ export const useExploreFiltersStore = create<FilterState>()(
 
         // Bathrooms (prefer newer)
         const hasBathrooms =
-          s.bathrooms !== null ||
-          (s.bathrooms === null && s.minBathrooms !== null);
+          s.bathrooms !== null || (s.bathrooms === null && s.minBathrooms !== null);
         if (hasBathrooms) count++;
 
         // Location

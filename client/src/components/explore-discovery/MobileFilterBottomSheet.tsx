@@ -198,10 +198,10 @@ export function MobileFilterBottomSheet({
   const sheetMotionProps = isTestEnv
     ? {}
     : {
-      drag: 'y' as const,
-      dragConstraints: { top: 0, bottom: 0 },
-      dragElastic: 0.2,
-    };
+        drag: 'y' as const,
+        dragConstraints: { top: 0, bottom: 0 },
+        dragElastic: 0.2,
+      };
 
   return (
     <AnimatePresence>
@@ -283,15 +283,17 @@ export function MobileFilterBottomSheet({
               <div className="flex justify-center gap-2 mt-3">
                 <button
                   onClick={() => setSnapPoint('half')}
-                  className={`w-2 h-2 rounded-full transition-colors ${snapPoint === 'half' ? 'bg-indigo-600' : 'bg-gray-300'
-                    }`}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    snapPoint === 'half' ? 'bg-indigo-600' : 'bg-gray-300'
+                  }`}
                   aria-label="Snap to half height"
                   type="button"
                 />
                 <button
                   onClick={() => setSnapPoint('full')}
-                  className={`w-2 h-2 rounded-full transition-colors ${snapPoint === 'full' ? 'bg-indigo-600' : 'bg-gray-300'
-                    }`}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    snapPoint === 'full' ? 'bg-indigo-600' : 'bg-gray-300'
+                  }`}
                   aria-label="Snap to full height"
                   type="button"
                 />
@@ -485,5 +487,3 @@ export function MobileFilterBottomSheet({
     </AnimatePresence>
   );
 }
-
-

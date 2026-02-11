@@ -10,7 +10,7 @@ import { ENV } from './env';
 import { PutObjectCommand, S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
-import crypto from 'crypto';
+import { randomUUID } from 'crypto';
 
 // Check if AWS S3 is configured
 const useS3 = Boolean(
@@ -74,7 +74,7 @@ export async function uploadPropertyImage(
   propertyId: string,
   filename: string,
 ): Promise<ImageUrls> {
-  const fileId = crypto.randomUUID();
+  const fileId = randomUUID();
   const baseKey = `properties/${propertyId}/${fileId}`;
   const urls: Partial<ImageUrls> = {};
 
@@ -217,7 +217,7 @@ export async function generatePresignedUploadUrl(
   try {
     // Generate a unique key for the file
     const fileExtension = filename.split('.').pop() || 'jpg';
-    const key = `properties/${propertyId}/${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
+    const key = `properties/${propertyId}/${Date.now()}-${randomUUID()}.${fileExtension}`;
 
     console.log(`[S3] Generating presigned URL for: ${key}`);
 

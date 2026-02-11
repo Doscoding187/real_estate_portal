@@ -166,7 +166,7 @@ describe('EmptyState', () => {
       render(<EmptyState type="noResults" onAction={handleAction} />);
 
       const button = screen.getByText('Clear Filters');
-      
+
       // Focus the button
       button.focus();
       expect(document.activeElement).toBe(button);

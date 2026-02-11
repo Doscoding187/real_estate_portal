@@ -41,6 +41,10 @@ export const motion = new Proxy(
   },
 );
 
-export const AnimatePresence: React.FC<{ children?: React.ReactNode }> = ({ children }) => <>{children}</>;
-export const LazyMotion: React.FC<{ children?: React.ReactNode }> = ({ children }) => <>{children}</>;
+export const AnimatePresence: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
+  <>{children}</>
+);
+export const LazyMotion: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
+  <>{children}</>
+);
 export const useInView = () => true;

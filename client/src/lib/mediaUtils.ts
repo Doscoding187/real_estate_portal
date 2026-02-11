@@ -18,6 +18,29 @@ export const withApiBase = (url: string | null | undefined): string | undefined 
   return `${cleanApiUrl}${cleanPath}`;
 };
 
+export const resolveMediaUrl = (input?: string | null): string | null => {
+  if (!input) return null;
+
+  const trimmed = input.trim();
+  if (trimmed.length === 0) return null;
+
+  // Already absolute or data/blob
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+
+  const base =
+    import.meta.env.VITE_CLOUDFRONT_URL ||
+    import.meta.env.VITE_ASSETS_BASE_URL ||
+    '';
+
+  if (!base) return trimmed; // fallback (relative)
+
+  const cleanBase = base.replace(/\/$/, '');
+  const cleanPath = trimmed.replace(/^\//, '');
+  return `${cleanBase}/${cleanPath}`;
+};
+
 /**
  * Robustly extracts the primary image URL from a development's images field.
  * Handles mixed types: string[], object[], JSON strings, etc.
@@ -53,21 +76,29 @@ export const getPrimaryDevelopmentImageUrl = (imagesData: any): string | null =>
   // 2. Find Hero Image
   // Check for object structure with category='hero'
   const heroImg = images.find(
-    img => typeof img === 'object' && img !== null && img.category === 'hero' && img.url,
+    img =>
+      typeof img === 'object' &&
+      img !== null &&
+      img.category === 'hero' &&
+      (img.url || img.key || img.src),
   );
-  if (heroImg && typeof heroImg.url === 'string') return heroImg.url;
+  if (heroImg) {
+    const candidate = heroImg.url || heroImg.key || heroImg.src;
+    if (typeof candidate === 'string') return resolveMediaUrl(candidate);
+  }
 
   // 3. Fallback to First Valid Image
   for (const img of images) {
-    if (typeof img === 'string' && img.length > 0) return img;
+    if (typeof img === 'string' && img.length > 0) return resolveMediaUrl(img);
     if (
       typeof img === 'object' &&
       img !== null &&
-      img.url &&
-      typeof img.url === 'string' &&
-      img.url.length > 0
+      (img.url || img.key || img.src)
     ) {
-      return img.url;
+      const candidate = img.url || img.key || img.src;
+      if (typeof candidate === 'string' && candidate.length > 0) {
+        return resolveMediaUrl(candidate);
+      }
     }
   }
 

@@ -8,12 +8,7 @@
  */
 
 import { getDb } from '../db';
-import {
-  locations,
-  properties,
-  developments,
-  locationSearches,
-} from '../../drizzle/schema';
+import { locations, properties, developments, locationSearches } from '../../drizzle/schema';
 import { eq, and, or, like, inArray, SQL, sql } from 'drizzle-orm';
 
 export interface SearchOptions {
@@ -205,10 +200,10 @@ export async function searchLocations(
   // Track searches for the top matches (so trending accumulates)
   // (Don’t track every fuzzy match — track only the top few)
   const toTrack = matchingLocations.slice(0, Math.min(3, matchingLocations.length));
-  await Promise.all(toTrack.map((l) => trackLocationSearch(l.id, userId)));
+  await Promise.all(toTrack.map(l => trackLocationSearch(l.id, userId)));
 
   // Pull trending counts for these locations (last 30 days)
-  const ids = matchingLocations.map((l) => l.id);
+  const ids = matchingLocations.map(l => l.id);
 
   const trendingRows = await db
     .select({
@@ -219,13 +214,16 @@ export async function searchLocations(
     .where(
       and(
         sql`${locationSearches.searchedAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
-        sql`${locationSearches.locationId} IN (${sql.join(ids.map((id) => sql`${id}`), sql`,`)})`,
+        sql`${locationSearches.locationId} IN (${sql.join(
+          ids.map(id => sql`${id}`),
+          sql`,`,
+        )})`,
       ),
     )
     .groupBy(locationSearches.locationId);
 
   const trendingMap = new Map<number, number>(
-    trendingRows.map((r) => [Number(r.locationId), Number(r.searches)]),
+    trendingRows.map(r => [Number(r.locationId), Number(r.searches)]),
   );
 
   const rankedResults = await Promise.all(
@@ -251,10 +249,7 @@ export async function searchLocations(
       const trendingScore = Math.min(trendingScoreRaw * 5, 100);
 
       const relevanceScore =
-        similarityScore * 0.45 +
-        inventoryScore * 0.25 +
-        typePriority * 0.10 +
-        trendingScore * 0.20;
+        similarityScore * 0.45 + inventoryScore * 0.25 + typePriority * 0.1 + trendingScore * 0.2;
 
       const url = await buildLocationUrl(db, location);
 
@@ -419,10 +414,15 @@ export async function filterListingsByPlaceId(
     return filterListingsByPlaceIdDirect(placeId, filters, limit);
   }
 
-  const conditions: SQL[] = [eq(properties.locationId, location.id), eq(properties.status, 'published')];
+  const conditions: SQL[] = [
+    eq(properties.locationId, location.id),
+    eq(properties.status, 'published'),
+  ];
 
-  if (filters?.propertyType?.length) conditions.push(inArray(properties.propertyType, filters.propertyType as any));
-  if (filters?.listingType?.length) conditions.push(inArray(properties.listingType, filters.listingType as any));
+  if (filters?.propertyType?.length)
+    conditions.push(inArray(properties.propertyType, filters.propertyType as any));
+  if (filters?.listingType?.length)
+    conditions.push(inArray(properties.listingType, filters.listingType as any));
   if (filters?.bedrooms) conditions.push(eq(properties.bedrooms, filters.bedrooms));
   if (filters?.bathrooms) conditions.push(eq(properties.bathrooms, filters.bathrooms));
 
@@ -462,8 +462,10 @@ async function filterListingsByPlaceIdDirect(
 
   const conditions: SQL[] = [eq(properties.placeId, placeId), eq(properties.status, 'published')];
 
-  if (filters?.propertyType?.length) conditions.push(inArray(properties.propertyType, filters.propertyType as any));
-  if (filters?.listingType?.length) conditions.push(inArray(properties.listingType, filters.listingType as any));
+  if (filters?.propertyType?.length)
+    conditions.push(inArray(properties.propertyType, filters.propertyType as any));
+  if (filters?.listingType?.length)
+    conditions.push(inArray(properties.listingType, filters.listingType as any));
   if (filters?.bedrooms) conditions.push(eq(properties.bedrooms, filters.bedrooms));
   if (filters?.bathrooms) conditions.push(eq(properties.bathrooms, filters.bathrooms));
 
@@ -504,4 +506,3 @@ export async function trackLocationSearch(locationId: number, userId?: number): 
     // searchedAt default CURRENT_TIMESTAMP
   });
 }
-

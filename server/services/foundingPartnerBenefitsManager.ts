@@ -1,6 +1,7 @@
 import { foundingPartnerService } from './foundingPartnerService';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 /**
  * Founding Partner Benefits Manager
@@ -131,7 +132,7 @@ class FoundingPartnerBenefitsManager {
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + 3);
 
-    const subscriptionId = crypto.randomUUID();
+    const subscriptionId = randomUUID();
 
     await db.insert(db.schema.partnerSubscriptions).values({
       id: subscriptionId,

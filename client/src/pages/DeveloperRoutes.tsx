@@ -51,9 +51,7 @@ export default function DeveloperRoutes() {
     return (
       <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-soft border border-slate-100 p-8 text-center">
-          <h1 className="text-2xl font-semibold text-slate-900 mb-2">
-            Select a brand to continue
-          </h1>
+          <h1 className="text-2xl font-semibold text-slate-900 mb-2">Select a brand to continue</h1>
           <p className="text-slate-600 mb-6">
             You need to choose a brand context before accessing the developer dashboard.
           </p>

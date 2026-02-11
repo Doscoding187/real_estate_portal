@@ -76,15 +76,18 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
         {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
           {/* Content Badge - Requirements 4.1, 4.7 */}
-          {neighbourhood.badgeType && <ContentBadgeOverlay type={neighbourhood.badgeType} size="sm" />}
+          {neighbourhood.badgeType && (
+            <ContentBadgeOverlay type={neighbourhood.badgeType} size="sm" />
+          )}
 
           {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
 
           <img
             src={neighbourhood.imageUrl}
             alt={neighbourhood.name}
-            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
+            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
             onLoad={() => setImageLoaded(true)}
             loading="lazy"
           />
@@ -95,10 +98,11 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
           {/* Follow button with modern design */}
           <motion.button
             onClick={handleFollow}
-            className={`absolute top-3 right-3 z-20 px-4 py-2 rounded-full text-sm font-medium transition-all ${isFollowing
+            className={`absolute top-3 right-3 z-20 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              isFollowing
                 ? 'bg-white text-gray-900 shadow-md'
                 : 'glass-overlay text-gray-900 hover:bg-white'
-              }`}
+            }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             transition={{ duration: 0.15 }}
@@ -110,7 +114,10 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
           </motion.button>
 
           {/* Content overlay */}
-          <div className="absolute bottom-0 left-0 right-0" style={{ padding: designTokens.spacing.md }}>
+          <div
+            className="absolute bottom-0 left-0 right-0"
+            style={{ padding: designTokens.spacing.md }}
+          >
             <h3
               className="text-xl font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors duration-200"
               style={{
@@ -130,7 +137,10 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
         {/* Stats - Using consistent spacing tokens */}
         <div style={{ padding: designTokens.spacing.md }}>
           {/* Price info */}
-          <div className="flex items-center justify-between" style={{ marginBottom: designTokens.spacing.sm }}>
+          <div
+            className="flex items-center justify-between"
+            style={{ marginBottom: designTokens.spacing.sm }}
+          >
             <div>
               <div className="text-xs mb-1" style={{ color: designTokens.colors.text.secondary }}>
                 Avg. Price
@@ -148,11 +158,14 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
 
             {neighbourhood.priceChange !== undefined && (
               <div
-                className={`flex items-center gap-1 text-sm font-medium ${neighbourhood.priceChange >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}
+                className={`flex items-center gap-1 text-sm font-medium ${
+                  neighbourhood.priceChange >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
                 style={{ fontWeight: designTokens.typography.fontWeight.medium }}
               >
-                <TrendingUp className={`w-4 h-4 ${neighbourhood.priceChange < 0 ? 'rotate-180' : ''}`} />
+                <TrendingUp
+                  className={`w-4 h-4 ${neighbourhood.priceChange < 0 ? 'rotate-180' : ''}`}
+                />
                 <span>{Math.abs(neighbourhood.priceChange)}%</span>
               </div>
             )}

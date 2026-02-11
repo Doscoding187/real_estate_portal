@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { protectedProcedure, router } from './_core/trpc';
 import { generatePresignedUploadUrl } from './_core/imageUpload';
 import { ENV } from './_core/env';
-import crypto from 'crypto';
+import { randomUUID } from 'crypto';
 import { TRPCError } from '@trpc/server';
 
 /**
@@ -28,7 +28,7 @@ export const uploadRouter = router({
       );
       try {
         // Generate a unique property ID if not provided
-        const propertyId = input.propertyId || crypto.randomUUID();
+        const propertyId = input.propertyId || randomUUID();
 
         // Generate presigned URL
         const result = await generatePresignedUploadUrl(
