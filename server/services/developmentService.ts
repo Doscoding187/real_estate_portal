@@ -406,7 +406,7 @@ export async function createDevelopment(
 
   // Check user role FIRST before any validation
   const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
+    where: (u, { eq }) => eq(u.id, userId),
     columns: { id: true, role: true },
   });
 
@@ -1802,7 +1802,7 @@ async function publishDevelopment(
 
   // Check user role FIRST before any validation
   const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
+    where: (u, { eq }) => eq(u.id, userId),
     columns: { id: true, role: true },
   });
 
@@ -2201,7 +2201,7 @@ async function deleteDevelopment(
   // Check user role FIRST before any validation (same pattern as publishDevelopment)
   if (userId !== undefined && userId !== -1) {
     const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
+      where: (u, { eq }) => eq(u.id, userId),
       columns: { id: true, role: true },
     });
 
