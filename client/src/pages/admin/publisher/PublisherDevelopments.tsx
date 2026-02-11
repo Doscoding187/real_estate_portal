@@ -89,17 +89,6 @@ const PublisherDevelopments: React.FC = () => {
     if (!selectedBrandId) return;
 
     // Persist the same structure that main.tsx expects:
-    // localStorage['publisher-context'] => { state: { context: { brandProfileId } } }
-    const payload = {
-      state: {
-        context: {
-          brandProfileId: selectedBrandId,
-        },
-      },
-    };
-
-    localStorage.setItem('publisher-context', JSON.stringify(payload));
-
     // Now navigate WITHOUT relying on query params
     setLocation(`/developer/create-development`);
 

@@ -25,6 +25,7 @@ const DeveloperContext = createContext<DeveloperContextValue | undefined>(undefi
 export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<BrandProfile | null>(null);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const { setOperatingAs, clearContext } = usePublisherContext();
 
   // Fetch real brand profile data when brand ID is selected
@@ -35,6 +36,23 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     },
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem('publisher-context');
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      const storedBrandId = parsed?.state?.context?.brandProfileId;
+      if (typeof storedBrandId === 'number') {
+        setSelectedBrandId(storedBrandId);
+      }
+    } catch {
+      // Ignore malformed storage
+    } finally {
+      setHasHydrated(true);
+    }
+  }, []);
 
   // Update selected brand and sync with global publisher context
   useEffect(() => {
@@ -59,11 +77,11 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
         brandProfileType: brand.identityType || 'developer', // Use real identityType
         logoUrl: brand.logoUrl,
       });
-    } else if (!selectedBrandId) {
+    } else if (hasHydrated && !selectedBrandId) {
       setSelectedBrand(null);
       clearContext();
     }
-  }, [selectedBrandId, brandProfile, setOperatingAs, clearContext]);
+  }, [selectedBrandId, brandProfile, setOperatingAs, clearContext, hasHydrated]);
 
   const value: DeveloperContextValue = {
     selectedBrandId,

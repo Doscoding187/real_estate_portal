@@ -1,5 +1,7 @@
-import { Route, Switch, Redirect } from 'wouter';
+import { Route, Switch, Redirect, Link } from 'wouter';
 import { DeveloperLayout } from '@/components/developer/DeveloperLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePublisherContext } from '@/hooks/usePublisherContext';
 
 // Import content components
 import Overview from '@/components/developer/Overview';
@@ -40,6 +42,31 @@ function LoadingSpinner() {
 }
 
 export default function DeveloperRoutes() {
+  const { user } = useAuth();
+  const { context: publisherContext } = usePublisherContext();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const hasPublisherContext = !!publisherContext?.brandProfileId;
+
+  if (isSuperAdmin && !hasPublisherContext) {
+    return (
+      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-soft border border-slate-100 p-8 text-center">
+          <h1 className="text-2xl font-semibold text-slate-900 mb-2">
+            Select a brand to continue
+          </h1>
+          <p className="text-slate-600 mb-6">
+            You need to choose a brand context before accessing the developer dashboard.
+          </p>
+          <Link href="/admin/publisher">
+            <a className="inline-flex items-center justify-center rounded-xl bg-blue-600 text-white px-4 py-2 font-medium hover:bg-blue-700 transition-colors">
+              Go to Brand Selector
+            </a>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DeveloperLayout>
       <Switch>

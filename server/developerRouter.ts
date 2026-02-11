@@ -613,6 +613,13 @@ export const developerRouter = router({
       };
     }
 
+    if (role === 'super_admin' && !brandEmulationContext) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'BRAND_CONTEXT_REQUIRED',
+      });
+    }
+
     // Normal real user flow
     const profile = await getDeveloperByUserId(user.id);
 
@@ -661,7 +668,7 @@ export const developerRouter = router({
   }),
 
   getUnreadNotificationsCount: protectedProcedure.query(async () => {
-    return 0;
+    return { count: 0 };
   }),
 
   publishDevelopment: protectedProcedure
