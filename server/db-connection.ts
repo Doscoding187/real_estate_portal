@@ -11,7 +11,14 @@ export async function getDb() {
 
   // In test environment, bypass actual DB connection to avoid DATABASE_URL dependency
   if (process.env.NODE_ENV === 'test') {
-    // Return a mock DB object manageable by tests
+    type Row = Record<string, any>;
+
+    let nextPropertyId = 1;
+    const state = {
+      properties: [] as Row[],
+      images: [] as Row[],
+    };
+
     const mockTable = {
       findFirst: async () => null,
       findMany: async () => [],
@@ -20,12 +27,11 @@ export async function getDb() {
       insert: async () => [],
     };
 
-    // Recursive proxy for query builder
     const createQueryProxy = () =>
       new Proxy(
         {},
         {
-          get: (target, prop) => {
+          get: (_target, prop) => {
             if (prop === 'developers') {
               return {
                 ...mockTable,
@@ -37,20 +43,241 @@ export async function getDb() {
                 }),
               };
             }
-            return mockTable; // Return mockTable for any other table name
+            return mockTable;
           },
         },
       );
 
-    const mockDb = {
-      query: createQueryProxy(),
-      select: () => ({ from: () => ({ where: () => [], limit: () => [], orderBy: () => [] }) }),
-      insert: () => ({ values: () => ({ returning: () => [] }) }),
-      update: () => ({ set: () => ({ where: () => ({ returning: () => [] }) }) }),
-      delete: () => ({ where: () => ({ returning: () => [] }) }),
-      transaction: (cb: any) => cb(mockDb), // Reuse same mock for translation
+    const getTableName = (table: any): string => {
+      if (table === schema.properties) return 'properties';
+      if (table === schema.propertyImages) return 'property_images';
+      return String(table?.name ?? table?.tableName ?? table?._?.name ?? '').toLowerCase();
     };
 
+    const collectHintTokens = (value: any, acc: string[] = [], depth = 0): string[] => {
+      if (depth > 5 || value === null || value === undefined) return acc;
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        acc.push(String(value).toLowerCase());
+        return acc;
+      }
+      if (Array.isArray(value)) {
+        value.forEach(item => collectHintTokens(item, acc, depth + 1));
+        return acc;
+      }
+      if (typeof value === 'object') {
+        Object.entries(value).forEach(([k, v]) => {
+          acc.push(k.toLowerCase());
+          collectHintTokens(v, acc, depth + 1);
+        });
+      }
+      return acc;
+    };
+
+    const normalizeSearchRow = (row: Row): Row => ({
+      id: Number(row.id ?? 0),
+      title: row.title ?? 'Untitled Property',
+      price: 1000000,
+      suburb: 'Mock Suburb',
+      city: row.city ?? '',
+      province: row.province ?? '',
+      propertyType: row.propertyType ?? 'house',
+      listingType: row.listingType ?? row.transactionType ?? 'sale',
+      bedrooms: row.bedrooms ?? null,
+      bathrooms: row.bathrooms ?? null,
+      erfSize: Number(row.area ?? row.erfSize ?? 0),
+      floorSize: Number(row.area ?? row.floorSize ?? 0),
+      titleType: 'freehold',
+      levy: row.levies ?? null,
+      rates: row.ratesAndTaxes ?? null,
+      securityEstate: false,
+      petFriendly: false,
+      fibreReady: false,
+      loadSheddingSolutions: ['none'],
+      videoCount: 0,
+      status: row.status ?? 'available',
+      listedDate:
+        row.listedDate instanceof Date
+          ? row.listedDate
+          : row.listedDate
+            ? new Date(row.listedDate)
+            : row.createdAt
+              ? new Date(row.createdAt)
+              : new Date('2024-01-01T00:00:00.000Z'),
+      latitude: Number(row.latitude ?? 0),
+      longitude: Number(row.longitude ?? 0),
+      highlights: [],
+      agentId: Number(row.agentId ?? row.ownerId ?? 0),
+    });
+
+    const makeQuery = (selectedShape?: Record<string, any>) => {
+      let activeTable = '';
+      let currentRows: Row[] = [];
+      let limitValue: number | null = null;
+      let offsetValue = 0;
+
+      const isCountSelect =
+        !!selectedShape &&
+        typeof selectedShape === 'object' &&
+        Object.prototype.hasOwnProperty.call(selectedShape, 'count') &&
+        Object.keys(selectedShape).length === 1;
+
+      const builder: any = {
+        from(table: any) {
+          activeTable = getTableName(table);
+
+          if (activeTable.includes('property_images')) {
+            currentRows = state.images.map(img => ({
+              propertyId: Number(img.propertyId ?? 0),
+              imageUrl: img.imageUrl ?? '',
+              isPrimary: Boolean(img.isPrimary),
+              displayOrder: Number(img.displayOrder ?? 0),
+            }));
+          } else {
+            currentRows = state.properties.map(normalizeSearchRow);
+          }
+
+          return builder;
+        },
+        leftJoin() {
+          return builder;
+        },
+        where() {
+          return builder;
+        },
+        groupBy() {
+          const grouped = new Map<string, number>();
+          currentRows.forEach(row => {
+            const key = String(row.propertyType ?? 'unknown');
+            grouped.set(key, (grouped.get(key) ?? 0) + 1);
+          });
+          currentRows = Array.from(grouped.entries()).map(([propertyType, count]) => ({
+            propertyType,
+            count,
+          }));
+          return builder;
+        },
+        orderBy(...args: any[]) {
+          if (activeTable.includes('property_images')) {
+            currentRows.sort((a, b) => {
+              const primaryCmp = Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary));
+              if (primaryCmp !== 0) return primaryCmp;
+              return Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0);
+            });
+            return builder;
+          }
+
+          const orderExpr: any = args?.[0];
+          const chunks = Array.isArray(orderExpr?.queryChunks) ? orderExpr.queryChunks : [];
+          const directionText = chunks
+            .filter((chunk: any) => Array.isArray(chunk?.value))
+            .map((chunk: any) => String(chunk.value.join('')).toLowerCase())
+            .join(' ');
+          const hasDesc = directionText.includes('desc');
+
+          const orderedColumn = chunks.find(
+            (chunk: any) => chunk && typeof chunk === 'object' && typeof chunk.name === 'string',
+          );
+          const columnName = String(orderedColumn?.name ?? '').toLowerCase();
+
+          if (columnName === 'price') {
+            currentRows.sort((a, b) =>
+              hasDesc
+                ? Number(b.price ?? 0) - Number(a.price ?? 0)
+                : Number(a.price ?? 0) - Number(b.price ?? 0),
+            );
+            return builder;
+          }
+
+          if (columnName === 'createdat' || columnName === 'created_at') {
+            currentRows.sort((a, b) => {
+              const aTs = new Date(a.listedDate ?? 0).getTime();
+              const bTs = new Date(b.listedDate ?? 0).getTime();
+              return hasDesc ? bTs - aTs : aTs - bTs;
+            });
+            return builder;
+          }
+
+          if (columnName === 'address') {
+            currentRows.sort((a, b) => {
+              const aSuburb = String(a.suburb ?? '').toLowerCase();
+              const bSuburb = String(b.suburb ?? '').toLowerCase();
+              return hasDesc ? bSuburb.localeCompare(aSuburb) : aSuburb.localeCompare(bSuburb);
+            });
+            return builder;
+          }
+
+          currentRows.sort(
+            (a, b) => new Date(b.listedDate ?? 0).getTime() - new Date(a.listedDate ?? 0).getTime(),
+          );
+          return builder;
+        },
+        limit(n: number) {
+          limitValue = Math.max(0, Number(n ?? 0));
+          return builder;
+        },
+        offset(n: number) {
+          offsetValue = Math.max(0, Number(n ?? 0));
+          return builder;
+        },
+        then(resolve: (value: any) => any, reject?: (reason: any) => any) {
+          let outputRows = [...currentRows];
+          if (offsetValue > 0) outputRows = outputRows.slice(offsetValue);
+          if (limitValue !== null) outputRows = outputRows.slice(0, limitValue);
+          const output = isCountSelect ? [{ count: currentRows.length }] : outputRows;
+          return Promise.resolve(output).then(resolve, reject);
+        },
+      };
+
+      return builder;
+    };
+
+    const mockDb: any = {
+      query: createQueryProxy(),
+      select: (shape?: Record<string, any>) => makeQuery(shape),
+      insert: (table: any) => ({
+        values: async (value: Row | Row[]) => {
+          const tableName = getTableName(table);
+          const values = Array.isArray(value) ? value : [value];
+
+          if (tableName.includes('properties')) {
+            let lastInsertId = 0;
+            values.forEach(v => {
+              const id = Number(v.id ?? nextPropertyId++);
+              state.properties.push({ ...v, id });
+              lastInsertId = id;
+            });
+            return { insertId: lastInsertId };
+          }
+
+          if (tableName.includes('property_images')) {
+            values.forEach((v, idx) => {
+              state.images.push({
+                id: Number(v.id ?? idx + 1),
+                propertyId: Number(v.propertyId ?? 0),
+                imageUrl: v.imageUrl ?? '',
+                isPrimary: Boolean(v.isPrimary),
+                displayOrder: Number(v.displayOrder ?? 0),
+              });
+            });
+            return { insertId: 1 };
+          }
+
+          return { insertId: 0 };
+        },
+      }),
+      update: () => ({ set: () => ({ where: async () => ({ affectedRows: 0 }) }) }),
+      delete: (table: any) => ({
+        where: async () => {
+          if (getTableName(table).includes('properties')) {
+            state.properties = [];
+          }
+          return { affectedRows: 0 };
+        },
+      }),
+      transaction: async (cb: any) => cb(mockDb),
+    };
+
+    (mockDb as any).__seed = state;
     _db = mockDb as any;
     return _db;
   }
