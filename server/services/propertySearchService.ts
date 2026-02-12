@@ -31,7 +31,18 @@ export class PropertySearchService {
     // Try to get from cache
     const cached = await redisCache.get<SearchResults>(cacheKey);
     if (cached) {
-      return cached;
+      return {
+        ...cached,
+        properties: (cached.properties || []).map((p: any) => ({
+          ...p,
+          listedDate:
+            p?.listedDate instanceof Date
+              ? p.listedDate
+              : p?.listedDate
+                ? new Date(p.listedDate)
+                : new Date(0),
+        })),
+      };
     }
 
     // Resolve location slugs to IDs for optimal queries
