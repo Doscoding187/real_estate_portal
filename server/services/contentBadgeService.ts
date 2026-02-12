@@ -340,7 +340,11 @@ export class ContentBadgeService {
   async updateContentBadge(contentId: string | number, isShort: boolean = false): Promise<void> {
     // Fetch the content
     const table = isShort ? exploreShorts : exploreContent;
-    const content = await db.select().from(table).where(eq(table.id, contentId)).limit(1);
+    const idNum = typeof contentId === 'number' ? contentId : Number(contentId);
+    if (!Number.isFinite(idNum)) {
+      throw new Error(`Content not found: ${contentId}`);
+    }
+    const content = await db.select().from(table).where(eq(table.id, idNum)).limit(1);
 
     if (content.length === 0) {
       throw new Error(`Content not found: ${contentId}`);
@@ -359,7 +363,7 @@ export class ContentBadgeService {
         badgeType,
         contentCategory,
       })
-      .where(eq(table.id, contentId));
+      .where(eq(table.id, idNum));
   }
 
   /**

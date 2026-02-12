@@ -15,7 +15,7 @@ export const systemRouter = router({
     .query(async () => {
       const db = await getDb();
       let dbStatus = 'disconnected';
-      let dbError = null;
+      let dbError: string | null = null;
 
       try {
         if (db) {

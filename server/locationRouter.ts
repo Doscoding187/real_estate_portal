@@ -11,6 +11,7 @@ import {
   agentCoverageAreas,
 } from '../drizzle/schema';
 import { eq, and, or, like, desc, sql, count } from 'drizzle-orm';
+import { requireUser } from './_core/requireUser';
 
 /**
  * Location Router - Location intelligence and search functionality
@@ -444,10 +445,10 @@ export const locationRouter = router({
         .limit(1)
         .orderBy(sql`distance`);
 
-      const [nearestProvince] = nearbyLocations;
+      const [nearestProvince] = nearbyLocations as any[];
 
-      let nearestCity = null;
-      let nearestSuburb = null;
+      let nearestCity: any = null;
+      let nearestSuburb: any = null;
 
       if (nearestProvince) {
         const citiesNearby = await db
@@ -537,6 +538,7 @@ export const locationRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      const user = requireUser(ctx);
 
       // Get agent record from user if no agentId provided
       let agentId = input.agentId;
@@ -545,13 +547,17 @@ export const locationRouter = router({
         const [agentRecord] = await db
           .select()
           .from(agents)
-          .where(eq(agents.userId, ctx.user.id))
+          .where(eq(agents.userId, user.id))
           .limit(1);
 
         if (!agentRecord) {
           throw new Error('Agent profile not found');
         }
         agentId = agentRecord.id;
+      }
+
+      if (!agentId) {
+        throw new Error('Agent profile not found');
       }
 
       const coverageAreas = await db
@@ -620,7 +626,12 @@ export const locationRouter = router({
       const latStep = (input.bounds.north - input.bounds.south) / input.gridSize;
       const lngStep = (input.bounds.east - input.bounds.west) / input.gridSize;
 
-      const heatmapData = [];
+      const heatmapData: Array<{
+        latitude: number;
+        longitude: number;
+        count: number;
+        weight: number;
+      }> = [];
 
       for (let i = 0; i < input.gridSize; i++) {
         for (let j = 0; j < input.gridSize; j++) {

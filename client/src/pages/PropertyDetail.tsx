@@ -167,7 +167,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     );
   }
 
-  const { property, images, agent } = data;
+  const { property, images } = data as any;
+  const agent = (data as any)?.agent;
 
   // Safely parse amenities with error handling
   let amenitiesList: string[] = [];
@@ -228,8 +229,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     console.error('Failed to parse property settings', e);
   }
 
-  const similarProperties =
-    similarPropertiesData?.properties?.filter(p => p.id !== propertyId) || [];
+  const similarProperties = (similarPropertiesData ?? []).filter(p => p.id !== propertyId);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -726,6 +726,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-6">
                 <SuburbInsights
+                  suburbId={Number((property as any).suburbId ?? 0)}
                   suburbName={property.suburb || property.city}
                   isDevelopment={!!property.developmentId}
                 />

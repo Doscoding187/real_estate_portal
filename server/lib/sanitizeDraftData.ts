@@ -70,7 +70,15 @@ const normalizeMedia = (raw: any) => {
   let heroImage = hero;
   if (!heroImage && photos.length) {
     const pick = photos.find((p: any) => p.category === 'featured' || p.isPrimary) ?? photos[0];
-    heroImage = { ...pick, category: 'featured', isPrimary: true };
+    heroImage = {
+      ...pick,
+      id: asString(pick?.id ?? `media-${Date.now()}-${Math.random()}`),
+      url: asString(pick?.url ?? ''),
+      type: asString(pick?.type ?? 'image'),
+      category: 'featured',
+      isPrimary: true,
+      displayOrder: clampInt(pick?.displayOrder, 0, 9999, 0),
+    };
     const rest = photos.filter((p: any) => p.id !== heroImage!.id);
     return { heroImage, photos: rest, videos, documents };
   }

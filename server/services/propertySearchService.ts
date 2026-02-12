@@ -441,7 +441,17 @@ export class PropertySearchService {
 
     // Floors (from Developments table)
     if (filters.floors && filters.floors.length > 0) {
-      conditions.push(inArray(developments.floors, filters.floors));
+      const floorMap: Record<string, number> = {
+        'single-storey': 1,
+        'double-storey': 2,
+        triplex: 3,
+      };
+      const floorNums = filters.floors
+        .map(f => floorMap[f])
+        .filter((n): n is number => Number.isFinite(n));
+      if (floorNums.length > 0) {
+        conditions.push(inArray(developments.floors, floorNums));
+      }
     }
 
     // SA-specific filters (will be fully functional after migration)

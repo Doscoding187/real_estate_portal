@@ -31,9 +31,9 @@ export default function AgentDetail() {
   const [, params] = useRoute('/agent/:id');
   const agentId = params?.id ? parseInt(params.id) : 0;
 
-  const { data: agent, isLoading } = trpc.agents.getById.useQuery({ id: agentId });
+  const { data: agent, isLoading } = trpc.agent.getById.useQuery({ id: agentId });
   const { data: reviews } = trpc.reviews.getByTarget.useQuery({
-    reviewType: 'agent',
+    targetType: 'agent',
     targetId: agentId,
   });
 

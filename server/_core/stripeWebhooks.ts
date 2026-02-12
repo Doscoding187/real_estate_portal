@@ -83,6 +83,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
 // Handle subscription creation
 async function handleSubscriptionCreated(subscription: Stripe.Subscription, db: any) {
   try {
+    const sub: any = subscription;
     // Find the subscription record in our database
     const [existingSubscription] = await db
       .select()
@@ -118,15 +119,15 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription, db: 
         .update(agencySubscriptions)
         .set({
           status: subscription.status,
-          currentPeriodStart: subscription.current_period_start
-            ? new Date(subscription.current_period_start * 1000)
+          currentPeriodStart: sub.current_period_start
+            ? new Date(sub.current_period_start * 1000).toISOString()
             : null,
-          currentPeriodEnd: subscription.current_period_end
-            ? new Date(subscription.current_period_end * 1000)
+          currentPeriodEnd: sub.current_period_end
+            ? new Date(sub.current_period_end * 1000).toISOString()
             : null,
-          trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+          trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
           cancelAtPeriodEnd: subscription.cancel_at_period_end ? 1 : 0,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(agencySubscriptions.id, existingSubscription.id));
     }
@@ -140,15 +141,20 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription, db: 
 // Handle subscription updates
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription, db: any) {
   try {
+    const sub: any = subscription;
     const updateData: any = {
       status: subscription.status,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+      currentPeriodStart: sub.current_period_start
+        ? new Date(sub.current_period_start * 1000).toISOString()
+        : null,
+      currentPeriodEnd: sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : null,
+      trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
       cancelAtPeriodEnd: subscription.cancel_at_period_end ? 1 : 0,
-      canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
-      endedAt: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null,
-      updatedAt: new Date(),
+      canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+      endedAt: sub.ended_at ? new Date(sub.ended_at * 1000).toISOString() : null,
+      updatedAt: new Date().toISOString(),
     };
 
     // Update subscription price if changed
@@ -183,8 +189,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, db: 
         .update(agencySubscriptions)
         .set({
           status: 'canceled',
-          endedAt: new Date(),
-          updatedAt: new Date(),
+          endedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(agencySubscriptions.id, existingSubscription.id));
 
@@ -206,7 +212,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, db: 
           subscriptionPlan: 'free',
           subscriptionStatus: 'canceled',
           subscriptionExpiry: null,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(agencies.id, existingSubscription.agencyId));
     }

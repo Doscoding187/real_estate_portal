@@ -4,6 +4,14 @@ import { authService } from './auth';
 
 export type User = typeof users.$inferSelect;
 
+export type BrandEmulationContext = {
+  originalUserId: number;
+  brandProfileId: number;
+  brandProfileType: 'developer' | 'marketing_agency' | 'hybrid';
+  mode?: 'seeding' | 'emulating';
+  brandProfileName?: string;
+};
+
 /**
  * Base tRPC context created for each request.
  * Brand emulation context is applied later by brandContext middleware.
@@ -12,6 +20,7 @@ export type TrpcContext = {
   req: CreateExpressContextOptions['req'];
   res: CreateExpressContextOptions['res'];
   user: User | null;
+  brandEmulationContext?: BrandEmulationContext;
 };
 
 export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {

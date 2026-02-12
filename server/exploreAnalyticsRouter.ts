@@ -7,6 +7,7 @@
 import { router, protectedProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { exploreAnalyticsService } from './services/exploreAnalyticsService';
+import { requireUser } from './_core/requireUser';
 
 export const exploreAnalyticsRouter = router({
   /**
@@ -16,7 +17,7 @@ export const exploreAnalyticsRouter = router({
   getVideoAnalytics: protectedProcedure
     .input(
       z.object({
-        videoId: z.number(),
+        videoId: z.string().min(1),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
       }),
@@ -47,7 +48,7 @@ export const exploreAnalyticsRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const creatorId = input.creatorId || ctx.user.id;
+      const creatorId = input.creatorId || requireUser(ctx).id;
 
       const analytics = await exploreAnalyticsService.getCreatorAnalytics(
         creatorId,
@@ -68,7 +69,7 @@ export const exploreAnalyticsRouter = router({
   getSessionAnalytics: protectedProcedure
     .input(
       z.object({
-        sessionId: z.number(),
+        sessionId: z.string().min(1),
       }),
     )
     .query(async ({ input }) => {
@@ -115,12 +116,12 @@ export const exploreAnalyticsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Get creator analytics
-      const creatorAnalytics = await exploreAnalyticsService.getCreatorAnalytics(ctx.user.id);
+      const creatorAnalytics = await exploreAnalyticsService.getCreatorAnalytics(requireUser(ctx).id);
 
       // Get aggregated metrics for the period
       const periodMetrics = await exploreAnalyticsService.getAggregatedMetrics(
         input.period,
-        ctx.user.id,
+        requireUser(ctx).id,
       );
 
       return {
@@ -159,7 +160,7 @@ export const exploreAnalyticsRouter = router({
    */
   batchUpdateEngagementScores: protectedProcedure.mutation(async ({ ctx }) => {
     // TODO: Add admin check
-    // if (ctx.user.role !== 'admin') {
+    // if (requireUser(ctx).role !== 'admin') {
     //   throw new Error('Unauthorized');
     // }
 
@@ -171,3 +172,4 @@ export const exploreAnalyticsRouter = router({
     };
   }),
 });
+

@@ -258,13 +258,13 @@ export class FeedRankingService {
     // Get user interest scores (simplified - would use ML model in production)
     const userInterestScores = await this.getUserInterestScores(userId, items);
 
-    // Calculate ranking score for each item
-    const rankedItems: RankedContent[] = items.map(item => {
-      const contentId = item.id.toString();
-      const partnerId = item.partnerId;
+      // Calculate ranking score for each item
+      const rankedItems: RankedContent[] = items.map(item => {
+        const contentId = item.id.toString();
+        const partnerId = item.partnerId;
 
-      // Find boost campaign for this content
-      const boostCampaign = activeCampaigns.find(c => c.contentId === contentId);
+        // Find boost campaign for this content
+        const boostCampaign = activeCampaigns.find(c => c.contentId === contentId);
 
       // Build ranking factors
       const factors: RankingFactors = {
@@ -364,11 +364,19 @@ export class FeedRankingService {
       return {};
     }
 
+    const contentIdNums = contentIds
+      .map(x => Number(x))
+      .filter(n => Number.isFinite(n));
+
+    if (contentIdNums.length === 0) {
+      return {};
+    }
+
     try {
       const scores = await db
         .select()
         .from(contentQualityScores)
-        .where(inArray(contentQualityScores.contentId, contentIds));
+        .where(inArray(contentQualityScores.contentId, contentIdNums));
 
       const scoreMap: Record<string, number> = {};
       for (const score of scores) {

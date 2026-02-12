@@ -65,8 +65,8 @@ export const auditLogs = mysqlTable('audit_logs', {
 
 export const platformSettings = mysqlTable('platform_settings', {
   id: int().autoincrement().notNull(),
-  key: varchar({ length: 100 }).notNull(),
-  value: text().notNull(),
+  settingKey: varchar('setting_key', { length: 100 }).notNull(),
+  settingValue: text('setting_value').notNull(),
   description: text(),
   category: mysqlEnum(['pricing', 'features', 'notifications', 'limits', 'other'])
     .default('other')

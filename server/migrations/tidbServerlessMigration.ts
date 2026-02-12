@@ -50,17 +50,19 @@ async function createBackup(): Promise<string> {
     // TiDB Serverless: Use smaller batches to avoid timeout
     console.log('   Fetching developments...');
     const developments = await conn.execute('SELECT * FROM developments');
+    const developmentsRows = (developments as any).rows ?? (developments as any[]);
 
     console.log('   Fetching unit types...');
     const unitTypes = await conn.execute('SELECT * FROM unit_types');
+    const unitTypesRows = (unitTypes as any).rows ?? (unitTypes as any[]);
 
     const backup = {
       timestamp: new Date().toISOString(),
       database: 'tidb-serverless',
-      developmentsCount: developments.length,
-      unitTypesCount: unitTypes.length,
-      developments: developments,
-      unitTypes: unitTypes,
+      developmentsCount: developmentsRows.length,
+      unitTypesCount: unitTypesRows.length,
+      developments: developmentsRows,
+      unitTypes: unitTypesRows,
     };
 
     // Save to file

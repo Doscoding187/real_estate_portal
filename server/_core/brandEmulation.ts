@@ -49,8 +49,8 @@ class BrandEmulationService {
 
       return {
         brandProfileId: brandEmulationContext.brandProfileId,
-        brandProfileName: brandEmulationContext.brandProfileName,
-        brandProfileType: brandEmulationContext.brandProfileType,
+        brandProfileName: brandEmulationContext.brandProfileName ?? 'Unknown Brand',
+        brandProfileType: brandEmulationContext.brandProfileType ?? 'developer',
         source: 'publisher_emulator',
         isEmulation: true,
       };

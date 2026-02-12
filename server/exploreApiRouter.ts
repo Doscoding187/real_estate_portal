@@ -19,6 +19,7 @@ import { eq, and, desc, sql, gte, lte, inArray, like } from 'drizzle-orm';
 import { recommendationEngineService } from './services/recommendationEngineService';
 import { exploreFeedService } from './services/exploreFeedService';
 import { exploreAgencyService } from './services/exploreAgencyService';
+import { requireUser } from './_core/requireUser';
 
 /**
  * Helper function to verify agency access
@@ -77,11 +78,13 @@ export const exploreApiRouter = router({
     .query(async ({ input, ctx }) => {
       try {
         const userId = ctx.user?.id;
-        const feed = await exploreFeedService.getPersonalizedFeed(
-          userId || null,
-          input.page,
-          input.limit,
-        );
+        const limit = input.limit;
+        const offset = Math.max(0, (input.page - 1) * limit);
+        const feed = await exploreFeedService.getPersonalizedFeed({
+          userId: userId ?? undefined,
+          limit,
+          offset,
+        });
         return { success: true, data: feed };
       } catch (error) {
         console.error('[exploreApiRouter] getFeed error:', error);
@@ -288,7 +291,7 @@ export const exploreApiRouter = router({
     )
     .query(async ({ ctx, input }) => {
       try {
-        await verifyAgencyAccess(ctx.user.id, input.agencyId);
+        await verifyAgencyAccess(requireUser(ctx).id, input.agencyId);
         const analytics = await exploreAgencyService.getAgencyAnalytics(
           input.agencyId,
           input.dateRange,
@@ -327,3 +330,4 @@ export const exploreApiRouter = router({
       }
     }),
 });
+

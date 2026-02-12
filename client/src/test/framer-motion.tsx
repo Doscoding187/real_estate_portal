@@ -28,7 +28,7 @@ function stripMotionProps(props: Record<string, any>) {
   return out;
 }
 
-function makeMotionTag(tag: keyof JSX.IntrinsicElements) {
+function makeMotionTag(tag: keyof React.JSX.IntrinsicElements) {
   return React.forwardRef<any, any>((props, ref) =>
     React.createElement(tag, { ...stripMotionProps(props), ref }, props.children),
   );

@@ -15,6 +15,11 @@ import { savedSearches } from '../drizzle/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { propertySearchService } from './services/propertySearchService';
 import type { PropertyFilters, SortOption } from '../shared/types';
+import { requireUser } from './_core/requireUser';
+
+function getUserId(ctx: { user: { id: number } | null }) {
+  return requireUser(ctx).id;
+}
 
 // Validation schemas
 const propertyFiltersSchema = z.object({
@@ -153,12 +158,11 @@ export const propertyResultsRouter = router({
 
         try {
           const result = await db.insert(savedSearches).values({
-            userId: ctx.user.id,
+            userId: getUserId(ctx),
             name: input.name,
             filters: input.filters as any,
             notificationMethod: input.notificationMethod,
             notificationFrequency: input.notificationFrequency,
-            isActive: 1,
           });
 
           return {
@@ -193,7 +197,7 @@ export const propertyResultsRouter = router({
         const searches = await db
           .select()
           .from(savedSearches)
-          .where(and(eq(savedSearches.userId, ctx.user.id), eq(savedSearches.isActive, 1)))
+          .where(eq(savedSearches.userId, getUserId(ctx)))
           .orderBy(desc(savedSearches.createdAt));
 
         // Get result counts for each saved search
@@ -278,8 +282,7 @@ export const propertyResultsRouter = router({
             .where(
               and(
                 eq(savedSearches.id, input.id),
-                eq(savedSearches.userId, ctx.user.id),
-                eq(savedSearches.isActive, 1),
+                eq(savedSearches.userId, getUserId(ctx)),
               ),
             )
             .limit(1);
@@ -334,7 +337,7 @@ export const propertyResultsRouter = router({
           const search = await db
             .select()
             .from(savedSearches)
-            .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, ctx.user.id)))
+            .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, getUserId(ctx))))
             .limit(1);
 
           if (search.length === 0) {
@@ -344,8 +347,7 @@ export const propertyResultsRouter = router({
             });
           }
 
-          // Soft delete by setting isActive to false
-          await db.update(savedSearches).set({ isActive: 0 }).where(eq(savedSearches.id, input.id));
+          await db.delete(savedSearches).where(eq(savedSearches.id, input.id));
 
           return {
             success: true,

@@ -13,6 +13,7 @@ import {
   validateVideoDuration,
   updateVideoAnalytics,
 } from './services/exploreVideoService';
+import { requireUser } from './_core/requireUser';
 import {
   processUploadedVideo,
   updateTranscodedUrls,
@@ -34,7 +35,7 @@ export const exploreVideoUploadRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const creatorId = ctx.user.id;
+      const creatorId = requireUser(ctx).id;
       const result = await generateVideoUploadUrls(creatorId, input.filename, input.contentType);
 
       return {
@@ -71,7 +72,7 @@ export const exploreVideoUploadRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const creatorId = ctx.user.id;
+      const creatorId = requireUser(ctx).id;
 
       // Validate metadata
       const metadataValidation = validateVideoMetadata(input.metadata);
@@ -96,7 +97,7 @@ export const exploreVideoUploadRouter = router({
 
       // Trigger video processing pipeline (transcoding, thumbnails, etc.)
       // This runs asynchronously and doesn't block the response
-      processUploadedVideo(result.exploreVideoId, input.videoUrl, input.duration).catch(error => {
+      processUploadedVideo(result.contentId, input.videoUrl, input.duration).catch(error => {
         console.error('[ExploreVideoUpload] Video processing failed:', error);
         // In production, this would trigger an alert or retry mechanism
       });
@@ -252,3 +253,4 @@ export const exploreVideoUploadRouter = router({
       };
     }),
 });
+

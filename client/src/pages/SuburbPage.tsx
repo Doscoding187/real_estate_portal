@@ -17,7 +17,6 @@ import PropertyCard from '@/components/PropertyCard';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
-import { FinalCTA } from '@/components/location/FinalCTA';
 import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { SimilarLocations } from '@/components/location/SimilarLocations';
@@ -85,7 +84,19 @@ export default function SuburbPage({
     );
   }
 
-  const { suburb, listings, stats, subLocalities = [], insights, reviews } = data;
+  const suburb = (data as any)?.suburb;
+  const listings = (data as any)?.listings ?? [];
+  const stats = (data as any)?.stats ?? {
+    totalListings: 0,
+    avgPrice: 0,
+    minPrice: 0,
+    maxPrice: 0,
+    rentalCount: 0,
+    saleCount: 0,
+  };
+  const subLocalities = (data as any)?.subLocalities ?? [];
+  const insights = (data as any)?.insights ?? null;
+  const reviews = (data as any)?.reviews ?? [];
 
   return (
     <div className="min-h-screen bg-white">
@@ -282,14 +293,6 @@ export default function SuburbPage({
         }
         exploreMore={
           <DiscoverProperties initialCity={suburb.cityName} locationName={suburb.name} />
-        }
-        finalCTA={
-          <FinalCTA
-            locationName={suburb.name}
-            provinceSlug={provinceSlug}
-            citySlug={citySlug}
-            suburbSlug={suburbSlug}
-          />
         }
       />
     </div>

@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { authService } from './_core/auth';
 import { COOKIE_NAME } from '@shared/const';
 import { getSessionCookieOptions } from './_core/cookies';
+import { requireUser } from './_core/requireUser';
 
 /**
  * Invitation Router
@@ -33,8 +34,9 @@ export const invitationRouter = router({
       throw new Error('Database not available');
     }
 
-    // Verify user has an agency
-    if (!ctx.user.agencyId) {
+    const user = requireUser(ctx);
+    const agencyId = user.agencyId;
+    if (!agencyId) {
       throw new Error('You must be part of an agency to send invitations');
     }
 
@@ -45,7 +47,7 @@ export const invitationRouter = router({
       .where(eq(users.email, input.email))
       .limit(1);
 
-    if (existingUser && existingUser.agencyId === ctx.user.agencyId) {
+    if (existingUser && existingUser.agencyId === agencyId) {
       throw new Error('This user is already part of your agency');
     }
 
@@ -56,7 +58,7 @@ export const invitationRouter = router({
       .where(
         and(
           eq(invitations.email, input.email),
-          eq(invitations.agencyId, ctx.user.agencyId),
+          eq(invitations.agencyId, agencyId),
           eq(invitations.status, 'pending'),
         ),
       )
@@ -75,8 +77,8 @@ export const invitationRouter = router({
 
     // Create invitation
     const [result] = await db.insert(invitations).values({
-      agencyId: ctx.user.agencyId,
-      invitedBy: ctx.user.id,
+      agencyId,
+      invitedBy: user.id,
       email: input.email,
       role: input.role,
       token,
@@ -86,7 +88,7 @@ export const invitationRouter = router({
 
     // Audit log
     await logAudit({
-      userId: ctx.user.id,
+      userId: user.id,
       action: 'invitation.create',
       targetType: 'invitation',
       targetId: Number(result.insertId),
@@ -114,14 +116,16 @@ export const invitationRouter = router({
       throw new Error('Database not available');
     }
 
-    if (!ctx.user.agencyId) {
+    const user = requireUser(ctx);
+    const agencyId = user.agencyId;
+    if (!agencyId) {
       throw new Error('You must be part of an agency');
     }
 
     const results = await db
       .select()
       .from(invitations)
-      .where(eq(invitations.agencyId, ctx.user.agencyId))
+      .where(eq(invitations.agencyId, agencyId))
       .orderBy(desc(invitations.createdAt));
 
     return results;
@@ -198,7 +202,7 @@ export const invitationRouter = router({
     }
 
     // Verify email matches (user must be logged in with the invited email)
-    if (ctx.user.email !== invitation.email) {
+    if (requireUser(ctx).email !== invitation.email) {
       throw new Error('This invitation is for a different email address');
     }
 
@@ -211,7 +215,7 @@ export const invitationRouter = router({
         isSubaccount: 1,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, ctx.user.id));
+      .where(eq(users.id, requireUser(ctx).id));
 
     // Mark invitation as accepted
     await db
@@ -219,12 +223,12 @@ export const invitationRouter = router({
       .set({
         status: 'accepted',
         acceptedAt: new Date(),
-        acceptedBy: ctx.user.id,
+        acceptedBy: requireUser(ctx).id,
       })
       .where(eq(invitations.id, invitation.id));
 
     // Issue new JWT cookie with updated role
-    const [updatedUser] = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+    const [updatedUser] = await db.select().from(users).where(eq(users.id, requireUser(ctx).id)).limit(1);
 
     if (updatedUser) {
       const sessionToken = await authService.createSessionToken(
@@ -238,7 +242,7 @@ export const invitationRouter = router({
 
     // Audit log
     await logAudit({
-      userId: ctx.user.id,
+      userId: requireUser(ctx).id,
       action: 'invitation.accept',
       targetType: 'invitation',
       targetId: invitation.id,
@@ -274,7 +278,8 @@ export const invitationRouter = router({
       }
 
       // Verify it's from the same agency
-      if (invitation.agencyId !== ctx.user.agencyId) {
+      const user = requireUser(ctx);
+      if (invitation.agencyId !== user.agencyId) {
         throw new Error('You can only cancel invitations from your agency');
       }
 
@@ -286,7 +291,7 @@ export const invitationRouter = router({
 
       // Audit log
       await logAudit({
-        userId: ctx.user.id,
+        userId: requireUser(ctx).id,
         action: 'invitation.cancel',
         targetType: 'invitation',
         targetId: input.invitationId,
@@ -319,7 +324,8 @@ export const invitationRouter = router({
       }
 
       // Verify it's from the same agency
-      if (invitation.agencyId !== ctx.user.agencyId) {
+      const user = requireUser(ctx);
+      if (invitation.agencyId !== user.agencyId) {
         throw new Error('You can only resend invitations from your agency');
       }
 
@@ -341,7 +347,7 @@ export const invitationRouter = router({
 
       // Audit log
       await logAudit({
-        userId: ctx.user.id,
+        userId: requireUser(ctx).id,
         action: 'invitation.resend',
         targetType: 'invitation',
         targetId: input.invitationId,
@@ -356,3 +362,5 @@ export const invitationRouter = router({
       return updated;
     }),
 });
+
+

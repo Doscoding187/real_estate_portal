@@ -12,6 +12,7 @@ import {} from // TODO: Re-enable when marketing campaign schema is added
 // campaignLeads,
 '../drizzle/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 
 // TEMPORARY: Placeholder types until schema is implemented
 const marketingCampaigns = {} as any;
@@ -145,7 +146,7 @@ export const marketingRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      const conditions = [];
+      const conditions: SQL[] = [];
 
       // If owner filters are provided, use them.
       // Otherwise, if user is NOT admin, force filter by their own ID (security check)

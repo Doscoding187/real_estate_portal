@@ -11,7 +11,6 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
-import superjson from 'superjson';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { registerAuthRoutes } from './authRoutes';
 import { appRouter } from '../routers';
@@ -152,7 +151,6 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
-      transformer: superjson,
       onError({ error, path, type }) {
         console.error('❌ tRPC Error:', {
           path,

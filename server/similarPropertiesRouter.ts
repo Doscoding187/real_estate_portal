@@ -7,6 +7,11 @@
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { similarPropertiesService } from './services/similarPropertiesService';
+import { requireUser } from './_core/requireUser';
+
+function getUserId(ctx: { user: { id: number } | null }) {
+  return requireUser(ctx).id;
+}
 
 export const similarPropertiesRouter = router({
   /**
@@ -60,7 +65,7 @@ export const similarPropertiesRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Get user's refined weights if available
-      const weights = await similarPropertiesService.getRefinedWeights(ctx.user.id);
+      const weights = await similarPropertiesService.getRefinedWeights(getUserId(ctx));
 
       const similarProperties = await similarPropertiesService.findSimilarProperties(
         input.propertyId,

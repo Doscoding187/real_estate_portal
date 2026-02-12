@@ -13,6 +13,7 @@
 import { db } from '../db';
 import { developerBrandProfiles, developments, leads, listings } from '../../drizzle/schema';
 import { eq, and, desc, sql, like, or, isNull, inArray } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 
 // ============================================================================
@@ -165,7 +166,7 @@ async function getBrandProfileBySlug(slug: string) {
  * List brand profiles with filtering
  */
 async function listBrandProfiles(filters: BrandProfileFilters = {}) {
-  const conditions = [];
+  const conditions: SQL[] = [];
 
   // Only show visible profiles by default for public queries
   if (filters.isVisible !== false) {
@@ -184,12 +185,13 @@ async function listBrandProfiles(filters: BrandProfileFilters = {}) {
     conditions.push(eq(developerBrandProfiles.ownerType, filters.ownerType));
   }
 
-  if (filters.search) {
+  const search = filters.search?.trim();
+  if (search) {
     conditions.push(
       or(
-        like(developerBrandProfiles.brandName, `%${filters.search}%`),
-        like(developerBrandProfiles.headOfficeLocation, `%${filters.search}%`),
-      ),
+        like(developerBrandProfiles.brandName, `%${search}%`),
+        like(developerBrandProfiles.headOfficeLocation, `%${search}%`),
+      )!,
     );
   }
 
@@ -489,15 +491,15 @@ async function getBrandLeadStats(brandProfileId: number) {
  */
 async function deleteBrandProfile(id: number, force: boolean = false) {
   // 1. Get brand profile with status
-  const [profile] = await db
-    .select({
-      id: developerBrandProfiles.id,
-      brandName: developerBrandProfiles.brandName,
-      status: developerBrandProfiles.status,
-      ownerType: developerBrandProfiles.ownerType,
-    })
-    .from(developerBrandProfiles)
-    .where(eq(developerBrandProfiles.id, id));
+    const [profile] = await db
+      .select({
+        id: developerBrandProfiles.id,
+        brandName: developerBrandProfiles.brandName,
+        profileType: developerBrandProfiles.profileType,
+        ownerType: developerBrandProfiles.ownerType,
+      })
+      .from(developerBrandProfiles)
+      .where(eq(developerBrandProfiles.id, id));
 
   if (!profile) {
     throw new TRPCError({
@@ -507,12 +509,11 @@ async function deleteBrandProfile(id: number, force: boolean = false) {
   }
 
   // 2. Safety check: Only seeded brands can be hard deleted (unless force=true)
-  if (profile.status !== 'seeded' && !force) {
+  if (profile.profileType !== 'industry_reference' && !force) {
     // Soft delete: Set to archived
     await db
       .update(developerBrandProfiles)
       .set({
-        status: 'archived',
         isVisible: 0,
         brandName: `${profile.brandName} (Archived ${new Date().toISOString().split('T')[0]})`,
         slug: `archived-${id}-${Date.now()}`, // Free up the slug
@@ -527,7 +528,7 @@ async function deleteBrandProfile(id: number, force: boolean = false) {
   }
 
   // 3. Hard delete: Only for seeded brands or force=true
-  if (profile.status === 'seeded' || force) {
+  if (profile.profileType === 'industry_reference' || force) {
     // Check dependencies before cascading
     const devCount = await db
       .select({ count: sql<number>`COUNT(*)` })
@@ -537,7 +538,7 @@ async function deleteBrandProfile(id: number, force: boolean = false) {
     const listingCount = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(listings)
-      .where(eq(listings.brandProfileId, id));
+      .where(eq((listings as any).developerBrandProfileId, id));
 
     const leadCount = await db
       .select({ count: sql<number>`COUNT(*)` })
@@ -564,7 +565,7 @@ async function deleteBrandProfile(id: number, force: boolean = false) {
 
   throw new TRPCError({
     code: 'FORBIDDEN',
-    message: `Cannot delete live brand "${profile.brandName}". Set status='seeded' first or use force=true.`,
+    message: `Cannot delete live brand "${profile.brandName}". Set profileType='industry_reference' first or use force=true.`,
   });
 }
 

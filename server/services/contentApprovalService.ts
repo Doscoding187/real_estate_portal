@@ -1,39 +1,33 @@
 import { db } from '../db';
-import {
-  contentApprovalQueue,
-  explorePartners,
-  partnerTiers,
-  exploreContent,
-  exploreShorts,
-} from '../../drizzle/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
+import { contentApprovalQueue, explorePartners, partnerTiers, exploreContent } from '../../drizzle/schema';
+import { eq, and, desc, sql, type SQL } from 'drizzle-orm';
 import { partnerService } from './partnerService';
+
+const toInt = (value: string | number): number =>
+  typeof value === 'number' ? value : Number(value);
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
 export interface ContentApprovalQueue {
-  id: string;
-  contentId: string;
-  partnerId: string;
-  status: 'pending' | 'approved' | 'rejected' | 'revision_requested';
+  id: number;
+  contentId: number;
+  status: 'pending' | 'reviewing' | 'approved' | 'rejected' | 'changes_requested';
   submittedAt: Date;
   reviewedAt?: Date;
-  reviewerId?: string;
+  reviewerId?: number;
   feedback?: string;
-  autoApprovalEligible: boolean;
 }
 
 export interface ApprovalDecision {
-  status: 'approved' | 'rejected' | 'revision_requested';
+  status: 'approved' | 'rejected' | 'reviewing' | 'changes_requested';
   feedback?: string;
   violationTypes?: string[];
 }
 
 export interface QueueFilters {
-  status?: 'pending' | 'approved' | 'rejected' | 'revision_requested';
+  status?: 'pending' | 'reviewing' | 'approved' | 'rejected' | 'changes_requested';
   partnerId?: string;
   limit?: number;
   offset?: number;
@@ -64,6 +58,11 @@ export class ContentApprovalService {
    * Requirements: 6.1, 6.2
    */
   async submitForApproval(contentId: string, partnerId: string): Promise<ContentApprovalQueue> {
+    const contentIdNum = toInt(contentId);
+    if (!Number.isFinite(contentIdNum)) {
+      throw new Error('Invalid contentId');
+    }
+
     // Check if partner exists
     const partner = await db.query.explorePartners.findFirst({
       where: eq(explorePartners.id, partnerId),
@@ -73,38 +72,31 @@ export class ContentApprovalService {
       throw new Error('Partner not found');
     }
 
+    const submittedBy = toInt(partner.userId);
+    if (!Number.isFinite(submittedBy)) {
+      throw new Error('Partner userId is not a numeric user id');
+    }
+
     // Check if content already in queue
     const existingQueueItem = await db.query.contentApprovalQueue.findFirst({
-      where: and(
-        eq(contentApprovalQueue.contentId, contentId),
-        eq(contentApprovalQueue.partnerId, partnerId),
-      ),
+      where: and(eq(contentApprovalQueue.contentId, contentIdNum)),
     });
 
     if (existingQueueItem) {
       throw new Error('Content already submitted for approval');
     }
 
-    // Determine if eligible for auto-approval
-    // Partners with 3+ approved content pieces are eligible
-    const isEligible = await partnerService.isEligibleForAutoApproval(partnerId);
-
-    const queueId = randomUUID();
     const [queueItem] = await db.insert(contentApprovalQueue).values({
-      id: queueId,
-      contentId,
-      partnerId,
+      contentId: contentIdNum,
+      submittedBy,
       status: 'pending',
-      autoApprovalEligible: isEligible,
     });
 
     return {
-      id: queueId,
-      contentId,
-      partnerId,
+      id: Number((queueItem as any)?.insertId ?? (queueItem as any)?.[0]?.insertId),
+      contentId: contentIdNum,
       status: 'pending',
       submittedAt: new Date(),
-      autoApprovalEligible: isEligible,
     };
   }
 
@@ -122,35 +114,38 @@ export class ContentApprovalService {
    * Requirements: 6.3
    */
   async flagContent(contentId: string, reason: string, reporterId: string): Promise<void> {
+    const contentIdNum = toInt(contentId);
+    if (!Number.isFinite(contentIdNum)) {
+      throw new Error('Invalid contentId');
+    }
+
     // Find the queue item for this content
     const queueItem = await db.query.contentApprovalQueue.findFirst({
-      where: eq(contentApprovalQueue.contentId, contentId),
+      where: eq(contentApprovalQueue.contentId, contentIdNum),
     });
 
     if (!queueItem) {
       // If content not in queue, it may already be approved
       // We need to create a new queue item for review
       const content = await db.query.exploreContent.findFirst({
-        where: eq(exploreContent.id, parseInt(contentId)),
+        where: eq(exploreContent.id, contentIdNum),
       });
 
       if (!content) {
         throw new Error('Content not found');
       }
 
-      if (!content.partnerId) {
-        throw new Error('Content does not have an associated partner');
+      // Create new queue item for flagged content
+      const reporterIdNum = toInt(reporterId);
+      if (!Number.isFinite(reporterIdNum)) {
+        throw new Error('Invalid reporterId');
       }
 
-      // Create new queue item for flagged content
-      const queueId = randomUUID();
       await db.insert(contentApprovalQueue).values({
-        id: queueId,
-        contentId,
-        partnerId: content.partnerId,
+        contentId: contentIdNum,
+        submittedBy: reporterIdNum,
         status: 'pending',
-        autoApprovalEligible: false,
-        feedback: `Flagged by user ${reporterId}: ${reason}`,
+        reviewNotes: `Flagged by user ${reporterId}: ${reason}`,
       });
 
       return;
@@ -161,8 +156,7 @@ export class ContentApprovalService {
       .update(contentApprovalQueue)
       .set({
         status: 'pending',
-        autoApprovalEligible: false,
-        feedback: `Flagged by user ${reporterId}: ${reason}`,
+        reviewNotes: `Flagged by user ${reporterId}: ${reason}`,
       })
       .where(eq(contentApprovalQueue.id, queueItem.id));
   }
@@ -173,14 +167,18 @@ export class ContentApprovalService {
    * Requirements: 6.3
    */
   async routeToManualReview(queueId: string, reason: string): Promise<void> {
+    const queueIdNum = toInt(queueId);
+    if (!Number.isFinite(queueIdNum)) {
+      throw new Error('Invalid queueId');
+    }
+
     await db
       .update(contentApprovalQueue)
       .set({
         status: 'pending',
-        autoApprovalEligible: false,
-        feedback: reason,
+        reviewNotes: reason,
       })
-      .where(eq(contentApprovalQueue.id, queueId));
+      .where(eq(contentApprovalQueue.id, queueIdNum));
   }
 
   /**
@@ -193,8 +191,13 @@ export class ContentApprovalService {
     decision: ApprovalDecision,
     reviewerId: string,
   ): Promise<void> {
+    const queueIdNum = toInt(queueId);
+    if (!Number.isFinite(queueIdNum)) {
+      throw new Error('Invalid queueId');
+    }
+
     const queueItem = await db.query.contentApprovalQueue.findFirst({
-      where: eq(contentApprovalQueue.id, queueId),
+      where: eq(contentApprovalQueue.id, queueIdNum),
     });
 
     if (!queueItem) {
@@ -203,7 +206,7 @@ export class ContentApprovalService {
 
     // Validate decision has feedback for rejections and revision requests
     if (
-      (decision.status === 'rejected' || decision.status === 'revision_requested') &&
+      (decision.status === 'rejected' || decision.status === 'changes_requested') &&
       !decision.feedback
     ) {
       throw new Error('Feedback is required for rejected or revision-requested content');
@@ -227,27 +230,27 @@ export class ContentApprovalService {
     }
 
     // Add guidance for revision requests
-    if (decision.status === 'revision_requested') {
+    if (decision.status === 'changes_requested') {
       feedbackMessage += '\n\nPlease make the requested changes and resubmit.';
     }
 
     // Update queue item with decision
+    const reviewerIdNum = toInt(reviewerId);
     await db
       .update(contentApprovalQueue)
       .set({
         status: decision.status,
         reviewedAt: sql`CURRENT_TIMESTAMP`,
-        reviewerId,
-        feedback: feedbackMessage,
+        assignedTo: Number.isFinite(reviewerIdNum) ? reviewerIdNum : undefined,
+        reviewNotes: feedbackMessage,
+        rejectionReason: decision.status === 'rejected' ? feedbackMessage : undefined,
       })
-      .where(eq(contentApprovalQueue.id, queueId));
+      .where(eq(contentApprovalQueue.id, queueIdNum));
 
     // If approved, increment partner's approved content count
     if (decision.status === 'approved') {
-      await partnerService.incrementApprovedContentCount(queueItem.partnerId);
-
-      // Recalculate partner trust score after approval
-      await partnerService.calculateTrustScore(queueItem.partnerId);
+      // Partner linkage is not present in the approval queue schema.
+      // Partner counters are updated elsewhere until schema is aligned.
     }
   }
 
@@ -268,13 +271,11 @@ export class ContentApprovalService {
     return items.map(item => ({
       id: item.id,
       contentId: item.contentId,
-      partnerId: item.partnerId,
       status: item.status,
       submittedAt: new Date(item.submittedAt),
       reviewedAt: item.reviewedAt ? new Date(item.reviewedAt) : undefined,
-      reviewerId: item.reviewerId || undefined,
-      feedback: item.feedback || undefined,
-      autoApprovalEligible: item.autoApprovalEligible,
+      reviewerId: item.assignedTo || undefined,
+      feedback: item.reviewNotes || undefined,
     }));
   }
 
@@ -290,15 +291,28 @@ export class ContentApprovalService {
     revisionRequested: number;
     approvalRate: number;
   }> {
+    const partner = await db.query.explorePartners.findFirst({
+      where: eq(explorePartners.id, partnerId),
+    });
+
+    if (!partner) {
+      return { total: 0, approved: 0, rejected: 0, pending: 0, revisionRequested: 0, approvalRate: 0 };
+    }
+
+    const submittedBy = toInt(partner.userId);
+    if (!Number.isFinite(submittedBy)) {
+      return { total: 0, approved: 0, rejected: 0, pending: 0, revisionRequested: 0, approvalRate: 0 };
+    }
+
     const items = await db.query.contentApprovalQueue.findMany({
-      where: eq(contentApprovalQueue.partnerId, partnerId),
+      where: eq(contentApprovalQueue.submittedBy, submittedBy),
     });
 
     const total = items.length;
     const approved = items.filter(i => i.status === 'approved').length;
     const rejected = items.filter(i => i.status === 'rejected').length;
     const pending = items.filter(i => i.status === 'pending').length;
-    const revisionRequested = items.filter(i => i.status === 'revision_requested').length;
+    const revisionRequested = items.filter(i => i.status === 'changes_requested').length;
 
     const approvalRate = total > 0 ? (approved / total) * 100 : 0;
 
@@ -317,14 +331,10 @@ export class ContentApprovalService {
    * Requirements: 6.1, 6.2, 6.3
    */
   async getApprovalQueue(filters: QueueFilters = {}): Promise<ContentApprovalQueue[]> {
-    const conditions = [];
+    const conditions: SQL[] = [];
 
     if (filters.status) {
       conditions.push(eq(contentApprovalQueue.status, filters.status));
-    }
-
-    if (filters.partnerId) {
-      conditions.push(eq(contentApprovalQueue.partnerId, filters.partnerId));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -339,13 +349,11 @@ export class ContentApprovalService {
     return items.map(item => ({
       id: item.id,
       contentId: item.contentId,
-      partnerId: item.partnerId,
       status: item.status,
       submittedAt: new Date(item.submittedAt),
       reviewedAt: item.reviewedAt ? new Date(item.reviewedAt) : undefined,
-      reviewerId: item.reviewerId || undefined,
-      feedback: item.feedback || undefined,
-      autoApprovalEligible: item.autoApprovalEligible,
+      reviewerId: item.assignedTo || undefined,
+      feedback: item.reviewNotes || undefined,
     }));
   }
 

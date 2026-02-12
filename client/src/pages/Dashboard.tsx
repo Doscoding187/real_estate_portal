@@ -41,7 +41,7 @@ export default function Dashboard() {
   const { isAuthenticated, user, loading: authLoading } = useAuth();
   const [deletePropertyId, setDeletePropertyId] = useState<number | null>(null);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'super_admin' || user?.role === 'agency_admin';
 
   // Show a loading state while authentication is being checked
   if (authLoading) {
@@ -59,6 +59,9 @@ export default function Dashboard() {
   }
 
   const { data: properties, isLoading, refetch } = trpc.properties.myProperties.useQuery();
+  const propertyItems = Array.isArray(properties)
+    ? properties
+    : (properties as any)?.items ?? (properties as any)?.results ?? [];
 
   const deletePropertyMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
@@ -136,19 +139,19 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        {!isLoading && properties && (
+        {!isLoading && propertyItems.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription>Total Properties</CardDescription>
-                <CardTitle className="text-3xl">{properties.length}</CardTitle>
+                <CardTitle className="text-3xl">{propertyItems.length}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription>Available</CardDescription>
                 <CardTitle className="text-3xl">
-                  {properties.filter(p => p.status === 'available').length}
+                  {propertyItems.filter((p: any) => p.status === 'available').length}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -156,7 +159,7 @@ export default function Dashboard() {
               <CardHeader className="pb-3">
                 <CardDescription>Sold/Rented</CardDescription>
                 <CardTitle className="text-3xl">
-                  {properties.filter(p => p.status === 'sold' || p.status === 'rented').length}
+                  {propertyItems.filter((p: any) => p.status === 'sold' || p.status === 'rented').length}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -164,7 +167,7 @@ export default function Dashboard() {
               <CardHeader className="pb-3">
                 <CardDescription>Total Views</CardDescription>
                 <CardTitle className="text-3xl">
-                  {properties.reduce((sum, p) => sum + (p.views || 0), 0)}
+                  {propertyItems.reduce((sum: number, p: any) => sum + (p.views || 0), 0)}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -185,9 +188,9 @@ export default function Dashboard() {
               </Card>
             ))}
           </div>
-        ) : properties && properties.length > 0 ? (
+        ) : propertyItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map(property => {
+            {propertyItems.map((property: any) => {
               const primaryImage = (property as any).primaryImage;
               const imageCount = (property as any).imageCount || 0;
 

@@ -12,6 +12,7 @@ import {
   type EnhancedTRPCContext,
 } from './_core/brandContext';
 import { developerBrandProfileService } from './services/developerBrandProfileService';
+import { requireUser } from './_core/requireUser';
 
 // ============================================================================
 // Input Schemas
@@ -44,6 +45,9 @@ export const emulatorRouter = router({
   getBrandContext: protectedProcedure.query(async ({ ctx }) => {
     // If in emulator mode, return the operating-as context
     if (isEmulatorMode(ctx as EnhancedTRPCContext)) {
+      if (!ctx.operatingAs) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Not operating as a brand' });
+      }
       return {
         isEmulator: true,
         brandProfileId: ctx.operatingAs.brandProfileId,
@@ -55,7 +59,7 @@ export const emulatorRouter = router({
 
     // Normal mode: get real developer profile
     const { getDeveloperByUserId } = await import('./services/developerService');
-    const developerProfile = await getDeveloperByUserId(ctx.user.id);
+    const developerProfile = await getDeveloperByUserId(requireUser(ctx).id);
 
     if (!developerProfile) {
       throw new TRPCError({
@@ -122,7 +126,7 @@ export const emulatorRouter = router({
           sourceAttribution: 'Emulator Mode Seeding',
           isVisible: true,
           isContactVerified: false,
-          createdBy: ctx.user.id,
+          createdBy: requireUser(ctx).id,
         });
 
         // Mark as platform-owned (seeded)
@@ -132,12 +136,15 @@ export const emulatorRouter = router({
           isClaimable: true,
         });
 
+        const fullBrandProfile =
+          (await developerBrandProfileService.getBrandProfileById(brandProfile.id)) || null;
+
         return {
           success: true,
           brandProfile: {
             id: brandProfile.id,
-            brandName: brandProfile.brandName,
-            brandTier: brandProfile.brandTier,
+            brandName: fullBrandProfile?.brandName ?? input.brandName,
+            brandTier: fullBrandProfile?.brandTier ?? input.brandTier,
             isSeeded: true,
           },
         };
@@ -269,3 +276,4 @@ export const emulatorRouter = router({
     };
   }),
 });
+
