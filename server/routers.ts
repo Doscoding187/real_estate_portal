@@ -38,8 +38,8 @@ import { subscriptionRouter } from './subscriptionRouter';
 import { developerRouter } from './developerRouter';
 import { exploreRouter } from './exploreRouter';
 import { exploreVideoUploadRouter } from './exploreVideoUploadRouter';
-// import { recommendationEngineRouter } from './recommendationEngineRouter'; // TODO: Fix syntax errors in this file
-// import { exploreApiRouter } from './exploreApiRouter'; // TODO: Fix syntax errors in this file
+import { recommendationEngineRouter } from './recommendationEngineRouter';
+import { exploreApiRouter } from './exploreApiRouter';
 // import { boostCampaignRouter } from './boostCampaignRouter'; // TODO: Fix syntax errors in this file
 import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
 import { analyticsRouter } from './analyticsRouter';
@@ -85,8 +85,8 @@ export const appRouter = router({
   developer: developerRouter,
   explore: exploreRouter,
   exploreVideoUpload: exploreVideoUploadRouter,
-  // recommendationEngine: recommendationEngineRouter, // TODO: Fix syntax errors in this file
-  // exploreApi: exploreApiRouter, // TODO: Fix syntax errors in this file
+  recommendationEngine: recommendationEngineRouter,
+  exploreApi: exploreApiRouter,
   // boostCampaign: boostCampaignRouter, // TODO: Fix syntax errors in this file
   exploreAnalytics: exploreAnalyticsRouter,
   similarProperties: similarPropertiesRouter,
@@ -592,5 +592,3 @@ export const appRouter = router({
 
 // Export type router type signature
 export type AppRouter = typeof appRouter;
-
-

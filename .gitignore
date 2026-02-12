@@ -125,3 +125,4 @@ backups/
 _WIP_*.patch
 rg-meta-output*.txt
 vitest.*.timestamp-*.mjs
+trpc-*.txt
