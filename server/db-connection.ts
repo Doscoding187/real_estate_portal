@@ -51,7 +51,8 @@ export async function getDb() {
       transaction: (cb: any) => cb(mockDb), // Reuse same mock for translation
     };
 
-    return mockDb as any;
+    _db = mockDb as any;
+    return _db;
   }
 
   if (!process.env.DATABASE_URL) {
@@ -138,3 +139,4 @@ export async function getDb() {
     return null;
   }
 }
+
