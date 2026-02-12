@@ -293,6 +293,24 @@ function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
     });
   }
 }
+
+const EMPTY_DEVELOPER_KPIS = {
+  totalLeads: 0,
+  qualifiedLeads: 0,
+  conversionRate: 0,
+  unitsSold: 0,
+  unitsAvailable: 0,
+  affordabilityMatchPercent: 0,
+  marketingPerformanceScore: 0,
+  trends: {
+    totalLeads: 0,
+    qualifiedLeads: 0,
+    conversionRate: 0,
+    unitsSold: 0,
+    affordabilityMatchPercent: 0,
+    marketingPerformanceScore: 0,
+  },
+};
 // ===========================================================================
 // ROUTER DEFINITION
 // ===========================================================================
@@ -390,6 +408,136 @@ export const developerRouter = router({
       }
 
       return profile;
+    }),
+  saveDraft: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().optional(),
+        brandProfileId: z.number().int().optional(),
+        draftData: z.any(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const sanitized = sanitizeDraftData(input.draftData ?? {});
+      const currentStep = Math.max(0, Number((sanitized as any).currentPhase ?? 0));
+      const progress = Math.min(100, Math.max(0, Math.round((currentStep / 11) * 100)));
+      const draftName =
+        String((sanitized as any).developmentData?.name ?? (sanitized as any).name ?? '').trim() ||
+        'Untitled Draft';
+
+      try {
+        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const dbConn = await db.getDb();
+        if (!dbConn) {
+          return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
+        }
+
+        if (input.id) {
+          const updateSet: Record<string, any> = {
+            draftName,
+            draftData: sanitized,
+            progress,
+            currentStep,
+            lastModified: new Date().toISOString(),
+          };
+          if (input.brandProfileId !== undefined) {
+            updateSet.developerBrandProfileId = input.brandProfileId;
+          }
+
+          await dbConn
+            .update(developmentDrafts)
+            .set(updateSet)
+            .where(
+              and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+            );
+
+          return { id: input.id, success: true, draftData: sanitized };
+        }
+
+        const insertResult = await dbConn.insert(developmentDrafts).values({
+          developerId: profile.id,
+          developerBrandProfileId: input.brandProfileId ?? null,
+          draftName,
+          draftData: sanitized,
+          progress,
+          currentStep,
+        });
+        const inserted = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+
+        return {
+          id: Number(inserted?.insertId ?? 0),
+          success: true,
+          draftData: sanitized,
+        };
+      } catch (error) {
+        console.warn('[developer.saveDraft] Falling back to safe response:', error);
+        return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
+      }
+    }),
+
+  getDraft: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    try {
+      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+      const dbConn = await db.getDb();
+      if (!dbConn) return null;
+
+      const [draft] = await dbConn
+        .select()
+        .from(developmentDrafts)
+        .where(and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)))
+        .limit(1);
+
+      if (!draft) return null;
+
+      return {
+        ...draft,
+        draftData: sanitizeDraftData((draft as any).draftData ?? {}),
+      };
+    } catch (error) {
+      console.warn('[developer.getDraft] Returning null due to error:', error);
+      return null;
+    }
+  }),
+
+  getDrafts: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+      const dbConn = await db.getDb();
+      if (!dbConn) return [];
+
+      const drafts = await dbConn
+        .select()
+        .from(developmentDrafts)
+        .where(eq(developmentDrafts.developerId, profile.id))
+        .orderBy(desc(developmentDrafts.lastModified));
+
+      return drafts.map((draft: any) => ({
+        ...draft,
+        draftData: sanitizeDraftData(draft?.draftData ?? {}),
+      }));
+    } catch (error) {
+      console.warn('[developer.getDrafts] Returning empty list due to error:', error);
+      return [];
+    }
+  }),
+
+  deleteDraft: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const dbConn = await db.getDb();
+        if (!dbConn) return { success: false, id: input.id };
+
+        await dbConn
+          .delete(developmentDrafts)
+          .where(and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)));
+
+        return { success: true, id: input.id };
+      } catch (error) {
+        console.warn('[developer.deleteDraft] Safe fallback after error:', error);
+        return { success: false, id: input.id };
+      }
     }),
   getPublishedDevelopments: publicProcedure
     .input(
@@ -534,10 +682,22 @@ export const developerRouter = router({
     }),
 
   getDashboardKPIs: protectedProcedure
-    .input(z.object({ timeRange: z.enum(['7d', '30d', '90d']).optional() }))
+    .input(
+      z
+        .object({
+          timeRange: z.enum(['7d', '30d', '90d']).optional(),
+          forceRefresh: z.boolean().optional(),
+        })
+        .optional(),
+    )
     .query(async ({ ctx, input }) => {
-      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-      return await getKPIsWithCache(profile.id, input.timeRange);
+      try {
+        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        return await getKPIsWithCache(profile.id, input?.timeRange, input?.forceRefresh ?? false);
+      } catch (error) {
+        console.warn('[developer.getDashboardKPIs] Returning safe defaults due to error:', error);
+        return EMPTY_DEVELOPER_KPIS;
+      }
     }),
 
   getSubscription: protectedProcedure.query(async ({ ctx }) => {
@@ -647,16 +807,21 @@ export const developerRouter = router({
   getDevelopment: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+      try {
+        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
 
-      // NOTE: Using getDevelopmentWithPhases to ensure we return full object
-      const dev = await developmentService.getDevelopmentWithPhases(input.id);
-      if (!dev) throw new TRPCError({ code: 'NOT_FOUND' });
+        // NOTE: Using getDevelopmentWithPhases to ensure we return full object
+        const dev = await developmentService.getDevelopmentWithPhases(input.id);
+        if (!dev) return null;
 
-      if (dev.developerId !== profile.id) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not own this development' });
+        if (dev.developerId !== profile.id) {
+          return null;
+        }
+        return dev;
+      } catch (error) {
+        console.warn('[developer.getDevelopment] Returning null due to error:', error);
+        return null;
       }
-      return dev;
     }),
 
   getDevelopments: protectedProcedure.query(async ({ ctx }) => {

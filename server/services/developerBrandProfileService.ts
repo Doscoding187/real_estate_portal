@@ -104,7 +104,7 @@ async function createBrandProfile(input: CreateBrandProfileInput) {
     });
   }
 
-  const [result] = await db.insert(developerBrandProfiles).values({
+  const insertResult = await db.insert(developerBrandProfiles).values({
     brandName: input.brandName,
     slug,
     logoUrl: input.logoUrl || null,
@@ -132,7 +132,8 @@ async function createBrandProfile(input: CreateBrandProfileInput) {
     lastLeadDate: null,
   });
 
-  return { id: result.insertId, slug };
+  const result = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+  return { id: Number((result as any)?.insertId ?? 0), slug };
 }
 
 /**

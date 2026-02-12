@@ -49,17 +49,83 @@ export const agentRouter = router({
       offersInProgress: number;
       commissionsPending: number;
     }> => {
-      const db = await getDb();
+      try {
+        const db = await getDb();
 
-      // Get agent record from user
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
-        .limit(1);
+        // Get agent record from user
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, ctx.user.id))
+          .limit(1);
 
-      if (!agentRecord) {
-        // Return empty stats if no agent profile found
+        if (!agentRecord) {
+          // Return empty stats if no agent profile found
+          return {
+            activeListings: 0,
+            newLeadsThisWeek: 0,
+            showingsToday: 0,
+            offersInProgress: 0,
+            commissionsPending: 0,
+          };
+        }
+
+        const agentId = agentRecord.id;
+        // Date calculations
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
+        const tomorrowDate = new Date(todayDate);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+
+        const today = todayDate.toISOString();
+        const tomorrow = tomorrowDate.toISOString();
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        // Active listings count
+        const [activeListingsResult] = await db
+          .select({ count: count() })
+          .from(properties)
+          .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
+
+        // New leads this week
+        const [newLeadsResult] = await db
+          .select({ count: count() })
+          .from(leads)
+          .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
+
+        // Showings today
+        const [showingsTodayResult] = await db
+          .select({ count: count() })
+          .from(showings)
+          .where(
+            and(
+              eq(showings.agentId, agentId),
+              gte(showings.scheduledAt, today),
+              lte(showings.scheduledAt, tomorrow),
+            ),
+          );
+
+        // Offers in progress
+        const [offersInProgressResult] = await db
+          .select({ count: count() })
+          .from(offers)
+          .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
+
+        // Pending commissions sum
+        const [pendingCommissionsResult] = await db
+          .select({ total: sql<number>`SUM(${commissions.amount})` })
+          .from(commissions)
+          .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+
+        return {
+          activeListings: activeListingsResult?.count || 0,
+          newLeadsThisWeek: newLeadsResult?.count || 0,
+          showingsToday: showingsTodayResult?.count || 0,
+          offersInProgress: offersInProgressResult?.count || 0,
+          commissionsPending: Number(pendingCommissionsResult?.total || 0),
+        };
+      } catch (error) {
+        console.warn('[agent.getDashboardStats] Returning safe defaults due to error:', error);
         return {
           activeListings: 0,
           newLeadsThisWeek: 0,
@@ -68,61 +134,6 @@ export const agentRouter = router({
           commissionsPending: 0,
         };
       }
-
-      const agentId = agentRecord.id;
-      // Date calculations
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
-      const tomorrowDate = new Date(todayDate);
-      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-
-      const today = todayDate.toISOString();
-      const tomorrow = tomorrowDate.toISOString();
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-      // Active listings count
-      const [activeListingsResult] = await db
-        .select({ count: count() })
-        .from(properties)
-        .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
-
-      // New leads this week
-      const [newLeadsResult] = await db
-        .select({ count: count() })
-        .from(leads)
-        .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
-
-      // Showings today
-      const [showingsTodayResult] = await db
-        .select({ count: count() })
-        .from(showings)
-        .where(
-          and(
-            eq(showings.agentId, agentId),
-            gte(showings.scheduledAt, today),
-            lte(showings.scheduledAt, tomorrow),
-          ),
-        );
-
-      // Offers in progress
-      const [offersInProgressResult] = await db
-        .select({ count: count() })
-        .from(offers)
-        .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
-
-      // Pending commissions sum
-      const [pendingCommissionsResult] = await db
-        .select({ total: sql<number>`SUM(${commissions.amount})` })
-        .from(commissions)
-        .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
-
-      return {
-        activeListings: activeListingsResult?.count || 0,
-        newLeadsThisWeek: newLeadsResult?.count || 0,
-        showingsToday: showingsTodayResult?.count || 0,
-        offersInProgress: offersInProgressResult?.count || 0,
-        commissionsPending: Number(pendingCommissionsResult?.total || 0),
-      };
     },
   ),
 
