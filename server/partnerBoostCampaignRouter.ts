@@ -14,6 +14,11 @@ import { Router } from 'express';
 import { partnerBoostCampaignService } from './services/partnerBoostCampaignService';
 
 const router = Router();
+const ensureNonEmptyString = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 /**
  * Create a new boost campaign
@@ -39,10 +44,19 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const validatedPartnerId = ensureNonEmptyString(partnerId);
+    const validatedContentId = ensureNonEmptyString(contentId);
+    const validatedTopicId = ensureNonEmptyString(topicId);
+    if (!validatedPartnerId || !validatedContentId || !validatedTopicId) {
+      return res.status(400).json({
+        error: 'partnerId, contentId, and topicId must be non-empty strings',
+      });
+    }
+
     const campaign = await partnerBoostCampaignService.createCampaign({
-      partnerId,
-      contentId,
-      topicId,
+      partnerId: validatedPartnerId,
+      contentId: validatedContentId,
+      topicId: validatedTopicId,
       budget: parseFloat(budget),
       startDate: new Date(startDate),
       endDate: endDate ? new Date(endDate) : undefined,
@@ -68,7 +82,8 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id/activate', async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = ensureNonEmptyString(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid campaign id' });
 
     await partnerBoostCampaignService.activateCampaign(id);
 
@@ -90,7 +105,8 @@ router.put('/:id/activate', async (req, res) => {
  */
 router.put('/:id/pause', async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = ensureNonEmptyString(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid campaign id' });
 
     await partnerBoostCampaignService.pauseCampaign(id);
 
@@ -113,7 +129,8 @@ router.put('/:id/pause', async (req, res) => {
  */
 router.get('/:id/analytics', async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = ensureNonEmptyString(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid campaign id' });
 
     const analytics = await partnerBoostCampaignService.getCampaignAnalytics(id);
 
@@ -135,7 +152,8 @@ router.get('/:id/analytics', async (req, res) => {
  */
 router.get('/:id/budget', async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = ensureNonEmptyString(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid campaign id' });
 
     const budgetStatus = await partnerBoostCampaignService.getBudgetStatus(id);
 
@@ -157,7 +175,8 @@ router.get('/:id/budget', async (req, res) => {
  */
 router.get('/partner/:partnerId', async (req, res) => {
   try {
-    const { partnerId } = req.params;
+    const partnerId = ensureNonEmptyString(req.params.partnerId);
+    if (!partnerId) return res.status(400).json({ error: 'Invalid partner id' });
 
     const campaigns = await partnerBoostCampaignService.getPartnerCampaigns(partnerId);
 
@@ -179,7 +198,8 @@ router.get('/partner/:partnerId', async (req, res) => {
  */
 router.get('/topic/:topicId/active', async (req, res) => {
   try {
-    const { topicId } = req.params;
+    const topicId = ensureNonEmptyString(req.params.topicId);
+    if (!topicId) return res.status(400).json({ error: 'Invalid topic id' });
 
     const campaigns = await partnerBoostCampaignService.getActiveCampaignsForTopic(topicId);
 
@@ -202,7 +222,8 @@ router.get('/topic/:topicId/active', async (req, res) => {
  */
 router.get('/content/:contentId/boosted', async (req, res) => {
   try {
-    const { contentId } = req.params;
+    const contentId = ensureNonEmptyString(req.params.contentId);
+    if (!contentId) return res.status(400).json({ error: 'Invalid content id' });
 
     const boostStatus = await partnerBoostCampaignService.isContentBoosted(contentId);
 
@@ -225,7 +246,8 @@ router.get('/content/:contentId/boosted', async (req, res) => {
  */
 router.get('/content/:contentId/sponsored-label', async (req, res) => {
   try {
-    const { contentId } = req.params;
+    const contentId = ensureNonEmptyString(req.params.contentId);
+    if (!contentId) return res.status(400).json({ error: 'Invalid content id' });
 
     const label = await partnerBoostCampaignService.getSponsoredLabel(contentId);
 
@@ -256,7 +278,13 @@ router.post('/validate-eligibility', async (req, res) => {
       });
     }
 
-    const validation = await partnerBoostCampaignService.validateBoostEligibility(contentId);
+    const validatedContentId = ensureNonEmptyString(contentId);
+    if (!validatedContentId) {
+      return res.status(400).json({ error: 'Invalid content id' });
+    }
+
+    const validation =
+      await partnerBoostCampaignService.validateBoostEligibility(validatedContentId);
 
     res.json({
       success: true,
@@ -276,7 +304,8 @@ router.post('/validate-eligibility', async (req, res) => {
  */
 router.post('/:id/impression', async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = ensureNonEmptyString(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid campaign id' });
 
     await partnerBoostCampaignService.recordImpression(id);
 
@@ -298,7 +327,8 @@ router.post('/:id/impression', async (req, res) => {
  */
 router.post('/:id/click', async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = ensureNonEmptyString(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid campaign id' });
 
     await partnerBoostCampaignService.recordClick(id);
 

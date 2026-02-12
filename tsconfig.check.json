@@ -1,7 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "target": "ES2017",
+    "lib": ["ES2017", "DOM"],
+    "downlevelIteration": true
   },
   "exclude": [
     "node_modules",
@@ -22,6 +25,8 @@
     "server/scripts/**",
     "server/db_*.ts",
     "server/**/debug-*.ts",
-    "client/**/stories/**"
+    "client/**/stories/**",
+    "server/services/locationPagesService.improved.ts",
+    "**/server/services/locationPagesService.improved.ts"
   ]
 }

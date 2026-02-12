@@ -24,6 +24,14 @@ const createSetupIntentSchema = z.object({
   paymentMethodType: z.enum(['card']).default('card'),
 });
 
+function requireAgencyId(ctx: { user?: { agencyId?: number | null } | null }): number {
+  const agencyId = ctx.user?.agencyId ?? null;
+  if (!agencyId) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'User must belong to an agency' });
+  }
+  return agencyId;
+}
+
 export const billingRouter = {
   // Public endpoints
   plans: publicProcedure.query(async () => {
@@ -63,16 +71,13 @@ export const billingRouter = {
           });
         }
 
-        // Check if user has agency
-        if (!ctx.user.agencyId) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'User must belong to an agency' });
-        }
+        const agencyId = requireAgencyId(ctx);
 
         // Get agency info
         const [agency] = await db
           .select()
           .from(agencies)
-          .where(eq(agencies.id, ctx.user.agencyId))
+          .where(eq(agencies.id, agencyId))
           .limit(1);
         if (!agency) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency not found' });
@@ -83,7 +88,7 @@ export const billingRouter = {
         const existingSubscription = await db
           .select()
           .from(agencySubscriptions)
-          .where(eq(agencySubscriptions.agencyId, ctx.user.agencyId))
+          .where(eq(agencySubscriptions.agencyId, agencyId))
           .limit(1);
 
         if (existingSubscription.length > 0) {
@@ -94,14 +99,14 @@ export const billingRouter = {
             email: agency.email,
             name: agency.name,
             metadata: {
-              agencyId: ctx.user.agencyId.toString(),
+              agencyId: agencyId.toString(),
             },
           });
           customerId = customer.id;
 
           // Create subscription record
           await db.insert(agencySubscriptions).values({
-            agencyId: ctx.user.agencyId,
+            agencyId,
             planId: input.planId,
             stripeCustomerId: customerId,
             stripePriceId: plan.stripePriceId,
@@ -123,7 +128,7 @@ export const billingRouter = {
           success_url: input.successUrl,
           cancel_url: input.cancelUrl,
           metadata: {
-            agencyId: ctx.user.agencyId.toString(),
+            agencyId: agencyId.toString(),
             planId: input.planId.toString(),
           },
         });
@@ -144,6 +149,8 @@ export const billingRouter = {
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
+    const agencyId = requireAgencyId(ctx);
+
     const [subscription] = await db
       .select({
         id: agencySubscriptions.id,
@@ -157,7 +164,7 @@ export const billingRouter = {
       })
       .from(agencySubscriptions)
       .leftJoin(plans, eq(agencySubscriptions.planId, plans.id))
-      .where(eq(agencySubscriptions.agencyId, ctx.user.agencyId))
+      .where(eq(agencySubscriptions.agencyId, agencyId))
       .limit(1);
 
     return subscription || null;
@@ -168,10 +175,12 @@ export const billingRouter = {
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
+    const agencyId = requireAgencyId(ctx);
+
     return await db
       .select()
       .from(paymentMethods)
-      .where(eq(paymentMethods.agencyId, ctx.user.agencyId))
+      .where(eq(paymentMethods.agencyId, agencyId))
       .orderBy(paymentMethods.isDefault);
   }),
 
@@ -181,13 +190,21 @@ export const billingRouter = {
       const db = await getDb();
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!stripe) {
+        throw new TRPCError({
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Payment system is not configured. Please contact support.',
+        });
+      }
 
       try {
+        const agencyId = requireAgencyId(ctx);
+
         // Get or create customer
         const [subscription] = await db
           .select()
           .from(agencySubscriptions)
-          .where(eq(agencySubscriptions.agencyId, ctx.user.agencyId!))
+          .where(eq(agencySubscriptions.agencyId, agencyId))
           .limit(1);
 
         if (!subscription) {
@@ -198,7 +215,7 @@ export const billingRouter = {
           customer: subscription.stripeCustomerId,
           payment_method_types: ['card'],
           metadata: {
-            agencyId: ctx.user.agencyId!.toString(),
+            agencyId: agencyId.toString(),
           },
         });
 
@@ -220,10 +237,12 @@ export const billingRouter = {
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
+    const agencyId = requireAgencyId(ctx);
+
     return await db
       .select()
       .from(invoices)
-      .where(eq(invoices.agencyId, ctx.user.agencyId))
+      .where(eq(invoices.agencyId, agencyId))
       .orderBy(invoices.createdAt);
   }),
 
@@ -231,12 +250,20 @@ export const billingRouter = {
     const db = await getDb();
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!stripe) {
+      throw new TRPCError({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Payment system is not configured. Please contact support.',
+      });
+    }
 
     try {
+      const agencyId = requireAgencyId(ctx);
+
       const [subscription] = await db
         .select()
         .from(agencySubscriptions)
-        .where(eq(agencySubscriptions.agencyId, ctx.user.agencyId))
+        .where(eq(agencySubscriptions.agencyId, agencyId))
         .limit(1);
 
       if (!subscription || !subscription.stripeSubscriptionId) {
@@ -271,12 +298,20 @@ export const billingRouter = {
     const db = await getDb();
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!stripe) {
+      throw new TRPCError({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Payment system is not configured. Please contact support.',
+      });
+    }
 
     try {
+      const agencyId = requireAgencyId(ctx);
+
       const [subscription] = await db
         .select()
         .from(agencySubscriptions)
-        .where(eq(agencySubscriptions.agencyId, ctx.user.agencyId))
+        .where(eq(agencySubscriptions.agencyId, agencyId))
         .limit(1);
 
       if (!subscription || !subscription.stripeSubscriptionId) {

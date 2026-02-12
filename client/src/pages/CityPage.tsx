@@ -129,12 +129,13 @@ export default function CityPage({
       rentalCount: 0,
       saleCount: 0,
     },
-    propertyTypes = [],
-    topLocalities = [],
-    topDevelopers = [],
-    investmentProjects = [],
-    recommendedAgencies = [],
-  } = data || {};
+  } = (data as any) || {};
+
+  const propertyTypes = (data as any)?.propertyTypes ?? [];
+  const topLocalities = (data as any)?.topLocalities ?? [];
+  const topDevelopers = (data as any)?.topDevelopers ?? [];
+  const investmentProjects = (data as any)?.investmentProjects ?? [];
+  const recommendedAgencies = (data as any)?.recommendedAgencies ?? [];
 
   // Additional validation - city must exist
   if (!city || !city.name) {
@@ -213,13 +214,7 @@ export default function CityPage({
           />
         }
         // Section 7: Top Localities / Market Insights
-        topLocalities={
-          <LocationTopLocalities
-            locationName={city.name}
-            localities={(topLocalities as any[]).map(l => ({ ...l, imageUrl: null }))}
-            parentSlug={`${provinceSlug}/${citySlug}`}
-          />
-        }
+        topLocalities={topLocalities}
         topLocalitiesShowcase={
           topLocalities && topLocalities.length > 0 ? (
             <LocationTopLocalities localities={topLocalities} locationName={city.name} />

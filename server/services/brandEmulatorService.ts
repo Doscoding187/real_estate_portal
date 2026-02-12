@@ -55,7 +55,7 @@ class BrandEmulatorService {
       name: context.brandName,
       type: context.identityType,
       tier: context.brandTier,
-      ownerType: context.ownerType,
+      ownerType: context.ownerType as 'platform',
     };
   }
 
@@ -204,13 +204,14 @@ class BrandEmulatorService {
         for (let i = 0; i < propertyData.mediaUrls.length; i++) {
           const [media] = await database
             .insert(listingMedia)
-            .values({
-              propertyId: property.id,
-              originalUrl: propertyData.mediaUrls[i],
-              isPrimary: i === 0 ? 1 : 0,
-              displayOrder: i,
-              createdAt: new Date(),
-            })
+              .values({
+                listingId: property.id,
+                mediaType: 'image',
+                originalUrl: propertyData.mediaUrls[i],
+                isPrimary: i === 0 ? 1 : 0,
+                displayOrder: i,
+                createdAt: new Date(),
+              })
             .$returningId();
           mediaIds.push(media.id);
         }
@@ -292,31 +293,31 @@ class BrandEmulatorService {
     const database = await db.getDb();
     if (!database) throw new Error('Database not available');
 
-    const [developments, properties, leads] = await Promise.all([
-      database
-        .select()
-        .from(developments)
-        .where(eq(developments.developerBrandProfileId, brandProfileId)),
+      const [devRows, propertyRows, leadRows] = await Promise.all([
+        database
+          .select()
+          .from(developments)
+          .where(eq(developments.developerBrandProfileId, brandProfileId)),
 
       database
         .select()
         .from(properties)
         .where(eq(properties.developerBrandProfileId, brandProfileId)),
 
-      database
-        .select()
-        .from(leads)
-        .where(eq(leads.developerBrandProfileId, brandProfileId))
-        .orderBy(desc(leads.createdAt)),
-    ]);
+        database
+          .select()
+          .from(leads)
+          .where(eq(leads.developerBrandProfileId, brandProfileId))
+          .orderBy(desc(leads.createdAt)),
+      ]);
 
-    return {
-      developments,
-      properties,
-      leads,
-      totalEntities: developments.length + properties.length + leads.length,
-    };
-  }
+      return {
+        developments: devRows,
+        properties: propertyRows,
+        leads: leadRows,
+        totalEntities: devRows.length + propertyRows.length + leadRows.length,
+      };
+    }
 
   /**
    * Cleanup all entities associated with a brand profile
@@ -378,7 +379,7 @@ class BrandEmulatorService {
         // Delete media for these properties
         const deletedMedia = await database
           .delete(listingMedia)
-          .where(eq(listingMedia.propertyId, propertyIds[0]));
+          .where(eq(listingMedia.listingId, propertyIds[0]));
         deletedCounts.media = deletedMedia.rowsAffected || 0;
 
         // Delete properties

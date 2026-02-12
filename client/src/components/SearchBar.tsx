@@ -9,30 +9,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search } from 'lucide-react';
+import type { SearchFilters } from '@/lib/urlUtils';
 
 interface SearchBarProps {
   onSearch: (filters: SearchFilters) => void;
   compact?: boolean;
 }
-
-export interface SearchFilters {
-  city?: string;
-  propertyType?: 'apartment' | 'house' | 'villa' | 'plot' | 'commercial';
-  listingType?: 'sale' | 'rent';
-  minPrice?: number;
-  maxPrice?: number;
-  minBedrooms?: number;
-  minArea?: number;
-  maxArea?: number;
-  amenities?: string[];
-  postedBy?: string[];
-  possessionStatus?: string[];
-  status?: string;
-  minLat?: number;
-  maxLat?: number;
-  minLng?: number;
-  maxLng?: number;
-}
+export type { SearchFilters };
 
 export function SearchBar({ onSearch, compact = false }: SearchBarProps) {
   const [filters, setFilters] = useState<SearchFilters>({});

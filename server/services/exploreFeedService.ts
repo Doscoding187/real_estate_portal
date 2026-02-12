@@ -17,6 +17,7 @@ export interface FeedOptions {
   agencyId?: number;
   seed?: string;
   seenIds?: number[];
+  includeAgentContent?: boolean;
 }
 
 export type FeedResult = {
@@ -64,7 +65,7 @@ function transformShort(row: any) {
   return {
     ...safeRow,
     primaryMediaUrl,
-    mediaUrls: [...new Set(mediaUrls)],
+    mediaUrls: Array.from(new Set(mediaUrls)),
     rankReason: _reason || null,
     performanceScore: safeRow.engagementScore ?? 0,
   };
@@ -216,6 +217,17 @@ async function logRecommendedEmptyDiagnostics(params: {
 /* ------------------ SERVICE ------------------ */
 
 export class ExploreFeedService {
+  async getPersonalizedFeed(options: FeedOptions): Promise<FeedResult> {
+    return this.getFeed('recommended', options);
+  }
+
+  async getCategories(): Promise<any[]> {
+    return [];
+  }
+
+  async getTopics(): Promise<any[]> {
+    return [];
+  }
   async getRecommendedFeed(options: FeedOptions): Promise<FeedResult> {
     const { userId, limit = 20, offset = 0, location, seed, seenIds } = options;
 

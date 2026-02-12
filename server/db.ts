@@ -131,11 +131,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
 
     if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
+      values.lastSignedIn = new Date().toISOString();
     }
 
     if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
+      updateSet.lastSignedIn = new Date().toISOString();
     }
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({
@@ -200,7 +200,7 @@ export async function createUser(
     ...userData,
     createdAt: new Date(),
     updatedAt: new Date(),
-    lastSignedIn: new Date(),
+    lastSignedIn: new Date().toISOString(),
   });
 
   return Number(result[0].insertId);
@@ -213,7 +213,10 @@ export async function updateUserLastSignIn(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ lastSignedIn: new Date().toISOString() })
+    .where(eq(users.id, userId));
 }
 
 /**
@@ -564,12 +567,12 @@ export async function searchProperties(params: PropertySearchParams) {
 
   // Posted By filter
   if (params.postedBy && params.postedBy.length > 0) {
-    const roleConditions = [];
+    const roleConditions: SQL[] = [];
     if (params.postedBy.includes('Owner')) {
       roleConditions.push(eq(users.role, 'visitor'));
     }
     if (params.postedBy.includes('Dealer') || params.postedBy.includes('Agent')) {
-      roleConditions.push(or(eq(users.role, 'agent'), eq(users.role, 'agency_admin')));
+      roleConditions.push(or(eq(users.role, 'agent'), eq(users.role, 'agency_admin'))!);
     }
     if (params.postedBy.includes('Builder') || params.postedBy.includes('Developer')) {
       roleConditions.push(eq(users.role, 'property_developer'));
@@ -582,7 +585,7 @@ export async function searchProperties(params: PropertySearchParams) {
           db
             .select({ id: users.id })
             .from(users)
-            .where(or(...roleConditions)),
+            .where(or(...roleConditions)!),
         ),
       );
     }
@@ -1499,7 +1502,7 @@ export async function getAgencyCommissionStats(agencyId: number, months: number 
     );
 
   // Monthly breakdown
-  const monthlyBreakdown = [];
+  const monthlyBreakdown: Array<{ month: string; earnings: number }> = [];
   for (let i = months - 1; i >= 0; i--) {
     const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
     const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + i + 1, 0);
@@ -1620,7 +1623,7 @@ export async function getPlatformSetting(key: string) {
   const result = await db
     .select()
     .from(platformSettings)
-    .where(eq(platformSettings.key, key))
+    .where(eq(platformSettings.settingKey, key))
     .limit(1);
   return result.length > 0 ? result[0] : null;
 }
@@ -1630,8 +1633,8 @@ export async function setPlatformSetting(key: string, value: any, updatedBy?: nu
   if (!db) throw new Error('Database not available');
 
   const settingData = {
-    key,
-    value: JSON.stringify(value),
+    settingKey: key,
+    settingValue: JSON.stringify(value),
     updatedBy,
     updatedAt: new Date(),
   };
@@ -1648,7 +1651,7 @@ export async function getAllPlatformSettings() {
   return await db
     .select()
     .from(platformSettings)
-    .orderBy(platformSettings.category, platformSettings.key);
+    .orderBy(platformSettings.category, platformSettings.settingKey);
 }
 
 // ==================== SUPER ADMIN ANALYTICS ====================
@@ -1918,7 +1921,11 @@ export async function createListing(listingData: any) {
     return listingId;
   } catch (error) {
     console.error('[Database] Failed to create listing:', error);
-    console.error('[Database] Error details:', error.message);
+    if (error instanceof Error) {
+      console.error('[Database] Error details:', error.message);
+    } else {
+      console.error('[Database] Error details:', String(error));
+    }
     throw error;
   }
 }
@@ -3107,7 +3114,7 @@ export async function listPartners({
   }
 
   if (search) {
-    conditions.push(or(like(partners.name, `%${search}%`), like(partners.email, `%${search}%`)));
+    conditions.push(or(like(partners.name, `%${search}%`), like(partners.email, `%${search}%`))!);
   }
 
   const offset = (page - 1) * limit;

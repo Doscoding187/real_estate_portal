@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from './_core/trpc';
 import { boostCampaignService } from './services/boostCampaignService';
+import { requireUser } from './_core/requireUser';
 
 const targetAudienceSchema = z.object({
   locations: z.array(z.string()).optional(),
@@ -39,8 +40,9 @@ export const boostCampaignRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
       const campaign = await boostCampaignService.createBoostCampaign(
-        ctx.user.id,
+        user.id,
         input.contentId,
         input.campaignName,
         input.config,
@@ -71,7 +73,8 @@ export const boostCampaignRouter = router({
    * Get all campaigns for the authenticated creator
    */
   getMyCampaigns: protectedProcedure.query(async ({ ctx }) => {
-    const campaigns = await boostCampaignService.getCreatorCampaigns(ctx.user.id);
+    const user = requireUser(ctx);
+    const campaigns = await boostCampaignService.getCreatorCampaigns(user.id);
     return campaigns;
   }),
 
@@ -85,7 +88,8 @@ export const boostCampaignRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await boostCampaignService.deactivateBoost(input.campaignId, ctx.user.id);
+      const user = requireUser(ctx);
+      await boostCampaignService.deactivateBoost(input.campaignId, user.id);
       return { success: true };
     }),
 
@@ -99,7 +103,8 @@ export const boostCampaignRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await boostCampaignService.reactivateBoost(input.campaignId, ctx.user.id);
+      const user = requireUser(ctx);
+      await boostCampaignService.reactivateBoost(input.campaignId, user.id);
       return { success: true };
     }),
 

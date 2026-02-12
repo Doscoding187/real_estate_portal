@@ -52,6 +52,10 @@ export interface TopContent {
 }
 
 export class ExploreAgencyService {
+  async getAgencyAnalytics(agencyId: number, ..._rest: any[]): Promise<AgencyMetrics> {
+    return this.getAgencyMetrics(agencyId);
+  }
+
   /**
    * Get comprehensive agency metrics
    * Requirements: 3.1, 3.2, 3.3, 3.4

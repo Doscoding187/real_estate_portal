@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
-import { SearchFilters } from '@/components/SearchBar';
+import { SearchFilters } from '@/lib/urlUtils';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCardList from '@/components/PropertyCardList';
 import { normalizePropertyForUI } from '@/lib/normalizers';
@@ -49,16 +49,21 @@ export default function Properties() {
     setFilters(newFilters);
   }, [location]);
 
+  const queryInput = {
+    ...filters,
+    suburb: filters.suburb ? [filters.suburb] : undefined,
+    locations: (filters as any).locations?.map((l: any) => l.slug) ?? undefined,
+    propertyType: (filters.propertyType as any) ?? undefined,
+    status: 'available' as const,
+    limit,
+    offset: page * limit,
+  };
+
   const {
     data: properties,
     isLoading,
     refetch,
-  } = trpc.properties.search.useQuery({
-    ...filters,
-    status: 'available' as const,
-    limit,
-    offset: page * limit,
-  });
+  } = trpc.properties.search.useQuery(queryInput);
 
   const addFavoriteMutation = trpc.favorites.add.useMutation({
     onSuccess: () => {
@@ -127,6 +132,8 @@ export default function Properties() {
     });
   };
 
+  const items = (properties as any)?.items ?? (properties as any) ?? [];
+
   return (
     <div className="min-h-screen bg-slate-50">
       <ListingNavbar />
@@ -149,8 +156,8 @@ export default function Properties() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
-                  {properties && properties.length > 0
-                    ? `${properties.length} Properties Found`
+                  {items.length > 0
+                    ? `${items.length} Properties Found`
                     : 'Available Properties'}
                 </h2>
                 {Object.keys(filters).length > 0 && (
@@ -202,10 +209,10 @@ export default function Properties() {
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               </div>
-            ) : properties && properties.length > 0 ? (
+            ) : items.length > 0 ? (
               viewMode === 'list' ? (
                 <div className="flex flex-col gap-4">
-                  {properties.map(property => {
+                  {items.map((property: any) => {
                     const normalized = normalizePropertyForUI(property);
                     if (!normalized) return null;
 
@@ -220,8 +227,8 @@ export default function Properties() {
                 </div>
               ) : (
                 <GooglePropertyMap
-                  properties={properties
-                    .map(p => {
+                  properties={items
+                    .map((p: any) => {
                       const normalized = normalizePropertyForUI(p);
                       if (!normalized) return null;
                       return {
@@ -232,9 +239,12 @@ export default function Properties() {
                         listingType: normalized.listingType,
                         latitude: parseFloat(p.latitude || '-26.2041'),
                         longitude: parseFloat(p.longitude || '28.0473'),
-                        mainImage: normalized.images[0],
-                        address: normalized.address,
-                        city: normalized.city,
+                        mainImage:
+                          (normalized as any).image ??
+                          (normalized as any).mainImage ??
+                          (normalized as any).images?.[0],
+                        address: (normalized as any).address,
+                        city: (normalized as any).city,
                         bedrooms: normalized.bedrooms,
                         bathrooms: normalized.bathrooms,
                         area: normalized.area,
@@ -286,9 +296,9 @@ export default function Properties() {
             </Button>
             <Button
               onClick={confirmSaveSearch}
-              disabled={saveSearchMutation.isLoading || !saveSearchName.trim()}
+              disabled={saveSearchMutation.isPending || !saveSearchName.trim()}
             >
-              {saveSearchMutation.isLoading ? 'Saving...' : 'Save Search'}
+              {saveSearchMutation.isPending ? 'Saving...' : 'Save Search'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,6 +16,7 @@ import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
+import { EmailService } from './emailService';
 
 export type SessionPayload = {
   userId: number;

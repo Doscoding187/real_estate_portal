@@ -3,7 +3,7 @@
  * Visual demonstration of the progress indicator component
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { GradientProgressIndicator } from '@/components/wizard/GradientProgressIndicator';
 import { GradientButton } from '@/components/ui/GradientButton';
 import {

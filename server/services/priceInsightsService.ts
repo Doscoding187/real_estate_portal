@@ -256,7 +256,7 @@ class PriceInsightsService {
 
     const results: SuburbPriceData[] = [];
 
-    for (const [suburbId, records] of suburbsMap.entries()) {
+    for (const [suburbId, records] of Array.from(suburbsMap.entries())) {
       if (records.length < MIN_OFFERS_FOR_LOW_CONFIDENCE) continue; // Confidence threshold
 
       const prices = records.map(r => Number(r.priceAmount));

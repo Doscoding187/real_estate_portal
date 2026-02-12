@@ -39,6 +39,9 @@ export default function MyDrafts() {
   const [draftToDelete, setDraftToDelete] = useState<number | null>(null);
 
   const { data: drafts, isLoading, refetch } = trpc.developer.getDrafts.useQuery();
+  const draftItems = Array.isArray(drafts)
+    ? drafts
+    : (drafts as any)?.items ?? (drafts as any)?.results ?? [];
   const deleteDraft = trpc.developer.deleteDraft.useMutation({
     onSuccess: () => {
       toast.success('Draft deleted successfully');
@@ -105,7 +108,7 @@ export default function MyDrafts() {
       </div>
 
       {/* Drafts List */}
-      {!drafts || drafts.length === 0 ? (
+      {draftItems.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="w-16 h-16 text-slate-300 mb-4" />
@@ -122,7 +125,7 @@ export default function MyDrafts() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {drafts.map(draft => {
+          {draftItems.map((draft: any) => {
             const draftData = draft.draftData as any;
             const progress = draft.progress || calculateProgress(draft.currentStep);
             const progressColor = getProgressColor(progress);

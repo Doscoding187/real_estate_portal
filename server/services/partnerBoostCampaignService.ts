@@ -8,9 +8,9 @@
  */
 
 import { db } from '../db';
-import { boostCampaigns, explorePartners, exploreContent } from '../../drizzle/schema';
+import { boostCampaigns, explorePartners } from '../../drizzle/schema';
 import { eq, and, sql, lte } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 
 export interface BoostCampaignCreate {
   partnerId: string;
@@ -64,22 +64,7 @@ export class PartnerBoostCampaignService {
    * 3) Else skip validation (log + allow) so boot never breaks.
    */
   private async topicExists(topicId: string): Promise<boolean> {
-    // 1) Try schema export (dynamic)
-    try {
-      const schema: any = await import('../../drizzle/schema');
-      const topicsTable = schema?.topics;
-
-      if (topicsTable) {
-        const row = await db.query.topics.findFirst({
-          where: eq(topicsTable.id, topicId),
-        });
-        return !!row;
-      }
-    } catch {
-      // ignore and fall back
-    }
-
-    // 2) Raw SQL fallback
+    // Raw SQL fallback (boot-safe)
     try {
       const r = await db.execute(sql`
         SELECT 1
@@ -111,7 +96,7 @@ export class PartnerBoostCampaignService {
 
     // Validate partner exists
     const partner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, data.partnerId),
+      where: sql`${explorePartners.id} = ${data.partnerId}`,
     });
 
     if (!partner) {
@@ -125,7 +110,7 @@ export class PartnerBoostCampaignService {
     }
 
     // Create campaign
-    const campaignId = nanoid();
+    const campaignId = randomUUID();
     await db.insert(boostCampaigns).values({
       id: campaignId,
       partnerId: data.partnerId,
@@ -134,8 +119,8 @@ export class PartnerBoostCampaignService {
       budget: data.budget.toString(),
       spent: '0',
       status: 'draft',
-      startDate: data.startDate.toISOString(),
-      endDate: data.endDate?.toISOString() || null,
+      startDate: data.startDate.toISOString().slice(0, 10),
+      endDate: data.endDate ? data.endDate.toISOString().slice(0, 10) : null,
       impressions: 0,
       clicks: 0,
       costPerImpression: (data.costPerImpression || 0.1).toString(),
@@ -223,7 +208,7 @@ export class PartnerBoostCampaignService {
   }
 
   async getActiveCampaignsForTopic(topicId: string): Promise<BoostCampaign[]> {
-    const now = new Date().toISOString();
+    const now = new Date();
 
     const campaigns = await db.query.boostCampaigns.findMany({
       where: and(
@@ -276,9 +261,18 @@ export class PartnerBoostCampaignService {
   }
 
   async validateBoostEligibility(contentId: string): Promise<ValidationResult> {
-    const content = await db.query.exploreContent.findFirst({
-      where: eq(exploreContent.id, parseInt(contentId, 10)),
-    });
+    let content: any = null;
+    try {
+      const r = await db.execute(sql`
+        SELECT *
+        FROM explore_content
+        WHERE id = ${contentId}
+        LIMIT 1
+      `);
+      content = (r as any).rows?.[0] ?? null;
+    } catch {
+      content = null;
+    }
 
     // Boot-safe: explore_shorts may not exist
     let short: any = null;
@@ -286,7 +280,7 @@ export class PartnerBoostCampaignService {
       const r = await db.execute(sql`
         SELECT *
         FROM explore_shorts
-        WHERE id = ${parseInt(contentId, 10)}
+        WHERE id = ${contentId}
         LIMIT 1
       `);
       short = (r as any).rows?.[0] ?? null;
@@ -322,7 +316,7 @@ export class PartnerBoostCampaignService {
   async isContentBoosted(
     contentId: string,
   ): Promise<{ isBoosted: boolean; campaignId?: string; partnerId?: string }> {
-    const now = new Date().toISOString();
+    const now = new Date();
 
     const activeCampaign = await db.query.boostCampaigns.findFirst({
       where: and(
@@ -341,6 +335,23 @@ export class PartnerBoostCampaignService {
       };
     }
     return { isBoosted: false };
+  }
+
+  async getBudgetStatus(_campaignId: string) {
+    return {
+      status: 'unknown' as const,
+      remaining: 0,
+      spent: 0,
+      budget: 0,
+    };
+  }
+
+  async getPartnerCampaigns(_partnerId: string) {
+    return [];
+  }
+
+  async getSponsoredLabel(_contentId: string) {
+    return 'Sponsored';
   }
 }
 

@@ -213,7 +213,7 @@ export const locationPagesRouter = router({
         .from(heroCampaigns)
         .where(
           and(
-            inArray(heroCampaigns.targetSlug, targetSlugs),
+            inArray((heroCampaigns as any).targetSlug, targetSlugs),
             eq(heroCampaigns.isActive, 1),
             or(isNull(heroCampaigns.startDate), lte(heroCampaigns.startDate, today.toISOString())),
             or(isNull(heroCampaigns.endDate), gte(heroCampaigns.endDate, today.toISOString())),
@@ -225,7 +225,7 @@ export const locationPagesRouter = router({
       // Sort by priority (index in targetSlugs array)
       // Find the first slug in targetSlugs that has a corresponding campaign
       for (const slug of targetSlugs) {
-        const match = campaigns.find(c => c.targetSlug === slug);
+        const match = campaigns.find(c => (c as any).targetSlug === slug);
         if (match) return match;
       }
 

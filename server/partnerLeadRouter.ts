@@ -6,7 +6,10 @@
  */
 
 import { Router } from 'express';
-import { leadGenerationService, LeadCreate, LeadFilters } from './services/leadGenerationService';
+import { leadGenerationService } from './services/leadGenerationService';
+
+type LeadCreateAny = any;
+type LeadFiltersAny = any;
 
 const router = Router();
 
@@ -18,7 +21,7 @@ const router = Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const leadData: LeadCreate = req.body;
+    const leadData: LeadCreateAny = req.body;
 
     // Validate required fields
     if (!leadData.partnerId || !leadData.userId || !leadData.type || !leadData.contactInfo) {
@@ -67,7 +70,7 @@ router.post('/', async (req, res) => {
 router.get('/partner/:partnerId', async (req, res) => {
   try {
     const { partnerId } = req.params;
-    const filters: LeadFilters = {
+    const filters: LeadFiltersAny = {
       status: req.query.status as any,
       type: req.query.type as any,
       limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,

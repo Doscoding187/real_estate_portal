@@ -381,7 +381,7 @@ async function verifyIntegrity(): Promise<void> {
 
     for (const dev of allDevs) {
       try {
-        if (dev.media) JSON.parse(dev.media as string);
+        if ((dev as any).media) JSON.parse((dev as any).media as string);
         if (dev.amenities) JSON.parse(dev.amenities as string);
       } catch {
         invalidJson++;

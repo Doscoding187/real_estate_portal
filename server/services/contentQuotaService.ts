@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { eq, inArray, and } from 'drizzle-orm';
+import { inArray, and } from 'drizzle-orm';
 import { launchService } from './launchService';
 import { unitTypes, developmentPhases, exploreContent } from '../../drizzle/schema';
 
@@ -138,7 +138,6 @@ class ContentQuotaService {
             'development_showcase',
             'agent_walkthrough',
           ]),
-          eq(content.isLaunchContent, true),
         ),
     });
 
@@ -147,7 +146,6 @@ class ContentQuotaService {
       where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['neighbourhood_guide', 'area_overview']),
-          eq(content.isLaunchContent, true),
         ),
     });
 
@@ -156,7 +154,6 @@ class ContentQuotaService {
       where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['expert_tip', 'how_to', 'educational']),
-          eq(content.isLaunchContent, true),
         ),
     });
 
@@ -165,7 +162,6 @@ class ContentQuotaService {
       where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['market_insight', 'market_analysis', 'price_trends']),
-          eq(content.isLaunchContent, true),
         ),
     });
 
@@ -174,7 +170,6 @@ class ContentQuotaService {
       where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['service_showcase', 'service_demo']),
-          eq(content.isLaunchContent, true),
         ),
     });
 
@@ -183,7 +178,6 @@ class ContentQuotaService {
       where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['inspiration', 'design_showcase', 'trend']),
-          eq(content.isLaunchContent, true),
         ),
     });
 

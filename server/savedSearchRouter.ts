@@ -4,6 +4,11 @@ import { TRPCError } from '@trpc/server';
 import { getDb } from './db';
 import { savedSearches } from '../drizzle/schema';
 import { eq, desc, and } from 'drizzle-orm';
+import { requireUser } from './_core/requireUser';
+
+function getUserId(ctx: { user: { id: number } | null }) {
+  return requireUser(ctx).id;
+}
 
 export const savedSearchRouter = router({
   create: protectedProcedure
@@ -23,7 +28,7 @@ export const savedSearchRouter = router({
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       await db.insert(savedSearches).values({
-        userId: ctx.user.id,
+        userId: getUserId(ctx),
         name: input.name,
         criteria: input.criteria,
         notificationFrequency: input.notificationFrequency,
@@ -40,7 +45,7 @@ export const savedSearchRouter = router({
     const searches = await db
       .select()
       .from(savedSearches)
-      .where(eq(savedSearches.userId, ctx.user.id))
+      .where(eq(savedSearches.userId, getUserId(ctx)))
       .orderBy(desc(savedSearches.createdAt));
 
     return searches;
@@ -56,7 +61,7 @@ export const savedSearchRouter = router({
       const search = await db
         .select()
         .from(savedSearches)
-        .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, ctx.user.id)))
+        .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, getUserId(ctx))))
         .limit(1);
 
       if (search.length === 0) {

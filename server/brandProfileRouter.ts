@@ -12,6 +12,7 @@ import { developerBrandProfileService } from './services/developerBrandProfileSe
 import { brandLeadService } from './services/brandLeadService';
 import { brandEmulationService } from './_core/brandEmulation';
 import { developmentService } from './services/developmentService';
+import { requireUser } from './_core/requireUser';
 
 // ============================================================================
 // Input Schemas
@@ -151,7 +152,8 @@ export const brandProfileRouter = router({
   adminCreateBrandProfile: protectedProcedure
     .input(createBrandProfileSchema)
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can create brand profiles',
@@ -160,7 +162,7 @@ export const brandProfileRouter = router({
 
       const result = await developerBrandProfileService.createBrandProfile({
         ...input,
-        createdBy: ctx.user.id,
+        createdBy: user.id,
       });
 
       return result;
@@ -172,7 +174,8 @@ export const brandProfileRouter = router({
   adminUpdateBrandProfile: protectedProcedure
     .input(updateBrandProfileSchema)
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can update brand profiles',
@@ -193,7 +196,8 @@ export const brandProfileRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can toggle visibility',
@@ -214,7 +218,8 @@ export const brandProfileRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can attach developments',
@@ -237,7 +242,8 @@ export const brandProfileRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can detach developments',
@@ -253,7 +259,8 @@ export const brandProfileRouter = router({
   adminGetBrandLeadStats: protectedProcedure
     .input(z.object({ brandProfileId: z.number().int() }))
     .query(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can view lead stats',
@@ -269,7 +276,8 @@ export const brandProfileRouter = router({
   adminListAllBrandProfiles: protectedProcedure
     .input(listBrandProfilesSchema)
     .query(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can list all brand profiles',
@@ -295,7 +303,8 @@ export const brandProfileRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can convert brands to subscribers',
@@ -314,7 +323,8 @@ export const brandProfileRouter = router({
   adminGetSalesPitchStats: protectedProcedure
     .input(z.object({ brandProfileId: z.number().int() }))
     .query(async ({ input, ctx }) => {
-      if (ctx.user.role !== 'super_admin') {
+      const user = requireUser(ctx);
+      if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only super admins can view sales stats',

@@ -119,7 +119,7 @@ export default function SearchResults({
       city: filters.city, // Explicitly ensure these are passed
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      locations: filters.locations, // Pass multi-location array
+      locations: filters.locations?.map(l => l.slug),
       locationId: filters.locationId, // Pass locationId if backend supports it (optional filter usually)
       propertyType: filters.propertyType as any,
       listingType: filters.listingType as any,
@@ -136,9 +136,9 @@ export default function SearchResults({
   // Fetch properties
   const { data: searchResults, isLoading } = trpc.properties.search.useQuery(queryInput);
 
-  const properties = searchResults?.properties || [];
-  const resultTotal = searchResults?.total || 0;
-  const locationContext = searchResults?.locationContext;
+  const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
+  const resultTotal = (searchResults as any)?.total ?? 0;
+  const locationContext = (searchResults as any)?.locationContext;
 
   // Mutations
   const addFavoriteMutation = trpc.favorites.add.useMutation({
@@ -292,7 +292,16 @@ export default function SearchResults({
   return (
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} />
-      <ListingNavbar defaultLocations={filters.locations || []} />
+      <ListingNavbar
+        defaultLocations={(filters.locations ?? []).map(l => ({
+          name: (l as any).name ?? l.slug,
+          slug: l.slug,
+          type: l.type,
+          citySlug: l.citySlug,
+          provinceSlug: l.provinceSlug,
+          fullAddress: (l as any).fullAddress ?? l.slug,
+        }))}
+      />
 
       <div className="container pt-24 pb-8">
         {/* Breadcrumbs */}
@@ -376,7 +385,15 @@ export default function SearchResults({
                       {sortedProperties.map(property => {
                         const normalized = normalizePropertyForUI(property);
                         if (!normalized) return null;
-                        return <PropertyCard key={normalized.id} {...normalized} />;
+                        const cardProps = {
+                          ...normalized,
+                          image:
+                            (normalized as any).image ??
+                            (normalized as any).mainImage ??
+                            (normalized as any).images?.[0] ??
+                            '/placeholder-property.jpg',
+                        };
+                        return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
                       })}
                     </div>
                   )}
@@ -391,13 +408,16 @@ export default function SearchResults({
                             id: parseInt(normalized.id),
                             title: normalized.title,
                             price: normalized.price,
-                            propertyType: normalized.propertyType,
-                            listingType: normalized.listingType,
+                            propertyType: normalized.propertyType ?? 'unknown',
+                            listingType: normalized.listingType ?? 'sale',
                             latitude: parseFloat(p.latitude || '-26.2041'),
                             longitude: parseFloat(p.longitude || '28.0473'),
-                            mainImage: normalized.images[0],
-                            address: normalized.address,
-                            city: normalized.city,
+                            mainImage:
+                              (normalized as any).image ??
+                              (normalized as any).mainImage ??
+                              (normalized as any).images?.[0],
+                            address: (normalized as any).address,
+                            city: (normalized as any).city,
                             bedrooms: normalized.bedrooms,
                             bathrooms: normalized.bathrooms,
                             area: normalized.area,

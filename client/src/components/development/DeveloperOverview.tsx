@@ -6,9 +6,14 @@ import { Input } from '@/components/ui/input';
 interface DeveloperOverviewProps {
   developerName: string;
   developerLogo?: string | null;
+  isVerified?: boolean;
 }
 
-export function DeveloperOverview({ developerName, developerLogo }: DeveloperOverviewProps) {
+export function DeveloperOverview({
+  developerName,
+  developerLogo,
+  isVerified = false,
+}: DeveloperOverviewProps) {
   return (
     <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
       <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
@@ -34,9 +39,11 @@ export function DeveloperOverview({ developerName, developerLogo }: DeveloperOve
               </div>
               <div>
                 <h4 className="text-lg font-bold text-slate-900">{developerName}</h4>
-                <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
-                  VERIFIED DEVELOPER
-                </Badge>
+                {isVerified && (
+                  <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
+                    VERIFIED DEVELOPER
+                  </Badge>
+                )}
               </div>
             </div>
 

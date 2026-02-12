@@ -37,11 +37,11 @@ interface Property {
 export default function LocationIntelligence() {
   const [activeTab, setActiveTab] = useState('map');
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
-  const [locationFilter, setLocationFilter] = useState({
-    provinceId: undefined as number | undefined,
-    cityId: undefined as number | undefined,
-    suburbId: undefined as number | undefined,
-  });
+  const [locationFilter, setLocationFilter] = useState<{
+    provinceId?: number;
+    cityId?: number;
+    suburbId?: number;
+  }>({});
 
   // Fetch heatmap data for density visualization
   const { data: heatmapData } = trpc.location.getPropertyHeatmap.useQuery({
@@ -68,7 +68,11 @@ export default function LocationIntelligence() {
     setSelectedLocation(location);
   };
 
-  const handleLocationFilterChange = (selection: typeof locationFilter) => {
+  const handleLocationFilterChange = (selection: {
+    provinceId?: number;
+    cityId?: number;
+    suburbId?: number;
+  }) => {
     setLocationFilter(selection);
   };
 
@@ -133,6 +137,7 @@ export default function LocationIntelligence() {
                   <CardContent className="space-y-4">
                     <LocationAutocomplete
                       onLocationSelect={handleLocationSelect}
+                      onValueChange={() => {}}
                       placeholder="Search any location..."
                       type="all"
                     />
@@ -193,18 +198,21 @@ export default function LocationIntelligence() {
                 <CardContent className="space-y-4">
                   <LocationAutocomplete
                     onLocationSelect={handleLocationSelect}
+                    onValueChange={() => {}}
                     placeholder="Search provinces, cities, suburbs..."
                     type="all"
                   />
 
                   <LocationAutocomplete
                     onLocationSelect={handleLocationSelect}
+                    onValueChange={() => {}}
                     placeholder="Search cities only..."
                     type="city"
                   />
 
                   <LocationAutocomplete
                     onLocationSelect={handleLocationSelect}
+                    onValueChange={() => {}}
                     placeholder="Search suburbs only..."
                     type="suburb"
                   />

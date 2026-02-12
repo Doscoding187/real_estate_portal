@@ -7,7 +7,7 @@
  */
 
 import { db } from '../db';
-import { exploreContent, exploreUserPreferencesNew } from '../../drizzle/schema';
+import { exploreContent } from '../../drizzle/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 
 interface UserContext {
@@ -32,33 +32,14 @@ class RecommendationEngineService {
    * Get user profile for personalization
    */
   async getUserProfile(userId: number): Promise<UserProfile> {
-    const profile = await db
-      .select()
-      .from(exploreUserPreferencesNew)
-      .where(eq(exploreUserPreferencesNew.userId, userId))
-      .limit(1);
-
-    if (!profile[0]) {
-      // Return default profile
-      return {
-        userId,
-        preferredLocations: [],
-        preferredPropertyTypes: [],
-        preferredLifestyleCategories: [],
-        followedNeighbourhoods: [],
-        followedCreators: [],
-      };
-    }
-
+    // Preferences table not available yet
     return {
       userId,
-      priceRangeMin: profile[0].priceRangeMin || undefined,
-      priceRangeMax: profile[0].priceRangeMax || undefined,
-      preferredLocations: profile[0].preferredLocations || [],
-      preferredPropertyTypes: profile[0].preferredPropertyTypes || [],
-      preferredLifestyleCategories: profile[0].preferredLifestyleCategories || [],
-      followedNeighbourhoods: profile[0].followedNeighbourhoods || [],
-      followedCreators: profile[0].followedCreators || [],
+      preferredLocations: [],
+      preferredPropertyTypes: [],
+      preferredLifestyleCategories: [],
+      followedNeighbourhoods: [],
+      followedCreators: [],
     };
   }
 

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -13,19 +14,18 @@ export default function AgentDashboard() {
   const { isAuthenticated, user, loading } = useAuth();
 
   // Check if agent profile exists
-  const { data: agentProfile, isLoading: isLoadingProfile } = trpc.agent.getDashboardStats.useQuery(
-    undefined,
-    {
-      enabled: isAuthenticated && user?.role === 'agent',
-      retry: false,
-      onError: error => {
-        // If agent profile not found, redirect to setup
-        if (error.message.includes('Agent profile not found')) {
-          setLocation('/agent/setup');
-        }
-      },
-    },
-  );
+  const agentProfileQuery = trpc.agent.getDashboardStats.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === 'agent',
+    retry: false,
+  });
+  const { data: agentProfile, isLoading: isLoadingProfile, error } = agentProfileQuery;
+
+  useEffect(() => {
+    if (!error) return;
+    if (error.message.includes('Agent profile not found')) {
+      setLocation('/agent/setup');
+    }
+  }, [error, setLocation]);
 
   // Show loading spinner while auth is being checked
   if (loading || isLoadingProfile) {

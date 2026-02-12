@@ -14,7 +14,7 @@ async function main() {
       openId: 'debug_open_id',
       createdAt: new Date(),
       updatedAt: new Date(),
-      lastSignedIn: new Date(),
+      lastSignedIn: new Date().toISOString(),
       emailVerified: 1,
       loginMethod: 'email',
       isSubaccount: 0,

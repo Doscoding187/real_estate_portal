@@ -17,7 +17,16 @@ import { locationRouter } from './locationRouter';
 import { enhancedLocationRouter } from './enhancedLocationRouter';
 import { googleMapsRouter } from './googleMapsRouter';
 import { priceInsightsRouter } from './priceInsightsRouter';
-import { devRouter } from './devRouter'; // ⚠️ DEV ONLY - Remove before production
+import { devRouter } from './devRouter';
+import { requireUser } from './_core/requireUser'; // ⚠️ DEV ONLY - Remove before production
+
+function getUserId(ctx: { user: { id: number } | null }) {
+  return requireUser(ctx).id;
+}
+
+function getUser(ctx: { user: { id: number; role?: string } | null }) {
+  return requireUser(ctx);
+}
 import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
@@ -43,6 +52,9 @@ import { partnerRouter } from './partnerRouter';
 import { brandProfileRouter } from './brandProfileRouter';
 import { brandEmulatorRouter } from './brandEmulatorRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
+import { favoritesRouter } from './favoritesRouter';
+import { reviewsRouter } from './reviewsRouter';
+import { leadsRouter } from './leadsRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -83,6 +95,9 @@ export const appRouter = router({
   brandProfile: brandProfileRouter,
   brandEmulator: brandEmulatorRouter,
   superAdminPublisher: superAdminPublisherRouter,
+  favorites: favoritesRouter,
+  reviews: reviewsRouter,
+  leads: leadsRouter,
 
   propertyResults: propertyResultsRouter,
 
@@ -98,6 +113,9 @@ export const appRouter = router({
   }),
 
   properties: router({
+    myProperties: publicProcedure.query(async () => {
+      return [] as any[];
+    }),
     search: publicProcedure
       .input(
         z.object({
@@ -221,7 +239,16 @@ export const appRouter = router({
       .query(async ({ input }) => {
         try {
           const { propertySearchService } = await import('./services/propertySearchService');
-          return await propertySearchService.getFilterCounts(input.filters || {});
+          const filters = input.filters || {};
+          const normalizedFilters = {
+            ...filters,
+            propertyType:
+              typeof filters.propertyType === 'string'
+                ? [filters.propertyType as any]
+                : filters.propertyType,
+            listingType: filters.listingType as any,
+          };
+          return await propertySearchService.getFilterCounts(normalizedFilters);
         } catch (error) {
           console.error('Error getting filter counts:', error);
           return { total: 0, byType: {}, byBedrooms: {}, byPriceRange: {} };
@@ -365,7 +392,7 @@ export const appRouter = router({
         }
 
         // Deduplicate
-        const uniqueAmenities = [...new Set(amenities)];
+        const uniqueAmenities = Array.from(new Set(amenities));
 
         return {
           property: {
@@ -432,10 +459,11 @@ export const appRouter = router({
         const propertyId = await db.createProperty({
           ...propertyData,
           amenities: input.amenities ? JSON.stringify(input.amenities) : null,
-          ownerId: ctx.user.id,
+          ownerId: getUserId(ctx),
           status: 'available',
           featured: 0,
           views: 0,
+          enquiries: 0,
           transactionType: input.listingType === 'rent' ? 'rent' : 'sale',
         });
 
@@ -498,16 +526,22 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Verify ownership
         const property = await db.getPropertyById(input.id);
-        if (!property || property.ownerId !== ctx.user.id) {
+        const user = getUser(ctx);
+        if (!property || property.ownerId !== user.id) {
           throw new Error('Unauthorized');
         }
 
         // Update property
-        await db.updateProperty(input.id, {
-          ...input,
-          amenities: input.amenities ? JSON.stringify(input.amenities) : undefined,
-          updatedAt: new Date(),
-        });
+        await db.updateProperty(
+          input.id,
+          user.id,
+          {
+            ...input,
+            amenities: input.amenities ? JSON.stringify(input.amenities) : undefined,
+            updatedAt: new Date().toISOString(),
+          },
+          user.role ?? undefined,
+        );
 
         return { success: true };
       }),
@@ -521,12 +555,13 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Verify ownership
         const property = await db.getPropertyById(input.id);
-        if (!property || property.ownerId !== ctx.user.id) {
+        const user = getUser(ctx);
+        if (!property || property.ownerId !== user.id) {
           throw new Error('Unauthorized');
         }
 
         // Delete property
-        await db.deleteProperty(input.id);
+        await db.deleteProperty(input.id, user.id, user.role ?? undefined);
 
         return { success: true };
       }),
@@ -539,21 +574,23 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        const existing = await db.isFavorite(ctx.user.id, input.propertyId);
+        const existing = await db.isFavorite(getUserId(ctx), input.propertyId);
         if (existing) {
-          await db.removeFavorite(ctx.user.id, input.propertyId);
+          await db.removeFavorite(getUserId(ctx), input.propertyId);
           return { favorited: false };
         } else {
-          await db.addFavorite(ctx.user.id, input.propertyId);
+          await db.addFavorite(getUserId(ctx), input.propertyId);
           return { favorited: true };
         }
       }),
 
     getFavorites: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserFavorites(ctx.user.id);
+      return await db.getUserFavorites(getUserId(ctx));
     }),
   }),
 });
 
 // Export type router type signature
 export type AppRouter = typeof appRouter;
+
+

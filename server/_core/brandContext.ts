@@ -3,19 +3,24 @@
  * Enables super admin to operate as specific brands for emulator mode
  */
 
-import type { TrpcContext } from './context';
+import type { TrpcContext, BrandEmulationContext } from './context';
 import { TRPCError } from '@trpc/server';
 import { developerBrandProfileService } from '../services/developerBrandProfileService';
+import { requireUser } from './requireUser';
 
 export interface BrandOperatingContext {
   brandProfileId: number;
   brandType: 'developer' | 'marketing_agency' | 'hybrid';
   brandName: string;
   originalUserId: number;
+  mode?: 'seeding' | 'emulating';
+  brandProfileType?: 'developer' | 'marketing_agency' | 'hybrid';
+  brandProfileName?: string;
 }
 
 export interface EnhancedTRPCContext extends TrpcContext {
   operatingAs?: BrandOperatingContext;
+  brandEmulationContext?: BrandEmulationContext;
 }
 
 /**
@@ -66,9 +71,11 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
       },
       // ✅ BRIDGE: legacy code expects this
       brandEmulationContext: {
+        originalUserId: ctx.user.id,
         mode: 'seeding',
         brandProfileId: brandProfile.id,
         brandProfileType: (brandProfile.identityType || 'developer') as any,
+        brandProfileName: brandProfile.brandName,
       },
     };
 
@@ -99,7 +106,7 @@ export async function getEffectiveBrandId(ctx: EnhancedTRPCContext): Promise<num
 
   // Normal mode: get developer profile for the user
   const { getDeveloperByUserId } = await import('../services/developerService');
-  const developerProfile = await getDeveloperByUserId(ctx.user.id);
+  const developerProfile = await getDeveloperByUserId(requireUser(ctx).id);
 
   if (!developerProfile) {
     throw new TRPCError({

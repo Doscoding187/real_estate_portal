@@ -43,7 +43,11 @@ export default function UserDashboard() {
   });
 
   // Get comparison properties details
-  const comparisonProperties = allProperties?.filter(p => comparedProperties.includes(p.id)) || [];
+  const allPropertyItems = Array.isArray(allProperties)
+    ? allProperties
+    : (allProperties as any)?.items ?? (allProperties as any)?.results ?? [];
+  const comparisonProperties =
+    allPropertyItems.filter((p: any) => comparedProperties.includes(p.id)) || [];
 
   const deleteSavedSearchMutation = trpc.savedSearch.delete.useMutation({
     onSuccess: () => {
@@ -286,7 +290,12 @@ export default function UserDashboard() {
                       <CardContent className="p-0">
                         <div className="relative h-48">
                           <img
-                            src={normalized.images[0] || '/placeholder-property.jpg'}
+                            src={
+                              (normalized as any).image ??
+                              (normalized as any).mainImage ??
+                              (normalized as any).images?.[0] ??
+                              '/placeholder-property.jpg'
+                            }
                             alt={normalized.title}
                             className="w-full h-full object-cover rounded-t-lg"
                           />
@@ -305,7 +314,7 @@ export default function UserDashboard() {
                           </h3>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
                             <MapPin className="h-3 w-3" />
-                            {normalized.city}
+                            {(normalized as any).city ?? (normalized as any).location ?? '—'}
                           </div>
                           <div className="flex items-center gap-3 text-sm text-slate-600 mb-3">
                             {normalized.bedrooms && (

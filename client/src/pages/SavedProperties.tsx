@@ -17,7 +17,7 @@ export default function SavedProperties() {
   const [limit] = useState(50);
   const [offset] = useState(0);
 
-  const { data, isLoading, refetch } = trpc.exploreApi.getSavedProperties.useQuery({
+  const { data, isLoading, refetch } = trpc.explore.getSavedProperties.useQuery({
     limit,
     offset,
   });
@@ -120,15 +120,22 @@ export default function SavedProperties() {
                 {savedItems.map(item => (
                   <div key={item.id} className="relative group">
                     <PropertyCard
-                      id={item.property.id}
-                      title={item.property.title}
-                      price={item.property.price}
-                      location={item.property.location}
-                      imageUrl={item.property.imageUrl}
-                      beds={item.property.beds}
-                      baths={item.property.baths}
-                      area={item.property.area}
-                      propertyType={item.property.propertyType}
+                      property={{
+                        id: item.property.id,
+                        title: item.property.title,
+                        price: item.property.price,
+                        location: item.property.location,
+                        imageUrl: item.property.imageUrl,
+                        beds: item.property.beds,
+                        baths: item.property.baths,
+                        size: item.property.area,
+                        propertyType: item.property.propertyType,
+                        isSaved: true,
+                      }}
+                      onClick={() => {
+                        window.location.href = `/property/${item.property.id}`;
+                      }}
+                      onSave={handleUnsave}
                     />
                     {/* Unsave button overlay */}
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -183,6 +190,7 @@ export default function SavedProperties() {
 // Wrapper component to handle unsave
 function SaveButtonWrapper({ propertyId, onUnsave }: { propertyId: number; onUnsave: () => void }) {
   const { isSaved, toggleSave } = useSaveProperty({
+    contentId: propertyId,
     propertyId,
     initialSaved: true,
     onUnsaveSuccess: onUnsave,

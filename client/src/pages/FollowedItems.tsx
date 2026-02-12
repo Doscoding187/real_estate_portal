@@ -15,7 +15,7 @@ type TabType = 'neighbourhoods' | 'creators';
 export default function FollowedItems() {
   const [activeTab, setActiveTab] = useState<TabType>('neighbourhoods');
 
-  const { data, isLoading, refetch } = trpc.exploreApi.getFollowedItems.useQuery();
+  const { data, isLoading, refetch } = trpc.explore.getFollowedItems.useQuery();
 
   const handleUnfollow = () => {
     // Refetch to update the lists
@@ -33,8 +33,8 @@ export default function FollowedItems() {
     );
   }
 
-  const neighbourhoods = data?.data.neighbourhoods || [];
-  const creators = data?.data.creators || [];
+  const neighbourhoods = (data as any)?.items?.neighbourhoods ?? [];
+  const creators = (data as any)?.items?.creators ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -142,13 +142,9 @@ function NeighbourhoodsTab({
       {neighbourhoods.map(item => (
         <div key={item.id} className="relative">
           <NeighbourhoodCard
-            id={item.neighbourhood.id}
-            name={item.neighbourhood.name}
-            city={item.neighbourhood.city}
-            imageUrl={item.neighbourhood.imageUrl}
-            propertyCount={item.neighbourhood.propertyCount}
-            averagePrice={item.neighbourhood.averagePrice}
-            description={item.neighbourhood.description}
+            neighbourhood={item.neighbourhood as any}
+            onClick={() => {}}
+            onFollow={() => {}}
           />
           <div className="absolute top-4 right-4">
             <FollowButton

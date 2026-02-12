@@ -107,12 +107,14 @@ export class PayloadCMSProvider implements CMSClient {
     return {
       hero: payloadData.hero || {},
       partnerTypes: payloadData.partnerTypes || [],
+      valueProposition: payloadData.valueProposition || [],
       features: payloadData.features || [],
       howItWorks: payloadData.howItWorks || {},
-      featuresGrid: payloadData.featuresGrid || [],
-      metrics: payloadData.metrics || [],
-      partnerLogos: payloadData.partnerLogos || [],
-      pricingCategories: payloadData.pricingCategories || [],
+      socialProof: {
+        logos: payloadData.partnerLogos || payloadData.socialProof?.logos || [],
+        metrics: payloadData.metrics || payloadData.socialProof?.metrics || [],
+      },
+      pricingPreview: payloadData.pricingCategories || payloadData.pricingPreview || [],
       finalCTA: payloadData.finalCTA || {},
       faqs: payloadData.faqs || [],
     };
@@ -126,12 +128,12 @@ export class PayloadCMSProvider implements CMSClient {
     return {
       hero: content.hero,
       partnerTypes: content.partnerTypes,
+      valueProposition: content.valueProposition,
       features: content.features,
       howItWorks: content.howItWorks,
-      featuresGrid: content.featuresGrid,
-      metrics: content.metrics,
-      partnerLogos: content.partnerLogos,
-      pricingCategories: content.pricingCategories,
+      partnerLogos: content.socialProof?.logos ?? [],
+      metrics: content.socialProof?.metrics ?? [],
+      pricingCategories: content.pricingPreview ?? [],
       finalCTA: content.finalCTA,
       faqs: content.faqs,
     };

@@ -265,7 +265,15 @@ class FoundingPartnerContentTracker {
     }
 
     const currentWeekIndex = foundingPartnerService.getCurrentWeekIndex(status.enrollmentDate);
-    const weeks = [];
+    type WeekStat = {
+      weekIndex: number;
+      startDate: Date;
+      endDate: Date;
+      contentDelivered: number;
+      required: number;
+      isMet: boolean;
+    };
+    const weeks: WeekStat[] = [];
 
     for (let i = 0; i <= currentWeekIndex; i++) {
       const weekStart = new Date(status.enrollmentDate);
@@ -338,7 +346,13 @@ class FoundingPartnerContentTracker {
     }[]
   > {
     const activePartners = await foundingPartnerService.getActiveFoundingPartners();
-    const partnersWithIssues = [];
+    type PartnerIssue = {
+      partnerId: string;
+      issues: string[];
+      warningCount: number;
+      status: 'active' | 'warning' | 'revoked';
+    };
+    const partnersWithIssues: PartnerIssue[] = [];
 
     for (const partner of activePartners) {
       const commitment = await foundingPartnerService.checkContentCommitment(partner.partnerId);
