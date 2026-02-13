@@ -12,10 +12,16 @@ export type TrpcContext = {
   req: CreateExpressContextOptions['req'];
   res: CreateExpressContextOptions['res'];
   user: User | null;
+  requestId: string;
 };
 
 export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
   let user: User | null = null;
+  const requestIdFromReq = (opts.req as any)?.requestId;
+  const requestId =
+    typeof requestIdFromReq === 'string' && requestIdFromReq.trim().length > 0
+      ? requestIdFromReq
+      : 'unknown';
 
   try {
     // Try to authenticate using custom auth service
@@ -30,5 +36,6 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
     req: opts.req,
     res: opts.res,
     user,
+    requestId,
   };
 }
