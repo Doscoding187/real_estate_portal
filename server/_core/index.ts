@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { randomUUID } from 'crypto';
 
 // Load .env first
 dotenv.config();
@@ -119,6 +120,18 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  app.use((req, res, next) => {
+    const headerRequestId = req.headers['x-request-id'];
+    const requestId =
+      typeof headerRequestId === 'string' && headerRequestId.trim().length > 0
+        ? headerRequestId
+        : randomUUID();
+
+    (req as any).requestId = requestId;
+    res.setHeader('x-request-id', requestId);
+    next();
+  });
 
   app.use(domainRoutingMiddleware);
   app.use(customDomainMiddleware);
