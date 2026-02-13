@@ -18,6 +18,7 @@ import {
 import { getActivityFeed as getActivityFeedService } from './services/activityService';
 import { getKPIsWithCache } from './services/kpiService';
 import { seedCleanupService } from './services/seedCleanupService';
+import { capturePublicLead } from './services/publicLeadCaptureService';
 import {
   developmentDrafts,
   developments,
@@ -612,6 +613,51 @@ export const developerRouter = router({
     .query(async ({ input }) => {
       return await developmentService.listPublicDevelopments({
         limit: input.limit,
+      });
+    }),
+
+  createLead: publicProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        developerBrandProfileId: z.number().int().positive().optional(),
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        message: z.string().optional(),
+        affordabilityData: z
+          .object({
+            monthlyIncome: z.number().optional(),
+            monthlyExpenses: z.number().optional(),
+            monthlyDebts: z.number().optional(),
+            availableDeposit: z.number().optional(),
+            maxAffordable: z.number().optional(),
+            calculatedAt: z.string().optional(),
+          })
+          .optional(),
+        referrerUrl: z.string().optional(),
+        utmSource: z.string().optional(),
+        utmMedium: z.string().optional(),
+        utmCampaign: z.string().optional(),
+        leadSource: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      return await capturePublicLead({
+        developmentId: input.developmentId,
+        developerBrandProfileId: input.developerBrandProfileId,
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        message: input.message,
+        leadType: 'inquiry',
+        source: input.leadSource || 'development_detail',
+        leadSource: input.leadSource || 'development_detail',
+        referrerUrl: input.referrerUrl,
+        utmSource: input.utmSource,
+        utmMedium: input.utmMedium,
+        utmCampaign: input.utmCampaign,
+        affordabilityData: input.affordabilityData,
       });
     }),
 
