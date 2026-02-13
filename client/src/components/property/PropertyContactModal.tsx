@@ -29,6 +29,8 @@ interface PropertyContactModalProps {
   agentName?: string;
   agentPhone?: string;
   agentEmail?: string;
+  agentId?: number;
+  agencyId?: number;
   developerBrandProfileId?: number; // For brand lead routing
   developmentId?: number;
 }
@@ -41,6 +43,8 @@ export function PropertyContactModal({
   agentName = 'Property Agent',
   agentPhone,
   agentEmail,
+  agentId,
+  agencyId,
   developerBrandProfileId,
   developmentId,
 }: PropertyContactModalProps) {
@@ -85,6 +89,8 @@ export function PropertyContactModal({
       phone: formData.phone,
       message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
       source: 'property_detail',
+      agentId,
+      agencyId,
       developerBrandProfileId, // For brand lead routing
       developmentId,
     });

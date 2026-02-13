@@ -850,6 +850,12 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         propertyId={propertyId}
         propertyTitle={property.title}
         agentName="Property Agent"
+        agentId={property?.agentId ? Number(property.agentId) : undefined}
+        agencyId={property?.agencyId ? Number(property.agencyId) : undefined}
+        developmentId={property?.developmentId ? Number(property.developmentId) : undefined}
+        developerBrandProfileId={
+          property?.developerBrandProfileId ? Number(property.developerBrandProfileId) : undefined
+        }
       />
 
       <PropertyShareModal

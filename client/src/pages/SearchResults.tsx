@@ -129,6 +129,7 @@ export default function SearchResults({
       status: 'available' as const,
       limit,
       offset: page * limit,
+      includeDevelopments: true,
     }),
     [filters, page],
   );
@@ -137,6 +138,7 @@ export default function SearchResults({
   const { data: searchResults, isLoading } = trpc.properties.search.useQuery(queryInput);
 
   const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
+  const developmentResults = (searchResults as any)?.developments?.items ?? [];
   const resultTotal = (searchResults as any)?.total ?? 0;
   const locationContext = (searchResults as any)?.locationContext;
 
@@ -358,6 +360,38 @@ export default function SearchResults({
           <div className="col-span-1 lg:col-span-9">
             {/* Results Grid */}
             <div className="">
+              {!isLoading && developmentResults.length > 0 && (
+                <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-slate-800">New Developments Nearby</h2>
+                    <a className="text-sm font-medium text-blue-700 hover:underline" href="/new-developments">
+                      View all
+                    </a>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {developmentResults.slice(0, 4).map((development: any) => (
+                      <a
+                        key={development.id}
+                        href={`/development/${development.slug || development.id}`}
+                        className="rounded-lg border border-blue-100 bg-white p-3 transition-colors hover:border-blue-300"
+                      >
+                        <div className="text-sm font-semibold text-slate-900">{development.name}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {[development.suburb, development.city, development.province]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </div>
+                        <div className="mt-2 text-xs text-slate-700">
+                          {development.priceFrom
+                            ? `From R${Number(development.priceFrom).toLocaleString()}`
+                            : 'Price on request'}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {isLoading ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />

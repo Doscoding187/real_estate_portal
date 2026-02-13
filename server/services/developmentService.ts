@@ -615,6 +615,7 @@ export async function listPublicDevelopments(options: {
       slug: developments.slug,
       images: developments.images,
       city: developments.city,
+      suburb: developments.suburb,
       province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
