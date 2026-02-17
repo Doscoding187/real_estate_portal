@@ -476,9 +476,9 @@ ALTER TABLE `developer_notifications` DROP FOREIGN KEY `developer_notifications_
 --> statement-breakpoint
 ALTER TABLE `developer_notifications` DROP FOREIGN KEY `developer_notifications_userId_users_id_fk`;
 --> statement-breakpoint
-ALTER TABLE `developer_subscription_limits` DROP FOREIGN KEY `developer_subscription_limits_subscriptionId_developer_subscriptions_id_fk`;
+ALTER TABLE `developer_subscription_limits` DROP FOREIGN KEY `developer_subscription_limits_subscriptionId_developer__1bc371cc`;
 --> statement-breakpoint
-ALTER TABLE `developer_subscription_usage` DROP FOREIGN KEY `developer_subscription_usage_subscriptionId_developer_subscriptions_id_fk`;
+ALTER TABLE `developer_subscription_usage` DROP FOREIGN KEY `developer_subscription_usage_subscriptionId_developer_s_49a4d70c`;
 --> statement-breakpoint
 ALTER TABLE `developer_subscriptions` DROP FOREIGN KEY `developer_subscriptions_developerId_developers_id_fk`;
 --> statement-breakpoint
@@ -701,7 +701,7 @@ ALTER TABLE `explore_boost_campaigns` ADD CONSTRAINT `explore_boost_campaigns_cr
 ALTER TABLE `explore_boost_campaigns` ADD CONSTRAINT `explore_boost_campaigns_content_id_explore_content_id_fk` FOREIGN KEY (`content_id`) REFERENCES `explore_content`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_creator_follows` ADD CONSTRAINT `explore_creator_follows_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_creator_follows` ADD CONSTRAINT `explore_creator_follows_creator_id_users_id_fk` FOREIGN KEY (`creator_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `explore_discovery_videos` ADD CONSTRAINT `explore_discovery_videos_explore_content_id_explore_content_id_fk` FOREIGN KEY (`explore_content_id`) REFERENCES `explore_content`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `explore_discovery_videos` ADD CONSTRAINT `explore_discovery_videos_explore_content_id_explore_con_c96d40d0` FOREIGN KEY (`explore_content_id`) REFERENCES `explore_content`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_discovery_videos` ADD CONSTRAINT `explore_discovery_videos_property_id_properties_id_fk` FOREIGN KEY (`property_id`) REFERENCES `properties`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_discovery_videos` ADD CONSTRAINT `explore_discovery_videos_development_id_developments_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_engagements` ADD CONSTRAINT `explore_engagements_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -709,7 +709,7 @@ ALTER TABLE `explore_engagements` ADD CONSTRAINT `explore_engagements_content_id
 ALTER TABLE `explore_engagements` ADD CONSTRAINT `explore_engagements_session_id_explore_feed_sessions_id_fk` FOREIGN KEY (`session_id`) REFERENCES `explore_feed_sessions`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_feed_sessions` ADD CONSTRAINT `explore_feed_sessions_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_neighbourhood_follows` ADD CONSTRAINT `explore_neighbourhood_follows_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `explore_neighbourhood_follows` ADD CONSTRAINT `explore_neighbourhood_follows_neighbourhood_id_explore_neighbourhoods_id_fk` FOREIGN KEY (`neighbourhood_id`) REFERENCES `explore_neighbourhoods`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `explore_neighbourhood_follows` ADD CONSTRAINT `explore_neighbourhood_follows_neighbourhood_id_explore__11c57d47` FOREIGN KEY (`neighbourhood_id`) REFERENCES `explore_neighbourhoods`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_neighbourhood_stories` ADD CONSTRAINT `explore_neighbourhood_stories_suburb_id_suburbs_id_fk` FOREIGN KEY (`suburb_id`) REFERENCES `suburbs`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_saved_properties` ADD CONSTRAINT `explore_saved_properties_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_saved_properties` ADD CONSTRAINT `explore_saved_properties_content_id_explore_content_id_fk` FOREIGN KEY (`content_id`) REFERENCES `explore_content`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -800,8 +800,8 @@ ALTER TABLE `activities` ADD CONSTRAINT `activities_developer_id_developers_id_f
 ALTER TABLE `activities` ADD CONSTRAINT `activities_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_notifications` ADD CONSTRAINT `developer_notifications_developer_id_developers_id_fk` FOREIGN KEY (`developer_id`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_notifications` ADD CONSTRAINT `developer_notifications_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developer_subscription_limits` ADD CONSTRAINT `developer_subscription_limits_subscription_id_developer_subscriptions_id_fk` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developer_subscription_usage` ADD CONSTRAINT `developer_subscription_usage_subscription_id_developer_subscriptions_id_fk` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developer_subscription_limits` ADD CONSTRAINT `developer_subscription_limits_subscription_id_developer_20cee64f` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developer_subscription_usage` ADD CONSTRAINT `developer_subscription_usage_subscription_id_developer__e8562959` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_subscriptions` ADD CONSTRAINT `developer_subscriptions_developer_id_developers_id_fk` FOREIGN KEY (`developer_id`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_subscriptions` ADD CONSTRAINT `developer_subscriptions_plan_id_plans_id_fk` FOREIGN KEY (`plan_id`) REFERENCES `plans`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_phases` ADD CONSTRAINT `development_phases_development_id_developments_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -952,3 +952,4 @@ ALTER TABLE `videos` DROP COLUMN `is_published`;--> statement-breakpoint
 ALTER TABLE `videos` DROP COLUMN `is_featured`;--> statement-breakpoint
 ALTER TABLE `videos` DROP COLUMN `created_at`;--> statement-breakpoint
 ALTER TABLE `videos` DROP COLUMN `updated_at`;
+

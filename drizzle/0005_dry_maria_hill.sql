@@ -234,6 +234,7 @@ ALTER TABLE `payment_proofs` ADD CONSTRAINT `payment_proofs_subscriptionId_agenc
 ALTER TABLE `payment_proofs` ADD CONSTRAINT `payment_proofs_agencyId_agencies_id_fk` FOREIGN KEY (`agencyId`) REFERENCES `agencies`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `payment_proofs` ADD CONSTRAINT `payment_proofs_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `payment_proofs` ADD CONSTRAINT `payment_proofs_verifiedBy_users_id_fk` FOREIGN KEY (`verifiedBy`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `subscription_transactions` ADD CONSTRAINT `subscription_transactions_subscriptionId_agency_subscriptions_id_fk` FOREIGN KEY (`subscriptionId`) REFERENCES `agency_subscriptions`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `subscription_transactions` ADD CONSTRAINT `subscription_transactions_subscriptionId_agency_subscri_2748ed6f` FOREIGN KEY (`subscriptionId`) REFERENCES `agency_subscriptions`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `subscription_transactions` ADD CONSTRAINT `subscription_transactions_agencyId_agencies_id_fk` FOREIGN KEY (`agencyId`) REFERENCES `agencies`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `subscription_transactions` ADD CONSTRAINT `subscription_transactions_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;
+

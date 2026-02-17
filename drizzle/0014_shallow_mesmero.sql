@@ -171,9 +171,9 @@ ALTER TABLE `content_approval_queue` DROP FOREIGN KEY `content_approval_queue_pa
 --> statement-breakpoint
 ALTER TABLE `content_topics` DROP FOREIGN KEY `content_topics_topic_id_topics_id_fk`;
 --> statement-breakpoint
-ALTER TABLE `developer_subscription_limits` DROP FOREIGN KEY `developer_subscription_limits_subscription_id_developer_subscriptions_id_fk`;
+ALTER TABLE `developer_subscription_limits` DROP FOREIGN KEY `developer_subscription_limits_subscription_id_developer_20cee64f`;
 --> statement-breakpoint
-ALTER TABLE `developer_subscription_usage` DROP FOREIGN KEY `developer_subscription_usage_subscription_id_developer_subscriptions_id_fk`;
+ALTER TABLE `developer_subscription_usage` DROP FOREIGN KEY `developer_subscription_usage_subscription_id_developer__e8562959`;
 --> statement-breakpoint
 ALTER TABLE `developer_subscriptions` DROP FOREIGN KEY `developer_subscriptions_developer_id_developers_id_fk`;
 --> statement-breakpoint
@@ -612,7 +612,7 @@ ALTER TABLE `agent_knowledge` ADD CONSTRAINT `agent_knowledge_created_by_users_i
 ALTER TABLE `agent_memory` ADD CONSTRAINT `agent_memory_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `agent_tasks` ADD CONSTRAINT `agent_tasks_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `billing_transactions` ADD CONSTRAINT `billing_transactions_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `explore_neighbourhood_stories` ADD CONSTRAINT `explore_neighbourhood_stories_neighbourhood_id_explore_neighbourhoods_id_fk` FOREIGN KEY (`neighbourhood_id`) REFERENCES `explore_neighbourhoods`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `explore_neighbourhood_stories` ADD CONSTRAINT `explore_neighbourhood_stories_neighbourhood_id_explore__0bb11165` FOREIGN KEY (`neighbourhood_id`) REFERENCES `explore_neighbourhoods`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_neighbourhood_stories` ADD CONSTRAINT `explore_neighbourhood_stories_author_id_users_id_fk` FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_shorts` ADD CONSTRAINT `explore_shorts_agency_id_agencies_id_fk` FOREIGN KEY (`agency_id`) REFERENCES `agencies`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_sponsorships` ADD CONSTRAINT `explore_sponsorships_partner_id_explore_partners_id_fk` FOREIGN KEY (`partner_id`) REFERENCES `explore_partners`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -660,8 +660,8 @@ ALTER TABLE `boost_credits` ADD CONSTRAINT `boost_credits_user_id_users_id_fk` F
 ALTER TABLE `bundle_partners` ADD CONSTRAINT `bundle_partners_bundle_id_marketplace_bundles_id_fk` FOREIGN KEY (`bundle_id`) REFERENCES `marketplace_bundles`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `content_approval_queue` ADD CONSTRAINT `content_approval_queue_partner_id_explore_partners_id_fk` FOREIGN KEY (`partner_id`) REFERENCES `explore_partners`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `content_topics` ADD CONSTRAINT `content_topics_topic_id_topics_id_fk` FOREIGN KEY (`topic_id`) REFERENCES `topics`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developer_subscription_limits` ADD CONSTRAINT `developer_subscription_limits_subscription_id_developer_subscriptions_id_fk` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developer_subscription_usage` ADD CONSTRAINT `developer_subscription_usage_subscription_id_developer_subscriptions_id_fk` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developer_subscription_limits` ADD CONSTRAINT `developer_subscription_limits_subscription_id_developer_20cee64f` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developer_subscription_usage` ADD CONSTRAINT `developer_subscription_usage_subscription_id_developer__e8562959` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_subscriptions` ADD CONSTRAINT `developer_subscriptions_developer_id_developers_id_fk` FOREIGN KEY (`developer_id`) REFERENCES `developers`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_subscriptions` ADD CONSTRAINT `developer_subscriptions_plan_id_plans_id_fk` FOREIGN KEY (`plan_id`) REFERENCES `plans`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_approval_queue` ADD CONSTRAINT `development_approval_queue_development_id_developments_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -839,3 +839,4 @@ ALTER TABLE `suburbs` DROP COLUMN `ai_generation_date`;--> statement-breakpoint
 ALTER TABLE `unit_types` DROP COLUMN `parking`;--> statement-breakpoint
 ALTER TABLE `unit_types` DROP COLUMN `size_from`;--> statement-breakpoint
 ALTER TABLE `unit_types` DROP COLUMN `size_to`;
+

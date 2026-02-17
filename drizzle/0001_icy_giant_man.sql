@@ -16,7 +16,7 @@ CREATE TABLE `development_partnerships` (
 --> statement-breakpoint
 DROP TABLE `development_partners`;--> statement-breakpoint
 ALTER TABLE `development_partnerships` ADD CONSTRAINT `development_partnerships_development_id_developments_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `development_partnerships` ADD CONSTRAINT `development_partnerships_brand_profile_id_developer_brand_profiles_id_fk` FOREIGN KEY (`brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `development_partnerships` ADD CONSTRAINT `development_partnerships_brand_profile_id_developer_bra_30f8d4e0` FOREIGN KEY (`brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_partnerships` ADD CONSTRAINT `development_partnerships_created_by_users_id_fk` FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX `dev_brand_idx` ON `development_partnerships` (`development_id`,`brand_profile_id`);--> statement-breakpoint
 CREATE INDEX `brand_dev_idx` ON `development_partnerships` (`brand_profile_id`,`development_id`);
