@@ -50,8 +50,8 @@ jobs:
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/test_db
         run: |
-          # Apply migrations to test DB
-          pnpm run db:migrate
+          # Apply Drizzle migrations to ephemeral MySQL test DB
+          pnpm drizzle-kit migrate
 
       - name: Run DB Contract Verification
         env:
@@ -133,7 +133,7 @@ jobs:
       - name: Setup test database
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/test_db
-        run: pnpm run db:migrate
+        run: pnpm drizzle-kit migrate
 
       - name: Run tests
         env:
