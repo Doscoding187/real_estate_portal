@@ -8,7 +8,8 @@ CREATE TABLE `activities` (
 	`related_entity_type` enum('development','unit','lead','campaign','team_member'),
 	`related_entity_id` int,
 	`user_id` int,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT `activities_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `agencies` (
