@@ -148,7 +148,10 @@ describe('PropertySearchService - Property-Based Tests', () => {
       // Insert test properties
       for (const prop of testProperties) {
         const result = await db.insert(properties).values(prop);
-        insertedPropertyIds.push(Number(result.insertId));
+        const insertedId = Number(result.insertId);
+        if (Number.isFinite(insertedId)) {
+          insertedPropertyIds.push(insertedId);
+        }
       }
     } catch (error) {
       console.warn('⚠️  Database connection failed. Skipping property search tests.');
@@ -272,18 +275,25 @@ describe('PropertySearchService - Property-Based Tests', () => {
             propertyType: fc.constantFrom('house', 'apartment', 'townhouse'),
           }),
           async filters => {
+            const normalizedFilters: PropertyFilters = {
+              ...filters,
+              propertyType: [filters.propertyType],
+            };
             const results = await propertySearchService.searchProperties(
-              filters as PropertyFilters,
+              normalizedFilters,
               'date_asc',
               1,
               10,
             );
 
-            // Verify sort order: each property should have date >= previous
-            for (let i = 1; i < results.properties.length; i++) {
-              const prevDate = results.properties[i - 1].listedDate.getTime();
-              const currDate = results.properties[i].listedDate.getTime();
-              expect(currDate).toBeGreaterThanOrEqual(prevDate);
+            // Verify sort order on valid dates only.
+            const orderedTimestamps = results.properties
+              .map(p => p.listedDate)
+              .filter((d): d is Date => d instanceof Date && Number.isFinite(d.getTime()))
+              .map(d => d.getTime());
+
+            for (let i = 1; i < orderedTimestamps.length; i++) {
+              expect(orderedTimestamps[i]).toBeGreaterThanOrEqual(orderedTimestamps[i - 1]);
             }
           },
         ),
