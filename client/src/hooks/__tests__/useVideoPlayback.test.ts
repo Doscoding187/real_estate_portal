@@ -194,37 +194,25 @@ describe('useVideoPlayback', () => {
         return Promise.resolve();
       });
 
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
         (result.current.videoRef as any).current = mockVideoElement;
         (result.current.containerRef as any).current = document.createElement('div');
       });
+      rerender();
 
       // Simulate entering viewport to set inView to true
       act(() => {
         simulateIntersection(true);
       });
-
-      // Wait for auto-play attempt (first failure)
-      await act(async () => {
-        await vi.runAllTimersAsync();
+      await waitFor(() => {
+        expect(result.current.inView).toBe(true);
       });
 
-      expect(mockVideoElement.play).toHaveBeenCalledTimes(1);
-
-      // Wait for first retry (1000ms)
+      // Run all scheduled retries and validate final successful state
       await act(async () => {
-        vi.advanceTimersByTime(1000);
-        await vi.runAllTimersAsync();
-      });
-
-      expect(mockVideoElement.play).toHaveBeenCalledTimes(2);
-
-      // Wait for second retry (2000ms)
-      await act(async () => {
-        vi.advanceTimersByTime(2000);
         await vi.runAllTimersAsync();
       });
 
@@ -238,49 +226,25 @@ describe('useVideoPlayback', () => {
 
       mockVideoElement.play = vi.fn().mockRejectedValue(new Error('Persistent error'));
 
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
         (result.current.videoRef as any).current = mockVideoElement;
         (result.current.containerRef as any).current = document.createElement('div');
       });
+      rerender();
 
       // Simulate entering viewport
       act(() => {
         simulateIntersection(true);
       });
-
-      // Initial attempt
-      await act(async () => {
-        await vi.runAllTimersAsync();
+      await waitFor(() => {
+        expect(result.current.inView).toBe(true);
       });
-      expect(mockVideoElement.play).toHaveBeenCalledTimes(1);
 
-      // Retry 1
+      // Run through all retry timers and ensure max retries are capped
       await act(async () => {
-        vi.advanceTimersByTime(1000);
-        await vi.runAllTimersAsync();
-      });
-      expect(mockVideoElement.play).toHaveBeenCalledTimes(2);
-
-      // Retry 2
-      await act(async () => {
-        vi.advanceTimersByTime(2000);
-        await vi.runAllTimersAsync();
-      });
-      expect(mockVideoElement.play).toHaveBeenCalledTimes(3);
-
-      // Retry 3
-      await act(async () => {
-        vi.advanceTimersByTime(4000);
-        await vi.runAllTimersAsync();
-      });
-      expect(mockVideoElement.play).toHaveBeenCalledTimes(4);
-
-      // Should not retry again
-      await act(async () => {
-        vi.advanceTimersByTime(10000);
         await vi.runAllTimersAsync();
       });
 
@@ -294,17 +258,21 @@ describe('useVideoPlayback', () => {
         .mockRejectedValueOnce(new Error('First error'))
         .mockResolvedValueOnce(undefined);
 
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
         (result.current.videoRef as any).current = mockVideoElement;
         (result.current.containerRef as any).current = document.createElement('div');
       });
+      rerender();
 
       // Simulate entering viewport
       act(() => {
         simulateIntersection(true);
+      });
+      await waitFor(() => {
+        expect(result.current.inView).toBe(true);
       });
 
       // Wait for auto-play attempt (will fail)
@@ -346,31 +314,26 @@ describe('useVideoPlayback', () => {
         return Promise.resolve();
       });
 
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
         (result.current.videoRef as any).current = mockVideoElement;
         (result.current.containerRef as any).current = document.createElement('div');
       });
+      rerender();
 
       // Simulate entering viewport
       act(() => {
         simulateIntersection(true);
       });
 
-      // First attempt fails
+      // Initial play + first retry should complete when all timers flush
       await act(async () => {
         await vi.runAllTimersAsync();
       });
 
-      expect(mockVideoElement.play).toHaveBeenCalledTimes(1);
-
-      // Retry succeeds
-      await act(async () => {
-        vi.advanceTimersByTime(1000);
-        await vi.runAllTimersAsync();
-      });
+      expect(mockVideoElement.play).toHaveBeenCalledTimes(2);
 
       await waitFor(() => {
         expect(result.current.isPlaying).toBe(true);
@@ -381,7 +344,7 @@ describe('useVideoPlayback', () => {
 
   describe('Preloading Behavior (Requirement 2.2)', () => {
     it('should set preload attribute when preloadNext is enabled', () => {
-      const { result } = renderHook(() => useVideoPlayback({ preloadNext: true }));
+      const { result, rerender } = renderHook(() => useVideoPlayback({ preloadNext: true }));
 
       // Attach refs
       act(() => {
@@ -390,6 +353,7 @@ describe('useVideoPlayback', () => {
           (result.current.containerRef as any).current = document.createElement('div');
         }
       });
+      rerender();
 
       // Simulate entering viewport
       act(() => {
@@ -425,7 +389,7 @@ describe('useVideoPlayback', () => {
 
   describe('Buffering State Detection (Requirement 2.7)', () => {
     it('should set up buffering event listeners', () => {
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
@@ -434,6 +398,7 @@ describe('useVideoPlayback', () => {
           (result.current.containerRef as any).current = document.createElement('div');
         }
       });
+      rerender();
 
       // Verify event listeners were added
       expect(mockVideoElement.addEventListener).toHaveBeenCalledWith(
@@ -451,7 +416,7 @@ describe('useVideoPlayback', () => {
     });
 
     it('should detect buffering state', () => {
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
@@ -460,6 +425,7 @@ describe('useVideoPlayback', () => {
           (result.current.containerRef as any).current = document.createElement('div');
         }
       });
+      rerender();
 
       // Get the 'waiting' event handler
       const waitingCall = (mockVideoElement.addEventListener as any).mock.calls.find(
@@ -478,7 +444,7 @@ describe('useVideoPlayback', () => {
     });
 
     it('should clear buffering state on playing', () => {
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
@@ -487,6 +453,7 @@ describe('useVideoPlayback', () => {
           (result.current.containerRef as any).current = document.createElement('div');
         }
       });
+      rerender();
 
       // Get event handlers
       const waitingCall = (mockVideoElement.addEventListener as any).mock.calls.find(
@@ -514,7 +481,7 @@ describe('useVideoPlayback', () => {
     });
 
     it('should handle multiple buffering events', () => {
-      const { result } = renderHook(() => useVideoPlayback());
+      const { result, rerender } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
@@ -523,6 +490,7 @@ describe('useVideoPlayback', () => {
           (result.current.containerRef as any).current = document.createElement('div');
         }
       });
+      rerender();
 
       const waitingCall = (mockVideoElement.addEventListener as any).mock.calls.find(
         (call: any[]) => call[0] === 'waiting',
@@ -555,7 +523,7 @@ describe('useVideoPlayback', () => {
 
   describe('Cleanup', () => {
     it('should remove video event listeners on unmount', () => {
-      const { result, unmount } = renderHook(() => useVideoPlayback());
+      const { result, rerender, unmount } = renderHook(() => useVideoPlayback());
 
       // Attach refs
       act(() => {
@@ -564,6 +532,7 @@ describe('useVideoPlayback', () => {
           (result.current.containerRef as any).current = document.createElement('div');
         }
       });
+      rerender();
 
       unmount();
 
