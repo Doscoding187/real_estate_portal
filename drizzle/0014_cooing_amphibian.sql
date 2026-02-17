@@ -8,7 +8,8 @@ CREATE TABLE `agent_knowledge` (
 	`is_active` int NOT NULL DEFAULT 1,
 	`created_by` int,
 	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `agent_knowledge_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `agent_memory` (
@@ -19,7 +20,8 @@ CREATE TABLE `agent_memory` (
 	`user_input` text NOT NULL,
 	`agent_response` text NOT NULL,
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	CONSTRAINT `agent_memory_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `agent_tasks` (
@@ -36,7 +38,8 @@ CREATE TABLE `agent_tasks` (
 	`started_at` timestamp,
 	`completed_at` timestamp,
 	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `agent_tasks_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `billing_transactions` (
@@ -53,7 +56,8 @@ CREATE TABLE `billing_transactions` (
 	`description` text,
 	`metadata` json,
 	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `billing_transactions_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 DROP TABLE `development_documents`;--> statement-breakpoint

@@ -8,7 +8,8 @@ CREATE TABLE `platform_inquiries` (
 	`message` text,
 	`status` enum('new','contacted','converted','closed') NOT NULL DEFAULT 'new',
 	`metadata` json,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT `platform_inquiries_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 ALTER TABLE `developments` ADD `ownership_type` enum('full-title','sectional-title','leasehold','life-rights');--> statement-breakpoint

@@ -9,7 +9,8 @@ CREATE TABLE `development_approval_queue` (
 	`compliance_checks` json,
 	`submitted_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
 	`reviewed_at` timestamp,
-	`reviewed_by` int
+	`reviewed_by` int,
+	CONSTRAINT `development_approval_queue_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 ALTER TABLE `developments` ADD `approval_status` enum('draft','pending','approved','rejected') DEFAULT 'draft';--> statement-breakpoint

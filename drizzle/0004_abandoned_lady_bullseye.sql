@@ -12,7 +12,8 @@ CREATE TABLE `partners` (
 	`rating` int,
 	`is_verified` int NOT NULL DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `partners_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `property_clicks` (
@@ -22,7 +23,8 @@ CREATE TABLE `property_clicks` (
 	`sessionId` varchar(255),
 	`position` int,
 	`searchFilters` json,
-	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT `property_clicks_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `search_analytics` (
@@ -33,7 +35,8 @@ CREATE TABLE `search_analytics` (
 	`resultCount` int,
 	`sortOrder` varchar(50),
 	`viewMode` varchar(20),
-	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT `search_analytics_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `suburb_reviews` (
@@ -48,7 +51,8 @@ CREATE TABLE `suburb_reviews` (
 	`is_verified` tinyint DEFAULT 0,
 	`is_published` tinyint DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `suburb_reviews_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 ALTER TABLE `developments` DROP FOREIGN KEY `developments_developerId_developers_id_fk`;

@@ -28,7 +28,8 @@ CREATE TABLE `saved_searches` (
 	`notificationFrequency` enum('never','daily','weekly') DEFAULT 'never',
 	`lastNotifiedAt` timestamp,
 	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `saved_searches_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 ALTER TABLE `listing_analytics` DROP FOREIGN KEY `listing_analytics_listingId_listings_id_fk`;

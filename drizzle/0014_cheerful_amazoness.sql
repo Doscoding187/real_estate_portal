@@ -8,7 +8,8 @@ CREATE TABLE `amenities` (
 	`longitude` varchar(50),
 	`distance` decimal(10,2),
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	CONSTRAINT `amenities_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 ALTER TABLE `amenities` ADD CONSTRAINT `amenities_location_id_locations_id_fk` FOREIGN KEY (`location_id`) REFERENCES `locations`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

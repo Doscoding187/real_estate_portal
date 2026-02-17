@@ -21,7 +21,8 @@ CREATE TABLE `advertising_campaigns` (
 	`spentAmount` int NOT NULL DEFAULT 0,
 	`metadata` text,
 	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `advertising_campaigns_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `campaign_budgets` (
@@ -130,7 +131,8 @@ CREATE TABLE `failed_payments` (
 	`stripePaymentIntentId` varchar(100),
 	`metadata` text,
 	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `failed_payments_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `marketing_campaigns` (
@@ -169,7 +171,8 @@ CREATE TABLE `payment_proofs` (
 	`notes` text,
 	`metadata` text,
 	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `payment_proofs_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `revenue_forecasts` (
@@ -186,7 +189,8 @@ CREATE TABLE `revenue_forecasts` (
 	`metadata` text,
 	`generatedAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
 	`periodStartDate` timestamp NOT NULL,
-	`periodEndDate` timestamp NOT NULL
+	`periodEndDate` timestamp NOT NULL,
+	CONSTRAINT `revenue_forecasts_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `subscription_transactions` (
@@ -205,7 +209,8 @@ CREATE TABLE `subscription_transactions` (
 	`description` text,
 	`metadata` text,
 	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`paidAt` timestamp
+	`paidAt` timestamp,
+	CONSTRAINT `subscription_transactions_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 DROP INDEX `idx_locations_place_id` ON `locations`;--> statement-breakpoint

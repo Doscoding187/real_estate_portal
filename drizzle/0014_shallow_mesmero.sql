@@ -8,7 +8,8 @@ CREATE TABLE `agent_knowledge` (
 	`is_active` int NOT NULL DEFAULT 1,
 	`created_by` int,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `agent_knowledge_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `agent_memory` (
@@ -19,7 +20,8 @@ CREATE TABLE `agent_memory` (
 	`user_input` text NOT NULL,
 	`agent_response` text NOT NULL,
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT (now())
+	`created_at` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `agent_memory_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `agent_tasks` (
@@ -36,7 +38,8 @@ CREATE TABLE `agent_tasks` (
 	`started_at` timestamp,
 	`completed_at` timestamp,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `agent_tasks_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `billing_transactions` (
@@ -53,7 +56,8 @@ CREATE TABLE `billing_transactions` (
 	`description` text,
 	`metadata` json,
 	`created_at` timestamp DEFAULT (now()),
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `billing_transactions_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `explore_categories` (
@@ -65,7 +69,8 @@ CREATE TABLE `explore_categories` (
 	`displayOrder` int NOT NULL DEFAULT 0,
 	`isActive` int NOT NULL DEFAULT 1,
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `explore_categories_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `explore_neighbourhood_stories` (
@@ -79,7 +84,8 @@ CREATE TABLE `explore_neighbourhood_stories` (
 	`published_at` timestamp,
 	`view_count` int NOT NULL DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `explore_neighbourhood_stories_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `explore_shorts` (
@@ -113,7 +119,8 @@ CREATE TABLE `explore_shorts` (
 	`is_featured` tinyint NOT NULL DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`published_at` timestamp
+	`published_at` timestamp,
+	CONSTRAINT `explore_shorts_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `explore_sponsorships` (
@@ -142,7 +149,8 @@ CREATE TABLE `explore_topics` (
 	`contentCount` int NOT NULL DEFAULT 0,
 	`followerCount` int NOT NULL DEFAULT 0,
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `explore_topics_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 ALTER TABLE `developments` DROP INDEX `unique_slug`;--> statement-breakpoint
