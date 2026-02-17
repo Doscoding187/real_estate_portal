@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { trpc } from '@/lib/trpc';

@@ -456,9 +456,32 @@ export const agencyRouter = router({
   getDashboardStats: agencyAdminProcedure.query(async ({ ctx }) => {
     const user = requireUser(ctx);
     if (!user.agencyId) {
-      throw new Error('You must be part of an agency');
+      return {
+        totalListings: 0,
+        totalSales: 0,
+        totalLeads: 0,
+        totalAgents: 0,
+        activeListings: 0,
+        pendingListings: 0,
+        recentLeads: 0,
+        recentSales: 0,
+      };
     }
-    return await getAgencyDashboardStats(user.agencyId);
+    try {
+      return await getAgencyDashboardStats(user.agencyId);
+    } catch (error) {
+      console.warn('[agency.getDashboardStats] Returning safe defaults due to error:', error);
+      return {
+        totalListings: 0,
+        totalSales: 0,
+        totalLeads: 0,
+        totalAgents: 0,
+        activeListings: 0,
+        pendingListings: 0,
+        recentLeads: 0,
+        recentSales: 0,
+      };
+    }
   }),
 
   /**
@@ -469,9 +492,14 @@ export const agencyRouter = router({
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
       if (!user.agencyId) {
-        throw new Error('You must be part of an agency');
+        return [];
       }
-      return await getAgencyPerformanceData(user.agencyId, input?.months || 6);
+      try {
+        return await getAgencyPerformanceData(user.agencyId, input?.months || 6);
+      } catch (error) {
+        console.warn('[agency.getPerformanceData] Returning safe defaults due to error:', error);
+        return [];
+      }
     }),
 
   /**

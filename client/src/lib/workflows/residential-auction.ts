@@ -1,4 +1,4 @@
-import { WizardWorkflow, WizardStep } from '../types/wizard-workflows';
+import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-workflows';
 
 const residentialAuctionSteps: WizardStep[] = [
   {
@@ -17,7 +17,7 @@ const residentialAuctionSteps: WizardStep[] = [
     required: true,
     description: 'Define the brand identity and market positioning of your development.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
 
       if (!data.name || data.name.trim().length < 2) {
         errors.push({ field: 'name', message: 'Development name is required' });
@@ -51,7 +51,7 @@ const residentialAuctionSteps: WizardStep[] = [
     required: true,
     description: 'Pinpoint the exact location and address details.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       const loc = data.location || {};
 
       if (!loc.latitude || !loc.longitude) {
@@ -67,7 +67,7 @@ const residentialAuctionSteps: WizardStep[] = [
     required: false,
     description: 'Configure levies, rates, and HOA details.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       if (data.hasGoverningBody) {
         if (!data.governanceType) {
           errors.push({ field: 'governanceType', message: 'Select a governing body type' });
@@ -91,7 +91,7 @@ const residentialAuctionSteps: WizardStep[] = [
     required: true,
     description: 'Create the marketing copy and key selling points.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       const d = data as any;
       if (!d.description || d.description.length < 50) {
         errors.push({
@@ -113,7 +113,7 @@ const residentialAuctionSteps: WizardStep[] = [
     required: true,
     description: 'Upload high-quality images, documents, and videos.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       const d = data as any;
       const media = d.media || {};
       const photos = media.photos || [];
@@ -131,7 +131,7 @@ const residentialAuctionSteps: WizardStep[] = [
     required: true,
     description: 'Define the different unit configurations available for auction.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       const units = data.unitTypes || [];
 
       if (units.length === 0) {

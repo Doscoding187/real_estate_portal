@@ -74,11 +74,9 @@ export const videoRouter = router({
     )
     .query(async () => []),
 
-  toggleLike: protectedProcedure
-    .input(z.object({ videoId: z.number() }))
-    .mutation(async () => {
-      throw new Error('Video features are temporarily disabled: schema mismatch');
-    }),
+  toggleLike: protectedProcedure.input(z.object({ videoId: z.number() })).mutation(async () => {
+    throw new Error('Video features are temporarily disabled: schema mismatch');
+  }),
 
   incrementViews: publicProcedure
     .input(z.object({ videoId: z.number() }))
@@ -109,9 +107,7 @@ export const videoRouter = router({
     )
     .query(async () => []),
 
-  deleteVideo: protectedProcedure
-    .input(z.object({ videoId: z.number() }))
-    .mutation(async () => {
-      throw new Error('Video features are temporarily disabled: schema mismatch');
-    }),
+  deleteVideo: protectedProcedure.input(z.object({ videoId: z.number() })).mutation(async () => {
+    throw new Error('Video features are temporarily disabled: schema mismatch');
+  }),
 });

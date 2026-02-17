@@ -57,13 +57,22 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     (Number(details.landSizeHa) ? Number(details.landSizeHa) * 10000 : undefined); // Convert hectares to m²
 
   // Determine agent/user info
-  const agent =
-    raw.user || raw.agent
-      ? {
-          name: raw.user?.name || raw.agent?.name || 'Property Agent',
-          image: raw.user?.image || raw.agent?.image || raw.user?.avatar || raw.agent?.avatar,
-        }
-      : undefined;
+  const derivedAgentName = (
+    raw.user?.name ||
+    raw.agent?.name ||
+    [raw.agent?.firstName, raw.agent?.lastName].filter(Boolean).join(' ')
+  )?.trim();
+  const agent = derivedAgentName
+    ? {
+        name: derivedAgentName,
+        image:
+          raw.user?.image ||
+          raw.agent?.image ||
+          raw.user?.avatar ||
+          raw.agent?.avatar ||
+          raw.agent?.profileImage,
+      }
+    : undefined;
 
   // Determine badges
   const badges: string[] = [];
@@ -80,21 +89,27 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
   const videoCount =
     raw.videos?.length || raw.media?.filter((m: any) => m.type === 'video').length || 0;
 
+  const firstImage = Array.isArray(raw.images) ? raw.images[0] : undefined;
+  const firstImageUrl =
+    typeof firstImage === 'string'
+      ? firstImage
+      : firstImage?.url || firstImage?.imageUrl || firstImage?.thumbnailUrl;
+
   return {
     id: String(raw.id),
     title: String(raw.title),
     price,
     location: raw.location?.city
       ? `${raw.location.suburb ? raw.location.suburb + ', ' : ''}${raw.location.city}`
-      : raw.city || raw.address || 'Unknown Location',
+      : [raw.suburb, raw.city, raw.province].filter(Boolean).join(', ') || raw.address || '-',
     image: (() => {
       const img =
         raw.image ||
+        raw.mainImage ||
         raw.coverImage ||
-        raw.images?.[0] ||
+        firstImageUrl ||
         raw.media?.find((m: any) => m.isPrimary)?.url ||
         raw.media?.[0]?.url ||
-        raw.mainImage ||
         '/placeholder.jpg';
       if (typeof img === 'string' && !img.startsWith('http') && !img.startsWith('/')) {
         return `/${img}`;
@@ -105,7 +120,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     bedrooms: Number(details.bedrooms) || Number(raw.bedrooms) || undefined,
     bathrooms: Number(details.bathrooms) || Number(raw.bathrooms) || undefined,
     area, // Building/floor size
-    yardSize, // Yard/land size (separate)
+    yardSize: yardSize || Number(raw.erfSize) || Number(raw.yardSize) || undefined, // Yard/land size (separate)
     propertyType: raw.propertyType
       ? raw.propertyType.charAt(0).toUpperCase() + raw.propertyType.slice(1).replace('_', ' ')
       : undefined,
@@ -117,7 +132,12 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     imageCount,
     videoCount,
     highlights: (() => {
-      const source = raw.features || raw.amenities || raw.highlights;
+      const source =
+        raw.highlights ||
+        details.propertyHighlights ||
+        details.amenitiesFeatures ||
+        raw.amenities ||
+        raw.features;
 
       const formatHighlight = (s: string) => {
         if (!s || typeof s !== 'string') return s;

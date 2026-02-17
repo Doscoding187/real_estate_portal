@@ -5,7 +5,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
-import { ExploreShort, AgencyFeedMetadata } from '@/shared/types';
+
+type ExploreShort = Record<string, unknown> & { id?: number | string };
+type AgencyFeedMetadata = Record<string, unknown>;
 
 export interface AgencyFeedResult {
   shorts: ExploreShort[];

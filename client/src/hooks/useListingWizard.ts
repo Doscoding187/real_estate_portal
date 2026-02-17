@@ -63,7 +63,7 @@ interface ListingWizardStore extends ListingWizardState {
   updateMedia: (index: number, updates: Partial<MediaFile>) => void;
   reorderMedia: (fromIndex: number, toIndex: number) => void;
   setMedia: (media: MediaFile[]) => void;
-  setMainMedia: (mediaId: number) => void;
+  setMainMedia: (mediaId: string) => void;
   setDisplayMediaType: (type: 'image' | 'video') => void;
 
   // Validation

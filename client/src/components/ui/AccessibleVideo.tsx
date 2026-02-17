@@ -10,7 +10,7 @@
  * - ARIA labels
  */
 
-import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useVideoAccessibility, useReducedMotion, useAnnounce } from '@/hooks/useAccessibility';
 
 interface Caption {
@@ -65,7 +65,7 @@ export const AccessibleVideo = forwardRef<AccessibleVideoRef, AccessibleVideoPro
     },
     ref,
   ) {
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null!);
     const prefersReducedMotion = useReducedMotion();
     const announce = useAnnounce();
 
@@ -84,8 +84,12 @@ export const AccessibleVideo = forwardRef<AccessibleVideoRef, AccessibleVideoPro
 
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
-      play: () => videoRef.current?.play(),
-      pause: () => videoRef.current?.pause(),
+      play: () => {
+        void videoRef.current?.play();
+      },
+      pause: () => {
+        videoRef.current?.pause();
+      },
       togglePlay,
       toggleMute,
       seek: (time: number) => {
@@ -310,7 +314,7 @@ export const AccessibleVideo = forwardRef<AccessibleVideoRef, AccessibleVideoPro
                   )
                 }
               >
-                ⌨️ Shortcuts
+                Shortcuts
               </button>
             </div>
           </div>

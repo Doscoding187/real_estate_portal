@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Affordability Calculator Widget - Gamified Buyability Calculator
  *

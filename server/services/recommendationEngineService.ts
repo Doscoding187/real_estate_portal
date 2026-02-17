@@ -32,7 +32,7 @@ class RecommendationEngineService {
    * Get user profile for personalization
    */
   async getUserProfile(userId: number): Promise<UserProfile> {
-    // Preferences table not available yet
+    // Stabilization stub: prefer a safe default profile until explore preferences schema is restored.
     return {
       userId,
       preferredLocations: [],

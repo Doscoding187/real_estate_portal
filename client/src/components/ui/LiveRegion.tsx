@@ -74,7 +74,7 @@ LiveRegion.displayName = 'LiveRegion';
  */
 export function useLiveRegion() {
   const [message, setMessage] = React.useState<string>('');
-  const timeoutRef = React.useRef<NodeJS.Timeout>();
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const announce = React.useCallback((text: string, duration = 1000) => {
     setMessage(text);
@@ -90,14 +90,14 @@ export function useLiveRegion() {
   }, []);
 
   // Cleanup on unmount
-  React.useEffect(() => {
-    const currentTimeout = timeoutRef.current;
-    return () => {
-      if (currentTimeout) {
-        clearTimeout(currentTimeout);
+  React.useEffect(
+    () => () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   return { message, announce };
 }

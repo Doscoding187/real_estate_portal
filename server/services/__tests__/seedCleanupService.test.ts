@@ -10,15 +10,18 @@ vi.mock('../brandCleanupService', () => ({
   },
 }));
 
+const createMockQuery = (data: any[] = []) => {
+  const p = Promise.resolve(data);
+  (p as any).from = vi.fn(() => p);
+  (p as any).innerJoin = vi.fn(() => p);
+  (p as any).where = vi.fn(() => p);
+  (p as any).limit = vi.fn(() => Promise.resolve(data));
+  return p;
+};
+
 vi.mock('../../db', () => ({
   db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => ({
-          limit: vi.fn(() => Promise.resolve([])),
-        })),
-      })),
-    })),
+    select: vi.fn(() => createMockQuery([])),
   },
 }));
 
@@ -79,14 +82,7 @@ describe('Seed Cleanup Service', () => {
   describe('findSeedCandidate', () => {
     it('should return null when no matching seed exists', async () => {
       // Mock empty results for all queries
-      const mockSelect = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      (db as any).select = mockSelect;
+      (db as any).select = vi.fn(() => createMockQuery([]));
 
       const result = await seedCleanupService.findSeedCandidate('New Brand', 'new-brand');
       expect(result).toBeNull();
@@ -101,13 +97,8 @@ describe('Seed Cleanup Service', () => {
         ownerType: 'platform' as const,
       };
 
-      // Mock DB to return one slug match
-      const mockSelect = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockSeed]),
-        }),
-      });
-      (db as any).select = mockSelect;
+      // Mock query returns mockSeed for slug match
+      (db as any).select = vi.fn(() => createMockQuery([mockSeed]));
 
       const result = await seedCleanupService.findSeedCandidate('Test Brand', 'test-brand');
       expect(result).toEqual(mockSeed);
@@ -131,12 +122,9 @@ describe('Seed Cleanup Service', () => {
         },
       ];
 
-      const mockSelect = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(mockSeeds),
-        }),
-      });
-      (db as any).select = mockSelect;
+
+
+      (db as any).select = vi.fn(() => createMockQuery(mockSeeds));
 
       await expect(
         seedCleanupService.findSeedCandidate('Test Brand', 'test-brand'),
@@ -152,15 +140,15 @@ describe('Seed Cleanup Service', () => {
         ownerType: 'platform' as const,
       };
 
-      // First call returns the exact seedBatchId + slug match
-      const mockSelect = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([exactMatch]),
-          }),
-        }),
-      });
-      (db as any).select = mockSelect;
+      // First call (step 1) returns valid match via createMockQuery
+      // Subsequent calls return empty arrays via createMockQuery([])
+      const mockQueryWithMatch = createMockQuery([exactMatch]);
+      const mockQueryEmpty = createMockQuery([]);
+
+      (db as any).select = vi
+        .fn()
+        .mockReturnValueOnce(mockQueryWithMatch)
+        .mockReturnValue(mockQueryEmpty);
 
       const result = await seedCleanupService.findSeedCandidate(
         'Test Brand',
@@ -179,14 +167,7 @@ describe('Seed Cleanup Service', () => {
 
     it('should return no_match when no seed candidate exists', async () => {
       // Mock empty results
-      const mockSelect = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      (db as any).select = mockSelect;
+      (db as any).select = vi.fn(() => createMockQuery([]));
 
       const result = await seedCleanupService.handleSeedDeletionOnRegistration(
         1, // triggerUserId
@@ -208,12 +189,7 @@ describe('Seed Cleanup Service', () => {
         ownerType: 'platform' as const,
       };
 
-      const mockSelect = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([seedWithoutBatchId]),
-        }),
-      });
-      (db as any).select = mockSelect;
+      (db as any).select = vi.fn(() => createMockQuery([seedWithoutBatchId]));
 
       const result = await seedCleanupService.handleSeedDeletionOnRegistration(
         1,
@@ -236,26 +212,16 @@ describe('Seed Cleanup Service', () => {
       };
 
       // Mock findSeedCandidate to return seed
-      const mockSelectForFind = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([seedCandidate]),
-        }),
-      });
+      const mockQueryFind = createMockQuery([seedCandidate]);
 
       // Mock for getCountsForAudit
-      const mockSelectForCounts = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 0 }]),
-        }),
-      });
+      const mockQueryCounts = createMockQuery([{ count: 0 }]);
 
       // Sequence the mock
       (db as any).select = vi
         .fn()
-        .mockReturnValueOnce(mockSelectForFind())
-        .mockReturnValueOnce(mockSelectForCounts())
-        .mockReturnValueOnce(mockSelectForCounts())
-        .mockReturnValueOnce(mockSelectForCounts());
+        .mockReturnValueOnce(mockQueryFind)
+        .mockReturnValue(mockQueryCounts);
 
       // Mock successful cleanup
       (brandCleanupService.executeCleanup as Mock).mockResolvedValue({
@@ -281,6 +247,18 @@ describe('Seed Cleanup Service', () => {
       expect(brandCleanupService.executeCleanup).toHaveBeenCalledWith(1, true);
     });
 
+      const result = await seedCleanupService.handleSeedDeletionOnRegistration(
+        1,
+        'Test Brand',
+        'test-brand',
+      );
+
+      expect(result.deleted).toBe(true);
+      expect(result.reason).toBe('deleted_on_registration');
+      expect(result.deletedCounts?.brandProfileId).toBe(1);
+      expect(brandCleanupService.executeCleanup).toHaveBeenCalledWith(1, true);
+    });
+
     it('should throw and block registration when deletion fails', async () => {
       const seedCandidate = {
         id: 1,
@@ -291,26 +269,16 @@ describe('Seed Cleanup Service', () => {
       };
 
       // Mock findSeedCandidate to return seed
-      const mockSelectForFind = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([seedCandidate]),
-        }),
-      });
+      const mockQueryFind = createMockQuery([seedCandidate]);
 
       // Mock for getCountsForAudit
-      const mockSelectForCounts = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 0 }]),
-        }),
-      });
+      const mockQueryCounts = createMockQuery([{ count: 0 }]);
 
       // Sequence the mock
       (db as any).select = vi
         .fn()
-        .mockReturnValueOnce(mockSelectForFind())
-        .mockReturnValueOnce(mockSelectForCounts())
-        .mockReturnValueOnce(mockSelectForCounts())
-        .mockReturnValueOnce(mockSelectForCounts());
+        .mockReturnValueOnce(mockQueryFind)
+        .mockReturnValue(mockQueryCounts);
 
       // Mock cleanup failure
       (brandCleanupService.executeCleanup as Mock).mockRejectedValue(
@@ -340,12 +308,7 @@ describe('Seed Cleanup Service', () => {
         },
       ];
 
-      const mockSelect = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(multipleSeeds),
-        }),
-      });
-      (db as any).select = mockSelect;
+      (db as any).select = vi.fn(() => createMockQuery(multipleSeeds));
 
       await expect(
         seedCleanupService.handleSeedDeletionOnRegistration(1, 'Test Brand', 'test-brand'),

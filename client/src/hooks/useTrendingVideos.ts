@@ -34,7 +34,7 @@ interface UseTrendingVideosReturn {
   videos: TrendingVideo[];
   isLoading: boolean;
   error: Error | null;
-  refetch: () => void;
+  refetch: () => Promise<unknown>;
   isEmpty: boolean;
 }
 
@@ -142,7 +142,7 @@ export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTr
 
   // Fetch trending videos from API
   const feedQuery = trpc.explore.getFeed.useQuery({
-    feedType: 'trending',
+    feedType: 'recommended',
     limit: limit,
     offset: 0,
   });
@@ -196,7 +196,7 @@ export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTr
   return {
     videos,
     isLoading: feedQuery.isLoading,
-    error: feedQuery.error as Error | null,
+    error: feedQuery.error ? new Error(feedQuery.error.message) : null,
     refetch: feedQuery.refetch,
     isEmpty,
   };

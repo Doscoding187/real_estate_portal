@@ -54,6 +54,7 @@ const SidebarNavigation: React.FC = () => {
     else if (location.startsWith('/admin/marketing')) setActiveSection('revenue');
     else if (location.startsWith('/admin/monetization')) setActiveSection('revenue');
     else if (location.startsWith('/admin/partners')) setActiveSection('revenue');
+    else if (location.startsWith('/admin/distribution')) setActiveSection('revenue');
     else if (location.startsWith('/admin/analytics')) setActiveSection('insights');
     else if (location.startsWith('/admin/users')) setActiveSection('system');
     else if (location.startsWith('/admin/settings')) setActiveSection('system');
@@ -95,6 +96,11 @@ const SidebarNavigation: React.FC = () => {
         { name: 'Featured Placements', path: '/admin/marketing', icon: Star },
         { name: 'Location Monetization', path: '/admin/monetization', icon: DollarSign },
         { name: 'Partner Network', path: '/admin/partners', icon: Handshake },
+        {
+          name: 'Distribution Network',
+          path: '/admin/distribution/partner-developments',
+          icon: Briefcase,
+        },
       ],
     },
     {

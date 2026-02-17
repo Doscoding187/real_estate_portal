@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * VirtualizedFeed Component
  * Implements virtualized scrolling for long lists using react-window

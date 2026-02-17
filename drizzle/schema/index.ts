@@ -10,6 +10,7 @@ export * from './marketplace';
 export * from './views';
 export * from './analytics';
 export * from './leads';
+export * from './distribution';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';

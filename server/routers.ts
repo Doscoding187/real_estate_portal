@@ -38,8 +38,8 @@ import { subscriptionRouter } from './subscriptionRouter';
 import { developerRouter } from './developerRouter';
 import { exploreRouter } from './exploreRouter';
 import { exploreVideoUploadRouter } from './exploreVideoUploadRouter';
-// import { recommendationEngineRouter } from './recommendationEngineRouter'; // TODO: Fix syntax errors in this file
-// import { exploreApiRouter } from './exploreApiRouter'; // TODO: Fix syntax errors in this file
+import { recommendationEngineRouter } from './recommendationEngineRouter';
+import { exploreApiRouter } from './exploreApiRouter';
 // import { boostCampaignRouter } from './boostCampaignRouter'; // TODO: Fix syntax errors in this file
 import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
 import { analyticsRouter } from './analyticsRouter';
@@ -55,6 +55,7 @@ import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
+import { distributionRouter } from './distributionRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -85,8 +86,8 @@ export const appRouter = router({
   developer: developerRouter,
   explore: exploreRouter,
   exploreVideoUpload: exploreVideoUploadRouter,
-  // recommendationEngine: recommendationEngineRouter, // TODO: Fix syntax errors in this file
-  // exploreApi: exploreApiRouter, // TODO: Fix syntax errors in this file
+  recommendationEngine: recommendationEngineRouter,
+  exploreApi: exploreApiRouter,
   // boostCampaign: boostCampaignRouter, // TODO: Fix syntax errors in this file
   exploreAnalytics: exploreAnalyticsRouter,
   similarProperties: similarPropertiesRouter,
@@ -98,6 +99,7 @@ export const appRouter = router({
   favorites: favoritesRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,
+  distribution: distributionRouter,
 
   propertyResults: propertyResultsRouter,
 
@@ -161,6 +163,7 @@ export const appRouter = router({
           sortOption: z
             .enum(['price_asc', 'price_desc', 'date_desc', 'date_asc', 'suburb_asc', 'suburb_desc'])
             .optional(), // Added sort option support
+          includeDevelopments: z.boolean().optional(),
         }),
       )
       .query(async ({ input }) => {
@@ -199,12 +202,111 @@ export const appRouter = router({
 
         // Use the service
         // We defaults/fallbacks are handled inside service or here
-        return await propertySearchService.searchProperties(
+        const propertyResults = await propertySearchService.searchProperties(
           filters,
           (input.sortOption as any) || 'date_desc',
           page,
           input.limit,
         );
+
+        if (!input.includeDevelopments) {
+          return propertyResults;
+        }
+
+        const { developmentService } = await import('./services/developmentService');
+        const nearbyDevelopments = await developmentService.listPublicDevelopments({
+          province: input.province,
+          city: input.city,
+          limit: Math.min(input.limit, 6),
+        });
+
+        const filteredDevelopments =
+          input.suburb && input.suburb.length > 0
+            ? nearbyDevelopments.filter((dev: any) => {
+                const devSuburb = String(dev.suburb || '').toLowerCase();
+                if (!devSuburb) return false;
+                return input.suburb!.some(suburb => devSuburb.includes(suburb.toLowerCase()));
+              })
+            : nearbyDevelopments;
+
+        return {
+          ...propertyResults,
+          developments: {
+            items: filteredDevelopments.map((dev: any) => ({
+              id: Number(dev.id),
+              name: dev.name,
+              slug: dev.slug || null,
+              description: dev.description || null,
+              city: dev.city,
+              suburb: dev.suburb || null,
+              province: dev.province,
+              priceFrom: dev.priceFrom ?? null,
+              priceTo: dev.priceTo ?? null,
+              status: dev.status ?? null,
+              isFeatured: dev.isFeatured ?? false,
+              rating: dev.rating ?? null,
+              highlights: Array.isArray(dev.highlights) ? dev.highlights : [],
+              builderName: dev.builderName ?? null,
+              builderLogoUrl: dev.builderLogoUrl ?? null,
+              configurations: Array.isArray(dev.configurations) ? dev.configurations : [],
+              images: Array.isArray(dev.images) ? dev.images : [],
+              developerBrandProfileId: dev.developerBrandProfileId ?? null,
+            })),
+            total: filteredDevelopments.length,
+          },
+        };
+      }),
+
+    searchDevelopments: publicProcedure
+      .input(
+        z.object({
+          province: z.string().optional(),
+          city: z.string().optional(),
+          suburb: z.array(z.string()).optional(),
+          limit: z.number().default(20),
+          offset: z.number().default(0),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { developmentService } = await import('./services/developmentService');
+        const safeLimit = Math.max(1, Math.min(input.limit, 50));
+        const cappedOffset = Math.max(0, input.offset);
+        const poolLimit = Math.min(200, cappedOffset + safeLimit);
+
+        const allResults = await developmentService.listPublicDevelopments({
+          province: input.province,
+          city: input.city,
+          limit: poolLimit,
+        });
+
+        const filteredResults =
+          input.suburb && input.suburb.length > 0
+            ? allResults.filter((dev: any) => {
+                const devSuburb = String(dev.suburb || '').toLowerCase();
+                if (!devSuburb) return false;
+                return input.suburb!.some(suburb => devSuburb.includes(suburb.toLowerCase()));
+              })
+            : allResults;
+
+        const paged = filteredResults.slice(cappedOffset, cappedOffset + safeLimit);
+
+        return {
+          items: paged.map((dev: any) => ({
+            id: Number(dev.id),
+            name: dev.name,
+            slug: dev.slug || null,
+            city: dev.city,
+            suburb: dev.suburb || null,
+            province: dev.province,
+            priceFrom: dev.priceFrom ?? null,
+            priceTo: dev.priceTo ?? null,
+            images: Array.isArray(dev.images) ? dev.images : [],
+            developerBrandProfileId: dev.developerBrandProfileId ?? null,
+          })),
+          total: filteredResults.length,
+          limit: safeLimit,
+          offset: cappedOffset,
+        };
       }),
 
     featured: publicProcedure
@@ -251,7 +353,7 @@ export const appRouter = router({
           return await propertySearchService.getFilterCounts(normalizedFilters);
         } catch (error) {
           console.error('Error getting filter counts:', error);
-          return { total: 0, byType: {}, byBedrooms: {}, byPriceRange: {} };
+          return { total: 0, byType: {}, byBedrooms: {}, byLocation: [], byPriceRange: [] };
         }
       }),
 
@@ -592,5 +694,3 @@ export const appRouter = router({
 
 // Export type router type signature
 export type AppRouter = typeof appRouter;
-
-

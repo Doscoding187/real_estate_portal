@@ -14,9 +14,9 @@ const ensureNonEmptyString = (value: unknown): string | null => {
  * Submit content for approval
  * Requirements: 6.1, 6.2
  */
-  router.post('/submit', requireAuth, async (req, res) => {
-    try {
-      const { contentId, partnerId } = req.body;
+router.post('/submit', requireAuth, async (req, res) => {
+  try {
+    const { contentId, partnerId } = req.body;
 
     if (!contentId || !partnerId) {
       return res.status(400).json({
@@ -24,23 +24,23 @@ const ensureNonEmptyString = (value: unknown): string | null => {
       });
     }
 
-      // Verify user owns the partner account
-      const { partnerService } = await import('./services/partnerService');
-      const partnerIdValue = ensureNonEmptyString(partnerId);
-      if (!partnerIdValue) {
-        return res.status(400).json({ error: 'Invalid partnerId' });
-      }
-      const partner = await partnerService.getPartnerProfile(partnerIdValue);
+    // Verify user owns the partner account
+    const { partnerService } = await import('./services/partnerService');
+    const partnerIdValue = ensureNonEmptyString(partnerId);
+    if (!partnerIdValue) {
+      return res.status(400).json({ error: 'Invalid partnerId' });
+    }
+    const partner = await partnerService.getPartnerProfile(partnerIdValue);
 
     if (!partner) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-      if (partner.userId !== String(req.user!.id)) {
-        return res.status(403).json({ error: "Unauthorized: You don't own this partner account" });
-      }
+    if (partner.userId !== String(req.user!.id)) {
+      return res.status(403).json({ error: "Unauthorized: You don't own this partner account" });
+    }
 
-      const queueItem = await contentApprovalService.submitForApproval(contentId, partnerIdValue);
+    const queueItem = await contentApprovalService.submitForApproval(contentId, partnerIdValue);
 
     res.status(201).json(queueItem);
   } catch (error: any) {
@@ -191,27 +191,27 @@ router.post('/:id/flag', requireAuth, async (req, res) => {
  * Get review statistics for a partner
  * Requirements: 6.5
  */
-  router.get('/partner/:partnerId/stats', requireAuth, async (req, res) => {
-    try {
-      const { partnerId } = req.params;
+router.get('/partner/:partnerId/stats', requireAuth, async (req, res) => {
+  try {
+    const { partnerId } = req.params;
 
-      // Verify user owns the partner account or is admin
-      const { partnerService } = await import('./services/partnerService');
-      const partnerIdValue = ensureNonEmptyString(partnerId);
-      if (!partnerIdValue) {
-        return res.status(400).json({ error: 'Invalid partnerId' });
-      }
-      const partner = await partnerService.getPartnerProfile(partnerIdValue);
+    // Verify user owns the partner account or is admin
+    const { partnerService } = await import('./services/partnerService');
+    const partnerIdValue = ensureNonEmptyString(partnerId);
+    if (!partnerIdValue) {
+      return res.status(400).json({ error: 'Invalid partnerId' });
+    }
+    const partner = await partnerService.getPartnerProfile(partnerIdValue);
 
     if (!partner) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-      if (partner.userId !== String(req.user!.id) && req.user!.role !== 'super_admin') {
-        return res.status(403).json({ error: 'Unauthorized' });
-      }
+    if (partner.userId !== String(req.user!.id) && req.user!.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
-      const stats = await contentApprovalService.getPartnerReviewStats(partnerIdValue);
+    const stats = await contentApprovalService.getPartnerReviewStats(partnerIdValue);
 
     res.json(stats);
   } catch (error: any) {
@@ -225,9 +225,9 @@ router.post('/:id/flag', requireAuth, async (req, res) => {
  * Validate content against tier rules
  * Requirements: 1.6, 15.2, 15.3
  */
-  router.post('/validate', requireAuth, async (req, res) => {
-    try {
-      const { contentId, partnerId, contentType, metadata, ctas } = req.body;
+router.post('/validate', requireAuth, async (req, res) => {
+  try {
+    const { contentId, partnerId, contentType, metadata, ctas } = req.body;
 
     if (!partnerId || !contentType) {
       return res.status(400).json({
@@ -235,32 +235,32 @@ router.post('/:id/flag', requireAuth, async (req, res) => {
       });
     }
 
-      // Verify user owns the partner account
-      const { partnerService } = await import('./services/partnerService');
-      const partnerIdValue = ensureNonEmptyString(partnerId);
-      if (!partnerIdValue) {
-        return res.status(400).json({ error: 'Invalid partnerId' });
-      }
-      const partner = await partnerService.getPartnerProfile(partnerIdValue);
+    // Verify user owns the partner account
+    const { partnerService } = await import('./services/partnerService');
+    const partnerIdValue = ensureNonEmptyString(partnerId);
+    if (!partnerIdValue) {
+      return res.status(400).json({ error: 'Invalid partnerId' });
+    }
+    const partner = await partnerService.getPartnerProfile(partnerIdValue);
 
     if (!partner) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-      if (partner.userId !== String(req.user!.id)) {
-        return res.status(403).json({ error: 'Unauthorized' });
-      }
+    if (partner.userId !== String(req.user!.id)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
-      const validation = await contentApprovalService.validateContentRules(
-        {
-          contentId: contentId || 'preview',
-          partnerId: partnerIdValue,
-          contentType,
-          metadata,
-          ctas,
-        },
-        partner,
-      );
+    const validation = await contentApprovalService.validateContentRules(
+      {
+        contentId: contentId || 'preview',
+        partnerId: partnerIdValue,
+        contentType,
+        metadata,
+        ctas,
+      },
+      partner,
+    );
 
     res.json(validation);
   } catch (error: any) {

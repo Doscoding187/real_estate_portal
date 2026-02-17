@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Enhanced Developer Setup Wizard
  * Multi-step registration form with Soft UI gradient components

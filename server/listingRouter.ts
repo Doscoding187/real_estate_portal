@@ -866,4 +866,3 @@ export const listingRouter = router({
 
 // Export type router type signature
 export type ListingRouter = typeof listingRouter;
-

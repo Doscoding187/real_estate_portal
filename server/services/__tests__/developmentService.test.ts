@@ -13,17 +13,23 @@ import { eq } from 'drizzle-orm';
 describe('Development Service - Property Tests', () => {
   // Helper function to create a test developer
   async function createTestDeveloper(userId: number) {
-    const [developer] = await db
-      .insert(developers)
-      .values({
-        userId,
-        name: `Test Developer ${userId}`,
-        email: `test${userId}@example.com`,
-        category: 'residential',
-        isVerified: 1,
-        status: 'approved',
-      })
-      .returning();
+    const result = await db.insert(developers).values({
+      userId,
+      name: `Test Developer ${userId}`,
+      email: `test${userId}@example.com`,
+      category: 'residential',
+      isVerified: 1,
+      status: 'approved',
+    });
+
+    // MySQL specific: Get inserted ID and fetch the record
+    const insertId = result[0].insertId;
+    const [developer] = await db.select().from(developers).where(eq(developers.id, insertId));
+
+    if (!developer) {
+      throw new Error(`Failed to create test developer with ID ${insertId}`);
+    }
+
     return developer;
   }
 
@@ -169,7 +175,7 @@ describe('Development Service - Property Tests', () => {
         developerId = developer.id;
 
         // Create development
-        const development = await developmentService.createDevelopment(developer.id, {
+        const development = await developmentService.createDevelopment(developer.userId, {
           name: 'Test Development',
           developmentType: 'residential',
           city: 'Test City',
@@ -224,7 +230,10 @@ describe('Development Service - Property Tests', () => {
       developerId = developer.id;
 
       // Create development
-      const development = await developmentService.createDevelopment(developer.id, developmentData);
+      const development = await developmentService.createDevelopment(
+        developer.userId,
+        developmentData,
+      );
 
       // Property: All required fields should be present
       expect(development.name).toBe(developmentData.name);

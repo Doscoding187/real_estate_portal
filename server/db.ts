@@ -46,19 +46,18 @@ import {
   platformSettings,
   unitTypes,
   developmentPhases,
-  partners as services, // Alias partners as services to match db usage
+  services,
   reviews,
   exploreContent,
   exploreEngagements,
   exploreFeedSessions,
-  exploreSavedProperties,
   locations,
   partners,
   explorePartners,
   auditLogs,
 } from '../drizzle/schema';
 
-import { ENV } from './_core/env.ts';
+import { ENV } from './_core/env';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
@@ -74,6 +73,22 @@ export type Property = InferSelectModel<typeof properties>;
 export type InsertProperty = InferInsertModel<typeof properties>;
 export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
 export type Prospect = InferSelectModel<typeof prospects>;
+
+function parseSessionUserId(sessionId: string): number {
+  const parsed = Number(sessionId);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error('Invalid sessionId format. Expected numeric user id.');
+  }
+  return parsed;
+}
+
+function toMysqlDateTime(value: Date | string = new Date()): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return new Date().toISOString().slice(0, 19).replace('T', ' ');
+  }
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
 
 // Export a synchronous db object that throws if not initialized
 // This is for backwards compatibility with existing code
@@ -119,8 +134,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     textFields.forEach(assignNullable);
 
     if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+      values.lastSignedIn = toMysqlDateTime(user.lastSignedIn as any);
+      updateSet.lastSignedIn = toMysqlDateTime(user.lastSignedIn as any);
     }
     if (user.role !== undefined) {
       values.role = user.role;
@@ -131,11 +146,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
 
     if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date().toISOString();
+      values.lastSignedIn = toMysqlDateTime();
     }
 
     if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date().toISOString();
+      updateSet.lastSignedIn = toMysqlDateTime();
     }
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({
@@ -200,7 +215,7 @@ export async function createUser(
     ...userData,
     createdAt: new Date(),
     updatedAt: new Date(),
-    lastSignedIn: new Date().toISOString(),
+    lastSignedIn: toMysqlDateTime(),
   });
 
   return Number(result[0].insertId);
@@ -215,7 +230,7 @@ export async function updateUserLastSignIn(userId: number): Promise<void> {
 
   await db
     .update(users)
-    .set({ lastSignedIn: new Date().toISOString() })
+    .set({ lastSignedIn: toMysqlDateTime() })
     .where(eq(users.id, userId));
 }
 
@@ -834,7 +849,11 @@ export async function getServicesByCategory(category: string) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(services).where(eq(services.category, category));
+  const categoryId = Number(category);
+  if (!Number.isFinite(categoryId) || categoryId <= 0) {
+    return [];
+  }
+  return await db.select().from(services).where(eq(services.categoryId, categoryId));
 }
 
 // ==================== REVIEWS ====================
@@ -849,7 +868,7 @@ export async function getReviewsByTarget(reviewType: string, targetId: number) {
     .from(reviews)
     .where(
       and(
-        eq(reviews.reviewType, reviewType as any),
+        eq(reviews.targetType, reviewType as any),
         eq(reviews.targetId, targetId),
         eq(reviews.isPublished, 1),
       ),
@@ -902,7 +921,7 @@ export async function getLocationsByType(type: string) {
   return await db
     .select()
     .from(locations)
-    .where(eq(locations.locationType, type as any));
+    .where(eq(locations.type, type as any));
 }
 
 // ==================== AGENCY DASHBOARD ANALYTICS ====================
@@ -985,15 +1004,16 @@ export async function createProspect(prospectData: any) {
 export async function updateProspect(sessionId: string, updates: any) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+  const userId = parseSessionUserId(sessionId);
 
   await db
     .update(prospects)
     .set({
-      ...updates,
-      lastActivity: new Date(),
+      preferences: updates?.preferences ?? null,
+      lastActiveAt: new Date() as any,
       updatedAt: new Date(),
     })
-    .where(eq(prospects.sessionId, sessionId));
+    .where(eq(prospects.userId, userId));
 
   return { success: true };
 }
@@ -1001,12 +1021,9 @@ export async function updateProspect(sessionId: string, updates: any) {
 export async function getProspect(sessionId: string): Promise<Prospect | undefined> {
   const db = await getDb();
   if (!db) return undefined;
+  const userId = parseSessionUserId(sessionId);
 
-  const result = await db
-    .select()
-    .from(prospects)
-    .where(eq(prospects.sessionId, sessionId))
-    .limit(1);
+  const result = await db.select().from(prospects).where(eq(prospects.userId, userId)).limit(1);
   return result[0];
 }
 
@@ -1018,7 +1035,9 @@ export async function addProspectFavorite(sessionId: string, propertyId: number)
   const prospect = await getProspect(sessionId);
   if (!prospect) throw new Error('Prospect not found');
 
-  await db.insert(prospectFavorites).values({ prospectId: prospect.id, propertyId });
+  await db
+    .insert(prospectFavorites)
+    .values({ prospectId: prospect.id, listingId: propertyId as any });
   return { success: true };
 }
 
@@ -1035,7 +1054,7 @@ export async function removeProspectFavorite(sessionId: string, propertyId: numb
     .where(
       and(
         eq(prospectFavorites.prospectId, prospect.id),
-        eq(prospectFavorites.propertyId, propertyId),
+        eq(prospectFavorites.listingId, propertyId as any),
       ),
     );
 
@@ -1057,12 +1076,12 @@ export async function getProspectFavorites(sessionId: string) {
     const results = await db
       .select({
         id: prospectFavorites.id,
-        propertyId: prospectFavorites.propertyId,
-        property: properties,
+        listingId: prospectFavorites.listingId,
+        listing: listings,
         createdAt: prospectFavorites.createdAt,
       })
       .from(prospectFavorites)
-      .innerJoin(properties, eq(prospectFavorites.propertyId, properties.id))
+      .innerJoin(listings, eq(prospectFavorites.listingId, listings.id))
       .where(eq(prospectFavorites.prospectId, prospect.id))
       .orderBy(desc(prospectFavorites.createdAt));
 
@@ -1086,32 +1105,23 @@ export async function scheduleViewing(viewingData: any) {
 export async function getScheduledViewings(sessionId: string) {
   const db = await getDb();
   if (!db) return [];
+  const userId = parseSessionUserId(sessionId);
 
   try {
-    // Get prospect ID from sessionId
-    const prospect = await getProspect(sessionId);
-    if (!prospect) {
-      console.log('[getScheduledViewings] No prospect found for sessionId:', sessionId);
-      return [];
-    }
-
     const results = await db
       .select({
         id: scheduledViewings.id,
         propertyId: scheduledViewings.propertyId,
         property: properties,
-        agentId: scheduledViewings.agentId,
-        agent: agents,
-        scheduledAt: scheduledViewings.scheduledAt,
+        scheduledAt: scheduledViewings.scheduledDate,
         status: scheduledViewings.status,
         notes: scheduledViewings.notes,
         createdAt: scheduledViewings.createdAt,
       })
       .from(scheduledViewings)
       .innerJoin(properties, eq(scheduledViewings.propertyId, properties.id))
-      .leftJoin(agents, eq(scheduledViewings.agentId, agents.id))
-      .where(eq(scheduledViewings.prospectId, prospect.id))
-      .orderBy(scheduledViewings.scheduledAt);
+      .where(eq(scheduledViewings.userId, userId))
+      .orderBy(scheduledViewings.scheduledDate);
 
     return Array.isArray(results) ? results : [];
   } catch (error) {
@@ -1138,18 +1148,13 @@ export async function updateViewingStatus(viewingId: number, status: string) {
 export async function trackPropertyView(sessionId: string, propertyId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-
-  // Get prospect ID from sessionId
-  const prospect = await getProspect(sessionId);
-  if (!prospect) throw new Error('Prospect not found');
+  const userId = parseSessionUserId(sessionId);
 
   // First check if this property was recently viewed by this prospect
   const existing = await db
     .select()
     .from(recentlyViewed)
-    .where(
-      and(eq(recentlyViewed.prospectId, prospect.id), eq(recentlyViewed.propertyId, propertyId)),
-    )
+    .where(and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, propertyId as any)))
     .limit(1);
 
   if (existing.length > 0) {
@@ -1160,13 +1165,13 @@ export async function trackPropertyView(sessionId: string, propertyId: number) {
         viewedAt: new Date(),
       })
       .where(
-        and(eq(recentlyViewed.prospectId, prospect.id), eq(recentlyViewed.propertyId, propertyId)),
+        and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, propertyId as any)),
       );
   } else {
     // Insert new record
     await db.insert(recentlyViewed).values({
-      prospectId: prospect.id,
-      propertyId,
+      userId,
+      listingId: propertyId as any,
       viewedAt: new Date(),
     });
   }
@@ -1177,25 +1182,19 @@ export async function trackPropertyView(sessionId: string, propertyId: number) {
 export async function getRecentlyViewed(sessionId: string) {
   const db = await getDb();
   if (!db) return [];
+  const userId = parseSessionUserId(sessionId);
 
   try {
-    // First get the prospect by sessionId
-    const prospect = await getProspect(sessionId);
-    if (!prospect) {
-      console.log('[getRecentlyViewed] No prospect found for sessionId:', sessionId);
-      return [];
-    }
-
     const results = await db
       .select({
         id: recentlyViewed.id,
-        propertyId: recentlyViewed.propertyId,
-        property: properties,
+        listingId: recentlyViewed.listingId,
+        listing: listings,
         viewedAt: recentlyViewed.viewedAt,
       })
       .from(recentlyViewed)
-      .innerJoin(properties, eq(recentlyViewed.propertyId, properties.id))
-      .where(eq(recentlyViewed.prospectId, prospect.id))
+      .innerJoin(listings, eq(recentlyViewed.listingId, listings.id))
+      .where(eq(recentlyViewed.userId, userId))
       .orderBy(desc(recentlyViewed.viewedAt))
       .limit(10);
 
@@ -1215,18 +1214,34 @@ export async function updateProspectProgress(
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+  const userId = parseSessionUserId(sessionId);
 
-  const updateData: any = {
+  const [current] = await db
+    .select({ preferences: prospects.preferences })
+    .from(prospects)
+    .where(eq(prospects.userId, userId))
+    .limit(1);
+
+  const currentPreferences =
+    current?.preferences && typeof current.preferences === 'object'
+      ? (current.preferences as Record<string, unknown>)
+      : {};
+  const nextPreferences: Record<string, unknown> = {
+    ...currentPreferences,
     profileProgress: progress,
-    lastActivity: new Date(),
-    updatedAt: new Date(),
   };
 
   if (badges) {
-    updateData.badges = JSON.stringify(badges);
+    nextPreferences.badges = badges;
   }
 
-  await db.update(prospects).set(updateData).where(eq(prospects.sessionId, sessionId));
+  const updateData = {
+    preferences: nextPreferences as any,
+    lastActiveAt: new Date() as any,
+    updatedAt: new Date(),
+  };
+
+  await db.update(prospects).set(updateData).where(eq(prospects.userId, userId));
   return { success: true };
 }
 
@@ -1236,18 +1251,26 @@ export async function earnBadge(sessionId: string, badge: string) {
 
   const prospect = await getProspect(sessionId);
   if (!prospect) throw new Error('Prospect not found');
-
-  const currentBadges = prospect.badges ? JSON.parse(prospect.badges) : [];
+  const prefs =
+    prospect.preferences && typeof prospect.preferences === 'object'
+      ? (prospect.preferences as Record<string, unknown>)
+      : {};
+  const currentBadges = Array.isArray(prefs.badges) ? [...(prefs.badges as string[])] : [];
   if (!currentBadges.includes(badge)) {
     currentBadges.push(badge);
+    const nextPreferences = {
+      ...prefs,
+      badges: currentBadges,
+    };
+    const userId = parseSessionUserId(sessionId);
     await db
       .update(prospects)
       .set({
-        badges: JSON.stringify(currentBadges),
-        lastActivity: new Date(),
+        preferences: nextPreferences as any,
+        lastActiveAt: new Date() as any,
         updatedAt: new Date(),
       })
-      .where(eq(prospects.sessionId, sessionId));
+      .where(eq(prospects.userId, userId));
   }
 
   return { success: true, badges: currentBadges };
@@ -1257,24 +1280,35 @@ export async function getRecommendedProperties(prospect: Prospect, limit: number
   const db = await getDb();
   if (!db) return [];
 
-  if (!prospect.affordabilityMax) return [];
+  const prefs =
+    prospect.preferences && typeof prospect.preferences === 'object'
+      ? (prospect.preferences as Record<string, unknown>)
+      : {};
+  const affordabilityMax = Number(prefs.affordabilityMax || 0);
+  const affordabilityMin = Number(prefs.affordabilityMin || 0);
+  const preferredPropertyType =
+    typeof prefs.preferredPropertyType === 'string' ? prefs.preferredPropertyType : null;
+  const preferredLocation =
+    typeof prefs.preferredLocation === 'string' ? prefs.preferredLocation : null;
+
+  if (!affordabilityMax) return [];
 
   // Build query conditions based on prospect preferences and affordability
-  let conditions = [
+  const conditions: SQL[] = [
     eq(properties.status, 'available' as any),
-    lte(properties.price, prospect.affordabilityMax),
+    lte(properties.price, affordabilityMax),
   ];
 
-  if (prospect.affordabilityMin) {
-    conditions.push(gte(properties.price, prospect.affordabilityMin));
+  if (affordabilityMin) {
+    conditions.push(gte(properties.price, affordabilityMin));
   }
 
-  if (prospect.preferredPropertyType) {
-    conditions.push(eq(properties.propertyType, prospect.preferredPropertyType as any));
+  if (preferredPropertyType) {
+    conditions.push(eq(properties.propertyType, preferredPropertyType as any));
   }
 
-  if (prospect.preferredLocation) {
-    conditions.push(like(properties.city, `%${prospect.preferredLocation}%`));
+  if (preferredLocation) {
+    conditions.push(like(properties.city, `%${preferredLocation}%`));
   }
 
   let query = db
@@ -3101,7 +3135,7 @@ export async function listPartners({
 }: {
   page?: number;
   limit?: number;
-  category?: 'mortgage_broker' | 'lawyer' | 'photographer' | 'inspector' | 'mover' | 'other';
+  category?: string;
   search?: string;
 }) {
   const db = await getDb();
@@ -3110,11 +3144,13 @@ export async function listPartners({
   const conditions: SQL[] = [];
 
   if (category) {
-    conditions.push(eq(partners.category, category));
+    conditions.push(eq(partners.serviceType, category as any));
   }
 
   if (search) {
-    conditions.push(or(like(partners.name, `%${search}%`), like(partners.email, `%${search}%`))!);
+    conditions.push(
+      or(like(partners.companyName, `%${search}%`), like(partners.contactEmail, `%${search}%`))!,
+    );
   }
 
   const offset = (page - 1) * limit;

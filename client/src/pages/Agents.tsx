@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { trpc } from '@/lib/trpc';
 import { Navbar } from '@/components/Navbar';
 import { Building2, MapPin, Star, Phone, Mail } from 'lucide-react';

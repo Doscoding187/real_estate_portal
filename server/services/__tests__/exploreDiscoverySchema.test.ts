@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getDb } from '../../db';
+import { resetDb } from '../../db-connection';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -21,6 +22,7 @@ describe('Explore Discovery Engine Database Schema', () => {
   let skipTests = false;
 
   beforeAll(async () => {
+    resetDb();
     // Initialize database connection
     try {
       db = await getDb();

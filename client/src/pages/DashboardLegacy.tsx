@@ -59,7 +59,7 @@ export default function Dashboard() {
   });
   const propertyItems = Array.isArray(properties)
     ? properties
-    : (properties as any)?.items ?? (properties as any)?.results ?? [];
+    : ((properties as any)?.items ?? (properties as any)?.results ?? []);
 
   const deletePropertyMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
@@ -172,7 +172,10 @@ export default function Dashboard() {
               <CardHeader className="pb-3">
                 <CardDescription>Sold/Rented</CardDescription>
                 <CardTitle className="text-3xl">
-                  {propertyItems.filter((p: any) => p.status === 'sold' || p.status === 'rented').length}
+                  {
+                    propertyItems.filter((p: any) => p.status === 'sold' || p.status === 'rented')
+                      .length
+                  }
                 </CardTitle>
               </CardHeader>
             </Card>

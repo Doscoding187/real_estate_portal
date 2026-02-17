@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { randomUUID } from 'crypto';
 
 // Load .env first
 dotenv.config();
@@ -19,6 +20,7 @@ import { serveStatic, setupVite } from './vite';
 import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
+import { registerHealthEndpoint } from './health';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -80,9 +82,6 @@ async function startServer() {
     legacyHeaders: false,
   });
 
-  app.use('/api/auth/login', authLimiter);
-  app.use('/api/auth/register', authLimiter);
-
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
@@ -116,13 +115,30 @@ async function startServer() {
     }),
   );
 
+  // Apply auth rate limits after CORS so even 429 responses include CORS headers.
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/register', authLimiter);
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  app.use((req, res, next) => {
+    const headerRequestId = req.headers['x-request-id'];
+    const requestId =
+      typeof headerRequestId === 'string' && headerRequestId.trim().length > 0
+        ? headerRequestId
+        : randomUUID();
+
+    (req as any).requestId = requestId;
+    res.setHeader('x-request-id', requestId);
+    next();
+  });
 
   app.use(domainRoutingMiddleware);
   app.use(customDomainMiddleware);
 
   registerAuthRoutes(app);
+  registerHealthEndpoint(app);
 
   app.get('/api/test', async (req, res) => {
     try {

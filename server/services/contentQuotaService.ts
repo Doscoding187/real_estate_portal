@@ -144,41 +144,31 @@ class ContentQuotaService {
     // Count neighbourhood guides
     const neighbourhoodGuides = await db.query.exploreContent.findMany({
       where: (content: typeof exploreContent) =>
-        and(
-          inArray(content.contentType, ['neighbourhood_guide', 'area_overview']),
-        ),
+        and(inArray(content.contentType, ['neighbourhood_guide', 'area_overview'])),
     });
 
     // Count expert tips
     const expertTips = await db.query.exploreContent.findMany({
       where: (content: typeof exploreContent) =>
-        and(
-          inArray(content.contentType, ['expert_tip', 'how_to', 'educational']),
-        ),
+        and(inArray(content.contentType, ['expert_tip', 'how_to', 'educational'])),
     });
 
     // Count market insights
     const marketInsights = await db.query.exploreContent.findMany({
       where: (content: typeof exploreContent) =>
-        and(
-          inArray(content.contentType, ['market_insight', 'market_analysis', 'price_trends']),
-        ),
+        and(inArray(content.contentType, ['market_insight', 'market_analysis', 'price_trends'])),
     });
 
     // Count service showcases
     const serviceShowcases = await db.query.exploreContent.findMany({
       where: (content: typeof exploreContent) =>
-        and(
-          inArray(content.contentType, ['service_showcase', 'service_demo']),
-        ),
+        and(inArray(content.contentType, ['service_showcase', 'service_demo'])),
     });
 
     // Count inspiration pieces
     const inspirationPieces = await db.query.exploreContent.findMany({
       where: (content: typeof exploreContent) =>
-        and(
-          inArray(content.contentType, ['inspiration', 'design_showcase', 'trend']),
-        ),
+        and(inArray(content.contentType, ['inspiration', 'design_showcase', 'trend'])),
     });
 
     // Update all quotas

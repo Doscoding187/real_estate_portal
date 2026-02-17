@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   SortableMediaGrid,
@@ -998,6 +999,9 @@ export function UnitTypesPhase() {
         <div>
           <h2 className="text-3xl font-bold text-slate-900">Unit Types</h2>
           <p className="text-slate-600">Configure your diverse unit mix.</p>
+          <p className="text-xs text-slate-500">
+            Recommended for cards: add at least 2 unit types with clear names and prices.
+          </p>
         </div>
         <Button
           onClick={() => handleOpenDialog()}

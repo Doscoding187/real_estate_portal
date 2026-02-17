@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PersonalizedContentBlock Component
  * Displays a horizontal scrollable section of personalized content

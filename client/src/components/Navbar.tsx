@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Heart, User, Menu, Home, Plus, Play, LayoutDashboard } from 'lucide-react';
+import { Heart, User, Menu, Home, Plus, Play, LayoutDashboard, Briefcase } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { APP_TITLE } from '@/const';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -21,13 +21,27 @@ export function Navbar() {
   const [location, setLocation] = useLocation();
   const logoutMutation = trpc.auth.logout.useMutation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const referrerStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasIdentity);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
     logout();
   };
 
-  const getDashboardRoute = (role?: string) => {
+  const getDashboardRoute = (role?: string, isReferrer?: boolean) => {
+    if (
+      isReferrer &&
+      role !== 'super_admin' &&
+      role !== 'property_developer' &&
+      role !== 'agency_admin'
+    ) {
+      return '/referrer/dashboard';
+    }
     switch (role) {
       case 'admin':
       case 'super_admin':
@@ -43,7 +57,7 @@ export function Navbar() {
     }
   };
 
-  const dashboardRoute = getDashboardRoute(user?.role);
+  const dashboardRoute = getDashboardRoute(user?.role, hasReferrerAccess);
   const showDashboardLink =
     user?.role &&
     ['admin', 'super_admin', 'property_developer', 'agency_admin', 'agent'].includes(user.role);
@@ -53,6 +67,9 @@ export function Navbar() {
     // Add Dashboard link for specialized roles
     ...(showDashboardLink
       ? [{ href: dashboardRoute, label: 'Dashboard', icon: LayoutDashboard }]
+      : []),
+    ...(hasReferrerAccess
+      ? [{ href: '/referrer/dashboard', label: 'Referrer', icon: Briefcase }]
       : []),
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
@@ -139,6 +156,14 @@ export function Navbar() {
                       My Favorites
                     </Link>
                   </DropdownMenuItem>
+                  {hasReferrerAccess && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/referrer/dashboard" className="flex items-center gap-2 w-full">
+                        <Briefcase className="h-4 w-4" />
+                        Referrer Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/listings/create" className="flex items-center gap-2 w-full">
                       <Home className="h-4 w-4" />

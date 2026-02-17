@@ -84,7 +84,10 @@ export function useKeyboardNavigation({
  * Focus Management Utilities
  */
 
-export function useFocusTrap(containerRef: React.RefObject<HTMLElement>, enabled: boolean = true) {
+export function useFocusTrap(
+  containerRef: React.RefObject<HTMLElement | null>,
+  enabled: boolean = true,
+) {
   useEffect(() => {
     if (!enabled || !containerRef.current) return;
 
@@ -116,7 +119,10 @@ export function useFocusTrap(containerRef: React.RefObject<HTMLElement>, enabled
   }, [containerRef, enabled]);
 }
 
-export function useFocusOnMount(elementRef: React.RefObject<HTMLElement>, enabled: boolean = true) {
+export function useFocusOnMount(
+  elementRef: React.RefObject<HTMLElement | null>,
+  enabled: boolean = true,
+) {
   useEffect(() => {
     if (enabled && elementRef.current) {
       // Small delay to ensure element is fully rendered

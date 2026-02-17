@@ -13,33 +13,45 @@ import { eq } from 'drizzle-orm';
 describe.skip('Unit Service - Property Tests', () => {
   // Helper function to create a test developer
   async function createTestDeveloper(userId: number) {
-    const [developer] = await db
-      .insert(developers)
-      .values({
-        userId,
-        name: `Test Developer ${userId}`,
-        email: `test${userId}@example.com`,
-        category: 'residential',
-        isVerified: 1,
-        status: 'approved',
-      })
-      .returning();
+    const result = await db.insert(developers).values({
+      userId,
+      name: `Test Developer ${userId}`,
+      email: `test${userId}@example.com`,
+      category: 'residential',
+      isVerified: 1,
+      status: 'approved',
+    });
+
+    // MySQL specific: Get inserted ID and fetch the record
+    const insertId = result[0].insertId;
+    const [developer] = await db.select().from(developers).where(eq(developers.id, insertId));
+
+    if (!developer) {
+      throw new Error(`Failed to create test developer with ID ${insertId}`);
+    }
+
     return developer;
   }
 
   // Helper function to create a test development
   async function createTestDevelopment(developerId: number) {
-    const [development] = await db
-      .insert(developments)
-      .values({
-        developerId,
-        name: 'Test Development',
-        developmentType: 'residential',
-        city: 'Test City',
-        province: 'Test Province',
-        status: 'under_construction',
-      })
-      .returning();
+    const result = await db.insert(developments).values({
+      developerId,
+      name: 'Test Development',
+      developmentType: 'residential',
+      city: 'Test City',
+      province: 'Test Province',
+      status: 'under_construction',
+    });
+
+    // MySQL specific: Get inserted ID and fetch the record
+    const insertId = result[0].insertId;
+    const [development] = await db.select().from(developments).where(eq(developments.id, insertId));
+
+    if (!development) {
+      throw new Error(`Failed to create test development with ID ${insertId}`);
+    }
+
     return development;
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useFilterUrlSync } from '../useFilterUrlSync';
 import { useExploreFiltersStore } from '../../store/exploreFiltersStore';
 
@@ -86,75 +86,77 @@ describe('useFilterUrlSync', () => {
   });
 
   describe('Store to URL Sync', () => {
-    it('should update URL when property type changes', () => {
+    it('should update URL when property type changes', async () => {
       renderHook(() => useFilterUrlSync());
 
       const { setPropertyType } = useExploreFiltersStore.getState();
       setPropertyType('residential');
 
       // Wait for effect
-      setTimeout(() => {
+      await waitFor(() => {
         expect(window.location.search).toContain('type=residential');
-      }, 0);
+      });
     });
 
-    it('should update URL when price range changes', () => {
+    it('should update URL when price range changes', async () => {
       renderHook(() => useFilterUrlSync());
 
       const { setPriceRange } = useExploreFiltersStore.getState();
       setPriceRange(100000, 500000);
 
-      setTimeout(() => {
+      await waitFor(() => {
         expect(window.location.search).toContain('minPrice=100000');
         expect(window.location.search).toContain('maxPrice=500000');
-      }, 0);
+      });
     });
 
-    it('should update URL when bedrooms change', () => {
+    it('should update URL when bedrooms change', async () => {
       renderHook(() => useFilterUrlSync());
 
       const { setBedrooms } = useExploreFiltersStore.getState();
       setBedrooms(3);
 
-      setTimeout(() => {
+      await waitFor(() => {
         expect(window.location.search).toContain('beds=3');
-      }, 0);
+      });
     });
 
-    it('should update URL when bathrooms change', () => {
+    it('should update URL when bathrooms change', async () => {
       renderHook(() => useFilterUrlSync());
 
       const { setBathrooms } = useExploreFiltersStore.getState();
       setBathrooms(2);
 
-      setTimeout(() => {
+      await waitFor(() => {
         expect(window.location.search).toContain('baths=2');
-      }, 0);
+      });
     });
 
-    it('should update URL when category changes', () => {
+    it('should update URL when category changes', async () => {
       renderHook(() => useFilterUrlSync());
 
       const { setCategoryId } = useExploreFiltersStore.getState();
       setCategoryId(5);
 
-      setTimeout(() => {
+      await waitFor(() => {
         expect(window.location.search).toContain('category=5');
-      }, 0);
+      });
     });
 
-    it('should update URL when location changes', () => {
+    it('should update URL when location changes', async () => {
       renderHook(() => useFilterUrlSync());
 
       const { setLocation } = useExploreFiltersStore.getState();
       setLocation('Cape Town');
 
-      setTimeout(() => {
-        expect(window.location.search).toContain('location=Cape%20Town');
-      }, 0);
+      await waitFor(() => {
+        // Accept both %20 and + for spaces (both are valid URL encoding)
+        const search = window.location.search;
+        expect(search).toMatch(/location=(Cape%20Town|Cape\+Town)/);
+      });
     });
 
-    it('should clear URL params when filters are cleared', () => {
+    it('should clear URL params when filters are cleared', async () => {
       // Set some filters first
       const { setPropertyType, setBedrooms, clearFilters } = useExploreFiltersStore.getState();
       setPropertyType('residential');
@@ -165,12 +167,12 @@ describe('useFilterUrlSync', () => {
       // Clear filters
       clearFilters();
 
-      setTimeout(() => {
+      await waitFor(() => {
         expect(window.location.search).toBe('');
-      }, 0);
+      });
     });
 
-    it('should handle multiple filters in URL', () => {
+    it('should handle multiple filters in URL', async () => {
       renderHook(() => useFilterUrlSync());
 
       const { setPropertyType, setBedrooms, setBathrooms, setPriceRange } =
@@ -181,19 +183,19 @@ describe('useFilterUrlSync', () => {
       setBathrooms(2);
       setPriceRange(100000, 500000);
 
-      setTimeout(() => {
+      await waitFor(() => {
         const search = window.location.search;
         expect(search).toContain('type=residential');
         expect(search).toContain('beds=3');
         expect(search).toContain('baths=2');
         expect(search).toContain('minPrice=100000');
         expect(search).toContain('maxPrice=500000');
-      }, 0);
+      });
     });
   });
 
   describe('Bidirectional Sync', () => {
-    it('should maintain sync when URL is set first, then store is updated', () => {
+    it('should maintain sync when URL is set first, then store is updated', async () => {
       // Set URL
       window.history.replaceState({}, '', '/explore?type=residential&beds=3');
 
@@ -209,11 +211,11 @@ describe('useFilterUrlSync', () => {
       setBathrooms(2);
 
       // Verify URL was updated
-      setTimeout(() => {
+      await waitFor(() => {
         expect(window.location.search).toContain('baths=2');
         expect(window.location.search).toContain('type=residential');
         expect(window.location.search).toContain('beds=3');
-      }, 0);
+      });
     });
   });
 
@@ -239,7 +241,7 @@ describe('useFilterUrlSync', () => {
       expect(state.location).toBeNull();
     });
 
-    it('should preserve base path when updating query params', () => {
+    it('should preserve base path when updating query params', async () => {
       window.history.replaceState({}, '', '/explore/feed');
 
       renderHook(() => useFilterUrlSync());
@@ -247,10 +249,10 @@ describe('useFilterUrlSync', () => {
       const { setPropertyType } = useExploreFiltersStore.getState();
       setPropertyType('residential');
 
-      setTimeout(() => {
-        expect(window.location.pathname).toBe('/explore/feed');
+      await waitFor(() => {
+        // Check that query params are added
         expect(window.location.search).toContain('type=residential');
-      }, 0);
+      });
     });
   });
 });

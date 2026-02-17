@@ -265,25 +265,28 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       }
 
       // Step 4: Create listing linked to location
+      const [listing] = await db.insert(listings).values({
+        title: 'TEST:INTEGRATION:Luxury Apartment',
+        description: 'Test listing for integration test',
+        price: 2500000,
+        propertyType: 'apartment',
+        listingType: 'for-sale',
+        bedrooms: 2,
+        bathrooms: 2,
+        locationId: location.id,
+        latitude: listingLocationData.latitude.toString(),
+        longitude: listingLocationData.longitude.toString(),
+        city: listingLocationData.city,
+        suburb: listingLocationData.suburb,
+        province: listingLocationData.province,
+        status: 'published',
+      });
+
+      const listingId = (listingResult as any)[0].insertId;
       const [listing] = await db
-        .insert(listings)
-        .values({
-          title: 'TEST:INTEGRATION:Luxury Apartment',
-          description: 'Test listing for integration test',
-          price: 2500000,
-          propertyType: 'apartment',
-          listingType: 'for-sale',
-          bedrooms: 2,
-          bathrooms: 2,
-          locationId: location.id,
-          latitude: listingLocationData.latitude.toString(),
-          longitude: listingLocationData.longitude.toString(),
-          city: listingLocationData.city,
-          suburb: listingLocationData.suburb,
-          province: listingLocationData.province,
-          status: 'published',
-        })
-        .$returningId();
+        .select()
+        .from(listings)
+        .where(sql`id = ${listingId}`);
 
       testListingIds.push(listing.id);
 
@@ -439,22 +442,25 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       ];
 
       for (const data of listingData) {
+        const [listing] = await db.insert(listings).values({
+          ...data,
+          description: 'Test listing',
+          bedrooms: 2,
+          bathrooms: 2,
+          locationId: suburbLocation.id,
+          latitude: '-33.9249',
+          longitude: '18.4241',
+          city: cityLocation.name,
+          suburb: suburbLocation.name,
+          province: provinceLocation.name,
+          status: 'published',
+        });
+
+        const listingId = (listingResult as any)[0].insertId;
         const [listing] = await db
-          .insert(listings)
-          .values({
-            ...data,
-            description: 'Test listing',
-            bedrooms: 2,
-            bathrooms: 2,
-            locationId: suburbLocation.id,
-            latitude: '-33.9249',
-            longitude: '18.4241',
-            city: cityLocation.name,
-            suburb: suburbLocation.name,
-            province: provinceLocation.name,
-            status: 'published',
-          })
-          .$returningId();
+          .select()
+          .from(listings)
+          .where(sql`id = ${listingId}`);
 
         testListingIds.push(listing.id);
       }
@@ -555,25 +561,28 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Create listings in this location
       for (let i = 0; i < 5; i++) {
+        const [listing] = await db.insert(listings).values({
+          title: `TEST:INTEGRATION:Property ${i + 1}`,
+          description: 'Test listing for search',
+          price: 2000000 + i * 500000,
+          propertyType: 'apartment',
+          listingType: 'for-sale',
+          bedrooms: 2,
+          bathrooms: 2,
+          locationId: testLocation.id,
+          latitude: '-26.107407',
+          longitude: '28.056229',
+          city: 'Johannesburg',
+          suburb: testLocation.name,
+          province: 'Gauteng',
+          status: 'published',
+        });
+
+        const listingId = (listingResult as any)[0].insertId;
         const [listing] = await db
-          .insert(listings)
-          .values({
-            title: `TEST:INTEGRATION:Property ${i + 1}`,
-            description: 'Test listing for search',
-            price: 2000000 + i * 500000,
-            propertyType: 'apartment',
-            listingType: 'for-sale',
-            bedrooms: 2,
-            bathrooms: 2,
-            locationId: testLocation.id,
-            latitude: '-26.107407',
-            longitude: '28.056229',
-            city: 'Johannesburg',
-            suburb: testLocation.name,
-            province: 'Gauteng',
-            status: 'published',
-          })
-          .$returningId();
+          .select()
+          .from(listings)
+          .where(sql`id = ${listingId}`);
 
         testListingIds.push(listing.id);
       }
@@ -646,39 +655,45 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       testLocationIds.push(location1.id, location2.id);
 
       // Create listings in both locations
-      const [listing1] = await db
-        .insert(listings)
-        .values({
-          title: 'TEST:INTEGRATION:Listing in Location 1',
-          description: 'Test',
-          price: 2000000,
-          propertyType: 'apartment',
-          listingType: 'for-sale',
-          bedrooms: 2,
-          bathrooms: 2,
-          locationId: location1.id,
-          latitude: '-26.1',
-          longitude: '28.0',
-          status: 'published',
-        })
-        .$returningId();
+      const [listing1] = await db.insert(listings).values({
+        title: 'TEST:INTEGRATION:Listing in Location 1',
+        description: 'Test',
+        price: 2000000,
+        propertyType: 'apartment',
+        listingType: 'for-sale',
+        bedrooms: 2,
+        bathrooms: 2,
+        locationId: location1.id,
+        latitude: '-26.1',
+        longitude: '28.0',
+        status: 'published',
+      });
 
+      const listing1Id = (listing1Result as any)[0].insertId;
+      const [listing1] = await db
+        .select()
+        .from(listings)
+        .where(sql`id = ${listing1Id}`);
+
+      const [listing2] = await db.insert(listings).values({
+        title: 'TEST:INTEGRATION:Listing in Location 2',
+        description: 'Test',
+        price: 3000000,
+        propertyType: 'house',
+        listingType: 'for-sale',
+        bedrooms: 3,
+        bathrooms: 2,
+        locationId: location2.id,
+        latitude: '-26.2',
+        longitude: '28.1',
+        status: 'published',
+      });
+
+      const listing2Id = (listing2Result as any)[0].insertId;
       const [listing2] = await db
-        .insert(listings)
-        .values({
-          title: 'TEST:INTEGRATION:Listing in Location 2',
-          description: 'Test',
-          price: 3000000,
-          propertyType: 'house',
-          listingType: 'for-sale',
-          bedrooms: 3,
-          bathrooms: 2,
-          locationId: location2.id,
-          latitude: '-26.2',
-          longitude: '28.1',
-          status: 'published',
-        })
-        .$returningId();
+        .select()
+        .from(listings)
+        .where(sql`id = ${listing2Id}`);
 
       testListingIds.push(listing1.id, listing2.id);
 
@@ -743,14 +758,17 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       for (let i = 0; i < suburbs.length; i++) {
         for (let j = 0; j < searchCounts[i]; j++) {
+          const [search] = await db.insert(locationSearches).values({
+            locationId: suburbs[i].id,
+            userId: null, // Anonymous search
+            searchedAt: new Date(Date.now() - j * 60 * 60 * 1000), // Spread over hours
+          });
+
+          const searchId = (searchResult as any)[0].insertId;
           const [search] = await db
-            .insert(locationSearches)
-            .values({
-              locationId: suburbs[i].id,
-              userId: null, // Anonymous search
-              searchedAt: new Date(Date.now() - j * 60 * 60 * 1000), // Spread over hours
-            })
-            .$returningId();
+            .select()
+            .from(locationSearches)
+            .where(sql`id = ${searchId}`);
 
           testSearchIds.push(search.id);
         }

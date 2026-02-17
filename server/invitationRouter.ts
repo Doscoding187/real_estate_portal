@@ -228,7 +228,11 @@ export const invitationRouter = router({
       .where(eq(invitations.id, invitation.id));
 
     // Issue new JWT cookie with updated role
-    const [updatedUser] = await db.select().from(users).where(eq(users.id, requireUser(ctx).id)).limit(1);
+    const [updatedUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, requireUser(ctx).id))
+      .limit(1);
 
     if (updatedUser) {
       const sessionToken = await authService.createSessionToken(
@@ -362,5 +366,3 @@ export const invitationRouter = router({
       return updated;
     }),
 });
-
-

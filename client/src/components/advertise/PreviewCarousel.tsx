@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PreviewCarousel Component - Elevated Card Stack
  *

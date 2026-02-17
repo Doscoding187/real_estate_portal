@@ -7,12 +7,41 @@
  * Requirements: 5.2
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PropertyCard } from '../cards/PropertyCard';
 import { VideoCard } from '../cards/VideoCard';
 import { NeighbourhoodCard } from '../cards/NeighbourhoodCard';
 import { InsightCard } from '../cards/InsightCard';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Mock TRPC
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    explore: {
+      saveProperty: {
+        useMutation: vi.fn(() => ({
+          mutate: vi.fn(),
+          mutateAsync: vi.fn(async () => ({ data: { saved: true } })),
+          isPending: false,
+          isLoading: false,
+          error: null,
+          reset: vi.fn(),
+        })),
+      },
+    },
+  },
+}));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+  },
+});
+
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+);
 
 describe('ARIA Compliance - Basic Tests', () => {
   describe('PropertyCard ARIA attributes', () => {

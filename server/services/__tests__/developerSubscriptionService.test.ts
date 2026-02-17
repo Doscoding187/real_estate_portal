@@ -18,17 +18,23 @@ import { eq } from 'drizzle-orm';
 describe('Developer Subscription Service - Property Tests', () => {
   // Helper function to create a test developer
   async function createTestDeveloper(userId: number) {
-    const [developer] = await db
-      .insert(developers)
-      .values({
-        userId,
-        name: `Test Developer ${userId}`,
-        email: `test${userId}@example.com`,
-        category: 'residential',
-        isVerified: 0,
-        status: 'pending',
-      })
-      .returning();
+    const result = await db.insert(developers).values({
+      userId,
+      name: `Test Developer ${userId}`,
+      email: `test${userId}@example.com`,
+      category: 'residential',
+      isVerified: 0,
+      status: 'pending',
+    });
+    
+    // MySQL specific: Get inserted ID and fetch the record
+    const insertId = result[0].insertId;
+    const [developer] = await db.select().from(developers).where(eq(developers.id, insertId));
+    
+    if (!developer) {
+      throw new Error(`Failed to create test developer with ID ${insertId}`);
+    }
+
     return developer;
   }
 

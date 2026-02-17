@@ -27,7 +27,9 @@ export default function HowItWorksDemo() {
       <div className="custom-how-it-works">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Start Your Journey</h2>
-          <p className="text-slate-600">Join thousands of successful partners in just three steps</p>
+          <p className="text-slate-600">
+            Join thousands of successful partners in just three steps
+          </p>
         </div>
         <HowItWorksSection />
       </div>

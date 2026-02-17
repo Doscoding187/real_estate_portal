@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SearchFilters, propertyTypeToSlug, unslugify } from '@/lib/urlUtils';
+import { SearchFilters } from '@/lib/urlUtils';
 
 export type ViewMode = 'grid' | 'list' | 'map';
 export type SortOption = 'relevance' | 'price_asc' | 'price_desc' | 'date_desc' | 'date_asc';
@@ -15,6 +15,8 @@ export type SortOption = 'relevance' | 'price_asc' | 'price_desc' | 'date_desc' 
 interface ResultsHeaderProps {
   filters: SearchFilters;
   resultCount: number;
+  displayedPropertyCount?: number;
+  developmentCount?: number;
   isLoading?: boolean;
   viewMode: ViewMode;
   sortBy: SortOption;
@@ -33,54 +35,11 @@ interface ResultsHeaderProps {
   };
 }
 
-// Generate human-readable results title
-function generateResultsTitle(
-  filters: SearchFilters,
-  count: number,
-  isLoading?: boolean,
-  locationContext?: ResultsHeaderProps['locationContext'],
-): string {
-  const parts: string[] = [];
-
-  // Count
-  if (isLoading) {
-    parts.push('Loading');
-  } else {
-    parts.push(count.toLocaleString());
-  }
-
-  // Property type
-  if (filters.propertyType) {
-    const slug = propertyTypeToSlug[filters.propertyType];
-    parts.push(unslugify(slug || filters.propertyType));
-  } else {
-    parts.push('Properties');
-  }
-
-  // Listing type
-  if (filters.listingType === 'sale') {
-    parts.push('for Sale');
-  } else if (filters.listingType === 'rent') {
-    parts.push('to Rent');
-  }
-
-  // Location - Use Context if available, else derive from filters
-  if (locationContext) {
-    parts.push(`in ${locationContext.name}`);
-  } else {
-    if (filters.suburb && filters.city) {
-      parts.push(`in ${filters.suburb}, ${filters.city}`);
-    } else if (filters.city) {
-      parts.push(`in ${filters.city}`);
-    }
-  }
-
-  return parts.join(' ');
-}
-
 export function ResultsHeader({
   filters,
   resultCount,
+  displayedPropertyCount = resultCount,
+  developmentCount = 0,
   isLoading,
   viewMode,
   sortBy,
@@ -90,8 +49,6 @@ export function ResultsHeader({
   showMobileFilterButton = true,
   locationContext,
 }: ResultsHeaderProps) {
-  const title = generateResultsTitle(filters, resultCount, isLoading, locationContext);
-
   // Generate hierarchy breadcrumbs if context exists
   const locationHierarchy = locationContext?.hierarchy
     ? [
@@ -104,28 +61,38 @@ export function ResultsHeader({
     : null;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-gray-100">
-      {/* Title & Market Pulse */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{title}</h1>
-        {locationHierarchy && (
-          <div className="text-sm text-slate-500 font-medium mt-1">
-            Searching in: <span className="text-slate-700">{locationHierarchy}</span>
-          </div>
-        )}
-        {resultCount > 0 && (
-          <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      {/* Left Column: Market + Count */}
+      <div className="min-w-0">
+        <div className="text-sm text-slate-500">
+          <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            Live Market Updates
+            <span>Live Market Updates</span>
+          </div>
+          <div className="mt-1">
+            {!isLoading ? (
+              <span>
+                Showing {displayedPropertyCount.toLocaleString()} of {resultCount.toLocaleString()}{' '}
+                properties
+                {developmentCount > 0 ? ` and ${developmentCount.toLocaleString()} developments` : ''}
+              </span>
+            ) : (
+              <span>Loading results...</span>
+            )}
+          </div>
+        </div>
+        {locationHierarchy && (
+          <div className="mt-1 text-xs text-slate-500">
+            Searching in: <span className="text-slate-700">{locationHierarchy}</span>
           </div>
         )}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile Filter Button - Kept for legacy/tablet, but hidden if Sticky Controls are used on mobile */}
         {showMobileFilterButton && onOpenFilters && (
           <Button

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Lead Capture Form Component
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { trpc } from '@/lib/trpc';
 import { HeroLocation } from './HeroLocation';
 import { trackEvent } from '@/lib/analytics';

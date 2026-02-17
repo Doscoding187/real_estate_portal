@@ -122,8 +122,8 @@ describe('GradientButton', () => {
       render(<GradientButton loading>Loading</GradientButton>);
 
       const spinner = screen.getByLabelText('Loading');
-      expect(spinner).toBeTruthy();
-      expect(spinner.className).toContain('animate-spin');
+      expect(spinner).toBeInTheDocument();
+      expect(spinner).toHaveClass('animate-spin');
     });
 
     test('loading button is disabled', () => {

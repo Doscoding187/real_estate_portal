@@ -46,7 +46,7 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
     },
     {
       enabled: !hasActiveFilters, // Only run if NO filters
-      keepPreviousData: true,
+      placeholderData: previousData => previousData,
     },
   );
 
@@ -60,7 +60,7 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
     },
     {
       enabled: hasActiveFilters,
-      keepPreviousData: true,
+      placeholderData: previousData => previousData,
     },
   );
 

@@ -63,7 +63,10 @@ export async function queueVideoForTranscoding(
   contentId: number,
   videoUrl: string,
 ): Promise<{ jobId?: string; status: string }> {
-  console.warn('[VideoProcessing] Pipeline disabled in Phase 1 ? skipping transcoding for content', contentId);
+  console.warn(
+    '[VideoProcessing] Pipeline disabled in Phase 1 ? skipping transcoding for content',
+    contentId,
+  );
   return { status: 'completed' };
 }
 

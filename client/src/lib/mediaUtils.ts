@@ -29,10 +29,7 @@ export const resolveMediaUrl = (input?: string | null): string | null => {
     return trimmed;
   }
 
-  const base =
-    import.meta.env.VITE_CLOUDFRONT_URL ||
-    import.meta.env.VITE_ASSETS_BASE_URL ||
-    '';
+  const base = import.meta.env.VITE_CLOUDFRONT_URL || import.meta.env.VITE_ASSETS_BASE_URL || '';
 
   if (!base) return trimmed; // fallback (relative)
 
@@ -90,11 +87,7 @@ export const getPrimaryDevelopmentImageUrl = (imagesData: any): string | null =>
   // 3. Fallback to First Valid Image
   for (const img of images) {
     if (typeof img === 'string' && img.length > 0) return resolveMediaUrl(img);
-    if (
-      typeof img === 'object' &&
-      img !== null &&
-      (img.url || img.key || img.src)
-    ) {
+    if (typeof img === 'object' && img !== null && (img.url || img.key || img.src)) {
       const candidate = img.url || img.key || img.src;
       if (typeof candidate === 'string' && candidate.length > 0) {
         return resolveMediaUrl(candidate);

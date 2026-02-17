@@ -1,4 +1,4 @@
-import { WizardWorkflow, WizardStep } from '../types/wizard-workflows';
+import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-workflows';
 
 const residentialSaleSteps: WizardStep[] = [
   {
@@ -17,7 +17,7 @@ const residentialSaleSteps: WizardStep[] = [
     required: true,
     description: 'Define the brand identity and market positioning of your development.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
 
       // 1. Name is required and must be significant
       if (!data.name || data.name.trim().length < 2) {
@@ -57,7 +57,7 @@ const residentialSaleSteps: WizardStep[] = [
     required: true,
     description: 'Pinpoint the exact location and address details.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       // Check nested location object where the data actually lives
       const loc = data.location || {};
 
@@ -74,7 +74,7 @@ const residentialSaleSteps: WizardStep[] = [
     required: false,
     description: 'Configure levies, rates, and HOA details.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       // Data is merged into root by buildWizardData, but also available in specific fields
       // Since we spread ...governance into root in buildWizardData, we can check root fields
       // OR rely on our convention. Let's check both to be safe, or just root properties as standard.
@@ -103,7 +103,7 @@ const residentialSaleSteps: WizardStep[] = [
     required: true,
     description: 'Create the marketing copy and key selling points.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       const d = data as any;
       if (!d.description || d.description.length < 50) {
         errors.push({
@@ -125,7 +125,7 @@ const residentialSaleSteps: WizardStep[] = [
     required: true,
     description: 'Upload high-quality images, documents, and videos.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
       const d = data as any;
       // Check for at least one photo (Hero Candidate)
       const media = d.media || {};
@@ -144,7 +144,7 @@ const residentialSaleSteps: WizardStep[] = [
     required: true,
     description: 'Define the different unit configurations available.',
     validate: data => {
-      const errors = [];
+      const errors: FieldError[] = [];
 
       const units = data.unitTypes || [];
 

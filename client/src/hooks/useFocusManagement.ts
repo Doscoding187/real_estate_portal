@@ -6,7 +6,7 @@
  * Requirements: 10.5
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   initializeFocusManager,
   createFocusTrap,
@@ -31,7 +31,7 @@ export function useFocusManager(): void {
  * @param isActive - Whether the focus trap should be active
  * @returns Ref to attach to the container element
  */
-export function useFocusTrap<T extends HTMLElement>(isActive: boolean): React.RefObject<T> {
+export function useFocusTrap<T extends HTMLElement>(isActive: boolean): RefObject<T | null> {
   const ref = useRef<T>(null);
   const focusTrapRef = useRef<FocusTrap | null>(null);
 
@@ -64,7 +64,7 @@ export function useFocusTrap<T extends HTMLElement>(isActive: boolean): React.Re
 export function useAutoFocus<T extends HTMLElement>(
   shouldFocus: boolean = true,
   delay: number = 0,
-): React.RefObject<T> {
+): RefObject<T | null> {
   const ref = useRef<T>(null);
 
   useEffect(() => {
@@ -111,11 +111,11 @@ export function useFocusRestore() {
  * @returns Object with ref and boolean indicating if focus is within
  */
 export function useFocusWithin<T extends HTMLElement>(): {
-  ref: React.RefObject<T>;
+  ref: RefObject<T | null>;
   isFocusWithin: boolean;
 } {
   const ref = useRef<T>(null);
-  const [isFocusWithin, setIsFocusWithin] = React.useState(false);
+  const [isFocusWithin, setIsFocusWithin] = useState(false);
 
   useEffect(() => {
     const element = ref.current;
@@ -150,11 +150,11 @@ export function useFocusWithin<T extends HTMLElement>(): {
  * @returns Object with ref and boolean indicating if focus is visible
  */
 export function useFocusVisible<T extends HTMLElement>(): {
-  ref: React.RefObject<T>;
+  ref: RefObject<T | null>;
   isFocusVisible: boolean;
 } {
   const ref = useRef<T>(null);
-  const [isFocusVisible, setIsFocusVisible] = React.useState(false);
+  const [isFocusVisible, setIsFocusVisible] = useState(false);
 
   useEffect(() => {
     const element = ref.current;

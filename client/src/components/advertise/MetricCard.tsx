@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 import { softUITokens } from './design-tokens';
 import { fadeUp } from '@/lib/animations/advertiseAnimations';
@@ -79,7 +79,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   animationDuration = 2000,
   enableCountUp = true,
 }) => {
-  const { ref, isVisible } = useScrollAnimation({
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({
     threshold: 0.3,
     triggerOnce: true,
   });

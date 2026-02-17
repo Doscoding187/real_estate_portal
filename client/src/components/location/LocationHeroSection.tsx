@@ -32,6 +32,8 @@ interface LocationHeroSectionProps {
   campaign?: HeroCampaign | null;
   quickLinks?: { label: string; path?: string; slug?: string }[];
   initialSearchQuery?: string;
+  activeTab?: string | null;
+  onActiveTabChange?: (tabId: string) => void;
 }
 
 // SA-specific property categories
@@ -92,11 +94,14 @@ export function LocationHeroSection({
   campaign,
   quickLinks = [],
   initialSearchQuery = '',
+  activeTab: controlledActiveTab,
+  onActiveTabChange,
 }: LocationHeroSectionProps) {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [internalActiveTab, setInternalActiveTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showFilters, setShowFilters] = useState(false);
+  const activeTab = controlledActiveTab ?? internalActiveTab;
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -115,7 +120,10 @@ export function LocationHeroSection({
   });
 
   const handleCategoryClick = (categoryId: string) => {
-    setActiveTab(categoryId);
+    if (controlledActiveTab === undefined) {
+      setInternalActiveTab(categoryId);
+    }
+    onActiveTabChange?.(categoryId);
     setShowFilters(true);
     trackEvent('hero_category_click', { category: categoryId, location: locationSlug });
   };

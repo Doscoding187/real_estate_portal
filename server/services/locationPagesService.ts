@@ -243,6 +243,10 @@ export const locationPagesService = {
           slug: suburbs.slug,
           listingCount: listingCountSql,
           avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
+          avgSalePrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'sale')`,
+          avgRentalPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'rent')`,
+          propertiesForSale: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'sale')`,
+          propertiesForRent: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'rent')`,
         })
         .from(suburbs)
         .where(eq(suburbs.cityId, city.id))

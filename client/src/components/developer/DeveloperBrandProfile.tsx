@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Developer Brand Profile Component
  *

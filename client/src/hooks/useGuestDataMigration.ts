@@ -27,7 +27,7 @@ export function useGuestDataMigration() {
   });
 
   useEffect(() => {
-    if (!loading && isAuthenticated && !migrationMutation.isLoading) {
+    if (!loading && isAuthenticated && !migrationMutation.isPending) {
       const counts = getActivityCounts();
 
       // Only migrate if there's data to migrate
@@ -43,6 +43,6 @@ export function useGuestDataMigration() {
   }, [isAuthenticated, loading]); // Only run when auth status changes
 
   return {
-    isMigrating: migrationMutation.isLoading,
+    isMigrating: migrationMutation.isPending,
   };
 }

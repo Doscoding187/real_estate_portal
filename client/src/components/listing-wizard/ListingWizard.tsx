@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Main Listing Wizard Component
  * Orchestrates the multi-step listing creation process

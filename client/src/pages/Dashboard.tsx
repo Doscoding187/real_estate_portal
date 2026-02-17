@@ -40,6 +40,15 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading: authLoading } = useAuth();
   const [deletePropertyId, setDeletePropertyId] = useState<number | null>(null);
+  const referrerStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled:
+      isAuthenticated &&
+      user?.role !== 'super_admin' &&
+      user?.role !== 'property_developer' &&
+      user?.role !== 'agency_admin',
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
   const isAdmin = user?.role === 'super_admin' || user?.role === 'agency_admin';
 
@@ -58,10 +67,15 @@ export default function Dashboard() {
     return null;
   }
 
+  if (referrerStatusQuery.data?.hasIdentity) {
+    setLocation('/referrer/dashboard');
+    return null;
+  }
+
   const { data: properties, isLoading, refetch } = trpc.properties.myProperties.useQuery();
   const propertyItems = Array.isArray(properties)
     ? properties
-    : (properties as any)?.items ?? (properties as any)?.results ?? [];
+    : ((properties as any)?.items ?? (properties as any)?.results ?? []);
 
   const deletePropertyMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
@@ -159,7 +173,10 @@ export default function Dashboard() {
               <CardHeader className="pb-3">
                 <CardDescription>Sold/Rented</CardDescription>
                 <CardTitle className="text-3xl">
-                  {propertyItems.filter((p: any) => p.status === 'sold' || p.status === 'rented').length}
+                  {
+                    propertyItems.filter((p: any) => p.status === 'sold' || p.status === 'rented')
+                      .length
+                  }
                 </CardTitle>
               </CardHeader>
             </Card>

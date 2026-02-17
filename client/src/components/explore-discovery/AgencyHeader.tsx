@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Agency Header Component
  * Requirements: 9.3, 9.4

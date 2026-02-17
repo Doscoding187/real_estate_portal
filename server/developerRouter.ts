@@ -18,6 +18,7 @@ import {
 import { getActivityFeed as getActivityFeedService } from './services/activityService';
 import { getKPIsWithCache } from './services/kpiService';
 import { seedCleanupService } from './services/seedCleanupService';
+import { capturePublicLead } from './services/publicLeadCaptureService';
 import {
   developmentDrafts,
   developments,
@@ -294,22 +295,36 @@ function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
     });
   }
 }
+
+const EMPTY_DEVELOPER_KPIS = {
+  totalLeads: 0,
+  qualifiedLeads: 0,
+  conversionRate: 0,
+  unitsSold: 0,
+  unitsAvailable: 0,
+  affordabilityMatchPercent: 0,
+  marketingPerformanceScore: 0,
+  trends: {
+    totalLeads: 0,
+    qualifiedLeads: 0,
+    conversionRate: 0,
+    unitsSold: 0,
+    affordabilityMatchPercent: 0,
+    marketingPerformanceScore: 0,
+  },
+};
 // ===========================================================================
 // ROUTER DEFINITION
 // ===========================================================================
 
 export const developerRouter = router({
-  adminListPendingDevelopers: protectedProcedure
-    .input(z.void())
-    .query(async () => {
-      return { developers: [] as any[], total: 0 };
-    }),
+  adminListPendingDevelopers: protectedProcedure.input(z.void()).query(async () => {
+    return { developers: [] as any[], total: 0 };
+  }),
 
-  adminListAllDevelopers: protectedProcedure
-    .input(z.void())
-    .query(async () => {
-      return { developers: [] as any[], total: 0 };
-    }),
+  adminListAllDevelopers: protectedProcedure.input(z.void()).query(async () => {
+    return { developers: [] as any[], total: 0 };
+  }),
 
   adminSetTrusted: protectedProcedure
     .input(z.object({ developerId: z.number(), isTrusted: z.boolean() }))
@@ -425,6 +440,145 @@ export const developerRouter = router({
 
       return profile;
     }),
+  saveDraft: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().optional(),
+        brandProfileId: z.number().int().optional(),
+        draftData: z.any(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const sanitized = sanitizeDraftData(input.draftData ?? {});
+      const currentStep = Math.max(0, Number((sanitized as any).currentPhase ?? 0));
+      const progress = Math.min(100, Math.max(0, Math.round((currentStep / 11) * 100)));
+      const draftName =
+        String((sanitized as any).developmentData?.name ?? (sanitized as any).name ?? '').trim() ||
+        'Untitled Draft';
+
+      try {
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+        const dbConn = await db.getDb();
+        if (!dbConn) {
+          return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
+        }
+
+        if (input.id) {
+          const updateSet: Record<string, any> = {
+            draftName,
+            draftData: sanitized,
+            progress,
+            currentStep,
+            lastModified: new Date().toISOString(),
+          };
+          if (input.brandProfileId !== undefined) {
+            updateSet.developerBrandProfileId = input.brandProfileId;
+          }
+
+          await dbConn
+            .update(developmentDrafts)
+            .set(updateSet)
+            .where(
+              and(
+                eq(developmentDrafts.id, input.id),
+                eq(developmentDrafts.developerId, profile.id),
+              ),
+            );
+
+          return { id: input.id, success: true, draftData: sanitized };
+        }
+
+        const insertResult = await dbConn.insert(developmentDrafts).values({
+          developerId: profile.id,
+          developerBrandProfileId: input.brandProfileId ?? null,
+          draftName,
+          draftData: sanitized,
+          progress,
+          currentStep,
+        });
+        const inserted = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+
+        return {
+          id: Number(inserted?.insertId ?? 0),
+          success: true,
+          draftData: sanitized,
+        };
+      } catch (error) {
+        console.warn('[developer.saveDraft] Falling back to safe response:', error);
+        return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
+      }
+    }),
+
+  getDraft: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+        const dbConn = await db.getDb();
+        if (!dbConn) return null;
+
+        const [draft] = await dbConn
+          .select()
+          .from(developmentDrafts)
+          .where(
+            and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+          )
+          .limit(1);
+
+        if (!draft) return null;
+
+        return {
+          ...draft,
+          draftData: sanitizeDraftData((draft as any).draftData ?? {}),
+        };
+      } catch (error) {
+        console.warn('[developer.getDraft] Returning null due to error:', error);
+        return null;
+      }
+    }),
+
+  getDrafts: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      const dbConn = await db.getDb();
+      if (!dbConn) return [];
+
+      const drafts = await dbConn
+        .select()
+        .from(developmentDrafts)
+        .where(eq(developmentDrafts.developerId, profile.id))
+        .orderBy(desc(developmentDrafts.lastModified));
+
+      return drafts.map((draft: any) => ({
+        ...draft,
+        draftData: sanitizeDraftData(draft?.draftData ?? {}),
+      }));
+    } catch (error) {
+      console.warn('[developer.getDrafts] Returning empty list due to error:', error);
+      return [];
+    }
+  }),
+
+  deleteDraft: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+        const dbConn = await db.getDb();
+        if (!dbConn) return { success: false, id: input.id };
+
+        await dbConn
+          .delete(developmentDrafts)
+          .where(
+            and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+          );
+
+        return { success: true, id: input.id };
+      } catch (error) {
+        console.warn('[developer.deleteDraft] Safe fallback after error:', error);
+        return { success: false, id: input.id };
+      }
+    }),
   getPublishedDevelopments: publicProcedure
     .input(
       z.object({
@@ -480,6 +634,279 @@ export const developerRouter = router({
       };
     }),
 
+  getHomeTrendingFeed: publicProcedure
+    .input(
+      z.object({
+        tab: z.enum([
+          'buy',
+          'rent',
+          'developments',
+          'shared_living',
+          'plot_land',
+          'commercial',
+        ]),
+        province: z.string().optional(),
+        city: z.string().optional(),
+        suburb: z.string().optional(),
+        limit: z.number().min(1).max(8).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const limit = input.limit ?? 5;
+      const requestedProvince = input.province?.trim() || undefined;
+      const requestedCity = input.city?.trim() || undefined;
+      const requestedSuburb = input.suburb?.trim() || undefined;
+
+      type LocationScope = 'suburb' | 'city' | 'province' | 'national';
+      type LocationFilter = {
+        province?: string;
+        city?: string;
+        suburb?: string;
+      };
+
+      const normalizeDevImage = (images: any): string => {
+        if (!images) return '';
+        if (Array.isArray(images) && images.length > 0) {
+          const first = images[0];
+          if (typeof first === 'string') return first;
+          if (first && typeof first === 'object' && typeof first.url === 'string') return first.url;
+        }
+        return '';
+      };
+
+      const mapDevelopment = (dev: any) => ({
+        id: String(dev.id),
+        kind: 'development' as const,
+        title: dev.name,
+        city: dev.city || '',
+        suburb: dev.suburb || '',
+        priceFrom: Number(dev.priceFrom || 0),
+        priceTo: Number(dev.priceTo || 0),
+        image: normalizeDevImage(dev.images),
+        href: `/development/${dev.slug || dev.id}`,
+      });
+
+      const mapListing = (prop: any) => ({
+        id: String(prop.id),
+        kind: 'listing' as const,
+        title: prop.title || 'Property Listing',
+        city: prop.city || '',
+        suburb: prop.suburb || '',
+        priceFrom: Number(prop.price || 0),
+        priceTo: Number(prop.price || 0),
+        image: Array.isArray(prop.images) && prop.images[0]?.url ? prop.images[0].url : '',
+        href: `/property/${prop.id}`,
+      });
+
+      const fetchTabItems = async (locationFilter: LocationFilter): Promise<{
+        items: Array<{
+          id: string;
+          kind: 'development' | 'listing';
+          title: string;
+          city: string;
+          suburb: string;
+          priceFrom: number;
+          priceTo: number;
+          image: string;
+          href: string;
+        }>;
+        source: 'developments' | 'listings';
+      }> => {
+        if (input.tab === 'buy') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'residential',
+            transactionType: 'for_sale',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'rent') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'residential',
+            transactionType: 'for_rent',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'developments') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'residential',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'plot_land') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'land',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'shared_living') {
+          const { propertySearchService } = await import('./services/propertySearchService');
+          const sharedListingTypes: Array<'rent' | 'sale'> = ['rent'];
+          const results = await Promise.all(
+            sharedListingTypes.map(listingType =>
+              propertySearchService.searchProperties(
+                {
+                  province: locationFilter.province,
+                  city: locationFilter.city,
+                  suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+                  listingType,
+                } as any,
+                'date_desc',
+                1,
+                limit,
+              ),
+            ),
+          );
+          const merged = results.flatMap(r => r.properties || []).slice(0, limit);
+          return { items: merged.map(mapListing), source: 'listings' };
+        }
+
+        // commercial
+        const { propertySearchService } = await import('./services/propertySearchService');
+        const commercialResults = await Promise.all(
+          (['sale', 'rent'] as const).map(listingType =>
+            propertySearchService.searchProperties(
+              {
+                province: locationFilter.province,
+                city: locationFilter.city,
+                suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+                propertyType: ['commercial'],
+                listingType,
+              } as any,
+              'date_desc',
+              1,
+              limit,
+            ),
+          ),
+        );
+        const deduped = Array.from(
+          new Map(
+            commercialResults
+              .flatMap(r => r.properties || [])
+              .map((prop: any) => [String(prop.id), prop]),
+          ).values(),
+        ).slice(0, limit);
+
+        return { items: deduped.map(mapListing), source: 'listings' };
+      };
+
+      const requestedScope: LocationScope = requestedSuburb
+        ? 'suburb'
+        : requestedCity
+          ? 'city'
+          : requestedProvince
+            ? 'province'
+            : 'national';
+
+      const locationCandidates: Array<{ scope: LocationScope; filters: LocationFilter }> = [];
+
+      if (requestedSuburb) {
+        locationCandidates.push({
+          scope: 'suburb',
+          filters: {
+            province: requestedProvince,
+            city: requestedCity,
+            suburb: requestedSuburb,
+          },
+        });
+      }
+
+      if (requestedCity) {
+        locationCandidates.push({
+          scope: 'city',
+          filters: {
+            province: requestedProvince,
+            city: requestedCity,
+          },
+        });
+      }
+
+      if (requestedProvince) {
+        locationCandidates.push({
+          scope: 'province',
+          filters: {
+            province: requestedProvince,
+          },
+        });
+      }
+
+      locationCandidates.push({ scope: 'national', filters: {} });
+
+      const dedupedCandidates = locationCandidates.filter(
+        (candidate, idx, all) =>
+          all.findIndex(
+            c =>
+              c.scope === candidate.scope &&
+              (c.filters.province || '') === (candidate.filters.province || '') &&
+              (c.filters.city || '') === (candidate.filters.city || '') &&
+              (c.filters.suburb || '') === (candidate.filters.suburb || ''),
+          ) === idx,
+      );
+
+      let items: Array<{
+        id: string;
+        kind: 'development' | 'listing';
+        title: string;
+        city: string;
+        suburb: string;
+        priceFrom: number;
+        priceTo: number;
+        image: string;
+        href: string;
+      }> = [];
+      let source: 'developments' | 'listings' = 'developments';
+      let selectedScope: LocationScope = requestedScope;
+
+      for (const candidate of dedupedCandidates) {
+        const result = await fetchTabItems(candidate.filters);
+        if (result.items.length > 0 || candidate.scope === 'national') {
+          items = result.items;
+          source = result.source;
+          selectedScope = candidate.scope;
+          break;
+        }
+      }
+
+      const usedFallback = requestedScope !== selectedScope;
+      const fallbackLevel = usedFallback ? `${requestedScope}_to_${selectedScope}` : 'none';
+
+
+      return {
+        items,
+        meta: {
+          tab: input.tab,
+          source,
+          usedFallback,
+          fallbackLevel,
+          requestedScope,
+          selectedScope,
+          requestedProvince: requestedProvince ?? null,
+          requestedCity: requestedCity ?? null,
+          requestedSuburb: requestedSuburb ?? null,
+          resultCount: items.length,
+        },
+      };
+    }),
+
   getPublicDevelopmentBySlug: publicProcedure
     .input(z.object({ slugOrId: z.string().min(1) }))
     .query(async ({ input }) => {
@@ -495,6 +922,51 @@ export const developerRouter = router({
     .query(async ({ input }) => {
       return await developmentService.listPublicDevelopments({
         limit: input.limit,
+      });
+    }),
+
+  createLead: publicProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        developerBrandProfileId: z.number().int().positive().optional(),
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        message: z.string().optional(),
+        affordabilityData: z
+          .object({
+            monthlyIncome: z.number().optional(),
+            monthlyExpenses: z.number().optional(),
+            monthlyDebts: z.number().optional(),
+            availableDeposit: z.number().optional(),
+            maxAffordable: z.number().optional(),
+            calculatedAt: z.string().optional(),
+          })
+          .optional(),
+        referrerUrl: z.string().optional(),
+        utmSource: z.string().optional(),
+        utmMedium: z.string().optional(),
+        utmCampaign: z.string().optional(),
+        leadSource: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      return await capturePublicLead({
+        developmentId: input.developmentId,
+        developerBrandProfileId: input.developerBrandProfileId,
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        message: input.message,
+        leadType: 'inquiry',
+        source: input.leadSource || 'development_detail',
+        leadSource: input.leadSource || 'development_detail',
+        referrerUrl: input.referrerUrl,
+        utmSource: input.utmSource,
+        utmMedium: input.utmMedium,
+        utmCampaign: input.utmCampaign,
+        affordabilityData: input.affordabilityData,
       });
     }),
 
@@ -564,10 +1036,26 @@ export const developerRouter = router({
     }),
 
   getDashboardKPIs: protectedProcedure
-    .input(z.object({ timeRange: z.enum(['7d', '30d', '90d']).optional() }))
+    .input(
+      z
+        .object({
+          timeRange: z.enum(['7d', '30d', '90d']).optional(),
+          forceRefresh: z.boolean().optional(),
+        })
+        .optional(),
+    )
     .query(async ({ ctx, input }) => {
-      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-      return await getKPIsWithCache(profile.id, input.timeRange);
+      try {
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+        return await getKPIsWithCache(
+          profile.id,
+          input?.timeRange ?? '30d',
+          input?.forceRefresh ?? false,
+        );
+      } catch (error) {
+        console.warn('[developer.getDashboardKPIs] Returning safe defaults due to error:', error);
+        return EMPTY_DEVELOPER_KPIS;
+      }
     }),
 
   getSubscription: protectedProcedure.query(async ({ ctx }) => {
@@ -672,22 +1160,31 @@ export const developerRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await requireDeveloperProfileByUserId(requireUser(ctx).id);
-      return await developmentService.updateDevelopment(input.id, requireUser(ctx).id, input.data as any);
+      return await developmentService.updateDevelopment(
+        input.id,
+        requireUser(ctx).id,
+        input.data as any,
+      );
     }),
 
   getDevelopment: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      try {
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
 
-      // NOTE: Using getDevelopmentWithPhases to ensure we return full object
-      const dev = await developmentService.getDevelopmentWithPhases(input.id);
-      if (!dev) throw new TRPCError({ code: 'NOT_FOUND' });
+        // NOTE: Using getDevelopmentWithPhases to ensure we return full object
+        const dev = await developmentService.getDevelopmentWithPhases(input.id);
+        if (!dev) return null;
 
-      if (dev.developerId !== profile.id) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not own this development' });
+        if (dev.developerId !== profile.id) {
+          return null;
+        }
+        return dev;
+      } catch (error) {
+        console.warn('[developer.getDevelopment] Returning null due to error:', error);
+        return null;
       }
-      return dev;
     }),
 
   getDevelopments: protectedProcedure.query(async ({ ctx }) => {
@@ -697,16 +1194,6 @@ export const developerRouter = router({
     );
     return await developmentService.getDevelopmentsByDeveloperId(profile.id);
   }),
-
-  getDrafts: protectedProcedure.query(async () => {
-    return [] as any[];
-  }),
-
-  deleteDraft: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async () => {
-      return { success: true };
-    }),
 
   upgradeSubscription: protectedProcedure
     .input(z.object({ tier: z.string().optional() }).optional())
@@ -746,4 +1233,3 @@ export const developerRouter = router({
       return result;
     }),
 });
-

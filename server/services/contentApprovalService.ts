@@ -1,5 +1,10 @@
 import { db } from '../db';
-import { contentApprovalQueue, explorePartners, partnerTiers, exploreContent } from '../../drizzle/schema';
+import {
+  contentApprovalQueue,
+  explorePartners,
+  partnerTiers,
+  exploreContent,
+} from '../../drizzle/schema';
 import { eq, and, desc, sql, type SQL } from 'drizzle-orm';
 import { partnerService } from './partnerService';
 
@@ -296,12 +301,26 @@ export class ContentApprovalService {
     });
 
     if (!partner) {
-      return { total: 0, approved: 0, rejected: 0, pending: 0, revisionRequested: 0, approvalRate: 0 };
+      return {
+        total: 0,
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        revisionRequested: 0,
+        approvalRate: 0,
+      };
     }
 
     const submittedBy = toInt(partner.userId);
     if (!Number.isFinite(submittedBy)) {
-      return { total: 0, approved: 0, rejected: 0, pending: 0, revisionRequested: 0, approvalRate: 0 };
+      return {
+        total: 0,
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        revisionRequested: 0,
+        approvalRate: 0,
+      };
     }
 
     const items = await db.query.contentApprovalQueue.findMany({

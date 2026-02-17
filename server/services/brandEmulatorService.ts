@@ -204,14 +204,14 @@ class BrandEmulatorService {
         for (let i = 0; i < propertyData.mediaUrls.length; i++) {
           const [media] = await database
             .insert(listingMedia)
-              .values({
-                listingId: property.id,
-                mediaType: 'image',
-                originalUrl: propertyData.mediaUrls[i],
-                isPrimary: i === 0 ? 1 : 0,
-                displayOrder: i,
-                createdAt: new Date(),
-              })
+            .values({
+              listingId: property.id,
+              mediaType: 'image',
+              originalUrl: propertyData.mediaUrls[i],
+              isPrimary: i === 0 ? 1 : 0,
+              displayOrder: i,
+              createdAt: new Date(),
+            })
             .$returningId();
           mediaIds.push(media.id);
         }
@@ -293,31 +293,31 @@ class BrandEmulatorService {
     const database = await db.getDb();
     if (!database) throw new Error('Database not available');
 
-      const [devRows, propertyRows, leadRows] = await Promise.all([
-        database
-          .select()
-          .from(developments)
-          .where(eq(developments.developerBrandProfileId, brandProfileId)),
+    const [devRows, propertyRows, leadRows] = await Promise.all([
+      database
+        .select()
+        .from(developments)
+        .where(eq(developments.developerBrandProfileId, brandProfileId)),
 
       database
         .select()
         .from(properties)
         .where(eq(properties.developerBrandProfileId, brandProfileId)),
 
-        database
-          .select()
-          .from(leads)
-          .where(eq(leads.developerBrandProfileId, brandProfileId))
-          .orderBy(desc(leads.createdAt)),
-      ]);
+      database
+        .select()
+        .from(leads)
+        .where(eq(leads.developerBrandProfileId, brandProfileId))
+        .orderBy(desc(leads.createdAt)),
+    ]);
 
-      return {
-        developments: devRows,
-        properties: propertyRows,
-        leads: leadRows,
-        totalEntities: devRows.length + propertyRows.length + leadRows.length,
-      };
-    }
+    return {
+      developments: devRows,
+      properties: propertyRows,
+      leads: leadRows,
+      totalEntities: devRows.length + propertyRows.length + leadRows.length,
+    };
+  }
 
   /**
    * Cleanup all entities associated with a brand profile

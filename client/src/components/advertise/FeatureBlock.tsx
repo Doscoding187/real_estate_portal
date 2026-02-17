@@ -48,7 +48,7 @@ export const FeatureBlock: React.FC<FeatureBlockProps> = ({
   index,
   className = '',
 }) => {
-  const { ref, isVisible } = useScrollAnimation({
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({
     threshold: 0.2,
     triggerOnce: true,
   });

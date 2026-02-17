@@ -3,6 +3,9 @@ import type { Express, Request, Response } from 'express';
 import { getSessionCookieOptions } from './cookies';
 import { authService } from './auth';
 import { ENV } from './env';
+import { and, eq } from 'drizzle-orm';
+import { getDb } from '../db';
+import { distributionIdentities } from '../../drizzle/schema';
 
 /**
  * Register authentication routes
@@ -105,6 +108,27 @@ export function registerAuthRoutes(app: Express) {
       const { user, sessionToken } = await authService.login(email, password, rememberMe);
       console.log('✅ Auth service returned user:', user.email);
 
+      let hasReferrerIdentity = false;
+      try {
+        const db = await getDb();
+        if (db) {
+          const [identity] = await db
+            .select({ id: distributionIdentities.id })
+            .from(distributionIdentities)
+            .where(
+              and(
+                eq(distributionIdentities.userId, user.id),
+                eq(distributionIdentities.identityType, 'referrer'),
+                eq(distributionIdentities.active, 1),
+              ),
+            )
+            .limit(1);
+          hasReferrerIdentity = Boolean(identity?.id);
+        }
+      } catch (identityError) {
+        console.warn('[Auth] Referrer identity lookup failed (non-fatal):', identityError);
+      }
+
       // Feature 4: "Remember Me" Functionality
       const maxAge = rememberMe
         ? 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -127,6 +151,7 @@ export function registerAuthRoutes(app: Express) {
           email: user.email,
           name: user.name,
           role: user.role,
+          hasReferrerIdentity,
         },
       });
     } catch (error: any) {

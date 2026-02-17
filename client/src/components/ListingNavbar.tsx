@@ -5,6 +5,8 @@ import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { generatePropertyUrl } from '@/lib/urlUtils';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { trpc } from '@/lib/trpc';
 
 interface ListingNavbarProps {
   defaultLocations?: {
@@ -19,7 +21,14 @@ interface ListingNavbarProps {
 
 export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
   const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
+  const referrerStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasIdentity);
 
   // Multi-location state
   const [selectedLocations, setSelectedLocations] = useState<
@@ -202,19 +211,38 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
             FREE
           </Badge>
         </Button>
+        {hasReferrerAccess && (
+          <Button
+            variant="secondary"
+            className="hidden md:flex bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm h-9 px-4"
+            onClick={() => setLocation('/referrer/dashboard')}
+          >
+            Referrer Dashboard
+          </Button>
+        )}
 
         <div
           className="relative cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => setLocation('/login')}
-          title="Sign In"
+          onClick={() =>
+            setLocation(
+              isAuthenticated
+                ? hasReferrerAccess
+                  ? '/referrer/dashboard'
+                  : '/dashboard'
+                : '/login',
+            )
+          }
+          title={isAuthenticated ? 'Account' : 'Sign In'}
         >
           <User className="h-6 w-6 text-white" />
-          <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-[#005ca8]"></span>
+          {!isAuthenticated && (
+            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-[#005ca8]"></span>
+          )}
         </div>
 
         <div
           className="cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => setLocation('/dashboard')}
+          onClick={() => setLocation(hasReferrerAccess ? '/referrer/dashboard' : '/dashboard')}
           title="Menu"
         >
           <Menu className="h-6 w-6 text-white" />

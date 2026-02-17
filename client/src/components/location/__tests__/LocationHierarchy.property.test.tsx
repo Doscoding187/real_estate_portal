@@ -49,21 +49,21 @@ describe('LocationHierarchy - Property 2: Hierarchical Data Consistency', () => 
           expect(path).toContain(hierarchy.province.slug);
 
           // 3. If city exists, path must contain city slug
+          // 3. If city exists, path must contain city slug
           if (hierarchy.city) {
-            expect(path).toContain(hierarchy.city.slug);
-            // 4. Hierarchy order check: Province before City
-            const provinceIndex = path.indexOf(hierarchy.province.slug);
-            const cityIndex = path.indexOf(hierarchy.city.slug);
-            expect(cityIndex).toBeGreaterThan(provinceIndex);
+            // Verify path structure: /province/city
+            const segments = path.split('/').filter(Boolean); // Remove empty strings from leading slash
+            expect(segments.length).toBeGreaterThanOrEqual(2);
+            expect(segments[0]).toBe(hierarchy.province.slug);
+            expect(segments[1]).toBe(hierarchy.city.slug);
           }
 
           // 5. If suburb exists, path must contain suburb slug and city slug
           if (hierarchy.city && hierarchy.suburb) {
-            expect(path).toContain(hierarchy.suburb.slug);
-            // 6. Hierarchy order check: City before Suburb
-            const cityIndex = path.indexOf(hierarchy.city.slug);
-            const suburbIndex = path.indexOf(hierarchy.suburb.slug);
-            expect(suburbIndex).toBeGreaterThan(cityIndex);
+            // Verify path structure: /province/city/suburb
+            const segments = path.split('/').filter(Boolean);
+            expect(segments.length).toBeGreaterThanOrEqual(3);
+            expect(segments[2]).toBe(hierarchy.suburb.slug);
           }
         },
       ),

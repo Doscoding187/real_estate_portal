@@ -152,6 +152,7 @@ export default function Login() {
       if (role === 'super_admin') redirectPath = '/admin/overview';
       else if (role === 'property_developer') redirectPath = '/developer/dashboard';
       else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
+      else if (result.user?.hasReferrerIdentity) redirectPath = '/referrer/dashboard';
       else if (role === 'agent') redirectPath = '/agent/dashboard';
 
       console.log('[Login] Redirecting to:', redirectPath);

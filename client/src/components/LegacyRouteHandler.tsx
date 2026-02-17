@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { CITY_PROVINCE_MAP } from '@/lib/locationUtils';
+import { CITY_PROVINCE_MAP, PROVINCE_SLUGS } from '@/lib/locationUtils';
+
+function normalizeSlug(value: string) {
+  return String(value || '')
+    .trim()
+    .toLowerCase();
+}
 
 /**
  * Handles redirect for City Shortcuts (e.g., /property-for-sale/johannesburg)
@@ -32,6 +38,11 @@ export function LegacyCityRedirect({ params }: { params: { province: string; cit
   const { province, city } = params;
 
   useEffect(() => {
+    const normalizedProvince = normalizeSlug(province);
+    if (!PROVINCE_SLUGS.includes(normalizedProvince)) {
+      setLocation('/404', { replace: true });
+      return;
+    }
     setLocation(`/property-for-sale/${province}/${city}`, { replace: true });
   }, [province, city, setLocation]);
 
@@ -51,6 +62,11 @@ export function LegacySuburbRedirect({
   const { province, city, suburb } = params;
 
   useEffect(() => {
+    const normalizedProvince = normalizeSlug(province);
+    if (!PROVINCE_SLUGS.includes(normalizedProvince)) {
+      setLocation('/404', { replace: true });
+      return;
+    }
     setLocation(`/property-for-sale/${province}/${city}/${suburb}`, { replace: true });
   }, [province, city, suburb, setLocation]);
 
@@ -66,8 +82,11 @@ export function LegacyProvinceRedirect({ params }: { params: { province: string 
   const { province } = params;
 
   useEffect(() => {
-    // Check if it's a known province or potentially a city without province (legacy issue?)
-    // For now assume strictly province if it matches
+    const normalizedProvince = normalizeSlug(province);
+    if (!PROVINCE_SLUGS.includes(normalizedProvince)) {
+      setLocation('/404', { replace: true });
+      return;
+    }
     setLocation(`/property-for-sale/${province}`, { replace: true });
   }, [province, setLocation]);
 

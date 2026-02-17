@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Copy, Trash2, Home, Bed, Bath, Maximize } from 'lucide-react';

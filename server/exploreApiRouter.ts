@@ -261,6 +261,129 @@ export const exploreApiRouter = router({
     }),
 
   /**
+   * Get agency feed - stabilization stub
+   */
+  getAgencyFeed: protectedProcedure
+    .input(
+      z.object({
+        agencyId: z.number().int().optional(),
+        includeAgentContent: z.boolean().optional(),
+        limit: z.number().int().min(1).max(50).optional(),
+        offset: z.number().int().min(0).optional(),
+        seed: z.string().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      return {
+        success: true,
+        data: {
+          shorts: [],
+          feedType: 'agency',
+          hasMore: false,
+          offset: input.offset ?? 0,
+          metadata: {
+            agencyName: 'Agency',
+            agencyLogo: null,
+            isVerified: false,
+            totalContent: 0,
+            includeAgentContent: input.includeAgentContent ?? true,
+          },
+        },
+      };
+    }),
+
+  /**
+   * Get video feed - stabilization stub
+   */
+  getVideoFeed: protectedProcedure
+    .input(
+      z.object({
+        sessionHistory: z.array(z.number()).optional(),
+        categoryId: z.number().optional(),
+        limit: z.number().int().min(1).max(50).optional(),
+        offset: z.number().int().min(0).optional(),
+        seed: z.string().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      return {
+        success: true,
+        data: {
+          videos: [],
+          hasMore: false,
+          nextOffset: (input.offset ?? 0) + (input.limit ?? 0),
+        },
+      };
+    }),
+
+  /**
+   * Toggle creator follow - stabilization stub
+   */
+  toggleCreatorFollow: protectedProcedure
+    .input(z.object({ creatorId: z.number().int() }))
+    .mutation(async () => {
+      return {
+        success: true,
+        data: {
+          following: true,
+        },
+      };
+    }),
+
+  /**
+   * Toggle neighbourhood follow - stabilization stub
+   */
+  toggleNeighbourhoodFollow: protectedProcedure
+    .input(z.object({ neighbourhoodId: z.number().int() }))
+    .mutation(async () => {
+      return {
+        success: true,
+        data: {
+          following: true,
+        },
+      };
+    }),
+
+  /**
+   * Toggle save property - stabilization stub
+   */
+  toggleSaveProperty: protectedProcedure
+    .input(
+      z.object({
+        contentId: z.number().int(),
+        propertyId: z.number().int().optional(),
+      }),
+    )
+    .mutation(async () => {
+      return {
+        success: true,
+        data: {
+          saved: true,
+        },
+      };
+    }),
+
+  /**
+   * Get followed items - stabilization stub
+   */
+  getFollowedItems: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).optional(),
+        })
+        .optional(),
+    )
+    .query(async () => {
+      return {
+        success: true,
+        data: {
+          creators: [],
+          neighbourhoods: [],
+        },
+      };
+    }),
+  /**
    * Track engagement - V3 (STUBBED)
    * exploreEngagements table not available
    */
@@ -330,4 +453,3 @@ export const exploreApiRouter = router({
       }
     }),
 });
-

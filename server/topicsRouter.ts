@@ -128,13 +128,10 @@ router.get('/:slug/feed', async (req, res) => {
     // Optionally get shorts for topic
     let shorts: any[] = [];
     if (includeShorts === 'true') {
-      shorts = await topicsService.getShortsForTopic(
-        topic.id,
-        {
-          page: parseInt(page as string),
-          limit: Math.floor(parseInt(limit as string) / 4), // 25% shorts
-        },
-      );
+      shorts = await topicsService.getShortsForTopic(topic.id, {
+        page: parseInt(page as string),
+        limit: Math.floor(parseInt(limit as string) / 4), // 25% shorts
+      });
     }
 
     res.json({

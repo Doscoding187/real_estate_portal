@@ -13,8 +13,7 @@ import { useMemo } from 'react';
 import { useDevelopmentWizard } from './useDevelopmentWizard';
 
 export function useWizardNavigation() {
-  const { developmentType, developmentData, residentialConfig, estateProfile } =
-    useDevelopmentWizard();
+  const { developmentType, developmentData } = useDevelopmentWizard();
 
   /**
    * Determines if Phase 6 (Development Profile / Estate Profile) should be shown

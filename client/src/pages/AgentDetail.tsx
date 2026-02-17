@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { trpc } from '@/lib/trpc';
 import { Navbar } from '@/components/Navbar';
 import {

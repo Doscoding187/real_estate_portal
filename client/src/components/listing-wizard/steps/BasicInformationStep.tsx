@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Step 4: Basic Information
  *

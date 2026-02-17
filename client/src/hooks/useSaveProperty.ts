@@ -52,13 +52,13 @@ export function useSaveProperty({
   });
 
   const toggleSave = useCallback(() => {
-    toggleSaveMutation.mutate({ contentId, propertyId });
+    toggleSaveMutation.mutate({ contentId, shortId: propertyId });
   }, [contentId, propertyId, toggleSaveMutation]);
 
   return {
     isSaved,
     isAnimating,
-    isLoading: toggleSaveMutation.isLoading,
+    isLoading: toggleSaveMutation.isPending,
     toggleSave,
   };
 }

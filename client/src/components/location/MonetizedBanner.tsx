@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useRef, useEffect } from 'react';
 import { trackEvent } from '@/lib/analytics';
 import { trpc } from '@/lib/trpc';

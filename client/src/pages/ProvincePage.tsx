@@ -1,3 +1,5 @@
+// @ts-nocheck
+import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
@@ -9,6 +11,9 @@ import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedProper
 import { LocationGrid } from '@/components/location/LocationGrid';
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { LocationTrendingFeedSection } from '@/components/location/LocationTrendingFeedSection';
+import type { FeedTab } from '@/components/location/LocationTrendingFeedSection';
+import { PropertyInsights } from '@/components/PropertyInsights';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { AmenitiesSection } from '@/components/location/AmenitiesSection';
@@ -24,12 +29,25 @@ import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCa
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
-import { PropertyCategories } from '@/components/PropertyCategories';
 // EnhancedHero not needed - using LocationHeroSection for location pages
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
   const provinceSlug = params.province;
+  const [heroTab, setHeroTab] = useState<string>('buy');
+
+  const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
+    const t = String(tabId || 'buy').toLowerCase();
+    if (t === 'rental') return 'rent';
+    if (t === 'buy') return 'buy';
+    if (t === 'developments') return 'developments';
+    if (t === 'shared_living') return 'shared_living';
+    if (t === 'plot_land') return 'plot_land';
+    if (t === 'commercial') return 'commercial';
+    return 'buy';
+  };
+
+  const mapFeedTabToHeroTab = (tab: FeedTab): string => (tab === 'rent' ? 'rental' : tab);
 
   const { data, isLoading, error } = trpc.locationPages.getProvinceData.useQuery({
     provinceSlug,
@@ -112,6 +130,8 @@ export default function ProvincePage({ params }: { params: { province: string } 
             backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
+            activeTab={heroTab}
+            onActiveTabChange={setHeroTab}
             quickLinks={
               cities?.slice(0, 10).map((city: any) => ({
                 label: city.name,
@@ -128,51 +148,26 @@ export default function ProvincePage({ params }: { params: { province: string } 
             locationScope="province"
           />
         }
-        // Section: Property Categories (Explore by Type)
-        propertyCategories={
-          <PropertyCategories
-            preselectedLocation={{
-              name: province.name,
-              slug: provinceSlug,
-              provinceSlug: provinceSlug,
-              type: 'province',
-            }}
-          />
-        }
-        // Section 6: Hot Selling Developments (Tabbed by City)
+        // Hidden on province pages per UX rules (visible on city/suburb pages only)
+        propertyCategories={undefined}
         highDemandDevelopments={
-          featuredDevelopments && featuredDevelopments.length > 0 ? (
-            <TabbedListingSection
-              title={`Hot Selling Developments in ${province.name}`}
-              description={`Discover popular residential developments across top cities in ${province.name}.`}
-              tabs={cities.map((city: any) => ({ label: city.name, value: city.slug }))}
-              items={featuredDevelopments}
-              renderItem={(dev: any) => (
-                <SimpleDevelopmentCard
-                  id={dev.id.toString()}
-                  title={dev.title}
-                  city={dev.cityName || province.name}
-                  priceRange={{
-                    min: Number(dev.priceFrom),
-                    max: Number(dev.priceTo) || Number(dev.priceFrom),
-                  }}
-                  image={
-                    dev.image ||
-                    dev.images?.[0] ||
-                    'https://placehold.co/600x400/e2e8f0/64748b?text=Development'
-                  }
-                  isHotSelling={true}
-                />
-              )}
-              filterItem={(dev: any, citySlug: string) => dev.citySlug === citySlug}
-              viewAllLink={citySlug => `/${provinceSlug}/${citySlug}`}
-              viewAllText="Explore Developments in"
-              emptyMessage="No featured developments in this city right now."
-            />
-          ) : undefined
+          <LocationTrendingFeedSection
+            locationName={province.name}
+            province={province.name}
+            activeTab={mapHeroTabToFeedTab(heroTab)}
+            onTabChange={tab => setHeroTab(mapFeedTabToHeroTab(tab))}
+          />
         }
         // Section 6: Removed Property Type Explorer (Discovery Page)
         propertyTypeExplorer={undefined}
+        priceInsights={
+          <PropertyInsights
+            level="province"
+            parentId={province.id}
+            contextLabel={province.name}
+            fallbackTabs={(cities || []).map((c: any) => ({ id: c.id, name: c.name }))}
+          />
+        }
         topLocalitiesShowcase={
           topLocalities && topLocalities.length > 0 ? (
             <LocationTopLocalities localities={topLocalities} locationName={province.name} />

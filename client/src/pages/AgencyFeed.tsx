@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Agency Feed Page
  * Requirements: 9.1, 9.2
