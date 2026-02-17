@@ -1291,7 +1291,8 @@ CREATE TABLE `partner_tiers` (
 	`allowed_ctas` json NOT NULL,
 	`requires_credentials` tinyint DEFAULT 0,
 	`max_monthly_content` int DEFAULT 10,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP'
+	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	CONSTRAINT `partner_tiers_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `partners` (
