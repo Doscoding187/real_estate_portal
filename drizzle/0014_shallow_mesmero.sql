@@ -60,7 +60,7 @@ CREATE TABLE `billing_transactions` (
 	CONSTRAINT `billing_transactions_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
-CREATE TABLE `explore_categories` (
+CREATE TABLE IF NOT EXISTS `explore_categories` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`name` varchar(100) NOT NULL,
 	`slug` varchar(100) NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE `explore_categories` (
 	CONSTRAINT `explore_categories_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
-CREATE TABLE `explore_neighbourhood_stories` (
+CREATE TABLE IF NOT EXISTS `explore_neighbourhood_stories` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`neighbourhood_id` int,
 	`title` varchar(255) NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE `explore_neighbourhood_stories` (
 	CONSTRAINT `explore_neighbourhood_stories_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
-CREATE TABLE `explore_shorts` (
+CREATE TABLE IF NOT EXISTS `explore_shorts` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`listing_id` int,
 	`development_id` int,
@@ -123,7 +123,7 @@ CREATE TABLE `explore_shorts` (
 	CONSTRAINT `explore_shorts_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
-CREATE TABLE `explore_sponsorships` (
+CREATE TABLE IF NOT EXISTS `explore_sponsorships` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`partner_id` int NOT NULL,
 	`content_type` enum('video','story','series','event','topic') NOT NULL,
@@ -137,7 +137,7 @@ CREATE TABLE `explore_sponsorships` (
 	CONSTRAINT `explore_sponsorships_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
-CREATE TABLE `explore_topics` (
+CREATE TABLE IF NOT EXISTS `explore_topics` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`name` varchar(150) NOT NULL,
 	`slug` varchar(150) NOT NULL,
