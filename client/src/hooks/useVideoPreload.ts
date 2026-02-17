@@ -179,9 +179,31 @@ export function useVideoPreload(options: UseVideoPreloadOptions): UseVideoPreloa
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(getNetworkInfo());
   const [isLowBandwidth, setIsLowBandwidth] = useState(isLowBandwidthConnection(networkInfo));
   const [preloadedUrls, setPreloadedUrls] = useState<Set<string>>(new Set());
+  const preloadedUrlsRef = useRef<Set<string>>(new Set());
 
   // Track preload elements to clean up
   const preloadElementsRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const preloadListenersRef = useRef<
+    Map<string, { loadedmetadata: EventListener; error: EventListener }>
+  >(new Map());
+  const skipAutoPreloadRef = useRef(false);
+
+  const cleanupPreloadEntry = useCallback((url: string) => {
+    const video = preloadElementsRef.current.get(url);
+    const listeners = preloadListenersRef.current.get(url);
+
+    if (video && listeners) {
+      video.removeEventListener('loadedmetadata', listeners.loadedmetadata);
+      video.removeEventListener('error', listeners.error);
+    }
+
+    if (video) {
+      video.remove();
+    }
+
+    preloadElementsRef.current.delete(url);
+    preloadListenersRef.current.delete(url);
+  }, []);
 
   /**
    * Update network information
@@ -223,8 +245,17 @@ export function useVideoPreload(options: UseVideoPreloadOptions): UseVideoPreloa
    */
   const preloadUrl = useCallback(
     (url: string) => {
+      if (!url) {
+        return;
+      }
+
       // Skip if already preloaded
-      if (preloadedUrls.has(url)) {
+      if (preloadedUrlsRef.current.has(url)) {
+        return;
+      }
+
+      // Skip if already being preloaded
+      if (preloadElementsRef.current.has(url)) {
         return;
       }
 
@@ -250,22 +281,31 @@ export function useVideoPreload(options: UseVideoPreloadOptions): UseVideoPreloa
       preloadElementsRef.current.set(url, video);
 
       // Mark as preloaded once metadata is loaded
-      const handleLoadedMetadata = () => {
-        setPreloadedUrls(prev => new Set(prev).add(url));
+      const handleLoadedMetadata: EventListener = () => {
+        if (!preloadedUrlsRef.current.has(url)) {
+          const nextPreloaded = new Set(preloadedUrlsRef.current);
+          nextPreloaded.add(url);
+          preloadedUrlsRef.current = nextPreloaded;
+          setPreloadedUrls(nextPreloaded);
+        }
+        cleanupPreloadEntry(url);
       };
 
       video.addEventListener('loadedmetadata', handleLoadedMetadata);
 
       // Clean up on error
-      const handleError = () => {
+      const handleError: EventListener = () => {
         console.warn(`Failed to preload video: ${url}`);
-        video.remove();
-        preloadElementsRef.current.delete(url);
+        cleanupPreloadEntry(url);
       };
 
       video.addEventListener('error', handleError);
+      preloadListenersRef.current.set(url, {
+        loadedmetadata: handleLoadedMetadata,
+        error: handleError,
+      });
     },
-    [isLowBandwidth, preloadedUrls],
+    [cleanupPreloadEntry, isLowBandwidth],
   );
 
   /**
@@ -278,19 +318,27 @@ export function useVideoPreload(options: UseVideoPreloadOptions): UseVideoPreloa
    */
   const clearPreloaded = useCallback(() => {
     // Remove all preload elements from DOM
-    preloadElementsRef.current.forEach(video => {
-      video.remove();
+    preloadElementsRef.current.forEach((_video, url) => {
+      cleanupPreloadEntry(url);
     });
 
     preloadElementsRef.current.clear();
+    preloadListenersRef.current.clear();
+    preloadedUrlsRef.current = new Set();
+    skipAutoPreloadRef.current = true;
     setPreloadedUrls(new Set());
-  }, []);
+  }, [cleanupPreloadEntry]);
 
   /**
    * Preload next videos based on current index
    * Requirement 2.2: Preload next 2 videos in feed
    */
   useEffect(() => {
+    if (skipAutoPreloadRef.current) {
+      skipAutoPreloadRef.current = false;
+      return;
+    }
+
     // Skip if in low-bandwidth mode
     if (isLowBandwidth) {
       return;
@@ -318,16 +366,16 @@ export function useVideoPreload(options: UseVideoPreloadOptions): UseVideoPreloa
       const urlIndex = videoUrls.indexOf(url);
       if (urlIndex !== -1 && (urlIndex < minIndex || urlIndex > maxIndex)) {
         // Remove videos that are out of range
-        video.remove();
-        preloadElementsRef.current.delete(url);
-        setPreloadedUrls(prev => {
-          const next = new Set(prev);
+        cleanupPreloadEntry(url);
+        if (preloadedUrlsRef.current.has(url)) {
+          const next = new Set(preloadedUrlsRef.current);
           next.delete(url);
-          return next;
-        });
+          preloadedUrlsRef.current = next;
+          setPreloadedUrls(next);
+        }
       }
     });
-  }, [currentIndex, videoUrls, preloadCount, isLowBandwidth, preloadUrl]);
+  }, [cleanupPreloadEntry, currentIndex, videoUrls, preloadCount, isLowBandwidth, preloadUrl]);
 
   /**
    * Clean up on unmount
