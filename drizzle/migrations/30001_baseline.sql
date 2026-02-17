@@ -1,5 +1,5 @@
 CREATE TABLE `activities` (
-	`id` int AUTO_INCREMENT NOT NULL,
+	`id` int AUTO_INCREMENT NOT NULL PRIMARY KEY,
 	`developer_id` int NOT NULL,
 	`activity_type` varchar(50) NOT NULL,
 	`title` varchar(255) NOT NULL,
