@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,6 +39,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Enable Corepack
         run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@10.4.1 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -61,6 +66,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -70,6 +77,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Enable Corepack
         run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@10.4.1 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -102,6 +112,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -111,6 +123,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Enable Corepack
         run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@10.4.1 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -133,6 +148,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -142,6 +159,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Enable Corepack
         run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@10.4.1 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
