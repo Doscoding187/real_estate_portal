@@ -121,6 +121,7 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inViewRef = useRef(false);
   const retryCountRef = useRef(0);
   const maxRetries = 3;
 
@@ -153,13 +154,13 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
         const delay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 5000);
 
         setTimeout(() => {
-          if (inView) {
-            play();
+          if (inViewRef.current) {
+            void play();
           }
         }, delay);
       }
     }
-  }, [inView]);
+  }, []);
 
   /**
    * Pause video
@@ -178,10 +179,10 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
   const retry = useCallback(() => {
     retryCountRef.current = 0;
     setError(null);
-    if (inView) {
-      play();
+    if (inViewRef.current) {
+      void play();
     }
-  }, [inView, play]);
+  }, [play]);
 
   /**
    * Set up IntersectionObserver for viewport detection
@@ -196,6 +197,7 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
       entries => {
         entries.forEach(entry => {
           const isIntersecting = entry.isIntersecting;
+          inViewRef.current = isIntersecting;
           setInView(isIntersecting);
 
           if (isIntersecting) {
@@ -227,7 +229,7 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
     return () => {
       observer.disconnect();
     };
-  }, [threshold, lowBandwidthMode, onEnterViewport, onExitViewport, play, pause]);
+  }, [threshold, lowBandwidthMode, onEnterViewport, onExitViewport, play, pause, containerRef.current]);
 
   /**
    * Set up buffering state detection
@@ -284,7 +286,7 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('loadeddata', handleLoadedData);
     };
-  }, []);
+  }, [videoRef.current]);
 
   /**
    * Track play/pause state changes
@@ -306,7 +308,7 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
     };
-  }, []);
+  }, [videoRef.current]);
 
   /**
    * Preload next videos if enabled
@@ -327,7 +329,7 @@ export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVide
         video.preload = 'metadata';
       }
     };
-  }, [preloadNext, inView]);
+  }, [preloadNext, inView, videoRef.current]);
 
   return {
     videoRef,

@@ -14,6 +14,7 @@ export default defineConfig({
     name: 'client',
     environment: 'jsdom',
     include: ['client/src/**/*.test.{ts,tsx}', 'client/src/**/*.spec.{ts,tsx}'],
+    exclude: ['client/src/**/*.visual.test.{ts,tsx}'],
     setupFiles: ['./vitest.client.setup.ts'],
     globals: true,
     restoreMocks: true,
