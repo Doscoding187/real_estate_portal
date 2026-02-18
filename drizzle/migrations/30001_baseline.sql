@@ -2413,6 +2413,6 @@ CREATE INDEX `email_idx` ON `users` (`email`);--> statement-breakpoint
 CREATE INDEX `role_idx` ON `users` (`role`);--> statement-breakpoint
 CREATE ALGORITHM = undefined
 SQL SECURITY definer
-VIEW `price_facts` AS (SELECT 1 AS `sourceType`,1 AS `sourceId`,1 AS `developmentId`,1 AS `province`,1 AS `created_at`,1 AS `locationId`,1 AS `cityLocationId`,1 AS `suburbLocationId`,1 AS `priceAmount`,1 AS `areaM2`,1 AS `offerKind`,1 AS `isActive`)
-WITH cascaded CHECK OPTION;
+VIEW `price_facts` AS (SELECT 1 AS `sourceType`,1 AS `sourceId`,1 AS `developmentId`,1 AS `province`,1 AS `created_at`,1 AS `locationId`,1 AS `cityLocationId`,1 AS `suburbLocationId`,1 AS `priceAmount`,1 AS `areaM2`,1 AS `offerKind`,1 AS `isActive`);
+
 
