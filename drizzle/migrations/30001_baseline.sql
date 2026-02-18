@@ -8,7 +8,7 @@ CREATE TABLE `activities` (
 	`related_entity_type` enum('development','unit','lead','campaign','team_member'),
 	`related_entity_id` int,
 	`user_id` int,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `activities_id` PRIMARY KEY(`id`)
 );
@@ -29,7 +29,7 @@ CREATE TABLE `agencies` (
 	`subscriptionStatus` varchar(30) NOT NULL DEFAULT 'trial',
 	`subscriptionExpiry` timestamp,
 	`isVerified` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agencies_id` PRIMARY KEY(`id`)
@@ -54,7 +54,7 @@ CREATE TABLE `agency_branding` (
 	`supportPhone` varchar(50),
 	`socialLinks` text,
 	`isEnabled` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agency_branding_id` PRIMARY KEY(`id`)
@@ -66,7 +66,7 @@ CREATE TABLE `agency_join_requests` (
 	`userId` int NOT NULL,
 	`status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
 	`message` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`reviewedBy` int,
 	`reviewedAt` timestamp,
@@ -89,7 +89,7 @@ CREATE TABLE `agency_subscriptions` (
 	`canceledAt` timestamp,
 	`endedAt` timestamp,
 	`metadata` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agency_subscriptions_id` PRIMARY KEY(`id`)
@@ -102,7 +102,7 @@ CREATE TABLE `agent_coverage_areas` (
 	`areaType` enum('province','city','suburb','custom_polygon') NOT NULL,
 	`areaData` text NOT NULL,
 	`isActive` int NOT NULL DEFAULT 1,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agent_coverage_areas_id` PRIMARY KEY(`id`)
@@ -117,7 +117,7 @@ CREATE TABLE `agent_knowledge` (
 	`metadata` json,
 	`is_active` int NOT NULL DEFAULT 1,
 	`created_by` int,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agent_knowledge_id` PRIMARY KEY(`id`)
@@ -131,7 +131,7 @@ CREATE TABLE `agent_memory` (
 	`user_input` text NOT NULL,
 	`agent_response` text NOT NULL,
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agent_memory_id` PRIMARY KEY(`id`)
 );
@@ -149,7 +149,7 @@ CREATE TABLE `agent_tasks` (
 	`error_message` text,
 	`started_at` timestamp,
 	`completed_at` timestamp,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agent_tasks_id` PRIMARY KEY(`id`)
@@ -182,7 +182,7 @@ CREATE TABLE `agents` (
 	`rejectionReason` text,
 	`approvedBy` int,
 	`approvedAt` timestamp,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `agents_id` PRIMARY KEY(`id`)
@@ -198,7 +198,7 @@ CREATE TABLE `amenities` (
 	`longitude` varchar(50),
 	`distance` decimal(10,2),
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `amenities_id` PRIMARY KEY(`id`)
 );
@@ -227,7 +227,7 @@ CREATE TABLE `analytics_aggregations` (
 	`soldProperties` int,
 	`rentedProperties` int,
 	`avgDaysOnMarket` int,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `analytics_aggregations_id` PRIMARY KEY(`id`)
 );
@@ -241,7 +241,7 @@ CREATE TABLE `audit_logs` (
 	`metadata` text,
 	`ipAddress` varchar(45),
 	`userAgent` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `audit_logs_id` PRIMARY KEY(`id`)
 );
@@ -259,7 +259,7 @@ CREATE TABLE `billing_transactions` (
 	`gateway_invoice_id` varchar(255),
 	`description` text,
 	`metadata` json,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `billing_transactions_id` PRIMARY KEY(`id`)
@@ -278,7 +278,7 @@ CREATE TABLE `boost_campaigns` (
 	`impressions` int DEFAULT 0,
 	`clicks` int DEFAULT 0,
 	`cost_per_impression` decimal(6,4) DEFAULT '0.10',
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `boost_campaigns_id` PRIMARY KEY(`id`)
 );
@@ -290,7 +290,7 @@ CREATE TABLE `boost_credits` (
 	`used_credits` int DEFAULT 0,
 	`reset_at` timestamp,
 	`expires_at` timestamp,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `boost_credits_id` PRIMARY KEY(`id`)
@@ -312,7 +312,7 @@ CREATE TABLE `cities` (
 	`latitude` varchar(20),
 	`longitude` varchar(21),
 	`isMetro` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`slug` varchar(100),
 	`place_id` varchar(255),
@@ -357,7 +357,7 @@ CREATE TABLE `commissions` (
 	`description` text,
 	`payoutDate` timestamp,
 	`paymentReference` varchar(100),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `commissions_id` PRIMARY KEY(`id`)
@@ -368,7 +368,7 @@ CREATE TABLE `content_approval_queue` (
 	`content_id` varchar(36) NOT NULL,
 	`partner_id` varchar(36) NOT NULL,
 	`status` enum('pending','approved','rejected','revision_requested') DEFAULT 'pending',
-	`submitted_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`submitted_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`reviewed_at` timestamp,
 	`reviewer_id` varchar(36),
 	`feedback` text,
@@ -384,14 +384,14 @@ CREATE TABLE `content_quality_scores` (
 	`engagement_score` decimal(5,2) DEFAULT '0',
 	`production_score` decimal(5,2) DEFAULT '0',
 	`negative_signals` int DEFAULT 0,
-	`last_calculated_at` timestamp DEFAULT 'CURRENT_TIMESTAMP'
+	`last_calculated_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `content_topics` (
 	`content_id` varchar(36) NOT NULL,
 	`topic_id` varchar(36) NOT NULL,
 	`relevance_score` decimal(5,2) DEFAULT '1.00',
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP'
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `coupons` (
@@ -408,7 +408,7 @@ CREATE TABLE `coupons` (
 	`validUntil` timestamp,
 	`isActive` int NOT NULL DEFAULT 1,
 	`appliesToPlans` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `coupons_id` PRIMARY KEY(`id`)
@@ -440,7 +440,7 @@ CREATE TABLE `developer_brand_profiles` (
 	`last_lead_date` timestamp,
 	`unclaimed_lead_count` int NOT NULL DEFAULT 0,
 	`created_by` int,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`identity_type` enum('developer','marketing_agency','hybrid') NOT NULL DEFAULT 'developer',
 	`seed_batch_id` varchar(36),
@@ -459,7 +459,7 @@ CREATE TABLE `developer_notifications` (
 	`read` tinyint NOT NULL DEFAULT 0,
 	`action_url` varchar(500),
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `developer_notifications_id` PRIMARY KEY(`id`)
 );
@@ -474,7 +474,7 @@ CREATE TABLE `developer_subscription_limits` (
 	`crm_integration_enabled` tinyint NOT NULL DEFAULT 0,
 	`advanced_analytics_enabled` tinyint NOT NULL DEFAULT 0,
 	`bond_integration_enabled` tinyint NOT NULL DEFAULT 0,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `developer_subscription_limits_id` PRIMARY KEY(`id`)
@@ -486,8 +486,8 @@ CREATE TABLE `developer_subscription_usage` (
 	`developments_count` int NOT NULL DEFAULT 0,
 	`leads_this_month` int NOT NULL DEFAULT 0,
 	`team_members_count` int NOT NULL DEFAULT 0,
-	`last_reset_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`last_reset_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `developer_subscription_usage_id` PRIMARY KEY(`id`)
@@ -504,7 +504,7 @@ CREATE TABLE `developer_subscriptions` (
 	`current_period_end` timestamp,
 	`stripe_subscription_id` varchar(100),
 	`stripe_customer_id` varchar(100),
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `developer_subscriptions_id` PRIMARY KEY(`id`)
@@ -529,7 +529,7 @@ CREATE TABLE `developers` (
 	`rating` decimal(3,2) DEFAULT '0.00',
 	`reviewCount` int DEFAULT 0,
 	`isVerified` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`userId` int NOT NULL,
 	`status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
@@ -559,7 +559,7 @@ CREATE TABLE `development_approval_queue` (
 	`review_notes` text,
 	`rejection_reason` text,
 	`compliance_checks` json,
-	`submitted_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`submitted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`reviewed_at` timestamp,
 	`reviewed_by` int,
 
@@ -574,7 +574,7 @@ CREATE TABLE `development_drafts` (
 	`progress` int NOT NULL DEFAULT 0,
 	`currentStep` int NOT NULL DEFAULT 0,
 	`lastModified` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`developer_brand_profile_id` int,
 
 	CONSTRAINT `development_drafts_id` PRIMARY KEY(`id`)
@@ -589,7 +589,7 @@ CREATE TABLE `development_lead_routes` (
 	`fallback_brand_profile_id` int,
 	`priority` int NOT NULL DEFAULT 0,
 	`is_active` tinyint NOT NULL DEFAULT 1,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `development_lead_routes_id` PRIMARY KEY(`id`)
 );
@@ -607,7 +607,7 @@ CREATE TABLE `development_phases` (
 	`price_to` int,
 	`launch_date` timestamp,
 	`completion_date` timestamp,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`spec_type` enum('affordable','gap','luxury','custom') DEFAULT 'affordable',
 	`custom_spec_type` varchar(100),
@@ -637,7 +637,7 @@ CREATE TABLE `development_units` (
 	`reserved_at` timestamp,
 	`reserved_by` int,
 	`sold_at` timestamp,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `development_units_id` PRIMARY KEY(`id`)
@@ -664,7 +664,7 @@ CREATE TABLE `developments` (
 	`completionDate` timestamp,
 	`isFeatured` int NOT NULL DEFAULT 0,
 	`views` int NOT NULL DEFAULT 0,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`slug` varchar(255),
 	`isPublished` tinyint NOT NULL DEFAULT 0,
@@ -732,7 +732,7 @@ CREATE TABLE `email_templates` (
 	`textContent` text,
 	`agencyId` int,
 	`isActive` int NOT NULL DEFAULT 1,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `email_templates_id` PRIMARY KEY(`id`)
@@ -743,7 +743,7 @@ CREATE TABLE `exploreComments` (
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
 	`comment` text NOT NULL,
-	`createdAt` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `exploreComments_id` PRIMARY KEY(`id`)
 );
@@ -770,7 +770,7 @@ CREATE TABLE `explore_content` (
 	`engagement_score` decimal(5,2) DEFAULT '0',
 	`is_active` tinyint DEFAULT 1,
 	`is_featured` tinyint DEFAULT 0,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `explore_content_id` PRIMARY KEY(`id`)
@@ -780,7 +780,7 @@ CREATE TABLE `exploreFollows` (
 	`id` varchar(191) NOT NULL,
 	`followerId` int NOT NULL,
 	`followingId` int NOT NULL,
-	`createdAt` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `exploreFollows_id` PRIMARY KEY(`id`)
 );
@@ -794,7 +794,7 @@ CREATE TABLE `explore_highlight_tags` (
 	`category` varchar(50),
 	`display_order` int NOT NULL DEFAULT 0,
 	`is_active` tinyint NOT NULL DEFAULT 1,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `explore_highlight_tags_id` PRIMARY KEY(`id`)
 );
@@ -806,7 +806,7 @@ CREATE TABLE `explore_interactions` (
 	`session_id` varchar(255) NOT NULL,
 	`interaction_type` enum('impression','view','skip','save','share','contact','whatsapp','book_viewing') NOT NULL,
 	`duration` int,
-	`timestamp` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`feed_type` enum('recommended','area','category','agent','developer') NOT NULL,
 	`feed_context` json,
 	`device_type` enum('mobile','tablet','desktop') NOT NULL,
@@ -821,7 +821,7 @@ CREATE TABLE `exploreLikes` (
 	`id` varchar(191) NOT NULL,
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
-	`createdAt` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `exploreLikes_id` PRIMARY KEY(`id`)
 );
@@ -837,7 +837,7 @@ CREATE TABLE `explore_partners` (
 	`trust_score` decimal(5,2) DEFAULT '50.00',
 	`service_locations` json,
 	`approved_content_count` int DEFAULT 0,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `explore_partners_id` PRIMARY KEY(`id`)
@@ -872,7 +872,7 @@ CREATE TABLE `explore_shorts` (
 	`skip_rate` decimal(5,2) NOT NULL DEFAULT '0',
 	`is_published` tinyint NOT NULL DEFAULT 1,
 	`is_featured` tinyint NOT NULL DEFAULT 0,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`published_at` timestamp,
 
@@ -889,7 +889,7 @@ CREATE TABLE `explore_user_preferences` (
 	`interaction_history` json,
 	`saved_properties` json,
 	`inferred_preferences` json,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `explore_user_preferences_id` PRIMARY KEY(`id`)
@@ -899,7 +899,7 @@ CREATE TABLE `exploreVideoViews` (
 	`id` varchar(191) NOT NULL,
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
-	`createdAt` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `exploreVideoViews_id` PRIMARY KEY(`id`)
 );
@@ -919,7 +919,7 @@ CREATE TABLE `exploreVideos` (
 	`shares` int NOT NULL,
 	`isPublished` int NOT NULL DEFAULT 1,
 	`isFeatured` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `exploreVideos_id` PRIMARY KEY(`id`)
@@ -929,7 +929,7 @@ CREATE TABLE `favorites` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
 	`propertyId` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `favorites_id` PRIMARY KEY(`id`)
 );
@@ -942,7 +942,7 @@ CREATE TABLE `founding_partners` (
 	`weekly_content_delivered` json,
 	`warning_count` int DEFAULT 0,
 	`status` enum('active','warning','revoked') DEFAULT 'active',
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP'
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `hero_campaigns` (
@@ -955,7 +955,7 @@ CREATE TABLE `hero_campaigns` (
 	`start_date` timestamp,
 	`end_date` timestamp,
 	`is_active` tinyint NOT NULL DEFAULT 1,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `hero_campaigns_id` PRIMARY KEY(`id`)
 );
@@ -971,7 +971,7 @@ CREATE TABLE `invitations` (
 	`expiresAt` timestamp NOT NULL,
 	`acceptedAt` timestamp,
 	`acceptedBy` int,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `invitations_id` PRIMARY KEY(`id`)
@@ -984,7 +984,7 @@ CREATE TABLE `invites` (
 	`token` varchar(255) NOT NULL,
 	`role` varchar(30) DEFAULT 'agent',
 	`expiresAt` timestamp,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`used` int NOT NULL,
 	`usedAt` timestamp,
 	`usedBy` int,
@@ -1011,7 +1011,7 @@ CREATE TABLE `invoices` (
 	`paidAt` timestamp,
 	`dueDate` timestamp,
 	`metadata` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `invoices_id` PRIMARY KEY(`id`)
@@ -1022,7 +1022,7 @@ CREATE TABLE `launch_content_quotas` (
 	`content_type` varchar(50) NOT NULL,
 	`required_count` int NOT NULL,
 	`current_count` int DEFAULT 0,
-	`last_updated` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`last_updated` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `launch_content_quotas_id` PRIMARY KEY(`id`)
 );
@@ -1035,7 +1035,7 @@ CREATE TABLE `launch_metrics` (
 	`save_share_rate` decimal(5,2),
 	`weekly_visits_per_user` decimal(5,2),
 	`algorithm_confidence_score` decimal(5,2),
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `launch_metrics_id` PRIMARY KEY(`id`)
 );
@@ -1049,7 +1049,7 @@ CREATE TABLE `launch_phases` (
 	`algorithm_weight` decimal(3,2) DEFAULT '0.00',
 	`editorial_weight` decimal(3,2) DEFAULT '1.00',
 	`is_active` tinyint DEFAULT 0,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `launch_phases_id` PRIMARY KEY(`id`)
 );
@@ -1061,7 +1061,7 @@ CREATE TABLE `lead_activities` (
 	`activityType` enum('call','email','meeting','note','status_change','viewing_scheduled','offer_sent') NOT NULL,
 	`description` text,
 	`metadata` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `lead_activities_id` PRIMARY KEY(`id`)
 );
@@ -1079,7 +1079,7 @@ CREATE TABLE `leads` (
 	`leadType` enum('inquiry','viewing_request','offer','callback') NOT NULL DEFAULT 'inquiry',
 	`status` enum('new','contacted','qualified','converted','closed','viewing_scheduled','offer_sent','lost') NOT NULL DEFAULT 'new',
 	`source` varchar(100),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`nextFollowUp` timestamp,
 	`lastContactedAt` timestamp,
@@ -1122,7 +1122,7 @@ CREATE TABLE `listing_analytics` (
 	`conversionRate` decimal(5,2),
 	`leadConversionRate` decimal(5,2),
 	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `listing_analytics_id` PRIMARY KEY(`id`)
 );
@@ -1131,7 +1131,7 @@ CREATE TABLE `listing_approval_queue` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`listingId` int NOT NULL,
 	`submittedBy` int NOT NULL,
-	`submittedAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`submittedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`status` enum('pending','reviewing','approved','rejected') NOT NULL DEFAULT 'pending',
 	`priority` enum('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
 	`reviewedBy` int,
@@ -1139,7 +1139,7 @@ CREATE TABLE `listing_approval_queue` (
 	`reviewNotes` text,
 	`rejectionReason` text,
 	`complianceChecks` json,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `listing_approval_queue_id` PRIMARY KEY(`id`)
@@ -1164,7 +1164,7 @@ CREATE TABLE `listing_leads` (
 	`crmSynced` int DEFAULT 0,
 	`crmSyncedAt` timestamp,
 	`crmId` varchar(255),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `listing_leads_id` PRIMARY KEY(`id`)
@@ -1190,8 +1190,8 @@ CREATE TABLE `listing_media` (
 	`isPrimary` int NOT NULL DEFAULT 0,
 	`processingStatus` enum('pending','processing','completed','failed') DEFAULT 'pending',
 	`processingError` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`uploadedAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`uploadedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`processedAt` timestamp,
 
 	CONSTRAINT `listing_media_id` PRIMARY KEY(`id`)
@@ -1236,7 +1236,7 @@ CREATE TABLE `listing_viewings` (
 	`visitorRating` int,
 	`reminderSent` int DEFAULT 0,
 	`confirmationSent` int DEFAULT 0,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `listing_viewings_id` PRIMARY KEY(`id`)
@@ -1291,7 +1291,7 @@ CREATE TABLE `listings` (
 	`canonicalUrl` text,
 	`searchTags` text,
 	`featured` int NOT NULL DEFAULT 0,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`publishedAt` timestamp,
 	`archivedAt` timestamp,
@@ -1305,7 +1305,7 @@ CREATE TABLE `location_search_cache` (
 	`searchQuery` varchar(255) NOT NULL,
 	`searchType` enum('province','city','suburb','address','all') NOT NULL,
 	`resultsJSON` text NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`expiresAt` timestamp NOT NULL,
 
 	CONSTRAINT `location_search_cache_id` PRIMARY KEY(`id`)
@@ -1321,7 +1321,7 @@ CREATE TABLE `locations` (
 	`latitude` varchar(50),
 	`longitude` varchar(50),
 	`propertyCount` int,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`place_id` varchar(255),
 	`viewport_ne_lat` decimal(10,8),
@@ -1341,7 +1341,7 @@ CREATE TABLE `market_insights_cache` (
 	`cacheData` text NOT NULL,
 	`cacheType` enum('suburb_heatmap','city_trends','popular_areas','price_predictions','user_recommendations') NOT NULL,
 	`expiresAt` timestamp NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `market_insights_cache_id` PRIMARY KEY(`id`)
@@ -1355,7 +1355,7 @@ CREATE TABLE `marketplace_bundles` (
 	`target_audience` varchar(100),
 	`is_active` tinyint DEFAULT 1,
 	`display_order` int DEFAULT 0,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `marketplace_bundles_id` PRIMARY KEY(`id`)
 );
@@ -1369,7 +1369,7 @@ CREATE TABLE `notifications` (
 	`data` text,
 	`isRead` int NOT NULL,
 	`readAt` timestamp,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `notifications_id` PRIMARY KEY(`id`)
 );
@@ -1387,7 +1387,7 @@ CREATE TABLE `offers` (
 	`conditions` text,
 	`expiresAt` timestamp,
 	`respondedAt` timestamp,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `offers_id` PRIMARY KEY(`id`)
@@ -1404,7 +1404,7 @@ CREATE TABLE `partner_leads` (
 	`contact_info` json NOT NULL,
 	`intent_details` text,
 	`dispute_reason` text,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `partner_leads_id` PRIMARY KEY(`id`)
@@ -1419,7 +1419,7 @@ CREATE TABLE `partner_subscriptions` (
 	`end_date` date,
 	`status` enum('active','cancelled','expired') DEFAULT 'active',
 	`features` json NOT NULL,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `partner_subscriptions_id` PRIMARY KEY(`id`)
 );
@@ -1431,7 +1431,7 @@ CREATE TABLE `partner_tiers` (
 	`allowed_ctas` json NOT NULL,
 	`requires_credentials` tinyint DEFAULT 0,
 	`max_monthly_content` int DEFAULT 10,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `partner_tiers_id` PRIMARY KEY(`id`)
 );
@@ -1446,7 +1446,7 @@ CREATE TABLE `partners` (
 	`email` varchar(320),
 	`phone` varchar(50),
 	`is_verified` int NOT NULL DEFAULT 0,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `partners_id` PRIMARY KEY(`id`)
@@ -1466,7 +1466,7 @@ CREATE TABLE `payment_methods` (
 	`isDefault` int NOT NULL,
 	`isActive` int NOT NULL DEFAULT 1,
 	`metadata` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `payment_methods_id` PRIMARY KEY(`id`)
@@ -1486,7 +1486,7 @@ CREATE TABLE `plans` (
 	`isActive` int NOT NULL DEFAULT 1,
 	`isPopular` int NOT NULL,
 	`sortOrder` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `plans_id` PRIMARY KEY(`id`)
@@ -1500,7 +1500,7 @@ CREATE TABLE `platform_settings` (
 	`category` enum('pricing','features','notifications','limits','other') NOT NULL DEFAULT 'other',
 	`isPublic` int NOT NULL,
 	`updatedBy` int,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `platform_settings_id` PRIMARY KEY(`id`)
@@ -1548,9 +1548,9 @@ CREATE TABLE `price_history` (
 	`pricePerSqm` int,
 	`propertyType` enum('apartment','house','villa','plot','commercial','townhouse','cluster_home','farm','shared_living') NOT NULL,
 	`listingType` enum('sale','rent','rent_to_buy','auction','shared_living') NOT NULL,
-	`recordedAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`recordedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`source` enum('new_listing','price_change','sold','rented','market_update') NOT NULL DEFAULT 'market_update',
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `price_history_id` PRIMARY KEY(`id`)
@@ -1572,7 +1572,7 @@ CREATE TABLE `price_predictions` (
 	`actualPrice` int,
 	`predictionError` int,
 	`predictionAccuracy` int,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`validatedAt` timestamp,
 
 	CONSTRAINT `price_predictions_id` PRIMARY KEY(`id`)
@@ -1615,7 +1615,7 @@ CREATE TABLE `properties` (
 	`levies` int,
 	`ratesAndTaxes` int,
 	`mainImage` varchar(1024),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`location_id` int,
 	`developer_brand_profile_id` int,
@@ -1629,7 +1629,7 @@ CREATE TABLE `propertyImages` (
 	`imageUrl` text NOT NULL,
 	`isPrimary` int NOT NULL,
 	`displayOrder` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `propertyImages_id` PRIMARY KEY(`id`)
 );
@@ -1644,7 +1644,7 @@ CREATE TABLE `property_similarity_index` (
 	`featureSimilarity` int,
 	`overallSimilarity` int,
 	`similarityReason` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `property_similarity_index_id` PRIMARY KEY(`id`)
 );
@@ -1653,7 +1653,7 @@ CREATE TABLE `prospect_favorites` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`prospectId` int NOT NULL,
 	`propertyId` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `prospect_favorites_id` PRIMARY KEY(`id`)
 );
@@ -1686,7 +1686,7 @@ CREATE TABLE `prospects` (
 	`ipAddress` varchar(45),
 	`userAgent` text,
 	`referrer` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `prospects_id` PRIMARY KEY(`id`)
@@ -1698,7 +1698,7 @@ CREATE TABLE `provinces` (
 	`code` varchar(10) NOT NULL,
 	`latitude` varchar(20),
 	`longitude` varchar(21),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`slug` varchar(100),
 	`place_id` varchar(255),
@@ -1712,7 +1712,7 @@ CREATE TABLE `recently_viewed` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`prospectId` int NOT NULL,
 	`propertyId` int NOT NULL,
-	`viewedAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`viewedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `recently_viewed_id` PRIMARY KEY(`id`)
 );
@@ -1727,7 +1727,7 @@ CREATE TABLE `reviews` (
 	`comment` text,
 	`isVerified` int NOT NULL,
 	`isPublished` int NOT NULL DEFAULT 1,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `reviews_id` PRIMARY KEY(`id`)
@@ -1740,7 +1740,7 @@ CREATE TABLE `saved_searches` (
 	`criteria` json NOT NULL,
 	`notificationFrequency` enum('never','daily','weekly') DEFAULT 'never',
 	`lastNotifiedAt` timestamp,
-	`createdAt` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `saved_searches_id` PRIMARY KEY(`id`)
@@ -1758,7 +1758,7 @@ CREATE TABLE `scheduled_viewings` (
 	`prospectEmail` varchar(320),
 	`prospectPhone` varchar(50),
 	`notificationSent` int,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `scheduled_viewings_id` PRIMARY KEY(`id`)
@@ -1776,7 +1776,7 @@ CREATE TABLE `services` (
 	`commissionRate` int,
 	`isActive` int NOT NULL DEFAULT 1,
 	`isFeatured` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `services_id` PRIMARY KEY(`id`)
@@ -1790,7 +1790,7 @@ CREATE TABLE `showings` (
 	`scheduledAt` timestamp NOT NULL,
 	`status` enum('requested','confirmed','completed','cancelled') NOT NULL DEFAULT 'requested',
 	`notes` text,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `showings_id` PRIMARY KEY(`id`)
@@ -1803,7 +1803,7 @@ CREATE TABLE `subscription_events` (
 	`event_type` enum('trial_started','trial_expiring_soon','trial_expired','subscription_created','subscription_renewed','subscription_upgraded','subscription_downgraded','subscription_cancelled','payment_succeeded','payment_failed','feature_locked','limit_reached') NOT NULL,
 	`event_data` json,
 	`metadata` json,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `subscription_events_id` PRIMARY KEY(`id`)
 );
@@ -1830,7 +1830,7 @@ CREATE TABLE `subscription_plans` (
 	`downgrade_to_plan_id` varchar(100),
 	`stripe_price_id` varchar(255),
 	`paystack_plan_code` varchar(255),
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `subscription_plans_id` PRIMARY KEY(`id`)
@@ -1850,7 +1850,7 @@ CREATE TABLE `subscription_usage` (
 	`storage_mb` int DEFAULT 0,
 	`crm_contacts` int DEFAULT 0,
 	`emails_sent` int DEFAULT 0,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `subscription_usage_id` PRIMARY KEY(`id`)
@@ -1886,7 +1886,7 @@ CREATE TABLE `suburbs` (
 	`latitude` varchar(20),
 	`longitude` varchar(21),
 	`postalCode` varchar(10),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`slug` varchar(100),
 
@@ -1904,7 +1904,7 @@ CREATE TABLE `topics` (
 	`content_tags` json,
 	`property_features` json,
 	`partner_categories` json,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `topics_id` PRIMARY KEY(`id`)
 );
@@ -1924,7 +1924,7 @@ CREATE TABLE `unit_types` (
 	`base_media` json,
 	`display_order` int DEFAULT 0,
 	`is_active` tinyint DEFAULT 1,
-	`created_at` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`total_units` int NOT NULL DEFAULT 0,
 	`available_units` int NOT NULL DEFAULT 0,
@@ -1985,7 +1985,7 @@ CREATE TABLE `user_behavior_events` (
 	`referrer` varchar(500),
 	`userAgent` text,
 	`ipAddress` varchar(45),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `user_behavior_events_id` PRIMARY KEY(`id`)
 );
@@ -2001,7 +2001,7 @@ CREATE TABLE `user_onboarding_state` (
 	`save_count` int DEFAULT 0,
 	`partner_engagement_count` int DEFAULT 0,
 	`features_unlocked` json,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
@@ -2033,7 +2033,7 @@ CREATE TABLE `user_preferences` (
 	`priceWeight` int DEFAULT 25,
 	`featuresWeight` int DEFAULT 25,
 	`sizeWeight` int DEFAULT 20,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`lastUsed` timestamp,
 
@@ -2054,7 +2054,7 @@ CREATE TABLE `user_recommendations` (
 	`recommendationClickCount` int,
 	`recommendationConversionCount` int,
 	`lastRecommendationUpdate` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `user_recommendations_id` PRIMARY KEY(`id`)
 );
@@ -2084,7 +2084,7 @@ CREATE TABLE `user_subscriptions` (
 	`downgrade_scheduled` tinyint DEFAULT 0,
 	`downgrade_to_plan_id` varchar(100),
 	`downgrade_effective_date` timestamp,
-	`created_at` timestamp DEFAULT 'CURRENT_TIMESTAMP',
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `user_subscriptions_id` PRIMARY KEY(`id`)
@@ -2104,9 +2104,9 @@ CREATE TABLE `users` (
 	`role` enum('visitor','agent','agency_admin','property_developer','super_admin') NOT NULL DEFAULT 'visitor',
 	`agencyId` int,
 	`isSubaccount` int NOT NULL DEFAULT 0,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`lastSignedIn` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`lastSignedIn` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`passwordResetToken` varchar(255),
 	`passwordResetTokenExpiresAt` timestamp,
 	`emailVerificationToken` varchar(255),
@@ -2118,7 +2118,7 @@ CREATE TABLE `video_likes` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`videoId` int NOT NULL,
 	`userId` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	CONSTRAINT `video_likes_id` PRIMARY KEY(`id`)
 );
@@ -2137,7 +2137,7 @@ CREATE TABLE `videos` (
 	`shares` int NOT NULL DEFAULT 0,
 	`isPublished` tinyint NOT NULL DEFAULT 1,
 	`isFeatured` int NOT NULL DEFAULT 0,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 
 	CONSTRAINT `videos_id` PRIMARY KEY(`id`)
@@ -2415,3 +2415,4 @@ CREATE ALGORITHM = undefined
 SQL SECURITY definer
 VIEW `price_facts` AS (SELECT 1 AS `sourceType`,1 AS `sourceId`,1 AS `developmentId`,1 AS `province`,1 AS `created_at`,1 AS `locationId`,1 AS `cityLocationId`,1 AS `suburbLocationId`,1 AS `priceAmount`,1 AS `areaM2`,1 AS `offerKind`,1 AS `isActive`)
 WITH cascaded CHECK OPTION;
+
