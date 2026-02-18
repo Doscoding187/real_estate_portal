@@ -16,7 +16,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: test_password
-          MYSQL_DATABASE: test_db
+          MYSQL_DATABASE: listify_test
         ports:
           - 3306:3306
         options: >-
@@ -51,12 +51,12 @@ jobs:
 
       - name: Apply Drizzle migrations
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/test_db
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm drizzle-kit migrate --config drizzle.config.ts
 
       - name: Run DB Contract Verification
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/test_db
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm run db:verify:ci
 
   lint-and-typecheck:
@@ -99,7 +99,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: test_password
-          MYSQL_DATABASE: test_db
+          MYSQL_DATABASE: listify_test
         ports:
           - 3306:3306
         options: >-
@@ -129,12 +129,12 @@ jobs:
 
       - name: Apply Drizzle migrations
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/test_db
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm drizzle-kit migrate --config drizzle.config.ts
 
       - name: Run tests
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/test_db
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm test
 
   build:
