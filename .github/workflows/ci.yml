@@ -49,9 +49,7 @@ jobs:
       - name: Setup test database
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: |
-          # Apply migrations to test DB
-          pnpm run db:migrate
+        run: pnpm drizzle-kit migrate --config drizzle.config.ts
 
       - name: Run DB Contract Verification
         env:
@@ -133,7 +131,7 @@ jobs:
       - name: Setup test database
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: pnpm run db:migrate
+        run: pnpm drizzle-kit migrate --config drizzle.config.ts
 
       - name: Run tests
         env:
