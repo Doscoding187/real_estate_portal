@@ -18,7 +18,6 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
-import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
 import { RequireRole } from '@/components/RequireRole';
 import {
   LegacyCityRedirect,
@@ -49,13 +48,7 @@ const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
-const AgencyList = lazy(() => import('./pages/admin/AgencyList'));
-const CreateAgency = lazy(() => import('./pages/admin/CreateAgency'));
-const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
-const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
 const ListingOversight = lazy(() => import('./pages/admin/ListingOversight'));
-const SubscriptionManagement = lazy(() => import('./pages/admin/SubscriptionManagement'));
-const PlatformSettings = lazy(() => import('./pages/admin/PlatformSettings'));
 const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
 const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
@@ -110,25 +103,13 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
-// DeveloperSetupWizard (unused in routes?) - keeping imported if it was used, but checking usage...
-// It was imported but not used in the Route list in the original file! I will comment it out or lazy load it if I see it.
-// Ah, checking original file... L98 imported it. L230 uses CreateDevelopment.
-// I don't see DeveloperSetupWizard used in the Switch. I'll omit it or lazy load it just in case.
-// Better to follow the pattern and lazy load relevant page-like components.
-const DeveloperSetupWizard = lazy(
-  () => import('./components/developer/DeveloperSetupWizardEnhanced'),
-);
-const DevelopmentsList = lazy(() => import('./components/developer/DevelopmentsList'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
 const ExploreComponentDemo = lazy(() => import('./pages/ExploreComponentDemo'));
 const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 
 // Import Developer Dashboard Pages
-const DeveloperCampaignsPage = lazy(() => import('./pages/DeveloperCampaignsPage'));
-const DeveloperPerformancePage = lazy(() => import('./pages/DeveloperPerformancePage'));
 const SubscriptionPlans = lazy(() => import('./pages/SubscriptionPlans'));
-const DeveloperPlans = lazy(() => import('./pages/DeveloperPlans'));
 // Import Developer Layout directly for specific tab routing
 const DeveloperRoutes = lazy(() => import('./pages/DeveloperRoutes'));
 // Import MyDrafts removed to prevent circular dependency with DeveloperLayout's lazy load
