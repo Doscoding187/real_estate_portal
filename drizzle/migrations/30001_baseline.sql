@@ -1997,6 +1997,7 @@ ALTER TABLE `developments` ADD CONSTRAINT `developments_developer_id_developers_
 ALTER TABLE `developments` ADD CONSTRAINT `developments_developer_brand_profile_id_developer_brand_profiles_id_fk` FOREIGN KEY (`developer_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developments` ADD CONSTRAINT `developments_marketing_brand_profile_id_developer_brand_profiles_id_fk` FOREIGN KEY (`marketing_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `email_templates` ADD CONSTRAINT `email_templates_agencyId_agencies_id_fk` FOREIGN KEY (`agencyId`) REFERENCES `agencies`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX `idx_partner_tiers_id` ON `partner_tiers` (`id`);--> statement-breakpoint
 ALTER TABLE `explore_partners` ADD CONSTRAINT `explore_partners_tier_id_partner_tiers_id_fk` FOREIGN KEY (`tier_id`) REFERENCES `partner_tiers`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `favorites` ADD CONSTRAINT `favorites_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `favorites` ADD CONSTRAINT `favorites_propertyId_properties_id_fk` FOREIGN KEY (`propertyId`) REFERENCES `properties`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

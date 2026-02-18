@@ -2391,6 +2391,7 @@ ALTER TABLE `explore_feed_sessions` ADD CONSTRAINT `explore_feed_sessions_user_i
 ALTER TABLE `explore_neighbourhood_follows` ADD CONSTRAINT `explore_neighbourhood_follows_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_neighbourhood_follows` ADD CONSTRAINT `fk_exp_neigh_follow_neigh` FOREIGN KEY (`neighbourhood_id`) REFERENCES `explore_neighbourhoods`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_neighbourhood_stories` ADD CONSTRAINT `explore_neighbourhood_stories_suburb_id_suburbs_id_fk` FOREIGN KEY (`suburb_id`) REFERENCES `suburbs`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX `idx_partner_tiers_id` ON `partner_tiers` (`id`);--> statement-breakpoint
 ALTER TABLE `explore_partners` ADD CONSTRAINT `explore_partners_tier_id_partner_tiers_id_fk` FOREIGN KEY (`tier_id`) REFERENCES `partner_tiers`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_saved_properties` ADD CONSTRAINT `explore_saved_properties_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_saved_properties` ADD CONSTRAINT `explore_saved_properties_content_id_explore_content_id_fk` FOREIGN KEY (`content_id`) REFERENCES `explore_content`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
