@@ -12,7 +12,7 @@
 
 import mysql from 'mysql2/promise';
 import { config } from 'dotenv';
-import { readdir } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 
 config();
@@ -249,33 +249,43 @@ async function verifyMigrations(connection: mysql.Connection): Promise<void> {
 
     const appliedCount = rows[0].count;
 
-    // Count migration files
+    // Count only journal-tracked Drizzle migrations
     const migrationsDir = join(process.cwd(), 'drizzle', 'migrations');
-    let fileCount = 0;
+    const journalPath = join(migrationsDir, 'meta', '_journal.json');
+    let trackedFiles: string[] = [];
+    let missingFiles: string[] = [];
 
     try {
+      const journalRaw = await readFile(journalPath, 'utf-8');
+      const journal = JSON.parse(journalRaw) as { entries?: Array<{ tag?: string }> };
+      const tags = (journal.entries || []).map(entry => entry.tag).filter(Boolean) as string[];
+      trackedFiles = tags.map(tag => `${tag}.sql`);
+
       const files = await readdir(migrationsDir);
-      fileCount = files.filter(f => f.endsWith('.sql')).length;
+      const sqlFiles = new Set(files.filter(f => f.endsWith('.sql')));
+      missingFiles = trackedFiles.filter(file => !sqlFiles.has(file));
     } catch (err) {
       results.push({
-        name: 'Migrations: File count',
+        name: 'Migrations: Journal integrity',
         passed: false,
-        error: `Could not read migrations directory: ${err}`,
+        error: `Could not read migration journal/files: ${err}`,
       });
       return;
     }
 
-    const passed = appliedCount >= fileCount;
+    const trackedCount = trackedFiles.length;
+    const passed = missingFiles.length === 0 && appliedCount >= trackedCount;
 
     results.push({
       name: 'Migrations: Applied vs Files',
       passed,
       error: passed
         ? undefined
-        : `Migration drift: ${appliedCount} applied, ${fileCount} files. Run migrations.`,
+        : `Migration drift: ${appliedCount} applied, ${trackedCount} tracked${missingFiles.length ? `, missing files: ${missingFiles.join(', ')}` : ''}.`,
       details: {
         applied: appliedCount,
-        files: fileCount,
+        tracked: trackedCount,
+        missingFiles,
       },
     });
   } catch (err: any) {
