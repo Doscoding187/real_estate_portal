@@ -1003,17 +1003,21 @@ const createActions = (
             errors.push('Add at least 3 key selling points');
           if ((state.developmentData?.description?.length || 0) < 50)
             errors.push('Description must be at least 50 characters');
-          const status = state.developmentData?.status;
-          if (status === 'launching-soon' || status === 'selling') {
-            if (!state.developmentData?.completionDate)
-              errors.push('Expected completion date is required for this status');
+          {
+            const status = state.developmentData?.status;
+            if (status === 'launching-soon' || status === 'selling') {
+              if (!state.developmentData?.completionDate)
+                errors.push('Expected completion date is required for this status');
+            }
           }
           break;
         case 9:
-          const media = state.developmentData?.media;
-          if (!media?.heroImage) errors.push('Hero image is required');
-          if ((media?.documents || []).length < 1)
-            errors.push('Add at least 1 brochure or document');
+          {
+            const media = state.developmentData?.media;
+            if (!media?.heroImage) errors.push('Hero image is required');
+            if ((media?.documents || []).length < 1)
+              errors.push('Add at least 1 brochure or document');
+          }
           break;
         case 10:
           if (state.classification?.type !== 'land' && (state.unitTypes?.length || 0) === 0)

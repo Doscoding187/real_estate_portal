@@ -517,7 +517,6 @@ const ListingWizard: React.FC = () => {
     }
 
     return steps;
-    return steps;
   }, [stepTitles, store.currentStep, store.completedSteps, validationErrors]);
 
   // Calculate readiness

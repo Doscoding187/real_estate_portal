@@ -318,17 +318,13 @@ const EMPTY_DEVELOPER_KPIS = {
 // ===========================================================================
 
 export const developerRouter = router({
-  adminListPendingDevelopers: protectedProcedure
-    .input(z.void())
-    .query(async () => {
-      return { developers: [] as any[], total: 0 };
-    }),
+  adminListPendingDevelopers: protectedProcedure.input(z.void()).query(async () => {
+    return { developers: [] as any[], total: 0 };
+  }),
 
-  adminListAllDevelopers: protectedProcedure
-    .input(z.void())
-    .query(async () => {
-      return { developers: [] as any[], total: 0 };
-    }),
+  adminListAllDevelopers: protectedProcedure.input(z.void()).query(async () => {
+    return { developers: [] as any[], total: 0 };
+  }),
 
   adminSetTrusted: protectedProcedure
     .input(z.object({ developerId: z.number(), isTrusted: z.boolean() }))
@@ -483,7 +479,10 @@ export const developerRouter = router({
             .update(developmentDrafts)
             .set(updateSet)
             .where(
-              and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+              and(
+                eq(developmentDrafts.id, input.id),
+                eq(developmentDrafts.developerId, profile.id),
+              ),
             );
 
           return { id: input.id, success: true, draftData: sanitized };
@@ -510,29 +509,33 @@ export const developerRouter = router({
       }
     }),
 
-  getDraft: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
-    try {
-      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-      const dbConn = await db.getDb();
-      if (!dbConn) return null;
+  getDraft: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const dbConn = await db.getDb();
+        if (!dbConn) return null;
 
-      const [draft] = await dbConn
-        .select()
-        .from(developmentDrafts)
-        .where(and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)))
-        .limit(1);
+        const [draft] = await dbConn
+          .select()
+          .from(developmentDrafts)
+          .where(
+            and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+          )
+          .limit(1);
 
-      if (!draft) return null;
+        if (!draft) return null;
 
-      return {
-        ...draft,
-        draftData: sanitizeDraftData((draft as any).draftData ?? {}),
-      };
-    } catch (error) {
-      console.warn('[developer.getDraft] Returning null due to error:', error);
-      return null;
-    }
-  }),
+        return {
+          ...draft,
+          draftData: sanitizeDraftData((draft as any).draftData ?? {}),
+        };
+      } catch (error) {
+        console.warn('[developer.getDraft] Returning null due to error:', error);
+        return null;
+      }
+    }),
 
   getDrafts: protectedProcedure.query(async ({ ctx }) => {
     try {
@@ -566,7 +569,9 @@ export const developerRouter = router({
 
         await dbConn
           .delete(developmentDrafts)
-          .where(and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)));
+          .where(
+            and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+          );
 
         return { success: true, id: input.id };
       } catch (error) {
@@ -878,7 +883,11 @@ export const developerRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await requireDeveloperProfileByUserId(requireUser(ctx).id);
-      return await developmentService.updateDevelopment(input.id, requireUser(ctx).id, input.data as any);
+      return await developmentService.updateDevelopment(
+        input.id,
+        requireUser(ctx).id,
+        input.data as any,
+      );
     }),
 
   getDevelopment: protectedProcedure
@@ -908,16 +917,6 @@ export const developerRouter = router({
     );
     return await developmentService.getDevelopmentsByDeveloperId(profile.id);
   }),
-
-  getDrafts: protectedProcedure.query(async () => {
-    return [] as any[];
-  }),
-
-  deleteDraft: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async () => {
-      return { success: true };
-    }),
 
   upgradeSubscription: protectedProcedure
     .input(z.object({ tier: z.string().optional() }).optional())
