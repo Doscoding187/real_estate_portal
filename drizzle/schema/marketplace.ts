@@ -28,7 +28,7 @@ import { videos } from './media';
 import { exploreContent } from './explore';
 
 export const partnerTiers = mysqlTable('partner_tiers', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 100 }).notNull(),
   slug: varchar({ length: 100 }).notNull(),
   description: text(),
@@ -43,7 +43,7 @@ export const partnerTiers = mysqlTable('partner_tiers', {
 export const partners = mysqlTable(
   'partners',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -84,7 +84,7 @@ export const partners = mysqlTable(
 export const partnerLeads = mysqlTable(
   'partner_leads',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     partnerId: int('partner_id')
       .notNull()
       .references(() => partners.id),
@@ -107,7 +107,7 @@ export const partnerLeads = mysqlTable(
 export const partnerSubscriptions = mysqlTable(
   'partner_subscriptions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     partnerId: int('partner_id')
       .notNull()
       .references(() => partners.id),
@@ -123,7 +123,7 @@ export const partnerSubscriptions = mysqlTable(
 );
 
 export const marketplaceBundles = mysqlTable('marketplace_bundles', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   description: text(),
   priceZar: int().notNull(),
@@ -135,7 +135,7 @@ export const marketplaceBundles = mysqlTable('marketplace_bundles', {
 });
 
 export const bundlePartners = mysqlTable('bundle_partners', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   bundleId: int()
     .notNull()
     .references(() => marketplaceBundles.id, { onDelete: 'cascade' }),
@@ -151,7 +151,7 @@ export const bundlePartners = mysqlTable('bundle_partners', {
 export const boostCampaigns = mysqlTable(
   'boost_campaigns',
   {
-    id: varchar('id', { length: 36 }).notNull(),
+    id: varchar('id', { length: 36 }).notNull().primaryKey(),
     partnerId: varchar('partner_id', { length: 36 }).notNull(),
     contentId: varchar('content_id', { length: 36 }).notNull(),
     topicId: varchar('topic_id', { length: 36 }).notNull(),
@@ -179,7 +179,7 @@ export const boostCampaigns = mysqlTable(
 export const contentApprovalQueue = mysqlTable(
   'content_approval_queue',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     contentId: int('content_id')
       .notNull()
       .references(() => exploreContent.id, { onDelete: 'cascade' }),
@@ -209,7 +209,7 @@ export const contentApprovalQueue = mysqlTable(
 export const contentQualityScores = mysqlTable(
   'content_quality_scores',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     contentId: int('content_id')
       .notNull()
       .references(() => exploreContent.id, { onDelete: 'cascade' }),
@@ -233,7 +233,7 @@ export const contentQualityScores = mysqlTable(
 export const launchContentQuotas = mysqlTable(
   'launch_content_quotas',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     phaseId: varchar('phase_id', { length: 50 }).notNull(),
     category: varchar({ length: 50 }).notNull(),
     targetCount: int('target_count').notNull(),
@@ -250,7 +250,7 @@ export const launchContentQuotas = mysqlTable(
 );
 
 export const launchMetrics = mysqlTable('launch_metrics', {
-  id: int('id').autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   metricName: varchar('metric_name', { length: 100 }).notNull(),
   metricValue: decimal('metric_value', { precision: 15, scale: 2 }).notNull(),
   metricType: mysqlEnum('metric_type', ['counter', 'gauge', 'percentage', 'currency']).notNull(),
@@ -259,7 +259,7 @@ export const launchMetrics = mysqlTable('launch_metrics', {
 });
 
 export const launchPhases = mysqlTable('launch_phases', {
-  id: int('id').autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   phaseName: varchar('phase_name', { length: 100 }).notNull(),
   codeName: varchar('code_name', { length: 50 }).notNull().unique(), // e.g., 'alpha', 'beta', 'market_entry'
   description: text('description'),
@@ -273,7 +273,7 @@ export const launchPhases = mysqlTable('launch_phases', {
 export const foundingPartners = mysqlTable(
   'founding_partners',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     partnerId: int('partner_id')
       .notNull()
       .references(() => partners.id, { onDelete: 'cascade' }),
@@ -292,7 +292,7 @@ export const foundingPartners = mysqlTable(
 export const heroCampaigns = mysqlTable(
   'hero_campaigns',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     title: varchar({ length: 255 }).notNull(),
     subtitle: varchar({ length: 255 }),
     backgroundImageUrl: varchar('background_image_url', { length: 500 }).notNull(),
@@ -320,7 +320,7 @@ export const heroCampaigns = mysqlTable(
 );
 
 export const services = mysqlTable('services', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 100 }).notNull(),
   description: text(),
   categoryId: int().notNull(),
@@ -332,7 +332,7 @@ export const services = mysqlTable('services', {
 });
 
 export const reviews = mysqlTable('reviews', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),

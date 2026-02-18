@@ -1,99 +1,86 @@
 #!/usr/bin/env tsx
 /**
- * ⚠️  WARNING: BOOTSTRAP/RECOVERY TOOL ONLY ⚠️
+ * WARNING: BOOTSTRAP/RECOVERY TOOL ONLY
  *
- * Mark existing migrations as applied
- *
- * ⚠️  DO NOT USE FOR REGULAR DEPLOYMENTS ⚠️
- *
- * This script marks all migration files as applied in the __drizzle_migrations table
- * without actually running them. Use this ONLY when:
- *
- * 1. Initial adoption: Database schema exists but migrations table is empty
- * 2. Recovery: Migrations table was accidentally dropped/corrupted
- *
- * For regular deployments, ALWAYS use:
- *   - `npm run db:generate` to create migrations
- *   - `npm run db:migrate` to apply migrations
- *
- * Using this script in production can mask schema drift and cause data corruption.
+ * Mark journal-tracked migrations as applied in __drizzle_migrations without executing SQL.
+ * Use only for initial bootstrap/recovery scenarios.
  */
 
 import mysql from 'mysql2/promise';
 import { config } from 'dotenv';
-import { readdir } from 'fs/promises';
+import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { createHash } from 'crypto';
-import { readFile } from 'fs/promises';
 
 config();
 
 async function main() {
-  const DATABASE_URL = process.env.DATABASE_URL;
+  const databaseUrl = process.env.DATABASE_URL;
 
-  if (!DATABASE_URL) {
-    console.error('❌ DATABASE_URL not set');
+  if (!databaseUrl) {
+    console.error('DATABASE_URL not set');
     process.exit(1);
   }
 
-  const connection = await mysql.createConnection(DATABASE_URL);
+  const connection = await mysql.createConnection(databaseUrl);
 
   try {
-    // 1. Get all migration files
-    const migrationsDir = join(process.cwd(), 'drizzle');
-    const files = await readdir(migrationsDir);
-    const sqlFiles = files
-      .filter(f => f.endsWith('.sql') && f.match(/^\d{4}_/)) // Only numbered migration files
-      .sort(); // Sort by filename (which includes timestamp)
+    const migrationsDir = join(process.cwd(), 'drizzle', 'migrations');
+    const journalPath = join(migrationsDir, 'meta', '_journal.json');
 
-    console.log(`\n📁 Found ${sqlFiles.length} migration files\n`);
+    const journalRaw = await readFile(journalPath, 'utf-8');
+    const journal = JSON.parse(journalRaw) as { entries?: Array<{ tag?: string }> };
+    const tags = (journal.entries || []).map(entry => entry.tag).filter(Boolean) as string[];
+    const trackedSqlFiles = tags.map(tag => `${tag}.sql`);
 
-    // 2. Check current state of migrations table
+    const sqlFilesInDir = new Set((await readdir(migrationsDir)).filter(name => name.endsWith('.sql')));
+    const missingFiles = trackedSqlFiles.filter(file => !sqlFilesInDir.has(file));
+    if (missingFiles.length > 0) {
+      throw new Error(`Missing journal-tracked migration file(s): ${missingFiles.join(', ')}`);
+    }
+
+    console.log(`Found ${trackedSqlFiles.length} tracked migration files`);
+
     const [existing] = await connection.query<any[]>(
       'SELECT * FROM __drizzle_migrations ORDER BY created_at',
     );
 
-    console.log(`📊 Currently applied: ${existing.length} migrations\n`);
+    console.log(`Currently applied: ${existing.length} migrations`);
 
-    if (existing.length === sqlFiles.length) {
-      console.log('✅ All migrations already marked as applied!');
-      process.exit(0);
+    if (existing.length === trackedSqlFiles.length) {
+      console.log('All journal-tracked migrations are already marked as applied.');
+      return;
     }
 
-    // 3. Get list of already applied migrations
     const appliedHashes = new Set(existing.map((row: any) => row.hash));
-
-    // 4. Mark remaining migrations as applied
     let marked = 0;
 
-    for (const file of sqlFiles) {
+    for (const file of trackedSqlFiles) {
       const filePath = join(migrationsDir, file);
       const content = await readFile(filePath, 'utf-8');
       const hash = createHash('sha256').update(content).digest('hex');
 
       if (appliedHashes.has(hash)) {
-        console.log(`⏭️  ${file} - already applied`);
+        console.log(`Skip ${file} (already applied)`);
         continue;
       }
 
-      // Insert into migrations table
       await connection.query('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)', [
         hash,
         Math.floor(Date.now()),
       ]);
 
-      console.log(`✅ ${file} - marked as applied`);
+      console.log(`Marked ${file}`);
       marked++;
     }
 
-    console.log(`\n🎉 Marked ${marked} migrations as applied!`);
-    console.log(`📊 Total migrations: ${sqlFiles.length}`);
+    console.log(`Marked ${marked} migration(s).`);
   } finally {
     await connection.end();
   }
 }
 
 main().catch(err => {
-  console.error('❌ Error:', err.message);
+  console.error('Error:', err.message);
   process.exit(1);
 });

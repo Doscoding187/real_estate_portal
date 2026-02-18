@@ -25,7 +25,7 @@ import { developments, developerBrandProfiles } from './developments';
 import { agencies, agents } from './agencies';
 
 export const leads = mysqlTable('leads', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
   developmentId: int('developmentId').references(() => developments.id, { onDelete: 'set null' }),
   agencyId: int('agencyId').references(() => agencies.id, { onDelete: 'set null' }),
@@ -100,7 +100,7 @@ export const leads = mysqlTable('leads', {
 });
 
 export const leadActivities = mysqlTable('lead_activities', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   leadId: int()
     .notNull()
     .references(() => leads.id, { onDelete: 'cascade' }),
@@ -111,7 +111,7 @@ export const leadActivities = mysqlTable('lead_activities', {
 });
 
 export const prospects = mysqlTable('prospects', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -123,7 +123,7 @@ export const prospects = mysqlTable('prospects', {
 });
 
 export const prospectFavorites = mysqlTable('prospect_favorites', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   prospectId: int()
     .notNull()
     .references(() => prospects.id, { onDelete: 'cascade' }),
@@ -134,7 +134,7 @@ export const prospectFavorites = mysqlTable('prospect_favorites', {
 });
 
 export const recentlyViewed = mysqlTable('recently_viewed', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -143,7 +143,7 @@ export const recentlyViewed = mysqlTable('recently_viewed', {
 });
 
 export const offers = mysqlTable('offers', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id, { onDelete: 'cascade' }),
@@ -161,7 +161,7 @@ export const offers = mysqlTable('offers', {
 });
 
 export const showings = mysqlTable('showings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id, { onDelete: 'cascade' }),
@@ -183,7 +183,7 @@ export const showings = mysqlTable('showings', {
 export const scheduledViewings = mysqlTable(
   'scheduled_viewings',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     propertyId: int('property_id')
       .notNull()
       .references(() => properties.id),
@@ -209,7 +209,7 @@ export const scheduledViewings = mysqlTable(
 export const favorites = mysqlTable(
   'favorites',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -227,7 +227,7 @@ export const favorites = mysqlTable(
 export const savedSearches = mysqlTable(
   'saved_searches',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
