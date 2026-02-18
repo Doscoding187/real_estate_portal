@@ -253,6 +253,7 @@ CREATE TABLE `billing_transactions` (
 --> statement-breakpoint
 CREATE TABLE `boost_campaigns` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`partner_id` varchar(36) NOT NULL,
 	`content_id` varchar(36) NOT NULL,
 	`topic_id` varchar(36) NOT NULL,
@@ -345,6 +346,7 @@ CREATE TABLE `commissions` (
 --> statement-breakpoint
 CREATE TABLE `content_approval_queue` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`content_id` varchar(36) NOT NULL,
 	`partner_id` varchar(36) NOT NULL,
 	`status` enum('pending','approved','rejected','revision_requested') DEFAULT 'pending',
@@ -704,6 +706,7 @@ CREATE TABLE `email_templates` (
 --> statement-breakpoint
 CREATE TABLE `exploreComments` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
 	`comment` text NOT NULL,
@@ -739,6 +742,7 @@ CREATE TABLE `explore_content` (
 --> statement-breakpoint
 CREATE TABLE `exploreFollows` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`followerId` int NOT NULL,
 	`followingId` int NOT NULL,
 	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
@@ -776,6 +780,7 @@ CREATE TABLE `explore_interactions` (
 --> statement-breakpoint
 CREATE TABLE `exploreLikes` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
 	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
@@ -783,6 +788,7 @@ CREATE TABLE `exploreLikes` (
 --> statement-breakpoint
 CREATE TABLE `explore_partners` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` varchar(36) NOT NULL,
 	`tier_id` int NOT NULL,
 	`company_name` varchar(255) NOT NULL,
@@ -848,6 +854,7 @@ CREATE TABLE `explore_user_preferences` (
 --> statement-breakpoint
 CREATE TABLE `exploreVideoViews` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
 	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
@@ -962,6 +969,7 @@ CREATE TABLE `invoices` (
 --> statement-breakpoint
 CREATE TABLE `launch_content_quotas` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`content_type` varchar(50) NOT NULL,
 	`required_count` int NOT NULL,
 	`current_count` int DEFAULT 0,
@@ -970,6 +978,7 @@ CREATE TABLE `launch_content_quotas` (
 --> statement-breakpoint
 CREATE TABLE `launch_metrics` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`metric_date` date NOT NULL,
 	`topic_engagement_rate` decimal(5,2),
 	`partner_content_watch_rate` decimal(5,2),
@@ -981,6 +990,7 @@ CREATE TABLE `launch_metrics` (
 --> statement-breakpoint
 CREATE TABLE `launch_phases` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`phase` enum('pre_launch','launch_period','ramp_up','ecosystem_maturity') NOT NULL,
 	`start_date` date NOT NULL,
 	`end_date` date,
@@ -1274,6 +1284,7 @@ CREATE TABLE `market_insights_cache` (
 --> statement-breakpoint
 CREATE TABLE `marketplace_bundles` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`slug` varchar(100) NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`description` text,
@@ -1316,6 +1327,7 @@ CREATE TABLE `offers` (
 --> statement-breakpoint
 CREATE TABLE `partner_leads` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`partner_id` varchar(36) NOT NULL,
 	`user_id` varchar(36) NOT NULL,
 	`content_id` varchar(36),
@@ -1331,6 +1343,7 @@ CREATE TABLE `partner_leads` (
 --> statement-breakpoint
 CREATE TABLE `partner_subscriptions` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`partner_id` varchar(36) NOT NULL,
 	`tier` enum('free','basic','premium','featured') NOT NULL,
 	`price_monthly` decimal(10,2) NOT NULL,
@@ -1343,6 +1356,7 @@ CREATE TABLE `partner_subscriptions` (
 --> statement-breakpoint
 CREATE TABLE `partner_tiers` (
 	`id` int NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(100) NOT NULL,
 	`allowed_content_types` json NOT NULL,
 	`allowed_ctas` json NOT NULL,
@@ -1786,6 +1800,7 @@ CREATE TABLE `suburbs` (
 --> statement-breakpoint
 CREATE TABLE `topics` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`slug` varchar(100) NOT NULL,
 	`name` varchar(100) NOT NULL,
 	`description` text,
@@ -1800,6 +1815,7 @@ CREATE TABLE `topics` (
 --> statement-breakpoint
 CREATE TABLE `unit_types` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`development_id` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`bedrooms` int NOT NULL,
