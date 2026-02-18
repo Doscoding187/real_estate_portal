@@ -66,7 +66,8 @@ const REQUIRED_COLUMNS = {
     { name: 'name', type: 'varchar' },
     { name: 'bedrooms', type: 'int' },
     { name: 'bathrooms', type: 'decimal' },
-    { name: 'parking', type: 'enum' },
+    { name: 'parking_type', type: 'varchar' },
+    { name: 'parking_bays', type: 'int' },
     { name: 'ownership_type', type: 'enum' }, // snake_case in DB
     { name: 'structural_type', type: 'enum' }, // snake_case in DB
     { name: 'base_price_from', type: 'decimal' }, // snake_case in DB
@@ -98,7 +99,6 @@ const ENUM_VALUES = {
   'developments.status': ['launching-soon', 'selling', 'sold-out'],
   'developments.developmentType': ['residential', 'commercial', 'mixed_use', 'land'],
   'developments.dev_owner_type': ['platform', 'developer'], // snake_case in DB
-  'unit_types.parking': ['none', '1', '2', 'carport', 'garage'],
   'unit_types.ownership_type': ['full-title', 'sectional-title', 'leasehold', 'life-rights'], // snake_case in DB
   'unit_types.structural_type': [
     // snake_case in DB
