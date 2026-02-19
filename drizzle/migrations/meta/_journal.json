@@ -15,6 +15,13 @@
       "when": 1771524316014,
       "tag": "0001_30002_schema_sync_partner_and_location_searches",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771525470213,
+      "tag": "0002_30003_google_places_api_logs",
+      "breakpoints": true
     }
   ]
 }
