@@ -206,7 +206,7 @@ export const locationPagesServiceEnhanced = {
     const seoContent = generateSEOContent(input);
 
     // 5) Create new location record
-    const [newLocation] = await db
+    const insertResult = await db
       .insert(locations)
       .values({
         name: input.name,
@@ -225,11 +225,14 @@ export const locationPagesServiceEnhanced = {
         seoDescription: input.seoDescription || seoContent.description,
         heroImage: input.heroImage || seoContent.heroImage || null,
         propertyCount: 0,
-      })
-      .$returningId();
+      });
 
     // ✅ Guard: returning id must exist (prevents Vitest/mock crashes & real DB surprises)
-    if (!newLocation?.id) {
+    const insertedId = Number(
+      (insertResult as any)?.insertId ?? (insertResult as any)?.[0]?.insertId ?? 0,
+    );
+
+    if (!insertedId) {
       throw new Error(
         `[LocationPagesEnhanced] Insert failed: returning id missing for location "${input.name}"`,
       );
@@ -239,13 +242,13 @@ export const locationPagesServiceEnhanced = {
     const [created] = await db
       .select()
       .from(locations)
-      .where(eq(locations.id, newLocation.id))
+      .where(eq(locations.id, insertedId))
       .limit(1);
 
     // ✅ Guard: must be able to re-fetch
     if (!created) {
       throw new Error(
-        `[LocationPagesEnhanced] Inserted location id=${newLocation.id} but could not re-fetch row`,
+        `[LocationPagesEnhanced] Inserted location id=${insertedId} but could not re-fetch row`,
       );
     }
 
