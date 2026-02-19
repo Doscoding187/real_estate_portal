@@ -2053,7 +2053,7 @@ async function createPhase(developmentId: number, developerId: number, data: any
   const [result] = await db.insert(developmentPhases).values({
     ...safe,
     developmentId,
-    createdAt: new Date().toISOString(),
+    createdAt: mysqlDateTime(),
   });
 
   const [created] = await db

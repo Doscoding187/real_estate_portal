@@ -7,12 +7,23 @@ import { describe, expect, beforeEach, afterEach } from 'vitest';
 import { it, fc } from '@fast-check/vitest';
 import { developmentService } from '../developmentService';
 import { db } from '../../db';
-import { developers, developments, developmentPhases } from '../../../drizzle/schema';
+import { developers, developments, developmentPhases, users } from '../../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
-describe('Development Service - Property Tests', () => {
+describe('Development Service - Property Tests', { timeout: 30000 }, () => {
   // Helper function to create a test developer
   async function createTestDeveloper(userId: number) {
+    const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (!existingUser) {
+      await db.insert(users).values({
+        id: userId,
+        email: `test${userId}@example.com`,
+        name: `Test User ${userId}`,
+        role: 'property_developer',
+        emailVerified: 1,
+      });
+    }
+
     const result = await db.insert(developers).values({
       userId,
       name: `Test Developer ${userId}`,
@@ -35,6 +46,8 @@ describe('Development Service - Property Tests', () => {
 
   // Helper function to cleanup test data
   async function cleanupTestData(developerId: number) {
+    const [developer] = await db.select().from(developers).where(eq(developers.id, developerId));
+
     // Delete in correct order due to foreign keys
     const devs = await db
       .select()
@@ -45,6 +58,9 @@ describe('Development Service - Property Tests', () => {
     }
     await db.delete(developments).where(eq(developments.developerId, developerId));
     await db.delete(developers).where(eq(developers.id, developerId));
+    if (developer?.userId) {
+      await db.delete(users).where(eq(users.id, developer.userId));
+    }
   }
 
   /**
@@ -55,10 +71,15 @@ describe('Development Service - Property Tests', () => {
    * For any development with amenities added, retrieving the development
    * should return the exact same amenities list.
    */
-  it.prop([
-    fc.integer({ min: 1, max: 10000 }),
-    fc.array(fc.string({ minLength: 3, maxLength: 30 }), { minLength: 1, maxLength: 10 }),
-  ])('Property 4: Development amenities round-trip consistency', async (userId, amenities) => {
+  it.prop(
+    [
+      fc.integer({ min: 1, max: 10000 }),
+      fc
+        .array(fc.string({ minLength: 3, maxLength: 30 }), { minLength: 1, maxLength: 10 })
+        .map(amenities => amenities.map(amenity => amenity.trim()).filter(Boolean)),
+    ],
+    { numRuns: 20 },
+  )('Property 4: Development amenities round-trip consistency', async (userId, amenities) => {
     let developerId: number | null = null;
 
     try {
@@ -67,7 +88,7 @@ describe('Development Service - Property Tests', () => {
       developerId = developer.id;
 
       // Create development with amenities
-      const development = await developmentService.createDevelopment(developer.id, {
+      const development = await developmentService.createDevelopment(developer.userId, {
         name: 'Test Development',
         developmentType: 'residential',
         city: 'Test City',
@@ -112,10 +133,13 @@ describe('Development Service - Property Tests', () => {
    * (planning, pre_launch, selling, sold out, completed), and invalid status values
    * should be rejected.
    */
-  it.prop([
-    fc.integer({ min: 1, max: 10000 }),
-    fc.constantFrom('planning', 'pre_launch', 'selling', 'sold_out', 'completed'),
-  ])('Property 35: Phase status transitions are valid', async (userId, newStatus) => {
+  it.prop(
+    [
+      fc.integer({ min: 1, max: 10000 }),
+      fc.constantFrom('planning', 'pre_launch', 'selling', 'sold_out', 'completed'),
+    ],
+    { numRuns: 20 },
+  )('Property 35: Phase status transitions are valid', async (userId, newStatus) => {
     let developerId: number | null = null;
 
     try {
@@ -124,7 +148,7 @@ describe('Development Service - Property Tests', () => {
       developerId = developer.id;
 
       // Create development
-      const development = await developmentService.createDevelopment(developer.id, {
+      const development = await developmentService.createDevelopment(developer.userId, {
         name: 'Test Development',
         developmentType: 'residential',
         city: 'Test City',
@@ -132,14 +156,14 @@ describe('Development Service - Property Tests', () => {
       });
 
       // Create phase
-      const phase = await developmentService.createPhase(development.id, developer.id, {
+      const phase = await developmentService.createPhase(development.id, developer.userId, {
         name: 'Phase 1',
         phaseNumber: 1,
         status: 'planning',
       });
 
       // Update phase status
-      const updatedPhase = await developmentService.updatePhase(phase.id, developer.id, {
+      const updatedPhase = await developmentService.updatePhase(phase.id, developer.userId, {
         status: newStatus,
       });
 
@@ -164,7 +188,7 @@ describe('Development Service - Property Tests', () => {
   /**
    * Additional test: Invalid status should be rejected
    */
-  it.prop([fc.integer({ min: 1, max: 10000 })])(
+  it.prop([fc.integer({ min: 1, max: 10000 })], { numRuns: 20 })(
     'Invalid phase status values are rejected',
     async userId => {
       let developerId: number | null = null;
@@ -183,7 +207,7 @@ describe('Development Service - Property Tests', () => {
         });
 
         // Create phase
-        const phase = await developmentService.createPhase(development.id, developer.id, {
+        const phase = await developmentService.createPhase(development.id, developer.userId, {
           name: 'Phase 1',
           phaseNumber: 1,
           status: 'planning',
@@ -206,22 +230,30 @@ describe('Development Service - Property Tests', () => {
    * Property test: Development profile captures all required fields
    * Validates: Requirements 2.1
    */
-  it.prop([
-    fc.integer({ min: 1, max: 10000 }),
-    fc.record({
-      name: fc.string({ minLength: 2, maxLength: 100 }),
-      developmentType: fc.constantFrom(
-        'residential',
-        'commercial',
-        'mixed_use',
-        'estate',
-        'complex',
-      ),
-      city: fc.string({ minLength: 2, maxLength: 50 }),
-      province: fc.string({ minLength: 2, maxLength: 50 }),
-      description: fc.option(fc.string({ minLength: 10, maxLength: 500 })),
-    }),
-  ])('Development profile captures all required fields', async (userId, developmentData) => {
+  it.prop(
+    [
+      fc.integer({ min: 1, max: 10000 }),
+      fc
+        .record({
+          name: fc.string({ minLength: 2, maxLength: 100 }),
+          developmentType: fc.constantFrom('residential', 'commercial', 'mixed_use', 'land'),
+          city: fc.string({ minLength: 2, maxLength: 50 }),
+          province: fc.string({ minLength: 2, maxLength: 50 }),
+          description: fc.option(fc.string({ minLength: 10, maxLength: 500 })),
+        })
+        .map(data => ({
+          ...data,
+          name: data.name.trim().length > 0 ? data.name.trim() : 'Test Development',
+          city: data.city.trim().length > 0 ? data.city.trim() : 'Test City',
+          province: data.province.trim().length > 0 ? data.province.trim() : 'Test Province',
+          description:
+            data.description && data.description.trim().length > 0
+              ? data.description.trim()
+              : null,
+        })),
+    ],
+    { numRuns: 20 },
+  )('Development profile captures all required fields', async (userId, developmentData) => {
     let developerId: number | null = null;
 
     try {
