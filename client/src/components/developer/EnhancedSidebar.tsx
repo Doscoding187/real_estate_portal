@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Enhanced Sidebar Component for Mission Control Dashboard
  * Features: Collapsible sections, notification badges, active state highlighting

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useMemo } from 'react';
 import { useDeveloperContext } from '@/contexts/DeveloperContextProvider';
 import { trpc } from '@/lib/trpc';

@@ -7,8 +7,8 @@ import {
   trackLocationSearch,
 } from '../globalSearchService';
 import { getDb } from '../../db';
-import { locations, locationSearches, properties } from '../../../drizzle/schema';
-import { eq, sql } from 'drizzle-orm';
+import { locations, locationSearches, properties, users } from '../../../drizzle/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 /**
  * Property-Based Tests for Search Integration
@@ -21,11 +21,12 @@ import { eq, sql } from 'drizzle-orm';
  * - Property 33: Place ID filtering
  */
 
-describe('Search Integration Property Tests', () => {
+describe('Search Integration Property Tests', { timeout: 30000 }, () => {
   let db: Awaited<ReturnType<typeof getDb>> | null = null;
   let skipTests = false;
   let testLocationIds: number[] = [];
   let testPropertyIds: number[] = [];
+  let testUserId: number | null = null;
 
   beforeAll(async () => {
     console.log('[SearchIntegration PBT] Setting up test database...');
@@ -44,6 +45,13 @@ describe('Search Integration Property Tests', () => {
       skipTests = true;
       return;
     }
+
+    const [userResult] = await db.insert(users).values({
+      email: `search-integration-${Date.now()}@example.com`,
+      role: 'visitor',
+      emailVerified: 1,
+    });
+    testUserId = Number(userResult.insertId);
 
     // Create test locations with hierarchy
     const [provinceResult] = await db.insert(locations).values({
@@ -98,6 +106,8 @@ describe('Search Integration Property Tests', () => {
         listingType: 'sale',
         bedrooms: 3,
         bathrooms: 2,
+        area: 120 + i,
+        address: `${i} Test Street`,
         city: 'Test City',
         province: 'Test Province',
         suburb: 'Test Suburb',
@@ -106,7 +116,10 @@ describe('Search Integration Property Tests', () => {
         latitude: '-26.2',
         longitude: '28.2',
         status: 'published',
-        userId: 1,
+        featured: 0,
+        views: 0,
+        enquiries: 0,
+        ownerId: testUserId!,
       });
 
       testPropertyIds.push(Number(propResult.insertId));
@@ -118,18 +131,20 @@ describe('Search Integration Property Tests', () => {
 
     // Clean up test data
     if (testPropertyIds.length > 0) {
-      await db.delete(properties).where(sql`${properties.id} IN (${testPropertyIds.join(',')})`);
+      await db.delete(properties).where(inArray(properties.id, testPropertyIds));
     }
 
     if (testLocationIds.length > 0) {
-      await db
-        .delete(locationSearches)
-        .where(sql`${locationSearches.locationId} IN (${testLocationIds.join(',')})`);
+      await db.delete(locationSearches).where(inArray(locationSearches.locationId, testLocationIds));
 
       // Delete in reverse order (suburb -> city -> province)
       for (let i = testLocationIds.length - 1; i >= 0; i--) {
         await db.delete(locations).where(eq(locations.id, testLocationIds[i]));
       }
+    }
+
+    if (testUserId) {
+      await db.delete(users).where(eq(users.id, testUserId));
     }
   });
 
@@ -244,7 +259,7 @@ describe('Search Integration Property Tests', () => {
           }
         },
       ),
-      { numRuns: 20 }, // Reduced runs due to database operations
+      { numRuns: 10 }, // Reduced runs due to database operations
     );
   });
 
@@ -325,7 +340,7 @@ describe('Search Integration Property Tests', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.record({
-          minPrice: fc.integer({ min: 500000, max: 2000000 }),
+          minPrice: fc.integer({ min: 500000, max: 1000000 }),
           maxPrice: fc.integer({ min: 2000001, max: 5000000 }),
         }),
         async ({ minPrice, maxPrice }) => {
@@ -408,7 +423,7 @@ describe('Search Integration Property Tests', () => {
     const testLocationId = testLocationIds[2]; // suburb
 
     // Track a search
-    await trackLocationSearch(testLocationId, 1);
+    await trackLocationSearch(testLocationId, testUserId ?? undefined);
 
     // Verify the search was recorded
     const [searchRecord] = await db

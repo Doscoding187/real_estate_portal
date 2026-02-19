@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
-import PropertyCardList from '@/components/PropertyCardList';
 import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { normalizePropertyForUI } from '@/lib/normalizers';
@@ -33,6 +32,8 @@ import {
   SortOption,
 } from '@/components/search';
 import { SearchFallbackNotice } from '@/components/search/SearchFallbackNotice';
+import { DevelopmentResultCard } from '@/components/property-results/DevelopmentResultCard';
+import { ListingResultCard } from '@/components/property-results/ListingResultCard';
 
 // URL utilities
 import { MetaControl } from '@/components/seo/MetaControl';
@@ -136,6 +137,19 @@ export default function SearchResults({
 
   // Fetch properties
   const { data: searchResults, isLoading } = trpc.properties.search.useQuery(queryInput);
+  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
+    filters: {
+      city: filters.city,
+      province: filters.province,
+      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+      listingType: filters.listingType,
+      propertyType: filters.propertyType,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      minBedrooms: filters.minBedrooms,
+      maxBedrooms: filters.maxBedrooms,
+    },
+  });
 
   const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
   const developmentResults = (searchResults as any)?.developments?.items ?? [];
@@ -143,11 +157,6 @@ export default function SearchResults({
   const locationContext = (searchResults as any)?.locationContext;
 
   // Mutations
-  const addFavoriteMutation = trpc.favorites.add.useMutation({
-    onSuccess: () => toast.success('Added to favorites'),
-    onError: () => toast.error('Failed to add to favorites'),
-  });
-
   const saveSearchMutation = trpc.savedSearch.create.useMutation({
     onSuccess: () => {
       toast.success('Search saved successfully');
@@ -203,14 +212,6 @@ export default function SearchResults({
       filters: {}, // Clear all optional filters
     };
     setLocation(generateIntentUrl(updatedIntent));
-  };
-
-  const handleFavoriteClick = (propertyId: string) => {
-    if (!isAuthenticated) {
-      toast.error('Please login to save favorites');
-      return;
-    }
-    addFavoriteMutation.mutate({ propertyId: parseInt(propertyId) });
   };
 
   const handleSaveSearch = () => {
@@ -288,8 +289,46 @@ export default function SearchResults({
     return sorted;
   }, [displayProperties, sortBy]);
 
+  const mixedListResults = useMemo(() => {
+    const propertyItems = sortedProperties.map(property => ({
+      kind: 'property' as const,
+      value: property,
+    }));
+    const developmentItems = (developmentResults as any[]).map(development => ({
+      kind: 'development' as const,
+      value: development,
+    }));
+
+    if (!developmentItems.length) return propertyItems;
+    if (!propertyItems.length) return developmentItems;
+
+    const mixed: Array<
+      | { kind: 'property'; value: (typeof propertyItems)[number]['value'] }
+      | { kind: 'development'; value: (typeof developmentItems)[number]['value'] }
+    > = [];
+
+    let p = 0;
+    let d = 0;
+    while (p < propertyItems.length || d < developmentItems.length) {
+      if (d < developmentItems.length) {
+        mixed.push(developmentItems[d]);
+        d += 1;
+      }
+      let inserted = 0;
+      while (p < propertyItems.length && inserted < 3) {
+        mixed.push(propertyItems[p]);
+        p += 1;
+        inserted += 1;
+      }
+    }
+
+    return mixed;
+  }, [sortedProperties, developmentResults]);
+
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
+  const hasRenderableResults =
+    viewMode === 'list' ? mixedListResults.length > 0 : sortedProperties.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -306,113 +345,123 @@ export default function SearchResults({
       />
 
       <div className="container pt-24 pb-8">
-        {/* Breadcrumbs */}
-        <div className="mb-4">
-          <Breadcrumbs items={breadcrumbs} />
-        </div>
-
-        {/* Location Fallback Notice */}
-        <SearchFallbackNotice locationContext={locationContext} />
-
-        {/* Results Header - Full Width */}
-        <div className="mb-6 border-b border-gray-200 pb-4">
-          <ResultsHeader
-            filters={filters}
-            resultCount={resultCount}
-            isLoading={isLoading}
-            viewMode={viewMode}
-            sortBy={sortBy}
-            onViewModeChange={setViewMode}
-            onSortChange={setSortBy}
-            onOpenFilters={() => setIsMobileFilterOpen(true)}
-          />
-          {/* Active Filter Chips - NOW MOVED HERE ABOVE RESULTS */}
-          <div className="mt-4">
-            <ActiveFilterChips
-              filters={searchIntent.filters} // Only show actual removable filters, not geography path
-              onRemoveFilter={handleRemoveFilter}
-              onClearAll={handleClearAllFilters}
-            />
-          </div>
-
-          {/* Result Delta Feedback - Mandatory from Spec */}
-          {!isLoading && (
-            <div className="mt-2 text-sm text-slate-500">
-              Showing {sortedProperties.length} of {resultCount} properties
+        <div className="mx-auto w-full max-w-[1180px]">
+          {/* Header Section */}
+          <div className="mb-3">
+            <div className="mb-2">
+              <Breadcrumbs items={breadcrumbs} />
             </div>
-          )}
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* LEFT SIDEBAR - FILTERS (Changed from col-span-3 on right to left) */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-24">
-              <SidebarFilters
+            <SearchFallbackNotice locationContext={locationContext} />
+
+            <div className="border-b border-gray-200 pb-3">
+              <ResultsHeader
                 filters={filters}
-                locationContext={locationContext}
-                onFilterChange={handleFilterChange}
-                onSaveSearch={handleSaveSearch}
+                resultCount={resultCount}
+                displayedPropertyCount={sortedProperties.length}
+                developmentCount={developmentResults.length}
+                isLoading={isLoading}
+                viewMode={viewMode}
+                sortBy={sortBy}
+                onViewModeChange={setViewMode}
+                onSortChange={setSortBy}
+                onOpenFilters={() => setIsMobileFilterOpen(true)}
               />
+              <div className="mt-2">
+                <ActiveFilterChips
+                  filters={searchIntent.filters} // Only show actual removable filters, not geography path
+                  onRemoveFilter={handleRemoveFilter}
+                  onClearAll={handleClearAllFilters}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Main Content - Results (Changed to come after sidebar) */}
-          <div className="col-span-1 lg:col-span-9">
-            {/* Results Grid */}
-            <div className="">
-              {!isLoading && developmentResults.length > 0 && (
-                <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-slate-800">New Developments Nearby</h2>
-                    <a className="text-sm font-medium text-blue-700 hover:underline" href="/new-developments">
-                      View all
-                    </a>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    {developmentResults.slice(0, 4).map((development: any) => (
-                      <a
-                        key={development.id}
-                        href={`/development/${development.slug || development.id}`}
-                        className="rounded-lg border border-blue-100 bg-white p-3 transition-colors hover:border-blue-300"
-                      >
-                        <div className="text-sm font-semibold text-slate-900">{development.name}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {[development.suburb, development.city, development.province]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </div>
-                        <div className="mt-2 text-xs text-slate-700">
-                          {development.priceFrom
-                            ? `From R${Number(development.priceFrom).toLocaleString()}`
-                            : 'Price on request'}
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* Content Section */}
+          <div className="grid grid-cols-1 gap-2 px-2 sm:px-3 lg:grid-cols-[292px_minmax(0,760px)] lg:justify-center lg:gap-3 lg:px-0">
+            {/* LEFT SIDEBAR - FILTERS */}
+            <div className="hidden lg:block">
+              <div className="sticky top-24">
+                <SidebarFilters
+                  filters={filters}
+                  filterCounts={filterCounts as any}
+                  locationContext={locationContext}
+                  onFilterChange={handleFilterChange}
+                  onSaveSearch={handleSaveSearch}
+                />
+              </div>
+            </div>
 
-              {isLoading ? (
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </div>
-              ) : sortedProperties.length > 0 ? (
-                <>
-                  {viewMode === 'list' && (
-                    <div className="flex flex-col gap-4">
-                      {sortedProperties.map(property => {
-                        const normalized = normalizePropertyForUI(property);
+            {/* Main Content - Results */}
+            <div className="col-span-1">
+              {/* Results Grid */}
+              <div className="">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  </div>
+                ) : hasRenderableResults ? (
+                  <>
+                    {viewMode === 'list' && (
+                      <div className="flex flex-col items-start gap-4">
+                      {mixedListResults.map((item, index) => {
+                        if (item.kind === 'development') {
+                          const development = item.value as any;
+                          return (
+                            <DevelopmentResultCard
+                              key={`dev-${development.id}-${index}`}
+                              id={development.id}
+                              name={development.name}
+                              slug={development.slug}
+                                suburb={development.suburb}
+                                city={development.city}
+                              province={development.province}
+                              status={development.status}
+                              isFeatured={development.isFeatured}
+                              rating={development.rating}
+                              highlights={Array.isArray(development.highlights) ? development.highlights : []}
+                              builderName={development.builderName}
+                              builderLogoUrl={development.builderLogoUrl}
+                              description={development.description ?? null}
+                              configurations={development.configurations}
+                              images={development.images}
+                              />
+                            );
+                          }
+
+                          const normalized = normalizePropertyForUI(item.value);
                         if (!normalized) return null;
                         return (
-                          <PropertyCardList
-                            key={normalized.id}
-                            {...normalized}
-                            onFavoriteClick={() => handleFavoriteClick(normalized.id)}
+                          <ListingResultCard
+                            key={`prop-${normalized.id}-${index}`}
+                            data={{
+                                id: normalized.id,
+                                title: normalized.title,
+                                location: normalized.location,
+                                price: normalized.price,
+                                image:
+                                  typeof (normalized as any).image === 'string'
+                                    ? (normalized as any).image
+                                    : (normalized as any).mainImage ??
+                                  '/placeholder-property.jpg',
+                              area: normalized.area,
+                              bedrooms: normalized.bedrooms,
+                              bathrooms: normalized.bathrooms,
+                              floor:
+                                typeof (normalized as any).yardSize === 'number' &&
+                                (normalized as any).yardSize > 0
+                                  ? `${(normalized as any).yardSize}m2`
+                                  : '-',
+                              highlights: Array.isArray(normalized.highlights) ? normalized.highlights : [],
+                              description: normalized.description ?? undefined,
+                              postedBy: normalized.agent?.name,
+                              agentAvatarUrl: normalized.agent?.image ?? undefined,
+                            }}
                           />
                         );
-                      })}
-                    </div>
-                  )}
+                        })}
+                      </div>
+                    )}
 
                   {viewMode === 'grid' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -550,6 +599,7 @@ export default function SearchResults({
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Mobile Sticky Controls (Persistent Bottom Bar) */}

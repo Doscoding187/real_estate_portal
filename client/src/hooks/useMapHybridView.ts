@@ -41,7 +41,7 @@ export function useMapHybridView(options: UseMapHybridViewOptions = {}) {
   const [highlightedPropertyId, setHighlightedPropertyId] = useState<number | null>(null);
   const [properties, setProperties] = useState<PropertyMapItem[]>([]);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const boundsChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const boundsChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch properties within map bounds
   const propertiesQuery = trpc.explore.getFeed.useQuery(
@@ -55,8 +55,9 @@ export function useMapHybridView(options: UseMapHybridViewOptions = {}) {
     },
   );
 
-  const propertiesData = propertiesQuery.data
-    ? propertiesQuery.data
+  const feedItems = propertiesQuery.data?.shorts ?? [];
+  const propertiesData = feedItems
+    ? feedItems
         .filter((item: any) => item.property?.location)
         .map((item: any) => ({
           id: item.id,

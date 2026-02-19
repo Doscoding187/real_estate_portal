@@ -90,7 +90,6 @@ const cities = [
   'Cape Town', // Western Cape
   'Johannesburg', // Gauteng
   'Durban', // KwaZulu-Natal
-  'Pretoria', // Gauteng (admin capital)
   'Bloemfontein', // Free State
   'Gqeberha', // Eastern Cape (Port Elizabeth)
   'Polokwane', // Limpopo
@@ -219,18 +218,18 @@ export function DiscoverProperties({
         </div>
 
         {/* City Tabs */}
-        <div className="flex justify-start mb-10">
-          <div className="inline-flex flex-wrap justify-start gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+        <div className="flex justify-start mb-10 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
             {displayCities.map(city => (
               <button
                 key={city}
                 onClick={() => setSelectedCity(city)}
                 className={`
-                  px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300
+                  rounded-lg px-4 py-2 text-sm font-semibold border border-transparent transition-all whitespace-nowrap
                   ${
                     selectedCity === city
-                      ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
-                      : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
+                      ? 'bg-[#2774AE] text-white shadow-sm'
+                      : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'
                   }
                 `}
               >

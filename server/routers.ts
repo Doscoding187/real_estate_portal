@@ -55,6 +55,7 @@ import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
+import { distributionRouter } from './distributionRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -98,6 +99,7 @@ export const appRouter = router({
   favorites: favoritesRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,
+  distribution: distributionRouter,
 
   propertyResults: propertyResultsRouter,
 
@@ -234,11 +236,19 @@ export const appRouter = router({
               id: Number(dev.id),
               name: dev.name,
               slug: dev.slug || null,
+              description: dev.description || null,
               city: dev.city,
               suburb: dev.suburb || null,
               province: dev.province,
               priceFrom: dev.priceFrom ?? null,
               priceTo: dev.priceTo ?? null,
+              status: dev.status ?? null,
+              isFeatured: dev.isFeatured ?? false,
+              rating: dev.rating ?? null,
+              highlights: Array.isArray(dev.highlights) ? dev.highlights : [],
+              builderName: dev.builderName ?? null,
+              builderLogoUrl: dev.builderLogoUrl ?? null,
+              configurations: Array.isArray(dev.configurations) ? dev.configurations : [],
               images: Array.isArray(dev.images) ? dev.images : [],
               developerBrandProfileId: dev.developerBrandProfileId ?? null,
             })),
@@ -343,7 +353,7 @@ export const appRouter = router({
           return await propertySearchService.getFilterCounts(normalizedFilters);
         } catch (error) {
           console.error('Error getting filter counts:', error);
-          return { total: 0, byType: {}, byBedrooms: {}, byPriceRange: {} };
+          return { total: 0, byType: {}, byBedrooms: {}, byLocation: [], byPriceRange: [] };
         }
       }),
 

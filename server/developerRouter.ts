@@ -634,6 +634,279 @@ export const developerRouter = router({
       };
     }),
 
+  getHomeTrendingFeed: publicProcedure
+    .input(
+      z.object({
+        tab: z.enum([
+          'buy',
+          'rent',
+          'developments',
+          'shared_living',
+          'plot_land',
+          'commercial',
+        ]),
+        province: z.string().optional(),
+        city: z.string().optional(),
+        suburb: z.string().optional(),
+        limit: z.number().min(1).max(8).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const limit = input.limit ?? 5;
+      const requestedProvince = input.province?.trim() || undefined;
+      const requestedCity = input.city?.trim() || undefined;
+      const requestedSuburb = input.suburb?.trim() || undefined;
+
+      type LocationScope = 'suburb' | 'city' | 'province' | 'national';
+      type LocationFilter = {
+        province?: string;
+        city?: string;
+        suburb?: string;
+      };
+
+      const normalizeDevImage = (images: any): string => {
+        if (!images) return '';
+        if (Array.isArray(images) && images.length > 0) {
+          const first = images[0];
+          if (typeof first === 'string') return first;
+          if (first && typeof first === 'object' && typeof first.url === 'string') return first.url;
+        }
+        return '';
+      };
+
+      const mapDevelopment = (dev: any) => ({
+        id: String(dev.id),
+        kind: 'development' as const,
+        title: dev.name,
+        city: dev.city || '',
+        suburb: dev.suburb || '',
+        priceFrom: Number(dev.priceFrom || 0),
+        priceTo: Number(dev.priceTo || 0),
+        image: normalizeDevImage(dev.images),
+        href: `/development/${dev.slug || dev.id}`,
+      });
+
+      const mapListing = (prop: any) => ({
+        id: String(prop.id),
+        kind: 'listing' as const,
+        title: prop.title || 'Property Listing',
+        city: prop.city || '',
+        suburb: prop.suburb || '',
+        priceFrom: Number(prop.price || 0),
+        priceTo: Number(prop.price || 0),
+        image: Array.isArray(prop.images) && prop.images[0]?.url ? prop.images[0].url : '',
+        href: `/property/${prop.id}`,
+      });
+
+      const fetchTabItems = async (locationFilter: LocationFilter): Promise<{
+        items: Array<{
+          id: string;
+          kind: 'development' | 'listing';
+          title: string;
+          city: string;
+          suburb: string;
+          priceFrom: number;
+          priceTo: number;
+          image: string;
+          href: string;
+        }>;
+        source: 'developments' | 'listings';
+      }> => {
+        if (input.tab === 'buy') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'residential',
+            transactionType: 'for_sale',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'rent') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'residential',
+            transactionType: 'for_rent',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'developments') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'residential',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'plot_land') {
+          const devs = await developmentService.listPublicDevelopments({
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb,
+            limit,
+            developmentType: 'land',
+          });
+          return { items: devs.map(mapDevelopment), source: 'developments' };
+        }
+
+        if (input.tab === 'shared_living') {
+          const { propertySearchService } = await import('./services/propertySearchService');
+          const sharedListingTypes: Array<'rent' | 'sale'> = ['rent'];
+          const results = await Promise.all(
+            sharedListingTypes.map(listingType =>
+              propertySearchService.searchProperties(
+                {
+                  province: locationFilter.province,
+                  city: locationFilter.city,
+                  suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+                  listingType,
+                } as any,
+                'date_desc',
+                1,
+                limit,
+              ),
+            ),
+          );
+          const merged = results.flatMap(r => r.properties || []).slice(0, limit);
+          return { items: merged.map(mapListing), source: 'listings' };
+        }
+
+        // commercial
+        const { propertySearchService } = await import('./services/propertySearchService');
+        const commercialResults = await Promise.all(
+          (['sale', 'rent'] as const).map(listingType =>
+            propertySearchService.searchProperties(
+              {
+                province: locationFilter.province,
+                city: locationFilter.city,
+                suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+                propertyType: ['commercial'],
+                listingType,
+              } as any,
+              'date_desc',
+              1,
+              limit,
+            ),
+          ),
+        );
+        const deduped = Array.from(
+          new Map(
+            commercialResults
+              .flatMap(r => r.properties || [])
+              .map((prop: any) => [String(prop.id), prop]),
+          ).values(),
+        ).slice(0, limit);
+
+        return { items: deduped.map(mapListing), source: 'listings' };
+      };
+
+      const requestedScope: LocationScope = requestedSuburb
+        ? 'suburb'
+        : requestedCity
+          ? 'city'
+          : requestedProvince
+            ? 'province'
+            : 'national';
+
+      const locationCandidates: Array<{ scope: LocationScope; filters: LocationFilter }> = [];
+
+      if (requestedSuburb) {
+        locationCandidates.push({
+          scope: 'suburb',
+          filters: {
+            province: requestedProvince,
+            city: requestedCity,
+            suburb: requestedSuburb,
+          },
+        });
+      }
+
+      if (requestedCity) {
+        locationCandidates.push({
+          scope: 'city',
+          filters: {
+            province: requestedProvince,
+            city: requestedCity,
+          },
+        });
+      }
+
+      if (requestedProvince) {
+        locationCandidates.push({
+          scope: 'province',
+          filters: {
+            province: requestedProvince,
+          },
+        });
+      }
+
+      locationCandidates.push({ scope: 'national', filters: {} });
+
+      const dedupedCandidates = locationCandidates.filter(
+        (candidate, idx, all) =>
+          all.findIndex(
+            c =>
+              c.scope === candidate.scope &&
+              (c.filters.province || '') === (candidate.filters.province || '') &&
+              (c.filters.city || '') === (candidate.filters.city || '') &&
+              (c.filters.suburb || '') === (candidate.filters.suburb || ''),
+          ) === idx,
+      );
+
+      let items: Array<{
+        id: string;
+        kind: 'development' | 'listing';
+        title: string;
+        city: string;
+        suburb: string;
+        priceFrom: number;
+        priceTo: number;
+        image: string;
+        href: string;
+      }> = [];
+      let source: 'developments' | 'listings' = 'developments';
+      let selectedScope: LocationScope = requestedScope;
+
+      for (const candidate of dedupedCandidates) {
+        const result = await fetchTabItems(candidate.filters);
+        if (result.items.length > 0 || candidate.scope === 'national') {
+          items = result.items;
+          source = result.source;
+          selectedScope = candidate.scope;
+          break;
+        }
+      }
+
+      const usedFallback = requestedScope !== selectedScope;
+      const fallbackLevel = usedFallback ? `${requestedScope}_to_${selectedScope}` : 'none';
+
+
+      return {
+        items,
+        meta: {
+          tab: input.tab,
+          source,
+          usedFallback,
+          fallbackLevel,
+          requestedScope,
+          selectedScope,
+          requestedProvince: requestedProvince ?? null,
+          requestedCity: requestedCity ?? null,
+          requestedSuburb: requestedSuburb ?? null,
+          resultCount: items.length,
+        },
+      };
+    }),
+
   getPublicDevelopmentBySlug: publicProcedure
     .input(z.object({ slugOrId: z.string().min(1) }))
     .query(async ({ input }) => {

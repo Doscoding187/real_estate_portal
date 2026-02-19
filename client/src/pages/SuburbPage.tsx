@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
@@ -24,6 +25,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Helmet } from 'react-helmet-async';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { useSimilarLocations } from '@/hooks/useSimilarLocations';
+import { LocationTrendingFeedSection } from '@/components/location/LocationTrendingFeedSection';
+import type { FeedTab } from '@/components/location/LocationTrendingFeedSection';
 
 import { MetaControl } from '@/components/seo/MetaControl';
 
@@ -39,6 +42,20 @@ export default function SuburbPage({
 }) {
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, suburb: suburbSlug, action, locationId } = params;
+  const [heroTab, setHeroTab] = useState<string>('buy');
+
+  const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
+    const t = String(tabId || 'buy').toLowerCase();
+    if (t === 'rental') return 'rent';
+    if (t === 'buy') return 'buy';
+    if (t === 'developments') return 'developments';
+    if (t === 'shared_living') return 'shared_living';
+    if (t === 'plot_land') return 'plot_land';
+    if (t === 'commercial') return 'commercial';
+    return 'buy';
+  };
+
+  const mapFeedTabToHeroTab = (tab: FeedTab): string => (tab === 'rent' ? 'rental' : tab);
 
   // 2025 Architecture: Controller Logic
   // Render Transaction Page (SearchResults) if 'view=list' OR any search filters are present
@@ -143,6 +160,8 @@ export default function SuburbPage({
             backgroundImage="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1984&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
+            activeTab={heroTab}
+            onActiveTabChange={setHeroTab}
             quickLinks={
               subLocalities?.slice(0, 10).map((loc: any) => ({
                 label: loc.name,
@@ -161,6 +180,16 @@ export default function SuburbPage({
               provinceSlug: `${provinceSlug}/${citySlug}`,
               type: 'suburb',
             }}
+          />
+        }
+        highDemandDevelopments={
+          <LocationTrendingFeedSection
+            locationName={suburb.name}
+            province={suburb.provinceName || provinceSlug}
+            city={suburb.cityName || citySlug}
+            suburb={suburb.name}
+            activeTab={mapHeroTabToFeedTab(heroTab)}
+            onTabChange={tab => setHeroTab(mapFeedTabToHeroTab(tab))}
           />
         }
         popularLocations={

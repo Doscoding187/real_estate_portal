@@ -52,7 +52,7 @@ export function useAgencyAnalytics(options: UseAgencyAnalyticsOptions) {
   // Fetch agency analytics using tRPC
   const analyticsQuery = trpc.exploreApi.getAgencyAnalytics.useQuery({
     agencyId,
-    timeRange,
+    dateRange: timeRange,
   });
 
   const isLoading = analyticsQuery.isLoading;

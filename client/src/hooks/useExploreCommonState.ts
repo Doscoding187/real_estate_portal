@@ -129,7 +129,17 @@ export function useExploreCommonState(
   const [showFilters, setShowFilters] = useState(initialShowFilters);
 
   // Category selection (from existing hook)
-  const { selectedCategoryId, setSelectedCategoryId } = useCategoryFilter();
+  const {
+    selectedCategoryId: rawSelectedCategoryId,
+    setSelectedCategoryId: setRawSelectedCategoryId,
+  } = useCategoryFilter();
+  const selectedCategoryId = rawSelectedCategoryId ?? null;
+  const setSelectedCategoryId = useCallback(
+    (id: number | null) => {
+      setRawSelectedCategoryId(id ?? undefined);
+    },
+    [setRawSelectedCategoryId],
+  );
 
   // Property filters (from existing hook)
   const {

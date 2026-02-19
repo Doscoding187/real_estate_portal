@@ -55,6 +55,11 @@ export const getSessionId = (): string => {
   return sessionId;
 };
 
+// Reset session ID (for testing)
+export const resetSessionId = (): void => {
+  sessionId = null;
+};
+
 // User ID (if authenticated)
 export const getUserId = (): string | undefined => {
   if (typeof window === 'undefined') return undefined;

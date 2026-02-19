@@ -4,16 +4,14 @@
  * Basic functionality tests for the map preview feature
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MapPreview } from '../MapPreview';
+import { useJsApiLoader } from '@react-google-maps/api';
 
 // Mock @react-google-maps/api
 vi.mock('@react-google-maps/api', () => ({
-  useJsApiLoader: () => ({
-    isLoaded: true,
-    loadError: null,
-  }),
+  useJsApiLoader: vi.fn(),
   GoogleMap: ({ children }: any) => <div data-testid="google-map">{children}</div>,
   Marker: () => <div data-testid="marker" />,
 }));
@@ -25,6 +23,13 @@ describe('MapPreview', () => {
       lng: 28.0473,
     },
   };
+
+  beforeEach(() => {
+    vi.mocked(useJsApiLoader).mockReturnValue({
+      isLoaded: true,
+      loadError: null,
+    });
+  });
 
   it('renders map preview in small mode by default', () => {
     render(<MapPreview {...defaultProps} />);
@@ -48,14 +53,10 @@ describe('MapPreview', () => {
   });
 
   it('shows loading state when map is not loaded', () => {
-    vi.mock('@react-google-maps/api', () => ({
-      useJsApiLoader: () => ({
-        isLoaded: false,
-        loadError: null,
-      }),
-      GoogleMap: ({ children }: any) => <div data-testid="google-map">{children}</div>,
-      Marker: () => <div data-testid="marker" />,
-    }));
+    vi.mocked(useJsApiLoader).mockReturnValue({
+      isLoaded: false,
+      loadError: null,
+    });
 
     render(<MapPreview {...defaultProps} />);
 

@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import { CTAButton } from '../CTAButton';
 import fc from 'fast-check';
 
@@ -89,9 +89,9 @@ describe('Property 13: Primary CTA navigation', () => {
             'event',
             'cta_click',
             expect.objectContaining({
-              label,
-              location: 'hero',
-              href,
+              event_label: label,
+              cta_location: 'hero',
+              cta_href: href,
             }),
           );
 

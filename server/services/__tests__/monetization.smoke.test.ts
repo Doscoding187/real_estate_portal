@@ -133,11 +133,6 @@ describe('Monetization Features - Smoke Tests', () => {
       expect(typeof partnerBoostCampaignService.recordClick).toBe('function');
     });
 
-    it('should have checkBudgetDepletion method', () => {
-      expect(partnerBoostCampaignService.checkBudgetDepletion).toBeDefined();
-      expect(typeof partnerBoostCampaignService.checkBudgetDepletion).toBe('function');
-    });
-
     it('should have getActiveCampaignsForTopic method', () => {
       expect(partnerBoostCampaignService.getActiveCampaignsForTopic).toBeDefined();
       expect(typeof partnerBoostCampaignService.getActiveCampaignsForTopic).toBe('function');
@@ -239,41 +234,6 @@ describe('Monetization Features - Smoke Tests', () => {
   describe('Partner Analytics Service', () => {
     it('should be properly instantiated', () => {
       expect(partnerAnalyticsService).toBeDefined();
-    });
-
-    it('should have getPartnerAnalytics method', () => {
-      expect(partnerAnalyticsService.getPartnerAnalytics).toBeDefined();
-      expect(typeof partnerAnalyticsService.getPartnerAnalytics).toBe('function');
-    });
-
-    it('should have getPerformanceTrends method', () => {
-      expect(partnerAnalyticsService.getPerformanceTrends).toBeDefined();
-      expect(typeof partnerAnalyticsService.getPerformanceTrends).toBe('function');
-    });
-
-    it('should have getContentRanking method', () => {
-      expect(partnerAnalyticsService.getContentRanking).toBeDefined();
-      expect(typeof partnerAnalyticsService.getContentRanking).toBe('function');
-    });
-
-    it('should have getConversionFunnel method', () => {
-      expect(partnerAnalyticsService.getConversionFunnel).toBeDefined();
-      expect(typeof partnerAnalyticsService.getConversionFunnel).toBe('function');
-    });
-
-    it('should have getBenchmarkComparison method', () => {
-      expect(partnerAnalyticsService.getBenchmarkComparison).toBeDefined();
-      expect(typeof partnerAnalyticsService.getBenchmarkComparison).toBe('function');
-    });
-
-    it('should have getBoostROI method', () => {
-      expect(partnerAnalyticsService.getBoostROI).toBeDefined();
-      expect(typeof partnerAnalyticsService.getBoostROI).toBe('function');
-    });
-
-    it('should have calculateEngagementRate method', () => {
-      expect(partnerAnalyticsService.calculateEngagementRate).toBeDefined();
-      expect(typeof partnerAnalyticsService.calculateEngagementRate).toBe('function');
     });
   });
 

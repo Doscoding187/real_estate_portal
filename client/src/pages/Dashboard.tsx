@@ -40,6 +40,15 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading: authLoading } = useAuth();
   const [deletePropertyId, setDeletePropertyId] = useState<number | null>(null);
+  const referrerStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled:
+      isAuthenticated &&
+      user?.role !== 'super_admin' &&
+      user?.role !== 'property_developer' &&
+      user?.role !== 'agency_admin',
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
   const isAdmin = user?.role === 'super_admin' || user?.role === 'agency_admin';
 
@@ -55,6 +64,11 @@ export default function Dashboard() {
   // Redirect if not authenticated
   if (!isAuthenticated) {
     setLocation('/');
+    return null;
+  }
+
+  if (referrerStatusQuery.data?.hasIdentity) {
+    setLocation('/referrer/dashboard');
     return null;
   }
 

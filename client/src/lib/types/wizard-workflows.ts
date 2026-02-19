@@ -1,4 +1,9 @@
-import { DevelopmentType } from './wizardTypes';
+import type {
+  DevelopmentType,
+  DevelopmentStatus,
+  AuctionType,
+  OwnershipType,
+} from '@/types/wizardTypes';
 
 export type WorkflowId = 'residential_sale' | 'residential_rent' | 'residential_auction';
 
@@ -24,11 +29,11 @@ export interface WizardData {
   transactionType?: 'for_sale' | 'for_rent' | 'auction';
   name?: string;
   subtitle?: string;
-  status?: import('../../../types/wizardTypes').DevelopmentStatus;
+  status?: DevelopmentStatus;
   marketingRole?: 'exclusive' | 'joint' | 'open';
   nature?: string;
-  auctionType?: import('../../../types/wizardTypes').AuctionType;
-  ownershipTypes?: import('../../../types/wizardTypes').OwnershipType[];
+  auctionType?: AuctionType;
+  ownershipTypes?: OwnershipType[];
   propertyStructure?: string; // rent only (optional)
   latitude?: number;
   longitude?: number;

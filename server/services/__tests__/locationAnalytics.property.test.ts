@@ -18,6 +18,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import * as fc from 'fast-check';
+import { resetDb } from '../../db-connection';
 import { getDb } from '../../db';
 import { locations, listings, developments } from '../../../drizzle/schema';
 import { locationAnalyticsService } from '../locationAnalyticsService';
@@ -33,6 +34,13 @@ let testLocationIds: number[] = [];
 let testListingIds: number[] = [];
 
 beforeAll(async () => {
+  resetDb(); // Ensure no stale mock connection
+  if (!process.env.DATABASE_URL) {
+    console.warn('⚠️  DATABASE_URL not configured. Skipping location analytics tests.');
+    console.warn('   To run these tests, set DATABASE_URL environment variable.');
+    skipTests = true;
+    return;
+  }
   console.log('[LocationAnalytics PBT] Setting up test database...');
 
   // Initialize database connection
@@ -98,22 +106,27 @@ async function createTestLocation(data: {
 }): Promise<number> {
   if (!db) throw new Error('Database not initialized');
 
-  const [result] = await db
-    .insert(locations)
-    .values({
-      name: data.name,
-      slug: data.name.toLowerCase().replace(/\s+/g, '-'),
-      type: data.type,
-      parentId: data.parentId || null,
-      description: `Test ${data.type} ${data.name}`,
-      latitude: '-26.0',
-      longitude: '28.0',
-      propertyCount: 0,
-    })
-    .$returningId();
+  const [result] = await db.insert(locations).values({
+    name: data.name,
+    slug: data.name.toLowerCase().replace(/\s+/g, '-'),
+    type: data.type,
+    parentId: data.parentId || null,
+    description: `Test ${data.type} ${data.name}`,
+    latitude: '-26.0',
+    longitude: '28.0',
+    propertyCount: 0,
+  });
 
-  testLocationIds.push(result.id);
-  return result.id;
+  const insertId = result[0]?.insertId || result.insertId;
+
+  if (!insertId) {
+    console.error('Failed to get id from location creation:', result);
+    throw new Error(`Failed to create test location: insertId is missing`);
+  }
+
+  const id = Number(insertId);
+  testLocationIds.push(id);
+  return id;
 }
 
 /**
@@ -130,30 +143,35 @@ async function createTestListing(data: {
 }): Promise<number> {
   if (!db) throw new Error('Database not initialized');
 
-  const [result] = await db
-    .insert(listings)
-    .values({
-      ownerId: 1, // Test user
-      action: data.action,
-      propertyType: (data.propertyType || 'house') as any,
-      title: `Test Property in ${data.suburb || data.city}`,
-      description: 'Test property description',
-      askingPrice: data.action === 'sell' ? data.price.toString() : null,
-      monthlyRent: data.action === 'rent' ? data.price.toString() : null,
-      address: `123 Test St, ${data.suburb || data.city}`,
-      latitude: '-26.0',
-      longitude: '28.0',
-      city: data.city,
-      suburb: data.suburb || null,
-      province: data.province,
-      slug: `test-property-${Date.now()}-${Math.random()}`,
-      status: 'published',
-      propertyDetails: data.floorArea ? { houseAreaM2: data.floorArea } : {},
-    })
-    .$returningId();
+  const [result] = await db.insert(listings).values({
+    ownerId: 1, // Test user
+    action: data.action,
+    propertyType: (data.propertyType || 'house') as any,
+    title: `Test Property in ${data.suburb || data.city}`,
+    description: 'Test property description',
+    askingPrice: data.action === 'sell' ? data.price.toString() : null,
+    monthlyRent: data.action === 'rent' ? data.price.toString() : null,
+    address: `123 Test St, ${data.suburb || data.city}`,
+    latitude: '-26.0',
+    longitude: '28.0',
+    city: data.city,
+    suburb: data.suburb || null,
+    province: data.province,
+    slug: `test-property-${Date.now()}-${Math.random()}`,
+    status: 'published',
+    propertyDetails: data.floorArea ? { houseAreaM2: data.floorArea } : {},
+  });
 
-  testListingIds.push(result.id);
-  return result.id;
+  const insertId = result[0]?.insertId || result.insertId;
+
+  if (!insertId) {
+    console.error('Failed to get id from listing creation:', result);
+    throw new Error(`Failed to create test listing: insertId is missing`);
+  }
+
+  const id = Number(insertId);
+  testListingIds.push(id);
+  return id;
 }
 
 // ============================================================================

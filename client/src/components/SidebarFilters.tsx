@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Accordion,
@@ -11,11 +12,15 @@ import {
 } from '@/components/ui/accordion';
 import { formatCurrency } from '@/lib/utils';
 import { SearchFilters } from '@/lib/urlUtils';
-import { LocationRefinement } from '@/components/search/LocationRefinement';
 import { SearchResults } from '@shared/types';
 
 interface SidebarFiltersProps {
   filters: SearchFilters;
+  filterCounts?: {
+    byType?: Record<string, number>;
+    byBedrooms?: Record<string, number>;
+    byLocation?: Array<{ name: string; slug: string; count: number }>;
+  };
   locationContext?: SearchResults['locationContext'];
   onFilterChange: (newFilters: SearchFilters) => void;
   onSaveSearch?: () => void;
@@ -36,7 +41,7 @@ const AMENITIES = [
 
 export function SidebarFilters({
   filters,
-  locationContext,
+  filterCounts,
   onFilterChange,
   onSaveSearch,
 }: SidebarFiltersProps) {
@@ -45,7 +50,6 @@ export function SidebarFilters({
     filters.minPrice || 0,
     filters.maxPrice || 50000000,
   ]);
-  const [areaRange, setAreaRange] = useState<[number, number]>([0, 5000]);
 
   // Sync local state with props when they change externally
   useEffect(() => {
@@ -86,23 +90,8 @@ export function SidebarFilters({
     }
   };
 
-  const handleAreaChange = (value: number[]) => {
-    setAreaRange([value[0], value[1]]);
-  };
-
-  const handleAreaCommit = (value: number[]) => {
-    onFilterChange({
-      ...filters,
-      minArea: value[0],
-      maxArea: value[1],
-    });
-  };
-
-  const handleCheckboxFilterChange = (
-    category: 'amenities' | 'postedBy' | 'possessionStatus',
-    value: string,
-    checked: boolean,
-  ) => {
+  const handleAmenitiesChange = (value: string, checked: boolean) => {
+    const category = 'amenities';
     const currentValues = filters[category] || [];
     let newValues: string[];
 
@@ -118,11 +107,70 @@ export function SidebarFilters({
     });
   };
 
-  return (
-    <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm p-4">
-      {/* Location Refinement Section */}
-      <LocationRefinement context={locationContext} />
+  const handleLocationChange = (slug: string, checked: boolean) => {
+    const selected = Array.isArray(filters.suburb)
+      ? filters.suburb
+      : filters.suburb
+        ? [filters.suburb]
+        : [];
+    const next = checked ? [...selected, slug] : selected.filter(v => v !== slug);
+    onFilterChange({
+      ...filters,
+      suburb: (next.length > 0 ? next : undefined) as any,
+    });
+  };
 
+  const formatBudgetCompact = (value: number) => {
+    if (value >= 1_000_000) {
+      const rounded = (value / 1_000_000).toFixed(1).replace('.0', '');
+      return `R ${rounded}M`;
+    }
+    if (value >= 1_000) {
+      return `R ${Math.round(value / 1_000)}K`;
+    }
+    return formatCurrency(value);
+  };
+
+  const locationOptions =
+    filterCounts?.byLocation
+      ?.filter(item => item && item.name && item.count > 0)
+      .slice(0, 7) ?? [];
+
+  const propertyTypeOptions = (() => {
+    const fromCounts = Object.entries(filterCounts?.byType ?? {})
+      .map(([value, count]) => ({
+        value,
+        label: value
+          .split('_')
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' '),
+        count: Number(count) || 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    if (fromCounts.length > 0) return fromCounts;
+
+    return [
+      { value: 'apartment', label: 'Apartment', count: 0 },
+      { value: 'house', label: 'House', count: 0 },
+      { value: 'villa', label: 'Villa', count: 0 },
+      { value: 'commercial', label: 'Commercial', count: 0 },
+      { value: 'plot', label: 'Plot', count: 0 },
+    ];
+  })();
+
+  const bedroomOptions = (() => {
+    const byBedrooms = filterCounts?.byBedrooms ?? {};
+    if (Object.keys(byBedrooms).length === 0) return [1, 2, 3, 4, 5];
+    return Object.keys(byBedrooms)
+      .map(v => Number(v))
+      .filter(v => Number.isFinite(v) && v > 0)
+      .sort((a, b) => a - b)
+      .slice(0, 5);
+  })();
+
+  return (
+    <div className="w-full bg-white rounded-lg border border-slate-200 p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-lg text-slate-800">Filters</h3>
         <div className="flex gap-2">
@@ -142,14 +190,24 @@ export function SidebarFilters({
         </div>
       </div>
 
-      <Accordion type="multiple" defaultValue={['budget', 'type', 'bedrooms']} className="w-full">
+      <Accordion
+        type="multiple"
+        defaultValue={['budget', 'locations', 'type', 'bedrooms']}
+        className="w-full"
+      >
         {/* Budget Filter */}
         <AccordionItem value="budget">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
             Budget
           </AccordionTrigger>
           <AccordionContent>
-            <div className="px-2 pt-2 pb-6">
+            <div className="px-1 pt-1 pb-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-2xl font-bold text-slate-900">{formatBudgetCompact(priceRange[0])}</p>
+                <span className="rounded bg-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                  {formatBudgetCompact(priceRange[1])}+
+                </span>
+              </div>
               <Slider
                 defaultValue={[0, 50000000]}
                 value={[priceRange[0], priceRange[1]]}
@@ -158,12 +216,71 @@ export function SidebarFilters({
                 min={0}
                 onValueChange={handlePriceChange}
                 onValueCommit={handlePriceCommit}
-                className="mb-4"
+                className="mb-3"
               />
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{formatCurrency(priceRange[0])}</span>
-                <span>{formatCurrency(priceRange[1])}</span>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={priceRange[0]}
+                  onChange={e => {
+                    const nextMin = Number(e.target.value || 0);
+                    setPriceRange([Math.max(0, Math.min(nextMin, priceRange[1])), priceRange[1]]);
+                  }}
+                  onBlur={() => handlePriceCommit(priceRange)}
+                  className="h-8 text-xs"
+                  placeholder="Min Budget"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  value={priceRange[1]}
+                  onChange={e => {
+                    const nextMax = Number(e.target.value || 0);
+                    setPriceRange([priceRange[0], Math.max(nextMax, priceRange[0])]);
+                  }}
+                  onBlur={() => handlePriceCommit(priceRange)}
+                  className="h-8 text-xs"
+                  placeholder="Max Budget"
+                />
               </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Locations */}
+        <AccordionItem value="locations">
+          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
+            Locations
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3 pt-2">
+              {locationOptions.length > 0 ? (
+                locationOptions.map(location => (
+                  <div key={location.slug} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`location-${location.slug}`}
+                      checked={Array.isArray(filters.suburb) && filters.suburb.includes(location.slug)}
+                      onCheckedChange={checked =>
+                        handleLocationChange(location.slug, checked as boolean)
+                      }
+                    />
+                    <Label
+                      htmlFor={`location-${location.slug}`}
+                      className="text-sm font-medium leading-none cursor-pointer text-slate-700"
+                    >
+                      {location.name}
+                    </Label>
+                    <span className="ml-auto rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                      {location.count.toLocaleString()}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Location counts will appear when more listings are available in this search area.
+                </p>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -175,21 +292,24 @@ export function SidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {['Apartment', 'House', 'Villa', 'Office', 'Plot'].map(type => (
-                <div key={type} className="flex items-center space-x-2">
+              {propertyTypeOptions.map(type => (
+                <div key={type.value} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`type-${type}`}
-                    checked={filters.propertyType === type.toLowerCase()}
+                    id={`type-${type.value}`}
+                    checked={filters.propertyType === type.value}
                     onCheckedChange={checked =>
-                      handlePropertyTypeChange(type.toLowerCase(), checked as boolean)
+                      handlePropertyTypeChange(type.value, checked as boolean)
                     }
                   />
                   <Label
-                    htmlFor={`type-${type}`}
+                    htmlFor={`type-${type.value}`}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-slate-600"
                   >
-                    {type}
+                    {type.label}
                   </Label>
+                  <span className="ml-auto rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                    {type.count}
+                  </span>
                 </div>
               ))}
             </div>
@@ -203,7 +323,7 @@ export function SidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-wrap gap-2 pt-2">
-              {[1, 2, 3, 4, 5].map(num => (
+              {bedroomOptions.map(num => (
                 <Button
                   key={num}
                   variant={filters.minBedrooms === num ? 'default' : 'outline'}
@@ -223,62 +343,6 @@ export function SidebarFilters({
           </AccordionContent>
         </AccordionItem>
 
-        {/* Possession Status */}
-        <AccordionItem value="possession">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Possession Status
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-3 pt-2">
-              {['Ready to move', 'Under construction'].map(status => (
-                <div key={status} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`status-${status}`}
-                    checked={filters.possessionStatus?.includes(status)}
-                    onCheckedChange={checked =>
-                      handleCheckboxFilterChange('possessionStatus', status, checked as boolean)
-                    }
-                  />
-                  <Label
-                    htmlFor={`status-${status}`}
-                    className="text-sm font-medium leading-none cursor-pointer text-slate-600"
-                  >
-                    {status}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Posted By */}
-        <AccordionItem value="postedBy">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Posted by
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-3 pt-2">
-              {['Owner', 'Dealer', 'Builder'].map(poster => (
-                <div key={poster} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`poster-${poster}`}
-                    checked={filters.postedBy?.includes(poster)}
-                    onCheckedChange={checked =>
-                      handleCheckboxFilterChange('postedBy', poster, checked as boolean)
-                    }
-                  />
-                  <Label
-                    htmlFor={`poster-${poster}`}
-                    className="text-sm font-medium leading-none cursor-pointer text-slate-600"
-                  >
-                    {poster}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
         {/* Amenities */}
         <AccordionItem value="amenities">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
@@ -291,9 +355,7 @@ export function SidebarFilters({
                   <Checkbox
                     id={`amenity-${amenity}`}
                     checked={filters.amenities?.includes(amenity)}
-                    onCheckedChange={checked =>
-                      handleCheckboxFilterChange('amenities', amenity, checked as boolean)
-                    }
+                    onCheckedChange={checked => handleAmenitiesChange(amenity, checked as boolean)}
                   />
                   <Label
                     htmlFor={`amenity-${amenity}`}
@@ -303,30 +365,6 @@ export function SidebarFilters({
                   </Label>
                 </div>
               ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Area Size */}
-        <AccordionItem value="area">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Area Size (sq ft)
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="px-2 pt-2 pb-6">
-              <Slider
-                defaultValue={[0, 5000]}
-                value={[areaRange[0], areaRange[1]]}
-                max={5000}
-                step={100}
-                onValueChange={handleAreaChange}
-                onValueCommit={handleAreaCommit}
-                className="mb-4"
-              />
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{areaRange[0]} sq ft</span>
-                <span>{areaRange[1]}+ sq ft</span>
-              </div>
             </div>
           </AccordionContent>
         </AccordionItem>

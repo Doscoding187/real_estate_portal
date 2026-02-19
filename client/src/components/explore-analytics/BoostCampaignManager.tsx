@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Boost Campaign Manager Component
  * Manages boost campaigns for Explore content

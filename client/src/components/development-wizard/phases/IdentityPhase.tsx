@@ -100,6 +100,7 @@ export function IdentityPhase() {
                 onChange={e => handleFieldChange('name', e.target.value)}
                 className={`h-11 ${getError('name') ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
               />
+              <p className="text-xs text-slate-500">Recommended for result cards.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="subtitle">Subtitle / Tagline</Label>
@@ -202,6 +203,7 @@ export function IdentityPhase() {
                       ?.description
                   : 'Choose the current sales status of your development'}
               </p>
+              <p className="text-xs text-slate-500">Recommended for result card status badges.</p>
             </div>
 
             {showCompletionDate && (

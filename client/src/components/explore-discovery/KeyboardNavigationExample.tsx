@@ -12,7 +12,7 @@
  * - Shortcuts guide
  */
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Filter, Grid, Map, HelpCircle } from 'lucide-react';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { IconButton } from '@/components/ui/soft/IconButton';
@@ -199,20 +199,18 @@ export function KeyboardNavigationExample() {
           className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center"
           onClick={() => setFiltersOpen(false)}
         >
-          <ModernCard
-            className="w-full max-w-md p-6"
-            variant="elevated"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Filters</h3>
-            <p className="text-gray-600 mb-4">Press Escape to close this panel</p>
-            <button
-              onClick={() => setFiltersOpen(false)}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Close (Escape)
-            </button>
-          </ModernCard>
+          <div onClick={e => e.stopPropagation()}>
+            <ModernCard className="w-full max-w-md p-6" variant="elevated">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Filters</h3>
+              <p className="text-gray-600 mb-4">Press Escape to close this panel</p>
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Close (Escape)
+              </button>
+            </ModernCard>
+          </div>
         </div>
       )}
     </div>

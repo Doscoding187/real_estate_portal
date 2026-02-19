@@ -36,11 +36,11 @@ interface UseScrollAnimationOptions {
   enabled?: boolean;
 }
 
-interface UseScrollAnimationReturn {
+interface UseScrollAnimationReturn<T extends HTMLElement = HTMLElement> {
   /**
    * Ref to attach to the element to observe
    */
-  ref: RefObject<HTMLElement>;
+  ref: RefObject<T | null>;
 
   /**
    * Whether the element is currently visible
@@ -72,12 +72,12 @@ interface UseScrollAnimationReturn {
  * );
  * ```
  */
-export function useScrollAnimation(
+export function useScrollAnimation<T extends HTMLElement = HTMLElement>(
   options: UseScrollAnimationOptions = {},
-): UseScrollAnimationReturn {
+): UseScrollAnimationReturn<T> {
   const { threshold = 0.1, rootMargin = '0px', triggerOnce = true, enabled = true } = options;
 
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<T>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
 

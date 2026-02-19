@@ -16,7 +16,7 @@ export function usePriceInsights() {
       // Cache data for 15 minutes (matches backend cache TTL)
       staleTime: 15 * 60 * 1000,
       // Keep data in cache for 30 minutes
-      cacheTime: 30 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
       // Retry failed requests up to 2 times
       retry: 2,
       // Don't refetch on window focus (data changes slowly)

@@ -17,6 +17,7 @@ export interface SimpleDevelopmentCardProps {
   isHotSelling?: boolean;
   isHighDemand?: boolean;
   bedrooms?: number[] | string;
+  href?: string;
 }
 
 export function SimpleDevelopmentCard({
@@ -30,6 +31,7 @@ export function SimpleDevelopmentCard({
   isHotSelling,
   isHighDemand,
   bedrooms,
+  href,
 }: SimpleDevelopmentCardProps) {
   // Location display
   const locationLabel = suburb ? `${suburb}, ${city}` : city;
@@ -63,7 +65,7 @@ export function SimpleDevelopmentCard({
 
   return (
     <Link
-      href={`/development/${slug || id}`}
+      href={href || `/development/${slug || id}`}
       className="group block relative rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-lg transition-all duration-300 w-full max-w-[288px]"
     >
       {/* Image Frame - Fixed Aspect Ratio */}

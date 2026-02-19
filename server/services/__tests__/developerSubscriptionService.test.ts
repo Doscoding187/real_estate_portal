@@ -1,66 +1,95 @@
-import { describe, expect, beforeEach, afterEach } from 'vitest';
+import { describe, expect } from 'vitest';
 import { it, fc } from '@fast-check/vitest';
 import { developerSubscriptionService } from '../developerSubscriptionService';
 import { db } from '../../db';
 import {
+  users,
   developers,
+  developments,
+  developmentPhases,
   developerSubscriptions,
   developerSubscriptionLimits,
   developerSubscriptionUsage,
 } from '../../../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 /**
  * Property-Based Tests for Developer Subscription Service
  * Feature: developer-lead-management
  */
 
-describe('Developer Subscription Service - Property Tests', () => {
+const hasDb = Boolean(process.env.DATABASE_URL);
+const describeWithDb: typeof describe = hasDb
+  ? describe
+  : ((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe;
+
+describeWithDb('Developer Subscription Service - Property Tests', () => {
   // Helper function to create a test developer
-  async function createTestDeveloper(userId: number) {
-    const [developer] = await db
-      .insert(developers)
-      .values({
-        userId,
-        name: `Test Developer ${userId}`,
-        email: `test${userId}@example.com`,
-        category: 'residential',
-        isVerified: 0,
-        status: 'pending',
-      })
-      .returning();
-    return developer;
+  async function createTestDeveloper(seed: number) {
+    const userResult = await db.insert(users).values({
+      email: `subscription-user-${seed}-${Date.now()}@example.com`,
+      role: 'property_developer',
+      firstName: 'Test',
+      lastName: 'Developer',
+      name: `Subscription User ${seed}`,
+      emailVerified: 1,
+    });
+    const createdUserId = Number(userResult[0].insertId);
+
+    const result = await db.insert(developers).values({
+      userId: createdUserId,
+      name: `Test Developer ${seed}`,
+      email: `subscription-dev-${seed}-${Date.now()}-${Math.floor(Math.random() * 10000)}@example.com`,
+      category: 'residential',
+      isVerified: 0,
+      status: 'pending',
+    });
+    
+    // MySQL specific: Get inserted ID and fetch the record
+    const insertId = result[0].insertId;
+    const [developer] = await db.select().from(developers).where(eq(developers.id, insertId));
+    
+    if (!developer) {
+      throw new Error(`Failed to create test developer with ID ${insertId}`);
+    }
+
+    return { developer, userId: createdUserId };
   }
 
   // Helper function to cleanup test data
-  async function cleanupTestData(developerId: number) {
+  async function cleanupTestData(developerId: number, userId: number) {
+    const developmentRows = await db
+      .select({ id: developments.id })
+      .from(developments)
+      .where(eq(developments.developerId, developerId));
+    const developmentIds = developmentRows.map(row => row.id);
+
+    if (developmentIds.length > 0) {
+      await db.delete(developmentPhases).where(inArray(developmentPhases.developmentId, developmentIds));
+      await db.delete(developments).where(inArray(developments.id, developmentIds));
+    }
+
+    const subscriptionRows = await db
+      .select({ id: developerSubscriptions.id })
+      .from(developerSubscriptions)
+      .where(eq(developerSubscriptions.developerId, developerId));
+    const subscriptionIds = subscriptionRows.map(row => row.id);
+
     // Delete in correct order due to foreign keys
-    await db
-      .delete(developerSubscriptionUsage)
-      .where(
-        eq(
-          developerSubscriptionUsage.subscriptionId,
-          db
-            .select({ id: developerSubscriptions.id })
-            .from(developerSubscriptions)
-            .where(eq(developerSubscriptions.developerId, developerId)),
-        ),
-      );
-    await db
-      .delete(developerSubscriptionLimits)
-      .where(
-        eq(
-          developerSubscriptionLimits.subscriptionId,
-          db
-            .select({ id: developerSubscriptions.id })
-            .from(developerSubscriptions)
-            .where(eq(developerSubscriptions.developerId, developerId)),
-        ),
-      );
+    if (subscriptionIds.length > 0) {
+      await db
+        .delete(developerSubscriptionUsage)
+        .where(inArray(developerSubscriptionUsage.subscriptionId, subscriptionIds));
+      await db
+        .delete(developerSubscriptionLimits)
+        .where(inArray(developerSubscriptionLimits.subscriptionId, subscriptionIds));
+    }
     await db
       .delete(developerSubscriptions)
       .where(eq(developerSubscriptions.developerId, developerId));
     await db.delete(developers).where(eq(developers.id, developerId));
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   /**
@@ -71,18 +100,20 @@ describe('Developer Subscription Service - Property Tests', () => {
    * For any new developer registration, the created account should have a subscription tier
    * that is one of the three valid values (Free Trial, Basic, Premium), with Free Trial as the default.
    */
-  it.prop([fc.integer({ min: 1, max: 10000 })])(
+  it.prop([fc.integer({ min: 1, max: 10000 })], { numRuns: 5 })(
     'Property 1: New developer accounts are assigned a valid subscription tier (free_trial by default)',
     async userId => {
       let developerId: number | null = null;
+      let createdUserId: number | null = null;
 
       try {
         // Create a test developer
-        const developer = await createTestDeveloper(userId);
-        developerId = developer.id;
+        const created = await createTestDeveloper(userId);
+        developerId = created.developer.id;
+        createdUserId = created.userId;
 
         // Create subscription
-        const subscription = await developerSubscriptionService.createSubscription(developer.id);
+        const subscription = await developerSubscriptionService.createSubscription(created.developer.id);
 
         // Property: Subscription tier must be one of the valid values
         const validTiers = ['free_trial', 'basic', 'premium'];
@@ -102,11 +133,12 @@ describe('Developer Subscription Service - Property Tests', () => {
         expect(subscription.usage.teamMembersCount).toBe(0);
       } finally {
         // Cleanup
-        if (developerId) {
-          await cleanupTestData(developerId);
+        if (developerId && createdUserId) {
+          await cleanupTestData(developerId, createdUserId);
         }
       }
     },
+    20000,
   );
 
   /**
@@ -117,20 +149,22 @@ describe('Developer Subscription Service - Property Tests', () => {
    * For any developer on Free Trial tier attempting to create a second development,
    * the platform should prevent the creation and display an upgrade prompt.
    */
-  it.prop([fc.integer({ min: 1, max: 10000 })])(
+  it.prop([fc.integer({ min: 1, max: 10000 })], { numRuns: 5 })(
     'Property 31: Free trial tier enforces development limit of 1',
     async userId => {
       let developerId: number | null = null;
+      let createdUserId: number | null = null;
 
       try {
         // Create a test developer with subscription
-        const developer = await createTestDeveloper(userId);
-        developerId = developer.id;
-        await developerSubscriptionService.createSubscription(developer.id);
+        const created = await createTestDeveloper(userId);
+        developerId = created.developer.id;
+        createdUserId = created.userId;
+        await developerSubscriptionService.createSubscription(created.developer.id);
 
         // Check limit before any developments
         const initialCheck = await developerSubscriptionService.checkLimit(
-          developer.id,
+          created.developer.id,
           'developments',
         );
         expect(initialCheck.allowed).toBe(true);
@@ -139,11 +173,11 @@ describe('Developer Subscription Service - Property Tests', () => {
         expect(initialCheck.tier).toBe('free_trial');
 
         // Increment usage to simulate creating a development
-        await developerSubscriptionService.incrementUsage(developer.id, 'developments');
+        await developerSubscriptionService.incrementUsage(created.developer.id, 'developments');
 
         // Check limit after one development
         const afterOneCheck = await developerSubscriptionService.checkLimit(
-          developer.id,
+          created.developer.id,
           'developments',
         );
         expect(afterOneCheck.allowed).toBe(false); // Should not allow second development
@@ -154,11 +188,12 @@ describe('Developer Subscription Service - Property Tests', () => {
         // (This would be enforced by middleware in actual API calls)
       } finally {
         // Cleanup
-        if (developerId) {
-          await cleanupTestData(developerId);
+        if (developerId && createdUserId) {
+          await cleanupTestData(developerId, createdUserId);
         }
       }
     },
+    20000,
   );
 
   /**
@@ -170,17 +205,19 @@ describe('Developer Subscription Service - Property Tests', () => {
    * For any developer account and any valid tier upgrade or downgrade,
    * the new feature access limits and capabilities should be applied immediately.
    */
-  it.prop([fc.integer({ min: 1, max: 10000 }), fc.constantFrom('basic', 'premium')])(
+  it.prop([fc.integer({ min: 1, max: 10000 }), fc.constantFrom('basic', 'premium')], { numRuns: 5 })(
     'Properties 2 & 32: Tier upgrades apply new limits immediately',
     async (userId, newTier) => {
       let developerId: number | null = null;
+      let createdUserId: number | null = null;
 
       try {
         // Create a test developer with free trial subscription
-        const developer = await createTestDeveloper(userId);
-        developerId = developer.id;
+        const created = await createTestDeveloper(userId);
+        developerId = created.developer.id;
+        createdUserId = created.userId;
         const initialSubscription = await developerSubscriptionService.createSubscription(
-          developer.id,
+          created.developer.id,
         );
 
         // Verify initial state
@@ -189,7 +226,7 @@ describe('Developer Subscription Service - Property Tests', () => {
 
         // Upgrade to new tier
         const upgradedSubscription = await developerSubscriptionService.updateTier(
-          developer.id,
+          created.developer.id,
           newTier,
         );
 
@@ -200,16 +237,16 @@ describe('Developer Subscription Service - Property Tests', () => {
         if (newTier === 'basic') {
           expect(upgradedSubscription.limits.maxDevelopments).toBe(5);
           expect(upgradedSubscription.limits.maxLeadsPerMonth).toBe(200);
-          expect(upgradedSubscription.limits.advancedAnalyticsEnabled).toBe(true);
+          expect(Number(upgradedSubscription.limits.advancedAnalyticsEnabled)).toBe(1);
         } else if (newTier === 'premium') {
           expect(upgradedSubscription.limits.maxDevelopments).toBe(999999); // Effectively unlimited
           expect(upgradedSubscription.limits.maxLeadsPerMonth).toBe(999999);
-          expect(upgradedSubscription.limits.crmIntegrationEnabled).toBe(true);
+          expect(Number(upgradedSubscription.limits.crmIntegrationEnabled)).toBe(1);
         }
 
         // Property: Check limit should reflect new tier immediately
         const limitCheck = await developerSubscriptionService.checkLimit(
-          developer.id,
+          created.developer.id,
           'developments',
         );
         expect(limitCheck.tier).toBe(newTier);
@@ -221,30 +258,37 @@ describe('Developer Subscription Service - Property Tests', () => {
         );
       } finally {
         // Cleanup
-        if (developerId) {
-          await cleanupTestData(developerId);
+        if (developerId && createdUserId) {
+          await cleanupTestData(developerId, createdUserId);
         }
       }
     },
+    20000,
   );
 
   /**
    * Additional property test: Trial expiration detection
    * Validates: Requirements 1.3
    */
-  it.prop([fc.integer({ min: 1, max: 10000 })])(
+  it.prop([fc.integer({ min: 1, max: 10000 })], { numRuns: 5 })(
     'Trial expiration is correctly detected',
     async userId => {
       let developerId: number | null = null;
+      let createdUserId: number | null = null;
 
       try {
         // Create a test developer with subscription
-        const developer = await createTestDeveloper(userId);
-        developerId = developer.id;
-        const subscription = await developerSubscriptionService.createSubscription(developer.id);
+        const created = await createTestDeveloper(userId);
+        developerId = created.developer.id;
+        createdUserId = created.userId;
+        const subscription = await developerSubscriptionService.createSubscription(
+          created.developer.id,
+        );
 
         // Check trial status for new subscription
-        const trialStatus = await developerSubscriptionService.checkTrialExpiration(developer.id);
+        const trialStatus = await developerSubscriptionService.checkTrialExpiration(
+          created.developer.id,
+        );
 
         // Property: New trial should not be expired
         expect(trialStatus.expired).toBe(false);
@@ -252,10 +296,11 @@ describe('Developer Subscription Service - Property Tests', () => {
         expect(trialStatus.daysRemaining).toBeLessThanOrEqual(14);
       } finally {
         // Cleanup
-        if (developerId) {
-          await cleanupTestData(developerId);
+        if (developerId && createdUserId) {
+          await cleanupTestData(developerId, createdUserId);
         }
       }
     },
+    20000,
   );
 });

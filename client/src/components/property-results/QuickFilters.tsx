@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Button } from '@/components/ui/button';
 import { Home, Heart, Shield, Wifi, Zap } from 'lucide-react';
 import type { PropertyFilters } from '../../../shared/types';

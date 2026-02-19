@@ -17,5 +17,10 @@ export default defineConfig({
     restoreMocks: true,
     clearMocks: true,
     mockReset: true,
+    env: {
+      // Load .env.test for test database configuration
+      NODE_ENV: 'test',
+    },
+    setupFiles: ['./vitest.setup.ts'],
   },
 });

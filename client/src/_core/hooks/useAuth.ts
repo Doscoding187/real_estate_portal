@@ -19,7 +19,7 @@ export function useAuth(options?: UseAuthOptions) {
    * Passing `undefined` as an input causes tRPC batching metadata like meta.values:["undefined"]
    * and can break validation when server expects required input shapes.
    */
-  const meQuery = trpc.auth.me.useQuery({
+  const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: 0,
     refetchOnWindowFocus: false,
     staleTime: 60_000,
@@ -28,7 +28,7 @@ export function useAuth(options?: UseAuthOptions) {
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       // IMPORTANT: Use `null` key instead of `undefined` so cache ops match the no-input query.
-      utils.auth.me.setData(null, null);
+      utils.auth.me.setData(undefined, null);
     },
   });
 
@@ -42,7 +42,7 @@ export function useAuth(options?: UseAuthOptions) {
       throw error;
     } finally {
       // Clear cached user and invalidate the no-input query
-      utils.auth.me.setData(null, null);
+      utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
 
       // Clear brand emulation context on logout

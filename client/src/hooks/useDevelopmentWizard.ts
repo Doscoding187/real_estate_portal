@@ -205,7 +205,6 @@ export interface UnitType {
   // Legacy compatibility (deprecated, use priceFrom/priceTo)
   basePriceFrom?: number;
   basePriceTo?: number;
-  unitSize?: number;
 
   // Amenities (Two-Level System)
   amenities: {
@@ -475,6 +474,7 @@ export interface DevelopmentWizardState {
   // Validation
   validatePhase: (phase: number) => { isValid: boolean; errors: string[] };
   validateForPublish: () => { isValid: boolean; errors: string[] };
+  getCardFieldRecommendations: () => string[];
 
   // Persistence
   saveDraft: (saveCallback?: (data: any) => Promise<void>) => Promise<void>;
@@ -731,9 +731,7 @@ const createActions = (
       heroImage:
         mediaData.heroImage ??
         state.developmentData.media?.heroImage ??
-        (mediaData.photos?.find(
-          (p: MediaItem) => p.category === 'hero' || p.category === 'featured' || p.isPrimary,
-        ) ||
+        (mediaData.photos?.find((p: MediaItem) => p.category === 'featured' || p.isPrimary) ||
           mediaData.photos?.[0]),
     };
 
@@ -800,6 +798,80 @@ const createActions = (
     getWizardData: (): WizardData => {
       const state = get();
       return buildWizardData(state);
+    },
+
+    /**
+     * Non-blocking recommendations focused on keeping result cards visually uniform.
+     * These are stricter than publish minimums and are shown as guidance.
+     */
+    getCardFieldRecommendations: (): string[] => {
+      const state = get();
+      const wizardData = buildWizardData(state);
+      const recommendations: string[] = [];
+
+      const suburb = String(wizardData.location?.suburb || '').trim();
+      if (!suburb) {
+        recommendations.push(
+          'Add a suburb so the result card location is complete (suburb, city, province).',
+        );
+      }
+
+      if (!state.listingIdentity?.developerBrandProfileId) {
+        recommendations.push(
+          'Link a developer brand profile (with logo) to keep builder name/avatar consistent on cards.',
+        );
+      }
+
+      const photosCount = wizardData.media?.photos?.length ?? 0;
+      const heroImage =
+        (wizardData as any).heroImage ||
+        wizardData.media?.heroImage?.url ||
+        (typeof wizardData.media?.heroImage === 'string' ? wizardData.media?.heroImage : undefined);
+      const totalImageCount = (heroImage ? 1 : 0) + photosCount;
+      if (totalImageCount < 3) {
+        recommendations.push(
+          'Upload at least 3 images so cards have consistent visual coverage and gallery indicators.',
+        );
+      }
+
+      const descriptionLength = String(wizardData.description || '').trim().length;
+      if (descriptionLength < 120) {
+        recommendations.push(
+          'Use a richer description (120+ characters) so card previews remain informative.',
+        );
+      }
+
+      const highlightCount = Array.isArray(wizardData.highlights) ? wizardData.highlights.length : 0;
+      if (highlightCount < 4) {
+        recommendations.push(
+          'Add at least 4 highlights to keep chips consistent across cards (only the first few are shown).',
+        );
+      }
+
+      if (state.classification?.type !== 'land') {
+        const units = Array.isArray(wizardData.unitTypes) ? wizardData.unitTypes : [];
+        if (units.length < 2) {
+          recommendations.push(
+            'Add at least 2 unit types to improve carousel consistency on result cards.',
+          );
+        }
+
+        const hasIncompleteUnit = units.some((u: any) => {
+          const unitName = String(u?.name || '').trim();
+          const priceValue = Number(
+            u?.priceFrom ?? u?.basePriceFrom ?? u?.monthlyRentFrom ?? u?.startingBid ?? 0,
+          );
+          return !unitName || !Number.isFinite(priceValue) || priceValue <= 0;
+        });
+
+        if (hasIncompleteUnit) {
+          recommendations.push(
+            'Ensure every unit type has a clear name and valid price so carousel items render uniformly.',
+          );
+        }
+      }
+
+      return recommendations;
     },
 
     // NEW ACTIONS
@@ -1001,14 +1073,16 @@ const createActions = (
         case 8:
           if ((state.developmentData?.highlights?.length || 0) < 3)
             errors.push('Add at least 3 key selling points');
-          if ((state.developmentData?.description?.length || 0) < 50)
+          const overviewDescLen = String(state.developmentData?.description ?? '').trim().length;
+          if (overviewDescLen === 0) {
+            errors.push('Description is required');
+          } else if (overviewDescLen < 50) {
             errors.push('Description must be at least 50 characters');
-          {
-            const status = state.developmentData?.status;
-            if (status === 'launching-soon' || status === 'selling') {
-              if (!state.developmentData?.completionDate)
-                errors.push('Expected completion date is required for this status');
-            }
+          }
+          const status = state.developmentData?.status;
+          if (status === 'launching-soon' || status === 'selling') {
+            if (!state.developmentData?.completionDate)
+              errors.push('Expected completion date is required for this status');
           }
           break;
         case 9:
@@ -1055,8 +1129,12 @@ const createActions = (
       const highlightsLen = wizardData.highlights?.length ?? 0;
       if (highlightsLen < 3) errors.push('Add at least 3 highlights');
 
-      const descLen = wizardData.description?.length ?? 0;
-      if (descLen < 50) errors.push('Description must be at least 50 characters');
+      const descLen = String(wizardData.description ?? '').trim().length;
+      if (descLen === 0) {
+        errors.push('Description is required');
+      } else if (descLen < 50) {
+        errors.push('Description must be at least 50 characters');
+      }
 
       // Unit Types (canonical)
       if (state.classification?.type !== 'land') {
@@ -1108,6 +1186,12 @@ const createActions = (
         }
       }
 
+      // Card-uniformity rules are now blocking publish rules.
+      const cardFieldRequirements = get().getCardFieldRecommendations();
+      for (const requirement of cardFieldRequirements) {
+        if (!errors.includes(requirement)) errors.push(requirement);
+      }
+
       return { isValid: errors.length === 0, errors };
     },
 
@@ -1117,12 +1201,13 @@ const createActions = (
       transactionType: import('@/types/wizardTypes').TransactionType,
     ) =>
       set(state => {
+        const normalizedTransactionType = normalizeTransactionType(transactionType) ?? 'for_sale';
         const newState: Partial<DevelopmentWizardState> = {
           developmentType: type,
-          transactionType: normalizeTransactionType(transactionType), // Store at root level (canonical)
+          transactionType: normalizedTransactionType, // Store at root level (canonical)
           developmentData: {
             ...state.developmentData,
-            transactionType: normalizeTransactionType(transactionType), // Keep legacy synced for safely
+            transactionType: normalizedTransactionType, // Keep legacy synced for safely
           },
           currentPhase: 1,
           currentStep: 1,

@@ -44,7 +44,7 @@ export function useFollowNeighbourhood({
 
   return {
     isFollowing,
-    isLoading: toggleFollowMutation.isLoading,
+    isLoading: toggleFollowMutation.isPending,
     toggleFollow,
   };
 }

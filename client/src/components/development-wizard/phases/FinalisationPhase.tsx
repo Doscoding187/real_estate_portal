@@ -131,6 +131,7 @@ export function FinalisationPhase() {
     setPhase,
     reset,
     validateForPublish,
+    getCardFieldRecommendations,
     residentialConfig,
   } = store;
 
@@ -157,7 +158,7 @@ export function FinalisationPhase() {
   // Run validation
   const validationResult = validateForPublish();
   const errors = validationResult?.errors || [];
-  const warnings: string[] = []; // Placeholder for future warnings support
+  const warnings: string[] = getCardFieldRecommendations().filter(message => !errors.includes(message));
   const canPublish = errors.length === 0;
 
   // Extract images from canonical media state (Phase 2I - Phase 2G canonical shape)

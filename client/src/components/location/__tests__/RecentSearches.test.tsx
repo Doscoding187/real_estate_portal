@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, vi, beforeEach, afterEach, it } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LocationAutocomplete } from '../LocationAutocomplete.new';
 
@@ -95,14 +95,14 @@ describe('Recent Searches Feature', () => {
     // Type to trigger autocomplete
     await userEvent.type(input, 'Sandton');
 
-    // Wait for suggestions
+    // Wait for suggestions dropdown to appear
     await waitFor(() => {
-      expect(mockAutocompleteService.getPlacePredictions).toHaveBeenCalled();
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
     });
 
-    // Click on suggestion
-    const suggestion = await screen.findByText('Sandton');
-    await userEvent.click(suggestion);
+    // Click on the first suggestion option
+    const suggestions = screen.getAllByRole('option');
+    fireEvent.click(suggestions[0]);
 
     // Wait for place details
     await waitFor(() => {
@@ -252,11 +252,13 @@ describe('Recent Searches Feature', () => {
 
     // Click the clear button
     const clearButton = screen.getByRole('button', { name: /clear recent searches/i });
-    await userEvent.click(clearButton);
+    fireEvent.click(clearButton);
 
-    // Verify localStorage is cleared
-    const stored = localStorage.getItem('recentLocationSearches');
-    expect(stored).toBeNull();
+    // Wait for localStorage to be cleared
+    await waitFor(() => {
+      const stored = localStorage.getItem('recentLocationSearches');
+      expect(stored).toBeNull();
+    });
 
     // Verify recent searches are no longer displayed
     expect(screen.queryByText('Recent Searches')).not.toBeInTheDocument();
@@ -343,14 +345,14 @@ describe('Recent Searches Feature', () => {
     // Type to trigger autocomplete
     await userEvent.type(input, 'Sandton');
 
-    // Wait for suggestions
+    // Wait for suggestions dropdown to appear
     await waitFor(() => {
-      expect(mockAutocompleteService.getPlacePredictions).toHaveBeenCalled();
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
     });
 
-    // Click on suggestion
-    const suggestion = await screen.findByText('Sandton');
-    await userEvent.click(suggestion);
+    // Click on the first suggestion option
+    const suggestions = screen.getAllByRole('option');
+    fireEvent.click(suggestions[0]);
 
     // Wait for place details
     await waitFor(() => {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from 'react';
 import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';

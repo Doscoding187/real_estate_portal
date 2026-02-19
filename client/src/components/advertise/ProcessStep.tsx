@@ -55,7 +55,7 @@ export const ProcessStep: React.FC<ProcessStepProps> = ({
   showConnector = false,
   className = '',
 }) => {
-  const { ref, isVisible } = useScrollAnimation({
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({
     threshold: 0.2,
     triggerOnce: true,
   });

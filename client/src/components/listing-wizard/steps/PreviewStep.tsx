@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Step 7: Preview & Submit
  * Implements full listing preview

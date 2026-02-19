@@ -57,15 +57,19 @@ describe('FeatureTile - Property 10: Feature tile hover interaction', () => {
         expect(tileContainer).toBeTruthy();
 
         if (tileContainer) {
-          // Verify the element has inline styles for animation
+          // Verify the element has inline styles for animation (box-shadow often inline in motion)
           const style = tileContainer.getAttribute('style');
-          expect(style).toBeTruthy();
 
-          // Verify box-shadow is present (for lift effect with shadow expansion)
-          expect(style).toContain('box-shadow');
+          // Verify transform/position related styles OR class names
+          const className = tileContainer.getAttribute('class');
 
-          // Verify the element has position relative (for transform)
-          expect(style).toContain('position');
+          // Verify box-shadow is present (either inline or class)
+          const hasBoxShadow = style?.includes('box-shadow') || className?.includes('shadow');
+          expect(hasBoxShadow).toBeTruthy();
+
+          // Position relative is usually a class 'relative' in Tailwind
+          const hasPosition = style?.includes('position') || className?.includes('relative');
+          expect(hasPosition).toBeTruthy();
         }
 
         cleanup();
@@ -96,10 +100,9 @@ describe('FeatureTile - Property 10: Feature tile hover interaction', () => {
           const className = tileContainer.getAttribute('class');
           expect(className).toContain('feature-tile');
 
-          // Verify it has flexbox layout (part of the card structure)
-          const style = tileContainer.getAttribute('style');
-          expect(style).toContain('display');
-          expect(style).toContain('flex');
+          // Verify it has flexbox layout (part of the card structure) - class check
+          expect(className).toContain('flex');
+          expect(className).toContain('flex-col');
         }
 
         cleanup();
@@ -122,11 +125,11 @@ describe('FeatureTile - Property 10: Feature tile hover interaction', () => {
           />,
         );
 
-        // Find the icon container (div with 56px dimensions)
+        // Find the icon container (div with w-14 class which is 56px)
         const iconContainers = container.querySelectorAll('div');
         const iconContainer = Array.from(iconContainers).find(div => {
-          const style = div.getAttribute('style');
-          return style?.includes('width: 56px') && style?.includes('height: 56px');
+          const className = div.getAttribute('class');
+          return className?.includes('w-14') && className?.includes('h-14');
         });
 
         expect(iconContainer).toBeDefined();
@@ -138,8 +141,9 @@ describe('FeatureTile - Property 10: Feature tile hover interaction', () => {
           // Should have background color (for color transition)
           expect(style).toContain('background');
 
-          // Should have border radius (soft-UI styling)
-          expect(style).toContain('border-radius');
+          // Should have border radius (soft-UI styling component uses classes)
+          const className = iconContainer.getAttribute('class');
+          expect(className).toContain('rounded');
         }
 
         cleanup();
@@ -197,12 +201,15 @@ describe('FeatureTile - Property 10: Feature tile hover interaction', () => {
 
     if (tileContainer) {
       const style = tileContainer.getAttribute('style');
+      const className = tileContainer.getAttribute('class');
 
-      // Should still have box-shadow for lift effect
-      expect(style).toContain('box-shadow');
+      // Should still have box-shadow (inline or class)
+      const hasBoxShadow = style?.includes('box-shadow') || className?.includes('shadow');
+      expect(hasBoxShadow).toBeTruthy();
 
-      // Should still have position for transform
-      expect(style).toContain('position');
+      // Should still have position (inline or class)
+      const hasPosition = style?.includes('position') || className?.includes('relative');
+      expect(hasPosition).toBeTruthy();
     }
   });
 
@@ -222,10 +229,14 @@ describe('FeatureTile - Property 10: Feature tile hover interaction', () => {
 
     if (tileContainer) {
       const style = tileContainer.getAttribute('style');
+      const className = tileContainer.getAttribute('class');
 
       // Should still have hover-capable styling
-      expect(style).toContain('box-shadow');
-      expect(style).toContain('position');
+      const hasBoxShadow = style?.includes('box-shadow') || className?.includes('shadow');
+      expect(hasBoxShadow).toBeTruthy();
+
+      const hasPosition = style?.includes('position') || className?.includes('relative');
+      expect(hasPosition).toBeTruthy();
     }
   });
 });

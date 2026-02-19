@@ -26,27 +26,22 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
     // Find the grid container
     const gridContainers = container.querySelectorAll('div');
     const gridContainer = Array.from(gridContainers).find(div => {
-      const style = window.getComputedStyle(div);
-      return style.display === 'grid';
+      // const style = window.getComputedStyle(div); // Unused
+      return div.className.includes('grid');
     });
 
     expect(gridContainer).toBeDefined();
 
     if (gridContainer) {
-      const style = window.getComputedStyle(gridContainer);
+      // Check for grid classes
+      expect(gridContainer.className).toContain('grid');
+      expect(gridContainer.className).toContain('gap-6');
+      expect(gridContainer.className).toContain('md:gap-8');
 
-      // Check that grid has gap property set
-      expect(style.gap).toBeTruthy();
-
-      // The gap should be consistent (single value, not different row/column gaps)
-      const gapValue = style.gap;
-      expect(gapValue).toBeTruthy();
-
-      // Grid should use auto-fit for responsive layout
-      expect(style.gridTemplateColumns).toContain('auto-fit');
-
-      // Grid should align items to start for consistent alignment
-      expect(style.alignItems).toBe('start');
+      // Grid should use responsive columns
+      expect(gridContainer.className).toContain('grid-cols-1');
+      expect(gridContainer.className).toContain('sm:grid-cols-2');
+      expect(gridContainer.className).toContain('lg:grid-cols-4');
     }
   });
 
@@ -71,23 +66,20 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
               // Find the grid container
               const gridContainers = container.querySelectorAll('div');
               const gridContainer = Array.from(gridContainers).find(div => {
-                const style = window.getComputedStyle(div);
-                return style.display === 'grid';
+                return div.className.includes('grid');
               });
 
               expect(gridContainer).toBeDefined();
 
               if (gridContainer) {
-                const style = window.getComputedStyle(gridContainer);
-
                 // Gap should always be set
-                expect(style.gap).toBeTruthy();
+                expect(gridContainer.className).toContain('gap-6');
+                expect(gridContainer.className).toContain('md:gap-8');
 
-                // Grid template should use auto-fit
-                expect(style.gridTemplateColumns).toContain('auto-fit');
-
-                // Alignment should be consistent
-                expect(style.alignItems).toBe('start');
+                // Grid template should use responsive columns
+                expect(gridContainer.className).toContain('grid-cols-1');
+                expect(gridContainer.className).toContain('sm:grid-cols-2');
+                expect(gridContainer.className).toContain('lg:grid-cols-4');
               }
             } finally {
               unmount();
@@ -114,45 +106,22 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
     // All feature blocks should be within the grid container
     const gridContainers = container.querySelectorAll('div');
     const gridContainer = Array.from(gridContainers).find(div => {
-      const style = window.getComputedStyle(div);
-      return style.display === 'grid';
+      return div.className.includes('grid');
     });
 
     expect(gridContainer).toBeDefined();
 
     if (gridContainer) {
-      // All feature blocks should be direct children of the grid
-      const gridChildren = Array.from(gridContainer.children);
-      const featureBlocksInGrid = gridChildren.filter(child =>
-        child.classList.contains('feature-block'),
-      );
+      // All feature blocks should be within the grid container
+      // Note: FeatureBlock might be nested inside wrapper divs
+      const featureBlocksInGrid = gridContainer.querySelectorAll('.feature-block');
 
       expect(featureBlocksInGrid.length).toBe(4);
-    }
-  });
 
-  /**
-   * Additional property: Grid uses responsive minmax for consistent sizing
-   */
-  it('should use minmax for responsive feature block sizing', () => {
-    const { container } = render(<ValuePropositionSection />);
-
-    const gridContainers = container.querySelectorAll('div');
-    const gridContainer = Array.from(gridContainers).find(div => {
-      const style = window.getComputedStyle(div);
-      return style.display === 'grid';
-    });
-
-    expect(gridContainer).toBeDefined();
-
-    if (gridContainer) {
-      const style = window.getComputedStyle(gridContainer);
-
-      // Grid template should use minmax for responsive sizing
-      expect(style.gridTemplateColumns).toContain('minmax');
-
-      // Should have minimum width constraint
-      expect(style.gridTemplateColumns).toContain('280px');
+      // Grid template should use responsive columns
+      expect(gridContainer.className).toContain('grid-cols-1');
+      expect(gridContainer.className).toContain('sm:grid-cols-2');
+      expect(gridContainer.className).toContain('lg:grid-cols-4');
     }
   });
 
@@ -167,13 +136,12 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
     expect(section).toBeDefined();
 
     if (section) {
-      const style = window.getComputedStyle(section);
-
       // Section should have padding
-      expect(style.padding).toBeTruthy();
+      expect(section.className).toContain('py-20');
+      expect(section.className).toContain('md:py-28');
 
       // Section should have background color
-      expect(style.backgroundColor).toBeTruthy();
+      expect(section.className).toContain('bg-white');
     }
   });
 });

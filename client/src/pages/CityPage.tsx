@@ -18,6 +18,9 @@ import { LocationGrid } from '@/components/location/LocationGrid';
 // import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider'; // Removed
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { LocationTrendingFeedSection } from '@/components/location/LocationTrendingFeedSection';
+import type { FeedTab } from '@/components/location/LocationTrendingFeedSection';
+import { PropertyInsights } from '@/components/PropertyInsights';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -43,6 +46,20 @@ export default function CityPage({
 }) {
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, action, locationId } = params;
+  const [heroTab, setHeroTab] = React.useState<string>('buy');
+
+  const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
+    const t = String(tabId || 'buy').toLowerCase();
+    if (t === 'rental') return 'rent';
+    if (t === 'buy') return 'buy';
+    if (t === 'developments') return 'developments';
+    if (t === 'shared_living') return 'shared_living';
+    if (t === 'plot_land') return 'plot_land';
+    if (t === 'commercial') return 'commercial';
+    return 'buy';
+  };
+
+  const mapFeedTabToHeroTab = (tab: FeedTab): string => (tab === 'rent' ? 'rental' : tab);
 
   // Use window.location.search for reactivity to query param changes
   // wouter's useLocation() only returns pathname, not query params
@@ -185,6 +202,8 @@ export default function CityPage({
             backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
+            activeTab={heroTab}
+            onActiveTabChange={setHeroTab}
             quickLinks={
               suburbs?.slice(0, 10).map((suburb: any) => ({
                 label: suburb.name,
@@ -221,42 +240,13 @@ export default function CityPage({
           ) : undefined
         }
         highDemandDevelopments={
-          developments && developments.length > 0 && suburbs && suburbs.length > 0 ? (
-            <TabbedListingSection
-              title={`Hot Selling Developments in ${city.name}`}
-              description={`Discover popular residential developments across top suburbs in ${city.name}.`}
-              // Section 6: Removed filtering tabs to prevent discovery-layer filtering
-              // Showing all developments or using a simpler carousel would be better,
-              // but for now keeping layout but strictly linking to SRPs
-              tabs={suburbs.map((suburb: any) => ({ label: suburb.name, value: suburb.name }))}
-              items={developments}
-              renderItem={(dev: any) => (
-                <SimpleDevelopmentCard
-                  id={dev.id.toString()}
-                  title={dev.title || dev.name}
-                  city={dev.suburb || city.name}
-                  priceRange={{
-                    min: Number(dev.priceFrom),
-                    max: Number(dev.priceTo) || Number(dev.priceFrom),
-                  }}
-                  image={
-                    dev.image ||
-                    dev.images?.[0] ||
-                    dev.mainImage ||
-                    'https://placehold.co/600x400/e2e8f0/64748b?text=Development'
-                  }
-                  isHotSelling={true}
-                />
-              )}
-              filterItem={(dev: any, suburbName: string) => dev.suburb === suburbName}
-              // CRITICAL: Suburb Link -> SRP (Transaction Mode)
-              viewAllLink={suburbName =>
-                `/property-for-sale/${provinceSlug}/${citySlug}/${suburbs.find((s: any) => s.name === suburbName)?.slug || ''}?view=list`
-              }
-              viewAllText="View properties in"
-              emptyMessage="No featured developments in this suburb right now."
-            />
-          ) : undefined
+          <LocationTrendingFeedSection
+            locationName={city.name}
+            province={city.provinceName || provinceSlug}
+            city={city.name}
+            activeTab={mapHeroTabToFeedTab(heroTab)}
+            onTabChange={tab => setHeroTab(mapFeedTabToHeroTab(tab))}
+          />
         }
         popularLocations={
           <ExploreCities

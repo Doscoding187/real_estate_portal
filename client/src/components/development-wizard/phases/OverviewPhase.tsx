@@ -147,6 +147,9 @@ export function OverviewPhase() {
                   {currentDescription.length} / 5000 chars
                 </p>
               </div>
+              <p className="text-xs text-slate-500">
+                Recommended: 120+ chars for stronger result card previews.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -222,6 +225,9 @@ export function OverviewPhase() {
             </div>
             <p className="text-xs text-slate-500">
               {currentHighlights.length} of 8 points added (Min 3)
+            </p>
+            <p className="text-xs text-slate-500">
+              Recommended: 4+ highlights for consistent card chips.
             </p>
           </CardContent>
         </Card>

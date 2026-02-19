@@ -144,60 +144,78 @@ export function LocationAutocomplete({
     }
   }, [allowManualEntry]);
 
-  // Debounced autocomplete fetch
-  const fetchSuggestions = useCallback((query: string) => {
-    if (!autocompleteServiceRef.current || !sessionTokenRef.current) {
-      return;
-    }
-
-    if (query.length < MIN_INPUT_LENGTH) {
-      setSuggestions([]);
-      setIsOpen(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    const request: google.maps.places.AutocompletionRequest = {
-      input: query,
-      componentRestrictions: { country: 'za' }, // South Africa restriction (requirement 2.1)
-      sessionToken: sessionTokenRef.current,
-    };
-
-    autocompleteServiceRef.current.getPlacePredictions(request, (predictions, status) => {
-      setIsLoading(false);
-
-      if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-        // Limit to MAX_SUGGESTIONS (requirement 1.3)
-        setSuggestions(predictions.slice(0, MAX_SUGGESTIONS));
-        setIsOpen(true);
-        setSelectedIndex(-1);
-      } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-        setSuggestions([]);
-        setIsOpen(false);
-      } else {
-        console.error('Autocomplete error:', status);
-
-        // Requirement 11.1-11.3: Handle API errors with fallback to manual entry
-        if (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
-          setError('API key invalid. Please enter location manually.');
-        } else if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
-          setError('Too many requests. Please enter location manually.');
-        } else {
-          setError('Failed to fetch suggestions. You can enter the address manually.');
-        }
-
-        setSuggestions([]);
-        setIsOpen(false);
-
-        // Enable manual mode if allowed
-        if (allowManualEntry) {
-          setIsManualMode(true);
-        }
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
       }
-    });
+    };
   }, []);
+
+  // Debounced autocomplete fetch
+  const fetchSuggestions = useCallback(
+    (query: string) => {
+      if (!autocompleteServiceRef.current || !sessionTokenRef.current) {
+        return;
+      }
+
+      if (query.length < MIN_INPUT_LENGTH) {
+        setSuggestions([]);
+        setIsOpen(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      const request: google.maps.places.AutocompletionRequest = {
+        input: query,
+        componentRestrictions: { country: 'za' }, // South Africa restriction (requirement 2.1)
+        sessionToken: sessionTokenRef.current,
+      };
+
+      autocompleteServiceRef.current.getPlacePredictions(request, (predictions, status) => {
+        // Check if component is still mounted before updating state
+        if (!autocompleteServiceRef.current) {
+          return;
+        }
+
+        setIsLoading(false);
+
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+          // Limit to MAX_SUGGESTIONS (requirement 1.3)
+          setSuggestions(predictions.slice(0, MAX_SUGGESTIONS));
+          setIsOpen(true);
+          setSelectedIndex(-1);
+        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          setSuggestions([]);
+          setIsOpen(false);
+        } else {
+          console.error('Autocomplete error:', status);
+
+          // Requirement 11.1-11.3: Handle API errors with fallback to manual entry
+          if (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
+            setError('API key invalid. Please enter location manually.');
+          } else if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
+            setError('Too many requests. Please enter location manually.');
+          } else {
+            setError('Failed to fetch suggestions. You can enter the address manually.');
+          }
+
+          setSuggestions([]);
+          setIsOpen(false);
+
+          // Enable manual mode if allowed
+          if (allowManualEntry) {
+            setIsManualMode(true);
+          }
+        }
+      });
+    },
+    [allowManualEntry],
+  );
 
   // Handle input change with debouncing (requirement 5.1)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,11 +226,13 @@ export function LocationAutocomplete({
     // Clear existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
 
     // Set new timer for 300ms debounce
     debounceTimerRef.current = setTimeout(() => {
       fetchSuggestions(newValue);
+      debounceTimerRef.current = null;
     }, DEBOUNCE_DELAY);
   };
 

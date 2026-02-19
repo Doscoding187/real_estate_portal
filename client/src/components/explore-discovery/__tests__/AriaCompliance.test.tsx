@@ -13,8 +13,8 @@ vi.mock('@/lib/trpc', () => ({
         })),
       },
     },
-    exploreApi: {
-      toggleSaveProperty: {
+    explore: {
+      saveProperty: {
         useMutation: vi.fn(() => ({
           mutate: vi.fn(),
           mutateAsync: vi.fn(async () => ({ data: { saved: true } })),
@@ -24,28 +24,6 @@ vi.mock('@/lib/trpc', () => ({
           reset: vi.fn(),
         })),
       },
-      getFeed: {
-        useQuery: vi.fn(() => ({
-          data: {
-            items: [],
-            shorts: [],
-            hasMore: false,
-            offset: 0,
-            feedType: 'recommended',
-          },
-          isLoading: false,
-          error: null,
-          refetch: vi.fn(),
-        })),
-      },
-      recordInteraction: {
-        useMutation: vi.fn(() => ({
-          mutate: vi.fn(),
-          mutateAsync: vi.fn(),
-        })),
-      },
-    },
-    explore: {
       getFeed: {
         useQuery: vi.fn(() => ({
           data: { items: [], totalCount: 0 },

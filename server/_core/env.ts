@@ -40,4 +40,6 @@ export const ENV = {
   // Email configuration
   resendApiKey: process.env.RESEND_API_KEY ?? '',
   resendFromEmail: process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev',
+  distributionNetworkEnabled:
+    String(process.env.FEATURE_DISTRIBUTION_NETWORK ?? '').toLowerCase() === 'true',
 };

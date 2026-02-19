@@ -17,6 +17,7 @@ import {
   getUserId,
   getReferrer,
   resetScrollDepthTracking,
+  resetSessionId,
 } from '../advertiseTracking';
 
 // Mock sessionStorage and localStorage
@@ -26,6 +27,7 @@ const mockLocalStorage = new Map<string, string>();
 beforeEach(() => {
   vi.clearAllMocks();
   resetScrollDepthTracking();
+  resetSessionId();
   mockSessionStorage.clear();
   mockLocalStorage.clear();
 
@@ -34,17 +36,42 @@ beforeEach(() => {
     value: {
       innerWidth: 1024,
       sessionStorage: {
-        getItem: (key: string) => mockSessionStorage.get(key) || null,
-        setItem: (key: string, value: string) => mockSessionStorage.set(key, value),
-      },
+        getItem: vi.fn((key: string) => mockSessionStorage.get(key) || null),
+        setItem: vi.fn((key: string, value: string) => mockSessionStorage.set(key, value)),
+        removeItem: vi.fn((key: string) => mockSessionStorage.delete(key)),
+        clear: vi.fn(() => mockSessionStorage.clear()),
+        key: vi.fn(),
+        get length() {
+          return mockSessionStorage.size;
+        },
+      } as Storage,
       localStorage: {
-        getItem: (key: string) => mockLocalStorage.get(key) || null,
-      },
+        getItem: vi.fn((key: string) => mockLocalStorage.get(key) || null),
+        setItem: vi.fn((key: string, value: string) => mockLocalStorage.set(key, value)),
+        removeItem: vi.fn((key: string) => mockLocalStorage.delete(key)),
+        clear: vi.fn(() => mockLocalStorage.clear()),
+        key: vi.fn(),
+        get length() {
+          return mockLocalStorage.size;
+        },
+      } as Storage,
       gtag: vi.fn(),
       location: {
         pathname: '/advertise',
       },
+      dispatchEvent: vi.fn(),
     },
+    writable: true,
+  });
+
+  // Also mock global sessionStorage and localStorage
+  Object.defineProperty(global, 'sessionStorage', {
+    value: (global.window as any).sessionStorage,
+    writable: true,
+  });
+
+  Object.defineProperty(global, 'localStorage', {
+    value: (global.window as any).localStorage,
     writable: true,
   });
 

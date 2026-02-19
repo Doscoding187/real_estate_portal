@@ -57,9 +57,9 @@
 }
 
 :root {
-  --primary: oklch(0.2 0.08 240); /* Deep navy blue */
+  --primary: rgb(0 92 168); /* Listing nav blue */
   --primary-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.25 0.08 240);
+  --sidebar-primary: rgb(0 92 168);
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --chart-1: var(--color-blue-300);
   --chart-2: var(--color-blue-500);
@@ -83,7 +83,7 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.2 0.08 240);
+  --ring: rgb(0 92 168);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.235 0.015 65);
   --sidebar-accent: oklch(0.967 0.001 286.375);
@@ -112,6 +112,11 @@
   --card-width-sm: clamp(240px, 70vw, 280px); /* Mobile: ~70% viewport */
   --card-width-md: clamp(260px, 45vw, 320px); /* Tablet: ~45% viewport */
   --card-width-lg: 300px; /* Desktop: fixed */
+
+  /* Content rail tokens (page composition system) */
+  --content-rail-width: 1240px;
+  --content-padding-mobile: 1rem;
+  --content-padding-desktop: 2rem;
 }
 
 .dark {
@@ -240,6 +245,31 @@
       padding-right: var(--space-xl);
       max-width: 1280px;
     }
+  }
+
+  .content-rail {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: var(--content-padding-mobile);
+  }
+
+  @media (min-width: 1024px) {
+    .content-rail {
+      padding-inline: var(--content-padding-desktop);
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .content-rail {
+      max-width: var(--content-rail-width);
+    }
+  }
+
+  /* Prevent double-constraining when section components still use .container internally. */
+  .content-rail .container {
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 

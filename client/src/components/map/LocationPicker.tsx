@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, Search, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';

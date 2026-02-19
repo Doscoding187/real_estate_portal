@@ -22,7 +22,7 @@ export const SearchFallbackNotice: React.FC<SearchFallbackNoticeProps> = ({ loca
   if (fallbackLevel === 'none') return null;
 
   return (
-    <Alert variant="default" className="mb-6 bg-amber-50 border-amber-200 text-amber-900">
+    <Alert variant="default" className="mb-3 bg-amber-50 border-amber-200 text-amber-900">
       <AlertCircle className="h-4 w-4 text-amber-600" />
       <AlertTitle className="text-amber-800 font-semibold flex items-center gap-2">
         <MapPin className="h-4 w-4" />

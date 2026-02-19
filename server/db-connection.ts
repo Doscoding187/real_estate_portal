@@ -5,18 +5,26 @@ import * as schema from '../drizzle/schema';
 // Connection state
 export let _db: any = null;
 
+export function resetDb() {
+  _db = null;
+}
+
 // Lazily create the drizzle instance
 export async function getDb() {
   if (_db) return _db;
 
   // In test environment, bypass actual DB connection to avoid DATABASE_URL dependency
-  if (process.env.NODE_ENV === 'test') {
+  // preventing unit tests from running in CI/CD.
+  // However, if DATABASE_URL is present, we assume integration tests are desired.
+  if (process.env.NODE_ENV === 'test' && !process.env.DATABASE_URL) {
     type Row = Record<string, any>;
 
     let nextPropertyId = 1;
     const state = {
       properties: [] as Row[],
       images: [] as Row[],
+      locations: [] as Row[],
+      listings: [] as Row[],
     };
 
     const mockTable = {
@@ -132,8 +140,16 @@ export async function getDb() {
               isPrimary: Boolean(img.isPrimary),
               displayOrder: Number(img.displayOrder ?? 0),
             }));
+          } else if (activeTable.includes('locations')) {
+            // Return raw location data as stored
+            currentRows = [...state.locations];
+          } else if (activeTable.includes('listings')) {
+            currentRows = [...state.listings];
+          } else if (activeTable.includes('properties')) {
+            // Return raw property data as stored, not normalized
+            currentRows = [...state.properties];
           } else {
-            currentRows = state.properties.map(normalizeSearchRow);
+            currentRows = [];
           }
 
           return builder;
@@ -141,7 +157,31 @@ export async function getDb() {
         leftJoin() {
           return builder;
         },
-        where() {
+        where(condition: any) {
+          // Basic filtering support for eq() conditions
+          // Extract field and value from Drizzle's eq() condition
+          if (condition && typeof condition === 'object') {
+            try {
+              // Try to extract the column name and value from the condition
+              // Drizzle's eq() creates an object with column and value info
+              const conditionStr = JSON.stringify(condition);
+
+              // Simple heuristic: if condition has 'value' property, use it
+              if (condition.value !== undefined) {
+                // Find which field is being filtered
+                // This is a simplified implementation - in reality Drizzle conditions are more complex
+                const filterValue = condition.value;
+
+                // Filter by id if the condition seems to be about id
+                if (conditionStr.includes('"id"') || conditionStr.includes('id')) {
+                  currentRows = currentRows.filter(row => row.id === filterValue);
+                }
+              }
+            } catch (e) {
+              // If we can't parse the condition, just return all rows
+              console.warn('[Mock DB] Could not parse where condition:', e);
+            }
+          }
           return builder;
         },
         groupBy() {
@@ -249,6 +289,26 @@ export async function getDb() {
             return { insertId: lastInsertId };
           }
 
+          if (tableName.includes('locations')) {
+            let lastInsertId = 0;
+            values.forEach(v => {
+              const id = Number(v.id ?? nextPropertyId++);
+              state.locations.push({ ...v, id });
+              lastInsertId = id;
+            });
+            return { insertId: lastInsertId };
+          }
+
+          if (tableName.includes('listings')) {
+            let lastInsertId = 0;
+            values.forEach(v => {
+              const id = Number(v.id ?? nextPropertyId++);
+              state.listings.push({ ...v, id });
+              lastInsertId = id;
+            });
+            return { insertId: lastInsertId };
+          }
+
           if (tableName.includes('property_images')) {
             values.forEach((v, idx) => {
               state.images.push({
@@ -270,6 +330,10 @@ export async function getDb() {
         where: async () => {
           if (getTableName(table).includes('properties')) {
             state.properties = [];
+          } else if (getTableName(table).includes('locations')) {
+            state.locations = [];
+          } else if (getTableName(table).includes('listings')) {
+            state.listings = [];
           }
           return { affectedRows: 0 };
         },
@@ -366,4 +430,3 @@ export async function getDb() {
     return null;
   }
 }
-

@@ -235,9 +235,10 @@ function handleDatabaseError(error: unknown, context?: Record<string, unknown>):
   });
 }
 
-function computeRentRangeFromUnits(
-  unitTypes?: Array<Record<string, unknown>> | null,
-): { monthlyRentFrom: number | null; monthlyRentTo: number | null } {
+function computeRentRangeFromUnits(unitTypes?: Array<Record<string, unknown>> | null): {
+  monthlyRentFrom: number | null;
+  monthlyRentTo: number | null;
+} {
   if (!Array.isArray(unitTypes) || unitTypes.length === 0) {
     return { monthlyRentFrom: null, monthlyRentTo: null };
   }
@@ -255,9 +256,7 @@ function computeRentRangeFromUnits(
   return { monthlyRentFrom: minFrom, monthlyRentTo: maxTo };
 }
 
-function computeAuctionRangeFromUnits(
-  unitTypes?: Array<Record<string, unknown>> | null,
-): {
+function computeAuctionRangeFromUnits(unitTypes?: Array<Record<string, unknown>> | null): {
   auctionStartDate: string | null;
   auctionEndDate: string | null;
   startingBidFrom: number | null;
@@ -598,37 +597,112 @@ export async function listPublicDevelopments(options: {
   limit?: number;
   province?: string;
   city?: string;
+  suburb?: string;
+  developmentType?: 'residential' | 'commercial' | 'mixed_use' | 'land';
+  transactionType?: 'for_sale' | 'for_rent' | 'auction';
 }) {
   const db = await getDb();
   if (!db) return [];
 
-  const { limit = 20, province, city } = options;
+  const { limit = 20, province, city, suburb, developmentType, transactionType } = options;
 
-  const conditions: any[] = [eq(developments.isPublished, 1)];
+  const conditions: any[] = [eq(developments.isPublished, 1), eq(developments.approvalStatus, 'approved')];
   if (province) conditions.push(eq(developments.province, province));
   if (city) conditions.push(eq(developments.city, city));
+  if (suburb) conditions.push(eq(developments.suburb, suburb));
+  if (developmentType) conditions.push(eq(developments.developmentType, developmentType as any));
+  if (transactionType) conditions.push(eq(developments.transactionType, transactionType as any));
 
   const results = await db
     .select({
       id: developments.id,
       name: developments.name,
       slug: developments.slug,
+      description: developments.description,
       images: developments.images,
       city: developments.city,
       suburb: developments.suburb,
       province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
+      status: developments.status,
+      isFeatured: developments.isFeatured,
+      rating: developments.rating,
+      highlights: developments.highlights,
       developerBrandProfileId: developments.developerBrandProfileId,
+      developerName: developers.name,
+      brandName: developerBrandProfiles.brandName,
+      builderLogoUrl: developerBrandProfiles.logoUrl,
     })
     .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(
+      developerBrandProfiles,
+      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+    )
     .where(and(...conditions))
     .orderBy(desc(developments.createdAt))
     .limit(limit);
 
+  const developmentIds = results.map((d: any) => Number(d.id)).filter(Boolean);
+  const unitRows =
+    developmentIds.length > 0
+      ? await db
+          .select({
+            developmentId: unitTypes.developmentId,
+            name: unitTypes.name,
+            bedrooms: unitTypes.bedrooms,
+            structuralType: unitTypes.structuralType,
+            basePriceFrom: unitTypes.basePriceFrom,
+            displayOrder: unitTypes.displayOrder,
+            developmentType: developments.developmentType,
+          })
+          .from(unitTypes)
+          .leftJoin(developments, eq(unitTypes.developmentId, developments.id))
+          .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+          .orderBy(unitTypes.displayOrder, unitTypes.basePriceFrom)
+      : [];
+
+  const unitsByDevelopment = new Map<
+    number,
+    Array<{
+      label: string;
+      priceFrom: number | null;
+    }>
+  >();
+
+  const mapUnitKind = (structuralType: unknown, developmentType: unknown) => {
+    const s = String(structuralType || '').toLowerCase();
+    const devType = String(developmentType || '').toLowerCase();
+
+    if (devType === 'land' || s.includes('plot')) return 'Plot';
+    if (devType === 'commercial') return 'Office';
+    if (s.includes('house') || s.includes('townhouse')) return 'House';
+    if (s.includes('office')) return 'Office';
+    return 'Apartment';
+  };
+
+  for (const unit of unitRows as any[]) {
+    const devId = Number(unit.developmentId);
+    if (!unitsByDevelopment.has(devId)) unitsByDevelopment.set(devId, []);
+    const kind = mapUnitKind(unit.structuralType, unit.developmentType);
+    const label =
+      unit.name ||
+      (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
+    unitsByDevelopment.get(devId)!.push({
+      label,
+      priceFrom: unit.basePriceFrom != null ? Number(unit.basePriceFrom) : null,
+    });
+  }
+
   return results.map((d: any) => ({
     ...d,
     images: parseJsonField(d.images),
+    highlights: parseJsonField(d.highlights),
+    rating: d.rating != null ? Number(d.rating) : null,
+    isFeatured: Number(d.isFeatured || 0) === 1,
+    builderName: d.brandName || d.developerName || null,
+    configurations: unitsByDevelopment.get(Number(d.id)) || [],
   }));
 }
 
@@ -797,6 +871,8 @@ export async function createDevelopment(
   const normalizedTransactionType = normalizeTransactionType(
     (developmentData as any).transactionType,
   );
+  const isSuperAdminBrandCreation = user?.role === 'super_admin' && !!resolvedBrandProfileId;
+  const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const rentRange =
     normalizedTransactionType === 'for_rent' ? computeRentRangeFromUnits(unitTypesData) : null;
   const auctionRange =
@@ -811,15 +887,22 @@ export async function createDevelopment(
     province: (developmentData as any).province,
     developmentType: (developmentData as any).developmentType || 'residential',
     transactionType: normalizedTransactionType,
-    status: 'launching-soon',
+    status: sanitizeEnum(
+      (developmentData as any).status,
+      ['launching-soon', 'selling', 'sold-out'],
+      'launching-soon',
+    ),
     devOwnerType: effectiveOwnerType,
 
     isFeatured: 0,
-    isPublished: 0,
+    isPublished: isSuperAdminBrandCreation ? 1 : 0,
+    publishedAt: isSuperAdminBrandCreation ? nowFormatted : null,
     views: 0,
     showHouseAddress: boolToInt((developmentData as any).showHouseAddress ?? true),
     readinessScore: 0,
-    approvalStatus: 'draft',
+    approvalStatus: isSuperAdminBrandCreation ? 'approved' : 'draft',
+    approvedAt: isSuperAdminBrandCreation ? nowFormatted : null,
+    approvedBy: isSuperAdminBrandCreation ? user?.id : null,
     nature: sanitizeEnum(
       (developmentData as any).nature,
       ['new', 'phase', 'extension', 'redevelopment'],
@@ -1396,8 +1479,6 @@ export async function updateDevelopment(
     updatePayload.reservePriceFrom = auctionRange.reservePriceFrom;
   }
 
-  updatePayload.updatedAt = new Date().toISOString();
-
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
   // ✅ Ownership check done in WHERE by developerProfileId
@@ -1972,7 +2053,7 @@ async function createPhase(developmentId: number, developerId: number, data: any
   const [result] = await db.insert(developmentPhases).values({
     ...safe,
     developmentId,
-    createdAt: new Date().toISOString(),
+    createdAt: mysqlDateTime(),
   });
 
   const [created] = await db
@@ -2084,6 +2165,13 @@ async function publishDevelopment(
       });
     }
 
+    if (!String(existingDev.description ?? '').trim()) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Description is required before publishing',
+      });
+    }
+
     console.log('[publishDevelopment] Development found:', {
       id: existingDev.id,
       name: existingDev.name,
@@ -2107,7 +2195,7 @@ async function publishDevelopment(
       const publishedAtFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
       const updateResult = await db
         .update(developments)
-        .set({ isPublished: 1, publishedAt: publishedAtFormatted, status: 'launching-soon' })
+        .set({ isPublished: 1, publishedAt: publishedAtFormatted })
         .where(eq(developments.id, id));
 
       console.log(
@@ -2161,11 +2249,34 @@ async function publishDevelopment(
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
   }
 
+  const [ownedDevelopment] = await db
+    .select({
+      id: developments.id,
+      description: developments.description,
+    })
+    .from(developments)
+    .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
+    .limit(1);
+
+  if (!ownedDevelopment) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Publish failed: Development not found or unauthorized',
+    });
+  }
+
+  if (!String(ownedDevelopment.description ?? '').trim()) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Description is required before publishing',
+    });
+  }
+
   // Format datetime for MySQL (YYYY-MM-DD HH:MM:SS)
   const publishedAtFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
   await db
     .update(developments)
-    .set({ isPublished: 1, publishedAt: publishedAtFormatted, status: 'launching-soon' })
+    .set({ isPublished: 1, publishedAt: publishedAtFormatted })
     .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)));
 
   const [updated] = await db
@@ -2191,7 +2302,6 @@ async function approveDevelopment(id: number, adminId: number) {
   await db
     .update(developments)
     .set({
-      status: 'selling',
       approvalStatus: 'approved',
       isPublished: true as any,
       approvedAt: new Date().toISOString(),
@@ -2400,6 +2510,13 @@ function validateForPublish(wizardState: WizardData): void {
 
   if (!hasHeroImage) {
     errors['media.heroImage'] = 'At least one photo (Hero Image) is required';
+  }
+
+  const description = String(
+    (wizardState as any).description ?? (wizardState as any).developmentData?.description ?? '',
+  ).trim();
+  if (!description) {
+    errors['description'] = 'Description is required before publishing';
   }
 
   const transactionType =

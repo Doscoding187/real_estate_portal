@@ -11,7 +11,8 @@ interface LocalityGuideProps {
   images?: string[];
 }
 
-const DEFAULT_GUIDE_IMAGE = '/placeholders/urban-illustration-with-large-buildings-with-cars-and-trees-city-activities-vector.jpg';
+const DEFAULT_GUIDE_IMAGE =
+  '/placeholders/urban-illustration-with-large-buildings-with-cars-and-trees-city-activities-vector.jpg';
 
 export function LocalityGuide({
   suburb,

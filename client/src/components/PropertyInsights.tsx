@@ -10,6 +10,8 @@ type Level = 'national' | 'province' | 'city';
 type Props = {
   level: Level;
   parentId?: number;
+  contextLabel?: string;
+  fallbackTabs?: Array<{ id: number | string; name: string }>;
   allowInPlaceDrilldown?: boolean;
   onNavigate?: (next: { level: Level; parentId?: number }) => void;
 };
@@ -20,7 +22,7 @@ type TabItem = {
 };
 
 function formatMoneyZAR(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—';
+  if (value == null || Number.isNaN(value)) return '-';
   if (value >= 1000000) {
     return 'R ' + (value / 1000000).toFixed(2) + 'M';
   }
@@ -32,7 +34,7 @@ function formatMoneyZAR(value: number | null | undefined) {
 }
 
 function formatNumber(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—';
+  if (value == null || Number.isNaN(value)) return '-';
   return new Intl.NumberFormat('en-ZA').format(value);
 }
 
@@ -95,25 +97,25 @@ function InsightCard({
   return (
     <div
       className={cn(
-        'flex-none w-[300px] sm:w-[340px] rounded-2xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm',
+        'flex-none w-[230px] sm:w-[245px] lg:w-auto rounded-xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm',
         t.bg,
         t.border,
         className,
       )}
     >
-      <div className="p-5 flex flex-col gap-1">
-        <div className="flex items-center gap-2 mb-1">
-          <div className={cn('p-1.5 rounded-lg shadow-sm', t.iconBg, t.iconText)}>
-            <Icon size={16} strokeWidth={2.5} />
+      <div className="p-3.5 flex flex-col gap-0.5">
+        <div className="flex items-center gap-2">
+          <div className={cn('p-1.5 rounded-md shadow-sm', t.iconBg, t.iconText)}>
+            <Icon size={14} strokeWidth={2.25} />
           </div>
-          <h3 className={cn('font-bold text-base', t.title)}>{title}</h3>
+          <h3 className={cn('font-bold text-xs sm:text-sm leading-tight', t.title)}>{title}</h3>
         </div>
-        <p className="text-xs text-slate-500 font-medium pl-9">{subtitle}</p>
+        <p className="text-[10px] text-slate-500 font-medium pl-8">{subtitle}</p>
       </div>
 
-      <div className="px-5 pb-5 flex-1 flex flex-col">{children}</div>
+      <div className="px-3.5 pb-3.5 flex-1 flex flex-col">{children}</div>
 
-      {action && <div className="px-5 pb-5 mt-auto">{action}</div>}
+      {action && <div className="px-3.5 pb-3.5 mt-auto">{action}</div>}
     </div>
   );
 }
@@ -121,6 +123,8 @@ function InsightCard({
 export function PropertyInsights({
   level,
   parentId,
+  contextLabel,
+  fallbackTabs = [],
   allowInPlaceDrilldown = false,
   onNavigate,
 }: Props) {
@@ -134,26 +138,43 @@ export function PropertyInsights({
 
   const effectiveLevel = allowInPlaceDrilldown ? localLevel : level;
   const effectiveParentId = allowInPlaceDrilldown ? localParentId : parentId;
+  const normalizedParentId =
+    effectiveParentId === undefined || effectiveParentId === null
+      ? undefined
+      : Number(effectiveParentId);
+  const hasValidParentId =
+    typeof normalizedParentId === 'number' && Number.isFinite(normalizedParentId);
 
   const insightsQuery = trpc.priceInsights.getHierarchy.useQuery(
-    { level: effectiveLevel, parentId: effectiveParentId },
+    { level: effectiveLevel, parentId: normalizedParentId },
     {
       enabled:
         effectiveLevel === 'national' ||
-        (effectiveLevel === 'province' && typeof effectiveParentId === 'number') ||
-        (effectiveLevel === 'city' && typeof effectiveParentId === 'number'),
+        (effectiveLevel === 'province' && hasValidParentId) ||
+        (effectiveLevel === 'city' && hasValidParentId),
     },
   );
 
   const data = insightsQuery.data;
   const tabs: TabItem[] = useMemo(() => data?.tabs ?? [], [data]);
+  const displayTabs: TabItem[] = useMemo(() => {
+    if (tabs.length > 0) return tabs;
+    const mapped = fallbackTabs.map((t, idx) => ({
+      id: Number(t.id) || idx + 1,
+      name: t.name,
+    }));
+    if (mapped.length > 0) return mapped;
+    return [{ id: 0, name: effectiveLevel === 'national' ? 'South Africa' : 'Overview' }];
+  }, [tabs, fallbackTabs]);
   const [activeTabId, setActiveTabId] = useState<string>('');
 
   useEffect(() => {
-    if (tabs.length > 0 && !activeTabId) {
-      setActiveTabId(String(tabs[0].id));
+    if (displayTabs.length === 0) return;
+    const hasCurrentTab = displayTabs.some(t => String(t.id) === activeTabId);
+    if (!activeTabId || !hasCurrentTab) {
+      setActiveTabId(String(displayTabs[0].id));
     }
-  }, [tabs]);
+  }, [displayTabs, activeTabId]);
 
   function drillTo(next: { level: Level; parentId: number }) {
     if (onNavigate) {
@@ -168,9 +189,12 @@ export function PropertyInsights({
   }
 
   // --- Derived Data for Active Tab ---
-  const activeTabName = tabs.find(t => String(t.id) === activeTabId)?.name || '';
+  const activeTabName = displayTabs.find(t => String(t.id) === activeTabId)?.name || '';
   const summary = activeTabId ? data?.summariesByTabId[activeTabId] : null;
   const topChildren = activeTabId ? data?.topChildrenByTabId[activeTabId] || [] : [];
+  const hasListings = (summary?.listingCount ?? 0) > 0;
+  const averagePriceDisplay = hasListings ? formatMoneyZAR(summary?.avgPrice) : '-';
+  const averagePriceWithUnit = hasListings ? averagePriceDisplay + ' / m²' : '-';
 
   // Calculate Asking Price Buckets (Price Range Distribution)
   const priceBuckets = useMemo(() => {
@@ -196,7 +220,7 @@ export function PropertyInsights({
 
   if (insightsQuery.isLoading) {
     return (
-      <div className="py-16 md:py-20 bg-white">
+      <div className="py-16 bg-white">
         <div className="container">
           <div className="h-64 bg-slate-50 rounded-xl animate-pulse w-full" />
         </div>
@@ -204,16 +228,15 @@ export function PropertyInsights({
     );
   }
 
-  if (!data && !insightsQuery.isLoading) return null;
-
-  return (
-    <div className="py-16 md:py-20 bg-white border-t border-slate-100">
+    return (
+    <div className="py-16 bg-white">
       <div className="container">
         <div className="w-full space-y-8">
           {/* Header */}
           <div>
             <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
-              Property Price Insights in {effectiveLevel === 'national' ? 'South Africa' : 'Market'}
+              Property Price Insights in{' '}
+              {effectiveLevel === 'national' ? 'South Africa' : contextLabel || 'this market'}
             </h2>
             <p className="text-slate-500 mt-2 max-w-3xl leading-relaxed text-xs md:text-sm">
               Get accurate property price insights with city-wise trends, median rates, and
@@ -224,14 +247,15 @@ export function PropertyInsights({
           <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full space-y-8">
             {/* Left Aligned Tabs to match Header Alignment standard */}
             <div className="flex justify-start overflow-x-auto pb-2 scrollbar-hide">
-              <TabsList className="bg-transparent h-auto p-0 gap-3">
-                {tabs.map(tab => (
+              <TabsList className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
+                {displayTabs.map(tab => (
                   <TabsTrigger
                     key={tab.id}
                     value={String(tab.id)}
-                    className="rounded-full px-6 py-2.5 text-sm font-semibold border transition-all 
-                            data-[state=active]:bg-[#2774AE] data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-[#2774AE]
-                            data-[state=inactive]:bg-white data-[state=inactive]:text-slate-600 data-[state=inactive]:border-slate-200 data-[state=inactive]:hover:border-[#2774AE]"
+                    className="rounded-lg px-4 py-2 text-sm font-semibold border border-transparent transition-all whitespace-nowrap
+                            data-[state=active]:bg-[#2774AE] data-[state=active]:text-white data-[state=active]:shadow-sm
+                            data-[state=inactive]:bg-transparent data-[state=inactive]:text-slate-600
+                            data-[state=inactive]:hover:text-[#2774AE] data-[state=inactive]:hover:bg-white"
                   >
                     {tab.name}
                   </TabsTrigger>
@@ -244,7 +268,7 @@ export function PropertyInsights({
               value={activeTabId}
               className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-500"
             >
-              <div className="flex overflow-x-auto pb-8 gap-6 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+              <div className="flex overflow-x-auto pb-6 gap-3 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide lg:grid lg:grid-cols-4 lg:gap-3 lg:overflow-visible lg:items-stretch">
                 {/* 1. AVERAGE PRICE MAP (Blue) */}
                 <InsightCard
                   title="Average Price Map"
@@ -253,12 +277,12 @@ export function PropertyInsights({
                   colorTheme="blue"
                   className="bg-blue-50/60"
                 >
-                  <p className="text-xs text-slate-500 mb-6">
+                  <p className="text-[11px] text-slate-500 mb-4 leading-relaxed">
                     Interactive map showing average property prices across different areas
                   </p>
 
                   <div
-                    className="flex-1 rounded-xl bg-white border border-blue-100 flex flex-col items-center justify-center p-6 shadow-sm group cursor-pointer hover:shadow-md transition-all relative overflow-hidden"
+                    className="flex-1 rounded-lg bg-white border border-blue-100 flex flex-col items-center justify-center p-4 shadow-sm group cursor-pointer hover:shadow-md transition-all relative overflow-hidden"
                     onClick={() => {
                       if (effectiveLevel === 'national')
                         drillTo({ level: 'province', parentId: Number(activeTabId) });
@@ -268,14 +292,14 @@ export function PropertyInsights({
                   >
                     {/* Map Decoration */}
                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-400 to-transparent" />
-                    <MapPin className="w-10 h-10 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold text-blue-600">Interactive Map View</span>
+                    <MapPin className="w-8 h-8 text-blue-500 mb-1.5 group-hover:scale-110 transition-transform" />
+                    <span className="text-[11px] font-bold text-blue-600">Interactive Map View</span>
                   </div>
 
-                  <div className="mt-6">
+                  <div className="mt-4">
                     <Button
                       variant="outline"
-                      className="w-full bg-white border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                      className="h-8 text-xs w-full bg-white border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
                       onClick={() => {
                         if (effectiveLevel === 'national')
                           drillTo({ level: 'province', parentId: Number(activeTabId) });
@@ -296,7 +320,7 @@ export function PropertyInsights({
                   colorTheme="orange"
                   className="bg-orange-50/60"
                 >
-                  <p className="text-xs text-slate-500 mb-4">
+                  <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
                     {activeTabName} has{' '}
                     <strong className="text-orange-700">
                       {formatNumber(summary?.listingCount)} listings
@@ -307,15 +331,15 @@ export function PropertyInsights({
                     </strong>
                   </p>
 
-                  <div className="flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                  <div className="flex-1 space-y-2.5 overflow-y-auto pr-1 custom-scrollbar">
                     {priceBuckets.map((bucket, idx) => {
                       const percent = (bucket.count / totalBucketCount) * 100;
                       return (
-                        <div key={idx} className="flex items-center gap-2 text-xs">
-                          <span className="w-16 text-slate-500 shrink-0 text-[10px]">
+                        <div key={idx} className="flex items-center gap-1.5 text-[11px]">
+                          <span className="w-14 text-slate-500 shrink-0 text-[10px]">
                             {bucket.label}
                           </span>
-                          <div className="flex-1 h-2.5 bg-white/80 rounded-full overflow-hidden border border-orange-100">
+                          <div className="flex-1 h-2 bg-white/80 rounded-full overflow-hidden border border-orange-100">
                             <div
                               className="h-full bg-orange-500 rounded-full transition-all duration-1000"
                               style={{
@@ -324,7 +348,7 @@ export function PropertyInsights({
                               }}
                             />
                           </div>
-                          <span className="w-4 text-right font-medium text-orange-700">
+                          <span className="w-3.5 text-right font-medium text-orange-700 text-[10px]">
                             {bucket.count}
                           </span>
                         </div>
@@ -345,43 +369,43 @@ export function PropertyInsights({
                   colorTheme="green"
                   className="bg-emerald-50/60"
                 >
-                  <p className="text-xs text-slate-500 mb-6">
+                  <p className="text-[11px] text-slate-500 mb-4 leading-relaxed">
                     Current market activity and listing trends in {activeTabName}
                   </p>
 
-                  <div className="space-y-3">
-                    <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                  <div className="space-y-2.5">
+                    <div className="bg-white p-2.5 rounded-lg border border-emerald-100 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600">
-                          <BarChart3 size={14} />
+                        <div className="bg-emerald-100 p-1 rounded text-emerald-600">
+                          <BarChart3 size={13} />
                         </div>
-                        <span className="text-sm font-medium text-slate-600">Active Listings</span>
+                        <span className="text-xs font-medium text-slate-600">Active Listings</span>
                       </div>
-                      <span className="font-bold text-emerald-900">
+                      <span className="font-bold text-sm text-emerald-900">
                         {formatNumber(summary?.listingCount)}
                       </span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                    <div className="bg-white p-2.5 rounded-lg border border-emerald-100 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600">
-                          <TrendingUp size={14} />
+                        <div className="bg-emerald-100 p-1 rounded text-emerald-600">
+                          <TrendingUp size={13} />
                         </div>
-                        <span className="text-sm font-medium text-slate-600">Avg. Price/m²</span>
+                        <span className="text-xs font-medium text-slate-600">Avg. Price/m²</span>
                       </div>
-                      <span className="font-bold text-emerald-900">
-                        R {(Math.random() * 5000 + 8000).toFixed(0)}
+                      <span className="font-bold text-sm text-emerald-900">
+                        {averagePriceDisplay}
                       </span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                    <div className="bg-white p-2.5 rounded-lg border border-emerald-100 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600">
-                          <Building2 size={14} />
+                        <div className="bg-emerald-100 p-1 rounded text-emerald-600">
+                          <Building2 size={13} />
                         </div>
-                        <span className="text-sm font-medium text-slate-600">Median Price</span>
+                        <span className="text-xs font-medium text-slate-600">Median Price</span>
                       </div>
-                      <span className="font-bold text-emerald-900">
+                      <span className="font-bold text-sm text-emerald-900">
                         {formatMoneyZAR(summary?.medianPrice)}
                       </span>
                     </div>
@@ -396,16 +420,16 @@ export function PropertyInsights({
                   colorTheme="purple"
                   className="bg-purple-50/60"
                 >
-                  <p className="text-xs text-slate-500 mb-4">
-                    {activeTabName} avg. price is R {(Math.random() * 5000 + 10000).toFixed(0)} / m²
+                  <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
+                    {activeTabName} avg. price is {averagePriceWithUnit}
                   </p>
 
-                  <div className="flex-1 bg-white rounded-xl border border-purple-100 overflow-hidden shadow-sm">
+                  <div className="flex-1 bg-white rounded-lg border border-purple-100 overflow-hidden shadow-sm">
                     <div className="divide-y divide-purple-50">
                       {topChildren.slice(0, 5).map(child => (
                         <div
                           key={child.id}
-                          className="p-3 flex items-center justify-between hover:bg-purple-50/50 transition-colors cursor-pointer"
+                          className="p-2.5 flex items-center justify-between hover:bg-purple-50/50 transition-colors cursor-pointer"
                           onClick={() => {
                             if (effectiveLevel === 'national')
                               drillTo({ level: 'province', parentId: Number(activeTabId) });
@@ -413,16 +437,14 @@ export function PropertyInsights({
                               drillTo({ level: 'city', parentId: Number(activeTabId) });
                           }}
                         >
-                          <span className="font-bold text-sm text-purple-900">
+                          <span className="font-bold text-xs text-purple-900">
                             {formatMoneyZAR(child.medianPrice)}
                           </span>
-                          <span className="text-xs font-medium text-slate-500">{child.name}</span>
+                          <span className="text-[11px] font-medium text-slate-500">{child.name}</span>
                         </div>
                       ))}
                       {topChildren.length === 0 && (
-                        <div className="p-4 text-center text-xs text-slate-400">
-                          No comparison data
-                        </div>
+                        <div className="p-4 text-center text-xs text-slate-400">-</div>
                       )}
                     </div>
                   </div>
@@ -435,3 +457,10 @@ export function PropertyInsights({
     </div>
   );
 }
+
+
+
+
+
+
+

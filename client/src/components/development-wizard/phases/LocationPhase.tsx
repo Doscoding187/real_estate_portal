@@ -120,7 +120,9 @@ export function LocationPhase() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="city">City / Town</Label>
+                <Label htmlFor="city">
+                  City / Town <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="city"
                   data-field="location.city"
@@ -141,10 +143,15 @@ export function LocationPhase() {
                   onChange={e => handleUpdate({ suburb: e.target.value })}
                   className="h-11"
                 />
+                <p className="text-xs text-slate-500">
+                  Recommended for cleaner card location formatting.
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="province">Province</Label>
+                <Label htmlFor="province">
+                  Province <span className="text-red-500">*</span>
+                </Label>
                 <Select
                   value={developmentData.location.province}
                   onValueChange={val => handleUpdate({ province: val })}

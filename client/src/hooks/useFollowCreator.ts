@@ -40,7 +40,7 @@ export function useFollowCreator({
 
   return {
     isFollowing,
-    isLoading: toggleFollowMutation.isLoading,
+    isLoading: toggleFollowMutation.isPending,
     toggleFollow,
   };
 }

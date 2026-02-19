@@ -11,8 +11,7 @@
 
 import { describe, expect, vi, beforeEach, afterEach } from 'vitest';
 import { it, fc } from '@fast-check/vitest';
-import { render, waitFor, act, cleanup } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, act, cleanup, fireEvent } from '@testing-library/react';
 import { LocationAutocomplete } from '../LocationAutocomplete.new';
 
 // Mock Google Maps API
@@ -87,11 +86,14 @@ describe('LocationAutocomplete Property-Based Tests', () => {
    * API requests should only be made after 300ms of inactivity
    */
   describe('Property 13: Debounce delay enforcement', () => {
-    it.prop([fc.string({ minLength: 3, maxLength: 10 }).filter(s => s.trim().length >= 3)], {
+    it.prop([fc.string({ minLength: 3, maxLength: 10 })], {
       numRuns: 100,
+      timeout: 10000,
     })('should only make API request after 300ms delay for any valid input', async searchQuery => {
+      // Reset mocks for this iteration
+      vi.clearAllMocks();
+
       const onChange = vi.fn();
-      const user = userEvent.setup({ delay: null }); // No delay with fake timers
 
       // Mock API response
       mockAutocompleteService.getPlacePredictions.mockImplementation((request, callback) => {
@@ -100,8 +102,10 @@ describe('LocationAutocomplete Property-Based Tests', () => {
 
       const { input, unmount } = renderLocationAutocomplete(onChange);
 
-      // Type the search query
-      await user.type(input, searchQuery);
+      // Type the search query using fireEvent for fake timer compatibility
+      act(() => {
+        fireEvent.change(input, { target: { value: searchQuery } });
+      });
 
       // Immediately after typing, API should not be called yet
       expect(mockAutocompleteService.getPlacePredictions).not.toHaveBeenCalled();
@@ -123,11 +127,14 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       unmount();
     });
 
-    it.prop([fc.string({ minLength: 3, maxLength: 10 }).filter(s => s.trim().length >= 3)], {
+    it.prop([fc.string({ minLength: 3, maxLength: 10 })], {
       numRuns: 100,
+      timeout: 10000,
     })('should reset debounce timer on each keystroke', async searchQuery => {
+      // Reset mocks for this iteration
+      vi.clearAllMocks();
+
       const onChange = vi.fn();
-      const user = userEvent.setup({ delay: null }); // No delay with fake timers
 
       // Mock API response
       mockAutocompleteService.getPlacePredictions.mockImplementation((request, callback) => {
@@ -138,7 +145,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
 
       // Type each character individually to simulate rapid typing
       for (let i = 0; i < searchQuery.length; i++) {
-        await user.type(input, searchQuery[i]);
+        act(() => {
+          fireEvent.change(input, { target: { value: searchQuery.substring(0, i + 1) } });
+        });
 
         // Advance time by 100ms (less than debounce delay)
         act(() => {
@@ -172,14 +181,16 @@ describe('LocationAutocomplete Property-Based Tests', () => {
   describe('Property 1: Minimum input length triggers autocomplete', () => {
     it.prop([fc.string({ minLength: 1, maxLength: 2 }).filter(s => s.trim().length > 0)], {
       numRuns: 100,
+      timeout: 10000,
     })('should NOT fetch suggestions for input with less than 3 characters', async shortInput => {
       const onChange = vi.fn();
-      const user = userEvent.setup({ delay: null });
 
       const { input, unmount } = renderLocationAutocomplete(onChange);
 
       // Type short input
-      await user.type(input, shortInput);
+      act(() => {
+        fireEvent.change(input, { target: { value: shortInput } });
+      });
 
       // Advance past debounce delay
       act(() => {
@@ -192,11 +203,11 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       unmount();
     });
 
-    it.prop([fc.string({ minLength: 3, maxLength: 15 }).filter(s => s.trim().length >= 3)], {
+    it.prop([fc.string({ minLength: 3, maxLength: 15 })], {
       numRuns: 100,
+      timeout: 10000,
     })('should fetch suggestions for input with 3 or more characters', async validInput => {
       const onChange = vi.fn();
-      const user = userEvent.setup({ delay: null });
 
       // Mock successful API response
       mockAutocompleteService.getPlacePredictions.mockImplementation((request, callback) => {
@@ -206,7 +217,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       const { input, unmount } = renderLocationAutocomplete(onChange);
 
       // Type valid input
-      await user.type(input, validInput);
+      act(() => {
+        fireEvent.change(input, { target: { value: validInput } });
+      });
 
       // Advance past debounce delay
       act(() => {
@@ -219,11 +232,16 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       unmount();
     });
 
-    it.prop([fc.integer({ min: 1, max: 2 }), fc.integer({ min: 3, max: 8 })], { numRuns: 100 })(
+    it.prop([fc.integer({ min: 1, max: 2 }), fc.integer({ min: 3, max: 8 })], {
+      numRuns: 100,
+      timeout: 10000,
+    })(
       'should transition from no-fetch to fetch when crossing 3-character threshold',
       async (shortLength, longLength) => {
+        // Reset mocks for this iteration
+        vi.clearAllMocks();
+
         const onChange = vi.fn();
-        const user = userEvent.setup({ delay: null });
 
         // Mock successful API response
         mockAutocompleteService.getPlacePredictions.mockImplementation((request, callback) => {
@@ -234,7 +252,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
 
         // Type short input (below threshold)
         const shortInput = 'a'.repeat(shortLength);
-        await user.type(input, shortInput);
+        act(() => {
+          fireEvent.change(input, { target: { value: shortInput } });
+        });
 
         // Advance past debounce delay
         act(() => {
@@ -245,8 +265,10 @@ describe('LocationAutocomplete Property-Based Tests', () => {
         expect(mockAutocompleteService.getPlacePredictions).not.toHaveBeenCalled();
 
         // Now type more to cross threshold
-        const additionalChars = 'b'.repeat(longLength - shortLength);
-        await user.type(input, additionalChars);
+        const longInput = 'a'.repeat(longLength);
+        act(() => {
+          fireEvent.change(input, { target: { value: longInput } });
+        });
 
         // Advance past debounce delay again
         act(() => {
@@ -274,10 +296,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       [
         fc.integer({ min: 6, max: 15 }), // Number of predictions returned by API
       ],
-      { numRuns: 100 },
+      { numRuns: 100, timeout: 10000 },
     )('should display at most 5 suggestions when API returns more', async numPredictions => {
       const onChange = vi.fn();
-      const user = userEvent.setup({ delay: null });
 
       // Generate mock predictions with valid data
       const mockPredictions = Array.from({ length: numPredictions }, (_, i) => ({
@@ -297,7 +318,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       const { input, container, unmount } = renderLocationAutocomplete(onChange);
 
       // Type valid input
-      await user.type(input, 'test');
+      act(() => {
+        fireEvent.change(input, { target: { value: 'test' } });
+      });
 
       // Advance timers to trigger debounce and allow state updates
       await act(async () => {
@@ -320,10 +343,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       [
         fc.integer({ min: 1, max: 5 }), // Number of predictions (within cap)
       ],
-      { numRuns: 100 },
+      { numRuns: 100, timeout: 10000 },
     )('should display all suggestions when API returns 5 or fewer', async numPredictions => {
       const onChange = vi.fn();
-      const user = userEvent.setup({ delay: null });
 
       // Generate mock predictions with valid data
       const mockPredictions = Array.from({ length: numPredictions }, (_, i) => ({
@@ -343,7 +365,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       const { input, container, unmount } = renderLocationAutocomplete(onChange);
 
       // Type valid input
-      await user.type(input, 'test');
+      act(() => {
+        fireEvent.change(input, { target: { value: 'test' } });
+      });
 
       // Advance timers to trigger debounce and allow state updates
       await act(async () => {
@@ -374,10 +398,12 @@ describe('LocationAutocomplete Property-Based Tests', () => {
           { minLength: 10, maxLength: 20 },
         ),
       ],
-      { numRuns: 100 },
+      { numRuns: 100, timeout: 10000 },
     )('should always cap at 5 regardless of prediction content', async predictionData => {
+      // Reset mocks for this iteration
+      vi.clearAllMocks();
+
       const onChange = vi.fn();
-      const user = userEvent.setup({ delay: null });
 
       // Convert to proper prediction format - filter out any invalid data
       const mockPredictions = predictionData
@@ -404,7 +430,9 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       const { input, container, unmount } = renderLocationAutocomplete(onChange);
 
       // Type valid input
-      await user.type(input, 'test');
+      act(() => {
+        fireEvent.change(input, { target: { value: 'test' } });
+      });
 
       // Advance timers to trigger debounce and allow state updates
       await act(async () => {

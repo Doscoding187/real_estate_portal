@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SortOption } from '@/lib/urlUtils';
+import type { SortOption } from '@/components/search/ResultsHeader';
 
 interface MobileStickyControlsProps {
   onOpenFilters: () => void;

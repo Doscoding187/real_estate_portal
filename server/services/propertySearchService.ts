@@ -5,14 +5,103 @@
  */
 
 import { db } from '../db';
-import { properties, propertyImages, developments } from '../../drizzle/schema';
-import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc, isNotNull } from 'drizzle-orm';
+import { properties, propertyImages, developments, agents, agencies, suburbs } from '../../drizzle/schema';
+import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type { PropertyFilters, SortOption, SearchResults, Property } from '../../shared/types';
 import { locationResolver, ResolvedLocation } from './locationResolverService';
 
 // Cache key prefix for property searches
 const CACHE_PREFIX = 'property:search:';
+
+type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
+
+function parseJsonObject(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, any>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function asPositiveNumber(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function parseStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map(v => String(v ?? '').trim())
+      .filter(Boolean);
+  }
+  if (typeof value !== 'string') return [];
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map(v => String(v ?? '').trim())
+        .filter(Boolean);
+    }
+  } catch {
+    // fall through
+  }
+  return trimmed
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.map(v => v.trim()).filter(Boolean)));
+}
+
+function slugifyText(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function parseCoordinate(value: unknown): number | null {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const x =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return R * c;
+}
+
+function deriveLoadSheddingSolutions(details: Record<string, any>): LoadSheddingSolution[] {
+  const solutions = new Set<LoadSheddingSolution>();
+  const powerBackup = String(details.powerBackup ?? '').toLowerCase();
+  if (powerBackup.includes('solar')) solutions.add('solar');
+  if (powerBackup.includes('generator')) solutions.add('generator');
+  if (powerBackup.includes('inverter') || powerBackup.includes('battery')) {
+    solutions.add('inverter');
+  }
+  if (solutions.size === 0) solutions.add('none');
+  return Array.from(solutions);
+}
 
 export class PropertySearchService {
   /**
@@ -150,8 +239,10 @@ export class PropertySearchService {
       .select({
         id: properties.id,
         title: properties.title,
+        description: properties.description,
         price: properties.price,
         suburb: sql<string>`COALESCE(${properties.address}, '')`,
+        address: properties.address,
         city: properties.city,
         province: properties.province,
         propertyType: properties.propertyType,
@@ -169,16 +260,29 @@ export class PropertySearchService {
         loadSheddingSolutions: sql<
           Array<'solar' | 'generator' | 'inverter' | 'none'>
         >`JSON_ARRAY('none')`,
-        videoCount: sql<number>`0`, // Will be calculated from related tables
+        videoCount: sql<number>`CASE WHEN ${properties.videoUrl} IS NOT NULL THEN 1 ELSE 0 END`,
         status: properties.status,
         listedDate: properties.createdAt,
         latitude: sql<number>`CAST(${properties.latitude} AS DECIMAL(10,8))`,
         longitude: sql<number>`CAST(${properties.longitude} AS DECIMAL(11,8))`,
-        highlights: sql<string[]>`JSON_ARRAY()`,
+        highlights: properties.amenities,
+        amenities: properties.amenities,
+        mainImage: properties.mainImage,
+        propertySettings: properties.propertySettings,
+        agentDisplayName: agents.displayName,
+        agentFirstName: agents.firstName,
+        agentLastName: agents.lastName,
+        agentPhone: agents.phone,
+        agentWhatsapp: agents.whatsapp,
+        agentEmail: agents.email,
+        agentProfileImage: agents.profileImage,
+        agencyName: agencies.name,
         agentId: properties.agentId,
       })
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
+      .leftJoin(agents, eq(properties.agentId, agents.id))
+      .leftJoin(agencies, eq(agents.agencyId, agencies.id))
       .where(and(...conditions))
       .orderBy(orderBy)
       .limit(pageSize)
@@ -210,45 +314,116 @@ export class PropertySearchService {
     });
 
     // Transform results to Property type
-    const transformedProperties: Property[] = results.map((prop: any) => ({
-      id: String(prop.id),
-      title: prop.title,
-      price: prop.price,
-      suburb: prop.suburb || prop.city,
-      city: prop.city,
-      province: prop.province,
-      propertyType: prop.propertyType as Property['propertyType'],
-      listingType: prop.listingType as Property['listingType'],
-      bedrooms: prop.bedrooms || undefined,
-      bathrooms: prop.bathrooms || undefined,
-      erfSize: prop.erfSize || undefined,
-      floorSize: prop.floorSize || undefined,
-      titleType: prop.titleType,
-      levy: prop.levy || undefined,
-      rates: prop.rates || undefined,
-      securityEstate: prop.securityEstate,
-      petFriendly: prop.petFriendly,
-      fibreReady: prop.fibreReady,
-      loadSheddingSolutions: prop.loadSheddingSolutions,
-      images: (imagesByProperty.get(Number(prop.id)) || []).map((img: any) => ({
+    const transformedProperties: Property[] = results.map((prop: any) => {
+      const details = parseJsonObject(prop.propertySettings);
+      const floorSize =
+        asPositiveNumber(details.unitSizeM2) ||
+        asPositiveNumber(details.houseAreaM2) ||
+        asPositiveNumber(details.floorAreaM2) ||
+        asPositiveNumber(prop.floorSize);
+      const erfSize =
+        asPositiveNumber(details.erfSizeM2) ||
+        asPositiveNumber(details.landSizeM2OrHa) ||
+        (asPositiveNumber(details.landSizeHa) ? Number(details.landSizeHa) * 10000 : undefined) ||
+        asPositiveNumber(prop.erfSize);
+
+      const securityTokens = parseStringList(details.securityFeatures).map(v => v.toLowerCase());
+      const amenityTokens = [
+        ...parseStringList(details.amenities),
+        ...parseStringList(details.amenitiesFeatures),
+        ...parseStringList(prop.amenities),
+      ].map(v => v.toLowerCase());
+
+      const internetAvailability = String(
+        details.internetAvailability ?? details.internetAccess ?? '',
+      ).toLowerCase();
+      const securityLabel = String(details.security ?? details.securityLevel ?? '').toLowerCase();
+
+      const securityEstate =
+        securityLabel.includes('estate') ||
+        securityLabel.includes('24') ||
+        securityTokens.includes('security_estate');
+      const petFriendly =
+        details.petFriendly === true ||
+        details.petPolicy === 'allowed' ||
+        details.petPolicy === 'by_arrangement';
+      const fibreReady =
+        internetAvailability.includes('fibre') ||
+        internetAvailability.includes('fiber') ||
+        amenityTokens.some(token => token.includes('fibre') || token.includes('fiber'));
+
+      const highlights = uniqueStrings([
+        ...parseStringList(prop.highlights),
+        ...parseStringList(details.propertyHighlights),
+        ...parseStringList(details.amenitiesFeatures),
+        ...parseStringList(details.securityFeatures),
+        ...parseStringList(details.outdoorFeatures),
+      ]);
+
+      const primaryImage = (imagesByProperty.get(Number(prop.id)) || []).map((img: any) => ({
         url: img.imageUrl,
         thumbnailUrl: img.imageUrl,
-      })),
-      videoCount: prop.videoCount,
-      status: this.mapStatus(prop.status),
-      listedDate: new Date(prop.listedDate),
-      agent: {
-        id: String(prop.agentId || 0),
-        name: 'Agent Name', // Will be populated from agents table
-        agency: 'Agency Name',
-        phone: '',
-        whatsapp: '',
-        email: '',
-      },
-      latitude: prop.latitude || 0,
-      longitude: prop.longitude || 0,
-      highlights: prop.highlights,
-    }));
+      }));
+      if (primaryImage.length === 0 && prop.mainImage) {
+        primaryImage.push({ url: prop.mainImage, thumbnailUrl: prop.mainImage });
+      }
+
+      const agentName = (
+        String(prop.agentDisplayName || '').trim() ||
+        [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim()
+      ).trim();
+
+      const titleType: Property['titleType'] =
+        String(details.propertySetting || details.ownershipType || '').toLowerCase().includes(
+          'sectional',
+        )
+          ? 'sectional'
+          : 'freehold';
+
+      return {
+        id: String(prop.id),
+        title: prop.title,
+        description: prop.description ?? undefined,
+        price: prop.price,
+        suburb: prop.suburb || prop.city,
+        city: prop.city,
+        province: prop.province,
+        propertyType: prop.propertyType as Property['propertyType'],
+        listingType: prop.listingType as Property['listingType'],
+        bedrooms: prop.bedrooms || undefined,
+        bathrooms: prop.bathrooms || undefined,
+        erfSize: erfSize || undefined,
+        floorSize: floorSize || undefined,
+        titleType,
+        levy: prop.levy || undefined,
+        rates: prop.rates || undefined,
+        securityEstate,
+        petFriendly,
+        fibreReady,
+        loadSheddingSolutions: deriveLoadSheddingSolutions(details),
+        images: primaryImage,
+        mainImage: prop.mainImage || primaryImage[0]?.url || undefined,
+        videoCount: Number(prop.videoCount || 0),
+        status: this.mapStatus(prop.status),
+        listedDate: new Date(prop.listedDate),
+        agent: {
+          id: String(prop.agentId || 0),
+          name: agentName,
+          agency: String(prop.agencyName || ''),
+          phone: String(prop.agentPhone || ''),
+          whatsapp: String(prop.agentWhatsapp || ''),
+          email: String(prop.agentEmail || ''),
+          image: prop.agentProfileImage || undefined,
+        },
+        latitude: prop.latitude || 0,
+        longitude: prop.longitude || 0,
+        highlights,
+        area: floorSize || undefined,
+        yardSize: erfSize || undefined,
+        address: prop.address || undefined,
+        propertySettings: details,
+      } as any;
+    });
 
     let locationContext: SearchResults['locationContext'] = undefined;
 
@@ -578,6 +753,9 @@ export class PropertySearchService {
    */
   async getFilterCounts(baseFilters: PropertyFilters): Promise<{
     total: number;
+    byType: Record<string, number>;
+    byBedrooms: Record<string, number>;
+    byLocation: Array<{ name: string; slug: string; count: number }>;
     byPropertyType: Record<string, number>;
     byPriceRange: Array<{ range: string; count: number }>;
   }> {
@@ -591,6 +769,7 @@ export class PropertySearchService {
       suburbId?: number;
       suburbName?: string;
     }> = [];
+    let resolvedLocation: ResolvedLocation | null = null;
     try {
       if (baseFilters.locations && baseFilters.locations.length > 0) {
         // Quick resolve logic similar to searchProperties
@@ -611,7 +790,7 @@ export class PropertySearchService {
           }),
         );
       } else {
-        const resolvedLocation = await locationResolver.resolveLocation({
+        resolvedLocation = await locationResolver.resolveLocation({
           provinceSlug: baseFilters.province,
           citySlug: baseFilters.city,
           suburbSlug: baseFilters.suburb?.[0],
@@ -661,6 +840,135 @@ export class PropertySearchService {
     typeResults.forEach((row: any) => {
       byPropertyType[row.propertyType] = Number(row.count);
     });
+    const byType = { ...byPropertyType };
+
+    // Get counts by bedrooms
+    const bedroomResults = await db
+      .select({
+        bedrooms: properties.bedrooms,
+        count: sql<number>`count(*)`,
+      })
+      .from(properties)
+      .leftJoin(developments, eq(properties.developmentId, developments.id))
+      .where(and(...conditions))
+      .groupBy(properties.bedrooms);
+
+    const byBedrooms: Record<string, number> = {};
+    bedroomResults.forEach((row: any) => {
+      const beds = Number(row.bedrooms || 0);
+      if (beds > 0) {
+        byBedrooms[String(beds)] = Number(row.count || 0);
+      }
+    });
+
+    // Get counts by nearby locations (suburbs) when city context exists
+    let byLocation: Array<{ name: string; slug: string; count: number }> = [];
+    if (resolvedLocation?.city?.id) {
+      const citySuburbs = await db
+        .select({
+          id: suburbs.id,
+          name: suburbs.name,
+          slug: suburbs.slug,
+          latitude: suburbs.latitude,
+          longitude: suburbs.longitude,
+        })
+        .from(suburbs)
+        .where(eq(suburbs.cityId, resolvedLocation.city.id))
+        .orderBy(suburbs.name);
+
+      const baseFilterNoGeo: PropertyFilters = {
+        ...baseFilters,
+        province: undefined,
+        city: undefined,
+        suburb: undefined,
+        locations: undefined,
+      };
+      const baseNoGeoConditions = this.buildFilterConditions(baseFilterNoGeo, []);
+
+      const currentSuburbSlug = baseFilters.suburb?.[0]?.toLowerCase();
+      const currentSuburbName = resolvedLocation.suburb?.name?.toLowerCase();
+      const refLat = parseCoordinate(resolvedLocation.suburb?.latitude);
+      const refLng = parseCoordinate(resolvedLocation.suburb?.longitude);
+
+      const suburbCounts = await Promise.all(
+        citySuburbs.map(async suburbItem => {
+          const countResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(properties)
+            .leftJoin(developments, eq(properties.developmentId, developments.id))
+            .where(and(...baseNoGeoConditions, eq(properties.suburbId, suburbItem.id)));
+          const count = Number(countResult[0]?.count || 0);
+          if (count <= 0) return null;
+
+          const distanceKm =
+            refLat !== null && refLng !== null
+              ? (() => {
+                  const lat = parseCoordinate(suburbItem.latitude);
+                  const lng = parseCoordinate(suburbItem.longitude);
+                  if (lat === null || lng === null) return Number.POSITIVE_INFINITY;
+                  return haversineKm(refLat, refLng, lat, lng);
+                })()
+              : Number.POSITIVE_INFINITY;
+
+          return {
+            name: suburbItem.name,
+            slug: suburbItem.slug || slugifyText(suburbItem.name),
+            count,
+            distanceKm,
+          };
+        }),
+      );
+
+      byLocation = suburbCounts
+        .filter((row): row is NonNullable<typeof row> => row !== null)
+        .filter(
+          row =>
+            row.slug.toLowerCase() !== currentSuburbSlug &&
+            row.name.toLowerCase() !== currentSuburbName,
+        )
+        .sort((a, b) => {
+          if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+          return b.count - a.count;
+        })
+        .slice(0, 8)
+        .map(({ name, slug, count }) => ({ name, slug, count }));
+    }
+
+    if (byLocation.length === 0) {
+      // Fallback to grouped locations when city context is not available
+      const locationFilters: PropertyFilters = {
+        ...baseFilters,
+        suburb: undefined,
+      };
+      const locationIdsForCounts = locationIds.map(loc => ({
+        provinceId: loc.provinceId,
+        provinceName: loc.provinceName,
+        cityId: loc.cityId,
+        cityName: loc.cityName,
+      }));
+      const locationConditions = this.buildFilterConditions(locationFilters, locationIdsForCounts);
+      const locationNameExpr = sql<string>`COALESCE(NULLIF(${suburbs.name}, ''), NULLIF(${properties.city}, ''), 'Other')`;
+      const locationResults = await db
+        .select({
+          name: locationNameExpr,
+          count: sql<number>`count(*)`,
+        })
+        .from(properties)
+        .leftJoin(developments, eq(properties.developmentId, developments.id))
+        .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
+        .where(and(...locationConditions))
+        .groupBy(locationNameExpr)
+        .orderBy(desc(sql`count(*)`))
+        .limit(12);
+
+      byLocation = locationResults
+        .map((row: any) => ({
+          name: String(row.name || '').trim(),
+          slug: slugifyText(String(row.name || '')),
+          count: Number(row.count || 0),
+        }))
+        .filter(row => row.name.length > 0 && row.slug.length > 0 && row.count > 0);
+    }
 
     // Get counts by price range
     const priceRanges = [
@@ -693,6 +1001,9 @@ export class PropertySearchService {
 
     return {
       total,
+      byType,
+      byBedrooms,
+      byLocation,
       byPropertyType,
       byPriceRange,
     };
