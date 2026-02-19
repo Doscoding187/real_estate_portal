@@ -15,7 +15,11 @@ import { eq } from 'drizzle-orm';
  * Feature: developer-lead-management
  */
 
-const describeWithDb = process.env.DATABASE_URL ? describe : describe.skip;
+const hasDb = Boolean(process.env.DATABASE_URL);
+const describeWithDb: typeof describe = hasDb
+  ? describe
+  : ((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe;
 
 describeWithDb('Developer Subscription Service - Property Tests', () => {
   // Helper function to create a test developer
