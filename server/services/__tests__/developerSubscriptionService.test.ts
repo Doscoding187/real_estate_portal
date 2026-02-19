@@ -5,6 +5,8 @@ import { db } from '../../db';
 import {
   users,
   developers,
+  developments,
+  developmentPhases,
   developerSubscriptions,
   developerSubscriptionLimits,
   developerSubscriptionUsage,
@@ -38,7 +40,7 @@ describeWithDb('Developer Subscription Service - Property Tests', () => {
     const result = await db.insert(developers).values({
       userId: createdUserId,
       name: `Test Developer ${seed}`,
-      email: `test${seed}@example.com`,
+      email: `subscription-dev-${seed}-${Date.now()}-${Math.floor(Math.random() * 10000)}@example.com`,
       category: 'residential',
       isVerified: 0,
       status: 'pending',
@@ -57,6 +59,17 @@ describeWithDb('Developer Subscription Service - Property Tests', () => {
 
   // Helper function to cleanup test data
   async function cleanupTestData(developerId: number, userId: number) {
+    const developmentRows = await db
+      .select({ id: developments.id })
+      .from(developments)
+      .where(eq(developments.developerId, developerId));
+    const developmentIds = developmentRows.map(row => row.id);
+
+    if (developmentIds.length > 0) {
+      await db.delete(developmentPhases).where(inArray(developmentPhases.developmentId, developmentIds));
+      await db.delete(developments).where(inArray(developments.id, developmentIds));
+    }
+
     const subscriptionRows = await db
       .select({ id: developerSubscriptions.id })
       .from(developerSubscriptions)
