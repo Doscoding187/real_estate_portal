@@ -55,7 +55,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
 
       act(() => {
-        // @ts-ignore - forcing invalid state for test
+        // @ts-expect-error forcing invalid state for test coverage
         result.current.setClassification({ type: '' });
       });
 

@@ -24,9 +24,10 @@ export function useSaveProperty({
   const [isSaved, setIsSaved] = useState(initialSaved);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const toggleSaveMutation = trpc.exploreApi.toggleSaveProperty.useMutation({
-    onSuccess: data => {
-      setIsSaved(data.data.saved);
+  const toggleSaveMutation = trpc.explore.saveProperty.useMutation({
+    onSuccess: () => {
+      const nextSaved = !isSaved;
+      setIsSaved(nextSaved);
 
       // Trigger animation
       setIsAnimating(true);
@@ -38,9 +39,9 @@ export function useSaveProperty({
       }
 
       // Call success callbacks
-      if (data.data.saved && onSaveSuccess) {
+      if (nextSaved && onSaveSuccess) {
         onSaveSuccess();
-      } else if (!data.data.saved && onUnsaveSuccess) {
+      } else if (!nextSaved && onUnsaveSuccess) {
         onUnsaveSuccess();
       }
     },

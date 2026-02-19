@@ -85,6 +85,7 @@ export function SuburbInsights({
 }: SuburbInsightsProps) {
   const [viewMode, setViewMode] = useState<'development' | 'suburb'>('suburb');
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [reviewsDisabled, setReviewsDisabled] = useState(false);
 
   // Review Form State
   const [userType, setUserType] = useState<string>('resident');
@@ -94,7 +95,13 @@ export function SuburbInsights({
   const [reviewComment, setReviewComment] = useState('');
 
   const submitReviewMutation = trpc.locationPages.submitReview.useMutation({
-    onSuccess: () => {
+    onSuccess: result => {
+      if (result?.success === false && result?.message?.toLowerCase().includes('disabled')) {
+        setReviewsDisabled(true);
+        setIsReviewDialogOpen(false);
+        toast.info(result.message || 'Reviews coming soon');
+        return;
+      }
       toast.success('Review submitted successfully!');
       setIsReviewDialogOpen(false);
       // Reset form
@@ -148,7 +155,12 @@ export function SuburbInsights({
         <div className="flex gap-3">
           <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#005ca8] hover:bg-[#004d8a] text-white">Write a Review</Button>
+              <Button
+                className="bg-[#005ca8] hover:bg-[#004d8a] text-white"
+                disabled={reviewsDisabled}
+              >
+                {reviewsDisabled ? 'Reviews Coming Soon' : 'Write a Review'}
+              </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
@@ -159,10 +171,19 @@ export function SuburbInsights({
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                {reviewsDisabled && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                    Reviews are coming soon. We’ll let you know when submissions open.
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>I am a...</Label>
-                    <Select value={userType} onValueChange={setUserType}>
+                    <Select
+                      value={userType}
+                      onValueChange={setUserType}
+                      disabled={reviewsDisabled}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
@@ -205,6 +226,7 @@ export function SuburbInsights({
                     placeholder="e.g. Safe streets, friendly neighbors, good schools..."
                     value={reviewPros}
                     onChange={e => setReviewPros(e.target.value)}
+                    disabled={reviewsDisabled}
                   />
                 </div>
 
@@ -220,6 +242,7 @@ export function SuburbInsights({
                     placeholder="e.g. Heavy traffic, noise, load shedding issues..."
                     value={reviewCons}
                     onChange={e => setReviewCons(e.target.value)}
+                    disabled={reviewsDisabled}
                   />
                 </div>
 
@@ -231,6 +254,7 @@ export function SuburbInsights({
                     value={reviewComment}
                     onChange={e => setReviewComment(e.target.value)}
                     className="h-20"
+                    disabled={reviewsDisabled}
                   />
                 </div>
               </div>
@@ -240,7 +264,7 @@ export function SuburbInsights({
                 </Button>
                 <Button
                   onClick={handleSubmitReview}
-                  disabled={submitReviewMutation.isLoading}
+                  disabled={submitReviewMutation.isLoading || reviewsDisabled}
                   className="bg-[#005ca8] hover:bg-[#004d8a]"
                 >
                   {submitReviewMutation.isLoading ? (
@@ -439,8 +463,12 @@ export function SuburbInsights({
             <Users className="h-10 w-10 text-slate-300 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 mb-1">No reviews yet</h3>
             <p className="text-slate-500 mb-4">Be the first to review {suburbName}!</p>
-            <Button variant="outline" onClick={() => setIsReviewDialogOpen(true)}>
-              Write a Review
+            <Button
+              variant="outline"
+              onClick={() => setIsReviewDialogOpen(true)}
+              disabled={reviewsDisabled}
+            >
+              {reviewsDisabled ? 'Reviews Coming Soon' : 'Write a Review'}
             </Button>
           </div>
         )}

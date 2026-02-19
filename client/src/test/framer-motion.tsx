@@ -28,10 +28,12 @@ function stripMotionProps(props: Record<string, any>) {
   return out;
 }
 
-function makeMotionTag(tag: keyof JSX.IntrinsicElements) {
-  return React.forwardRef<any, any>((props, ref) =>
+function makeMotionTag(tag: keyof React.JSX.IntrinsicElements) {
+  const MotionTag = React.forwardRef<any, any>((props, ref) =>
     React.createElement(tag, { ...stripMotionProps(props), ref }, props.children),
   );
+  MotionTag.displayName = `motion.${String(tag)}`;
+  return MotionTag;
 }
 
 export const motion = new Proxy(

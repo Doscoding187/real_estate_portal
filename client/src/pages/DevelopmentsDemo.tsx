@@ -3,7 +3,7 @@ import { trpc } from '@/lib/trpc';
 import { DevelopmentCard } from '@/components/DevelopmentCard';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
-import { SearchFilters } from '@/components/SearchBar';
+import type { SearchFilters } from '@/lib/urlUtils';
 import { Button } from '@/components/ui/button';
 import { List, Building2, Loader2 } from 'lucide-react';
 import { MetaControl } from '@/components/seo/MetaControl';

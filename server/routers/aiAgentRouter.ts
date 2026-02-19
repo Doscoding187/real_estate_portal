@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from '../_core/trpc';
 import * as agentService from '../services/agentService';
+import { requireUser } from '../_core/requireUser';
+
+function getUserId(ctx: { user: { id: number } | null }) {
+  return requireUser(ctx).id;
+}
 
 export const aiAgentRouter = router({
   // ==================== MEMORY ENDPOINTS ====================
@@ -25,7 +30,7 @@ export const aiAgentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const id = await agentService.storeConversation({
         ...input,
-        userId: ctx.user.id,
+        userId: getUserId(ctx),
       });
       return { id, success: true };
     }),
@@ -48,7 +53,7 @@ export const aiAgentRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return await agentService.getConversationsByUser(ctx.user.id, input.limit);
+      return await agentService.getConversationsByUser(getUserId(ctx), input.limit);
     }),
 
   // ==================== TASK ENDPOINTS ====================
@@ -66,7 +71,7 @@ export const aiAgentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const id = await agentService.createTask({
         ...input,
-        userId: ctx.user.id,
+        userId: getUserId(ctx),
       });
       return { id, success: true };
     }),
@@ -112,7 +117,7 @@ export const aiAgentRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return await agentService.getTasksByUser(ctx.user.id, input.limit);
+      return await agentService.getTasksByUser(getUserId(ctx), input.limit);
     }),
 
   // ==================== KNOWLEDGE BASE ENDPOINTS ====================
@@ -137,7 +142,7 @@ export const aiAgentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const id = await agentService.addKnowledge({
         ...input,
-        createdBy: ctx.user.id,
+        createdBy: getUserId(ctx),
       });
       return { id, success: true };
     }),

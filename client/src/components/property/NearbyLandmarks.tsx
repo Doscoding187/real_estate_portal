@@ -39,39 +39,37 @@ const TABS = [
 export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
   const [activeTab, setActiveTab] = useState('Education');
 
-  // Fallback to Sandton if no coordinates (for test properties)
-  // Fallback to Sandton if no coordinates (for test properties)
-  const DEFAULT_LAT = -26.107567;
-  const DEFAULT_LNG = 28.056702;
-
   let latitude =
     typeof property.latitude === 'string' ? parseFloat(property.latitude) : property.latitude;
   let longitude =
     typeof property.longitude === 'string' ? parseFloat(property.longitude) : property.longitude;
 
-  // Use default if coordinates are missing or 0
-  if (!latitude || !longitude) {
-    latitude = DEFAULT_LAT;
-    longitude = DEFAULT_LNG;
-  }
+  const hasValidCoordinates =
+    typeof latitude === 'number' &&
+    typeof longitude === 'number' &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude !== 0 &&
+    longitude !== 0;
 
   const activeTabConfig = TABS.find(t => t.id === activeTab);
 
   const { data: connectedPOIs, isLoading } = trpc.location.getNearbyAmenities.useQuery(
     {
-      latitude,
-      longitude,
+      latitude: latitude || 0,
+      longitude: longitude || 0,
       radius: 5000,
       types: activeTabConfig?.types || [],
       limit: 5,
     },
     {
-      enabled: !!activeTabConfig, // Always enabled since we have defaults
+      enabled: !!activeTabConfig && hasValidCoordinates,
       staleTime: 1000 * 60 * 60, // 1 hour
     },
   );
 
   const handleOpenMap = () => {
+    if (!hasValidCoordinates) return;
     window.open(
       `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`,
       '_blank',
@@ -85,55 +83,65 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
 
         {/* Map Preview with Static Fallback */}
         <div className="relative rounded-xl overflow-hidden border border-slate-200 h-[240px] mb-6 group">
-          {/* Static map image as fallback background */}
-          <img
-            src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=800x400&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}`}
-            alt="Map location"
-            className="absolute inset-0 w-full h-full object-cover"
-            onError={e => {
-              // Fallback to a generic map placeholder if static map fails
-              (e.target as HTMLImageElement).src =
-                'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=400&fit=crop';
-            }}
-          />
+          {hasValidCoordinates ? (
+            <>
+              {/* Static map image as fallback background */}
+              <img
+                src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=800x400&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}`}
+                alt="Map location"
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={e => {
+                  // Fallback to a generic map placeholder if static map fails
+                  (e.target as HTMLImageElement).src =
+                    'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=400&fit=crop';
+                }}
+              />
 
-          {/* Interactive map overlay */}
-          <div className="absolute inset-0">
-            <GooglePropertyMap
-              center={{ lat: latitude, lng: longitude }}
-              zoom={14}
-              minimal={true}
-              className="pointer-events-none"
-              properties={[
-                {
-                  id: property.id,
-                  title: property.title,
-                  latitude,
-                  longitude,
-                  price: 0,
-                  propertyType: 'property',
-                  listingType: 'sale',
-                  address: '',
-                  city: '',
-                  bedrooms: 0,
-                  bathrooms: 0,
-                  area: 0,
-                  mainImage: '',
-                },
-              ]}
-            />
-          </div>
+              {/* Interactive map overlay */}
+              <div className="absolute inset-0">
+                <GooglePropertyMap
+                  center={{ lat: latitude as number, lng: longitude as number }}
+                  zoom={14}
+                  minimal={true}
+                  className="pointer-events-none"
+                  properties={[
+                    {
+                      id: property.id,
+                      title: property.title,
+                      latitude: latitude as number,
+                      longitude: longitude as number,
+                      price: 0,
+                      propertyType: 'property',
+                      listingType: 'sale',
+                      address: '',
+                      city: '',
+                      bedrooms: 0,
+                      bathrooms: 0,
+                      area: 0,
+                      mainImage: '',
+                    },
+                  ]}
+                />
+              </div>
 
-          {/* Floating Button */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              onClick={handleOpenMap}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 py-2 shadow-lg flex items-center gap-2 transform scale-95 group-hover:scale-100 transition-all duration-200"
-            >
-              <MapPin className="h-4 w-4" />
-              View on Map
-            </Button>
-          </div>
+              {/* Floating Button */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  onClick={handleOpenMap}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 py-2 shadow-lg flex items-center gap-2 transform scale-95 group-hover:scale-100 transition-all duration-200"
+                >
+                  <MapPin className="h-4 w-4" />
+                  View on Map
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-500">
+              <MapPin className="h-8 w-8 text-slate-300 mb-2" />
+              <p className="text-sm font-medium">Location not provided</p>
+              <p className="text-xs text-slate-400">Request the exact pin from the developer.</p>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -167,7 +175,12 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
 
       {/* POI List */}
       <div className="px-6 min-h-[200px]">
-        {isLoading ? (
+        {!hasValidCoordinates ? (
+          <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+            <MapPin className="h-8 w-8 text-slate-300 mb-2" />
+            <p className="text-sm">Nearby landmarks unavailable</p>
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
           </div>

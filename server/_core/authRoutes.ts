@@ -29,7 +29,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={};':"\\|,.<>/?]).{8,}$/;
       if (!passwordStrengthRegex.test(password)) {
         return res.status(400).json({
           error:
@@ -231,7 +231,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={};':"\\|,.<>/?]).{8,}$/;
       if (!passwordStrengthRegex.test(newPassword)) {
         return res.status(400).json({
           error:

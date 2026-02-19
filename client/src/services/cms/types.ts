@@ -172,6 +172,11 @@ export interface AdvertisePageContent {
   faqs: FAQ[];
 }
 
+export interface CMSClient {
+  getContent(): Promise<AdvertisePageContent>;
+  updateContent(content: AdvertisePageContent): Promise<void>;
+}
+
 /**
  * CMS API Response wrapper
  */

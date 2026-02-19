@@ -107,7 +107,11 @@ export class MarketplaceBundleService {
       ],
     );
 
-    return this.getBundleById(id);
+    const bundle = await this.getBundleById(id);
+    if (!bundle) {
+      throw new Error('Bundle not found');
+    }
+    return bundle;
   }
 
   /**
@@ -481,7 +485,7 @@ export class MarketplaceBundleService {
         ? partners.reduce((sum, p) => sum + (p.performanceScore || 0), 0) / totalPartners
         : 0;
 
-    const categoryCoverage = [...new Set(partners.map(p => p.category))];
+    const categoryCoverage = Array.from(new Set(partners.map(p => p.category)));
 
     // In a full implementation, this would query bundle_engagements table
     const engagementCount = 0;

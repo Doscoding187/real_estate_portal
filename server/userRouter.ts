@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { router, superAdminProcedure } from './_core/trpc';
 import { users } from '../drizzle/schema';
-import { eq, like, or, desc, and } from 'drizzle-orm';
+import { eq, like, or, desc, and, isNull } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { getDb } from './db';
 import { logAudit } from './_core/auditLog';
 
@@ -45,16 +46,17 @@ export const userRouter = router({
     let query = db.select().from(users);
 
     // Apply filters
-    const conditions = [];
+    const conditions: SQL[] = [];
 
-    if (input.search) {
+    const search = input.search?.trim();
+    if (search) {
       conditions.push(
         or(
-          like(users.email, `%${input.search}%`),
-          like(users.name, `%${input.search}%`),
-          like(users.firstName, `%${input.search}%`),
-          like(users.lastName, `%${input.search}%`),
-        ),
+          like(users.email, `%${search}%`),
+          like(users.name, `%${search}%`),
+          like(users.firstName, `%${search}%`),
+          like(users.lastName, `%${search}%`),
+        )!,
       );
     }
 
@@ -64,7 +66,7 @@ export const userRouter = router({
 
     if (input.agencyId !== undefined) {
       if (input.agencyId === null) {
-        conditions.push(eq(users.agencyId, null));
+        conditions.push(isNull(users.agencyId));
       } else {
         conditions.push(eq(users.agencyId, input.agencyId));
       }

@@ -8,6 +8,7 @@ import {
 } from './_core/trpc';
 import { agencies, users, plans, agencyBranding, invitations } from '../drizzle/schema';
 import { eq, like, or, desc, and } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import {
   getDb,
   getAgencyDashboardStats,
@@ -20,6 +21,7 @@ import {
   getAgentPerformanceLeaderboard,
 } from './db';
 import { logAudit } from './_core/auditLog';
+import { requireUser } from './_core/requireUser';
 
 /**
  * Agency Router - Manages real estate agencies
@@ -90,6 +92,7 @@ export const agencyRouter = router({
       if (!db) {
         throw new Error('Database not available');
       }
+      const user = requireUser(ctx);
 
       // 1. Validate plan exists and is active
       const [plan] = await db.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
@@ -159,14 +162,14 @@ export const agencyRouter = router({
           role: 'agency_admin',
           updatedAt: new Date(),
         })
-        .where(eq(users.id, ctx.user.id));
+        .where(eq(users.id, user.id));
 
       // 7. Store team invitations (will be sent after payment)
       if (input.teamEmails && input.teamEmails.length > 0) {
         const invitationValues = input.teamEmails.map(email => ({
           agencyId,
           email,
-          invitedBy: ctx.user.id,
+          invitedBy: user.id,
           role: 'agent',
           token: `invite-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           status: 'pending' as const,
@@ -178,7 +181,7 @@ export const agencyRouter = router({
 
       // 8. Audit log
       await logAudit({
-        userId: ctx.user.id,
+        userId: user.id,
         action: 'agency.create_onboarding',
         targetType: 'agency',
         targetId: agencyId,
@@ -198,6 +201,7 @@ export const agencyRouter = router({
     if (!db) {
       throw new Error('Database not available');
     }
+    const user = requireUser(ctx);
 
     // Check if slug already exists
     const existing = await db.select().from(agencies).where(eq(agencies.slug, input.slug)).limit(1);
@@ -224,7 +228,7 @@ export const agencyRouter = router({
 
     // Audit log
     await logAudit({
-      userId: ctx.user.id,
+      userId: user.id,
       action: 'agency.create',
       targetType: 'agency',
       targetId: Number(result.insertId),
@@ -251,15 +255,16 @@ export const agencyRouter = router({
     let query = db.select().from(agencies);
 
     // Apply filters
-    const conditions = [];
+    const conditions: SQL[] = [];
 
-    if (input.search) {
+    const search = input.search?.trim();
+    if (search) {
       conditions.push(
         or(
-          like(agencies.name, `%${input.search}%`),
-          like(agencies.email, `%${input.search}%`),
-          like(agencies.city, `%${input.search}%`),
-        ),
+          like(agencies.name, `%${search}%`),
+          like(agencies.email, `%${search}%`),
+          like(agencies.city, `%${search}%`),
+        )!,
       );
     }
 
@@ -276,7 +281,7 @@ export const agencyRouter = router({
     }
 
     if (conditions.length > 0) {
-      query = query.where(or(...conditions));
+      query = query.where(or(...conditions)!);
     }
 
     const results = await query
@@ -339,6 +344,7 @@ export const agencyRouter = router({
     if (!db) {
       throw new Error('Database not available');
     }
+    const user = requireUser(ctx);
 
     const { id, ...updateData } = input;
 
@@ -349,8 +355,8 @@ export const agencyRouter = router({
     }
 
     // Authorization check: super_admin can update any, agency_admin only their own
-    if (ctx.user.role !== 'super_admin') {
-      if (!ctx.user.agencyId || ctx.user.agencyId !== id) {
+    if (user.role !== 'super_admin') {
+      if (!user.agencyId || user.agencyId !== id) {
         throw new Error('You can only update your own agency');
       }
     }
@@ -366,7 +372,7 @@ export const agencyRouter = router({
 
     // Audit log
     await logAudit({
-      userId: ctx.user.id,
+      userId: user.id,
       action: 'agency.update',
       targetType: 'agency',
       targetId: id,
@@ -388,6 +394,7 @@ export const agencyRouter = router({
       if (!db) {
         throw new Error('Database not available');
       }
+      const user = requireUser(ctx);
 
       // Check if agency exists
       const [agency] = await db.select().from(agencies).where(eq(agencies.id, input.id)).limit(1);
@@ -400,7 +407,7 @@ export const agencyRouter = router({
 
       // Audit log
       await logAudit({
-        userId: ctx.user.id,
+        userId: user.id,
         action: 'agency.delete',
         targetType: 'agency',
         targetId: input.id,
@@ -420,6 +427,7 @@ export const agencyRouter = router({
       if (!db) {
         throw new Error('Database not available');
       }
+      const user = requireUser(ctx);
 
       await db
         .update(agencies)
@@ -431,7 +439,7 @@ export const agencyRouter = router({
 
       // Audit log
       await logAudit({
-        userId: ctx.user.id,
+        userId: user.id,
         action: input.isVerified ? 'agency.verify' : 'agency.unverify',
         targetType: 'agency',
         targetId: input.id,
@@ -447,9 +455,32 @@ export const agencyRouter = router({
    */
   getDashboardStats: agencyAdminProcedure.query(async ({ ctx }) => {
     if (!ctx.user.agencyId) {
-      throw new Error('You must be part of an agency');
+      return {
+        totalListings: 0,
+        totalSales: 0,
+        totalLeads: 0,
+        totalAgents: 0,
+        activeListings: 0,
+        pendingListings: 0,
+        recentLeads: 0,
+        recentSales: 0,
+      };
     }
-    return await getAgencyDashboardStats(ctx.user.agencyId);
+    try {
+      return await getAgencyDashboardStats(ctx.user.agencyId);
+    } catch (error) {
+      console.warn('[agency.getDashboardStats] Returning safe defaults due to error:', error);
+      return {
+        totalListings: 0,
+        totalSales: 0,
+        totalLeads: 0,
+        totalAgents: 0,
+        activeListings: 0,
+        pendingListings: 0,
+        recentLeads: 0,
+        recentSales: 0,
+      };
+    }
   }),
 
   /**
@@ -459,9 +490,14 @@ export const agencyRouter = router({
     .input(z.object({ months: z.number().default(6) }).optional())
     .query(async ({ ctx, input }) => {
       if (!ctx.user.agencyId) {
-        throw new Error('You must be part of an agency');
+        return [];
       }
-      return await getAgencyPerformanceData(ctx.user.agencyId, input?.months || 6);
+      try {
+        return await getAgencyPerformanceData(ctx.user.agencyId, input?.months || 6);
+      } catch (error) {
+        console.warn('[agency.getPerformanceData] Returning safe defaults due to error:', error);
+        return [];
+      }
     }),
 
   /**
@@ -470,10 +506,11 @@ export const agencyRouter = router({
   getRecentLeads: agencyAdminProcedure
     .input(z.object({ limit: z.number().default(5) }).optional())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user.agencyId) {
+      const user = requireUser(ctx);
+      if (!user.agencyId) {
         throw new Error('You must be part of an agency');
       }
-      return await getAgencyRecentLeads(ctx.user.agencyId, input?.limit || 5);
+      return await getAgencyRecentLeads(user.agencyId, input?.limit || 5);
     }),
 
   /**
@@ -482,20 +519,22 @@ export const agencyRouter = router({
   getRecentListings: agencyAdminProcedure
     .input(z.object({ limit: z.number().default(5) }).optional())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user.agencyId) {
+      const user = requireUser(ctx);
+      if (!user.agencyId) {
         throw new Error('You must be part of an agency');
       }
-      return await getAgencyRecentListings(ctx.user.agencyId, input?.limit || 5);
+      return await getAgencyRecentListings(user.agencyId, input?.limit || 5);
     }),
 
   /**
    * Get all agents in the agency (for management)
    */
   listAgents: agencyAdminProcedure.query(async ({ ctx }) => {
-    if (!ctx.user.agencyId) {
+    const user = requireUser(ctx);
+    if (!user.agencyId) {
       throw new Error('You must be part of an agency');
     }
-    return await getAgencyAgents(ctx.user.agencyId);
+    return await getAgencyAgents(user.agencyId);
   }),
 
   /**
@@ -513,19 +552,24 @@ export const agencyRouter = router({
       if (!db) {
         throw new Error('Database not available');
       }
+      const authUser = requireUser(ctx);
 
       // Verify the user is in the same agency
-      const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
-      if (!user || user.agencyId !== ctx.user.agencyId) {
+      const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+      if (!targetUser || targetUser.agencyId !== authUser.agencyId) {
         throw new Error('User not found in your agency');
       }
 
       // Prevent changing your own role if you're the last admin
-      if (user.id === ctx.user.id && input.role !== 'agency_admin') {
+      if (targetUser.id === authUser.id && input.role !== 'agency_admin') {
+        const userContext = authUser;
+        if (!userContext?.agencyId) {
+          throw new Error('Agency context required');
+        }
         const agencyAdmins = await db
           .select()
           .from(users)
-          .where(and(eq(users.agencyId, ctx.user.agencyId!), eq(users.role, 'agency_admin')));
+          .where(and(eq(users.agencyId, userContext.agencyId), eq(users.role, 'agency_admin')));
         if (agencyAdmins.length === 1) {
           throw new Error('Cannot demote the last agency admin');
         }
@@ -540,7 +584,7 @@ export const agencyRouter = router({
         .where(eq(users.id, input.userId));
 
       await logAudit({
-        userId: ctx.user.id,
+        userId: authUser.id,
         action: 'agency.agent_role_update',
         targetType: 'user',
         targetId: input.userId,
@@ -561,15 +605,16 @@ export const agencyRouter = router({
       if (!db) {
         throw new Error('Database not available');
       }
+      const authUser = requireUser(ctx);
 
       // Verify the user is in the same agency
-      const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
-      if (!user || user.agencyId !== ctx.user.agencyId) {
+      const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+      if (!targetUser || targetUser.agencyId !== authUser.agencyId) {
         throw new Error('User not found in your agency');
       }
 
       // Prevent removing yourself
-      if (user.id === ctx.user.id) {
+      if (targetUser.id === authUser.id) {
         throw new Error('Cannot remove yourself from the agency');
       }
 
@@ -585,7 +630,7 @@ export const agencyRouter = router({
         .where(eq(users.id, input.userId));
 
       await logAudit({
-        userId: ctx.user.id,
+        userId: authUser.id,
         action: 'agency.agent_removed',
         targetType: 'user',
         targetId: input.userId,
@@ -601,10 +646,11 @@ export const agencyRouter = router({
   getLeadConversionStats: agencyAdminProcedure
     .input(z.object({ months: z.number().default(6) }).optional())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user.agencyId) {
+      const user = requireUser(ctx);
+      if (!user.agencyId) {
         throw new Error('You must be part of an agency');
       }
-      return await getLeadConversionStats(ctx.user.agencyId, input?.months || 6);
+      return await getLeadConversionStats(user.agencyId, input?.months || 6);
     }),
 
   /**
@@ -613,10 +659,11 @@ export const agencyRouter = router({
   getCommissionStats: agencyAdminProcedure
     .input(z.object({ months: z.number().default(6) }).optional())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user.agencyId) {
+      const user = requireUser(ctx);
+      if (!user.agencyId) {
         throw new Error('You must be part of an agency');
       }
-      return await getAgencyCommissionStats(ctx.user.agencyId, input?.months || 6);
+      return await getAgencyCommissionStats(user.agencyId, input?.months || 6);
     }),
 
   /**
@@ -625,10 +672,11 @@ export const agencyRouter = router({
   getAgentLeaderboard: agencyAdminProcedure
     .input(z.object({ months: z.number().default(3) }).optional())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user.agencyId) {
+      const user = requireUser(ctx);
+      if (!user.agencyId) {
         throw new Error('You must be part of an agency');
       }
-      return await getAgentPerformanceLeaderboard(ctx.user.agencyId, input?.months || 3);
+      return await getAgentPerformanceLeaderboard(user.agencyId, input?.months || 3);
     }),
 
   /**

@@ -7,17 +7,12 @@
 
 import { redisCache, ExploreCacheKeys, CacheTTL } from '../lib/redis';
 import type { InferSelectModel } from 'drizzle-orm';
-import {
-  exploreContent,
-  exploreDiscoveryVideos,
-  exploreNeighbourhoods,
-  userPreferences,
-} from '../../drizzle/schema';
+import { exploreContent, exploreDiscoveryVideos } from '../../drizzle/schema';
 
 type ExploreContent = InferSelectModel<typeof exploreContent>;
 type ExploreDiscoveryVideo = InferSelectModel<typeof exploreDiscoveryVideos>;
-type Neighbourhood = InferSelectModel<typeof exploreNeighbourhoods>;
-type UserPreferences = InferSelectModel<typeof userPreferences>;
+type Neighbourhood = any;
+type UserPreferences = any;
 
 /**
  * Cache wrapper for personalized feed

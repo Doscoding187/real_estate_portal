@@ -285,8 +285,13 @@ export const superAdminPublisherRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      // Use service to get developments specifically linked to this brand profile
-      return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
+      try {
+        // Use service to get developments specifically linked to this brand profile
+        return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
+      } catch (error) {
+        console.warn('[superAdminPublisher.getDevelopments] Returning empty list due to error:', error);
+        return [];
+      }
     }),
 
   /**
@@ -351,37 +356,47 @@ export const superAdminPublisherRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const dbConn = await db.getDb();
-      if (!dbConn) throw new Error('Database not available');
+      try {
+        const dbConn = await db.getDb();
+        if (!dbConn) return [];
 
-      const brandLeads = await dbConn
-        .select()
-        .from(leads)
-        .where(eq(leads.developerBrandProfileId, input.brandProfileId))
-        .orderBy(desc(leads.createdAt))
-        .limit(input.limit)
-        .offset(input.offset);
+        const brandLeads = await dbConn
+          .select()
+          .from(leads)
+          .where(eq(leads.developerBrandProfileId, input.brandProfileId))
+          .orderBy(desc(leads.createdAt))
+          .limit(input.limit)
+          .offset(input.offset);
 
-      return brandLeads;
+        return brandLeads;
+      } catch (error) {
+        console.warn('[superAdminPublisher.getBrandLeads] Returning empty list due to error:', error);
+        return [];
+      }
     }),
 
   /**
    * Get global metrics across all brands (for header stats)
    */
   getGlobalMetrics: superAdminProcedure.query(async () => {
-    const dbConn = await db.getDb();
-    if (!dbConn) throw new Error('Database not available');
+    try {
+      const dbConn = await db.getDb();
+      if (!dbConn) return { totalDevelopments: 0, totalLeads: 0 };
 
-    // Count total developments
-    const [devCount] = await dbConn.select({ count: sql<number>`count(*)` }).from(developments);
+      // Count total developments
+      const [devCount] = await dbConn.select({ count: sql<number>`count(*)` }).from(developments);
 
-    // Count total leads
-    const [leadCount] = await dbConn.select({ count: sql<number>`count(*)` }).from(leads);
+      // Count total leads
+      const [leadCount] = await dbConn.select({ count: sql<number>`count(*)` }).from(leads);
 
-    return {
-      totalDevelopments: Number(devCount?.count || 0),
-      totalLeads: Number(leadCount?.count || 0),
-    };
+      return {
+        totalDevelopments: Number(devCount?.count || 0),
+        totalLeads: Number(leadCount?.count || 0),
+      };
+    } catch (error) {
+      console.warn('[superAdminPublisher.getGlobalMetrics] Returning safe defaults due to error:', error);
+      return { totalDevelopments: 0, totalLeads: 0 };
+    }
   }),
 
   /**

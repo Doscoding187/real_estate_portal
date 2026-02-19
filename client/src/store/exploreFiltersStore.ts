@@ -1,7 +1,7 @@
 // client/src/store/exploreFiltersStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { OwnershipType, StructuralType, FloorType } from '@/shared/contract';
+import type { OwnershipType, StructuralType, FloorType } from '../../../shared/db-enums';
 
 /**
  * Explore Filters Store

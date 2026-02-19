@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { db, getDb } from './db-connection';
+import { getDb } from './db';
 import * as dotenv from 'dotenv';
 import path from 'path';
 
@@ -26,12 +26,6 @@ async function verify() {
     const _drizzle = await getDb(); // This triggers the [Database] Connected to... log internally
 
     // Manual SQL verify
-    // @ts-expect-error
-    const pool = _drizzle.session.client;
-    // Drizzle mysql2 pool access might differ, but getDb uses the pool.
-    // actually getDb returns the drizzle instance.
-    // We can use sql execute
-
     const [rows] = await _drizzle.execute(sql`SELECT DATABASE() as db, @@hostname as host`);
     console.log('SQL Verification Output:', rows[0]);
   } catch (e) {

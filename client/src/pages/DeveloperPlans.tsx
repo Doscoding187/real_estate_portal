@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { SUBSCRIPTION_TIER_LIMITS, type SubscriptionTier } from '../../shared/types';
+import { SUBSCRIPTION_TIER_LIMITS, type SubscriptionTier } from '@/shared/types';
 
 // Developer-specific plan definitions with SA Rand pricing
 const DEVELOPER_PLANS = [
@@ -137,7 +137,7 @@ export default function DeveloperPlans() {
     },
   });
 
-  const currentTier = subscriptionData?.subscription?.tier;
+  const currentTier = (subscriptionData as any)?.subscription?.tier ?? (subscriptionData as any)?.tier;
 
   const handleSelectPlan = (plan: (typeof DEVELOPER_PLANS)[0]) => {
     if (plan.tier === currentTier) {

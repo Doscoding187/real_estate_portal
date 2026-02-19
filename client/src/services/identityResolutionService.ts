@@ -6,7 +6,7 @@
  * and enables safe seeding, lead attribution, and brand cleanup.
  */
 
-import { trpc } from '@/lib/trpc';
+import { trpcClient } from '@/lib/trpcClient';
 
 export interface BrandProfile {
   id: number;
@@ -73,7 +73,7 @@ class IdentityResolutionService {
   ): Promise<ResolvedPublisherIdentity | IdentityResolutionError> {
     try {
       // Fetch full brand profile from server
-      const brandProfile = await trpc.superAdminPublisher.getBrandProfileById.query({
+      const brandProfile = await trpcClient.superAdminPublisher.getBrandProfileById.query({
         id: brandProfileId,
       });
 
@@ -216,4 +216,3 @@ class IdentityResolutionService {
 export const identityResolution = IdentityResolutionService.getInstance();
 
 // Export types for external use
-export type { ResolvedPublisherIdentity, IdentityResolutionError };

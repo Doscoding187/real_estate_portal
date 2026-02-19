@@ -15,9 +15,11 @@ import {
   notifications,
 } from '../drizzle/schema';
 import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
+import { requireUser } from './_core/requireUser';
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -49,17 +51,83 @@ export const agentRouter = router({
       offersInProgress: number;
       commissionsPending: number;
     }> => {
-      const db = await getDb();
+      try {
+        const db = await getDb();
 
-      // Get agent record from user
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
-        .limit(1);
+        // Get agent record from user
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, ctx.user.id))
+          .limit(1);
 
-      if (!agentRecord) {
-        // Return empty stats if no agent profile found
+        if (!agentRecord) {
+          // Return empty stats if no agent profile found
+          return {
+            activeListings: 0,
+            newLeadsThisWeek: 0,
+            showingsToday: 0,
+            offersInProgress: 0,
+            commissionsPending: 0,
+          };
+        }
+
+        const agentId = agentRecord.id;
+        // Date calculations
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
+        const tomorrowDate = new Date(todayDate);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+
+        const today = todayDate.toISOString();
+        const tomorrow = tomorrowDate.toISOString();
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        // Active listings count
+        const [activeListingsResult] = await db
+          .select({ count: count() })
+          .from(properties)
+          .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
+
+        // New leads this week
+        const [newLeadsResult] = await db
+          .select({ count: count() })
+          .from(leads)
+          .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
+
+        // Showings today
+        const [showingsTodayResult] = await db
+          .select({ count: count() })
+          .from(showings)
+          .where(
+            and(
+              eq(showings.agentId, agentId),
+              gte(showings.scheduledAt, today),
+              lte(showings.scheduledAt, tomorrow),
+            ),
+          );
+
+        // Offers in progress
+        const [offersInProgressResult] = await db
+          .select({ count: count() })
+          .from(offers)
+          .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
+
+        // Pending commissions sum
+        const [pendingCommissionsResult] = await db
+          .select({ total: sql<number>`SUM(${commissions.amount})` })
+          .from(commissions)
+          .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+
+        return {
+          activeListings: activeListingsResult?.count || 0,
+          newLeadsThisWeek: newLeadsResult?.count || 0,
+          showingsToday: showingsTodayResult?.count || 0,
+          offersInProgress: offersInProgressResult?.count || 0,
+          commissionsPending: Number(pendingCommissionsResult?.total || 0),
+        };
+      } catch (error) {
+        console.warn('[agent.getDashboardStats] Returning safe defaults due to error:', error);
         return {
           activeListings: 0,
           newLeadsThisWeek: 0,
@@ -68,61 +136,6 @@ export const agentRouter = router({
           commissionsPending: 0,
         };
       }
-
-      const agentId = agentRecord.id;
-      // Date calculations
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
-      const tomorrowDate = new Date(todayDate);
-      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-
-      const today = todayDate.toISOString();
-      const tomorrow = tomorrowDate.toISOString();
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-      // Active listings count
-      const [activeListingsResult] = await db
-        .select({ count: count() })
-        .from(properties)
-        .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
-
-      // New leads this week
-      const [newLeadsResult] = await db
-        .select({ count: count() })
-        .from(leads)
-        .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
-
-      // Showings today
-      const [showingsTodayResult] = await db
-        .select({ count: count() })
-        .from(showings)
-        .where(
-          and(
-            eq(showings.agentId, agentId),
-            gte(showings.scheduledAt, today),
-            lte(showings.scheduledAt, tomorrow),
-          ),
-        );
-
-      // Offers in progress
-      const [offersInProgressResult] = await db
-        .select({ count: count() })
-        .from(offers)
-        .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
-
-      // Pending commissions sum
-      const [pendingCommissionsResult] = await db
-        .select({ total: sql<number>`SUM(${commissions.amount})` })
-        .from(commissions)
-        .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
-
-      return {
-        activeListings: activeListingsResult?.count || 0,
-        newLeadsThisWeek: newLeadsResult?.count || 0,
-        showingsToday: showingsTodayResult?.count || 0,
-        offersInProgress: offersInProgressResult?.count || 0,
-        commissionsPending: Number(pendingCommissionsResult?.total || 0),
-      };
     },
   ),
 
@@ -153,7 +166,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -161,7 +174,7 @@ export const agentRouter = router({
       }
 
       // Build conditions
-      const conditions = [eq(leads.agentId, agentRecord.id)];
+      const conditions: SQL[] = [eq(leads.agentId, agentRecord.id)];
 
       if (input.filters?.propertyId) {
         conditions.push(eq(leads.propertyId, input.filters.propertyId));
@@ -285,7 +298,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -338,7 +351,7 @@ export const agentRouter = router({
 
       // Create notification for lead assignment changes
       await db.insert(notifications).values({
-        userId: ctx.user.id,
+        userId: requireUser(ctx).id,
         type: 'lead_assigned',
         title: 'Lead Status Updated',
         content: `Lead "${lead.name}" moved to ${input.targetStage} stage`,
@@ -361,25 +374,26 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      const user = requireUser(ctx);
 
       // Try to get agent record, but don't fail if it doesn't exist
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, user.id))
         .limit(1);
 
       // Build conditions - use agentId if profile exists, otherwise use ownerId
-      const conditions = [];
+      const conditions: SQL[] = [];
 
       if (agentRecord) {
         // User has agent profile - query by agentId OR ownerId
         conditions.push(
-          or(eq(properties.agentId, agentRecord.id), eq(properties.ownerId, ctx.user.id)),
+          or(eq(properties.agentId, agentRecord.id), eq(properties.ownerId, user.id))!,
         );
       } else {
         // No agent profile - query by ownerId only
-        conditions.push(eq(properties.ownerId, ctx.user.id));
+        conditions.push(eq(properties.ownerId, user.id));
       }
 
       if (input.status && input.status !== 'all') {
@@ -444,14 +458,14 @@ export const agentRouter = router({
       }
 
       // Check if user owns this property (either as owner or as agent)
-      const isOwner = property.ownerId === ctx.user.id;
+      const isOwner = property.ownerId === requireUser(ctx).id;
 
       let isAgent = false;
       if (property.agentId) {
         const [agentRecord] = await db
           .select()
           .from(agents)
-          .where(and(eq(agents.id, property.agentId), eq(agents.userId, ctx.user.id)))
+          .where(and(eq(agents.id, property.agentId), eq(agents.userId, requireUser(ctx).id)))
           .limit(1);
         isAgent = !!agentRecord;
       }
@@ -484,14 +498,14 @@ export const agentRouter = router({
       }
 
       // Check if user owns this property (either as owner or as agent)
-      const isOwner = property.ownerId === ctx.user.id;
+      const isOwner = property.ownerId === requireUser(ctx).id;
 
       let isAgent = false;
       if (property.agentId) {
         const [agentRecord] = await db
           .select()
           .from(agents)
-          .where(and(eq(agents.id, property.agentId), eq(agents.userId, ctx.user.id)))
+          .where(and(eq(agents.id, property.agentId), eq(agents.userId, requireUser(ctx).id)))
           .limit(1);
         isAgent = !!agentRecord;
       }
@@ -525,7 +539,7 @@ export const agentRouter = router({
       const [existing] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (existing) {
@@ -534,7 +548,7 @@ export const agentRouter = router({
 
       // Create agent profile
       const agentId = await db.createAgentProfile({
-        userId: ctx.user.id,
+        userId: requireUser(ctx).id,
         displayName: input.displayName,
         phone: input.phone,
         bio: input.bio,
@@ -575,7 +589,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -583,7 +597,7 @@ export const agentRouter = router({
       }
 
       // Build query conditions
-      const conditions = [eq(leads.agentId, agentRecord.id)];
+      const conditions: SQL[] = [eq(leads.agentId, agentRecord.id)];
       if (input.status && input.status !== 'all') {
         conditions.push(eq(leads.status, input.status as any));
       }
@@ -640,7 +654,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -701,7 +715,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -772,7 +786,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -780,13 +794,13 @@ export const agentRouter = router({
       }
 
       // Build conditions
-      const conditions = [eq(showings.agentId, agentRecord.id)];
+      const conditions: SQL[] = [eq(showings.agentId, agentRecord.id)];
 
       if (input.startDate) {
-        conditions.push(gte(showings.scheduledAt, new Date(input.startDate).toISOString()));
+        conditions.push(gte(showings.scheduledTime, new Date(input.startDate).toISOString()));
       }
       if (input.endDate) {
-        conditions.push(lte(showings.scheduledAt, new Date(input.endDate).toISOString()));
+        conditions.push(lte(showings.scheduledTime, new Date(input.endDate).toISOString()));
       }
       if (input.status && input.status !== 'all') {
         conditions.push(eq(showings.status, input.status as any));
@@ -796,32 +810,15 @@ export const agentRouter = router({
       const showingsList = await db
         .select({
           showing: showings,
-          property: properties,
-          lead: leads,
         })
         .from(showings)
-        .leftJoin(properties, eq(showings.propertyId, properties.id))
-        .leftJoin(leads, eq(showings.leadId, leads.id))
         .where(and(...conditions))
-        .orderBy(showings.scheduledAt);
+        .orderBy(showings.scheduledTime);
 
-      return showingsList.map(({ showing, property, lead }) => ({
+      return showingsList.map(({ showing }) => ({
         ...showing,
-        property: property
-          ? {
-              id: property.id,
-              title: property.title,
-              address: property.address,
-              city: property.city,
-            }
-          : null,
-        client: lead
-          ? {
-              name: lead.name,
-              email: lead.email,
-              phone: lead.phone,
-            }
-          : null,
+        property: null,
+        client: null,
       }));
     }),
 
@@ -843,7 +840,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -855,7 +852,6 @@ export const agentRouter = router({
         .update(showings)
         .set({
           status: input.status,
-          notes: input.notes || showings.notes,
           updatedAt: nowAsDbTimestamp(),
         })
         .where(and(eq(showings.id, input.showingId), eq(showings.agentId, agentRecord.id)));
@@ -879,7 +875,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -887,7 +883,7 @@ export const agentRouter = router({
       }
 
       // Build conditions
-      const conditions = [eq(commissions.agentId, agentRecord.id)];
+      const conditions: SQL[] = [eq(commissions.agentId, agentRecord.id)];
       if (input.status && input.status !== 'all') {
         conditions.push(eq(commissions.status, input.status as any));
       }
@@ -939,7 +935,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -1017,7 +1013,7 @@ export const agentRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
 
-      const conditions = [eq(notifications.userId, ctx.user.id)];
+      const conditions = [eq(notifications.userId, requireUser(ctx).id)];
 
       if (input.unreadOnly) {
         conditions.push(eq(notifications.isRead, 0));
@@ -1046,7 +1042,7 @@ export const agentRouter = router({
         .update(notifications)
         .set({ isRead: 1, readAt: new Date() })
         .where(
-          and(eq(notifications.id, input.notificationId), eq(notifications.userId, ctx.user.id)),
+          and(eq(notifications.id, input.notificationId), eq(notifications.userId, requireUser(ctx).id)),
         );
 
       return { success: true };
@@ -1061,7 +1057,7 @@ export const agentRouter = router({
     await db
       .update(notifications)
       .set({ isRead: 1, readAt: new Date() })
-      .where(eq(notifications.userId, ctx.user.id));
+      .where(eq(notifications.userId, requireUser(ctx).id));
 
     return { success: true };
   }),
@@ -1075,7 +1071,7 @@ export const agentRouter = router({
     const [result] = await db
       .select({ count: count() })
       .from(notifications)
-      .where(and(eq(notifications.userId, ctx.user.id), eq(notifications.isRead, 0)));
+      .where(and(eq(notifications.userId, requireUser(ctx).id), eq(notifications.isRead, 0)));
 
     return { count: result?.count || 0 };
   }),
@@ -1096,7 +1092,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -1180,7 +1176,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, ctx.user.id))
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {

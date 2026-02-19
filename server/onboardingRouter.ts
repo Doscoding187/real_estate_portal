@@ -18,7 +18,7 @@ const router = Router();
  */
 router.get('/state', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const state = await onboardingService.getOnboardingState(userId);
     res.json(state);
   } catch (error: any) {
@@ -34,7 +34,7 @@ router.get('/state', requireAuth, async (req, res) => {
  */
 router.post('/welcome/show', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     await onboardingService.showWelcomeOverlay(userId);
     res.json({ success: true });
   } catch (error: any) {
@@ -50,7 +50,7 @@ router.post('/welcome/show', requireAuth, async (req, res) => {
  */
 router.post('/welcome/dismiss', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     await onboardingService.dismissWelcomeOverlay(userId);
     res.json({ success: true });
   } catch (error: any) {
@@ -66,7 +66,7 @@ router.post('/welcome/dismiss', requireAuth, async (req, res) => {
  */
 router.get('/suggested-topics', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const topics = await onboardingService.getSuggestedTopicsForUser(userId);
     res.json(topics);
   } catch (error: any) {
@@ -82,7 +82,7 @@ router.get('/suggested-topics', requireAuth, async (req, res) => {
  */
 router.post('/tooltip/show', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const { tooltipId } = req.body;
 
     if (!tooltipId) {
@@ -104,7 +104,7 @@ router.post('/tooltip/show', requireAuth, async (req, res) => {
  */
 router.post('/tooltip/dismiss', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const { tooltipId } = req.body;
 
     if (!tooltipId) {
@@ -126,7 +126,7 @@ router.post('/tooltip/dismiss', requireAuth, async (req, res) => {
  */
 router.get('/feature-unlocks', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const unlocks = await onboardingService.checkFeatureUnlock(userId);
     res.json(unlocks);
   } catch (error: any) {
@@ -142,7 +142,7 @@ router.get('/feature-unlocks', requireAuth, async (req, res) => {
  */
 router.post('/unlock-feature', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const { feature } = req.body;
 
     if (!feature) {
@@ -164,7 +164,7 @@ router.post('/unlock-feature', requireAuth, async (req, res) => {
  */
 router.post('/track', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const { type, metadata } = req.body;
 
     if (!type) {
@@ -186,7 +186,7 @@ router.post('/track', requireAuth, async (req, res) => {
  */
 router.get('/should-show-welcome', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const shouldShow = await onboardingService.shouldShowWelcomeOverlay(userId);
     res.json({ shouldShow });
   } catch (error: any) {
@@ -202,7 +202,7 @@ router.get('/should-show-welcome', requireAuth, async (req, res) => {
  */
 router.get('/should-show-tooltip/:tooltipId', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     const { tooltipId } = req.params;
 
     const shouldShow = await onboardingService.shouldShowTooltip(userId, tooltipId);
@@ -240,7 +240,7 @@ router.get('/tooltip-config/:tooltipId', async (req, res) => {
  */
 router.delete('/reset', requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = String(req.user!.id);
     await onboardingService.resetOnboardingState(userId);
     res.json({ success: true });
   } catch (error: any) {
@@ -250,3 +250,4 @@ router.delete('/reset', requireAuth, async (req, res) => {
 });
 
 export default router;
+

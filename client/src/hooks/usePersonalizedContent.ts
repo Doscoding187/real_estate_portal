@@ -13,7 +13,7 @@ export interface PersonalizedSection {
   id: string;
   title: string;
   subtitle?: string;
-  type: 'for-you' | 'popular-near-you' | 'new-developments' | 'trending';
+  type: 'for-you' | 'popular-near-you' | 'new-developments' | 'trending' | 'partner';
   items: DiscoveryItem[];
 }
 

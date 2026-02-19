@@ -275,9 +275,17 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
                       {/* 2. Bedrooms */}
                       <div className="flex flex-col items-center justify-center text-center px-1">
                         <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
-                          {unit.bedrooms} Bed
-                        </span>
+                        {(() => {
+                          const bedText =
+                            unit.bedroomKey === 'other'
+                              ? 'Studio/Other'
+                              : `${unit.bedrooms ?? unit.bedroomLabel ?? '-'}`;
+                          return (
+                            <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
+                              {unit.bedroomKey === 'other' ? bedText : `${bedText} Bed`}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="h-6 w-px bg-slate-100 shrink-0" />
@@ -383,6 +391,34 @@ export default function DevelopmentDetail() {
     }
   };
 
+  const normalizeAmenities = (input: unknown): string[] => {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.map(item => String(item ?? '').trim()).filter(Boolean);
+    if (typeof input === 'string') {
+      const trimmed = input.trim();
+      if (!trimmed) return [];
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed))
+          return parsed.map(item => String(item ?? '').trim()).filter(Boolean);
+      } catch {
+        // fall through to comma-separated support
+      }
+      return trimmed
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+    if (typeof input === 'object') {
+      const obj = input as { amenities?: unknown; items?: unknown };
+      const list = obj.amenities ?? obj.items;
+      if (Array.isArray(list)) {
+        return list.map(item => String(item ?? '').trim()).filter(Boolean);
+      }
+    }
+    return [];
+  };
+
   // Lightbox handler
   const openLightbox = (index: number, title: string) => {
     setLightboxIndex(index);
@@ -407,7 +443,7 @@ export default function DevelopmentDetail() {
     { enabled: !!dev?.developer?.id },
   );
 
-  const amenityList = parseJSON(dev?.amenities);
+  const amenityList = normalizeAmenities(dev?.amenities);
   const amenityGroups = buildAmenityGroups(amenityList);
   const amenityTabs = [
     ...AMENITY_CATEGORIES.map(category => ({
@@ -518,7 +554,7 @@ export default function DevelopmentDetail() {
   }
 
   // Format label helper
-  const formatLabel = (value: string) => {
+  const formatLabel = (value?: string) => {
     if (!value) return '—';
     return value
       .replace(/-/g, ' ')
@@ -592,6 +628,7 @@ export default function DevelopmentDetail() {
   // 1. RAW DATA EXTRACTION
   const rawImages = parseJSON(dev.images);
   const rawVideos = parseJSON(dev.videos);
+  const rawFloorPlans = parseJSON(dev.floorPlans);
 
   // 2. NORMALIZE TO CANONICAL TYPES
   // Convert DB format to our typed ImageMedia/VideoMedia
@@ -610,9 +647,19 @@ export default function DevelopmentDetail() {
   };
 
   const normalizeVideo = (v: any) => (typeof v === 'string' ? { url: v } : v);
+  const normalizeFloorPlan = (fp: any) => {
+    if (typeof fp === 'string') {
+      return { url: resolveMediaUrl(fp) };
+    }
+    const candidate = fp?.url ?? fp?.key ?? fp?.src ?? null;
+    return { url: typeof candidate === 'string' ? resolveMediaUrl(candidate) : null };
+  };
 
   const normalizedImages = rawImages.map(normalizeImage);
   const normalizedVideos = rawVideos.map(normalizeVideo);
+  const normalizedFloorPlans = rawFloorPlans
+    .map(normalizeFloorPlan)
+    .filter((fp: any) => typeof fp?.url === 'string' && fp.url.length > 0);
 
   // Create the Data Object
   const mediaData: DevelopmentMedia = {
@@ -641,7 +688,7 @@ export default function DevelopmentDetail() {
   };
 
   // Missing declaration restoration
-  const floorPlans: any[] = []; // Initialize as empty array for now, or derive from units if available later
+  const floorPlans: any[] = normalizedFloorPlans;
   const amenities = amenityList;
   const units = dev.unitTypes || [];
 
@@ -657,7 +704,7 @@ export default function DevelopmentDetail() {
   })();
 
   // Calculate sales metrics from unit types
-  const sales = (() => {
+  const fallbackSales = (() => {
     const unitTypes = dev.unitTypes || [];
     const totals = unitTypes.reduce(
       (acc: any, u: any) => {
@@ -690,6 +737,14 @@ export default function DevelopmentDetail() {
 
     return { soldPct, total: totalUnits, available: clampedAvailable };
   })();
+  const salesFromApi = dev.salesMetrics
+    ? {
+        soldPct: dev.salesMetrics.soldPct,
+        total: dev.salesMetrics.totalUnits ?? dev.salesMetrics.total ?? 0,
+        available: dev.salesMetrics.availableUnits ?? dev.salesMetrics.available ?? 0,
+      }
+    : null;
+  const sales = salesFromApi ?? fallbackSales;
 
   // ✅ Prefer publisher / brand profile over legacy developer
   const publisher =
@@ -699,6 +754,23 @@ export default function DevelopmentDetail() {
     null;
 
   // ... (Update development object)
+  const unifiedMediaRaw = [
+    ...galleryImages.map(img => ({ url: img.url, type: 'image' as const })),
+    ...normalizedVideos
+      .map((video: any) => ({ url: video?.url, type: 'video' as const }))
+      .filter(item => !!item.url),
+    ...floorPlans.map((fp: any) => ({ url: fp?.url, type: 'image' as const })),
+  ];
+  const unifiedMedia = (() => {
+    const seen = new Set<string>();
+    return unifiedMediaRaw.filter(item => {
+      if (!item?.url) return false;
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+  })();
+
   const development = {
     // ... existing fields ...
     id: dev.id,
@@ -741,6 +813,7 @@ export default function DevelopmentDetail() {
 
     indices: galleryIndices,
     amenities: amenities,
+    isVerified: !!(dev.developerDisplay as any)?.isVerified,
 
     // CRITICAL: Ensure we rely on unitTypes, not mixed sources
     units: units.map((u: any) => {
@@ -762,6 +835,8 @@ export default function DevelopmentDetail() {
         landSize: u.erfSize || u.yardSize,
       };
     }),
+
+    unifiedMedia: unifiedMedia,
   };
 
   return (
@@ -782,7 +857,7 @@ export default function DevelopmentDetail() {
             items={[
               { label: 'Home', href: '/' },
               { label: development.location, href: '#' },
-              { label: development.name, href: `/development/${development.id}`, active: true },
+              { label: development.name, href: `/development/${development.id}` },
             ]}
           />
         </div>
@@ -850,7 +925,7 @@ export default function DevelopmentDetail() {
                 <DevelopmentOverviewCard
                   priceFrom={development.startingPrice}
                   completionDate={development.completionDate || '—'}
-                  progressPercentage={sales.soldPct ?? 0}
+                  progressPercentage={sales?.soldPct ?? 0}
                   constructionStatus={formatLabel(dev.status)}
                   salesMetrics={sales}
                 />
@@ -876,12 +951,14 @@ export default function DevelopmentDetail() {
                         <p className="font-bold text-sm text-slate-900 truncate">
                           {development.developer}
                         </p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
-                          <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">
-                            Verified Developer
-                          </span>
-                        </div>
+                    {development.isVerified && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                        <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">
+                          Verified Developer
+                        </span>
+                      </div>
+                    )}
                       </div>
                     </div>
 
@@ -1000,12 +1077,20 @@ export default function DevelopmentDetail() {
 
                   {(() => {
                     // Use the normalized units from the development object
-                    const validUnits = (development.units || []).filter((u: any) => {
+                    const allUnits = development.units || [];
+                    const normalizedUnits = allUnits.map((u: any) => {
                       const bed = Number(u.bedrooms);
-                      return Number.isFinite(bed) && bed >= 0;
+                      const hasBedroom = Number.isFinite(bed) && bed >= 0;
+                      const bedroomKey = hasBedroom ? bed.toString() : 'other';
+                      const bedroomLabel = hasBedroom ? `${bed}` : 'Other';
+                      return {
+                        ...u,
+                        bedroomKey,
+                        bedroomLabel,
+                      };
                     });
 
-                    if (validUnits.length === 0) {
+                    if (normalizedUnits.length === 0) {
                       return (
                         <div className="w-full text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-300">
                           <Home className="mx-auto h-8 w-8 text-slate-300 mb-2" />
@@ -1019,18 +1104,29 @@ export default function DevelopmentDetail() {
                       );
                     }
 
-                    const bedroomCounts = Array.from(
-                      new Set(validUnits.map((u: any) => Number(u.bedrooms))),
-                    ).sort((a: any, b: any) => a - b);
-                    const defaultTab = bedroomCounts[0]?.toString() || '0';
+                    const bedroomGroups = new Map<string, { label: string; units: any[] }>();
+                    normalizedUnits.forEach((u: any) => {
+                      const key = u.bedroomKey;
+                      if (!bedroomGroups.has(key)) {
+                        bedroomGroups.set(key, {
+                          label: key === 'other' ? 'Other / Studio / Unknown' : `${u.bedroomLabel} Bedroom`,
+                          units: [],
+                        });
+                      }
+                      bedroomGroups.get(key)!.units.push(u);
+                    });
+                    const orderedKeys = Array.from(bedroomGroups.keys()).sort((a, b) => {
+                      if (a === 'other') return 1;
+                      if (b === 'other') return -1;
+                      return Number(a) - Number(b);
+                    });
+                    const defaultTab = orderedKeys[0] || 'other';
 
                     return (
                       <Tabs defaultValue={defaultTab} className="w-full">
                         <TabsList className="bg-transparent p-0 flex flex-wrap gap-2 h-auto mb-6 justify-start">
-                          {bedroomCounts.map((count: any) => {
-                            const unitsInGroup = validUnits.filter(
-                              (u: any) => Number(u.bedrooms) === count,
-                            );
+                          {orderedKeys.map((key: string) => {
+                            const unitsInGroup = bedroomGroups.get(key)?.units || [];
                             const types = Array.from(
                               new Set(unitsInGroup.map((u: any) => u.normalizedType)),
                             );
@@ -1051,25 +1147,31 @@ export default function DevelopmentDetail() {
 
                             return (
                               <TabsTrigger
-                                key={count}
-                                value={count.toString()}
+                                key={key}
+                                value={key}
                                 className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 shadow-sm transition-all"
                               >
-                                {count} Bedroom{' '}
-                                <span className="ml-1 opacity-70 font-normal">{label}</span>
+                                {key === 'other' ? (
+                                  'Other / Studio / Unknown'
+                                ) : (
+                                  <>
+                                    {key} Bedroom{' '}
+                                    <span className="ml-1 opacity-70 font-normal">{label}</span>
+                                  </>
+                                )}
                               </TabsTrigger>
                             );
                           })}
                         </TabsList>
 
-                        {bedroomCounts.map((count: any) => (
+                        {orderedKeys.map((key: string) => (
                           <TabsContent
-                            key={count}
-                            value={count.toString()}
+                            key={key}
+                            value={key}
                             className="mt-0 focus-visible:outline-none"
                           >
                             <UnitTypeCarousel
-                              units={validUnits.filter((u: any) => Number(u.bedrooms) === count)}
+                              units={bedroomGroups.get(key)?.units || []}
                             />
                           </TabsContent>
                         ))}
@@ -1080,14 +1182,8 @@ export default function DevelopmentDetail() {
 
                 {/* Specifications */}
                 {(() => {
-                  const estateSpecs = (dev as any).estateSpecs || {};
                   const hasEstateSpecs =
                     estateSpecs.ownershipType || estateSpecs.powerBackup || estateSpecs.waterSupply;
-
-                  const formatLabel = (value: string) => {
-                    if (!value) return '';
-                    return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                  };
 
                   const specs: Array<{ icon: any; label: string; value: string }> = [];
 
@@ -1300,6 +1396,7 @@ export default function DevelopmentDetail() {
                   <DeveloperOverview
                     developerName={development.developer}
                     developerLogo={development.developerLogo}
+                    isVerified={development.isVerified}
                   />
                 </section>
 

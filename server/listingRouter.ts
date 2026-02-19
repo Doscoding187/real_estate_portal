@@ -17,6 +17,7 @@ import {
 } from './services/locationAutoPopulation';
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
+import { requireUser } from './_core/requireUser';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -495,7 +496,7 @@ export const listingRouter = router({
         }
 
         const isOwner = listing.userId === userId;
-        const isSuperAdmin = ctx.user.role === 'super_admin';
+        const isSuperAdmin = requireUser(ctx).role === 'super_admin';
 
         if (!isOwner && !isSuperAdmin) {
           throw new TRPCError({
@@ -686,7 +687,7 @@ export const listingRouter = router({
         // --- Fast-Track Approval Logic (Phase 5) ---
         // Criteria: Readiness 100%, Quality >= 85, Trusted/Verified Agent
         const quality = calculateListingQualityScore({ ...fullListing, media });
-        const agent = await db.getAgentByUserId(ctx.user.id);
+        const agent = await db.getAgentByUserId(requireUser(ctx).id);
 
         // Check if agent is verified (assuming isVerified is 1 or true)
         const isTrusted = agent?.isVerified === 1;
@@ -695,7 +696,7 @@ export const listingRouter = router({
           // Auto-Approve
           await db.approveListing(
             input.listingId,
-            ctx.user.id,
+            requireUser(ctx).id,
             'Fast-Track Auto Approval (High Quality & Trusted)',
           );
           return { success: true, status: 'approved', fastTracked: true };
@@ -783,7 +784,7 @@ export const listingRouter = router({
 
       try {
         // Update listing status to approved
-        await db.approveListing(input.listingId, ctx.user.id, input.notes);
+        await db.approveListing(input.listingId, requireUser(ctx).id, input.notes);
 
         return { success: true };
       } catch (error) {
@@ -817,7 +818,7 @@ export const listingRouter = router({
         // Store structured data
         await db.rejectListing(
           input.listingId,
-          ctx.user.id,
+          requireUser(ctx).id,
           input.reason || 'See rejection reasons',
           input.reasons,
           input.note,
@@ -865,3 +866,4 @@ export const listingRouter = router({
 
 // Export type router type signature
 export type ListingRouter = typeof listingRouter;
+

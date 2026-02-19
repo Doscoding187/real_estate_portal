@@ -17,7 +17,7 @@ import {
   type OwnershipType,
   type StructuralType,
   type FloorType,
-} from '@/shared/contract';
+} from '../../../shared/db-enums';
 
 // Re-export for convenience (optional, but keeps imports clean)
 export type { OwnershipType, StructuralType, FloorType };

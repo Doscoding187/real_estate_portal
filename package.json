@@ -22,6 +22,7 @@
     "lint": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
     "test": "vitest run",
+    "demo:gate": "pnpm build && pnpm vitest run server/__tests__/smoke.superadmin-publishing.test.ts",
     "test:integration": "vitest run tests/integration",
     "db:verify": "tsx scripts/db-contract-verify.ts",
     "db:verify:ci": "tsx scripts/db-contract-verify.ts --format=json",
@@ -95,6 +96,7 @@
     "cmdk": "^1.1.1",
     "cookie": "^1.0.2",
     "cors": "^2.8.5",
+    "cross-env": "^10.1.0",
     "csurf": "^1.11.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
@@ -129,14 +131,13 @@
     "superjson": "^1.13.3",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.19.1",
     "uuid": "^13.0.0",
     "vaul": "^1.1.2",
     "virtua": "^0.48.2",
     "wouter": "^3.3.5",
     "zod": "3.24.1",
-    "zustand": "^5.0.8",
-    "cross-env": "^10.1.0",
-    "tsx": "^4.19.1"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -190,6 +191,10 @@
   "pnpm": {
     "overrides": {
       "tailwindcss>nanoid": "3.3.7"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
   }
 }

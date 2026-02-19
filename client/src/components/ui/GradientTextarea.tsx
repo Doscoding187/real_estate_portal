@@ -52,7 +52,8 @@ const GradientTextarea = React.forwardRef<HTMLTextAreaElement, GradientTextareaP
     },
     ref,
   ) => {
-    const textareaId = id || `textarea-${React.useId()}`;
+    const generatedId = React.useId();
+    const textareaId = id ?? `textarea-${generatedId}`;
     const hasError = !!error;
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 

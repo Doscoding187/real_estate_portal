@@ -11,7 +11,7 @@
 
 import { getDb } from '../db';
 import { locations, provinces, cities, suburbs } from '../../drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { PlaceDetails, extractHierarchy } from './googlePlacesService';
 
 // ============================================================================
@@ -191,7 +191,7 @@ export const locationPagesServiceEnhanced = {
           eq(locations.parentId, input.parentId),
           eq(locations.type, input.type),
         )
-      : and(eq(locations.slug, slug), eq(locations.parentId, null), eq(locations.type, input.type));
+      : and(eq(locations.slug, slug), isNull(locations.parentId), eq(locations.type, input.type));
 
     const existingBySlug = await db.select().from(locations).where(slugWhere).limit(1);
 

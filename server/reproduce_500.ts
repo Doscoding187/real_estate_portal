@@ -56,7 +56,7 @@ async function main() {
         name: 'Failure Bundle Tester',
         createdAt: new Date(),
         updatedAt: new Date(),
-        lastSignedIn: new Date(),
+        lastSignedIn: new Date().toISOString(),
         emailVerified: 0,
         loginMethod: 'email',
         // Add other required user fields with defaults if strict

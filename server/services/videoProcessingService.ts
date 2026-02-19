@@ -6,9 +6,6 @@
  */
 
 import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { db } from '../db';
-import { exploreContent } from '../../drizzle/schema';
-import { eq, and } from 'drizzle-orm';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'eu-north-1',
@@ -66,93 +63,11 @@ export async function queueVideoForTranscoding(
   contentId: number,
   videoUrl: string,
 ): Promise<{ jobId?: string; status: string }> {
-  if (!VIDEO_PIPELINE_ENABLED) {
-    console.warn(
-      '[VideoProcessing] Pipeline disabled in Phase 1 – marking as completed with original',
-    );
-    return { status: 'completed' };
-  }
-
-  try {
-    const s3Key = extractS3Key(videoUrl);
-    const inputPath = `s3://${S3_BUCKET_NAME}/${s3Key}`;
-    const outputPath = `s3://${S3_BUCKET_NAME}/transcoded/${contentId}`;
-
-    // Mark as queued (in exploreContent)
-    await db
-      .update(exploreContent)
-      .set({
-        transcodedUrls: JSON.stringify({
-          status: 'queued',
-          queuedAt: new Date().toISOString(),
-          inputPath,
-          outputPath,
-        }),
-        processingStatus: 'queued', // optional – add this column if you want
-      })
-      .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
-
-    // Try MediaConvert if configured
-    if (MEDIACONVERT_ENDPOINT && MEDIACONVERT_ROLE_ARN) {
-      try {
-        const jobId = await submitMediaConvertJob(inputPath, outputPath, contentId);
-
-        await db
-          .update(exploreContent)
-          .set({
-            transcodedUrls: JSON.stringify({
-              status: 'processing',
-              queuedAt: new Date().toISOString(),
-              jobId,
-              inputPath,
-              outputPath,
-            }),
-            processingStatus: 'processing',
-          })
-          .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
-
-        return { jobId, status: 'processing' };
-      } catch (err: any) {
-        console.error('[VideoProcessing] MediaConvert failed, falling back:', err.message);
-      }
-    }
-
-    // Fallback: use original video
-    const fallbackUrls: Record<string, string> = {};
-    VIDEO_FORMATS.forEach(f => (fallbackUrls[f.quality] = videoUrl));
-
-    await db
-      .update(exploreContent)
-      .set({
-        transcodedUrls: JSON.stringify({
-          status: 'completed',
-          completedAt: new Date().toISOString(),
-          ...fallbackUrls,
-          note: 'Original video used (MediaConvert not configured or disabled)',
-        }),
-        processingStatus: 'completed',
-      })
-      .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
-
-    return { status: 'completed' };
-  } catch (error: any) {
-    console.error('[VideoProcessing] Queue failed:', error);
-
-    await db
-      .update(exploreContent)
-      .set({
-        transcodedUrls: JSON.stringify({
-          status: 'failed',
-          error: error.message,
-          failedAt: new Date().toISOString(),
-        }),
-        processingStatus: 'failed',
-      })
-      .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')))
-      .catch(() => {});
-
-    throw error;
-  }
+  console.warn(
+    '[VideoProcessing] Pipeline disabled in Phase 1 ? skipping transcoding for content',
+    contentId,
+  );
+  return { status: 'completed' };
 }
 
 /**
@@ -172,24 +87,10 @@ async function submitMediaConvertJob(
  * Called after transcoding finishes (usually via webhook)
  */
 export async function updateTranscodedUrls(
-  contentId: number,
-  transcodedVideos: TranscodedVideo[],
+  _contentId: number,
+  _transcodedVideos: TranscodedVideo[],
 ): Promise<void> {
-  if (!VIDEO_PIPELINE_ENABLED) {
-    console.warn('[VideoProcessing] Pipeline disabled – ignoring transcoded URLs update');
-    return;
-  }
-
-  const map: Record<string, string> = {};
-  transcodedVideos.forEach(v => (map[v.quality] = v.url));
-
-  await db
-    .update(exploreContent)
-    .set({
-      transcodedUrls: JSON.stringify(map),
-      processingStatus: 'completed',
-    })
-    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
+  console.warn('[VideoProcessing] Pipeline disabled ? transcoded URLs not stored');
 }
 
 /**
@@ -272,7 +173,9 @@ export async function extractVideoMetadata(
       }),
     );
     fileSize = head.ContentLength || 0;
-  } catch {}
+  } catch (_error) {
+    // Continue with conservative defaults when metadata lookup fails.
+  }
 
   const duration = providedDuration ?? 30;
   const bitrate = fileSize > 0 ? Math.floor((fileSize * 8) / duration) : 5_000_000;
@@ -376,67 +279,22 @@ export async function processUploadedVideo(
  * Webhook / callback handler
  */
 export async function handleTranscodingComplete(
-  contentId: number,
-  jobId: string,
-  outputUrls: Record<string, string>,
+  _contentId: number,
+  _jobId: string,
+  _outputUrls: Record<string, string>,
 ): Promise<void> {
-  if (!VIDEO_PIPELINE_ENABLED) {
-    console.warn('[VideoProcessing] Pipeline disabled – ignoring complete webhook');
-    return;
-  }
-
-  await db
-    .update(exploreContent)
-    .set({
-      transcodedUrls: JSON.stringify({
-        status: 'completed',
-        completedAt: new Date().toISOString(),
-        jobId,
-        ...outputUrls,
-      }),
-      processingStatus: 'completed',
-    })
-    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
+  console.warn('[VideoProcessing] Transcoding completion ignored (no transcoded_urls column).');
 }
 
 /**
  * Query current transcoding status
  */
-export async function getTranscodingStatus(contentId: number): Promise<{
+export async function getTranscodingStatus(_contentId: number): Promise<{
   status: string;
   jobId?: string;
   completedAt?: string;
   error?: string;
   urls?: Record<string, string>;
 }> {
-  const rows = await db
-    .select({ transcodedUrls: exploreContent.transcodedUrls })
-    .from(exploreContent)
-    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')))
-    .limit(1);
-
-  const record = rows[0];
-  if (!record) throw new Error(`Video content ${contentId} not found`);
-
-  if (!record.transcodedUrls) return { status: 'not_started' };
-
-  const data =
-    typeof record.transcodedUrls === 'string'
-      ? JSON.parse(record.transcodedUrls)
-      : record.transcodedUrls;
-
-  return {
-    status: data.status || 'unknown',
-    jobId: data.jobId,
-    completedAt: data.completedAt,
-    error: data.error,
-    urls:
-      data.status === 'completed'
-        ? {
-            '1080p': data['1080p'],
-            '720p': data['720p'],
-            '480p': data['480p'],
-          }
-        : undefined,
-  };
+  return { status: 'not_started' };
 }

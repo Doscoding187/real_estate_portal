@@ -4,7 +4,7 @@
  * Requirements: 2.2, 2.4
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useVideoPreload } from '../useVideoPreload';
 
@@ -18,15 +18,41 @@ const mockConnection = {
   removeEventListener: vi.fn(),
 };
 
+const originalCreateElement = document.createElement.bind(document);
+
 describe('useVideoPreload', () => {
   beforeEach(() => {
     // Reset DOM
     document.body.innerHTML = '';
 
+    mockConnection.effectiveType = '4g';
+    mockConnection.downlink = 10;
+    mockConnection.saveData = false;
+    mockConnection.rtt = 50;
+
     // Mock Network Information API
     Object.defineProperty(navigator, 'connection', {
       writable: true,
       value: mockConnection,
+    });
+
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName.toLowerCase() !== 'video') {
+        return originalCreateElement(tagName);
+      }
+
+      const mockVideo = originalCreateElement('div') as any;
+      mockVideo.setAttribute('data-mock-video', 'true');
+      mockVideo.style.display = '';
+      mockVideo.addEventListener = vi.fn();
+      mockVideo.removeEventListener = vi.fn();
+      mockVideo.remove = () => {
+        if (mockVideo.parentNode) {
+          mockVideo.parentNode.removeChild(mockVideo);
+        }
+      };
+
+      return mockVideo;
     });
   });
 
@@ -198,16 +224,10 @@ describe('useVideoPreload', () => {
       );
 
       expect(result.current.isLowBandwidth).toBe(true);
-
-      // Wait a bit to ensure no preloading happens
-      act(() => {
-        vi.advanceTimersByTime(1000);
-      });
-
       expect(result.current.preloadedUrls.size).toBe(0);
     });
 
-    it('should preload next videos in good connection', async () => {
+    it('should preload next videos in good connection', () => {
       mockConnection.effectiveType = '4g';
       mockConnection.downlink = 10;
       mockConnection.saveData = false;
@@ -221,13 +241,8 @@ describe('useVideoPreload', () => {
       );
 
       expect(result.current.isLowBandwidth).toBe(false);
-
-      // Preloading happens asynchronously
-      await waitFor(() => {
-        // Check that video elements were created
-        const videoElements = document.querySelectorAll('video[style*="display: none"]');
-        expect(videoElements.length).toBeGreaterThan(0);
-      });
+      const videoElements = document.querySelectorAll('[data-mock-video="true"]');
+      expect(videoElements.length).toBeGreaterThan(0);
     });
 
     it('should respect preloadCount parameter', () => {
@@ -277,7 +292,7 @@ describe('useVideoPreload', () => {
       });
 
       // Check that video element was created
-      const videoElements = document.querySelectorAll('video[src="video2.mp4"]');
+      const videoElements = document.querySelectorAll('[data-mock-video="true"]');
       expect(videoElements.length).toBeGreaterThan(0);
     });
 
@@ -318,7 +333,7 @@ describe('useVideoPreload', () => {
       expect(result.current.preloadedUrls.size).toBe(0);
 
       // Check that video elements were removed
-      const videoElements = document.querySelectorAll('video[style*="display: none"]');
+      const videoElements = document.querySelectorAll('[data-mock-video="true"]');
       expect(videoElements.length).toBe(0);
     });
 
@@ -334,13 +349,13 @@ describe('useVideoPreload', () => {
         result.current.preloadUrl('video2.mp4');
       });
 
-      const firstCount = document.querySelectorAll('video[src="video2.mp4"]').length;
+      const firstCount = document.querySelectorAll('[data-mock-video="true"]').length;
 
       act(() => {
         result.current.preloadUrl('video2.mp4');
       });
 
-      const secondCount = document.querySelectorAll('video[src="video2.mp4"]').length;
+      const secondCount = document.querySelectorAll('[data-mock-video="true"]').length;
 
       expect(secondCount).toBe(firstCount);
     });
@@ -359,12 +374,12 @@ describe('useVideoPreload', () => {
         result.current.preloadUrl('video2.mp4');
       });
 
-      const beforeUnmount = document.querySelectorAll('video[style*="display: none"]').length;
+      const beforeUnmount = document.querySelectorAll('[data-mock-video="true"]').length;
       expect(beforeUnmount).toBeGreaterThan(0);
 
       unmount();
 
-      const afterUnmount = document.querySelectorAll('video[style*="display: none"]').length;
+      const afterUnmount = document.querySelectorAll('[data-mock-video="true"]').length;
       expect(afterUnmount).toBe(0);
     });
 

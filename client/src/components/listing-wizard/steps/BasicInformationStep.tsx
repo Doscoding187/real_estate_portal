@@ -137,8 +137,11 @@ const BasicInformationStep: React.FC = () => {
 
   // Update handlers
   const updateBasicInfo = (field: string, value: any) => {
-    store.setBasicInfo?.({ ...basicInfo, [field]: value }) ||
-      store.updatePropertyDetail?.(field, value);
+    if (store.setBasicInfo) {
+      store.setBasicInfo({ ...basicInfo, [field]: value });
+      return;
+    }
+    store.updatePropertyDetail?.(field, value);
   };
 
   const updateTitle = (value: string) => {

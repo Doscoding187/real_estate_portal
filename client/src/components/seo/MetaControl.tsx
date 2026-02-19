@@ -4,9 +4,18 @@ import { useLocation } from 'wouter';
 interface MetaControlProps {
   canonicalUrl?: string; // Explicit canonical URL (e.g., from backend or constructed)
   forceNoIndex?: boolean; // Manual override
+  title?: string;
+  description?: string;
+  image?: string;
 }
 
-export function MetaControl({ canonicalUrl, forceNoIndex = false }: MetaControlProps) {
+export function MetaControl({
+  canonicalUrl,
+  forceNoIndex = false,
+  title,
+  description,
+  image,
+}: MetaControlProps) {
   const [location] = useLocation();
 
   // Logic to determine if page should be noindexed
@@ -52,6 +61,11 @@ export function MetaControl({ canonicalUrl, forceNoIndex = false }: MetaControlP
 
   return (
     <Helmet>
+      {title && <title>{title}</title>}
+      {description && <meta name="description" content={description} />}
+      {title && <meta property="og:title" content={title} />}
+      {description && <meta property="og:description" content={description} />}
+      {image && <meta property="og:image" content={image} />}
       {isNoIndex && <meta name="robots" content="noindex, follow" />}
       {!isNoIndex && <meta name="robots" content="index, follow" />}
       {currentCanonical && <link rel="canonical" href={currentCanonical} />}

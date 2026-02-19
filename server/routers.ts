@@ -17,7 +17,16 @@ import { locationRouter } from './locationRouter';
 import { enhancedLocationRouter } from './enhancedLocationRouter';
 import { googleMapsRouter } from './googleMapsRouter';
 import { priceInsightsRouter } from './priceInsightsRouter';
-import { devRouter } from './devRouter'; // ⚠️ DEV ONLY - Remove before production
+import { devRouter } from './devRouter';
+import { requireUser } from './_core/requireUser'; // ⚠️ DEV ONLY - Remove before production
+
+function getUserId(ctx: { user: { id: number } | null }) {
+  return requireUser(ctx).id;
+}
+
+function getUser(ctx: { user: { id: number; role?: string } | null }) {
+  return requireUser(ctx);
+}
 import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
@@ -29,8 +38,8 @@ import { subscriptionRouter } from './subscriptionRouter';
 import { developerRouter } from './developerRouter';
 import { exploreRouter } from './exploreRouter';
 import { exploreVideoUploadRouter } from './exploreVideoUploadRouter';
-// import { recommendationEngineRouter } from './recommendationEngineRouter'; // TODO: Fix syntax errors in this file
-// import { exploreApiRouter } from './exploreApiRouter'; // TODO: Fix syntax errors in this file
+import { recommendationEngineRouter } from './recommendationEngineRouter';
+import { exploreApiRouter } from './exploreApiRouter';
 // import { boostCampaignRouter } from './boostCampaignRouter'; // TODO: Fix syntax errors in this file
 import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
 import { analyticsRouter } from './analyticsRouter';
@@ -43,6 +52,9 @@ import { partnerRouter } from './partnerRouter';
 import { brandProfileRouter } from './brandProfileRouter';
 import { brandEmulatorRouter } from './brandEmulatorRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
+import { favoritesRouter } from './favoritesRouter';
+import { reviewsRouter } from './reviewsRouter';
+import { leadsRouter } from './leadsRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -73,8 +85,8 @@ export const appRouter = router({
   developer: developerRouter,
   explore: exploreRouter,
   exploreVideoUpload: exploreVideoUploadRouter,
-  // recommendationEngine: recommendationEngineRouter, // TODO: Fix syntax errors in this file
-  // exploreApi: exploreApiRouter, // TODO: Fix syntax errors in this file
+  recommendationEngine: recommendationEngineRouter,
+  exploreApi: exploreApiRouter,
   // boostCampaign: boostCampaignRouter, // TODO: Fix syntax errors in this file
   exploreAnalytics: exploreAnalyticsRouter,
   similarProperties: similarPropertiesRouter,
@@ -83,6 +95,9 @@ export const appRouter = router({
   brandProfile: brandProfileRouter,
   brandEmulator: brandEmulatorRouter,
   superAdminPublisher: superAdminPublisherRouter,
+  favorites: favoritesRouter,
+  reviews: reviewsRouter,
+  leads: leadsRouter,
 
   propertyResults: propertyResultsRouter,
 
@@ -98,6 +113,9 @@ export const appRouter = router({
   }),
 
   properties: router({
+    myProperties: publicProcedure.query(async () => {
+      return [] as any[];
+    }),
     search: publicProcedure
       .input(
         z.object({
@@ -143,6 +161,7 @@ export const appRouter = router({
           sortOption: z
             .enum(['price_asc', 'price_desc', 'date_desc', 'date_asc', 'suburb_asc', 'suburb_desc'])
             .optional(), // Added sort option support
+          includeDevelopments: z.boolean().optional(),
         }),
       )
       .query(async ({ input }) => {
@@ -181,12 +200,103 @@ export const appRouter = router({
 
         // Use the service
         // We defaults/fallbacks are handled inside service or here
-        return await propertySearchService.searchProperties(
+        const propertyResults = await propertySearchService.searchProperties(
           filters,
           (input.sortOption as any) || 'date_desc',
           page,
           input.limit,
         );
+
+        if (!input.includeDevelopments) {
+          return propertyResults;
+        }
+
+        const { developmentService } = await import('./services/developmentService');
+        const nearbyDevelopments = await developmentService.listPublicDevelopments({
+          province: input.province,
+          city: input.city,
+          limit: Math.min(input.limit, 6),
+        });
+
+        const filteredDevelopments =
+          input.suburb && input.suburb.length > 0
+            ? nearbyDevelopments.filter((dev: any) => {
+                const devSuburb = String(dev.suburb || '').toLowerCase();
+                if (!devSuburb) return false;
+                return input.suburb!.some(suburb => devSuburb.includes(suburb.toLowerCase()));
+              })
+            : nearbyDevelopments;
+
+        return {
+          ...propertyResults,
+          developments: {
+            items: filteredDevelopments.map((dev: any) => ({
+              id: Number(dev.id),
+              name: dev.name,
+              slug: dev.slug || null,
+              city: dev.city,
+              suburb: dev.suburb || null,
+              province: dev.province,
+              priceFrom: dev.priceFrom ?? null,
+              priceTo: dev.priceTo ?? null,
+              images: Array.isArray(dev.images) ? dev.images : [],
+              developerBrandProfileId: dev.developerBrandProfileId ?? null,
+            })),
+            total: filteredDevelopments.length,
+          },
+        };
+      }),
+
+    searchDevelopments: publicProcedure
+      .input(
+        z.object({
+          province: z.string().optional(),
+          city: z.string().optional(),
+          suburb: z.array(z.string()).optional(),
+          limit: z.number().default(20),
+          offset: z.number().default(0),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { developmentService } = await import('./services/developmentService');
+        const safeLimit = Math.max(1, Math.min(input.limit, 50));
+        const cappedOffset = Math.max(0, input.offset);
+        const poolLimit = Math.min(200, cappedOffset + safeLimit);
+
+        const allResults = await developmentService.listPublicDevelopments({
+          province: input.province,
+          city: input.city,
+          limit: poolLimit,
+        });
+
+        const filteredResults =
+          input.suburb && input.suburb.length > 0
+            ? allResults.filter((dev: any) => {
+                const devSuburb = String(dev.suburb || '').toLowerCase();
+                if (!devSuburb) return false;
+                return input.suburb!.some(suburb => devSuburb.includes(suburb.toLowerCase()));
+              })
+            : allResults;
+
+        const paged = filteredResults.slice(cappedOffset, cappedOffset + safeLimit);
+
+        return {
+          items: paged.map((dev: any) => ({
+            id: Number(dev.id),
+            name: dev.name,
+            slug: dev.slug || null,
+            city: dev.city,
+            suburb: dev.suburb || null,
+            province: dev.province,
+            priceFrom: dev.priceFrom ?? null,
+            priceTo: dev.priceTo ?? null,
+            images: Array.isArray(dev.images) ? dev.images : [],
+            developerBrandProfileId: dev.developerBrandProfileId ?? null,
+          })),
+          total: filteredResults.length,
+          limit: safeLimit,
+          offset: cappedOffset,
+        };
       }),
 
     featured: publicProcedure
@@ -221,7 +331,16 @@ export const appRouter = router({
       .query(async ({ input }) => {
         try {
           const { propertySearchService } = await import('./services/propertySearchService');
-          return await propertySearchService.getFilterCounts(input.filters || {});
+          const filters = input.filters || {};
+          const normalizedFilters = {
+            ...filters,
+            propertyType:
+              typeof filters.propertyType === 'string'
+                ? [filters.propertyType as any]
+                : filters.propertyType,
+            listingType: filters.listingType as any,
+          };
+          return await propertySearchService.getFilterCounts(normalizedFilters);
         } catch (error) {
           console.error('Error getting filter counts:', error);
           return { total: 0, byType: {}, byBedrooms: {}, byPriceRange: {} };
@@ -365,7 +484,7 @@ export const appRouter = router({
         }
 
         // Deduplicate
-        const uniqueAmenities = [...new Set(amenities)];
+        const uniqueAmenities = Array.from(new Set(amenities));
 
         return {
           property: {
@@ -432,10 +551,11 @@ export const appRouter = router({
         const propertyId = await db.createProperty({
           ...propertyData,
           amenities: input.amenities ? JSON.stringify(input.amenities) : null,
-          ownerId: ctx.user.id,
+          ownerId: getUserId(ctx),
           status: 'available',
           featured: 0,
           views: 0,
+          enquiries: 0,
           transactionType: input.listingType === 'rent' ? 'rent' : 'sale',
         });
 
@@ -498,16 +618,22 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Verify ownership
         const property = await db.getPropertyById(input.id);
-        if (!property || property.ownerId !== ctx.user.id) {
+        const user = getUser(ctx);
+        if (!property || property.ownerId !== user.id) {
           throw new Error('Unauthorized');
         }
 
         // Update property
-        await db.updateProperty(input.id, {
-          ...input,
-          amenities: input.amenities ? JSON.stringify(input.amenities) : undefined,
-          updatedAt: new Date(),
-        });
+        await db.updateProperty(
+          input.id,
+          user.id,
+          {
+            ...input,
+            amenities: input.amenities ? JSON.stringify(input.amenities) : undefined,
+            updatedAt: new Date().toISOString(),
+          },
+          user.role ?? undefined,
+        );
 
         return { success: true };
       }),
@@ -521,12 +647,13 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Verify ownership
         const property = await db.getPropertyById(input.id);
-        if (!property || property.ownerId !== ctx.user.id) {
+        const user = getUser(ctx);
+        if (!property || property.ownerId !== user.id) {
           throw new Error('Unauthorized');
         }
 
         // Delete property
-        await db.deleteProperty(input.id);
+        await db.deleteProperty(input.id, user.id, user.role ?? undefined);
 
         return { success: true };
       }),
@@ -539,18 +666,18 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        const existing = await db.isFavorite(ctx.user.id, input.propertyId);
+        const existing = await db.isFavorite(getUserId(ctx), input.propertyId);
         if (existing) {
-          await db.removeFavorite(ctx.user.id, input.propertyId);
+          await db.removeFavorite(getUserId(ctx), input.propertyId);
           return { favorited: false };
         } else {
-          await db.addFavorite(ctx.user.id, input.propertyId);
+          await db.addFavorite(getUserId(ctx), input.propertyId);
           return { favorited: true };
         }
       }),
 
     getFavorites: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserFavorites(ctx.user.id);
+      return await db.getUserFavorites(getUserId(ctx));
     }),
   }),
 });

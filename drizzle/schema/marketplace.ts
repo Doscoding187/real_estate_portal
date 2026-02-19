@@ -27,14 +27,6 @@ import { developments } from './developments';
 import { videos } from './media';
 import { exploreContent } from './explore';
 
-export const explorePartners = mysqlTable('explore_partners', {
-  id: int().autoincrement().notNull(),
-  name: varchar({ length: 255 }).notNull(),
-  logo: text(),
-  website: varchar({ length: 255 }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-});
-
 export const partnerTiers = mysqlTable('partner_tiers', {
   id: int().autoincrement().notNull(),
   name: varchar({ length: 100 }).notNull(),
@@ -156,26 +148,33 @@ export const bundlePartners = mysqlTable('bundle_partners', {
   createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export const boostCampaigns = mysqlTable('boost_campaigns', {
-  id: int().autoincrement().notNull(),
-  partnerId: int()
-    .notNull()
-    .references(() => partners.id, { onDelete: 'cascade' }),
-  contentId: int(), // Can link to various content types
-  contentType: mysqlEnum(['listing', 'development', 'profile', 'article']).notNull(),
-  budgetZar: int().notNull(),
-  creditsUsed: int().default(0).notNull(),
-  impressions: int().default(0).notNull(),
-  clicks: int().default(0).notNull(),
-  startDate: timestamp({ mode: 'string' }).notNull(),
-  endDate: timestamp({ mode: 'string' }).notNull(),
-  status: mysqlEnum(['scheduled', 'active', 'paused', 'completed', 'cancelled'])
-    .default('scheduled')
-    .notNull(),
-  targeting: json(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+export const boostCampaigns = mysqlTable(
+  'boost_campaigns',
+  {
+    id: varchar('id', { length: 36 }).notNull(),
+    partnerId: varchar('partner_id', { length: 36 }).notNull(),
+    contentId: varchar('content_id', { length: 36 }).notNull(),
+    topicId: varchar('topic_id', { length: 36 }).notNull(),
+    budget: decimal('budget', { precision: 10, scale: 2 }).notNull(),
+    spent: decimal('spent', { precision: 10, scale: 2 }).default('0.00'),
+    status: mysqlEnum('status', ['draft', 'active', 'paused', 'completed', 'depleted']).default(
+      'draft',
+    ),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date'),
+    impressions: int('impressions').default(0),
+    clicks: int('clicks').default(0),
+    costPerImpression: decimal('cost_per_impression', { precision: 6, scale: 4 }).default(
+      '0.1000',
+    ),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+  },
+  t => ({
+    topicIdx: index('idx_boost_campaigns_topic').on(t.topicId),
+    contentIdx: index('idx_boost_campaigns_content').on(t.contentId),
+    partnerIdx: index('idx_boost_campaigns_partner').on(t.partnerId),
+  }),
+);
 
 export const contentApprovalQueue = mysqlTable(
   'content_approval_queue',

@@ -192,7 +192,8 @@ export class RedisCacheManager {
       this.fallbackMode = false;
       console.log('Redis: Connection restored');
     } catch (error) {
-      console.error('Redis: Reconnection failed:', error.message);
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('Redis: Reconnection failed:', msg);
       setTimeout(() => {
         this.checkRedisConnection();
       }, 10000);
@@ -353,7 +354,7 @@ export class RedisCacheManager {
     try {
       if (this.redis && this.isConnected) {
         const info = await this.redis.info('memory');
-        const dbSize = await this.redis.dbSize();
+        const dbSize = await this.redis.dbsize();
 
         this.metrics.memoryUsage = this.parseMemoryUsage(info);
         this.metrics.keyCount = dbSize;

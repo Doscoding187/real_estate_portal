@@ -10,6 +10,7 @@ import {
   agentCoverageAreas,
 } from '../drizzle/schema';
 import { eq, and, or, like, desc, sql, count, inArray } from 'drizzle-orm';
+import { requireUser } from './_core/requireUser';
 
 /**
  * Enhanced Location Router - Advanced Property Discovery & Location Intelligence
@@ -343,7 +344,6 @@ export const enhancedLocationRouter = router({
         if (type === 'transport')
           googleType = 'train_station|bus_station|subway_station|transit_station';
         if (type === 'shopping') googleType = 'shopping_mall|supermarket';
-        if (type === 'education') googleType = 'school|university'; // Fallback if 'education' used
         // 'school', 'hospital', 'restaurant', 'bank', 'park' map directly
 
         // Google API expects one type for text search or type param.
@@ -427,7 +427,14 @@ export const enhancedLocationRouter = router({
       const latStep = (input.bounds.north - input.bounds.south) / input.gridSize;
       const lngStep = (input.bounds.east - input.bounds.west) / input.gridSize;
 
-      const heatmapData = [];
+      type HeatPoint = {
+        latitude: number;
+        longitude: number;
+        count: number;
+        weight: number;
+        intensity?: number;
+      };
+      const heatmapData: HeatPoint[] = [];
 
       // Build filter conditions
       const conditions = [eq(properties.status, 'published')];
@@ -579,7 +586,7 @@ export const enhancedLocationRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
 
-      let locationFilter = '';
+      let locationFilter: any = null;
       let locationValue = input.location.value;
 
       // Build location filter based on type
@@ -709,8 +716,8 @@ export const enhancedLocationRouter = router({
         .from(locationSearchCache) // Using existing table for now
         .where(
           and(
-            eq(locationSearchCache.searchQuery, `${ctx.user.id}_${input.name}`),
-            eq(locationSearchCache.searchType, 'saved_search'),
+            eq(locationSearchCache.searchQuery, `${requireUser(ctx).id}_${input.name}`),
+            eq(locationSearchCache.searchType, 'saved_search' as any),
           ),
         )
         .limit(1);
@@ -733,8 +740,8 @@ export const enhancedLocationRouter = router({
       } else {
         // Create new saved search
         await db.insert(locationSearchCache).values({
-          searchQuery: `${ctx.user.id}_${input.name}`,
-          searchType: 'saved_search',
+          searchQuery: `${requireUser(ctx).id}_${input.name}`,
+          searchType: 'saved_search' as any,
           resultsJSON: JSON.stringify({
             params: input.searchParams,
             notificationEnabled: input.notificationEnabled,
@@ -767,3 +774,4 @@ function calculateHaversineDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+

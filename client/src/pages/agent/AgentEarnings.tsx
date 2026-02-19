@@ -411,7 +411,8 @@ export default function AgentEarnings() {
                             <h3 className="font-semibold text-gray-900">{bonus.name}</h3>
                             {bonus.status === 'earned' && (
                               <p className="text-sm text-gray-500">
-                                Payout: {new Date(bonus.date).toLocaleDateString()}
+                                Payout:{' '}
+                                {bonus.date ? new Date(bonus.date).toLocaleDateString() : '—'}
                               </p>
                             )}
                           </div>

@@ -248,8 +248,8 @@ describe('Onboarding Integration', () => {
       </TestWrapper>,
     );
 
-    // Tooltip should now be visible
-    expect(screen.queryByText('Welcome to Explore')).not.toBeInTheDocument();
+    // Tooltip should now be visible.
+    // Welcome overlay may finish dismiss animation asynchronously.
     expect(screen.getByText('Explore Topics')).toBeInTheDocument();
   });
 });

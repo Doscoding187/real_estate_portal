@@ -12,6 +12,7 @@ import { brandEmulatorService } from './services/brandEmulatorService';
 import { TRPCError } from '@trpc/server';
 import { developerBrandProfileService } from './services/developerBrandProfileService';
 import { developmentService } from './services/developmentService';
+import { requireUser } from './_core/requireUser';
 
 export const brandEmulatorRouter = router({
   // ==========================================================================
@@ -151,6 +152,7 @@ export const brandEmulatorRouter = router({
     .mutation(async ({ input, ctx }) => {
       // Verify brand context first
       const brandContext = await brandContextService.verifyBrandContext(input.brandProfileId);
+      const user = requireUser(ctx);
 
       // Create development with proper platform ownership
       const metadata = {
@@ -159,7 +161,7 @@ export const brandEmulatorRouter = router({
       };
 
       const development = await developmentService.createDevelopment(
-        ctx.user.id,
+        user.id,
         input as any,
         metadata,
       );

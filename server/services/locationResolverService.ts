@@ -71,7 +71,7 @@ export class LocationResolverService {
     if (!provinceSlug) return null;
 
     // Construct original intent for display/debugging
-    const parts = [];
+    const parts: string[] = [];
     if (suburbSlug) parts.push(suburbSlug);
     if (citySlug) parts.push(citySlug);
     if (provinceSlug) parts.push(provinceSlug);

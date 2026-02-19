@@ -212,9 +212,11 @@ export default function OnboardingDemo() {
             <h2 className="text-xl font-semibold mb-4">Topics Navigation</h2>
             <div ref={topicsRef}>
               <TopicsNavigation
-                topics={MOCK_TOPICS}
-                selectedTopicSlug={selectedTopic}
-                onTopicSelect={setSelectedTopic}
+                {...({
+                  topics: MOCK_TOPICS,
+                  selectedTopicSlug: selectedTopic,
+                  onTopicSelect: setSelectedTopic,
+                } as any)}
               />
             </div>
           </Card>

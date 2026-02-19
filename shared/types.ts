@@ -844,6 +844,21 @@ export interface SearchResults {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  developments?: {
+    items: Array<{
+      id: number;
+      name: string;
+      slug: string | null;
+      city: string;
+      suburb?: string | null;
+      province: string;
+      priceFrom?: number | null;
+      priceTo?: number | null;
+      images?: any[];
+      developerBrandProfileId?: number | null;
+    }>;
+    total: number;
+  };
   locationContext?: {
     type: 'province' | 'city' | 'suburb';
     name: string;

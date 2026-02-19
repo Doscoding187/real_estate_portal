@@ -11,7 +11,6 @@ import { TabbedListingSection } from '@/components/location/TabbedListingSection
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
-import { FinalCTA } from '@/components/location/FinalCTA';
 import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -104,8 +103,6 @@ export default function ProvincePage({ params }: { params: { province: string } 
       <LocationPageLayout
         locationName={province.name}
         locationSlug={provinceSlug}
-        locationType="province"
-        heroImage="/images/province-hero.jpg"
         banner={
           <LocationHeroSection
             locationName={province.name}
@@ -259,7 +256,6 @@ export default function ProvincePage({ params }: { params: { province: string } 
             content={province.description || undefined}
           />
         }
-        finalCTA={<FinalCTA locationName={province.name} provinceSlug={provinceSlug} />}
       />
     </div>
   );

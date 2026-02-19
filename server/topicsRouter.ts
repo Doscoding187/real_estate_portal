@@ -38,7 +38,7 @@ router.get('/:slug', async (req, res) => {
     const hasSufficientContent = await topicsService.hasSufficientContent(topic.id);
 
     // Get related topics if content is insufficient
-    let relatedTopics = [];
+    let relatedTopics: any[] = [];
     if (!hasSufficientContent) {
       relatedTopics = await topicsService.getRelatedTopics(topic.id);
     }
@@ -126,7 +126,7 @@ router.get('/:slug/feed', async (req, res) => {
     );
 
     // Optionally get shorts for topic
-    let shorts = [];
+    let shorts: any[] = [];
     if (includeShorts === 'true') {
       shorts = await topicsService.getShortsForTopic(
         topic.id,
@@ -134,7 +134,6 @@ router.get('/:slug/feed', async (req, res) => {
           page: parseInt(page as string),
           limit: Math.floor(parseInt(limit as string) / 4), // 25% shorts
         },
-        filters,
       );
     }
 

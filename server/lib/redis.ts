@@ -42,7 +42,7 @@ export const CachePrefix = {
 class RedisCache {
   private client: RedisClientType | null = null;
   private isConnected = false;
-  private connectionPromise: Promise<void> | null = null;
+  private connectionPromise: Promise<unknown> | null = null;
   private fallbackCache: Map<string, { value: string; expiresAt: number }> = new Map();
 
   constructor() {
@@ -74,10 +74,11 @@ class RedisCache {
         console.log('[Redis] Reconnecting...');
       });
 
-      this.connectionPromise = this.client.connect();
+      this.connectionPromise = this.client.connect().then(() => undefined);
       await this.connectionPromise;
     } catch (error) {
-      console.error('[Redis] Failed to connect:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Redis] Failed to connect:', message);
       this.client = null;
       this.isConnected = false;
     }
@@ -110,7 +111,8 @@ class RedisCache {
       // Fallback to in-memory
       return this.getFallback<T>(key);
     } catch (error) {
-      console.error('[Redis] Get error:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Redis] Get error:', message);
       return this.getFallback<T>(key);
     }
   }
@@ -130,7 +132,8 @@ class RedisCache {
       // Fallback to in-memory
       this.setFallback(key, serialized, ttlSeconds);
     } catch (error) {
-      console.error('[Redis] Set error:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Redis] Set error:', message);
       this.setFallback(key, JSON.stringify(value), ttlSeconds);
     }
   }
@@ -145,7 +148,8 @@ class RedisCache {
       }
       this.fallbackCache.delete(key);
     } catch (error) {
-      console.error('[Redis] Delete error:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Redis] Delete error:', message);
       this.fallbackCache.delete(key);
     }
   }
@@ -170,7 +174,8 @@ class RedisCache {
         }
       }
     } catch (error) {
-      console.error('[Redis] Delete by pattern error:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Redis] Delete by pattern error:', message);
     }
   }
 

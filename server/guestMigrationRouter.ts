@@ -3,6 +3,7 @@ import { protectedProcedure, router } from './_core/trpc';
 import { getDb } from './db';
 import { favorites, recentlyViewed } from '../drizzle/schema';
 import { TRPCError } from '@trpc/server';
+import { requireUser } from './_core/requireUser';
 
 export const guestMigrationRouter = router({
   // Migrate guest activity data to user account
@@ -14,7 +15,7 @@ export const guestMigrationRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.user.id;
+      const userId = requireUser(ctx).id;
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -71,3 +72,4 @@ export const guestMigrationRouter = router({
       }
     }),
 });
+

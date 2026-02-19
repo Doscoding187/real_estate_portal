@@ -16,11 +16,7 @@ export default function OnboardingSuccess() {
   const [manualTriggerNeeded, setManualTriggerNeeded] = useState(false);
 
   // Query agency status
-  const {
-    data: agency,
-    refetch,
-    isLoading,
-  } = trpc.agency.getById.useQuery(
+  const agencyQuery = trpc.agency.getById.useQuery(
     { id: Number(agencyId) },
     {
       enabled: !!agencyId,
@@ -34,6 +30,8 @@ export default function OnboardingSuccess() {
       },
     },
   );
+  const { refetch } = agencyQuery;
+  const agency = agencyQuery.data as any;
 
   const triggerWebhook = trpc.dev?.triggerWebhookManual.useMutation();
   const isActive = agency?.subscriptionStatus === 'active';
@@ -151,12 +149,12 @@ export default function OnboardingSuccess() {
                 </p>
                 <Button
                   onClick={handleManualTrigger}
-                  disabled={triggerWebhook?.isLoading}
+                  disabled={triggerWebhook?.isPending}
                   variant="outline"
                   size="sm"
                   className="w-full"
                 >
-                  {triggerWebhook?.isLoading ? (
+                  {triggerWebhook?.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Triggering...

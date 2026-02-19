@@ -47,8 +47,8 @@ export default function ExploreMap() {
 
           <div className="flex-1 overflow-hidden">
             <LifestyleCategorySelector
-              selectedCategoryId={selectedCategoryId}
-              onCategoryChange={setSelectedCategoryId}
+              selectedCategoryId={selectedCategoryId ?? undefined}
+              onCategoryChange={id => setSelectedCategoryId(id ?? null)}
               variant="light"
             />
           </div>
@@ -83,7 +83,7 @@ export default function ExploreMap() {
         transition={{ duration: 0.4, delay: 0.1 }}
       >
         <MapHybridView
-          categoryId={selectedCategoryId}
+          categoryId={selectedCategoryId ?? undefined}
           filters={filters}
           onPropertyClick={handlePropertyClick}
         />

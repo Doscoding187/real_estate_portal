@@ -292,10 +292,14 @@ function computeAuctionRangeFromUnits(
         minReservePrice === null ? reservePrice : Math.min(minReservePrice, reservePrice);
     }
     if (startDate) {
-      earliestStart = earliestStart === null ? startDate : earliestStart > startDate ? startDate : earliestStart;
+      if (!earliestStart || startDate < earliestStart) {
+        earliestStart = startDate;
+      }
     }
     if (endDate) {
-      latestEnd = latestEnd === null ? endDate : latestEnd < endDate ? endDate : latestEnd;
+      if (!latestEnd || endDate > latestEnd) {
+        latestEnd = endDate;
+      }
     }
   }
 
@@ -345,6 +349,9 @@ function buildDeveloperDisplay(dev: any) {
   const brand = dev?.brandProfile ?? dev?.publisher ?? null;
   const developer = dev?.developer ?? null;
 
+  // Schema-safe: verification fields are not guaranteed to exist yet.
+  const isVerified = false;
+
   if (brand?.name) {
     return {
       type: 'brand_profile' as const,
@@ -353,6 +360,7 @@ function buildDeveloperDisplay(dev: any) {
       websiteUrl: brand.websiteUrl ?? null,
       description: brand.description ?? null,
       slug: brand.slug ?? undefined,
+      isVerified,
     };
   }
 
@@ -364,6 +372,7 @@ function buildDeveloperDisplay(dev: any) {
       websiteUrl: developer.website ?? null,
       description: developer.description ?? null,
       slug: developer.slug ?? undefined,
+      isVerified,
     };
   }
 
@@ -374,6 +383,7 @@ function buildDeveloperDisplay(dev: any) {
     websiteUrl: null,
     description: 'Professional property developer committed to quality and excellence.',
     slug: undefined,
+    isVerified,
   };
 }
 
@@ -605,6 +615,7 @@ export async function listPublicDevelopments(options: {
       slug: developments.slug,
       images: developments.images,
       city: developments.city,
+      suburb: developments.suburb,
       province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
@@ -2217,6 +2228,22 @@ async function requestChanges(id: number, adminId: number, notes: string) {
     .where(eq(developments.id, id));
 }
 
+async function unpublishDevelopment(id: number, adminId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database unavailable');
+
+  await db
+    .update(developments)
+    .set({
+      isPublished: 0,
+      publishedAt: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(developments.id, id));
+
+  return { success: true, id, adminId };
+}
+
 // ===========================================================================
 // DRAFT VS PUBLISH SEPARATION
 // ===========================================================================
@@ -2538,8 +2565,8 @@ async function getDevelopmentById(id: number) {
   const result = await db
     .select({
       id: developments.id,
-      title: developments.title,
-      brandProfileId: developments.brandProfileId,
+      title: developments.name,
+      brandProfileId: developments.developerBrandProfileId,
       slug: developments.slug,
       status: developments.status,
       // Add other required fields as needed
@@ -2549,6 +2576,16 @@ async function getDevelopmentById(id: number) {
     .limit(1);
 
   return result[0] || null;
+}
+
+async function getDevelopmentsByBrandId(brandProfileId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database unavailable');
+
+  return db
+    .select()
+    .from(developments)
+    .where(eq(developments.developerBrandProfileId, brandProfileId));
 }
 
 // ===========================================================================
@@ -2568,12 +2605,14 @@ export const developmentService = {
   updateDevelopment,
   getDevelopmentWithPhases,
   getDevelopmentById,
+  getDevelopmentsByBrandId,
   getDevelopmentsByDeveloperId,
   getDeveloperDevelopments: getDevelopmentsByDeveloperId,
   createPhase,
   updatePhase,
   deleteDevelopment,
   publishDevelopment,
+  unpublishDevelopment,
   saveDraft,
   publishDevelopmentStrict,
 };

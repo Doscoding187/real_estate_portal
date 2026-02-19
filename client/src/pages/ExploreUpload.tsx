@@ -423,7 +423,12 @@ export default function ExploreUpload() {
                   <div className="space-y-4">
                     <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-200">
                       <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                        {user?.username?.charAt(0).toUpperCase() || 'A'}
+                        {(
+                          user?.firstName?.charAt(0) ||
+                          (user as any)?.name?.charAt(0) ||
+                          user?.email?.charAt(0) ||
+                          'A'
+                        ).toUpperCase()}
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">Your Agency</p>

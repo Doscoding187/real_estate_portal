@@ -4,7 +4,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
  */
 
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useRoute } from 'wouter';
 import { ArrowLeft, MapPin, Users, Home, Video, Check } from 'lucide-react';
 import { useNeighbourhoodDetail } from '@/hooks/useNeighbourhoodDetail';
 import { AmenityDisplay } from '@/components/explore-discovery/AmenityDisplay';
@@ -14,8 +14,16 @@ import { PropertyCard } from '@/components/explore-discovery/cards/PropertyCard'
 import { FollowButton } from '@/components/explore-discovery/FollowButton';
 
 export default function NeighbourhoodDetail() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const [, params] = useRoute('/neighbourhood/:id');
+  const [, setLocation] = useLocation();
+  const navigate = (to: string | number) => {
+    if (typeof to === 'number') {
+      setLocation('/');
+      return;
+    }
+    setLocation(to);
+  };
+  const { id } = (params ?? {}) as { id?: string };
   const neighbourhoodId = parseInt(id || '0', 10);
 
   const { neighbourhood, videos, isLoading, error, isFollowing, toggleFollow, isTogglingFollow } =

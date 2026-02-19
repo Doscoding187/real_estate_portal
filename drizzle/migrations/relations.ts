@@ -449,9 +449,9 @@ export const leadsRelations = relations(leads, ({one, many}) => ({
 }));
 
 export const contentApprovalQueueRelations = relations(contentApprovalQueue, ({one}) => ({
-	explorePartner: one(explorePartners, {
-		fields: [contentApprovalQueue.partnerId],
-		references: [explorePartners.id]
+	submittedByUser: one(users, {
+		fields: [contentApprovalQueue.submittedBy],
+		references: [users.id]
 	}),
 }));
 

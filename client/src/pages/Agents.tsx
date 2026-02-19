@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export default function Agents() {
-  const { data: agents, isLoading } = trpc.agents.list.useQuery();
+  const { data: agents, isLoading } = trpc.agent.list.useQuery();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

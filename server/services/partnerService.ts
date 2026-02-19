@@ -2,7 +2,6 @@ import { db } from '../db';
 import {
   explorePartners,
   partnerTiers,
-  users,
   contentQualityScores,
   exploreContent,
 } from '../../drizzle/schema';
@@ -84,9 +83,8 @@ export class PartnerService {
       throw new Error('User already has a partner account');
     }
 
-    // Create partner with UUID
     const partnerId = randomUUID();
-    const [partner] = await db.insert(explorePartners).values({
+    await db.insert(explorePartners).values({
       id: partnerId,
       userId: data.userId,
       tierId: data.tierId,
@@ -97,9 +95,9 @@ export class PartnerService {
       trustScore: '50.00', // Default starting score
       serviceLocations: data.serviceLocations || [],
       approvedContentCount: 0,
-    });
+    } as any);
 
-    return partner;
+    return partnerId;
   }
 
   /**
@@ -312,7 +310,7 @@ export class PartnerService {
     await db
       .update(explorePartners)
       .set({
-        trustScore: finalScore.toString(),
+        trustScore: finalScore.toFixed(2),
         updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(explorePartners.id, partnerId));

@@ -20,7 +20,7 @@ interface OnboardingTooltipProps {
   isVisible: boolean;
   onDismiss: () => void;
   position?: 'top' | 'bottom' | 'left' | 'right';
-  targetRef?: React.RefObject<HTMLElement>;
+  targetRef?: React.RefObject<HTMLElement | null>;
 }
 
 const TOOLTIP_CONFIG = {
