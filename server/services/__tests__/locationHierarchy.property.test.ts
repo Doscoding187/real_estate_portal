@@ -154,27 +154,29 @@ describe('Location Hierarchy Property Tests', () => {
         return;
       }
 
-      // Get all locations with a parent_id
-      const locationsWithParents = await db
-        .select()
-        .from(locations)
-        .where(isNotNull(locations.parentId));
+      // Use a single transaction snapshot so concurrent cleanup in other suites
+      // does not cause false orphan detections between individual queries.
+      await db.transaction(async tx => {
+        const locationsWithParents = await tx
+          .select()
+          .from(locations)
+          .where(isNotNull(locations.parentId));
 
-      console.log(`Checking ${locationsWithParents.length} locations with parent_ids...`);
+        console.log(`Checking ${locationsWithParents.length} locations with parent_ids...`);
 
-      // For each location with a parent_id, verify the parent exists
-      for (const location of locationsWithParents) {
-        if (location.parentId !== null) {
-          const parent = await db
-            .select()
-            .from(locations)
-            .where(eq(locations.id, location.parentId))
-            .limit(1);
+        for (const location of locationsWithParents) {
+          if (location.parentId !== null) {
+            const parent = await tx
+              .select()
+              .from(locations)
+              .where(eq(locations.id, location.parentId))
+              .limit(1);
 
-          expect(parent).toHaveLength(1);
-          expect(parent[0].id).toBe(location.parentId);
+            expect(parent).toHaveLength(1);
+            expect(parent[0].id).toBe(location.parentId);
+          }
         }
-      }
+      });
     },
   );
 
