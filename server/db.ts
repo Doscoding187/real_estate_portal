@@ -3148,7 +3148,9 @@ export async function listPartners({
   }
 
   if (search) {
-    conditions.push(or(like(partners.name, `%${search}%`), like(partners.email, `%${search}%`))!);
+    conditions.push(
+      or(like(partners.companyName, `%${search}%`), like(partners.contactEmail, `%${search}%`))!,
+    );
   }
 
   const offset = (page - 1) * limit;
