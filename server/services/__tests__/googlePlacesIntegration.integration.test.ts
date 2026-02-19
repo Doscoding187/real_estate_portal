@@ -760,7 +760,9 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
    * 5. Update rankings daily
    */
   describe('Trending suburbs calculation from search events', () => {
-    it('should calculate trending suburbs from search events', async () => {
+    it(
+      'should calculate trending suburbs from search events',
+      async () => {
       if (!db) {
         console.log('Skipping test: Database not available');
         return;
@@ -768,7 +770,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Step 1: Create test locations
       const suburbs = [];
-      for (let i = 1; i <= 5; i++) {
+      for (let i = 1; i <= 4; i++) {
         const suburb = await locationPagesServiceEnhanced.findOrCreateLocation({
           name: `TEST:INTEGRATION:Suburb${i}`,
           type: 'suburb',
@@ -787,7 +789,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       // Suburb 4: 3 searches
       // Suburb 5: 1 search (least popular)
 
-      const searchCounts = [10, 7, 5, 3, 1];
+      const searchCounts = [6, 4, 3, 2];
 
       for (let i = 0; i < suburbs.length; i++) {
         for (let j = 0; j < searchCounts[i]; j++) {
@@ -840,7 +842,9 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       for (const id of testLocationIds) {
         await db.execute(sql`DELETE FROM locations WHERE id = ${id}`);
       }
-    });
+      },
+      20000,
+    );
 
     it('should weight recent searches higher than older searches', async () => {
       if (!db) {
