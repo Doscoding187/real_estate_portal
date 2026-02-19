@@ -1078,12 +1078,11 @@ const createActions = (
             errors.push('Description is required');
           } else if (overviewDescLen < 50) {
             errors.push('Description must be at least 50 characters');
-          {
-            const status = state.developmentData?.status;
-            if (status === 'launching-soon' || status === 'selling') {
-              if (!state.developmentData?.completionDate)
-                errors.push('Expected completion date is required for this status');
-            }
+          }
+          const status = state.developmentData?.status;
+          if (status === 'launching-soon' || status === 'selling') {
+            if (!state.developmentData?.completionDate)
+              errors.push('Expected completion date is required for this status');
           }
           break;
         case 9:
