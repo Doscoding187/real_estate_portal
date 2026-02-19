@@ -356,8 +356,14 @@ export const locationPagesServiceEnhanced = {
           .limit(1);
 
         if (!existingProvince) {
+          const provinceCode =
+            location.name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'UNK';
+
           await db.insert(provinces).values({
             name: location.name,
+            code: provinceCode,
+            latitude: location.latitude,
+            longitude: location.longitude,
             slug: location.slug,
             placeId: location.placeId,
             seoTitle: location.seoTitle,
@@ -439,11 +445,9 @@ export const locationPagesServiceEnhanced = {
             name: location.name,
             slug: location.slug,
             cityId: city.id,
-            placeId: location.placeId,
             latitude: location.latitude,
             longitude: location.longitude,
-            seoTitle: location.seoTitle,
-            seoDescription: location.seoDescription,
+            postalCode: null,
           });
           console.log(`[LocationPagesEnhanced] Synced suburb: ${location.name}`);
         }

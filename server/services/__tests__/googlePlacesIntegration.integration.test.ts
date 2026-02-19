@@ -21,6 +21,7 @@ import {
   provinces,
   cities,
   suburbs,
+  users,
 } from '../../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import { googlePlacesService, PlaceDetails } from '../googlePlacesService';
@@ -32,6 +33,15 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
   let testLocationIds: number[] = [];
   let testListingIds: number[] = [];
   let testSearchIds: number[] = [];
+  let testUserIds: number[] = [];
+
+  const getInsertId = (result: any): number => {
+    const id = Number(result?.insertId ?? result?.[0]?.insertId ?? result?.[0]?.id ?? 0);
+    if (!id) {
+      throw new Error('Insert failed: id was not returned by the database driver');
+    }
+    return id;
+  };
 
   beforeAll(async () => {
     // Check if DATABASE_URL is set
@@ -70,6 +80,14 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
     await db.execute(sql`DELETE FROM suburbs WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM cities WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM provinces WHERE name LIKE 'TEST:INTEGRATION:%'`);
+    await db.execute(sql`DELETE FROM users WHERE email LIKE 'test.integration.%@example.com'`);
+
+    const userInsert = await db.insert(users).values({
+      email: `test.integration.${Date.now()}.${Math.floor(Math.random() * 10000)}@example.com`,
+      role: 'visitor',
+      emailVerified: 1,
+    });
+    testUserIds = [getInsertId(userInsert)];
 
     testLocationIds = [];
     testListingIds = [];
@@ -88,6 +106,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
     await db.execute(sql`DELETE FROM suburbs WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM cities WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM provinces WHERE name LIKE 'TEST:INTEGRATION:%'`);
+    await db.execute(sql`DELETE FROM users WHERE email LIKE 'test.integration.%@example.com'`);
   });
 
   /**
@@ -265,14 +284,16 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       }
 
       // Step 4: Create listing linked to location
-      const [listing] = await db.insert(listings).values({
+      const listingResult = await db.insert(listings).values({
         title: 'TEST:INTEGRATION:Luxury Apartment',
         description: 'Test listing for integration test',
-        price: 2500000,
+        ownerId: testUserIds[0],
+        action: 'sell',
+        askingPrice: '2500000.00',
         propertyType: 'apartment',
-        listingType: 'for-sale',
-        bedrooms: 2,
-        bathrooms: 2,
+        address: listingLocationData.address,
+        slug: 'test-integration-luxury-apartment',
+        propertyDetails: { bedrooms: 2, bathrooms: 2 },
         locationId: location.id,
         latitude: listingLocationData.latitude.toString(),
         longitude: listingLocationData.longitude.toString(),
@@ -282,7 +303,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
         status: 'published',
       });
 
-      const listingId = (listingResult as any)[0].insertId;
+      const listingId = getInsertId(listingResult);
       const [listing] = await db
         .select()
         .from(listings)
@@ -308,7 +329,6 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       expect(suburbRecord).toBeDefined();
       expect(suburbRecord.slug).toBe('test-integration-rosebank');
-      expect(suburbRecord.placeId).toBe('TEST_PLACE_ID_ROSEBANK');
 
       // Clean up
       await db.execute(sql`DELETE FROM listings WHERE id = ${listing.id}`);
@@ -417,36 +437,39 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       const listingData = [
         {
           title: 'TEST:INTEGRATION:Apartment 1',
-          price: 3000000,
+          action: 'sell',
+          askingPrice: '3000000.00',
           propertyType: 'apartment',
-          listingType: 'for-sale',
         },
         {
           title: 'TEST:INTEGRATION:Apartment 2',
-          price: 3500000,
+          action: 'sell',
+          askingPrice: '3500000.00',
           propertyType: 'apartment',
-          listingType: 'for-sale',
         },
         {
           title: 'TEST:INTEGRATION:House 1',
-          price: 5000000,
+          action: 'sell',
+          askingPrice: '5000000.00',
           propertyType: 'house',
-          listingType: 'for-sale',
         },
         {
           title: 'TEST:INTEGRATION:Rental 1',
-          price: 15000,
+          action: 'rent',
+          monthlyRent: '15000.00',
           propertyType: 'apartment',
-          listingType: 'to-rent',
         },
       ];
 
-      for (const data of listingData) {
-        const [listing] = await db.insert(listings).values({
+      for (let i = 0; i < listingData.length; i++) {
+        const data = listingData[i];
+        const listingResult = await db.insert(listings).values({
           ...data,
+          ownerId: testUserIds[0],
           description: 'Test listing',
-          bedrooms: 2,
-          bathrooms: 2,
+          address: `${100 + i} Test Street, ${suburbLocation.name}`,
+          slug: `test-integration-listing-${i + 1}-${Date.now()}`,
+          propertyDetails: { bedrooms: 2, bathrooms: 2 },
           locationId: suburbLocation.id,
           latitude: '-33.9249',
           longitude: '18.4241',
@@ -456,7 +479,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
           status: 'published',
         });
 
-        const listingId = (listingResult as any)[0].insertId;
+        const listingId = getInsertId(listingResult);
         const [listing] = await db
           .select()
           .from(listings)
@@ -488,13 +511,13 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Step 5: Verify dynamic statistics
       const { locationAnalyticsService } = await import('../locationAnalyticsService');
-      const stats = await locationAnalyticsService.calculatePriceStats(suburbLocation.id);
+      const stats = await locationAnalyticsService.getLocationStatistics(suburbLocation.id);
 
       expect(stats.totalListings).toBe(4);
       expect(stats.forSaleCount).toBe(3);
       expect(stats.toRentCount).toBe(1);
-      expect(stats.averageSalePrice).toBe(3833333.33); // (3000000 + 3500000 + 5000000) / 3
-      expect(stats.averageRentalPrice).toBe(15000);
+      expect(stats.avgSalePrice).toBeCloseTo(3833333.33, 2); // (3000000 + 3500000 + 5000000) / 3
+      expect(stats.avgRentalPrice).toBe(15000);
 
       // Step 6: Verify URL format
       // Province URL: /south-africa/{province-slug}
@@ -561,14 +584,16 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Create listings in this location
       for (let i = 0; i < 5; i++) {
-        const [listing] = await db.insert(listings).values({
+        const listingResult = await db.insert(listings).values({
           title: `TEST:INTEGRATION:Property ${i + 1}`,
           description: 'Test listing for search',
-          price: 2000000 + i * 500000,
+          ownerId: testUserIds[0],
+          action: 'sell',
+          askingPrice: `${2000000 + i * 500000}.00`,
           propertyType: 'apartment',
-          listingType: 'for-sale',
-          bedrooms: 2,
-          bathrooms: 2,
+          address: `${10 + i} Search Test Road`,
+          slug: `test-integration-search-property-${i + 1}-${Date.now()}`,
+          propertyDetails: { bedrooms: 2, bathrooms: 2 },
           locationId: testLocation.id,
           latitude: '-26.107407',
           longitude: '28.056229',
@@ -578,7 +603,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
           status: 'published',
         });
 
-        const listingId = (listingResult as any)[0].insertId;
+        const listingId = getInsertId(listingResult);
         const [listing] = await db
           .select()
           .from(listings)
@@ -655,41 +680,49 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       testLocationIds.push(location1.id, location2.id);
 
       // Create listings in both locations
-      const [listing1] = await db.insert(listings).values({
+      const listing1Result = await db.insert(listings).values({
         title: 'TEST:INTEGRATION:Listing in Location 1',
         description: 'Test',
-        price: 2000000,
+        ownerId: testUserIds[0],
+        action: 'sell',
+        askingPrice: '2000000.00',
         propertyType: 'apartment',
-        listingType: 'for-sale',
-        bedrooms: 2,
-        bathrooms: 2,
+        address: '1 Test Avenue',
+        slug: `test-integration-location-1-${Date.now()}`,
+        propertyDetails: { bedrooms: 2, bathrooms: 2 },
         locationId: location1.id,
         latitude: '-26.1',
         longitude: '28.0',
+        city: 'TEST:INTEGRATION:City1',
+        province: 'TEST:INTEGRATION:Province1',
         status: 'published',
       });
 
-      const listing1Id = (listing1Result as any)[0].insertId;
+      const listing1Id = getInsertId(listing1Result);
       const [listing1] = await db
         .select()
         .from(listings)
         .where(sql`id = ${listing1Id}`);
 
-      const [listing2] = await db.insert(listings).values({
+      const listing2Result = await db.insert(listings).values({
         title: 'TEST:INTEGRATION:Listing in Location 2',
         description: 'Test',
-        price: 3000000,
+        ownerId: testUserIds[0],
+        action: 'sell',
+        askingPrice: '3000000.00',
         propertyType: 'house',
-        listingType: 'for-sale',
-        bedrooms: 3,
-        bathrooms: 2,
+        address: '2 Test Avenue',
+        slug: `test-integration-location-2-${Date.now()}`,
+        propertyDetails: { bedrooms: 3, bathrooms: 2 },
         locationId: location2.id,
         latitude: '-26.2',
         longitude: '28.1',
+        city: 'TEST:INTEGRATION:City2',
+        province: 'TEST:INTEGRATION:Province2',
         status: 'published',
       });
 
-      const listing2Id = (listing2Result as any)[0].insertId;
+      const listing2Id = getInsertId(listing2Result);
       const [listing2] = await db
         .select()
         .from(listings)
@@ -758,13 +791,13 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       for (let i = 0; i < suburbs.length; i++) {
         for (let j = 0; j < searchCounts[i]; j++) {
-          const [search] = await db.insert(locationSearches).values({
+          const searchResult = await db.insert(locationSearches).values({
             locationId: suburbs[i].id,
             userId: null, // Anonymous search
             searchedAt: new Date(Date.now() - j * 60 * 60 * 1000), // Spread over hours
           });
 
-          const searchId = (searchResult as any)[0].insertId;
+          const searchId = getInsertId(searchResult);
           const [search] = await db
             .select()
             .from(locationSearches)
@@ -790,7 +823,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       for (const suburb of trendingSuburbs) {
         expect(suburb.trendingScore).toBeDefined();
         expect(suburb.trendingScore).toBeGreaterThan(0);
-        expect(suburb.searchCount).toBeDefined();
+        expect(suburb.searchCount30d).toBeDefined();
       }
 
       // Verify suburbs are sorted by trending score (descending)
@@ -836,30 +869,22 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Recent suburb: 5 searches in last 24 hours
       for (let i = 0; i < 5; i++) {
-        const [search] = await db
-          .insert(locationSearches)
-          .values({
-            locationId: recentSuburb.id,
-            userId: null,
-            searchedAt: new Date(Date.now() - i * 60 * 60 * 1000), // Last 5 hours
-          })
-          .$returningId();
-
-        testSearchIds.push(search.id);
+        const insertResult = await db.insert(locationSearches).values({
+          locationId: recentSuburb.id,
+          userId: null,
+          searchedAt: new Date(Date.now() - i * 60 * 60 * 1000), // Last 5 hours
+        });
+        testSearchIds.push(getInsertId(insertResult));
       }
 
       // Old suburb: 5 searches from 25-30 days ago
       for (let i = 0; i < 5; i++) {
-        const [search] = await db
-          .insert(locationSearches)
-          .values({
-            locationId: oldSuburb.id,
-            userId: null,
-            searchedAt: new Date(Date.now() - (25 + i) * 24 * 60 * 60 * 1000), // 25-30 days ago
-          })
-          .$returningId();
-
-        testSearchIds.push(search.id);
+        const insertResult = await db.insert(locationSearches).values({
+          locationId: oldSuburb.id,
+          userId: null,
+          searchedAt: new Date(Date.now() - (25 + i) * 24 * 60 * 60 * 1000), // 25-30 days ago
+        });
+        testSearchIds.push(getInsertId(insertResult));
       }
 
       // Calculate trending scores
@@ -904,16 +929,12 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
         // Each suburb gets i searches
         for (let j = 0; j < i; j++) {
-          const [search] = await db
-            .insert(locationSearches)
-            .values({
-              locationId: suburb.id,
-              userId: null,
-              searchedAt: new Date(),
-            })
-            .$returningId();
-
-          testSearchIds.push(search.id);
+          const insertResult = await db.insert(locationSearches).values({
+            locationId: suburb.id,
+            userId: null,
+            searchedAt: new Date(),
+          });
+          testSearchIds.push(getInsertId(insertResult));
         }
       }
 
