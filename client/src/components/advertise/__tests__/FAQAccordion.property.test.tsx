@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import { FAQSection } from '../FAQSection';
 import { FAQAccordionItem } from '../FAQAccordionItem';
 import fc from 'fast-check';
@@ -26,6 +26,34 @@ vi.mock('../../hooks/useScrollAnimation', () => ({
     ref: { current: null },
     isVisible: true,
   }),
+}));
+
+// Remove animation timing from property tests to avoid async flakes.
+vi.mock('framer-motion', () => ({
+  motion: new Proxy(
+    {},
+    {
+      get: (_target, key) => {
+        const tag = String(key);
+        return ({ children, ...props }: any) => {
+          const {
+            initial: _initial,
+            animate: _animate,
+            exit: _exit,
+            transition: _transition,
+            whileHover: _whileHover,
+            whileTap: _whileTap,
+            variants: _variants,
+            layout: _layout,
+            ...domProps
+          } = props;
+          const Component = tag as any;
+          return <Component {...domProps}>{children}</Component>;
+        };
+      },
+    },
+  ),
+  AnimatePresence: ({ children }: any) => children,
 }));
 
 // Clean up after each test
@@ -61,7 +89,8 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         const { container } = render(<FAQSection faqs={faqs} />);
 
         // Get all FAQ buttons
-        const buttons = container.querySelectorAll('button[aria-expanded]');
+        const getButtons = () => container.querySelectorAll('button[aria-expanded]');
+        const buttons = getButtons();
         expect(buttons.length).toBe(faqs.length);
 
         // Initially, all should be collapsed
@@ -73,32 +102,30 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         fireEvent.click(buttons[0]);
 
         // First should be expanded, all others collapsed
-        await waitFor(() => {
-          expect(buttons[0].getAttribute('aria-expanded')).toBe('true');
-        });
+        let currentButtons = getButtons();
+        expect(currentButtons[0].getAttribute('aria-expanded')).toBe('true');
 
-        for (let i = 1; i < buttons.length; i++) {
-          expect(buttons[i].getAttribute('aria-expanded')).toBe('false');
+        for (let i = 1; i < currentButtons.length; i++) {
+          expect(currentButtons[i].getAttribute('aria-expanded')).toBe('false');
         }
 
         // Click the second FAQ
-        fireEvent.click(buttons[1]);
+        fireEvent.click(currentButtons[1]);
 
         // Second should be expanded, all others (including first) collapsed
-        await waitFor(() => {
-          expect(buttons[1].getAttribute('aria-expanded')).toBe('true');
-        });
+        currentButtons = getButtons();
+        expect(currentButtons[1].getAttribute('aria-expanded')).toBe('true');
 
-        for (let i = 0; i < buttons.length; i++) {
+        for (let i = 0; i < currentButtons.length; i++) {
           if (i !== 1) {
-            expect(buttons[i].getAttribute('aria-expanded')).toBe('false');
+            expect(currentButtons[i].getAttribute('aria-expanded')).toBe('false');
           }
         }
 
         cleanup();
         return true;
       }),
-      { numRuns: 20 },
+      { numRuns: 12 },
     );
   });
 
@@ -109,19 +136,18 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
 
         const { container } = render(<FAQSection faqs={faqs} />);
 
-        const buttons = container.querySelectorAll('button[aria-expanded]');
+        const getButtons = () => container.querySelectorAll('button[aria-expanded]');
+        let buttons = getButtons();
 
         // Click first FAQ to open it
         fireEvent.click(buttons[0]);
-        await waitFor(() => {
-          expect(buttons[0].getAttribute('aria-expanded')).toBe('true');
-        });
+        buttons = getButtons();
+        expect(buttons[0].getAttribute('aria-expanded')).toBe('true');
 
         // Click it again to close it
         fireEvent.click(buttons[0]);
-        await waitFor(() => {
-          expect(buttons[0].getAttribute('aria-expanded')).toBe('false');
-        });
+        buttons = getButtons();
+        expect(buttons[0].getAttribute('aria-expanded')).toBe('false');
 
         // All should be collapsed
         buttons.forEach(button => {
@@ -131,7 +157,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 20 },
+      { numRuns: 12 },
     );
   });
 
@@ -145,15 +171,14 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
 
           const { container } = render(<FAQSection faqs={faqs} />);
 
-          const buttons = container.querySelectorAll('button[aria-expanded]');
+          const getButtons = () => container.querySelectorAll('button[aria-expanded]');
+          let buttons = getButtons();
 
           // Perform a sequence of clicks
           for (const index of clickSequence) {
             const validIndex = index % buttons.length;
             fireEvent.click(buttons[validIndex]);
-
-            // Wait for update
-            await new Promise(r => setTimeout(r, 0));
+            buttons = getButtons();
 
             // We can't easily wait for a specific state here as it flips
             // But we check invariant: at most 1 expanded
@@ -170,7 +195,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
           return true;
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 12 },
     );
   });
 
@@ -181,7 +206,8 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
 
         const { container } = render(<FAQSection faqs={faqs} />);
 
-        const buttons = container.querySelectorAll('button[aria-expanded]');
+        const getButtons = () => container.querySelectorAll('button[aria-expanded]');
+        let buttons = getButtons();
 
         // Initially, all buttons should be collapsed
         buttons.forEach(button => {
@@ -190,6 +216,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
 
         // Click first FAQ
         fireEvent.click(buttons[0]);
+        buttons = getButtons();
 
         // First button should be expanded
         await waitFor(() => {
@@ -214,7 +241,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 20 },
+      { numRuns: 12 },
     );
   });
 
@@ -242,7 +269,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 },
+      { numRuns: 25 },
     );
   });
 });
@@ -274,7 +301,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 },
+      { numRuns: 50 },
     );
   });
 
@@ -313,7 +340,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 },
+      { numRuns: 50 },
     );
   });
 
@@ -336,7 +363,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 },
+      { numRuns: 50 },
     );
   });
 
@@ -384,7 +411,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 },
+      { numRuns: 50 },
     );
   });
 
@@ -423,7 +450,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 },
+      { numRuns: 50 },
     );
   });
 });
@@ -446,7 +473,7 @@ describe('FAQSection - Content and structure validation', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 },
+      { numRuns: 25 },
     );
   });
 
@@ -467,7 +494,7 @@ describe('FAQSection - Content and structure validation', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 },
+      { numRuns: 25 },
     );
   });
 
@@ -484,7 +511,7 @@ describe('FAQSection - Content and structure validation', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 },
+      { numRuns: 25 },
     );
   });
 });

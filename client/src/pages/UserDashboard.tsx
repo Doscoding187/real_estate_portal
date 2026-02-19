@@ -45,7 +45,7 @@ export default function UserDashboard() {
   // Get comparison properties details
   const allPropertyItems = Array.isArray(allProperties)
     ? allProperties
-    : ((allProperties as any)?.items ?? (allProperties as any)?.results ?? []);
+    : (allProperties as any)?.items ?? (allProperties as any)?.results ?? [];
   const comparisonProperties =
     allPropertyItems.filter((p: any) => comparedProperties.includes(p.id)) || [];
 

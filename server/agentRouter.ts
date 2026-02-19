@@ -58,7 +58,7 @@ export const agentRouter = router({
         const [agentRecord] = await db
           .select()
           .from(agents)
-          .where(eq(agents.userId, requireUser(ctx).id))
+          .where(eq(agents.userId, ctx.user.id))
           .limit(1);
 
         if (!agentRecord) {
@@ -102,8 +102,8 @@ export const agentRouter = router({
           .where(
             and(
               eq(showings.agentId, agentId),
-              gte(showings.scheduledTime, today),
-              lte(showings.scheduledTime, tomorrow),
+              gte(showings.scheduledAt, today),
+              lte(showings.scheduledAt, tomorrow),
             ),
           );
 
@@ -111,7 +111,7 @@ export const agentRouter = router({
         const [offersInProgressResult] = await db
           .select({ count: count() })
           .from(offers)
-          .where(and(eq((offers as any).agentId, agentId), eq(offers.status, 'pending')));
+          .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
 
         // Pending commissions sum
         const [pendingCommissionsResult] = await db
@@ -1042,10 +1042,7 @@ export const agentRouter = router({
         .update(notifications)
         .set({ isRead: 1, readAt: new Date() })
         .where(
-          and(
-            eq(notifications.id, input.notificationId),
-            eq(notifications.userId, requireUser(ctx).id),
-          ),
+          and(eq(notifications.id, input.notificationId), eq(notifications.userId, requireUser(ctx).id)),
         );
 
       return { success: true };

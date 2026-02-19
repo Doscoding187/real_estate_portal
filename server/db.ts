@@ -146,11 +146,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
 
     if (!values.lastSignedIn) {
-      values.lastSignedIn = toMysqlDateTime();
+      values.lastSignedIn = new Date().toISOString();
     }
 
     if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = toMysqlDateTime();
+      updateSet.lastSignedIn = new Date().toISOString();
     }
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({
@@ -215,7 +215,7 @@ export async function createUser(
     ...userData,
     createdAt: new Date(),
     updatedAt: new Date(),
-    lastSignedIn: toMysqlDateTime(),
+    lastSignedIn: new Date().toISOString(),
   });
 
   return Number(result[0].insertId);
@@ -230,7 +230,7 @@ export async function updateUserLastSignIn(userId: number): Promise<void> {
 
   await db
     .update(users)
-    .set({ lastSignedIn: toMysqlDateTime() })
+    .set({ lastSignedIn: new Date().toISOString() })
     .where(eq(users.id, userId));
 }
 
@@ -3148,9 +3148,7 @@ export async function listPartners({
   }
 
   if (search) {
-    conditions.push(
-      or(like(partners.companyName, `%${search}%`), like(partners.contactEmail, `%${search}%`))!,
-    );
+    conditions.push(or(like(partners.name, `%${search}%`), like(partners.email, `%${search}%`))!);
   }
 
   const offset = (page - 1) * limit;

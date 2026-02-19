@@ -289,67 +289,9 @@ export const superAdminPublisherRouter = router({
         // Use service to get developments specifically linked to this brand profile
         return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
       } catch (error) {
-        console.warn(
-          '[superAdminPublisher.getDevelopments] Returning empty list due to error:',
-          error,
-        );
+        console.warn('[superAdminPublisher.getDevelopments] Returning empty list due to error:', error);
         return [];
       }
-    }),
-
-  /**
-   * Bulk approve + publish all developments for a brand profile.
-   * Useful for seeding/demo content where super admin content should be immediately visible.
-   */
-  publishAllBrandDevelopments: superAdminProcedure
-    .input(
-      z.object({
-        brandProfileId: z.number().int(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const dbConn = await db.getDb();
-      if (!dbConn) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-
-      const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
-      const [before] = await dbConn
-        .select({ count: sql<number>`count(*)` })
-        .from(developments)
-        .where(eq(developments.developerBrandProfileId, input.brandProfileId));
-
-      const [needsUpdate] = await dbConn
-        .select({ count: sql<number>`count(*)` })
-        .from(developments)
-        .where(
-          and(
-            eq(developments.developerBrandProfileId, input.brandProfileId),
-            sql`(${developments.isPublished} = 0 OR ${developments.approvalStatus} <> 'approved')`,
-          ),
-        );
-
-      await dbConn
-        .update(developments)
-        .set({
-          isPublished: 1,
-          approvalStatus: 'approved' as any,
-          approvedAt: nowFormatted,
-          approvedBy: ctx.user.id,
-          publishedAt: nowFormatted,
-          status: 'launching-soon',
-          updatedAt: nowFormatted,
-        })
-        .where(eq(developments.developerBrandProfileId, input.brandProfileId));
-
-      const total = Number(before?.count || 0);
-      const updated = Number(needsUpdate?.count || 0);
-
-      return {
-        success: true,
-        brandProfileId: input.brandProfileId,
-        totalDevelopments: total,
-        updatedDevelopments: updated,
-      };
     }),
 
   /**
@@ -428,10 +370,7 @@ export const superAdminPublisherRouter = router({
 
         return brandLeads;
       } catch (error) {
-        console.warn(
-          '[superAdminPublisher.getBrandLeads] Returning empty list due to error:',
-          error,
-        );
+        console.warn('[superAdminPublisher.getBrandLeads] Returning empty list due to error:', error);
         return [];
       }
     }),
@@ -455,10 +394,7 @@ export const superAdminPublisherRouter = router({
         totalLeads: Number(leadCount?.count || 0),
       };
     } catch (error) {
-      console.warn(
-        '[superAdminPublisher.getGlobalMetrics] Returning safe defaults due to error:',
-        error,
-      );
+      console.warn('[superAdminPublisher.getGlobalMetrics] Returning safe defaults due to error:', error);
       return { totalDevelopments: 0, totalLeads: 0 };
     }
   }),

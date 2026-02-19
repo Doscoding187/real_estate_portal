@@ -951,14 +951,14 @@ export default function DevelopmentDetail() {
                         <p className="font-bold text-sm text-slate-900 truncate">
                           {development.developer}
                         </p>
-                        {development.isVerified && (
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
-                            <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">
-                              Verified Developer
-                            </span>
-                          </div>
-                        )}
+                    {development.isVerified && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                        <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">
+                          Verified Developer
+                        </span>
+                      </div>
+                    )}
                       </div>
                     </div>
 
@@ -1109,10 +1109,7 @@ export default function DevelopmentDetail() {
                       const key = u.bedroomKey;
                       if (!bedroomGroups.has(key)) {
                         bedroomGroups.set(key, {
-                          label:
-                            key === 'other'
-                              ? 'Other / Studio / Unknown'
-                              : `${u.bedroomLabel} Bedroom`,
+                          label: key === 'other' ? 'Other / Studio / Unknown' : `${u.bedroomLabel} Bedroom`,
                           units: [],
                         });
                       }
@@ -1173,7 +1170,9 @@ export default function DevelopmentDetail() {
                             value={key}
                             className="mt-0 focus-visible:outline-none"
                           >
-                            <UnitTypeCarousel units={bedroomGroups.get(key)?.units || []} />
+                            <UnitTypeCarousel
+                              units={bedroomGroups.get(key)?.units || []}
+                            />
                           </TabsContent>
                         ))}
                       </Tabs>

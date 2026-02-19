@@ -46,7 +46,6 @@ const SidebarNavigation: React.FC = () => {
     else if (location.startsWith('/admin/ecosystem')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/agencies')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/agents')) setActiveSection('ecosystem');
-    else if (location.startsWith('/admin/agents')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/developers')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/publisher')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/revenue')) setActiveSection('revenue');

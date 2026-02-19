@@ -137,18 +137,16 @@ export default function SearchResults({
 
   // Fetch properties
   const { data: searchResults, isLoading } = trpc.properties.search.useQuery(queryInput);
-  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
-    filters: {
-      city: filters.city,
-      province: filters.province,
-      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      listingType: filters.listingType,
-      propertyType: filters.propertyType,
-      minPrice: filters.minPrice,
-      maxPrice: filters.maxPrice,
-      minBedrooms: filters.minBedrooms,
-      maxBedrooms: filters.maxBedrooms,
-    },
+
+  const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
+  const developmentResults = (searchResults as any)?.developments?.items ?? [];
+  const resultTotal = (searchResults as any)?.total ?? 0;
+  const locationContext = (searchResults as any)?.locationContext;
+
+  // Mutations
+  const addFavoriteMutation = trpc.favorites.add.useMutation({
+    onSuccess: () => toast.success('Added to favorites'),
+    onError: () => toast.error('Failed to add to favorites'),
   });
 
   const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
@@ -377,59 +375,52 @@ export default function SearchResults({
             </div>
           </div>
 
-          {/* Content Section */}
-          <div className="grid grid-cols-1 gap-2 px-2 sm:px-3 lg:grid-cols-[292px_minmax(0,760px)] lg:justify-center lg:gap-3 lg:px-0">
-            {/* LEFT SIDEBAR - FILTERS */}
-            <div className="hidden lg:block">
-              <div className="sticky top-24">
-                <SidebarFilters
-                  filters={filters}
-                  filterCounts={filterCounts as any}
-                  locationContext={locationContext}
-                  onFilterChange={handleFilterChange}
-                  onSaveSearch={handleSaveSearch}
-                />
-              </div>
-            </div>
-
-            {/* Main Content - Results */}
-            <div className="col-span-1">
-              {/* Results Grid */}
-              <div className="">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          {/* Main Content - Results (Changed to come after sidebar) */}
+          <div className="col-span-1 lg:col-span-9">
+            {/* Results Grid */}
+            <div className="">
+              {!isLoading && developmentResults.length > 0 && (
+                <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-slate-800">New Developments Nearby</h2>
+                    <a className="text-sm font-medium text-blue-700 hover:underline" href="/new-developments">
+                      View all
+                    </a>
                   </div>
-                ) : hasRenderableResults ? (
-                  <>
-                    {viewMode === 'list' && (
-                      <div className="flex flex-col items-start gap-4">
-                      {mixedListResults.map((item, index) => {
-                        if (item.kind === 'development') {
-                          const development = item.value as any;
-                          return (
-                            <DevelopmentResultCard
-                              key={`dev-${development.id}-${index}`}
-                              id={development.id}
-                              name={development.name}
-                              slug={development.slug}
-                                suburb={development.suburb}
-                                city={development.city}
-                              province={development.province}
-                              status={development.status}
-                              isFeatured={development.isFeatured}
-                              rating={development.rating}
-                              highlights={Array.isArray(development.highlights) ? development.highlights : []}
-                              builderName={development.builderName}
-                              builderLogoUrl={development.builderLogoUrl}
-                              description={development.description ?? null}
-                              configurations={development.configurations}
-                              images={development.images}
-                              />
-                            );
-                          }
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {developmentResults.slice(0, 4).map((development: any) => (
+                      <a
+                        key={development.id}
+                        href={`/development/${development.slug || development.id}`}
+                        className="rounded-lg border border-blue-100 bg-white p-3 transition-colors hover:border-blue-300"
+                      >
+                        <div className="text-sm font-semibold text-slate-900">{development.name}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {[development.suburb, development.city, development.province]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </div>
+                        <div className="mt-2 text-xs text-slate-700">
+                          {development.priceFrom
+                            ? `From R${Number(development.priceFrom).toLocaleString()}`
+                            : 'Price on request'}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                          const normalized = normalizePropertyForUI(item.value);
+              {isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+              ) : sortedProperties.length > 0 ? (
+                <>
+                  {viewMode === 'list' && (
+                    <div className="flex flex-col gap-4">
+                      {sortedProperties.map(property => {
+                        const normalized = normalizePropertyForUI(property);
                         if (!normalized) return null;
                         return (
                           <ListingResultCard

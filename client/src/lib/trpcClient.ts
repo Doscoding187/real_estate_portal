@@ -11,10 +11,10 @@ const TRPC_URL = new URL(
   .replace(/\/api\/api\//, '/api/');
 
 export const trpcClient = createTRPCProxyClient<AppRouter>({
+  transformer: superjson,
   links: [
     httpBatchLink({
       url: TRPC_URL,
-      transformer: superjson,
       async fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

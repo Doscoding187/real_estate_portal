@@ -10,8 +10,7 @@ async function run() {
   const db = await getDb();
   if (!db) return;
 
-  // @ts-ignore
-  await db.execute(sql`CREATE DATABASE IF NOT EXISTS listify_test`);
+  await (db.execute(sql`CREATE DATABASE IF NOT EXISTS listify_test`) as Promise<unknown>);
   console.log('✅ Created/Verified listify_test database');
   process.exit(0);
 }

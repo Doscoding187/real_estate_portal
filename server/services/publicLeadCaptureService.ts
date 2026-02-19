@@ -137,9 +137,7 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
   return resolved;
 }
 
-export async function capturePublicLead(
-  input: PublicLeadCaptureInput,
-): Promise<PublicLeadCaptureResult> {
+export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<PublicLeadCaptureResult> {
   const db = await getDb();
   if (!db) {
     throw new Error('Database not available');
