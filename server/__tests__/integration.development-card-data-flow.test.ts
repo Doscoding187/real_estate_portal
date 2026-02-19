@@ -16,7 +16,9 @@ import { getDb } from '../db-connection';
 import { developers, developments } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
 
-describe('Development Card Data Flow Integration', () => {
+const describeWithDb = process.env.DATABASE_URL ? describe : describe.skip;
+
+describeWithDb('Development Card Data Flow Integration', () => {
   let createdDevelopmentId: number | null = null;
   let createdDeveloperId: number | null = null;
 

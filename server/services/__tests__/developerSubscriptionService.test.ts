@@ -15,7 +15,9 @@ import { eq } from 'drizzle-orm';
  * Feature: developer-lead-management
  */
 
-describe('Developer Subscription Service - Property Tests', () => {
+const describeWithDb = process.env.DATABASE_URL ? describe : describe.skip;
+
+describeWithDb('Developer Subscription Service - Property Tests', () => {
   // Helper function to create a test developer
   async function createTestDeveloper(userId: number) {
     const result = await db.insert(developers).values({
