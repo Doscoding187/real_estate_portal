@@ -1479,8 +1479,6 @@ export async function updateDevelopment(
     updatePayload.reservePriceFrom = auctionRange.reservePriceFrom;
   }
 
-  updatePayload.updatedAt = new Date().toISOString();
-
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
   // ✅ Ownership check done in WHERE by developerProfileId
