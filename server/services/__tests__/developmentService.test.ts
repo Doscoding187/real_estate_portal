@@ -7,27 +7,32 @@ import { describe, expect, beforeEach, afterEach } from 'vitest';
 import { it, fc } from '@fast-check/vitest';
 import { developmentService } from '../developmentService';
 import { db } from '../../db';
-import { developers, developments, developmentPhases, users } from '../../../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import {
+  developers,
+  developments,
+  developmentPhases,
+  developerSubscriptions,
+  developerSubscriptionLimits,
+  developerSubscriptionUsage,
+  users,
+} from '../../../drizzle/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 describe('Development Service - Property Tests', { timeout: 30000 }, () => {
   // Helper function to create a test developer
   async function createTestDeveloper(userId: number) {
-    const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
-    if (!existingUser) {
-      await db.insert(users).values({
-        id: userId,
-        email: `test${userId}@example.com`,
-        name: `Test User ${userId}`,
-        role: 'property_developer',
-        emailVerified: 1,
-      });
-    }
+    const userInsert = await db.insert(users).values({
+      email: `dev-service-user-${userId}-${Date.now()}-${Math.floor(Math.random() * 10000)}@example.com`,
+      name: `Test User ${userId}`,
+      role: 'property_developer',
+      emailVerified: 1,
+    });
+    const createdUserId = Number(userInsert[0].insertId);
 
     const result = await db.insert(developers).values({
-      userId,
+      userId: createdUserId,
       name: `Test Developer ${userId}`,
-      email: `test${userId}@example.com`,
+      email: `dev-service-dev-${userId}-${Date.now()}-${Math.floor(Math.random() * 10000)}@example.com`,
       category: 'residential',
       isVerified: 1,
       status: 'approved',
@@ -47,20 +52,47 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
   // Helper function to cleanup test data
   async function cleanupTestData(developerId: number) {
     const [developer] = await db.select().from(developers).where(eq(developers.id, developerId));
+    if (!developer) {
+      return;
+    }
 
-    // Delete in correct order due to foreign keys
+    const developerRows = await db
+      .select({ id: developers.id })
+      .from(developers)
+      .where(eq(developers.userId, developer.userId));
+    const developerIds = developerRows.map(row => row.id);
+
+    const subscriptionRows = await db
+      .select({ id: developerSubscriptions.id })
+      .from(developerSubscriptions)
+      .where(inArray(developerSubscriptions.developerId, developerIds));
+    const subscriptionIds = subscriptionRows.map(row => row.id);
+
+    if (subscriptionIds.length > 0) {
+      await db
+        .delete(developerSubscriptionUsage)
+        .where(inArray(developerSubscriptionUsage.subscriptionId, subscriptionIds));
+      await db
+        .delete(developerSubscriptionLimits)
+        .where(inArray(developerSubscriptionLimits.subscriptionId, subscriptionIds));
+      await db
+        .delete(developerSubscriptions)
+        .where(inArray(developerSubscriptions.id, subscriptionIds));
+    }
+
     const devs = await db
-      .select()
+      .select({ id: developments.id })
       .from(developments)
-      .where(eq(developments.developerId, developerId));
-    for (const dev of devs) {
-      await db.delete(developmentPhases).where(eq(developmentPhases.developmentId, dev.id));
+      .where(inArray(developments.developerId, developerIds));
+    const developmentIds = devs.map(dev => dev.id);
+
+    if (developmentIds.length > 0) {
+      await db.delete(developmentPhases).where(inArray(developmentPhases.developmentId, developmentIds));
+      await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
-    await db.delete(developments).where(eq(developments.developerId, developerId));
-    await db.delete(developers).where(eq(developers.id, developerId));
-    if (developer?.userId) {
-      await db.delete(users).where(eq(users.id, developer.userId));
-    }
+
+    await db.delete(developers).where(inArray(developers.id, developerIds));
+    await db.delete(users).where(eq(users.id, developer.userId));
   }
 
   /**
