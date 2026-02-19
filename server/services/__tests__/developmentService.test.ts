@@ -3,7 +3,7 @@
  * Feature: developer-lead-management
  */
 
-import { describe, expect, beforeEach, afterEach } from 'vitest';
+import { describe, expect } from 'vitest';
 import { it, fc } from '@fast-check/vitest';
 import { developmentService } from '../developmentService';
 import { db } from '../../db';
