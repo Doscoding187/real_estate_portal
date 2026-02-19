@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup, fireEvent } from '@testing-library/react';
+import { render, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { FAQSection } from '../FAQSection';
 import { FAQAccordionItem } from '../FAQAccordionItem';
 import fc from 'fast-check';

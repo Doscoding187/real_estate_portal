@@ -7,6 +7,7 @@ export * from './developments';
 export * from './media';
 export * from './explore';
 export * from './marketplace';
+export * from './distribution';
 export * from './views';
 export * from './analytics';
 export * from './leads';

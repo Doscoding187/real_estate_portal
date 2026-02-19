@@ -1479,8 +1479,6 @@ export async function updateDevelopment(
     updatePayload.reservePriceFrom = auctionRange.reservePriceFrom;
   }
 
-  updatePayload.updatedAt = new Date().toISOString();
-
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
   // ✅ Ownership check done in WHERE by developerProfileId
@@ -2055,7 +2053,7 @@ async function createPhase(developmentId: number, developerId: number, data: any
   const [result] = await db.insert(developmentPhases).values({
     ...safe,
     developmentId,
-    createdAt: new Date().toISOString(),
+    createdAt: mysqlDateTime(),
   });
 
   const [created] = await db
