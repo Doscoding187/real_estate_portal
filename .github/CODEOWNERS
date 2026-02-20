@@ -1,0 +1,14 @@
+# Default owner
+* @Doscoding187
+
+# Integration and CI spine
+/.github/workflows/ @Doscoding187
+/server/_core/ @Doscoding187
+/server/routers.ts @Doscoding187
+
+# Database contract and migrations
+/drizzle/schema/ @Doscoding187
+/drizzle/migrations/ @Doscoding187
+
+# High-impact routing UI surfaces
+/client/src/pages/ @Doscoding187

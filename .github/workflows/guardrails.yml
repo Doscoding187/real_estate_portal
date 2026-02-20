@@ -1,0 +1,99 @@
+name: Guardrails
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review, labeled, unlabeled]
+
+jobs:
+  guardrails:
+    name: Guardrails
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce PR target policy
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          ACTOR: ${{ github.actor }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          ALLOWED_MAIN_PR_ACTORS: ${{ vars.ALLOWED_MAIN_PR_ACTORS }}
+        run: |
+          set -euo pipefail
+
+          allowed_raw="${ALLOWED_MAIN_PR_ACTORS:-$REPO_OWNER}"
+          is_allowed=0
+          IFS=',' read -r -a allowed <<< "$allowed_raw"
+          for entry in "${allowed[@]}"; do
+            user="$(echo "$entry" | xargs)"
+            if [[ -n "$user" && "$ACTOR" == "$user" ]]; then
+              is_allowed=1
+              break
+            fi
+          done
+
+          if [[ "$BASE_REF" == "main" ]]; then
+            if [[ "$is_allowed" -ne 1 ]]; then
+              echo "::error::Direct PRs to main are blocked for this actor. Use integrate/all-changes."
+              exit 1
+            fi
+            echo "Main-target PR allowed for actor: $ACTOR"
+          elif [[ "$BASE_REF" != "integrate/all-changes" ]]; then
+            echo "::error::PR base must be integrate/all-changes (or approved actor to main)."
+            exit 1
+          fi
+
+      - name: Collect changed files
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$BASE_REF" --depth=1
+          git diff --name-only "origin/$BASE_REF...HEAD" > changed_files.txt
+          echo "Changed files:"
+          cat changed_files.txt
+
+      - name: Enforce schema to migration sync
+        run: |
+          set -euo pipefail
+
+          schema_changed=0
+          migration_sql_changed=0
+          journal_changed=0
+          snapshot_changed=0
+
+          if grep -qE '^drizzle/schema/' changed_files.txt; then
+            schema_changed=1
+          fi
+          if grep -qE '^drizzle/migrations/.*\.sql$' changed_files.txt; then
+            migration_sql_changed=1
+          fi
+          if grep -qE '^drizzle/migrations/meta/_journal\.json$' changed_files.txt; then
+            journal_changed=1
+          fi
+          if grep -qE '^drizzle/migrations/meta/.*_snapshot\.json$' changed_files.txt; then
+            snapshot_changed=1
+          fi
+
+          if [[ "$schema_changed" -eq 1 ]]; then
+            if [[ "$migration_sql_changed" -ne 1 || "$journal_changed" -ne 1 || "$snapshot_changed" -ne 1 ]]; then
+              echo "::error::Schema changed without canonical migration artifacts (.sql + meta snapshot + _journal.json)."
+              exit 1
+            fi
+          fi
+
+      - name: Guard against wide auto-fix PRs
+        run: |
+          set -euo pipefail
+          changed_count=$(grep -c '.' changed_files.txt || true)
+          labels=$(jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+
+          if [[ "$changed_count" -gt 150 ]]; then
+            if ! echo "$labels" | grep -qx 'allow-wide-change'; then
+              echo "::error::PR touches $changed_count files. Add label allow-wide-change if intentional."
+              exit 1
+            fi
+          fi
