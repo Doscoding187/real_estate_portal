@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import { Loader2, Upload, Sparkles, MapPin, Grid3x3, SlidersHorizontal } from 'lucide-react';
@@ -11,36 +11,24 @@ import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
-import { PLACEHOLDER_VIDEOS as CENTRALIZED_PLACEHOLDER_VIDEOS } from '@/data/explorePlaceholderData';
 import { pageVariants, buttonVariants, getVariants } from '@/lib/animations/exploreAnimations';
-
-// Placeholder videos for design purposes - using centralized data with additional fields
-const PLACEHOLDER_VIDEOS = CENTRALIZED_PLACEHOLDER_VIDEOS.map(v => ({
-  id: `placeholder-${v.id}`,
-  title: v.title,
-  caption: `${v.bedrooms} Bed | ${v.bathrooms} Bath | ${v.highlights?.slice(0, 2).join(' | ')}`,
-  primaryMediaUrl: v.thumbnailUrl,
-  viewCount: v.viewCount || v.views,
-  likeCount: Math.floor((v.viewCount || v.views) * 0.08),
-  agentId: 1,
-  publishedAt: new Date(),
-  type: 'listing',
-  propertyTitle: v.propertyTitle,
-  propertyLocation: v.propertyLocation,
-  propertyPrice: v.propertyPrice,
-  bedrooms: v.bedrooms,
-  bathrooms: v.bathrooms,
-  area: v.area,
-  yardSize: v.area ? Math.floor(v.area * 1.5) : undefined,
-  propertyType: v.propertyType,
-  highlights: v.highlights,
-}));
+import { getFeedItems } from '@/lib/exploreFeed';
+import { useExploreIntent } from '@/hooks/useExploreIntent';
+import { ExploreIntentPrompt } from '@/components/explore/ExploreIntentPrompt';
+import { mapFocusToLegacyIntent, readExploreIntent } from '@/lib/exploreIntentSession';
 
 export default function ExploreFeed() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const { intent, shouldShowPrompt, setIntent, dismissPrompt } = useExploreIntent();
+  const sessionIntent = useMemo(() => readExploreIntent(), []);
+  const effectiveIntent = intent ?? (sessionIntent ? mapFocusToLegacyIntent(sessionIntent.focus) : undefined);
+  const showIntentBadge =
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('debugIntent');
 
   // Use common state hook for shared logic
   const { feedType, setFeedType, showFilters, setShowFilters, toggleFilters, filterActions } =
@@ -50,12 +38,29 @@ export default function ExploreFeed() {
     });
 
   // Fetch explore shorts feed
-  const { data: feedData, isLoading } = trpc.explore.getFeed.useQuery({
+  const feedQueryInput: any = {
     feedType: feedType,
     limit: 20,
     offset: 0,
     userId: user?.id,
-  });
+  };
+  if (feedType === 'area') {
+    feedQueryInput.location = searchQuery || 'gauteng';
+  }
+  if (feedType === 'category') {
+    feedQueryInput.category = searchQuery || 'property';
+  }
+  if (effectiveIntent) {
+    feedQueryInput.intent = effectiveIntent;
+  }
+  if (sessionIntent?.focus) {
+    feedQueryInput.intentFocus = sessionIntent.focus;
+  }
+  if (sessionIntent?.subFocus) {
+    feedQueryInput.intentSubFocus = sessionIntent.subFocus;
+  }
+
+  const { data: feedData, isLoading } = trpc.explore.getFeed.useQuery(feedQueryInput);
 
   // Debug logging for feed verification
   useEffect(() => {
@@ -67,17 +72,17 @@ export default function ExploreFeed() {
   // Mutation for recording interactions
   const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
 
-  // Use canonical `items` when available, fall back to legacy `shorts`, then placeholders
-  const items = feedData?.items ?? feedData?.shorts ?? [];
-  const videos = items.length > 0 ? items : PLACEHOLDER_VIDEOS;
+  const videos = getFeedItems(feedData);
 
   // Filter videos based on search query
   const filteredVideos = searchQuery
     ? videos.filter(
-        (video: any) =>
-          video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          video.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          video.propertyLocation?.toLowerCase().includes(searchQuery.toLowerCase()),
+        video =>
+          video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          video.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          `${video.location?.suburb || ''} ${video.location?.city || ''} ${video.location?.province || ''}`
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()),
       )
     : videos;
 
@@ -121,6 +126,26 @@ export default function ExploreFeed() {
     );
   }
 
+  if (!isLoading && filteredVideos.length === 0) {
+    return (
+      <motion.div
+        className="flex items-center justify-center h-screen text-center px-6"
+        style={{ backgroundColor: designTokens.colors.bg.dark }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <div>
+          <h2 className="text-2xl font-semibold mb-3" style={{ color: designTokens.colors.text.inverse }}>
+            No explore items yet
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.8)' }}>
+            Upload content or adjust filters to see results.
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       className="h-screen relative overflow-hidden"
@@ -132,6 +157,21 @@ export default function ExploreFeed() {
       exit="exit"
       variants={getVariants(pageVariants)}
     >
+      <ExploreIntentPrompt
+        open={shouldShowPrompt}
+        onSelect={nextIntent => {
+          void setIntent(nextIntent);
+        }}
+        onDismiss={dismissPrompt}
+      />
+
+      {showIntentBadge && sessionIntent?.focus && (
+        <div className="pointer-events-none absolute left-4 top-4 z-[70] rounded-full border border-white/30 bg-black/50 px-3 py-1 text-xs font-medium text-white">
+          Focus: {sessionIntent.focus}
+          {sessionIntent.subFocus ? ` / ${sessionIntent.subFocus}` : ''}
+        </div>
+      )}
+
       {/* Background blur effect */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent"></div>
 
@@ -335,35 +375,34 @@ export default function ExploreFeed() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
             >
-              {filteredVideos?.map((short: any, idx: number) => (
-                <div key={short.id} className="snap-start snap-always h-screen w-full">
+              {filteredVideos?.map((item, idx: number) => (
+                <div key={item.id} className="snap-start snap-always h-screen w-full">
                   <VideoCard
                     video={{
-                      id: short.id,
-                      title: short.title,
-                      description: short.caption || '',
-                      videoUrl: short.primaryMediaUrl || '',
-                      thumbnailUrl: short.primaryMediaUrl || '',
-                      views: short.viewCount || 0,
-                      likes: short.likeCount || 0,
-                      userId: short.agentId || short.developerId || 0,
-                      createdAt: short.publishedAt || new Date(),
-                      type: short.type || 'listing',
-                      propertyTitle: short.propertyTitle || short.title,
-                      propertyLocation: short.propertyLocation,
-                      propertyPrice: short.propertyPrice,
-                      caption: short.caption,
-                      bedrooms: short.bedrooms,
-                      bathrooms: short.bathrooms,
-                      area: short.area,
-                      yardSize: short.yardSize,
-                      propertyType: short.propertyType,
-                      highlights: short.highlights || [],
+                      id: String(item.id),
+                      title: item.title,
+                      description: '',
+                      videoUrl: item.mediaUrl,
+                      thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
+                      views: item.stats.views || 0,
+                      likes: item.stats.saves || 0,
+                      userId: item.actor.id || 0,
+                      createdAt: new Date(),
+                      type: 'listing',
+                      propertyTitle: item.title,
+                      propertyLocation: [item.location?.suburb, item.location?.city]
+                        .filter(Boolean)
+                        .join(', '),
+                      caption: item.category,
+                      highlights: [item.category],
+                      agentName: item.actor.displayName,
+                      verificationStatus: item.actor.verificationStatus,
+                      trustBand: item.actorInsights?.trustBand || 'standard',
                     }}
                     isActive={idx === currentIndex}
                     onView={() => {
                       recordInteractionMutation.mutate({
-                        shortId: short.id,
+                        contentId: item.id,
                         interactionType: 'view',
                         feedType: feedType,
                       });
@@ -511,35 +550,34 @@ export default function ExploreFeed() {
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           >
-            {filteredVideos?.map((short: any, idx: number) => (
-              <div key={short.id} className="snap-start snap-always h-screen w-full">
+            {filteredVideos?.map((item, idx: number) => (
+              <div key={item.id} className="snap-start snap-always h-screen w-full">
                 <VideoCard
                   video={{
-                    id: short.id,
-                    title: short.title,
-                    description: short.caption || '',
-                    videoUrl: short.primaryMediaUrl || '',
-                    thumbnailUrl: short.primaryMediaUrl || '',
-                    views: short.viewCount || 0,
-                    likes: short.likeCount || 0,
-                    userId: short.agentId || short.developerId || 0,
-                    createdAt: short.publishedAt || new Date(),
-                    type: short.type || 'listing',
-                    propertyTitle: short.propertyTitle || short.title,
-                    propertyLocation: short.propertyLocation,
-                    propertyPrice: short.propertyPrice,
-                    caption: short.caption,
-                    bedrooms: short.bedrooms,
-                    bathrooms: short.bathrooms,
-                    area: short.area,
-                    yardSize: short.yardSize,
-                    propertyType: short.propertyType,
-                    highlights: short.highlights || [],
+                    id: String(item.id),
+                    title: item.title,
+                    description: '',
+                    videoUrl: item.mediaUrl,
+                    thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
+                    views: item.stats.views || 0,
+                    likes: item.stats.saves || 0,
+                    userId: item.actor.id || 0,
+                    createdAt: new Date(),
+                    type: 'listing',
+                    propertyTitle: item.title,
+                    propertyLocation: [item.location?.suburb, item.location?.city]
+                      .filter(Boolean)
+                      .join(', '),
+                    caption: item.category,
+                    highlights: [item.category],
+                    agentName: item.actor.displayName,
+                    verificationStatus: item.actor.verificationStatus,
+                    trustBand: item.actorInsights?.trustBand || 'standard',
                   }}
                   isActive={idx === currentIndex}
                   onView={() => {
                     recordInteractionMutation.mutate({
-                      shortId: short.id,
+                      contentId: item.id,
                       interactionType: 'view',
                       feedType: feedType,
                     });
