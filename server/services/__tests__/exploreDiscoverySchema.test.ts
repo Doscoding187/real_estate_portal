@@ -3,6 +3,8 @@ import { getDb } from '../../db';
 import { resetDb } from '../../db-connection';
 import { sql } from 'drizzle-orm';
 
+const describeWithDb = process.env.DATABASE_URL ? describe : describe.skip;
+
 /**
  * Database Schema Unit Tests for Explore Discovery Engine
  * Task: 1.1 Write unit tests for database schema
@@ -17,7 +19,7 @@ import { sql } from 'drizzle-orm';
  * and the explore discovery engine migration to be run.
  */
 
-describe('Explore Discovery Engine Database Schema', () => {
+describeWithDb('Explore Discovery Engine Database Schema', () => {
   let db: Awaited<ReturnType<typeof getDb>> | null = null;
   let skipTests = false;
 

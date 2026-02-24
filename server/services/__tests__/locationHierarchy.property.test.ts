@@ -16,6 +16,11 @@ describe('Location Hierarchy Property Tests', () => {
   let skipTests = false;
 
   beforeAll(async () => {
+    if (!process.env.DATABASE_URL) {
+      skipTests = true;
+      return;
+    }
+
     // Initialize database connection
     try {
       db = await getDb();

@@ -31,6 +31,11 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
   beforeAll(async () => {
     console.log('[SearchIntegration PBT] Setting up test database...');
 
+    if (!process.env.DATABASE_URL) {
+      skipTests = true;
+      return;
+    }
+
     // Initialize database connection
     try {
       db = await getDb();

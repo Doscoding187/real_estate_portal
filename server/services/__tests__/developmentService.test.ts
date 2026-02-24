@@ -18,7 +18,9 @@ import {
 } from '../../../drizzle/schema';
 import { eq, inArray } from 'drizzle-orm';
 
-describe('Development Service - Property Tests', { timeout: 30000 }, () => {
+const describeWithDatabase = process.env.DATABASE_URL ? describe : describe.skip;
+
+describeWithDatabase('Development Service - Property Tests', { timeout: 30000 }, () => {
   // Helper function to create a test developer
   async function createTestDeveloper(userId: number) {
     const userInsert = await db.insert(users).values({

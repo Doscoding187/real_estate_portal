@@ -136,6 +136,11 @@ describe('PropertySearchService - Property-Based Tests', () => {
   let insertedPropertyIds: number[] = [];
 
   beforeAll(async () => {
+    if (!process.env.DATABASE_URL) {
+      skipTests = true;
+      return;
+    }
+
     try {
       db = await getDb();
       if (!db) {

@@ -5,7 +5,9 @@ import { getDb } from '../db-connection';
 import { propertySearchService } from '../services/propertySearchService';
 import { agencies, agents, properties, propertyImages, users } from '../../drizzle/schema';
 
-describe('Property Card Data Flow Integration', () => {
+const describeWithDatabase = process.env.DATABASE_URL ? describe : describe.skip;
+
+describeWithDatabase('Property Card Data Flow Integration', () => {
   let createdUserId: number | null = null;
   let createdAgencyId: number | null = null;
   let createdAgentId: number | null = null;

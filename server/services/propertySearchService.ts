@@ -380,12 +380,18 @@ export class PropertySearchService {
           ? 'sectional'
           : 'freehold';
 
+      const listedDateCandidate = prop.listedDate ?? prop.createdAt;
+      const parsedListedDate = new Date(listedDateCandidate);
+      const safeListedDate = Number.isFinite(parsedListedDate.getTime())
+        ? parsedListedDate
+        : new Date(0);
+
       return {
         id: String(prop.id),
         title: prop.title,
         description: prop.description ?? undefined,
         price: prop.price,
-        suburb: prop.suburb || prop.city,
+        suburb: prop.suburb || prop.address || prop.city,
         city: prop.city,
         province: prop.province,
         propertyType: prop.propertyType as Property['propertyType'],
@@ -405,7 +411,7 @@ export class PropertySearchService {
         mainImage: prop.mainImage || primaryImage[0]?.url || undefined,
         videoCount: Number(prop.videoCount || 0),
         status: this.mapStatus(prop.status),
-        listedDate: new Date(prop.listedDate),
+        listedDate: safeListedDate,
         agent: {
           id: String(prop.agentId || 0),
           name: agentName,

@@ -4,6 +4,8 @@ import { developmentService } from '../services/developmentService';
 import { developments, developers, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
+const describeWithDatabase = process.env.DATABASE_URL ? describe : describe.skip;
+
 // Mock Data
 const TEST_DEV_NAME = 'Integration Test Dev Refactor';
 const TEST_DEV_DATA = {
@@ -41,7 +43,7 @@ const V2_UNIT_DATA = [
   },
 ];
 
-describe('Unit Type Refactoring Integration', () => {
+describeWithDatabase('Unit Type Refactoring Integration', () => {
   let testUserId: number;
   let testDeveloperId: number;
   let createdDevId: number;

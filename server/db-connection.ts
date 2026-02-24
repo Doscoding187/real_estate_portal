@@ -81,6 +81,26 @@ export async function getDb() {
       return acc;
     };
 
+    const toSqlText = (query: any): string => {
+      if (typeof query === 'string') return query;
+      if (typeof query?.sql === 'string') return query.sql;
+      if (!Array.isArray(query?.queryChunks)) return String(query ?? '');
+
+      return query.queryChunks
+        .map((chunk: any) => {
+          if (typeof chunk === 'string') return chunk;
+          if (Array.isArray(chunk?.value)) return chunk.value.join('');
+          if (typeof chunk?.value === 'string') return chunk.value;
+          if (typeof chunk?.name === 'string') return chunk.name;
+          return '';
+        })
+        .join(' ');
+    };
+
+    const buildInsertResult = (insertId: number) => {
+      return Object.assign([{ insertId }], { insertId });
+    };
+
     const normalizeSearchRow = (row: Row): Row => ({
       id: Number(row.id ?? 0),
       title: row.title ?? 'Untitled Property',
@@ -158,28 +178,11 @@ export async function getDb() {
           return builder;
         },
         where(condition: any) {
-          // Basic filtering support for eq() conditions
-          // Extract field and value from Drizzle's eq() condition
-          if (condition && typeof condition === 'object') {
-            try {
-              // Try to extract the column name and value from the condition
-              // Drizzle's eq() creates an object with column and value info
-              const conditionStr = JSON.stringify(condition);
-
-              // Simple heuristic: if condition has 'value' property, use it
-              if (condition.value !== undefined) {
-                // Find which field is being filtered
-                // This is a simplified implementation - in reality Drizzle conditions are more complex
-                const filterValue = condition.value;
-
-                // Filter by id if the condition seems to be about id
-                if (conditionStr.includes('"id"') || conditionStr.includes('id')) {
-                  currentRows = currentRows.filter(row => row.id === filterValue);
-                }
-              }
-            } catch (e) {
-              // If we can't parse the condition, just return all rows
-              console.warn('[Mock DB] Could not parse where condition:', e);
+          // Keep test-mock filtering intentionally shallow to avoid brittle AST parsing.
+          if (condition && typeof condition === 'object' && condition.value !== undefined) {
+            const tokens = collectHintTokens(condition);
+            if (tokens.includes('id')) {
+              currentRows = currentRows.filter(row => row.id === condition.value);
             }
           }
           return builder;
@@ -212,14 +215,15 @@ export async function getDb() {
             .filter((chunk: any) => Array.isArray(chunk?.value))
             .map((chunk: any) => String(chunk.value.join('')).toLowerCase())
             .join(' ');
-          const hasDesc = directionText.includes('desc');
+          const hintText = collectHintTokens(orderExpr).join(' ');
+          const hasDesc = directionText.includes('desc') || hintText.includes('desc');
 
           const orderedColumn = chunks.find(
             (chunk: any) => chunk && typeof chunk === 'object' && typeof chunk.name === 'string',
           );
           const columnName = String(orderedColumn?.name ?? '').toLowerCase();
 
-          if (columnName === 'price') {
+          if (columnName === 'price' || hintText.includes('price')) {
             currentRows.sort((a, b) =>
               hasDesc
                 ? Number(b.price ?? 0) - Number(a.price ?? 0)
@@ -228,26 +232,33 @@ export async function getDb() {
             return builder;
           }
 
-          if (columnName === 'createdat' || columnName === 'created_at') {
+          if (
+            columnName === 'createdat' ||
+            columnName === 'created_at' ||
+            hintText.includes('createdat') ||
+            hintText.includes('created_at')
+          ) {
             currentRows.sort((a, b) => {
-              const aTs = new Date(a.listedDate ?? 0).getTime();
-              const bTs = new Date(b.listedDate ?? 0).getTime();
+              const aTs = new Date(a.listedDate ?? a.createdAt ?? 0).getTime();
+              const bTs = new Date(b.listedDate ?? b.createdAt ?? 0).getTime();
               return hasDesc ? bTs - aTs : aTs - bTs;
             });
             return builder;
           }
 
-          if (columnName === 'address') {
+          if (columnName === 'address' || hintText.includes('address')) {
             currentRows.sort((a, b) => {
-              const aSuburb = String(a.suburb ?? '').toLowerCase();
-              const bSuburb = String(b.suburb ?? '').toLowerCase();
+              const aSuburb = String(a.address ?? a.suburb ?? a.city ?? '').toLowerCase();
+              const bSuburb = String(b.address ?? b.suburb ?? b.city ?? '').toLowerCase();
               return hasDesc ? bSuburb.localeCompare(aSuburb) : aSuburb.localeCompare(bSuburb);
             });
             return builder;
           }
 
           currentRows.sort(
-            (a, b) => new Date(b.listedDate ?? 0).getTime() - new Date(a.listedDate ?? 0).getTime(),
+            (a, b) =>
+              new Date(b.listedDate ?? b.createdAt ?? 0).getTime() -
+              new Date(a.listedDate ?? a.createdAt ?? 0).getTime(),
           );
           return builder;
         },
@@ -274,6 +285,23 @@ export async function getDb() {
     const mockDb: any = {
       query: createQueryProxy(),
       select: (shape?: Record<string, any>) => makeQuery(shape),
+      execute: async (statement: any) => {
+        const sqlText = toSqlText(statement).toLowerCase();
+
+        if (sqlText.includes('select database()')) {
+          return [[{ db: 'listify_test', host: 'mock-host' }], []];
+        }
+
+        if (sqlText.includes('select 1 from explore_content')) {
+          return [[{ '1': 1 }], []];
+        }
+
+        if (sqlText.includes('delete from explore_content')) {
+          return [{ affectedRows: 0 }, []];
+        }
+
+        return [[], []];
+      },
       insert: (table: any) => ({
         values: async (value: Row | Row[]) => {
           const tableName = getTableName(table);
@@ -286,7 +314,7 @@ export async function getDb() {
               state.properties.push({ ...v, id });
               lastInsertId = id;
             });
-            return { insertId: lastInsertId };
+            return buildInsertResult(lastInsertId);
           }
 
           if (tableName.includes('locations')) {
@@ -296,7 +324,7 @@ export async function getDb() {
               state.locations.push({ ...v, id });
               lastInsertId = id;
             });
-            return { insertId: lastInsertId };
+            return buildInsertResult(lastInsertId);
           }
 
           if (tableName.includes('listings')) {
@@ -306,7 +334,7 @@ export async function getDb() {
               state.listings.push({ ...v, id });
               lastInsertId = id;
             });
-            return { insertId: lastInsertId };
+            return buildInsertResult(lastInsertId);
           }
 
           if (tableName.includes('property_images')) {
@@ -319,10 +347,10 @@ export async function getDb() {
                 displayOrder: Number(v.displayOrder ?? 0),
               });
             });
-            return { insertId: 1 };
+            return buildInsertResult(1);
           }
 
-          return { insertId: 0 };
+          return buildInsertResult(0);
         },
       }),
       update: () => ({ set: () => ({ where: async () => ({ affectedRows: 0 }) }) }),
