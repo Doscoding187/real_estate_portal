@@ -457,7 +457,7 @@ export const developerRouter = router({
         'Untitled Draft';
 
       try {
-        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
         const dbConn = await db.getDb();
         if (!dbConn) {
           return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
@@ -513,7 +513,7 @@ export const developerRouter = router({
     .input(z.object({ id: z.number().int() }))
     .query(async ({ ctx, input }) => {
       try {
-        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
         const dbConn = await db.getDb();
         if (!dbConn) return null;
 
@@ -539,7 +539,7 @@ export const developerRouter = router({
 
   getDrafts: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       const dbConn = await db.getDb();
       if (!dbConn) return [];
 
@@ -563,7 +563,7 @@ export const developerRouter = router({
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
         const dbConn = await db.getDb();
         if (!dbConn) return { success: false, id: input.id };
 
@@ -1046,7 +1046,7 @@ export const developerRouter = router({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
         return await getKPIsWithCache(profile.id, input?.timeRange, input?.forceRefresh ?? false);
       } catch (error) {
         console.warn('[developer.getDashboardKPIs] Returning safe defaults due to error:', error);
@@ -1167,7 +1167,7 @@ export const developerRouter = router({
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       try {
-        const profile = await requireDeveloperProfileByUserId(ctx.user.id);
+        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
 
         // NOTE: Using getDevelopmentWithPhases to ensure we return full object
         const dev = await developmentService.getDevelopmentWithPhases(input.id);

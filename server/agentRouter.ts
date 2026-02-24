@@ -102,8 +102,8 @@ export const agentRouter = router({
           .where(
             and(
               eq(showings.agentId, agentId),
-              gte(showings.scheduledAt, today),
-              lte(showings.scheduledAt, tomorrow),
+              gte(showings.scheduledTime, today),
+              lte(showings.scheduledTime, tomorrow),
             ),
           );
 
@@ -111,7 +111,8 @@ export const agentRouter = router({
         const [offersInProgressResult] = await db
           .select({ count: count() })
           .from(offers)
-          .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
+          .innerJoin(properties, eq(offers.listingId, properties.id))
+          .where(and(eq(properties.agentId, agentId), eq(offers.status, 'pending')));
 
         // Pending commissions sum
         const [pendingCommissionsResult] = await db

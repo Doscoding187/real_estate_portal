@@ -237,13 +237,15 @@ export function validateTierTransition(
 // TYPE EXTENSIONS
 // =====================================================
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    partnerSubscription?: {
-      id: string;
-      partner_id: string;
-      tier: string;
-      features: SubscriptionFeatures;
-    };
+declare global {
+  namespace Express {
+    interface Request {
+      partnerSubscription?: {
+        id: string;
+        partner_id: string;
+        tier: string;
+        features: SubscriptionFeatures;
+      };
+    }
   }
 }

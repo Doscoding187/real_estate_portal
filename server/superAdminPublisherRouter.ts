@@ -295,6 +295,57 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
+   * Publish all developments for the selected brand context
+   */
+  publishAllBrandDevelopments: superAdminProcedure
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new Error('Database not available');
+      }
+
+      const brandDevelopments = await dbConn
+        .select({
+          id: developments.id,
+          isPublished: developments.isPublished,
+        })
+        .from(developments)
+        .where(eq(developments.developerBrandProfileId, input.brandProfileId));
+
+      const totalDevelopments = brandDevelopments.length;
+      const unpublishedCount = brandDevelopments.filter(
+        development => Number(development.isPublished ?? 0) === 0,
+      ).length;
+
+      if (unpublishedCount > 0) {
+        const now = new Date().toISOString();
+        await dbConn
+          .update(developments)
+          .set({
+            isPublished: 1,
+            publishedAt: now,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(developments.developerBrandProfileId, input.brandProfileId),
+              eq(developments.isPublished, 0),
+            ),
+          );
+      }
+
+      return {
+        totalDevelopments,
+        updatedDevelopments: unpublishedCount,
+      };
+    }),
+
+  /**
    * Update a development (must check brand context ownership)
    */
   updateDevelopment: superAdminProcedure
