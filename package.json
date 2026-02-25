@@ -19,6 +19,7 @@
     "build:railway": "pnpm build:backend",
     "start": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "check": "tsc -p tsconfig.check.json --noEmit",
+    "type-check": "pnpm check",
     "lint": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
     "test": "vitest run",
