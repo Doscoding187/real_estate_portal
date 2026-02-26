@@ -30,7 +30,7 @@ Pilot dashboards contained mock/hardcoded KPI values shown as real metrics, crea
 - Merge-base confirmation: `merge-base(phase-4.5, phase-5) = c036224`
 - Key commits:
   - `f4c0df0` (dashboard truthing + Node baseline alignment)
-  - Follow-up docs commits on this branch (`bf5c70f`, `aeb0f5d`, `7693a48`)
+  - Follow-up documentation commits on this branch
 
 ## CI / Node baseline note
 

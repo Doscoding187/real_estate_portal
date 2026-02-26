@@ -36,7 +36,7 @@ Current branch tips:
 
 - `hardening/phase-4-transactions` -> `504243b` (`fix: wrap distribution state transitions in atomic transactions`)
 - `hardening/phase-4-5-repo-stabilization` -> `c036224` (`stabilize: restore explore compile modules and clear typecheck blockers`)
-- `hardening/phase-5-dashboards-truth` -> includes `f4c0df0` plus documentation updates (`bf5c70f`, `aeb0f5d`, `7693a48`)
+- `hardening/phase-5-dashboards-truth` -> includes `f4c0df0` plus documentation follow-up commits
 
 Merge-base confirmation:
 
