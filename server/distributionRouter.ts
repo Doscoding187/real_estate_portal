@@ -3426,6 +3426,75 @@ const adminDistributionRouter = router({
 });
 
 const managerDistributionRouter = router({
+  status: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    if (!ENV.distributionNetworkEnabled) {
+      return {
+        hasIdentity: false,
+        hasAccess: false,
+        assignmentCount: 0,
+      };
+    }
+
+    // Super admins can inspect manager tooling regardless of identity wiring.
+    if (ctx.user!.role === 'super_admin') {
+      const [assignmentCountRow] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(distributionManagerAssignments)
+        .innerJoin(
+          distributionPrograms,
+          eq(distributionManagerAssignments.programId, distributionPrograms.id),
+        )
+        .where(
+          and(
+            eq(distributionManagerAssignments.isActive, 1),
+            eq(distributionPrograms.isActive, 1),
+          ),
+        );
+
+      const assignmentCount = Number(assignmentCountRow?.count || 0);
+      return {
+        hasIdentity: true,
+        hasAccess: true,
+        assignmentCount,
+      };
+    }
+
+    const managerId = Number(ctx.user!.id);
+    const hasIdentity = await hasActiveDistributionIdentity(db, managerId, 'manager');
+    if (!hasIdentity) {
+      return {
+        hasIdentity: false,
+        hasAccess: false,
+        assignmentCount: 0,
+      };
+    }
+
+    const [assignmentCountRow] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(distributionManagerAssignments)
+      .innerJoin(
+        distributionPrograms,
+        eq(distributionManagerAssignments.programId, distributionPrograms.id),
+      )
+      .where(
+        and(
+          eq(distributionManagerAssignments.managerUserId, managerId),
+          eq(distributionManagerAssignments.isActive, 1),
+          eq(distributionPrograms.isActive, 1),
+        ),
+      );
+
+    const assignmentCount = Number(assignmentCountRow?.count || 0);
+    return {
+      hasIdentity: true,
+      hasAccess: assignmentCount > 0,
+      assignmentCount,
+    };
+  }),
+
   myAssignments: protectedProcedure.query(async ({ ctx }) => {
     assertDistributionEnabled();
     const db = await getDb();

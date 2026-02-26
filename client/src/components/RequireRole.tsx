@@ -2,35 +2,45 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
-export const RequireRole = ({ role, children }: { role: string; children: React.ReactNode }) => {
+type RequireRoleProps = {
+  role: string | string[];
+  children: React.ReactNode;
+  redirectTo?: string;
+};
+
+function isRoleAllowed(userRole: string | undefined, required: string | string[]) {
+  if (!userRole) return false;
+  if (Array.isArray(required)) {
+    return required.includes(userRole);
+  }
+  return userRole === required;
+}
+
+export const RequireRole = ({ role, children, redirectTo = '/login' }: RequireRoleProps) => {
   const { isAuthenticated, user, loading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    // Bail out while the auth status is still loading (prevents flash-of-unauthenticated)
+    // Bail out while auth status is loading (prevents flash-of-unauthenticated)
     if (loading) return;
 
-    // If NOT authorized → client-side navigation
-    if (!isAuthenticated || user?.role !== role) {
-      // Only trigger if we're not already on the login page
-      if (window.location.pathname !== '/login') {
-        setLocation('/login');
+    // If not authorized, redirect client-side.
+    if (!isAuthenticated || !isRoleAllowed(user?.role, role)) {
+      if (window.location.pathname !== redirectTo) {
+        setLocation(redirectTo);
       }
     }
-  }, [isAuthenticated, user, loading, role, setLocation]);
+  }, [isAuthenticated, user, loading, role, redirectTo, setLocation]);
 
-  // While we decide whether to redirect, render nothing (or a loader)
   if (loading) {
-    // Optionally render a spinner or skeleton
     return (
       <div className="flex h-screen items-center justify-center">
-        <span className="text-slate-600">Checking access…</span>
+        <span className="text-slate-600">Checking access...</span>
       </div>
     );
   }
 
-  // If we made it here, the user is authorized
-  if (!isAuthenticated || user?.role !== role) {
+  if (!isAuthenticated || !isRoleAllowed(user?.role, role)) {
     return null;
   }
 

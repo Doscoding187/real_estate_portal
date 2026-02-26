@@ -18,7 +18,7 @@ import { useLocation } from 'wouter';
 const mockUseAuth = useAuth as ReturnType<typeof vi.fn>;
 const mockUseLocation = useLocation as ReturnType<typeof vi.fn>;
 
-const renderWithAuth = (authValue: any, role: string) => {
+const renderWithAuth = (authValue: any, role: string | string[]) => {
   return render(
     <RequireRole role={role}>
       <div data-testid="protected">Protected Content</div>
@@ -86,6 +86,20 @@ describe('RequireRole', () => {
     await waitFor(() => {
       expect(setLocation).toHaveBeenCalledWith('/login');
     });
+  });
+
+  test('renders protected children when user has any allowed role in array', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'super_admin' },
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, vi.fn()]);
+
+    renderWithAuth({}, ['agency_admin', 'super_admin']);
+
+    expect(await screen.findByTestId('protected')).toBeInTheDocument();
   });
 
   test('shows loading spinner while auth is loading', () => {

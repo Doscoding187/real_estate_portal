@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure, publicProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
 import { EmailService } from './_core/emailService';
@@ -318,15 +318,15 @@ const EMPTY_DEVELOPER_KPIS = {
 // ===========================================================================
 
 export const developerRouter = router({
-  adminListPendingDevelopers: protectedProcedure.input(z.void()).query(async () => {
+  adminListPendingDevelopers: superAdminProcedure.input(z.void()).query(async () => {
     return { developers: [] as any[], total: 0 };
   }),
 
-  adminListAllDevelopers: protectedProcedure.input(z.void()).query(async () => {
+  adminListAllDevelopers: superAdminProcedure.input(z.void()).query(async () => {
     return { developers: [] as any[], total: 0 };
   }),
 
-  adminSetTrusted: protectedProcedure
+  adminSetTrusted: superAdminProcedure
     .input(z.object({ developerId: z.number(), isTrusted: z.boolean() }))
     .mutation(async () => {
       return { ok: true };

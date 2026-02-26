@@ -21,6 +21,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import Home from './pages/Home';
 import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
 import { RequireRole } from '@/components/RequireRole';
+import { RequireDistributionIdentity } from '@/components/RequireDistributionIdentity';
 import {
   LegacyCityRedirect,
   LegacySuburbRedirect,
@@ -155,6 +156,10 @@ const SearchResults = lazy(() => import('./pages/SearchResults'));
 const SuburbPage = lazy(() => import('./pages/SuburbPage'));
 
 function Router() {
+  const AGENT_PORTAL_ROLES = ['agent', 'agency_admin', 'super_admin'];
+  const AGENCY_PORTAL_ROLES = ['agency_admin', 'super_admin'];
+  const DEVELOPER_PORTAL_ROLES = ['property_developer', 'super_admin'];
+
   const isLegacyPropertyAction = (action?: string) => {
     const normalized = String(action || '')
       .trim()
@@ -216,11 +221,114 @@ function Router() {
 
           {/* ============================================================== */}
           {/* 2A. DEVELOPER DASHBOARD ROUTES                                 */}
-          {/* All /developer/* routes are handled by DeveloperRoutes         */}
+          {/* Private dashboard routes use explicit role guards              */}
           {/* ============================================================== */}
 
-          {/* We use a wildcard to let DeveloperRoutes handle sub-routing */}
-          <Route path="/developer/:rest*" component={DeveloperRoutes} />
+          <Route path="/developer">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/dashboard">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/developments">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/developments/new">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/create-development">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/drafts">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/leads">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/messages">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/tasks">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/reports">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/analytics">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/explore">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/campaigns">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/campaigns/new">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/performance">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/settings">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/settings/team">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/subscription">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/settings/subscription">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/plans">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/notifications">
+            <RequireRole role={DEVELOPER_PORTAL_ROLES}>
+              <DeveloperRoutes />
+            </RequireRole>
+          </Route>
 
           {/* Developer Brand Directory (public) */}
           <Route path="/developers" component={DeveloperDirectoryPage} />
@@ -233,23 +341,67 @@ function Router() {
 
           {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
-          <Route path="/admin/review/:id" component={AdminPropertyReview} />
+          <Route path="/admin/review/:id">
+            <RequireSuperAdmin>
+              <AdminPropertyReview />
+            </RequireSuperAdmin>
+          </Route>
 
           {/* Legacy properties route (query params) */}
           <Route path="/properties" component={SearchResults} />
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
-          <Route path="/agent/dashboard" component={AgentDashboard} />
-          <Route path="/agent/listings" component={AgentListings} />
-          <Route path="/agent/leads" component={AgentLeadsEnhanced} />
-          <Route path="/agent/marketing" component={AgentMarketingHub} />
-          <Route path="/agent/earnings" component={AgentEarnings} />
-          <Route path="/agent/analytics" component={AgentAnalytics} />
-          <Route path="/agent/productivity" component={AgentProductivity} />
-          <Route path="/agent/training" component={AgentTrainingSupport} />
-          <Route path="/agent/settings" component={AgentSettings} />
-          <Route path="/agent/setup" component={AgentSetup} />
+          <Route path="/agent/dashboard">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentDashboard />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/listings">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentListings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/leads">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentLeadsEnhanced />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/marketing">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentMarketingHub />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/earnings">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentEarnings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/analytics">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentAnalytics />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/productivity">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentProductivity />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/training">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentTrainingSupport />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/settings">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentSettings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/setup">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
+              <AgentSetup />
+            </RequireRole>
+          </Route>
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
 
@@ -306,7 +458,11 @@ function Router() {
 
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
-          <Route path="/referrer/dashboard" component={ReferrerDashboard} />
+          <Route path="/referrer/dashboard">
+            <RequireDistributionIdentity identity="referrer">
+              <ReferrerDashboard />
+            </RequireDistributionIdentity>
+          </Route>
 
           <Route path="/compare" component={CompareProperties} />
 
@@ -548,36 +704,68 @@ function Router() {
           {/* Other routes that might conflict */}
           <Route path="/dashboard" component={Dashboard} />
 
-          <Route path="/agency/dashboard" component={AgencyDashboard} />
-          <Route path="/distribution/manager" component={DistributionManagerDashboard} />
+          <Route path="/agency/dashboard">
+            <RequireRole role={AGENCY_PORTAL_ROLES}>
+              <AgencyDashboard />
+            </RequireRole>
+          </Route>
+          <Route path="/distribution/manager">
+            <RequireDistributionIdentity identity="manager">
+              <DistributionManagerDashboard />
+            </RequireDistributionIdentity>
+          </Route>
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
-          <Route path="/agency/subscription" component={AgencySubscriptionPage} />
+          <Route path="/agency/subscription">
+            <RequireRole role={AGENCY_PORTAL_ROLES}>
+              <AgencySubscriptionPage />
+            </RequireRole>
+          </Route>
           <Route path="/agency/onboarding" component={AgencyOnboarding} />
-          <Route path="/admin/subscription-management" component={SubscriptionManagementPage} />
-          <Route path="/admin/plan-editor" component={PlanEditor} />
-          <Route path="/admin/revenue-center" component={RevenueCenterPage} />
+          <Route path="/admin/subscription-management">
+            <RequireSuperAdmin>
+              <SubscriptionManagementPage />
+            </RequireSuperAdmin>
+          </Route>
+          <Route path="/admin/plan-editor">
+            <RequireSuperAdmin>
+              <PlanEditor />
+            </RequireSuperAdmin>
+          </Route>
+          <Route path="/admin/revenue-center">
+            <RequireSuperAdmin>
+              <RevenueCenterPage />
+            </RequireSuperAdmin>
+          </Route>
           <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
-          <Route path="/agency/invite" component={InviteAgents} />
-          <Route path="/agency/agents" component={AgentManagement} />
+          <Route path="/agency/invite">
+            <RequireRole role={AGENCY_PORTAL_ROLES}>
+              <InviteAgents />
+            </RequireRole>
+          </Route>
+          <Route path="/agency/agents">
+            <RequireRole role={AGENCY_PORTAL_ROLES}>
+              <AgentManagement />
+            </RequireRole>
+          </Route>
 
           {/* NOTE: Developer routes are defined in section 2A above */}
 
           {/* User Dashboard Route */}
           <Route path="/user/dashboard">
-            <RequireRole role="user">
+            <RequireRole role="visitor">
               <UserDashboard />
             </RequireRole>
           </Route>
 
-          {/* Future Dashboard Routes - TODO: Add proper role-based guards */}
+          {/* Guarded fallback dashboard routes */}
           <Route path="/agency/*">
-            <RequireRole role="agency_admin">
+            <RequireRole role={AGENCY_PORTAL_ROLES}>
               <AgencyDashboard />
             </RequireRole>
           </Route>
 
           <Route path="/agent/*">
-            <RequireRole role="agent">
+            <RequireRole role={AGENT_PORTAL_ROLES}>
               <AgentDashboard />
             </RequireRole>
           </Route>
