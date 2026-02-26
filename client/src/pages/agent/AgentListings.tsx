@@ -357,7 +357,11 @@ export default function AgentListings() {
                       readiness={listing.readiness}
                       onEdit={id => setLocation(`/listings/create?id=${id}&edit=true`)}
                       onDelete={id => handleDelete(id)}
-                      onView={id => setLocation(`/property/${id}`)}
+                      onView={id =>
+                        isDraftOrPending
+                          ? setLocation(`/listings/create?id=${id}&edit=true`)
+                          : setLocation(`/agent/listings/${id}`)
+                      }
                     />
                   ))}
                 </div>

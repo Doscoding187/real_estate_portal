@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db';
-import { agents, developments, leads, properties } from '../../drizzle/schema';
+import { agents, developments, leads, properties, users } from '../../drizzle/schema';
 import { brandLeadService } from './brandLeadService';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
@@ -35,12 +35,13 @@ export interface PublicLeadCaptureInput {
   affordabilityData?: AffordabilityData;
 }
 
-interface ResolvedLeadOwnership {
+export interface ResolvedLeadOwnership {
   propertyId?: number;
   developmentId?: number;
   developerBrandProfileId?: number;
   agencyId?: number;
   agentId?: number;
+  ownerUserId?: number;
 }
 
 export interface PublicLeadCaptureResult {
@@ -57,6 +58,63 @@ function coerceLeadType(input?: string): LeadType {
   if (input === 'offer') return 'offer';
   if (input === 'callback') return 'callback';
   return 'inquiry';
+}
+
+interface OwnerContext {
+  ownerUserId: number;
+  ownerRole?: string | null;
+  ownerAgencyId?: number | null;
+  ownerAgentId?: number | null;
+  ownerAgentAgencyId?: number | null;
+}
+
+export class LeadOwnershipResolutionError extends Error {
+  constructor(message: string = 'Unable to resolve lead owner context') {
+    super(message);
+    this.name = 'LeadOwnershipResolutionError';
+  }
+}
+
+export function applyOwnershipFallback(
+  resolved: ResolvedLeadOwnership,
+  ownerContext?: OwnerContext,
+): ResolvedLeadOwnership {
+  if (!ownerContext) return resolved;
+
+  const next: ResolvedLeadOwnership = { ...resolved };
+
+  if (!next.ownerUserId) {
+    next.ownerUserId = ownerContext.ownerUserId;
+  }
+
+  if (!next.agentId && ownerContext.ownerAgentId) {
+    next.agentId = ownerContext.ownerAgentId;
+  }
+
+  if (!next.agencyId) {
+    const canUseOwnerAgencyRole =
+      ownerContext.ownerRole === 'agency_admin' || ownerContext.ownerRole === 'agent';
+
+    if (
+      next.agentId &&
+      ownerContext.ownerAgentId &&
+      next.agentId === ownerContext.ownerAgentId &&
+      ownerContext.ownerAgentAgencyId
+    ) {
+      next.agencyId = ownerContext.ownerAgentAgencyId;
+    } else if (canUseOwnerAgencyRole && ownerContext.ownerAgencyId) {
+      // Agency-managed fallback when listing/property has no explicit agent assignment.
+      next.agencyId = ownerContext.ownerAgencyId;
+    }
+  }
+
+  return next;
+}
+
+export function hasDeterministicOwnerContext(resolved: ResolvedLeadOwnership): boolean {
+  return Boolean(
+    resolved.developerBrandProfileId || resolved.agentId || resolved.agencyId || resolved.ownerUserId,
+  );
 }
 
 async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<ResolvedLeadOwnership> {
@@ -85,6 +143,7 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
         developmentId: properties.developmentId,
         developerBrandProfileId: properties.developerBrandProfileId,
         agentId: properties.agentId,
+        ownerId: properties.ownerId,
       })
       .from(properties)
       .where(eq(properties.id, resolved.propertyId))
@@ -95,6 +154,7 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
       resolved.developerBrandProfileId =
         resolved.developerBrandProfileId || property.developerBrandProfileId || undefined;
       resolved.agentId = resolved.agentId || property.agentId || undefined;
+      resolved.ownerUserId = property.ownerId || undefined;
     } else {
       resolved.propertyId = undefined;
     }
@@ -134,6 +194,40 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
     }
   }
 
+  if (resolved.ownerUserId) {
+    const [ownerUser] = await db
+      .select({
+        id: users.id,
+        role: users.role,
+        agencyId: users.agencyId,
+      })
+      .from(users)
+      .where(eq(users.id, resolved.ownerUserId))
+      .limit(1);
+
+    if (!ownerUser) {
+      resolved.ownerUserId = undefined;
+      return resolved;
+    }
+
+    const [ownerAgent] = await db
+      .select({
+        id: agents.id,
+        agencyId: agents.agencyId,
+      })
+      .from(agents)
+      .where(eq(agents.userId, ownerUser.id))
+      .limit(1);
+
+    return applyOwnershipFallback(resolved, {
+      ownerUserId: ownerUser.id,
+      ownerRole: ownerUser.role,
+      ownerAgencyId: ownerUser.agencyId,
+      ownerAgentId: ownerAgent?.id,
+      ownerAgentAgencyId: ownerAgent?.agencyId,
+    });
+  }
+
   return resolved;
 }
 
@@ -146,6 +240,10 @@ export async function capturePublicLead(
   }
 
   const resolved = await resolveLeadOwnership(input);
+  if (!hasDeterministicOwnerContext(resolved)) {
+    throw new LeadOwnershipResolutionError();
+  }
+
   const source = input.source || input.leadSource || 'web';
   const leadSource = input.leadSource || input.source || 'web';
   const leadType = coerceLeadType(input.leadType);
@@ -169,6 +267,7 @@ export async function capturePublicLead(
     const leadPatch: Partial<LeadInsert> = {};
     if (resolved.agentId) leadPatch.agentId = resolved.agentId;
     if (resolved.agencyId) leadPatch.agencyId = resolved.agencyId;
+    if (resolved.ownerUserId) leadPatch.assignedTo = resolved.ownerUserId;
     if (leadType !== 'inquiry') leadPatch.leadType = leadType;
     if (source) leadPatch.source = source;
     if (input.affordabilityData) {
@@ -211,6 +310,7 @@ export async function capturePublicLead(
     affordabilityData: input.affordabilityData ? (input.affordabilityData as any) : null,
     funnelStage: input.affordabilityData ? 'affordability' : 'interest',
     qualificationStatus: 'pending',
+    assignedTo: resolved.ownerUserId || null,
   });
 
   return {

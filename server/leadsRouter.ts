@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { router, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
-import { capturePublicLead } from './services/publicLeadCaptureService';
+import { LeadOwnershipResolutionError, capturePublicLead } from './services/publicLeadCaptureService';
 
 const affordabilityDataSchema = z
   .object({
@@ -158,7 +158,19 @@ export const leadsRouter = router({
         });
       }
 
-      const result = await capturePublicLead(input);
+      let result;
+      try {
+        result = await capturePublicLead(input);
+      } catch (error) {
+        if (error instanceof LeadOwnershipResolutionError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Lead target could not be resolved for this submission.',
+          });
+        }
+
+        throw error;
+      }
 
       logLeadEvent('lead_accepted', {
         requestId,

@@ -7,8 +7,8 @@
 import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
-import { locations } from '../drizzle/schema';
+import { and, count, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { agents, leads, locations, properties, users } from '../drizzle/schema';
 import * as db from './db';
 import { ENV } from './_core/env';
 import {
@@ -62,6 +62,41 @@ async function normalizeLocationInput(inputLocation: { placeId?: string; locatio
   }
 
   return { sanitizedPlaceId, resolvedLocationId };
+}
+
+interface ListingLeadAccessListing {
+  ownerId: number;
+  agentId?: number | null;
+  agencyId?: number | null;
+  ownerAgencyId?: number | null;
+}
+
+interface ListingLeadAccessParams {
+  userRole?: string | null;
+  userId: number;
+  userAgencyId?: number | null;
+  actorAgentId?: number | null;
+  listing: ListingLeadAccessListing;
+}
+
+export function hasListingLeadAccess(params: ListingLeadAccessParams): boolean {
+  if (params.userRole === 'super_admin') return true;
+  if (Number(params.listing.ownerId) === Number(params.userId)) return true;
+
+  if (params.userRole === 'agency_admin' && params.userAgencyId) {
+    if (
+      Number(params.listing.agencyId || 0) === Number(params.userAgencyId) ||
+      Number(params.listing.ownerAgencyId || 0) === Number(params.userAgencyId)
+    ) {
+      return true;
+    }
+  }
+
+  if (params.userRole === 'agent' && params.actorAgentId && params.listing.agentId) {
+    return Number(params.actorAgentId) === Number(params.listing.agentId);
+  }
+
+  return false;
 }
 
 // Validation schemas
@@ -627,30 +662,195 @@ export const listingRouter = router({
    */
   getLeads: protectedProcedure
     .input(
-      z.object({
-        listingId: z.number(),
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      }),
+      z
+        .object({
+          listingId: z.number().optional(),
+          propertyId: z.number().optional(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().default(0),
+        })
+        .refine(value => value.listingId || value.propertyId, {
+          message: 'Either listingId or propertyId is required',
+        }),
     )
     .query(async ({ ctx, input }) => {
       try {
-        // Fetch leads with filtering
-        // For now, we'll return mock data
-        // In a real implementation, this would query the leads database
+        const authUser = requireUser(ctx);
+        const dbConn = await db.getDb();
 
-        // Verify ownership
-        const listing = await db.getListingById(input.listingId);
-        if (!listing) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+        let actorAgentId: number | null = null;
+        if (authUser.role === 'agent' || authUser.role === 'agency_admin') {
+          const [actorAgent] = await dbConn
+            .select({
+              id: agents.id,
+            })
+            .from(agents)
+            .where(eq(agents.userId, authUser.id))
+            .limit(1);
+          actorAgentId = actorAgent?.id ?? null;
         }
 
+        let propertyIds: number[] = [];
+
+        if (input.propertyId) {
+          const [property] = await dbConn
+            .select({
+              id: properties.id,
+              ownerId: properties.ownerId,
+              agentId: properties.agentId,
+            })
+            .from(properties)
+            .where(eq(properties.id, input.propertyId))
+            .limit(1);
+
+          if (!property) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+          }
+
+          const [ownerProfile] = await dbConn
+            .select({
+              agencyId: users.agencyId,
+            })
+            .from(users)
+            .where(eq(users.id, property.ownerId))
+            .limit(1);
+
+          let propertyAgencyId: number | null = null;
+          if (property.agentId) {
+            const [propertyAgent] = await dbConn
+              .select({
+                agencyId: agents.agencyId,
+              })
+              .from(agents)
+              .where(eq(agents.id, property.agentId))
+              .limit(1);
+            propertyAgencyId = propertyAgent?.agencyId ? Number(propertyAgent.agencyId) : null;
+          }
+
+          const canViewLeads = hasListingLeadAccess({
+            userRole: authUser.role,
+            userId: authUser.id,
+            userAgencyId: authUser.agencyId ?? null,
+            actorAgentId,
+            listing: {
+              ownerId: Number(property.ownerId),
+              agentId: property.agentId ? Number(property.agentId) : null,
+              agencyId: propertyAgencyId,
+              ownerAgencyId: ownerProfile?.agencyId ? Number(ownerProfile.agencyId) : null,
+            },
+          });
+
+          if (!canViewLeads) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view listing leads' });
+          }
+
+          propertyIds = [Number(property.id)];
+        } else {
+          // Verify ownership for listing-based lookup
+          const listing = await db.getListingById(Number(input.listingId));
+          if (!listing) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+          }
+
+          const [ownerProfile] = await dbConn
+            .select({
+              agencyId: users.agencyId,
+            })
+            .from(users)
+            .where(eq(users.id, listing.ownerId))
+            .limit(1);
+
+          const canViewLeads = hasListingLeadAccess({
+            userRole: authUser.role,
+            userId: authUser.id,
+            userAgencyId: authUser.agencyId ?? null,
+            actorAgentId,
+            listing: {
+              ownerId: Number(listing.ownerId),
+              agentId: listing.agentId ? Number(listing.agentId) : null,
+              agencyId: listing.agencyId ? Number(listing.agencyId) : null,
+              ownerAgencyId: ownerProfile?.agencyId ? Number(ownerProfile.agencyId) : null,
+            },
+          });
+
+          if (!canViewLeads) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view listing leads' });
+          }
+
+          const propertyLookupConditions: SQL[] = [eq(properties.ownerId, listing.ownerId)];
+          if (listing.agentId) {
+            propertyLookupConditions.push(eq(properties.agentId, Number(listing.agentId)));
+          }
+          if (listing.placeId) {
+            propertyLookupConditions.push(eq(properties.placeId, listing.placeId));
+          } else {
+            propertyLookupConditions.push(eq(properties.title, listing.title));
+            propertyLookupConditions.push(eq(properties.address, listing.address));
+            propertyLookupConditions.push(eq(properties.city, listing.city));
+            propertyLookupConditions.push(eq(properties.province, listing.province));
+          }
+
+          const matchingProperties = await dbConn
+            .select({
+              id: properties.id,
+            })
+            .from(properties)
+            .where(and(...propertyLookupConditions))
+            .orderBy(desc(properties.id))
+            .limit(10);
+
+          propertyIds = matchingProperties
+            .map(record => Number(record.id))
+            .filter(id => Number.isFinite(id) && id > 0);
+        }
+
+        if (propertyIds.length === 0) {
+          return {
+            leads: [],
+            total: 0,
+          };
+        }
+
+        const scopedLeadFilter = inArray(leads.propertyId, propertyIds);
+
+        const leadsList = await dbConn
+          .select({
+            id: leads.id,
+            propertyId: leads.propertyId,
+            developmentId: leads.developmentId,
+            agencyId: leads.agencyId,
+            agentId: leads.agentId,
+            assignedTo: leads.assignedTo,
+            name: leads.name,
+            email: leads.email,
+            phone: leads.phone,
+            message: leads.message,
+            leadType: leads.leadType,
+            status: leads.status,
+            source: leads.source,
+            createdAt: leads.createdAt,
+            updatedAt: leads.updatedAt,
+          })
+          .from(leads)
+          .where(scopedLeadFilter)
+          .orderBy(desc(leads.createdAt))
+          .limit(input.limit)
+          .offset(input.offset);
+
+        const [totalResult] = await dbConn
+          .select({
+            total: count(),
+          })
+          .from(leads)
+          .where(scopedLeadFilter);
+
         return {
-          leads: [],
-          total: 0,
+          leads: leadsList,
+          total: Number(totalResult?.total || 0),
         };
       } catch (error) {
         console.error('Error fetching leads:', error);
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch leads' });
       }
     }),
