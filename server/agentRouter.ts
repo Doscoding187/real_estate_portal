@@ -34,6 +34,98 @@ const NOTIFICATION_TYPES = [
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
+type AgentAuthUser = {
+  id: number;
+  role?: string | null;
+  agencyId?: number | null;
+};
+
+type LeadAccessRecord = {
+  id: number;
+  agentId: number | null;
+  agencyId: number | null;
+};
+
+export function hasLeadActivityAccess(params: {
+  role?: string | null;
+  userAgencyId?: number | null;
+  lead: LeadAccessRecord;
+  actorAgentId?: number | null;
+}) {
+  const role = params.role || 'visitor';
+
+  if (role === 'super_admin') return true;
+
+  if (role === 'agency_admin') {
+    if (!params.userAgencyId) return false;
+    return Number(params.lead.agencyId || 0) === Number(params.userAgencyId);
+  }
+
+  return Number(params.actorAgentId || 0) > 0 && Number(params.lead.agentId || 0) === params.actorAgentId;
+}
+
+async function resolveLeadActivityAccess(
+  db: Awaited<ReturnType<typeof getDb>>,
+  authUser: AgentAuthUser,
+  leadId: number,
+) {
+  const [lead] = await db
+    .select({
+      id: leads.id,
+      agentId: leads.agentId,
+      agencyId: leads.agencyId,
+    })
+    .from(leads)
+    .where(eq(leads.id, leadId))
+    .limit(1);
+
+  if (!lead) {
+    throw new Error('Lead not found or unauthorized');
+  }
+
+  const role = authUser.role || 'visitor';
+  let actorAgentId: number | null = null;
+  if (role !== 'super_admin' && role !== 'agency_admin') {
+    const [agentRecord] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(agents.userId, authUser.id))
+      .limit(1);
+
+    if (!agentRecord) {
+      throw new Error('Agent profile not found');
+    }
+
+    actorAgentId = Number(agentRecord.id);
+  } else if (lead.agentId) {
+    actorAgentId = Number(lead.agentId);
+  }
+
+  const canAccess = hasLeadActivityAccess({
+    role,
+    userAgencyId: authUser.agencyId,
+    lead: {
+      id: Number(lead.id),
+      agentId: lead.agentId ? Number(lead.agentId) : null,
+      agencyId: lead.agencyId ? Number(lead.agencyId) : null,
+    },
+    actorAgentId,
+  });
+
+  if (!canAccess) {
+    throw new Error('Lead not found or unauthorized');
+  }
+
+  return {
+    lead: {
+      id: Number(lead.id),
+      agentId: lead.agentId ? Number(lead.agentId) : null,
+      agencyId: lead.agencyId ? Number(lead.agencyId) : null,
+    },
+    actorAgentId,
+  };
+}
+
 /**
  * Agent Router - Dashboard and CRM functionality for agents
  */
@@ -710,32 +802,21 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      // Verify lead belongs to agent
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-
-      if (!lead || lead.agentId !== agentRecord.id) {
-        throw new Error('Lead not found or unauthorized');
-      }
+      const authUser = requireUser(ctx);
+      const { actorAgentId } = await resolveLeadActivityAccess(db, authUser, input.leadId);
 
       // Add activity
       await db.insert(leadActivities).values({
         leadId: input.leadId,
-        agentId: agentRecord.id,
+        agentId: actorAgentId,
         activityType: input.activityType,
         description: input.description,
-        metadata: input.metadata,
+        metadata:
+          input.metadata ||
+          JSON.stringify({
+            actorUserId: authUser.id,
+            actorRole: authUser.role || 'visitor',
+          }),
       });
 
       // Update lead's updatedAt
@@ -758,6 +839,8 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }): Promise<(typeof leadActivities.$inferSelect)[]> => {
       const db = await getDb();
+      const authUser = requireUser(ctx);
+      await resolveLeadActivityAccess(db, authUser, input.leadId);
 
       const activities = await db
         .select()

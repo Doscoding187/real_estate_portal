@@ -104,9 +104,18 @@ export const leadActivities = mysqlTable('lead_activities', {
   leadId: int()
     .notNull()
     .references(() => leads.id, { onDelete: 'cascade' }),
-  userId: int().references(() => users.id, { onDelete: 'set null' }),
-  type: mysqlEnum(['note', 'call', 'email', 'meeting', 'status_change']).notNull(),
+  agentId: int('agentId').references(() => agents.id, { onDelete: 'set null' }),
+  activityType: mysqlEnum('activityType', [
+    'call',
+    'email',
+    'meeting',
+    'note',
+    'status_change',
+    'viewing_scheduled',
+    'offer_sent',
+  ]).notNull(),
   description: text(),
+  metadata: text(),
   createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
