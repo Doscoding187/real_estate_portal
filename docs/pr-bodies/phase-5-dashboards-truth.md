@@ -31,6 +31,7 @@ Pilot dashboards contained mock/hardcoded KPI values shown as real metrics, crea
 - Key commits:
   - `f4c0df0` (dashboard truthing + Node baseline alignment)
   - `bf5c70f` (Pilot RC report)
+  - `aeb0f5d` (stacked PR templates + RC risk notes)
 
 ## CI / Node baseline note
 

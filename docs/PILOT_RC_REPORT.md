@@ -36,7 +36,7 @@ Current branch tips:
 
 - `hardening/phase-4-transactions` -> `504243b` (`fix: wrap distribution state transitions in atomic transactions`)
 - `hardening/phase-4-5-repo-stabilization` -> `c036224` (`stabilize: restore explore compile modules and clear typecheck blockers`)
-- `hardening/phase-5-dashboards-truth` -> `bf5c70f` (`docs: add pilot release candidate report`)
+- `hardening/phase-5-dashboards-truth` -> `aeb0f5d` (`docs: add stacked PR templates and RC risk notes`)
 
 Merge-base confirmation:
 
@@ -85,7 +85,7 @@ Manual staging run still required for full operational SOP:
 ### Staging execution log (to fill during live run)
 
 - Staging URL: `TBD`
-- Build/version identifier: `bf5c70f`
+- Build/version identifier: `aeb0f5d`
 - Timestamp (UTC): `2026-02-26T00:00:00Z` (update during run)
 
 Checklist run log:
@@ -105,6 +105,6 @@ PRs should be opened in this order:
 
 1. Phase 4 PR from `hardening/phase-4-transactions` (`504243b`)
 2. Phase 4.5 PR from `hardening/phase-4-5-repo-stabilization` (`c036224`)
-3. Phase 5 PR from `hardening/phase-5-dashboards-truth` (`bf5c70f`)
+3. Phase 5 PR from `hardening/phase-5-dashboards-truth` (`aeb0f5d`)
 
 Repository is ready for Pilot RC review with the above ordering.
