@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, TrendingUp, Users, UserPlus } from 'lucide-react';
+import { KpiValue } from '@/components/dashboard/KpiValue';
 
 interface AgencyStatsCardsProps {
-  stats: {
+  stats?: {
     totalListings: number;
     totalSales: number;
     totalLeads: number;
@@ -36,32 +37,35 @@ export function AgencyStatsCards({ stats, isLoading }: AgencyStatsCardsProps) {
     );
   }
 
+  const hasStats = Boolean(stats);
   const cards = [
     {
       title: 'Total Listings',
-      value: stats.totalListings,
-      description: `${stats.activeListings} active, ${stats.pendingListings} pending`,
+      value: stats?.totalListings ?? null,
+      description: hasStats
+        ? `${stats?.activeListings ?? 0} active, ${stats?.pendingListings ?? 0} pending`
+        : 'Not available yet',
       icon: Home,
       color: 'text-blue-600',
     },
     {
       title: 'Total Sales',
-      value: stats.totalSales,
-      description: `+${stats.recentSales} this month`,
+      value: stats?.totalSales ?? null,
+      description: hasStats ? `+${stats?.recentSales ?? 0} this month` : 'Not available yet',
       icon: TrendingUp,
       color: 'text-green-600',
     },
     {
       title: 'Total Leads',
-      value: stats.totalLeads,
-      description: `+${stats.recentLeads} this month`,
+      value: stats?.totalLeads ?? null,
+      description: hasStats ? `+${stats?.recentLeads ?? 0} this month` : 'Not available yet',
       icon: UserPlus,
       color: 'text-orange-600',
     },
     {
       title: 'Team Agents',
-      value: stats.totalAgents,
-      description: 'Active team members',
+      value: stats?.totalAgents ?? null,
+      description: hasStats ? 'Active team members' : 'Not available yet',
       icon: Users,
       color: 'text-purple-600',
     },
@@ -76,7 +80,12 @@ export function AgencyStatsCards({ stats, isLoading }: AgencyStatsCardsProps) {
             <card.icon className={`h-4 w-4 ${card.color}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{card.value.toLocaleString()}</div>
+            <KpiValue
+              value={typeof card.value === 'number' ? card.value.toLocaleString() : null}
+              status={hasStats ? 'real' : 'unavailable'}
+              className="text-2xl font-bold"
+              hint={hasStats ? undefined : 'Agency stats are currently unavailable.'}
+            />
             <p className="text-xs text-muted-foreground">{card.description}</p>
           </CardContent>
         </Card>

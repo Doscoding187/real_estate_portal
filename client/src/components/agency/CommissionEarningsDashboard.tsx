@@ -14,7 +14,7 @@ import {
 import { DollarSign, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 
 interface CommissionEarningsDashboardProps {
-  data: {
+  data?: {
     totalEarnings: number;
     paidCommissions: number;
     pendingCommissions: number;

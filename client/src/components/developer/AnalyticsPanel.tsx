@@ -1,30 +1,8 @@
 // @ts-nocheck
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  TrendingUp,
-  Users,
-  Eye,
-  MousePointerClick,
-  Calendar,
-  BarChart3,
-  AlertCircle,
-} from 'lucide-react';
+import { TrendingUp, Users, MousePointerClick, Calendar, BarChart3, AlertCircle } from 'lucide-react';
 import { MetricCard } from '@/components/MetricCard';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 import { trpc } from '@/lib/trpc';
 import {
   Select,
@@ -35,23 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Mock chart data (until time-series API is ready)
-const trafficData = [
-  { month: 'Jan', views: 2400, clicks: 1200 },
-  { month: 'Feb', views: 3200, clicks: 1600 },
-  { month: 'Mar', views: 2800, clicks: 1400 },
-  { month: 'Apr', views: 3900, clicks: 2100 },
-  { month: 'May', views: 4200, clicks: 2400 },
-  { month: 'Jun', views: 5100, clicks: 2900 },
-];
-
-const sourceData = [
-  { name: 'Direct', value: 35, color: '#3b82f6' }, // blue-500
-  { name: 'Search', value: 30, color: '#10b981' }, // emerald-500
-  { name: 'Social', value: 20, color: '#f59e0b' }, // amber-500
-  { name: 'Referral', value: 15, color: '#ef4444' }, // red-500
-];
+import { KpiValue } from '@/components/dashboard/KpiValue';
 
 type TimeRange = '7d' | '30d' | '90d';
 
@@ -79,9 +41,10 @@ const AnalyticsPanel: React.FC = () => {
     );
   }
 
+  const hasKpis = Boolean(kpis) && !isLoading;
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
@@ -107,7 +70,6 @@ const AnalyticsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Overview Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {isLoading ? (
           Array(4)
@@ -123,29 +85,29 @@ const AnalyticsPanel: React.FC = () => {
           <>
             <MetricCard
               title="Total Leads"
-              value={kpis?.totalLeads.toLocaleString() || '0'}
-              change={`${kpis?.trends.totalLeads > 0 ? '+' : ''}${kpis?.trends.totalLeads}%`}
+              value={kpis?.totalLeads.toLocaleString() || '--'}
+              change={`${kpis?.trends.totalLeads > 0 ? '+' : ''}${kpis?.trends.totalLeads ?? 0}%`}
               changeType={kpis?.trends.totalLeads >= 0 ? 'positive' : 'negative'}
               icon={Users}
             />
             <MetricCard
               title="Qualified Leads"
-              value={kpis?.qualifiedLeads.toLocaleString() || '0'}
-              change={`${kpis?.trends.qualifiedLeads > 0 ? '+' : ''}${kpis?.trends.qualifiedLeads}%`}
+              value={kpis?.qualifiedLeads.toLocaleString() || '--'}
+              change={`${kpis?.trends.qualifiedLeads > 0 ? '+' : ''}${kpis?.trends.qualifiedLeads ?? 0}%`}
               changeType={kpis?.trends.qualifiedLeads >= 0 ? 'positive' : 'negative'}
               icon={MousePointerClick}
             />
             <MetricCard
               title="Marketing Score"
-              value={`${kpis?.marketingPerformanceScore || 0}/100`}
-              change={`${kpis?.trends.marketingPerformanceScore > 0 ? '+' : ''}${kpis?.trends.marketingPerformanceScore}%`}
+              value={hasKpis ? `${kpis?.marketingPerformanceScore || 0}/100` : '--'}
+              change={`${kpis?.trends.marketingPerformanceScore > 0 ? '+' : ''}${kpis?.trends.marketingPerformanceScore ?? 0}%`}
               changeType={kpis?.trends.marketingPerformanceScore >= 0 ? 'positive' : 'negative'}
               icon={TrendingUp}
             />
             <MetricCard
               title="Units Sold"
-              value={kpis?.unitsSold.toLocaleString() || '0'}
-              change={`${kpis?.unitsAvailable} Available`}
+              value={kpis?.unitsSold.toLocaleString() || '--'}
+              change={hasKpis ? `${kpis?.unitsAvailable ?? 0} Available` : 'Unavailable'}
               changeType="neutral"
               icon={BarChart3}
             />
@@ -153,100 +115,83 @@ const AnalyticsPanel: React.FC = () => {
         )}
       </div>
 
-      {/* Traffic Overview */}
       <Card>
         <CardHeader>
-          <CardTitle>Traffic Overview (Live Data Coming Soon)</CardTitle>
+          <CardTitle>Traffic Overview</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={trafficData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="views"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                name="Views"
-                dot={{ strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, strokeWidth: 2 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="clicks"
-                stroke="#10b981"
-                strokeWidth={2}
-                name="Clicks"
-                dot={{ strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, strokeWidth: 2 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <CardContent className="space-y-2">
+          <KpiValue
+            status="coming_soon"
+            className="text-lg font-semibold"
+            hint="Time-series traffic ingestion is not wired for this dashboard yet."
+          />
+          <p className="text-sm text-muted-foreground">
+            Views and click-through trend charts will appear here once the traffic stream is enabled.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Traffic Sources */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="col-span-1 lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span>Performance Insights</span>
-              <span className="text-sm font-normal text-muted-foreground">
-                Based on {timeRange} activity
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-slate-500">Conversion Rate</h4>
-                <div className="flex items-end gap-2">
-                  <span className="text-2xl font-bold text-slate-900">{kpis?.conversionRate}%</span>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            <span>Performance Insights</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              Based on {timeRange} activity
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-slate-500">Conversion Rate</h4>
+              <div className="flex items-end gap-2">
+                <span className="text-2xl font-bold text-slate-900">
+                  {hasKpis ? `${kpis?.conversionRate ?? 0}%` : '--'}
+                </span>
+                {hasKpis ? (
                   <span
-                    className={`text-xs mb-1 ${kpis?.trends.conversionRate >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                    className={`text-xs mb-1 ${(kpis?.trends.conversionRate ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}
                   >
-                    {kpis?.trends.conversionRate > 0 ? '+' : ''}
-                    {kpis?.trends.conversionRate}%
+                    {(kpis?.trends.conversionRate ?? 0) > 0 ? '+' : ''}
+                    {kpis?.trends.conversionRate ?? 0}%
                   </span>
-                </div>
-                <p className="text-xs text-slate-400">Leads converting to sales</p>
+                ) : null}
               </div>
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-slate-500">Affordability Match</h4>
-                <div className="flex items-end gap-2">
-                  <span className="text-2xl font-bold text-slate-900">
-                    {kpis?.affordabilityMatchPercent}%
-                  </span>
-                  <span
-                    className={`text-xs mb-1 ${kpis?.trends.affordabilityMatchPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    {kpis?.trends.affordabilityMatchPercent > 0 ? '+' : ''}
-                    {kpis?.trends.affordabilityMatchPercent}%
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">Leads matching price range</p>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-slate-500">Lead Response</h4>
-                <div className="flex items-end gap-2">
-                  <span className="text-2xl font-bold text-slate-900">2.4h</span>
-                  <span className="text-xs mb-1 text-green-600">-5%</span>
-                </div>
-                <p className="text-xs text-slate-400">Avg time to action lead</p>
-              </div>
+              <p className="text-xs text-slate-400">Leads converting to sales</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-slate-500">Affordability Match</h4>
+              <div className="flex items-end gap-2">
+                <span className="text-2xl font-bold text-slate-900">
+                  {hasKpis ? `${kpis?.affordabilityMatchPercent ?? 0}%` : '--'}
+                </span>
+                {hasKpis ? (
+                  <span
+                    className={`text-xs mb-1 ${(kpis?.trends.affordabilityMatchPercent ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {(kpis?.trends.affordabilityMatchPercent ?? 0) > 0 ? '+' : ''}
+                    {kpis?.trends.affordabilityMatchPercent ?? 0}%
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-xs text-slate-400">Leads matching price range</p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-slate-500">Lead Response</h4>
+              <div className="flex items-end gap-2">
+                <KpiValue
+                  status="coming_soon"
+                  className="text-2xl font-bold text-slate-900"
+                  hint="Lead response time telemetry is not wired in developer analytics yet."
+                />
+              </div>
+              <p className="text-xs text-slate-400">Average time to action a lead</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
