@@ -2316,8 +2316,12 @@ const adminDistributionRouter = router({
         rows.flatMap(row => [Number(row.userId || 0), Number(row.reviewedBy || 0)]),
       );
 
-      const registrationUserIds = Array.from(
-        new Set(rows.map(row => Number(row.userId || 0)).filter(id => id > 0)),
+      const registrationUserIds: number[] = Array.from(
+        new Set(
+          rows
+            .map(row => Number(row.userId || 0))
+            .filter((id): id is number => Number.isFinite(id) && id > 0),
+        ),
       );
       const managerIdentityByUserId = new Map<number, boolean>();
       if (registrationUserIds.length) {

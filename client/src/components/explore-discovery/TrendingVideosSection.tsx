@@ -17,12 +17,14 @@ import { staggerContainerVariants, staggerItemVariants } from '@/lib/animations/
 
 interface TrendingVideosSectionProps {
   categoryId?: number;
-  onVideoClick: (video: TrendingVideo) => void;
+  intent?: string | null;
+  onVideoClick?: (video: TrendingVideo) => void;
   onSeeAll: () => void;
 }
 
 export function TrendingVideosSection({
   categoryId,
+  intent: _intent,
   onVideoClick,
   onSeeAll,
 }: TrendingVideosSectionProps) {
@@ -137,7 +139,7 @@ export function TrendingVideosSection({
                 >
                   <TrendingVideoCard
                     video={video}
-                    onClick={() => onVideoClick(video)}
+                    onClick={() => onVideoClick?.(video)}
                     index={index}
                   />
                 </motion.div>
