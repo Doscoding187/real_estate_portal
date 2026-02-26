@@ -2,6 +2,28 @@
 
 Date: 2026-02-26
 
+## 0) Release Notes and Risk
+
+### Material user-facing changes
+
+- Distribution/deal/commission transitions now run with atomic transaction boundaries (prevents partial financial state writes).
+- Repository compile and Explore module restoration fixes remove Phase 4.5 blockers (`pnpm check`/build stability).
+- Pilot-critical dashboards now render truthful KPIs only (real data or explicit `Coming soon`/unavailable states).
+- CI runtime now uses `.nvmrc` (`22`) as source of truth for Node setup.
+
+### Top 3 risk areas
+
+1. Live staging environment drift (env vars, auth providers, DB data shape) versus local test setup.
+2. Role and permission edge cases in real tenant data across agent/agency/distribution contexts.
+3. Performance and caching behavior under real pilot traffic (not fully represented in focused smoke tests).
+
+### Rollback plan
+
+- Revert Phase 5 changes by reverting commits `bf5c70f` and `f4c0df0` if dashboard truthing introduces regressions.
+- Revert Phase 4.5 stabilization by reverting `c036224` if compile/runtime behavior regresses unexpectedly.
+- Revert Phase 4 transaction hardening by reverting `504243b` only if a critical production regression is proven.
+- Safe baseline for this RC stack: commit `e6eab7d` (pre-Phase-4 tip).
+
 ## 1) Merge Order and Branch Integrity
 
 Required merge order:
@@ -14,7 +36,7 @@ Current branch tips:
 
 - `hardening/phase-4-transactions` -> `504243b` (`fix: wrap distribution state transitions in atomic transactions`)
 - `hardening/phase-4-5-repo-stabilization` -> `c036224` (`stabilize: restore explore compile modules and clear typecheck blockers`)
-- `hardening/phase-5-dashboards-truth` -> `f4c0df0` (`hardening: truth dashboard KPIs and align CI with Node baseline`)
+- `hardening/phase-5-dashboards-truth` -> `bf5c70f` (`docs: add pilot release candidate report`)
 
 Merge-base confirmation:
 
@@ -60,12 +82,29 @@ Manual staging run still required for full operational SOP:
 - stage transition + commission status transition in live environment
 - log/audit verification in staging runtime
 
+### Staging execution log (to fill during live run)
+
+- Staging URL: `TBD`
+- Build/version identifier: `bf5c70f`
+- Timestamp (UTC): `2026-02-26T00:00:00Z` (update during run)
+
+Checklist run log:
+
+- [ ] Create listing (agent-managed)
+- [ ] Create listing (agency-managed)
+- [ ] Capture lead and verify deterministic inbox owner
+- [ ] Verify listing lead visibility in listing detail + inbox + relevant dashboard
+- [ ] Advance deal stage and validate timeline/event write
+- [ ] Update commission status and validate transactionally consistent state
+- [ ] Verify logs/audit rows for lead routing, stage transition, commission updates
+- [ ] Note any anomalies with screenshots/short notes
+
 ## 5) PR Readiness
 
 PRs should be opened in this order:
 
 1. Phase 4 PR from `hardening/phase-4-transactions` (`504243b`)
 2. Phase 4.5 PR from `hardening/phase-4-5-repo-stabilization` (`c036224`)
-3. Phase 5 PR from `hardening/phase-5-dashboards-truth` (`f4c0df0`)
+3. Phase 5 PR from `hardening/phase-5-dashboards-truth` (`bf5c70f`)
 
 Repository is ready for Pilot RC review with the above ordering.
