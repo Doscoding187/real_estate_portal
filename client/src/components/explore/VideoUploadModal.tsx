@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { trpc } from '@/utils/trpc';
+import { trpc } from '@/lib/trpc';
 import { Loader2, Upload, X, Play } from 'lucide-react';
 
 interface VideoUploadModalProps {
@@ -41,7 +41,7 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
 
   // tRPC hooks
   const getPresignedUrl = trpc.video.getPresignedUrl.useMutation();
-  const uploadVideo = trpc.video.uploadVideo.useMutation();
+  const uploadVideo = trpc.explore.uploadShort.useMutation();
   const getAgentProperties = trpc.agent.getMyListings.useQuery(
     { status: 'available', limit: 100 },
     { enabled: videoType === 'listing' },
@@ -207,12 +207,11 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
       console.log('Saving video record to database...');
 
       await uploadVideo.mutateAsync({
-        propertyId: form.propertyId ? parseInt(form.propertyId) : undefined,
+        title: form.caption?.trim() || selectedFile.name.replace(/\.[^/.]+$/, '') || 'Explore Upload',
+        caption: form.caption?.trim() || undefined,
+        mediaUrls: [videoUrl],
+        listingId: form.propertyId ? parseInt(form.propertyId) : undefined,
         developmentId: form.developmentId ? parseInt(form.developmentId) : undefined,
-        videoUrl,
-        caption: form.caption || undefined,
-        type: videoType,
-        duration: form.duration,
       });
 
       console.log('Video upload complete!');

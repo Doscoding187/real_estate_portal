@@ -21,7 +21,7 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const contactAgent = trpc.video.contactAgent.useMutation({
+  const contactAgent = trpc.leads.create.useMutation({
     onSuccess: data => {
       console.log('Success:', data);
       onClose();
@@ -72,12 +72,14 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
 
     contactAgent.mutate({
       agentId: video.agentId,
-      videoId: video.id,
       propertyId: video.propertyId,
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim() || undefined,
       message,
+      leadType: 'inquiry',
+      source: 'explore_contact_modal',
+      leadSource: 'explore_contact_modal',
     });
   };
 

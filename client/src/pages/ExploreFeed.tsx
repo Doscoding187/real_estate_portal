@@ -86,6 +86,13 @@ export default function ExploreFeed() {
       )
     : videos;
 
+  const resolveLinkedListingId = (item: any): number | undefined => {
+    const rawId =
+      item?.linkedListingId ?? item?.referenceId ?? item?.listingId ?? item?.metadata?.listingId;
+    const numericId = Number(rawId);
+    return Number.isFinite(numericId) && numericId > 0 ? numericId : undefined;
+  };
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight } = e.currentTarget;
     const index = Math.round(scrollTop / clientHeight);
@@ -375,8 +382,10 @@ export default function ExploreFeed() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
             >
-              {filteredVideos?.map((item, idx: number) => (
-                <div key={item.id} className="snap-start snap-always h-screen w-full">
+              {filteredVideos?.map((item, idx: number) => {
+                const linkedListingId = resolveLinkedListingId(item);
+                return (
+                  <div key={item.id} className="snap-start snap-always h-screen w-full">
                   <VideoCard
                     video={{
                       id: String(item.id),
@@ -390,6 +399,8 @@ export default function ExploreFeed() {
                       createdAt: new Date(),
                       type: 'listing',
                       propertyTitle: item.title,
+                      propertyId: linkedListingId,
+                      agentId: item.actor.id || undefined,
                       propertyLocation: [item.location?.suburb, item.location?.city]
                         .filter(Boolean)
                         .join(', '),
@@ -398,6 +409,7 @@ export default function ExploreFeed() {
                       agentName: item.actor.displayName,
                       verificationStatus: item.actor.verificationStatus,
                       trustBand: item.actorInsights?.trustBand || 'standard',
+                      linkedListingId,
                     }}
                     isActive={idx === currentIndex}
                     onView={() => {
@@ -407,9 +419,22 @@ export default function ExploreFeed() {
                         feedType: feedType,
                       });
                     }}
+                    onOpenListing={listingId => {
+                      recordInteractionMutation.mutate({
+                        contentId: item.id,
+                        interactionType: 'contact',
+                        feedType: feedType,
+                        feedContext: {
+                          event: 'listing_click',
+                          listingId,
+                        },
+                      });
+                      setLocation(`/property/${listingId}`);
+                    }}
                   />
                 </div>
-              ))}
+                );
+              })}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -550,8 +575,10 @@ export default function ExploreFeed() {
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           >
-            {filteredVideos?.map((item, idx: number) => (
-              <div key={item.id} className="snap-start snap-always h-screen w-full">
+            {filteredVideos?.map((item, idx: number) => {
+              const linkedListingId = resolveLinkedListingId(item);
+              return (
+                <div key={item.id} className="snap-start snap-always h-screen w-full">
                 <VideoCard
                   video={{
                     id: String(item.id),
@@ -565,6 +592,8 @@ export default function ExploreFeed() {
                     createdAt: new Date(),
                     type: 'listing',
                     propertyTitle: item.title,
+                    propertyId: linkedListingId,
+                    agentId: item.actor.id || undefined,
                     propertyLocation: [item.location?.suburb, item.location?.city]
                       .filter(Boolean)
                       .join(', '),
@@ -573,6 +602,7 @@ export default function ExploreFeed() {
                     agentName: item.actor.displayName,
                     verificationStatus: item.actor.verificationStatus,
                     trustBand: item.actorInsights?.trustBand || 'standard',
+                    linkedListingId,
                   }}
                   isActive={idx === currentIndex}
                   onView={() => {
@@ -582,9 +612,22 @@ export default function ExploreFeed() {
                       feedType: feedType,
                     });
                   }}
+                  onOpenListing={listingId => {
+                    recordInteractionMutation.mutate({
+                      contentId: item.id,
+                      interactionType: 'contact',
+                      feedType: feedType,
+                      feedContext: {
+                        event: 'listing_click',
+                        listingId,
+                      },
+                    });
+                    setLocation(`/property/${listingId}`);
+                  }}
                 />
               </div>
-            ))}
+              );
+            })}
           </motion.div>
         </AnimatePresence>
       </div>

@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { trpc } from '@/lib/trpc';
 import {
   Heart,
   Share2,
@@ -39,6 +38,8 @@ interface Video {
   propertyTitle?: string;
   propertyLocation?: string;
   propertyPrice?: number;
+  propertyId?: number;
+  agentId?: number;
   caption?: string;
   duration?: number;
   isLiked?: boolean;
@@ -55,6 +56,9 @@ interface Video {
   parking?: string;
   parkingType?: string;
   parkingBays?: number;
+  verificationStatus?: string;
+  trustBand?: string;
+  linkedListingId?: number;
 }
 
 // Format helpers
@@ -101,9 +105,10 @@ interface VideoCardProps {
   video: Video;
   isActive: boolean;
   onView?: () => void;
+  onOpenListing?: (listingId: number) => void;
 }
 
-export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
+export default function VideoCard({ video, isActive, onView, onOpenListing }: VideoCardProps) {
   // Use the new video playback hook with viewport detection
   const { videoRef, containerRef, isPlaying, isBuffering, error, inView, retry, play, pause } =
     useVideoPlayback({
@@ -119,15 +124,6 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
   const [liked, setLiked] = useState(video.isLiked || false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const [showPropertyDetails, setShowPropertyDetails] = useState(false);
-
-  const toggleLike = trpc.video.toggleLike.useMutation({
-    onSuccess: data => {
-      setLiked(data.liked);
-    },
-    onError: error => {
-      console.error('Failed to toggle like:', error);
-    },
-  });
 
   // Manual play/pause control when isActive changes (for swipe navigation)
   useEffect(() => {
@@ -195,13 +191,34 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
     }
   };
 
-  // Double tap to like (TikTok-style)
-  const handleDoubleTap = () => {
+  const handleLikeToggle = () => {
+    setLiked(prev => !prev);
     if (!liked) {
-      toggleLike.mutate({ videoId: parseInt(video.id) });
       setShowLikeAnimation(true);
       setTimeout(() => setShowLikeAnimation(false), 1000);
     }
+  };
+
+  // Double tap to like (TikTok-style)
+  const handleDoubleTap = () => {
+    if (!liked) {
+      handleLikeToggle();
+    }
+  };
+
+  const handleOpenListing = () => {
+    const listingId = Number(video.linkedListingId || 0);
+    if (!Number.isFinite(listingId) || listingId <= 0) return;
+    onOpenListing?.(listingId);
+  };
+
+  const handlePrimaryClick = () => {
+    if (video.type === 'listing' && video.linkedListingId) {
+      handleOpenListing();
+      return;
+    }
+
+    togglePlayPause();
   };
 
   // Auto-hide pause icon after 800ms
@@ -230,7 +247,7 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
             className="h-full w-auto max-w-full object-contain"
             loading="lazy"
             onDoubleClick={handleDoubleTap}
-            onClick={() => setShowPropertyDetails(!showPropertyDetails)}
+            onClick={handlePrimaryClick}
           />
         ) : (
           // Actual Video
@@ -243,7 +260,7 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
             playsInline
             preload="metadata"
             poster={video.thumbnailUrl}
-            onClick={togglePlayPause}
+            onClick={handlePrimaryClick}
             onDoubleClick={handleDoubleTap}
             onLoadedMetadata={() => {
               // Video loaded, ready to play
@@ -550,9 +567,23 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
               </motion.div>
 
               {/* Property Title */}
-              <h2 className="font-bold text-xl md:text-2xl line-clamp-2 mb-2 drop-shadow-lg">
-                {video.propertyTitle}
-              </h2>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h2 className="font-bold text-xl md:text-2xl line-clamp-2 drop-shadow-lg">
+                  {video.propertyTitle}
+                </h2>
+                {video.linkedListingId && (
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleOpenListing();
+                    }}
+                    className="pointer-events-auto px-3 py-1.5 rounded-full text-xs font-semibold border border-white/30 bg-black/40 hover:bg-black/60 transition-colors"
+                  >
+                    View
+                  </button>
+                )}
+              </div>
 
               {/* Location */}
               <div className="flex items-center gap-2 text-sm md:text-base text-gray-200 mb-2">
@@ -561,18 +592,6 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
               </div>
 
               {/* Property Specs Row */}
-              {/* Property Specs Row */}
-              {/* DEBUG: Check what fields are actually present on 'video' object */}
-              {(() => {
-                console.log('[VideoCard] unit sample', {
-                  unitSize: (video as any).unitSize,
-                  yardSize: (video as any).yardSize,
-                  parking: (video as any).parking,
-                  parkingType: (video as any).parkingType,
-                  parkingBays: (video as any).parkingBays,
-                });
-                return null;
-              })()}
 
               <div className="flex items-center gap-3 text-xs md:text-sm text-gray-300 mb-2">
                 {video.bedrooms && (
@@ -656,18 +675,11 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
       <div className="absolute right-3 md:right-4 bottom-28 md:bottom-32 flex flex-col items-center space-y-5 md:space-y-6 pointer-events-auto">
         {/* Like Button */}
         <motion.button
-          onClick={() => {
-            toggleLike.mutate({ videoId: parseInt(video.id) });
-            if (!liked) {
-              setShowLikeAnimation(true);
-              setTimeout(() => setShowLikeAnimation(false), 1000);
-            }
-          }}
+          onClick={handleLikeToggle}
           variants={buttonVariants}
           whileHover="hover"
           whileTap="tap"
           className="flex flex-col items-center"
-          disabled={toggleLike.isPending}
         >
           <div
             className="p-3 md:p-3.5 rounded-full shadow-xl transition-all duration-300"
