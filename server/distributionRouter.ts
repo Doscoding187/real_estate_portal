@@ -109,7 +109,7 @@ const AGENT_STAGE_TRANSITIONS: Partial<Record<DistributionDealStage, Distributio
   bond_approved: ['commission_pending', 'cancelled'],
 };
 
-// ── Manager-controlled stage transitions (source of truth for operator lifecycle) ──
+// Manager-controlled stage transitions (source of truth for operator lifecycle)
 const MANAGER_STAGE_TRANSITIONS: Partial<Record<DistributionDealStage, DistributionDealStage[]>> = {
   viewing_completed: ['application_submitted', 'cancelled'],
   application_submitted: ['contract_signed', 'cancelled'],
@@ -117,7 +117,7 @@ const MANAGER_STAGE_TRANSITIONS: Partial<Record<DistributionDealStage, Distribut
   bond_approved: ['commission_pending', 'cancelled'],
 };
 
-// Stages where fee accrual has begun — cancellation requires admin override
+// Stages where fee accrual has begun - cancellation requires admin override
 const ACCRUAL_PROTECTED_STAGES: DistributionDealStage[] = ['commission_pending', 'commission_paid'];
 
 // Viewing expiry: booking must complete within this window or auto-cancel
@@ -3108,85 +3108,87 @@ const adminDistributionRouter = router({
         updatePayload.closedAt = null;
       }
 
-      await db
-        .update(distributionDeals)
-        .set(updatePayload)
-        .where(eq(distributionDeals.id, deal.id));
+      await db.transaction(async tx => {
+        await tx
+          .update(distributionDeals)
+          .set(updatePayload)
+          .where(eq(distributionDeals.id, deal.id));
 
-      await ensureCommissionEntryForDeal({
-        deal: {
-          id: Number(deal.id),
-          programId: Number(deal.programId),
-          developmentId: Number(deal.developmentId),
-          agentId: Number(deal.agentId),
-          commissionTriggerStage: deal.commissionTriggerStage as
-            | 'contract_signed'
-            | 'bond_approved',
-        },
-        transitionToStage: toStage,
-        actorUserId: ctx.user.id,
-        source: 'admin.transitionDealStage',
-        deps: {
-          findExistingEntry: async (dealId, triggerStage) => {
-            const [row] = await db
-              .select({ id: distributionCommissionEntries.id })
-              .from(distributionCommissionEntries)
-              .where(
-                and(
-                  eq(distributionCommissionEntries.dealId, dealId),
-                  eq(distributionCommissionEntries.triggerStage, triggerStage),
-                ),
-              )
-              .limit(1);
-            return row ? { id: Number(row.id) } : null;
+        await ensureCommissionEntryForDeal({
+          deal: {
+            id: Number(deal.id),
+            programId: Number(deal.programId),
+            developmentId: Number(deal.developmentId),
+            agentId: Number(deal.agentId),
+            commissionTriggerStage: deal.commissionTriggerStage as
+              | 'contract_signed'
+              | 'bond_approved',
           },
-          getProgramDefaults: async programId => {
-            const [program] = await db
-              .select({
-                commissionModel: distributionPrograms.commissionModel,
-                defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-                defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-              })
-              .from(distributionPrograms)
-              .where(eq(distributionPrograms.id, programId))
-              .limit(1);
-            return program || null;
+          transitionToStage: toStage,
+          actorUserId: ctx.user.id,
+          source: 'admin.transitionDealStage',
+          deps: {
+            findExistingEntry: async (dealId, triggerStage) => {
+              const [row] = await tx
+                .select({ id: distributionCommissionEntries.id })
+                .from(distributionCommissionEntries)
+                .where(
+                  and(
+                    eq(distributionCommissionEntries.dealId, dealId),
+                    eq(distributionCommissionEntries.triggerStage, triggerStage),
+                  ),
+                )
+                .limit(1);
+              return row ? { id: Number(row.id) } : null;
+            },
+            getProgramDefaults: async programId => {
+              const [program] = await tx
+                .select({
+                  commissionModel: distributionPrograms.commissionModel,
+                  defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
+                  defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+                })
+                .from(distributionPrograms)
+                .where(eq(distributionPrograms.id, programId))
+                .limit(1);
+              return program || null;
+            },
+            insertEntry: async payload => {
+              await tx.insert(distributionCommissionEntries).values(payload);
+            },
+            setDealCommissionPending: async dealId => {
+              await tx
+                .update(distributionDeals)
+                .set({ commissionStatus: 'pending' })
+                .where(eq(distributionDeals.id, dealId));
+            },
+            insertCommissionCreatedEvent: async ({ dealId, toStage, actorUserId, metadata }) => {
+              await tx.insert(distributionDealEvents).values({
+                dealId,
+                fromStage,
+                toStage,
+                eventType: 'system',
+                actorUserId,
+                metadata: metadata as any,
+                notes: 'Commission entry created from stage transition.',
+              });
+            },
           },
-          insertEntry: async payload => {
-            await db.insert(distributionCommissionEntries).values(payload);
-          },
-          setDealCommissionPending: async dealId => {
-            await db
-              .update(distributionDeals)
-              .set({ commissionStatus: 'pending' })
-              .where(eq(distributionDeals.id, dealId));
-          },
-          insertCommissionCreatedEvent: async ({ dealId, toStage, actorUserId, metadata }) => {
-            await db.insert(distributionDealEvents).values({
-              dealId,
-              fromStage,
-              toStage,
-              eventType: 'system',
-              actorUserId,
-              metadata: metadata as any,
-              notes: 'Commission entry created from stage transition.',
-            });
-          },
-        },
-      });
+        });
 
-      await db.insert(distributionDealEvents).values({
-        dealId: deal.id,
-        fromStage,
-        toStage,
-        eventType: input.force ? 'override' : 'stage_transition',
-        actorUserId: ctx.user.id,
-        metadata: {
-          force: input.force,
-          previousCommissionStatus: deal.commissionStatus,
-          nextCommissionStatus: commissionStatus,
-        } as any,
-        notes: input.notes ?? null,
+        await tx.insert(distributionDealEvents).values({
+          dealId: deal.id,
+          fromStage,
+          toStage,
+          eventType: input.force ? 'override' : 'stage_transition',
+          actorUserId: ctx.user.id,
+          metadata: {
+            force: input.force,
+            previousCommissionStatus: deal.commissionStatus,
+            nextCommissionStatus: commissionStatus,
+          } as any,
+          notes: input.notes ?? null,
+        });
       });
 
       return {
@@ -3370,11 +3372,6 @@ const adminDistributionRouter = router({
         }
       }
 
-      await db
-        .update(distributionCommissionEntries)
-        .set(updatePayload)
-        .where(eq(distributionCommissionEntries.id, entry.id));
-
       const nextDealCommissionStatus =
         nextStatus === 'approved' ? 'approved' : nextStatus === 'pending' ? 'pending' : nextStatus;
       const nextDealStage: DistributionDealStage =
@@ -3384,6 +3381,21 @@ const adminDistributionRouter = router({
             ? 'cancelled'
             : (deal.currentStage as DistributionDealStage);
 
+      if (
+        entry.entryStatus === nextStatus &&
+        typeof input.notes === 'undefined' &&
+        typeof input.paymentReference === 'undefined'
+      ) {
+        return {
+          success: true,
+          entryId: entry.id,
+          entryStatus: entry.entryStatus,
+          dealId: deal.id,
+          dealStage: deal.currentStage as DistributionDealStage,
+          dealCommissionStatus: deal.commissionStatus,
+        };
+      }
+
       const dealUpdatePayload: Record<string, unknown> = {
         commissionStatus: nextDealCommissionStatus,
       };
@@ -3392,26 +3404,33 @@ const adminDistributionRouter = router({
         dealUpdatePayload.closedAt = sql`CURRENT_TIMESTAMP`;
       }
 
-      await db
-        .update(distributionDeals)
-        .set(dealUpdatePayload)
-        .where(eq(distributionDeals.id, deal.id));
+      await db.transaction(async tx => {
+        await tx
+          .update(distributionCommissionEntries)
+          .set(updatePayload)
+          .where(eq(distributionCommissionEntries.id, entry.id));
 
-      await db.insert(distributionDealEvents).values({
-        dealId: deal.id,
-        fromStage: deal.currentStage as DistributionDealStage,
-        toStage: nextDealStage,
-        eventType: 'override',
-        actorUserId: ctx.user.id,
-        metadata: {
-          source: 'admin.updateCommissionEntryStatus',
-          entryId: entry.id,
-          previousEntryStatus: entry.entryStatus,
-          nextEntryStatus: nextStatus,
-          previousDealCommissionStatus: deal.commissionStatus,
-          nextDealCommissionStatus,
-        } as any,
-        notes: input.notes ?? null,
+        await tx
+          .update(distributionDeals)
+          .set(dealUpdatePayload)
+          .where(eq(distributionDeals.id, deal.id));
+
+        await tx.insert(distributionDealEvents).values({
+          dealId: deal.id,
+          fromStage: deal.currentStage as DistributionDealStage,
+          toStage: nextDealStage,
+          eventType: 'override',
+          actorUserId: ctx.user.id,
+          metadata: {
+            source: 'admin.updateCommissionEntryStatus',
+            entryId: entry.id,
+            previousEntryStatus: entry.entryStatus,
+            nextEntryStatus: nextStatus,
+            previousDealCommissionStatus: deal.commissionStatus,
+            nextDealCommissionStatus,
+          } as any,
+          notes: input.notes ?? null,
+        });
       });
 
       return {
@@ -3823,26 +3842,14 @@ const managerDistributionRouter = router({
         });
       }
 
-      await db
-        .insert(distributionViewings)
-        .values({
-          dealId: deal.id,
-          programId: deal.programId,
-          developmentId: deal.developmentId,
-          agentId: deal.agentId,
-          managerUserId,
-          scheduledStartAt: normalizeDateForSql(startAt),
-          scheduledEndAt: endAt ? normalizeDateForSql(endAt) : null,
-          timezone: input.timezone || 'Africa/Johannesburg',
-          locationName: input.locationName ?? null,
-          status: 'scheduled',
-          rescheduleCount: nextRescheduleCount,
-          scheduledByUserId: ctx.user!.id,
-          lastRescheduledBy: existingViewing ? ctx.user!.id : null,
-          notes: input.notes ?? null,
-        })
-        .onDuplicateKeyUpdate({
-          set: {
+      await db.transaction(async tx => {
+        await tx
+          .insert(distributionViewings)
+          .values({
+            dealId: deal.id,
+            programId: deal.programId,
+            developmentId: deal.developmentId,
+            agentId: deal.agentId,
             managerUserId,
             scheduledStartAt: normalizeDateForSql(startAt),
             scheduledEndAt: endAt ? normalizeDateForSql(endAt) : null,
@@ -3850,32 +3857,46 @@ const managerDistributionRouter = router({
             locationName: input.locationName ?? null,
             status: 'scheduled',
             rescheduleCount: nextRescheduleCount,
-            lastRescheduledBy: ctx.user!.id,
+            scheduledByUserId: ctx.user!.id,
+            lastRescheduledBy: existingViewing ? ctx.user!.id : null,
             notes: input.notes ?? null,
-          },
+          })
+          .onDuplicateKeyUpdate({
+            set: {
+              managerUserId,
+              scheduledStartAt: normalizeDateForSql(startAt),
+              scheduledEndAt: endAt ? normalizeDateForSql(endAt) : null,
+              timezone: input.timezone || 'Africa/Johannesburg',
+              locationName: input.locationName ?? null,
+              status: 'scheduled',
+              rescheduleCount: nextRescheduleCount,
+              lastRescheduledBy: ctx.user!.id,
+              notes: input.notes ?? null,
+            },
+          });
+
+        if (deal.managerUserId !== managerUserId) {
+          await tx
+            .update(distributionDeals)
+            .set({ managerUserId })
+            .where(eq(distributionDeals.id, deal.id));
+        }
+
+        await tx.insert(distributionDealEvents).values({
+          dealId: deal.id,
+          fromStage: deal.currentStage,
+          toStage: deal.currentStage,
+          eventType: 'note',
+          actorUserId: ctx.user!.id,
+          metadata: {
+            source: 'manager.scheduleViewing',
+            scheduledStartAt: normalizeDateForSql(startAt),
+            timezone: input.timezone || 'Africa/Johannesburg',
+            rescheduleCount: nextRescheduleCount,
+            managerUserId,
+          } as any,
+          notes: input.notes ?? null,
         });
-
-      if (deal.managerUserId !== managerUserId) {
-        await db
-          .update(distributionDeals)
-          .set({ managerUserId })
-          .where(eq(distributionDeals.id, deal.id));
-      }
-
-      await db.insert(distributionDealEvents).values({
-        dealId: deal.id,
-        fromStage: deal.currentStage,
-        toStage: deal.currentStage,
-        eventType: 'note',
-        actorUserId: ctx.user!.id,
-        metadata: {
-          source: 'manager.scheduleViewing',
-          scheduledStartAt: normalizeDateForSql(startAt),
-          timezone: input.timezone || 'Africa/Johannesburg',
-          rescheduleCount: nextRescheduleCount,
-          managerUserId,
-        } as any,
-        notes: input.notes ?? null,
       });
 
       const viewing = await getViewingByDealId(db, deal.id);
@@ -4048,19 +4069,6 @@ const managerDistributionRouter = router({
       const attributionLockAt = deal.attributionLockedAt ?? null;
       const attributionLockApplied = Boolean(attributionLockAt);
 
-      // Attribution lock is now set at booking (submitDeal). No lock logic here.
-      await db.insert(distributionViewingValidations).values({
-        dealId: deal.id,
-        developmentId: deal.developmentId,
-        managerUserId: ctx.user!.id,
-        agentId: deal.agentId,
-        validationStatus: input.outcome,
-        validatedAt: sql`CURRENT_TIMESTAMP`,
-        attributionLockApplied: attributionLockApplied ? 1 : 0,
-        attributionLockAt,
-        notes: input.notes ?? null,
-      });
-
       const viewingStatus: (typeof DISTRIBUTION_VIEWING_STATUS_VALUES)[number] =
         input.outcome === 'no_show'
           ? 'no_show'
@@ -4068,40 +4076,55 @@ const managerDistributionRouter = router({
             ? 'cancelled'
             : 'completed';
 
-      await db
-        .update(distributionViewings)
-        .set({
-          status: viewingStatus,
-          managerUserId: ctx.user!.id,
-        })
-        .where(eq(distributionViewings.dealId, deal.id));
-
       const dealUpdate: Record<string, unknown> = {
         currentStage: nextStage,
         managerUserId: deal.managerUserId ?? ctx.user!.id,
       };
       // Attribution lock cleanup: no longer set here (set at booking)
 
-      await db.update(distributionDeals).set(dealUpdate).where(eq(distributionDeals.id, deal.id));
-
       const resolvedAttributionLockAt =
         (dealUpdate.attributionLockedAt as string | null | undefined) ?? attributionLockAt;
       const resolvedAttributionLockApplied = Boolean(resolvedAttributionLockAt);
 
-      await db.insert(distributionDealEvents).values({
-        dealId: deal.id,
-        fromStage: deal.currentStage,
-        toStage: nextStage,
-        eventType: 'validation',
-        actorUserId: ctx.user!.id,
-        metadata: {
-          outcome: input.outcome,
+      await db.transaction(async tx => {
+        // Attribution lock is now set at booking (submitDeal). No lock logic here.
+        await tx.insert(distributionViewingValidations).values({
+          dealId: deal.id,
+          developmentId: deal.developmentId,
+          managerUserId: ctx.user!.id,
+          agentId: deal.agentId,
           validationStatus: input.outcome,
-          attributionLockApplied: resolvedAttributionLockApplied,
-          attributionLockAt: resolvedAttributionLockAt,
-          nextStage,
-        } as any,
-        notes: input.notes ?? null,
+          validatedAt: sql`CURRENT_TIMESTAMP`,
+          attributionLockApplied: attributionLockApplied ? 1 : 0,
+          attributionLockAt,
+          notes: input.notes ?? null,
+        });
+
+        await tx
+          .update(distributionViewings)
+          .set({
+            status: viewingStatus,
+            managerUserId: ctx.user!.id,
+          })
+          .where(eq(distributionViewings.dealId, deal.id));
+
+        await tx.update(distributionDeals).set(dealUpdate).where(eq(distributionDeals.id, deal.id));
+
+        await tx.insert(distributionDealEvents).values({
+          dealId: deal.id,
+          fromStage: deal.currentStage,
+          toStage: nextStage,
+          eventType: 'validation',
+          actorUserId: ctx.user!.id,
+          metadata: {
+            outcome: input.outcome,
+            validationStatus: input.outcome,
+            attributionLockApplied: resolvedAttributionLockApplied,
+            attributionLockAt: resolvedAttributionLockAt,
+            nextStage,
+          } as any,
+          notes: input.notes ?? null,
+        });
       });
 
       return {
@@ -4198,7 +4221,7 @@ const managerDistributionRouter = router({
     }));
   }),
 
-  // ── Manager-controlled deal stage progression ──
+  // Manager-controlled deal stage progression
   // Operator controls all forward transitions after viewing completion.
   dealTimeline: protectedProcedure
     .input(
@@ -4310,32 +4333,43 @@ const managerDistributionRouter = router({
       const fromStage = deal.currentStage as DistributionDealStage;
       const toStage = input.toStage as DistributionDealStage;
 
-      // ── Viewing expiry check ──
-      // If deal is still at viewing_scheduled and TTL expired → auto-cancel
+      if (fromStage === toStage) {
+        return {
+          success: true,
+          dealId: deal.id,
+          stage: fromStage,
+          commissionStatus: deal.commissionStatus,
+        };
+      }
+
+      // Viewing expiry check
+      // If deal is still at viewing_scheduled and TTL expired -> auto-cancel
       if (fromStage === 'viewing_scheduled' && deal.submittedAt) {
         const bookingDate = new Date(deal.submittedAt);
         const expiryDate = new Date(
           bookingDate.getTime() + VIEWING_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
         );
         if (new Date() > expiryDate) {
-          await db
-            .update(distributionDeals)
-            .set({
-              currentStage: 'cancelled',
-              closedAt: sql`CURRENT_TIMESTAMP`,
-            })
-            .where(eq(distributionDeals.id, deal.id));
-          await db.insert(distributionDealEvents).values({
-            dealId: deal.id,
-            fromStage: 'viewing_scheduled',
-            toStage: 'cancelled',
-            eventType: 'system',
-            actorUserId: null,
-            metadata: {
-              reason: 'viewing_expired',
-              expiryDays: VIEWING_EXPIRY_DAYS,
-            } as any,
-            notes: `Auto-cancelled: viewing not completed within ${VIEWING_EXPIRY_DAYS} days.`,
+          await db.transaction(async tx => {
+            await tx
+              .update(distributionDeals)
+              .set({
+                currentStage: 'cancelled',
+                closedAt: sql`CURRENT_TIMESTAMP`,
+              })
+              .where(eq(distributionDeals.id, deal.id));
+            await tx.insert(distributionDealEvents).values({
+              dealId: deal.id,
+              fromStage: 'viewing_scheduled',
+              toStage: 'cancelled',
+              eventType: 'system',
+              actorUserId: null,
+              metadata: {
+                reason: 'viewing_expired',
+                expiryDays: VIEWING_EXPIRY_DAYS,
+              } as any,
+              notes: `Auto-cancelled: viewing not completed within ${VIEWING_EXPIRY_DAYS} days.`,
+            });
           });
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
@@ -4344,7 +4378,7 @@ const managerDistributionRouter = router({
         }
       }
 
-      // ── Attribution null-check ──
+      // Attribution null-check
       // Protect legacy anomalies: if lock missing on non-initial stage, reject progression.
       if (!deal.attributionLockedAt && fromStage !== 'viewing_scheduled') {
         throw new TRPCError({
@@ -4353,7 +4387,7 @@ const managerDistributionRouter = router({
         });
       }
 
-      // ── Post-accrual cancellation guard ──
+      // Post-accrual cancellation guard
       // Once fees accrue, manager cannot cancel. Requires admin override.
       if (toStage === 'cancelled' && ACCRUAL_PROTECTED_STAGES.includes(fromStage)) {
         throw new TRPCError({
@@ -4362,7 +4396,7 @@ const managerDistributionRouter = router({
         });
       }
 
-      // ── Cancellation requires rejection reason ──
+      // Cancellation requires rejection reason
       if (toStage === 'cancelled' && !input.rejectionReason) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -4370,7 +4404,7 @@ const managerDistributionRouter = router({
         });
       }
 
-      // ── Validate transition ──
+      // Validate transition
       const allowedNextStages = MANAGER_STAGE_TRANSITIONS[fromStage] || [];
       if (!allowedNextStages.includes(toStage)) {
         throw new TRPCError({
@@ -4393,86 +4427,88 @@ const managerDistributionRouter = router({
         updatePayload.closedAt = sql`CURRENT_TIMESTAMP`;
       }
 
-      await db
-        .update(distributionDeals)
-        .set(updatePayload)
-        .where(eq(distributionDeals.id, deal.id));
+      await db.transaction(async tx => {
+        await tx
+          .update(distributionDeals)
+          .set(updatePayload)
+          .where(eq(distributionDeals.id, deal.id));
 
-      await ensureCommissionEntryForDeal({
-        deal: {
-          id: Number(deal.id),
-          programId: Number(deal.programId),
-          developmentId: Number(deal.developmentId),
-          agentId: Number(deal.agentId),
-          commissionTriggerStage: deal.commissionTriggerStage as
-            | 'contract_signed'
-            | 'bond_approved',
-        },
-        transitionToStage: toStage,
-        actorUserId: ctx.user!.id,
-        source: 'manager.advanceDealStage',
-        deps: {
-          findExistingEntry: async (dealId, triggerStage) => {
-            const [row] = await db
-              .select({ id: distributionCommissionEntries.id })
-              .from(distributionCommissionEntries)
-              .where(
-                and(
-                  eq(distributionCommissionEntries.dealId, dealId),
-                  eq(distributionCommissionEntries.triggerStage, triggerStage),
-                ),
-              )
-              .limit(1);
-            return row ? { id: Number(row.id) } : null;
+        await ensureCommissionEntryForDeal({
+          deal: {
+            id: Number(deal.id),
+            programId: Number(deal.programId),
+            developmentId: Number(deal.developmentId),
+            agentId: Number(deal.agentId),
+            commissionTriggerStage: deal.commissionTriggerStage as
+              | 'contract_signed'
+              | 'bond_approved',
           },
-          getProgramDefaults: async programId => {
-            const [program] = await db
-              .select({
-                commissionModel: distributionPrograms.commissionModel,
-                defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-                defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-              })
-              .from(distributionPrograms)
-              .where(eq(distributionPrograms.id, programId))
-              .limit(1);
-            return program || null;
-          },
-          insertEntry: async payload => {
-            await db.insert(distributionCommissionEntries).values(payload);
-          },
-          setDealCommissionPending: async dealId => {
-            await db
-              .update(distributionDeals)
-              .set({ commissionStatus: 'pending' })
-              .where(eq(distributionDeals.id, dealId));
-          },
-          insertCommissionCreatedEvent: async ({ dealId, toStage, actorUserId, metadata }) => {
-            await db.insert(distributionDealEvents).values({
-              dealId,
-              fromStage,
-              toStage,
-              eventType: 'system',
-              actorUserId,
-              metadata: metadata as any,
-              notes: 'Commission entry created from stage transition.',
-            });
-          },
-        },
-      });
-
-      await db.insert(distributionDealEvents).values({
-        dealId: deal.id,
-        fromStage,
-        toStage,
-        eventType: 'stage_transition',
-        actorUserId: ctx.user!.id,
-        metadata: {
+          transitionToStage: toStage,
+          actorUserId: ctx.user!.id,
           source: 'manager.advanceDealStage',
-          previousCommissionStatus: deal.commissionStatus,
-          nextCommissionStatus: commissionStatus,
-          rejectionReason: input.rejectionReason ?? null,
-        } as any,
-        notes: input.notes ?? null,
+          deps: {
+            findExistingEntry: async (dealId, triggerStage) => {
+              const [row] = await tx
+                .select({ id: distributionCommissionEntries.id })
+                .from(distributionCommissionEntries)
+                .where(
+                  and(
+                    eq(distributionCommissionEntries.dealId, dealId),
+                    eq(distributionCommissionEntries.triggerStage, triggerStage),
+                  ),
+                )
+                .limit(1);
+              return row ? { id: Number(row.id) } : null;
+            },
+            getProgramDefaults: async programId => {
+              const [program] = await tx
+                .select({
+                  commissionModel: distributionPrograms.commissionModel,
+                  defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
+                  defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+                })
+                .from(distributionPrograms)
+                .where(eq(distributionPrograms.id, programId))
+                .limit(1);
+              return program || null;
+            },
+            insertEntry: async payload => {
+              await tx.insert(distributionCommissionEntries).values(payload);
+            },
+            setDealCommissionPending: async dealId => {
+              await tx
+                .update(distributionDeals)
+                .set({ commissionStatus: 'pending' })
+                .where(eq(distributionDeals.id, dealId));
+            },
+            insertCommissionCreatedEvent: async ({ dealId, toStage, actorUserId, metadata }) => {
+              await tx.insert(distributionDealEvents).values({
+                dealId,
+                fromStage,
+                toStage,
+                eventType: 'system',
+                actorUserId,
+                metadata: metadata as any,
+                notes: 'Commission entry created from stage transition.',
+              });
+            },
+          },
+        });
+
+        await tx.insert(distributionDealEvents).values({
+          dealId: deal.id,
+          fromStage,
+          toStage,
+          eventType: 'stage_transition',
+          actorUserId: ctx.user!.id,
+          metadata: {
+            source: 'manager.advanceDealStage',
+            previousCommissionStatus: deal.commissionStatus,
+            nextCommissionStatus: commissionStatus,
+            rejectionReason: input.rejectionReason ?? null,
+          } as any,
+          notes: input.notes ?? null,
+        });
       });
 
       return {
@@ -4847,31 +4883,33 @@ const referrerDistributionRouter = router({
       }
 
       const nextRescheduleCount = currentRescheduleCount + 1;
-      await db
-        .update(distributionViewings)
-        .set({
-          scheduledStartAt: normalizeDateForSql(nextStartAt),
-          scheduledEndAt: nextEndAt ? normalizeDateForSql(nextEndAt) : null,
-          timezone: input.timezone || viewing.timezone || 'Africa/Johannesburg',
-          rescheduleCount: nextRescheduleCount,
-          lastRescheduledBy: ctx.user!.id,
-          notes: input.notes ?? viewing.notes ?? null,
-        })
-        .where(eq(distributionViewings.id, viewing.id));
+      await db.transaction(async tx => {
+        await tx
+          .update(distributionViewings)
+          .set({
+            scheduledStartAt: normalizeDateForSql(nextStartAt),
+            scheduledEndAt: nextEndAt ? normalizeDateForSql(nextEndAt) : null,
+            timezone: input.timezone || viewing.timezone || 'Africa/Johannesburg',
+            rescheduleCount: nextRescheduleCount,
+            lastRescheduledBy: ctx.user!.id,
+            notes: input.notes ?? viewing.notes ?? null,
+          })
+          .where(eq(distributionViewings.id, viewing.id));
 
-      await db.insert(distributionDealEvents).values({
-        dealId: viewing.dealId,
-        fromStage: null,
-        toStage: 'viewing_scheduled',
-        eventType: 'note',
-        actorUserId: ctx.user!.id,
-        metadata: {
-          source: 'referrer.rescheduleViewing',
-          viewingId: viewing.id,
-          rescheduleCount: nextRescheduleCount,
-          scheduledStartAt: normalizeDateForSql(nextStartAt),
-        } as any,
-        notes: input.notes ?? null,
+        await tx.insert(distributionDealEvents).values({
+          dealId: viewing.dealId,
+          fromStage: null,
+          toStage: 'viewing_scheduled',
+          eventType: 'note',
+          actorUserId: ctx.user!.id,
+          metadata: {
+            source: 'referrer.rescheduleViewing',
+            viewingId: viewing.id,
+            rescheduleCount: nextRescheduleCount,
+            scheduledStartAt: normalizeDateForSql(nextStartAt),
+          } as any,
+          notes: input.notes ?? null,
+        });
       });
 
       return {
@@ -5031,7 +5069,7 @@ const referrerDistributionRouter = router({
         });
       }
 
-      // ── Deterministic duplicate check: email OR phone per development ──
+      // Deterministic duplicate check: email OR phone per development
       // Excludes cancelled deals to prevent permanent inventory lock.
       if (input.buyerEmail || input.buyerPhone) {
         const orConditions: SQL[] = [];
@@ -5070,19 +5108,72 @@ const referrerDistributionRouter = router({
 
       let insertedDealId = 0;
       try {
-        const [insertResult] = await db.insert(distributionDeals).values({
-          programId: input.programId,
-          developmentId: program.developmentId,
-          agentId,
-          managerUserId,
-          externalRef: normalizedExternalRef,
-          buyerName: input.buyerName.trim(),
-          buyerEmail: input.buyerEmail ?? null,
-          buyerPhone: input.buyerPhone ?? null,
-          currentStage: 'viewing_scheduled',
-          commissionStatus: 'not_ready',
+        await db.transaction(async tx => {
+          const [insertResult] = await tx.insert(distributionDeals).values({
+            programId: input.programId,
+            developmentId: program.developmentId,
+            agentId,
+            managerUserId,
+            externalRef: normalizedExternalRef,
+            buyerName: input.buyerName.trim(),
+            buyerEmail: input.buyerEmail ?? null,
+            buyerPhone: input.buyerPhone ?? null,
+            currentStage: 'viewing_scheduled',
+            commissionStatus: 'not_ready',
+          });
+          insertedDealId = Number((insertResult as any).insertId || 0);
+          if (insertedDealId <= 0) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Failed to create distribution deal.',
+            });
+          }
+
+          await tx
+            .update(distributionDeals)
+            .set({
+              attributionLockedAt: sql`CURRENT_TIMESTAMP`,
+              attributionLockedBy: ctx.user!.id,
+            })
+            .where(eq(distributionDeals.id, insertedDealId));
+
+          if (scheduledViewingStartAt && managerUserId) {
+            await tx.insert(distributionViewings).values({
+              dealId: insertedDealId,
+              programId: input.programId,
+              developmentId: program.developmentId,
+              agentId,
+              managerUserId,
+              scheduledStartAt: normalizeDateForSql(scheduledViewingStartAt),
+              scheduledEndAt: scheduledViewingEndAt
+                ? normalizeDateForSql(scheduledViewingEndAt)
+                : null,
+              timezone: normalizedReferralContext?.viewingSchedule?.timezone || 'Africa/Johannesburg',
+              locationName: normalizedReferralContext?.viewingSchedule?.locationName ?? null,
+              status: 'scheduled',
+              rescheduleCount: 0,
+              scheduledByUserId: ctx.user!.id,
+              notes: normalizedReferralContext?.viewingSchedule?.notes ?? input.notes ?? null,
+            });
+          }
+
+          await tx.insert(distributionDealEvents).values({
+            dealId: insertedDealId,
+            fromStage: null,
+            toStage: 'viewing_scheduled',
+            eventType: 'system',
+            actorUserId: ctx.user!.id,
+            metadata: {
+              submittedVia: 'referrer.submitDeal',
+              managerAssigned: managerUserId,
+              programId: input.programId,
+              attributionLockedAtBooking: true,
+              viewingScheduled: Boolean(scheduledViewingStartAt),
+              referralContext: normalizedReferralContext,
+            } as any,
+            notes: input.notes ?? null,
+          });
         });
-        insertedDealId = Number((insertResult as any).insertId || 0);
       } catch (error: any) {
         if (
           String(error?.message || '')
@@ -5095,55 +5186,6 @@ const referrerDistributionRouter = router({
           });
         }
         throw error;
-      }
-
-      if (insertedDealId > 0) {
-        // ── Attribution lock at booking (viewing_booked) ──
-        // Deal ownership starts at submission. No path bypasses booked viewing.
-        await db
-          .update(distributionDeals)
-          .set({
-            attributionLockedAt: sql`CURRENT_TIMESTAMP`,
-            attributionLockedBy: ctx.user!.id,
-          })
-          .where(eq(distributionDeals.id, insertedDealId));
-
-        if (scheduledViewingStartAt && managerUserId) {
-          await db.insert(distributionViewings).values({
-            dealId: insertedDealId,
-            programId: input.programId,
-            developmentId: program.developmentId,
-            agentId,
-            managerUserId,
-            scheduledStartAt: normalizeDateForSql(scheduledViewingStartAt),
-            scheduledEndAt: scheduledViewingEndAt
-              ? normalizeDateForSql(scheduledViewingEndAt)
-              : null,
-            timezone: normalizedReferralContext?.viewingSchedule?.timezone || 'Africa/Johannesburg',
-            locationName: normalizedReferralContext?.viewingSchedule?.locationName ?? null,
-            status: 'scheduled',
-            rescheduleCount: 0,
-            scheduledByUserId: ctx.user!.id,
-            notes: normalizedReferralContext?.viewingSchedule?.notes ?? input.notes ?? null,
-          });
-        }
-
-        await db.insert(distributionDealEvents).values({
-          dealId: insertedDealId,
-          fromStage: null,
-          toStage: 'viewing_scheduled',
-          eventType: 'system',
-          actorUserId: ctx.user!.id,
-          metadata: {
-            submittedVia: 'referrer.submitDeal',
-            managerAssigned: managerUserId,
-            programId: input.programId,
-            attributionLockedAtBooking: true,
-            viewingScheduled: Boolean(scheduledViewingStartAt),
-            referralContext: normalizedReferralContext,
-          } as any,
-          notes: input.notes ?? null,
-        });
       }
 
       return {
@@ -5189,34 +5231,38 @@ const referrerDistributionRouter = router({
       }
 
       if (fromStage === 'cancelled') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Deal is already cancelled.',
-        });
+        return {
+          success: true,
+          dealId: deal.id,
+          stage: toStage,
+          commissionStatus: 'cancelled' as const,
+        };
       }
 
-      await db
-        .update(distributionDeals)
-        .set({
-          currentStage: toStage,
-          commissionStatus: 'cancelled',
-          closedAt: sql`CURRENT_TIMESTAMP`,
-        })
-        .where(eq(distributionDeals.id, deal.id));
+      await db.transaction(async tx => {
+        await tx
+          .update(distributionDeals)
+          .set({
+            currentStage: toStage,
+            commissionStatus: 'cancelled',
+            closedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(eq(distributionDeals.id, deal.id));
 
-      await db.insert(distributionDealEvents).values({
-        dealId: deal.id,
-        fromStage,
-        toStage,
-        eventType: 'stage_transition',
-        actorUserId: ctx.user!.id,
-        metadata: {
-          source: 'referrer.advanceDealStage',
-          previousCommissionStatus: deal.commissionStatus,
-          nextCommissionStatus: 'cancelled',
-          cancelledByReferrer: true,
-        } as any,
-        notes: input.notes ?? null,
+        await tx.insert(distributionDealEvents).values({
+          dealId: deal.id,
+          fromStage,
+          toStage,
+          eventType: 'stage_transition',
+          actorUserId: ctx.user!.id,
+          metadata: {
+            source: 'referrer.advanceDealStage',
+            previousCommissionStatus: deal.commissionStatus,
+            nextCommissionStatus: 'cancelled',
+            cancelledByReferrer: true,
+          } as any,
+          notes: input.notes ?? null,
+        });
       });
 
       return {
