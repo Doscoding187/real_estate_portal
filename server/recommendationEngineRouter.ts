@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from './_core/trpc';
+import { requireUser } from './_core/requireUser';
 
 /**
  * Stabilization-safe router for recommendationEngine.*
@@ -21,7 +22,7 @@ export const recommendationEngineRouter = router({
         success: true,
         data: {
           sessionId: Date.now(),
-          userId: ctx.user.id,
+          userId: requireUser(ctx).id,
         },
       };
     }),

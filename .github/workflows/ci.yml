@@ -82,6 +82,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate @ts-nocheck baseline
+        run: pnpm run lint:tsnocheck-baseline
+
       - name: Run ESLint
         run: pnpm run lint
 

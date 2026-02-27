@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getDb } from './db';
 import {
   properties,
+  listings,
   leads,
   showings,
   commissions,
@@ -102,8 +103,8 @@ export const agentRouter = router({
           .where(
             and(
               eq(showings.agentId, agentId),
-              gte(showings.scheduledAt, today),
-              lte(showings.scheduledAt, tomorrow),
+              gte(showings.scheduledTime, today),
+              lte(showings.scheduledTime, tomorrow),
             ),
           );
 
@@ -111,7 +112,8 @@ export const agentRouter = router({
         const [offersInProgressResult] = await db
           .select({ count: count() })
           .from(offers)
-          .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
+          .innerJoin(listings, eq(offers.listingId, listings.id))
+          .where(and(eq(listings.agentId, agentId), eq(offers.status, 'pending')));
 
         // Pending commissions sum
         const [pendingCommissionsResult] = await db
@@ -1042,7 +1044,10 @@ export const agentRouter = router({
         .update(notifications)
         .set({ isRead: 1, readAt: new Date() })
         .where(
-          and(eq(notifications.id, input.notificationId), eq(notifications.userId, requireUser(ctx).id)),
+          and(
+            eq(notifications.id, input.notificationId),
+            eq(notifications.userId, requireUser(ctx).id),
+          ),
         );
 
       return { success: true };
