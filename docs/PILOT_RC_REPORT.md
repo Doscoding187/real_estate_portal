@@ -108,3 +108,124 @@ PRs should be opened in this order:
 3. Phase 5 PR from `hardening/phase-5-dashboards-truth` (`f4c0df0` + docs updates)
 
 Repository is ready for Pilot RC review with the above ordering.
+
+## 6) Staging API Wiring Unblock (2026-02-27)
+
+Branch scope:
+
+- `hardening/staging-seed-auth-unblock`
+- Validation-only infra wiring and secret hygiene (no feature additions)
+
+### Phase 0) Backend Target Confirmation
+
+Health probes (Node `fetch`) against Railway candidates:
+
+```text
+GET https://realestateportal-staging.up.railway.app/api/health -> 502 {"status":"error","code":502,"message":"Application failed to respond",...}
+GET https://realestateportal-production-8e32.up.railway.app/api/health -> 200 {"ok":true,"env":"production","db":{"ok":true},"cache":{"ok":true,"mode":"memory"},"s3":{"ok":true}}
+```
+
+Selected backend for Preview `/api/*` proxy unblock:
+
+- `https://realestateportal-production-8e32.up.railway.app` (currently reachable)
+
+### Phase 1) Vercel Preview 405 Fix
+
+Root-cause confirmed:
+
+- Preview was frontend-only with SPA catch-all, no `/api/*` proxy in `vercel.json`.
+- `POST /api/auth/login` on Preview returned `405`.
+
+Fix committed:
+
+- `bfd268f` (`chore: wire preview api proxy and remove vercel env file`)
+- `vercel.json` now routes `/api/(.*)` to Railway before SPA fallback.
+
+### Phase 2) Preview Validation Evidence (post-redeploy)
+
+Deployment:
+
+```text
+commit: bfd268f595a47f99c936a9b8ec5f7dba46e27167
+Vercel status: success
+deployment: https://vercel.com/edwards-projects-29c395d1/real-estate-portal/H3N4atzTS1ATewzbpm4Hc6KsU7tV
+preview: https://real-estate-portal-h7v9ewutp-edwards-projects-29c395d1.vercel.app
+```
+
+Preview endpoint checks (with protection bypass header):
+
+```text
+GET  https://real-estate-portal-h7v9ewutp-edwards-projects-29c395d1.vercel.app/api/health
+-> 200 application/json
+-> {"ok":true,"env":"production","db":{"ok":true},"cache":{"ok":true,"mode":"memory"},"s3":{"ok":true}}
+
+POST https://real-estate-portal-h7v9ewutp-edwards-projects-29c395d1.vercel.app/api/auth/login
+-> 401 application/json
+-> {"error":"Invalid email or password"}
+```
+
+Outcome:
+
+- 405s on Preview `/api/*` are removed.
+- API requests now hit backend JSON handlers (expected 200/401 behavior).
+
+### Phase 3) Preview Env State Check
+
+Bundle inspection evidence:
+
+```text
+preview JS contains: realestateportal-staging.up.railway.app = true
+preview JS contains: realestateportal-production-8e32.up.railway.app = false
+```
+
+Implication:
+
+- `VITE_API_URL` in current Preview build appears to point to staging host.
+- Staging host health is currently 502, so app-side absolute API calls may still fail even though same-origin `/api/*` proxy now works.
+
+### Phase 4) Security Cleanup
+
+Completed:
+
+- Removed tracked `/.env.vercel` from repository.
+- Added `.env.vercel` to `.gitignore`.
+
+Action still required:
+
+- Rotate previously exposed credentials/tokens.
+
+### Phase 5) Infra Auth + Seed + SOP
+
+Current blocker evidence:
+
+```text
+vercel whoami -> No existing credentials found
+railway whoami -> Unauthorized
+railway status -> Unauthorized
+DATABASE_URL_NOT_SET
+```
+
+Status:
+
+- Cannot run `pnpm seed:staging:accounts` against staging DB from this environment yet.
+- Cannot execute full role-login SOP until infra auth and staging DB access are restored.
+
+## 7) Updated Gate Status
+
+| Validation Item | Result | Evidence |
+| --- | --- | --- |
+| Preview `/api/*` routing no longer returns 405 | PASS | `/api/health`=200 JSON, `/api/auth/login`=401 JSON |
+| Vercel preview redeploy after wiring change | PASS | commit `bfd268f`, Vercel success |
+| `.env.vercel` removed from tracked source | PASS | file deleted + `.gitignore` updated |
+| Railway staging backend health (`realestateportal-staging`) | FAIL | returns 502 |
+| Vercel CLI auth in execution environment | BLOCKED | `vercel whoami` no credentials |
+| Railway CLI auth in execution environment | BLOCKED | `railway whoami/status` unauthorized |
+| Staging DB seed execution | BLOCKED | missing auth + `DATABASE_URL` |
+| Full staging SOP (role logins + flows) | BLOCKED | depends on seed + backend/env access |
+
+## 8) Go / No-Go (Post API Wiring)
+
+- Decision: **NO-GO**
+- Rationale:
+  - API 405 routing blocker is fixed.
+  - Remaining blockers are environment-level: staging backend 502, missing infra auth, unavailable staging DB credentials, and incomplete SOP evidence.
