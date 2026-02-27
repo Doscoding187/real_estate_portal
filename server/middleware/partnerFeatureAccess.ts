@@ -237,7 +237,7 @@ export function validateTierTransition(
 // TYPE EXTENSIONS
 // =====================================================
 
-declare module 'express-serve-static-core' {
+declare module 'express' {
   interface Request {
     partnerSubscription?: {
       id: string;

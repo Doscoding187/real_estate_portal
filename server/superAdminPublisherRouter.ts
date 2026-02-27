@@ -289,9 +289,67 @@ export const superAdminPublisherRouter = router({
         // Use service to get developments specifically linked to this brand profile
         return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
       } catch (error) {
-        console.warn('[superAdminPublisher.getDevelopments] Returning empty list due to error:', error);
+        console.warn(
+          '[superAdminPublisher.getDevelopments] Returning empty list due to error:',
+          error,
+        );
         return [];
       }
+    }),
+
+  /**
+   * Publish all developments for a brand profile in one action.
+   * Used by publisher UI "Publish Existing" CTA.
+   */
+  publishAllBrandDevelopments: superAdminProcedure
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+        onlyApproved: z.boolean().default(true),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const scopedConditions = [eq(developments.developerBrandProfileId, input.brandProfileId)];
+      if (input.onlyApproved) {
+        scopedConditions.push(eq(developments.approvalStatus, 'approved'));
+      }
+
+      const scopedWhere =
+        scopedConditions.length === 1 ? scopedConditions[0] : and(...scopedConditions);
+
+      const [totalResult] = await dbConn
+        .select({ count: sql<number>`count(*)` })
+        .from(developments)
+        .where(scopedWhere);
+
+      const [alreadyPublishedResult] = await dbConn
+        .select({ count: sql<number>`count(*)` })
+        .from(developments)
+        .where(and(scopedWhere, eq(developments.isPublished, 1)));
+
+      await dbConn
+        .update(developments)
+        .set({
+          isPublished: 1,
+          publishedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(and(scopedWhere, eq(developments.isPublished, 0)));
+
+      const totalDevelopments = Number(totalResult?.count ?? 0);
+      const alreadyPublished = Number(alreadyPublishedResult?.count ?? 0);
+      const updatedDevelopments = Math.max(totalDevelopments - alreadyPublished, 0);
+
+      return {
+        totalDevelopments,
+        updatedDevelopments,
+        alreadyPublished,
+      };
     }),
 
   /**
@@ -370,7 +428,10 @@ export const superAdminPublisherRouter = router({
 
         return brandLeads;
       } catch (error) {
-        console.warn('[superAdminPublisher.getBrandLeads] Returning empty list due to error:', error);
+        console.warn(
+          '[superAdminPublisher.getBrandLeads] Returning empty list due to error:',
+          error,
+        );
         return [];
       }
     }),
@@ -394,7 +455,10 @@ export const superAdminPublisherRouter = router({
         totalLeads: Number(leadCount?.count || 0),
       };
     } catch (error) {
-      console.warn('[superAdminPublisher.getGlobalMetrics] Returning safe defaults due to error:', error);
+      console.warn(
+        '[superAdminPublisher.getGlobalMetrics] Returning safe defaults due to error:',
+        error,
+      );
       return { totalDevelopments: 0, totalLeads: 0 };
     }
   }),
