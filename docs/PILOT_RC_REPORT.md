@@ -513,3 +513,54 @@ GET  /api/explore/by-area?...        -> 200 JSON (items may be empty)
 ```
 
 If both return 200 post-deploy, Explore read-path blocker can be downgraded from hard NO-GO.
+
+## 16) Deployment Proof Hardening (`/api/health` Build Stamp) - 2026-02-27
+
+Objective:
+
+- Remove deployment ambiguity by exposing a backend build identifier on live health checks.
+
+Implemented:
+
+- `server/_core/health.ts`
+  - Added `build.sha` in JSON response (derived from `RAILWAY_GIT_COMMIT_SHA`, `VERCEL_GIT_COMMIT_SHA`, `GITHUB_SHA`, or `SOURCE_VERSION`).
+  - Added `build.builtAt` field (optional metadata).
+  - Added response header: `x-build-sha`.
+- `server/__tests__/smoke.health.test.ts`
+  - Asserts `payload.build.sha` and `x-build-sha` header.
+
+Verification (local):
+
+```text
+pnpm vitest run --silent server/__tests__/smoke.health.test.ts server/services/__tests__/exploreFeedService.fallback.test.ts
+-> PASS (2 files, 3 tests)
+
+pnpm check
+-> PASS
+```
+
+Post-deploy proof step:
+
+```text
+GET https://api.propertylistifysa.co.za/api/health
+Expected:
+- status: 200
+- header x-build-sha = deployed commit SHA
+- payload.build.sha = deployed commit SHA
+```
+
+Current status:
+
+- Deployment proof mechanism is implemented in code.
+- Live verification against `api.propertylistifysa.co.za` still requires deployment of this branch tip.
+
+## 17) Report Path Clarification
+
+There are two report files because there are two separate worktrees:
+
+- `C:\\dev\\real_estate_portal\\.worktrees\\hardening-phase0\\docs\\PILOT_RC_REPORT.md`
+- `C:\\dev\\real_estate_portal\\.worktrees\\hardening-staging-auth\\docs\\PILOT_RC_REPORT.md`
+
+Canonical RC report for active unblock track:
+
+- `hardening-staging-auth/docs/PILOT_RC_REPORT.md`
