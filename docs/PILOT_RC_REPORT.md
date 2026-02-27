@@ -360,3 +360,65 @@ Intentional non-execution:
    - no staging host references in active runtime API target paths.
 3. Resolve production backend 500s for read-only Explore feed endpoints or explicitly remove those flows from pilot scope.
 4. Keep staging seed/SOP as a separate gate once Railway staging health and auth are restored.
+
+## 13) Fresh Preview Re-Validation (After Env + Proxy Alignment) - 2026-02-27
+
+Fresh deployment trigger:
+
+```text
+commit pushed: cb818a3e320b6af758761dd5b27600616695da4d
+Vercel deployment id: 5nkedCvMp3J7AnSVP9Hv9QVwAFGw
+Vercel status: success
+Preview URL: https://real-estate-portal-git-hardeni-d1ab93-edwards-projects-29c395d1.vercel.app
+```
+
+### 13.1 Preview API checks (same-origin through proxy)
+
+```text
+GET  /api/health                         -> 200 JSON {"ok":true,"env":"production",...}
+POST /api/auth/login (invalid creds)     -> 401 JSON {"error":"Invalid email or password"}
+GET  /api/explore?limit=3&offset=0       -> 500 JSON {"error":"Failed to fetch feed"}
+GET  /api/explore/by-area?...            -> 500 JSON {"error":"Failed to fetch feed"}
+GET  /api/explore/highlight-tags         -> 200 JSON {"tags":[]}
+GET  /api/explore/by-category            -> 501 JSON {"error":"Not implemented",...}
+```
+
+### 13.2 Direct absolute API checks (`https://api.propertylistifysa.co.za`)
+
+```text
+GET  https://api.propertylistifysa.co.za/api/health                     -> 200 JSON
+POST https://api.propertylistifysa.co.za/api/auth/login (invalid creds) -> 401 JSON
+GET  https://api.propertylistifysa.co.za/api/explore?...                -> 500 JSON
+GET  https://api.propertylistifysa.co.za/api/explore/by-area?...        -> 500 JSON
+```
+
+Interpretation:
+
+- Proxy and absolute host now converge on the same backend behavior.
+- Remaining `/api/explore*` 500s are backend-side behavior, not preview routing.
+
+### 13.3 Compiled bundle scan (new artifact)
+
+```text
+present: VITE_API_URL:"https://api.propertylistifysa.co.za"
+present: VITE_DEPLOY_ENV:"preview"
+present: [tRPC] URL -> https://api.propertylistifysa.co.za/api/trpc
+absent:  VITE_DEPLOY_ENV:"staging"
+present: realestateportal-staging.up.railway.app (from static env host allowlist constants)
+```
+
+Interpretation:
+
+- Active runtime target is aligned to `api.propertylistifysa.co.za`.
+- `staging` deploy env marker is removed from active build config.
+- Staging host string is still present in compiled constants (`BACKEND_HOSTS`) as static allowlist metadata.
+
+## 14) Updated Gate Decision (Post Fresh Build)
+
+- Decision: **NO-GO**
+- Current blockers:
+  1. `GET /api/explore` and `GET /api/explore/by-area` return `500` on the aligned production API host.
+  2. If strict artifact policy requires zero staging-host string presence, `BACKEND_HOSTS` constants must be adjusted for preview policy.
+- Cleared blockers:
+  1. Preview `/api/*` routing no longer returns `405`.
+  2. Preview env now resolves active API calls to `https://api.propertylistifysa.co.za`.
