@@ -11,30 +11,7 @@ import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
-import { PLACEHOLDER_VIDEOS as CENTRALIZED_PLACEHOLDER_VIDEOS } from '@/data/explorePlaceholderData';
 import { pageVariants, buttonVariants, getVariants } from '@/lib/animations/exploreAnimations';
-
-// Placeholder videos for design purposes - using centralized data with additional fields
-const PLACEHOLDER_VIDEOS = CENTRALIZED_PLACEHOLDER_VIDEOS.map(v => ({
-  id: `placeholder-${v.id}`,
-  title: v.title,
-  caption: `${v.bedrooms} Bed | ${v.bathrooms} Bath | ${v.highlights?.slice(0, 2).join(' | ')}`,
-  primaryMediaUrl: v.thumbnailUrl,
-  viewCount: v.viewCount || v.views,
-  likeCount: Math.floor((v.viewCount || v.views) * 0.08),
-  agentId: 1,
-  publishedAt: new Date(),
-  type: 'listing',
-  propertyTitle: v.propertyTitle,
-  propertyLocation: v.propertyLocation,
-  propertyPrice: v.propertyPrice,
-  bedrooms: v.bedrooms,
-  bathrooms: v.bathrooms,
-  area: v.area,
-  yardSize: v.area ? Math.floor(v.area * 1.5) : undefined,
-  propertyType: v.propertyType,
-  highlights: v.highlights,
-}));
 
 export default function ExploreFeed() {
   const [, setLocation] = useLocation();
@@ -67,9 +44,9 @@ export default function ExploreFeed() {
   // Mutation for recording interactions
   const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
 
-  // Use canonical `items` when available, fall back to legacy `shorts`, then placeholders
+  // Use canonical `items` when available, then legacy `shorts`.
   const items = feedData?.items ?? feedData?.shorts ?? [];
-  const videos = items.length > 0 ? items : PLACEHOLDER_VIDEOS;
+  const videos = items;
 
   // Filter videos based on search query
   const filteredVideos = searchQuery
@@ -115,6 +92,26 @@ export default function ExploreFeed() {
           />
           <p style={{ color: designTokens.colors.text.inverse }} className="text-sm">
             Loading amazing properties...
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (!isLoading && filteredVideos.length === 0) {
+    return (
+      <motion.div
+        className="flex items-center justify-center h-screen text-center px-6"
+        style={{ backgroundColor: designTokens.colors.bg.dark }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <div>
+          <h2 className="text-2xl font-semibold mb-3" style={{ color: designTokens.colors.text.inverse }}>
+            No explore items yet
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.8)' }}>
+            Upload content or adjust filters to see results.
           </p>
         </div>
       </motion.div>
