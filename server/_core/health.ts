@@ -5,6 +5,10 @@ import { getCacheHealth } from './cache/redis';
 export interface ApiHealthResponse {
   ok: true;
   env: string;
+  build: {
+    sha: string;
+    builtAt: string | null;
+  };
   db: { ok: boolean };
   cache: { ok: boolean; mode: 'redis' | 'memory' };
   s3: { ok: boolean };
@@ -19,6 +23,23 @@ const REQUIRED_S3_ENV_KEYS = [
 
 function hasEnvValue(value: string | undefined): boolean {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function resolveBuildSha(env: NodeJS.ProcessEnv = process.env): string {
+  const candidates = [
+    env.RAILWAY_GIT_COMMIT_SHA,
+    env.VERCEL_GIT_COMMIT_SHA,
+    env.GITHUB_SHA,
+    env.SOURCE_VERSION,
+  ];
+  const match = candidates.find(hasEnvValue);
+  return match ?? 'unknown';
+}
+
+function resolveBuildTime(env: NodeJS.ProcessEnv = process.env): string | null {
+  const candidates = [env.BUILD_TIME, env.VERCEL_GIT_COMMIT_MESSAGE];
+  const match = candidates.find(hasEnvValue);
+  return match ?? null;
 }
 
 export function isS3Configured(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -55,6 +76,10 @@ export async function buildApiHealthResponse(): Promise<ApiHealthResponse> {
   return {
     ok: true,
     env: process.env.NODE_ENV || 'development',
+    build: {
+      sha: resolveBuildSha(),
+      builtAt: resolveBuildTime(),
+    },
     db: { ok: dbOk },
     cache: cacheStatus,
     s3: { ok: isS3Configured() },
@@ -64,6 +89,7 @@ export async function buildApiHealthResponse(): Promise<ApiHealthResponse> {
 export function registerHealthEndpoint(app: express.Express): void {
   app.get('/api/health', async (_req, res) => {
     const payload = await buildApiHealthResponse();
+    res.setHeader('x-build-sha', payload.build.sha);
     res.json(payload);
   });
 }
