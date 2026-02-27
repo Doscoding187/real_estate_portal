@@ -229,3 +229,42 @@ Status:
 - Rationale:
   - API 405 routing blocker is fixed.
   - Remaining blockers are environment-level: staging backend 502, missing infra auth, unavailable staging DB credentials, and incomplete SOP evidence.
+
+## 9) Infra Auth Recovery Attempt (2026-02-27)
+
+Command evidence from this execution environment:
+
+```text
+vercel logout
+-> NOTE: Not currently logged in
+
+vercel login
+-> device code shown
+-> waits for interactive confirmation
+-> timed out in this non-interactive agent session
+
+vercel whoami
+-> Error: No existing credentials found
+```
+
+```text
+railway logout
+-> Logged out successfully
+
+railway login
+-> Cannot login in non-interactive mode
+
+railway login --browserless
+-> Cannot login in non-interactive mode
+
+railway whoami
+-> Unauthorized
+railway status
+-> Unauthorized
+```
+
+Implication:
+
+- CLI-driven staging env inspection (`DATABASE_URL`, service logs, migration status) is blocked until credentials are provided via:
+  - interactive login in a user-attended session, or
+  - pre-provisioned `VERCEL_TOKEN` / `RAILWAY_TOKEN` in the execution environment.
