@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { TrendingUp, Target, Users, CheckCircle } from 'lucide-react';
 
 interface LeadConversionAnalyticsProps {
-  data: {
+  data?: {
     total: number;
     converted: number;
     conversionRate: number;

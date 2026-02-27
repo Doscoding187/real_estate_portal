@@ -96,21 +96,7 @@ export default function AgencyDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <AgencyStatsCards
-          stats={
-            stats || {
-              totalListings: 0,
-              totalSales: 0,
-              totalLeads: 0,
-              totalAgents: 0,
-              activeListings: 0,
-              pendingListings: 0,
-              recentLeads: 0,
-              recentSales: 0,
-            }
-          }
-          isLoading={statsLoading}
-        />
+        <AgencyStatsCards stats={stats} isLoading={statsLoading} />
 
         {/* Performance Chart */}
         <AgencyPerformanceChart data={performanceData || []} isLoading={performanceLoading} />
@@ -121,20 +107,10 @@ export default function AgencyDashboard() {
         {/* Advanced Analytics */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <LeadConversionAnalytics
-            data={conversionStats || { total: 0, converted: 0, conversionRate: 0, byStatus: [] }}
+            data={conversionStats}
             isLoading={conversionLoading}
           />
-          <CommissionEarningsDashboard
-            data={
-              commissionStats || {
-                totalEarnings: 0,
-                paidCommissions: 0,
-                pendingCommissions: 0,
-                monthlyBreakdown: [],
-              }
-            }
-            isLoading={commissionLoading}
-          />
+          <CommissionEarningsDashboard data={commissionStats} isLoading={commissionLoading} />
         </div>
 
         {/* Agent Performance Leaderboard */}

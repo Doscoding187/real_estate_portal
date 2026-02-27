@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { KpiValue } from '@/components/dashboard/KpiValue';
 
 export default function DistributionManagerDashboard() {
   const { isAuthenticated, loading } = useAuth();
@@ -165,19 +166,54 @@ export default function DistributionManagerDashboard() {
           <Card>
             <CardHeader>
               <CardDescription>Open Pipeline Deals</CardDescription>
-              <CardTitle>{(pipelineQuery.data || []).length}</CardTitle>
+              <CardTitle>
+                <KpiValue
+                  value={pipelineQuery.isLoading ? null : (pipelineQuery.data || []).length}
+                  status={
+                    pipelineQuery.isLoading
+                      ? 'unavailable'
+                      : pipelineQuery.error
+                        ? 'unavailable'
+                        : 'real'
+                  }
+                />
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader>
               <CardDescription>Upcoming Viewings</CardDescription>
-              <CardTitle>{(viewingsQuery.data || []).length}</CardTitle>
+              <CardTitle>
+                <KpiValue
+                  value={viewingsQuery.isLoading ? null : (viewingsQuery.data || []).length}
+                  status={
+                    viewingsQuery.isLoading
+                      ? 'unavailable'
+                      : viewingsQuery.error
+                        ? 'unavailable'
+                        : 'real'
+                  }
+                />
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader>
               <CardDescription>Validation Queue</CardDescription>
-              <CardTitle>{(validationQueueQuery.data || []).length}</CardTitle>
+              <CardTitle>
+                <KpiValue
+                  value={
+                    validationQueueQuery.isLoading ? null : (validationQueueQuery.data || []).length
+                  }
+                  status={
+                    validationQueueQuery.isLoading
+                      ? 'unavailable'
+                      : validationQueueQuery.error
+                        ? 'unavailable'
+                        : 'real'
+                  }
+                />
+              </CardTitle>
             </CardHeader>
           </Card>
         </div>

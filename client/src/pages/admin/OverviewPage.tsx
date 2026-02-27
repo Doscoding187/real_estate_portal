@@ -17,10 +17,15 @@ import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
+import { KpiValue } from '@/components/dashboard/KpiValue';
 
 const OverviewPage: React.FC = () => {
   const [, setLocation] = useLocation();
-  const { data: analytics, isLoading: analyticsLoading } = trpc.admin.getAnalytics.useQuery();
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    error: analyticsError,
+  } = trpc.admin.getAnalytics.useQuery();
   const { data: actions, isLoading: actionsLoading } = trpc.admin.getAdminActionItems.useQuery(
     undefined,
     {
@@ -28,7 +33,11 @@ const OverviewPage: React.FC = () => {
     },
   );
   // Fetch Quality Stats
-  const { data: propStats } = trpc.admin.getPropertiesStats.useQuery();
+  const {
+    data: propStats,
+    isLoading: propStatsLoading,
+    error: propStatsError,
+  } = trpc.admin.getPropertiesStats.useQuery();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', {
@@ -39,25 +48,30 @@ const OverviewPage: React.FC = () => {
   };
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-ZA').format(num);
+  const hasAnalytics = Boolean(analytics) && !analyticsLoading && !analyticsError;
+  const hasPropStats = Boolean(propStats) && !propStatsLoading && !propStatsError;
 
   // SECTION 1: EXECUTIVE PULSE
   const pulseMetrics = [
     {
       label: 'Revenue (30d)',
-      value: analyticsLoading ? '...' : formatCurrency(analytics?.monthlyRevenue || 0),
-      trend: '+12%', // Mock trend for now
+      value: hasAnalytics ? formatCurrency(analytics?.monthlyRevenue || 0) : null,
+      status: hasAnalytics ? ('real' as const) : ('unavailable' as const),
+      trend: hasAnalytics ? 'Gross commission volume (30d)' : null,
       color: 'text-blue-600',
     },
     {
       label: 'Active Users',
-      value: analyticsLoading ? '...' : formatNumber(analytics?.totalUsers || 0),
-      trend: `+${analytics?.userGrowth || 0}`,
+      value: hasAnalytics ? formatNumber(analytics?.totalUsers || 0) : null,
+      status: hasAnalytics ? ('real' as const) : ('unavailable' as const),
+      trend: hasAnalytics ? `+${analytics?.userGrowth || 0} in last 30d` : null,
       color: 'text-emerald-600',
     },
     {
       label: 'Active Listings',
-      value: analyticsLoading ? '...' : formatNumber(analytics?.activeProperties || 0),
-      trend: `+${analytics?.propertyGrowth || 0}`,
+      value: hasAnalytics ? formatNumber(analytics?.activeProperties || 0) : null,
+      status: hasAnalytics ? ('real' as const) : ('unavailable' as const),
+      trend: hasAnalytics ? `+${analytics?.propertyGrowth || 0} in last 30d` : null,
       color: 'text-purple-600',
     },
   ];
@@ -89,11 +103,26 @@ const OverviewPage: React.FC = () => {
               <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">
                 {metric.label}
               </p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-2">{metric.value}</h3>
+              <KpiValue
+                value={metric.value}
+                status={metric.status}
+                className="text-2xl font-bold text-slate-900 mt-2"
+                hint={
+                  metric.status === 'unavailable'
+                    ? 'Metric is not available right now.'
+                    : undefined
+                }
+              />
             </div>
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-100">
-              {metric.trend}
-            </Badge>
+            {metric.trend ? (
+              <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-100">
+                {metric.trend}
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-100">
+                Unavailable
+              </Badge>
+            )}
           </Card>
         ))}
       </div>
@@ -208,7 +237,11 @@ const OverviewPage: React.FC = () => {
                   <p className="text-xs text-slate-500">Last 30 days</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-900">+{analytics?.userGrowth || 0}</p>
+                  <KpiValue
+                    value={hasAnalytics ? `+${analytics?.userGrowth || 0}` : null}
+                    status={hasAnalytics ? 'real' : 'unavailable'}
+                    className="font-bold text-slate-900"
+                  />
                 </div>
               </div>
 
@@ -218,7 +251,11 @@ const OverviewPage: React.FC = () => {
                   <p className="text-xs text-slate-500">Last 30 days</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-900">+{analytics?.propertyGrowth || 0}</p>
+                  <KpiValue
+                    value={hasAnalytics ? `+${analytics?.propertyGrowth || 0}` : null}
+                    status={hasAnalytics ? 'real' : 'unavailable'}
+                    className="font-bold text-slate-900"
+                  />
                 </div>
               </div>
 
@@ -229,14 +266,24 @@ const OverviewPage: React.FC = () => {
                     <Sparkles className="h-4 w-4 text-amber-500" />
                     <p className="text-sm font-medium text-slate-700">Avg Quality</p>
                   </div>
-                  <p className="text-xs text-slate-500">
-                    {(propStats as any)?.qualityMetrics?.featuredCount || 0} Featured Listings
-                  </p>
+                  {hasPropStats ? (
+                    <p className="text-xs text-slate-500">
+                      {(propStats as any)?.qualityMetrics?.featuredCount || 0} Featured Listings
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500">Quality metrics unavailable</p>
+                  )}
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-900 text-lg">
-                    {Math.round((propStats as any)?.qualityMetrics?.averageScore || 0)}
-                  </p>
+                  <KpiValue
+                    value={
+                      hasPropStats
+                        ? Math.round((propStats as any)?.qualityMetrics?.averageScore || 0)
+                        : null
+                    }
+                    status={hasPropStats ? 'real' : 'unavailable'}
+                    className="font-bold text-slate-900 text-lg"
+                  />
                 </div>
               </div>
 
@@ -266,14 +313,22 @@ const OverviewPage: React.FC = () => {
                 <CreditCard className="h-5 w-5 text-slate-400" />
                 <span className="text-slate-700 font-medium">Active Subscriptions</span>
               </div>
-              <span className="font-bold text-slate-900">{analytics?.paidSubscriptions || 0}</span>
+              <KpiValue
+                value={hasAnalytics ? analytics?.paidSubscriptions || 0 : null}
+                status={hasAnalytics ? 'real' : 'unavailable'}
+                className="font-bold text-slate-900"
+              />
             </div>
             <div className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-3">
                 <DollarSign className="h-5 w-5 text-slate-400" />
                 <span className="text-slate-700 font-medium">Revenue (MoM)</span>
               </div>
-              <span className="font-bold text-emerald-600">+12%</span>
+              <KpiValue
+                status="coming_soon"
+                className="font-bold text-slate-600"
+                hint="Month-over-month revenue percentage is not wired yet."
+              />
             </div>
             <div
               className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
