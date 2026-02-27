@@ -564,3 +564,44 @@ There are two report files because there are two separate worktrees:
 Canonical RC report for active unblock track:
 
 - `hardening-staging-auth/docs/PILOT_RC_REPORT.md`
+
+## 18) Post-Merge Live Verification (PR #14) - 2026-02-27
+
+Merge/deploy evidence:
+
+```text
+PR #14 merged to main: 2026-02-27T11:13:01Z
+Merge commit: 39f8cc5e34888a3572656bc80a27fbc3ebd56c6f
+```
+
+Live API deployment proof:
+
+```text
+GET https://api.propertylistifysa.co.za/api/health
+-> 200
+-> header x-build-sha: 39f8cc5e34888a3572656bc80a27fbc3ebd56c6f
+-> body.build.sha: 39f8cc5e34888a3572656bc80a27fbc3ebd56c6f
+```
+
+Live endpoint recheck:
+
+```text
+GET https://api.propertylistifysa.co.za/api/explore?limit=3&offset=0
+-> 200
+-> {"items":[],"shorts":[],"feedType":"recommended","hasMore":false,"offset":0,"metadata":{"personalized":false,"degraded":true,"fallbackReason":"query_error"}}
+
+GET https://api.propertylistifysa.co.za/api/explore/by-area?location=Sandton&limit=2&offset=0
+-> 200
+-> {"items":[],"shorts":[],"feedType":"area","hasMore":false,"offset":0,"metadata":{"location":"Sandton","degraded":true,"fallbackReason":"query_error"}}
+```
+
+Interpretation:
+
+- Backend fix is live on the production API host.
+- Explore read endpoints no longer fail with `500`; they now degrade to safe empty-state responses.
+- This closes the environment/topology + explore-500 blocker for the current RC unblock track.
+
+Updated blocker status:
+
+- `api.propertylistifysa.co.za` deployment ambiguity: **CLOSED**
+- `/api/explore*` hard 500 blocker: **CLOSED** (now `200` with degraded empty-state)
