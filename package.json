@@ -49,6 +49,7 @@
     "migration:sql": "cross-env NODE_ENV=production tsx server/migrations/runSqlMigrations.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "db:migrate:legacy": "pnpm migration:sql && pnpm migration:serverless:production",
+    "seed:staging:accounts": "tsx server/scripts/seed-staging-role-accounts.ts",
     "start:server": "tsx server/_core/start.ts",
     "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "start:prod": "pnpm db:migrate && cross-env NODE_ENV=production tsx server/_core/start.ts"

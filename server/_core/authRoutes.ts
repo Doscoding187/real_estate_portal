@@ -41,8 +41,21 @@ export function registerAuthRoutes(app: Express) {
       }
 
       // Validate agent profile if role is agent
+      const normalizedAgentProfile =
+        role === 'agent'
+          ? {
+              displayName: agentProfile?.displayName,
+              phone: agentProfile?.phone || agentProfile?.phoneNumber,
+              bio: agentProfile?.bio,
+              licenseNumber: agentProfile?.licenseNumber,
+              specializations: Array.isArray(agentProfile?.specializations)
+                ? agentProfile.specializations
+                : undefined,
+            }
+          : undefined;
+
       if (role === 'agent') {
-        if (!agentProfile || !agentProfile.displayName || !agentProfile.phoneNumber) {
+        if (!normalizedAgentProfile?.displayName || !normalizedAgentProfile.phone) {
           return res.status(400).json({
             error:
               'Agent profile with display name and phone number is required for agent registration',
@@ -60,7 +73,7 @@ export function registerAuthRoutes(app: Express) {
         password,
         name,
         requestedRole as any,
-        agentProfile,
+        normalizedAgentProfile,
       );
 
       // Return success message - user must verify email before logging in
