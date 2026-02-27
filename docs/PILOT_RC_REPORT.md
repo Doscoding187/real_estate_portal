@@ -268,3 +268,95 @@ Implication:
 - CLI-driven staging env inspection (`DATABASE_URL`, service logs, migration status) is blocked until credentials are provided via:
   - interactive login in a user-attended session, or
   - pre-provisioned `VERCEL_TOKEN` / `RAILWAY_TOKEN` in the execution environment.
+
+## 10) Preview+Prod Validation Pass (No Staging/Seed) - 2026-02-27
+
+Scope constraints for this pass:
+
+- Validation-only.
+- No staging seed execution.
+- No infra auth attempts.
+- No feature work.
+
+Validation target:
+
+- Preview URL: `https://real-estate-portal-h7v9ewutp-edwards-projects-29c395d1.vercel.app`
+- Bypass header: `x-vercel-protection-bypass` (configured secret)
+- Backend target intent: production Railway
+
+### 10.1 Build Artifact Host Verification (Mixed-Target Check)
+
+Evidence from live Preview bundle inspection (`/assets/index-Cq_2q91e.js`):
+
+```text
+FILES_WITH_STAGING=1
+STAGING_REF=/assets/index-Cq_2q91e.js
+FILES_WITH_PROD=0
+
+VITE_API_URL:"https://realestateportal-staging.up.railway.app"
+VITE_DEPLOY_ENV:"staging"
+[tRPC] URL = https://realestateportal-staging.up.railway.app/api/trpc
+```
+
+Result:
+
+- Preview bundle is **not clean** for Preview+Prod.
+- Mixed-target risk remains: app-side calls can still target staging host directly.
+
+### 10.2 Safe Preview+Prod SOP Checks (Read-only / Minimal Risk)
+
+Executed checks:
+
+```text
+PREVIEW_ROOT                       -> 200 text/html
+PREVIEW_EXPLORE_ROUTE              -> 200 text/html
+PREVIEW_LISTING_SEARCH_ROUTE       -> 200 text/html
+
+API_HEALTH                         -> 200 application/json
+                                   -> {"ok":true,"env":"production",...}
+
+API_AUTH_LOGIN_INVALID             -> 401 application/json
+                                   -> {"error":"Invalid email or password"}
+
+API_EXPLORE_FEED                   -> 500 application/json
+                                   -> {"error":"Failed to fetch feed"}
+
+API_EXPLORE_BY_AREA                -> 500 application/json
+                                   -> {"error":"Failed to fetch feed"}
+
+API_EXPLORE_HIGHLIGHT_TAGS         -> 200 application/json
+                                   -> {"tags":[]}
+
+API_EXPLORE_BY_CATEGORY            -> 501 application/json
+                                   -> {"error":"Not implemented","message":"Category feed is not available yet."}
+```
+
+Intentional non-execution:
+
+- Contact/lead submission actions were skipped to avoid unintended production writes or notification spam.
+
+### 10.3 Issue Classification (Topology Inventory)
+
+| Finding | Class | Notes |
+| --- | --- | --- |
+| Preview bundle still embeds staging host for API/TRPC | A) Preview config regression | Bundle/env drift from intended Preview+Prod target |
+| `/api/explore` and `/api/explore/by-area` return 500 via Preview proxy | B) Backend production behavior | Read-path instability for pilot discovery flows |
+| `/api/explore/by-category` returns 501 | C) Feature/logic limitation (known) | Explicitly not implemented; expected but must be acknowledged |
+
+## 11) Preview+Prod Gate Decision
+
+- Decision: **NO-GO**
+- Reason:
+  - Preview is not fully aligned to a single backend target (mixed-target risk persists in compiled bundle).
+  - Core read flows for Explore return server errors (`500`) under Preview+Prod checks.
+  - Staging remains unavailable (`502`) and staging seed/SOP remains a separate blocked gate.
+
+## 12) Required Next Unblock Before Pilot Gate Re-check
+
+1. Redeploy Preview with compiled env proving:
+   - `VITE_API_URL` points to the same intended backend as `/api/*` proxy target.
+   - `VITE_DEPLOY_ENV` matches that topology (no guard mismatch).
+2. Re-run Preview bundle host scan:
+   - no staging host references in active runtime API target paths.
+3. Resolve production backend 500s for read-only Explore feed endpoints or explicitly remove those flows from pilot scope.
+4. Keep staging seed/SOP as a separate gate once Railway staging health and auth are restored.
