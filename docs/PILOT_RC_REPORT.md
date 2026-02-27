@@ -422,3 +422,94 @@ Interpretation:
 - Cleared blockers:
   1. Preview `/api/*` routing no longer returns `405`.
   2. Preview env now resolves active API calls to `https://api.propertylistifysa.co.za`.
+
+## 15) Explore 500 Root-Cause Track (Backend-Only, Minimal Patch) - 2026-02-27
+
+Scope:
+
+- No staging seed.
+- No infra auth dependency.
+- No feature additions.
+- Backend resiliency patch only for `/api/explore` and `/api/explore/by-area` failure mode.
+
+### 15.1 Reproduction Against Production API Host
+
+```text
+GET https://api.propertylistifysa.co.za/api/explore?limit=3&offset=0
+-> 500 {"error":"Failed to fetch feed"}
+-> x-request-id: 01d2c0d9-b5d9-4f4a-96a3-570558ef39ae
+
+GET https://api.propertylistifysa.co.za/api/explore/by-area?location=Sandton&limit=2&offset=0
+-> 500 {"error":"Failed to fetch feed"}
+-> x-request-id: ba8e3fee-fd97-49cb-a6ef-72bb43569779
+```
+
+### 15.2 Root Cause Classification
+
+Classification: **DB/query-path throw bubbling to route-level 500** in `exploreFeedService`.
+
+Evidence basis:
+
+- Both failing endpoints share `exploreFeedService` query paths:
+  - `getRecommendedFeed`
+  - `getAreaFeed`
+- Existing route handlers convert thrown service errors to generic `500` (`{"error":"Failed to fetch feed"}`).
+- No environment/proxy mismatch remains for active target host in this phase.
+
+### 15.3 Minimal Safe Fix Implemented
+
+Files changed:
+
+- `server/services/exploreFeedService.ts`
+- `server/services/__tests__/exploreFeedService.fallback.test.ts`
+
+Behavioral change:
+
+- Added defensive `try/catch` around query execution in:
+  - `getRecommendedFeed`
+  - `getAreaFeed`
+- On query failure, service now:
+  - logs structured error details,
+  - returns deterministic empty feed (`200`-shape payload),
+  - sets metadata flags:
+    - `degraded: true`
+    - `fallbackReason: "query_error"`
+
+Result:
+
+- Prevents hard 500 for read-feed endpoints when underlying data/query path fails.
+- Preserves endpoint contract with safe empty-state response.
+
+### 15.4 Regression Coverage Added
+
+New focused test file:
+
+- `server/services/__tests__/exploreFeedService.fallback.test.ts`
+
+Added tests:
+
+1. Recommended feed returns empty fallback when DB query throws.
+2. Area feed returns empty fallback when DB query throws.
+
+### 15.5 Verification Evidence (Local)
+
+```text
+pnpm check
+-> PASS
+
+pnpm vitest run --silent server/services/__tests__/exploreFeedService.fallback.test.ts
+-> PASS (1 file, 2 tests)
+```
+
+### 15.6 Deployment Recheck Requirement
+
+This patch is validated locally only in this report section.
+
+Post-deploy checks required to close this blocker:
+
+```text
+GET  /api/explore                    -> 200 JSON (items may be empty)
+GET  /api/explore/by-area?...        -> 200 JSON (items may be empty)
+```
+
+If both return 200 post-deploy, Explore read-path blocker can be downgraded from hard NO-GO.
