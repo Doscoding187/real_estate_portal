@@ -141,9 +141,9 @@ jobs:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           NODE_OPTIONS: --max-old-space-size=6144
         run: |
-          pnpm vitest run --config vitest.client.config.ts --shard=1/2 --minWorkers=1 --maxWorkers=2 --silent
-          pnpm vitest run --config vitest.client.config.ts --shard=2/2 --minWorkers=1 --maxWorkers=2 --silent
-          pnpm vitest run --config vitest.server.config.ts --minWorkers=1 --maxWorkers=2 --silent
+          pnpm vitest run --project client --shard=1/2 --minWorkers=1 --maxWorkers=2 --silent
+          pnpm vitest run --project client --shard=2/2 --minWorkers=1 --maxWorkers=2 --silent
+          pnpm vitest run --project server --minWorkers=1 --maxWorkers=2 --silent
 
   build:
     name: Build Application
