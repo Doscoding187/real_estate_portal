@@ -140,7 +140,9 @@ jobs:
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           NODE_OPTIONS: --max-old-space-size=6144
-        run: pnpm test -- --maxWorkers=50% --silent
+        run: |
+          pnpm vitest run --config vitest.client.config.ts --maxWorkers=50% --silent
+          pnpm vitest run --config vitest.server.config.ts --maxWorkers=50% --silent
 
   build:
     name: Build Application
