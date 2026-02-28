@@ -141,14 +141,17 @@ jobs:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           NODE_OPTIONS: --max-old-space-size=12288
         run: |
-          pnpm vitest run --project client --shard=1/8 --minWorkers=1 --maxWorkers=1 --silent
-          pnpm vitest run --project client --shard=2/8 --minWorkers=1 --maxWorkers=1 --silent
-          pnpm vitest run --project client --shard=3/8 --minWorkers=1 --maxWorkers=1 --silent
-          pnpm vitest run --project client --shard=4/8 --minWorkers=1 --maxWorkers=1 --silent
-          pnpm vitest run --project client --shard=5/8 --minWorkers=1 --maxWorkers=1 --silent
-          pnpm vitest run --project client --shard=6/8 --minWorkers=1 --maxWorkers=1 --silent
-          pnpm vitest run --project client --shard=7/8 --minWorkers=1 --maxWorkers=1 --silent
-          pnpm vitest run --project client --shard=8/8 --minWorkers=1 --maxWorkers=1 --silent
+          mapfile -t CLIENT_TESTS < <(
+            find client/src -type f \
+              \( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.spec.ts' -o -name '*.spec.tsx' \) \
+              ! -name '*.visual.test.ts' \
+              ! -name '*.visual.test.tsx' \
+              | sort
+          )
+          for test_file in "${CLIENT_TESTS[@]}"; do
+            echo "Running client test: ${test_file}"
+            pnpm vitest run --project client --minWorkers=1 --maxWorkers=1 --silent "${test_file}"
+          done
           pnpm vitest run --project server --minWorkers=1 --maxWorkers=2 --silent
 
   build:
