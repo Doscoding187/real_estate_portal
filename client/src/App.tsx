@@ -230,18 +230,65 @@ function Router() {
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
-          <Route path="/agent/dashboard" component={AgentDashboard} />
-          <Route path="/agent/listings" component={AgentListings} />
-          <Route path="/agent/leads" component={AgentLeadsEnhanced} />
-          <Route path="/agent/marketing" component={AgentMarketingHub} />
-          <Route path="/agent/earnings" component={AgentEarnings} />
-          <Route path="/agent/analytics" component={AgentAnalytics} />
-          <Route path="/agent/productivity" component={AgentProductivity} />
-          <Route path="/agent/training" component={AgentTrainingSupport} />
-          <Route path="/agent/settings" component={AgentSettings} />
-          <Route path="/agent/setup" component={AgentSetup} />
+          <Route path="/agent/dashboard">
+            <RequireRole role="agent">
+              <AgentDashboard />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/listings">
+            <RequireRole role="agent">
+              <AgentListings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/leads">
+            <RequireRole role="agent">
+              <AgentLeadsEnhanced />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/marketing">
+            <RequireRole role="agent">
+              <AgentMarketingHub />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/earnings">
+            <RequireRole role="agent">
+              <AgentEarnings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/analytics">
+            <RequireRole role="agent">
+              <AgentAnalytics />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/productivity">
+            <RequireRole role="agent">
+              <AgentProductivity />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/training">
+            <RequireRole role="agent">
+              <AgentTrainingSupport />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/settings">
+            <RequireRole role="agent">
+              <AgentSettings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/setup">
+            <RequireRole role="agent">
+              <AgentSetup />
+            </RequireRole>
+          </Route>
+          <Route path="/onboarding/agent-profile">
+            <RequireRole role="agent">
+              <AgentSetup />
+            </RequireRole>
+          </Route>
           <Route path="/agent/referrals">
-            <Redirect to="/referrer/dashboard" />
+            <RequireRole role="agent">
+              <Redirect to="/referrer/dashboard" />
+            </RequireRole>
           </Route>
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
