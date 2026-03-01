@@ -139,7 +139,20 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: pnpm test
+          NODE_OPTIONS: --max-old-space-size=12288
+        run: |
+          mapfile -t CLIENT_TESTS < <(
+            find client/src -type f \
+              \( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.spec.ts' -o -name '*.spec.tsx' \) \
+              ! -name '*.visual.test.ts' \
+              ! -name '*.visual.test.tsx' \
+              | sort
+          )
+          for test_file in "${CLIENT_TESTS[@]}"; do
+            echo "Running client test: ${test_file}"
+            pnpm vitest run --project client --minWorkers=1 --maxWorkers=1 --silent "${test_file}"
+          done
+          pnpm vitest run --project server --minWorkers=1 --maxWorkers=2 --silent
 
   build:
     name: Build Application

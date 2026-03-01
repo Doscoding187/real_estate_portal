@@ -7,7 +7,6 @@
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { DiscoveryItem } from './useDiscoveryFeed';
-import { getPlaceholderSections } from '@/data/explorePlaceholderData';
 
 export interface PersonalizedSection {
   id: string;
@@ -20,12 +19,19 @@ export interface PersonalizedSection {
 interface UsePersonalizedContentOptions {
   categoryId?: number;
   location?: { lat: number; lng: number };
-  usePlaceholder?: boolean; // Enable placeholder data for visualization
+}
+
+function pickFeedItems(payload: unknown): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  const value = payload as Record<string, unknown>;
+  if (Array.isArray(value.items)) return value.items as any[];
+  if (Array.isArray(value.shorts)) return value.shorts as any[];
+  return [];
 }
 
 export function usePersonalizedContent(options: UsePersonalizedContentOptions = {}) {
   const [sections, setSections] = useState<PersonalizedSection[]>([]);
-  const [usePlaceholderData, setUsePlaceholderData] = useState(options.usePlaceholder ?? true);
 
   // Fetch "For You" personalized content
   const forYouQuery = trpc.explore.getFeed.useQuery({
@@ -82,28 +88,30 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     const newSections: PersonalizedSection[] = [];
 
     // Check if we have any real data
-    const hasRealData =
-      (forYouData && Array.isArray(forYouData) && forYouData.length > 0) ||
-      (popularNearYouData && Array.isArray(popularNearYouData) && popularNearYouData.length > 0) ||
-      (newDevelopmentsData &&
-        Array.isArray(newDevelopmentsData) &&
-        newDevelopmentsData.length > 0) ||
-      (trendingData && Array.isArray(trendingData) && trendingData.length > 0);
+    const forYouItems = pickFeedItems(forYouData);
+    const nearYouItems = pickFeedItems(popularNearYouData);
+    const developmentItems = pickFeedItems(newDevelopmentsData);
+    const trendingItems = pickFeedItems(trendingData);
 
-    // Use placeholder data if no real data and placeholder is enabled
-    if (!hasRealData && usePlaceholderData && !isLoading) {
-      setSections(getPlaceholderSections());
+    const hasRealData =
+      forYouItems.length > 0 ||
+      nearYouItems.length > 0 ||
+      developmentItems.length > 0 ||
+      trendingItems.length > 0;
+
+    if (!hasRealData && !isLoading) {
+      setSections([]);
       return;
     }
 
     // For You section
-    if (forYouData && Array.isArray(forYouData) && forYouData.length > 0) {
+    if (forYouItems.length > 0) {
       newSections.push({
         id: 'for-you',
         title: 'For You',
         subtitle: 'Personalized based on your preferences',
         type: 'for-you',
-        items: forYouData.map((item: any) => ({
+        items: forYouItems.map((item: any) => ({
           id: item.id,
           type: 'property',
           data: item,
@@ -112,13 +120,13 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     }
 
     // Popular Near You section
-    if (popularNearYouData && Array.isArray(popularNearYouData) && popularNearYouData.length > 0) {
+    if (nearYouItems.length > 0) {
       newSections.push({
         id: 'popular-near-you',
         title: 'Popular Near You',
         subtitle: 'Trending properties in your area',
         type: 'popular-near-you',
-        items: popularNearYouData.map((item: any) => ({
+        items: nearYouItems.map((item: any) => ({
           id: item.id,
           type: 'property',
           data: item,
@@ -127,12 +135,8 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     }
 
     // New Developments section
-    if (
-      newDevelopmentsData &&
-      Array.isArray(newDevelopmentsData) &&
-      newDevelopmentsData.length > 0
-    ) {
-      const developments = newDevelopmentsData.filter((item: any) => item.developmentId);
+    if (developmentItems.length > 0) {
+      const developments = developmentItems.filter((item: any) => item.developmentId);
 
       if (developments.length > 0) {
         newSections.push({
@@ -150,8 +154,8 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     }
 
     // Trending section
-    if (trendingData && Array.isArray(trendingData) && trendingData.length > 0) {
-      const sorted = [...trendingData].sort(
+    if (trendingItems.length > 0) {
+      const sorted = [...trendingItems].sort(
         (a: any, b: any) => (b.viewCount || 0) - (a.viewCount || 0),
       );
 
@@ -168,9 +172,8 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       });
     }
 
-    // If still no sections after processing real data, use placeholder
-    if (newSections.length === 0 && usePlaceholderData) {
-      setSections(getPlaceholderSections());
+    if (newSections.length === 0) {
+      setSections([]);
       return;
     }
 
@@ -180,7 +183,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     popularNearYouData,
     newDevelopmentsData,
     trendingData,
-    usePlaceholderData,
     isLoading,
   ]);
 
