@@ -67,7 +67,7 @@ export default function Dashboard() {
     return null;
   }
 
-  if (referrerStatusQuery.data?.hasIdentity) {
+  if (referrerStatusQuery.data?.hasAccess) {
     setLocation('/referrer/dashboard');
     return null;
   }
