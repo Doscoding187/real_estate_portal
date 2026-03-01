@@ -329,6 +329,15 @@ function Router() {
           <Route path="/explore/home" component={ExploreHome} />
           <Route path="/explore/shorts" component={ExploreShorts} />
           <Route path="/explore/upload" component={ExploreUpload} />
+          <Route path="/explore/create">
+            <Redirect to="/explore/upload" />
+          </Route>
+          <Route path="/explore/publish">
+            <Redirect to="/explore/upload" />
+          </Route>
+          <Route path="/explore/upload/video">
+            <Redirect to="/explore/upload" />
+          </Route>
           <Route path="/explore/component-demo" component={ExploreComponentDemo} />
           <Route path="/map-preview-demo" component={MapPreviewDemo} />
 
