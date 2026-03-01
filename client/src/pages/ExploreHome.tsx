@@ -297,6 +297,11 @@ export default function ExploreHome() {
     navigateToFeed('buy');
   };
 
+  const handleTrendingVideoClick = () => {
+    topicTooltip.incrementScrollCount();
+    navigateToFeed('buy');
+  };
+
   const handleWelcomeTopicSelect = (topicSlug: string) => {
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem(
@@ -466,7 +471,7 @@ export default function ExploreHome() {
           {/* Trending Videos Section - First content after header */}
           <TrendingVideosSection
             categoryId={selectedCategoryId ?? undefined}
-            intent={intent}
+            onVideoClick={handleTrendingVideoClick}
             onSeeAll={handleTrendingVideosSeeAll}
           />
 
