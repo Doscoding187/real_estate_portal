@@ -290,6 +290,12 @@ function Router() {
               <Redirect to="/referrer/dashboard" />
             </RequireRole>
           </Route>
+          <Route path="/agents/:slug">
+            <Redirect to="/agents" />
+          </Route>
+          <Route path="/a/:slug">
+            <Redirect to="/agents" />
+          </Route>
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
 
@@ -347,6 +353,9 @@ function Router() {
 
           {/* Legacy Feed */}
           <Route path="/explore/feed" component={ExploreFeed} />
+          <Route path="/explore/@:handle/:slug">
+            <Redirect to="/explore/feed" />
+          </Route>
 
           {/* Explore Entry Rule (MUST be after the specific routes) */}
           <Route path="/explore">
@@ -364,6 +373,9 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
+          <Route path="/referral-upload/:token">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
           <Route path="/get-started/referral">
             <Redirect to="/distribution-network/apply" />
           </Route>
