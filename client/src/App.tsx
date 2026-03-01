@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -121,6 +121,9 @@ const DeveloperBrandProfilePage = lazy(() => import('./pages/DeveloperBrandProfi
 // Import Comparison Page
 const CompareProperties = lazy(() => import('./pages/CompareProperties'));
 const AdvertiseWithUs = lazy(() => import('./pages/AdvertiseWithUs'));
+const GetStarted = lazy(() => import('./pages/GetStarted'));
+const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
+const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
@@ -129,6 +132,12 @@ const DistributionManagerDashboard = lazy(
 );
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
+);
+const DistributionNetworkPublicPage = lazy(
+  () => import('./pages/distribution/DistributionNetworkPublicPage'),
+);
+const DistributionReferralApplyPage = lazy(
+  () => import('./pages/distribution/DistributionReferralApplyPage'),
 );
 
 // Import SearchResults page for SEO-friendly URLs
@@ -296,6 +305,16 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
+          <Route path="/get-started/referral">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
+          <Route path="/get-started/referrer">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
+          <Route path="/get-started/:role/confirmation" component={GetStartedRole} />
+          <Route path="/get-started/:role" component={GetStartedRole} />
+          <Route path="/get-started" component={GetStarted} />
+          <Route path="/book-strategy" component={BookStrategy} />
           <Route path="/role-selection" component={RoleSelection} />
           <Route path="/advertise" component={AdvertiseWithUs} />
           <Route
@@ -532,6 +551,11 @@ function Router() {
           <Route path="/agency/dashboard" component={AgencyDashboard} />
           <Route path="/distribution/manager" component={DistributionManagerDashboard} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
+          <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
+          <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
+          <Route path="/referral/apply">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
           <Route path="/agency/subscription" component={AgencySubscriptionPage} />
           <Route path="/agency/onboarding" component={AgencyOnboarding} />
           <Route path="/admin/subscription-management" component={SubscriptionManagementPage} />
@@ -645,3 +669,4 @@ function App() {
 }
 
 export default App;
+
