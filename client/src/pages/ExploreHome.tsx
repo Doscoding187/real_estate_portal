@@ -1,9 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Grid3x3, SlidersHorizontal, MapPin } from 'lucide-react';
-import { DiscoveryCardFeed } from '@/components/explore-discovery/DiscoveryCardFeed';
-import { ExploreVideoFeed } from '@/components/explore-discovery/ExploreVideoFeed';
+import {
+  Play,
+  Grid3x3,
+  SlidersHorizontal,
+  Home,
+  Wrench,
+  Hammer,
+  Wallet,
+  TrendingUp,
+  Building2,
+} from 'lucide-react';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { PersonalizedContentBlock } from '@/components/explore-discovery/PersonalizedContentBlock';
@@ -12,11 +20,12 @@ import { WelcomeOverlay } from '@/components/explore-discovery/WelcomeOverlay';
 import { OnboardingTooltip } from '@/components/explore-discovery/OnboardingTooltip';
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { usePersonalizedContent } from '@/hooks/usePersonalizedContent';
+import { useExploreIntent } from '@/hooks/useExploreIntent';
 import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
 import { useWelcomeOverlay } from '@/hooks/useWelcomeOverlay';
 import { useTopicNavigationTooltip, usePartnerContentTooltip } from '@/hooks/useOnboardingTooltip';
 import { DiscoveryItem } from '@/hooks/useDiscoveryFeed';
-import { TrendingVideo } from '@/hooks/useTrendingVideos';
+import { type ExploreIntent, writeStoredExploreIntent } from '@/lib/exploreIntent';
 import { designTokens } from '@/lib/design-tokens';
 import {
   pageVariants,
@@ -26,16 +35,158 @@ import {
   getVariants,
 } from '@/lib/animations/exploreAnimations';
 
+type ExploreFocus = 'buy' | 'sell' | 'renovate' | 'services' | 'finance' | 'invest' | 'neighbourhood';
+type LegacyExploreIntent = ExploreIntent;
+
+const EXPLORE_INTENT_SESSION_KEY = 'exploreIntent';
+
+const SECTION_ID_ALIASES: Record<string, string> = {
+  'for-you': 'for_you',
+  for_you: 'for_you',
+  'home-services': 'home_services',
+  home_services: 'home_services',
+  'featured-tours': 'featured_tours',
+  featured_tours: 'featured_tours',
+  'new-listings': 'new_listings',
+  new_listings: 'new_listings',
+  'top-contractors-builders': 'top_contractors_builders',
+  top_contractors_builders: 'top_contractors_builders',
+  'finance-education': 'finance_education',
+  finance_education: 'finance_education',
+  'explore-neighbourhoods': 'neighbourhoods',
+  neighbourhoods: 'neighbourhoods',
+  'market-insights': 'market_insights',
+  market_insights: 'market_insights',
+};
+
+const SECTION_ORDER = [
+  'for_you',
+  'home_services',
+  'featured_tours',
+  'new_listings',
+  'top_contractors_builders',
+  'finance_education',
+  'neighbourhoods',
+  'market_insights',
+] as const;
+
+const SECTION_ORDER_INDEX = SECTION_ORDER.reduce<Record<string, number>>((acc, id, index) => {
+  acc[id] = index;
+  return acc;
+}, {});
+
+function normalizeSectionId(section: { id: string; canonicalId?: string }) {
+  const rawId = (section.canonicalId || section.id || '').trim().toLowerCase();
+  return SECTION_ID_ALIASES[rawId] ?? rawId;
+}
+
+function mapFocusToLegacyIntent(focus: ExploreFocus): LegacyExploreIntent {
+  switch (focus) {
+    case 'buy':
+      return 'buy';
+    case 'sell':
+      return 'sell';
+    case 'invest':
+      return 'invest';
+    case 'renovate':
+    case 'services':
+      return 'improve';
+    case 'finance':
+    case 'neighbourhood':
+      return 'learn';
+    default:
+      return 'buy';
+  }
+}
+
+function mapSectionToFocus(sectionId: string): ExploreFocus {
+  switch (sectionId) {
+    case 'home_services':
+      return 'services';
+    case 'featured_tours':
+    case 'new_listings':
+    case 'for_you':
+      return 'buy';
+    case 'top_contractors_builders':
+      return 'renovate';
+    case 'finance_education':
+      return 'finance';
+    case 'neighbourhoods':
+      return 'neighbourhood';
+    case 'market_insights':
+      return 'invest';
+    default:
+      return 'buy';
+  }
+}
+
+interface FocusTile {
+  id: string;
+  title: string;
+  subtitle: string;
+  focus: ExploreFocus;
+  subFocus: string;
+  icon: typeof Home;
+}
+
+const FOCUS_TILES: FocusTile[] = [
+  {
+    id: 'buying',
+    title: 'Buying a Home',
+    subtitle: 'Discover listings matched to your budget and lifestyle',
+    focus: 'buy',
+    subFocus: 'buying',
+    icon: Home,
+  },
+  {
+    id: 'selling',
+    title: 'Selling a Home',
+    subtitle: 'Market-ready ideas, pricing signals, and seller tips',
+    focus: 'sell',
+    subFocus: 'selling',
+    icon: TrendingUp,
+  },
+  {
+    id: 'renovating',
+    title: 'Renovating',
+    subtitle: 'Design upgrades and trusted build partners',
+    focus: 'renovate',
+    subFocus: 'renovating',
+    icon: Hammer,
+  },
+  {
+    id: 'services',
+    title: 'Home Services',
+    subtitle: 'Browse specialists for every room and repair',
+    focus: 'services',
+    subFocus: 'services',
+    icon: Wrench,
+  },
+  {
+    id: 'finance',
+    title: 'Finance & Bonds',
+    subtitle: 'Learn deposits, transfer costs, and affordability',
+    focus: 'finance',
+    subFocus: 'finance',
+    icon: Wallet,
+  },
+  {
+    id: 'investing',
+    title: 'Investment',
+    subtitle: 'Track areas, yields, and long-term opportunities',
+    focus: 'invest',
+    subFocus: 'investment',
+    icon: Building2,
+  },
+];
+
 export default function ExploreHome() {
-  // Use common state hook for shared logic
+  const { intent, setIntent } = useExploreIntent();
   const {
-    // viewMode,
-    // setViewMode,
     selectedCategoryId,
     setSelectedCategoryId,
     showFilters,
     setShowFilters,
-    filters,
   } = useExploreCommonState({ initialViewMode: 'home' });
 
   // Onboarding hooks
@@ -57,6 +208,7 @@ export default function ExploreHome() {
   const { sections, isLoading: sectionsLoading } = usePersonalizedContent({
     categoryId: selectedCategoryId ?? undefined,
     location: userLocation,
+    intent,
   });
 
   // Get user location for "Popular Near You"
@@ -79,55 +231,103 @@ export default function ExploreHome() {
   // Navigation
   const [location, setLocation] = useLocation();
 
-  const handleItemClick = (item: DiscoveryItem) => {
-    console.log('Item clicked:', item);
+  const navigateToFeed = (focus: ExploreFocus, subFocus?: string) => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        EXPLORE_INTENT_SESSION_KEY,
+        JSON.stringify({
+          focus,
+          subFocus,
+          ts: Date.now(),
+        }),
+      );
+    }
+    const legacyIntent = mapFocusToLegacyIntent(focus);
+    writeStoredExploreIntent(legacyIntent);
+    void setIntent(legacyIntent);
+    setLocation('/explore/feed');
+  };
 
+  const handleItemClick = (item: DiscoveryItem) => {
     // Track partner content encounters for tooltip
     if (item.partnerId) {
       partnerTooltip.onPartnerContentEncounter();
     }
 
-    // TODO: Navigate to detail page based on item type
+    const data = item.data as Record<string, unknown> | undefined;
+    const listingId =
+      Number(data?.linkedListingId || data?.listingId || data?.propertyId || 0) || undefined;
+
     if (item.type === 'property') {
-      // Navigate to property detail
-    } else if (item.type === 'video') {
-      // Open video feed at this video
-      setLocation('/explore/discovery');
-    } else if (item.type === 'neighbourhood') {
-      // Navigate to neighbourhood detail
+      if (listingId) {
+        setLocation(`/property/${listingId}`);
+        return;
+      }
+      navigateToFeed('buy');
+      return;
     }
+
+    if (item.type === 'video') {
+      navigateToFeed('buy');
+      return;
+    }
+
+    if (item.type === 'neighbourhood') {
+      const name =
+        typeof item.data?.name === 'string' ? String(item.data.name).toLowerCase() : undefined;
+      navigateToFeed('neighbourhood', name);
+      return;
+    }
+
+    if (item.type === 'insight') {
+      navigateToFeed('finance');
+      return;
+    }
+
+    navigateToFeed('buy');
   };
 
-  const handleSeeAll = (sectionType: string) => {
-    console.log('See all:', sectionType);
-    // Navigate to full view of section
-    setLocation('/explore/map');
-  };
-
-  // Handle trending video click - switch to videos view
-  const handleTrendingVideoClick = (video: TrendingVideo) => {
-    console.log('Trending video clicked:', video);
-
-    // Increment scroll count for topic tooltip
-    topicTooltip.incrementScrollCount();
-
-    setLocation('/explore/discovery');
+  const handleSeeAll = (sectionId: string) => {
+    navigateToFeed(mapSectionToFocus(sectionId));
   };
 
   // Handle "See All" for trending videos - switch to videos view
   const handleTrendingVideosSeeAll = () => {
-    // Increment scroll count for topic tooltip
     topicTooltip.incrementScrollCount();
-
-    setLocation('/explore/discovery');
+    navigateToFeed('buy');
   };
 
-  // Handle topic selection from welcome overlay
+  const handleTrendingVideoClick = () => {
+    topicTooltip.incrementScrollCount();
+    navigateToFeed('buy');
+  };
+
   const handleWelcomeTopicSelect = (topicSlug: string) => {
-    // This would normally set the selected topic and filter the feed
-    console.log('Topic selected from welcome:', topicSlug);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        EXPLORE_INTENT_SESSION_KEY,
+        JSON.stringify({ focus: 'buy', subFocus: topicSlug, ts: Date.now() }),
+      );
+    }
+    writeStoredExploreIntent('buy');
     welcomeOverlay.onTopicSelect(topicSlug);
   };
+
+  const orderedSections = useMemo(() => {
+    return sections
+      .map((section, index) => ({
+        section,
+        index,
+        normalizedId: normalizeSectionId(section),
+      }))
+      .sort((a, b) => {
+        const ai = SECTION_ORDER_INDEX[a.normalizedId] ?? Number.MAX_SAFE_INTEGER;
+        const bi = SECTION_ORDER_INDEX[b.normalizedId] ?? Number.MAX_SAFE_INTEGER;
+        if (ai !== bi) return ai - bi;
+        return a.index - b.index;
+      })
+      .map(item => item.section);
+  }, [sections]);
 
   return (
     <motion.div
@@ -154,19 +354,21 @@ export default function ExploreHome() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Title and View Mode Toggle */}
-          <div className="flex items-center justify-between mb-4">
-            <motion.h1
-              className="text-3xl font-bold"
-              style={{
-                color: designTokens.colors.text.primary,
-                fontWeight: designTokens.typography.fontWeight.bold,
-              }}
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
-            >
-              Explore
-            </motion.h1>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <motion.h1
+                className="text-3xl font-bold"
+                style={{
+                  color: designTokens.colors.text.primary,
+                  fontWeight: designTokens.typography.fontWeight.bold,
+                }}
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+              >
+                Explore
+              </motion.h1>
+            </div>
 
             {/* View mode toggle - Modern pill design */}
             <motion.div
@@ -178,7 +380,7 @@ export default function ExploreHome() {
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.1, duration: 0.3 }}
               role="tablist"
-              aria-label="View mode selection"
+              aria-label="Explore view selection"
             >
               <motion.button
                 onClick={() => setLocation('/explore/home')}
@@ -198,66 +400,38 @@ export default function ExploreHome() {
                 whileTap="tap"
                 role="tab"
                 aria-selected={location === '/explore/home'}
-                aria-controls="explore-content"
-                aria-label="Home view"
+                aria-label="Home"
               >
-                <MapPin className="w-4 h-4" aria-hidden="true" />
+                <Grid3x3 className="w-4 h-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Home</span>
               </motion.button>
               <motion.button
-                onClick={() => setLocation('/explore/map')}
+                onClick={() => setLocation('/explore/feed')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
                   backgroundColor:
-                    location === '/explore/map' ? designTokens.colors.bg.primary : 'transparent',
+                    location === '/explore/feed' ? designTokens.colors.bg.primary : 'transparent',
                   color:
-                    location === '/explore/map'
+                    location === '/explore/feed'
                       ? designTokens.colors.text.primary
                       : designTokens.colors.text.secondary,
-                  boxShadow: location === '/explore/map' ? designTokens.shadows.sm : 'none',
+                  boxShadow: location === '/explore/feed' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
                 role="tab"
-                aria-selected={location === '/explore/map'}
-                aria-controls="explore-content"
-                aria-label="Cards view"
-              >
-                <Grid3x3 className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Map</span>
-              </motion.button>
-              <motion.button
-                onClick={() => setLocation('/explore/discovery')}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
-                style={{
-                  backgroundColor:
-                    location === '/explore/discovery'
-                      ? designTokens.colors.bg.primary
-                      : 'transparent',
-                  color:
-                    location === '/explore/discovery'
-                      ? designTokens.colors.text.primary
-                      : designTokens.colors.text.secondary,
-                  boxShadow: location === '/explore/discovery' ? designTokens.shadows.sm : 'none',
-                  fontWeight: designTokens.typography.fontWeight.medium,
-                }}
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                role="tab"
-                aria-selected={location === '/explore/discovery'}
-                aria-controls="explore-content"
-                aria-label="Videos view"
+                aria-selected={location === '/explore/feed'}
+                aria-label="Feed"
               >
                 <Play className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Videos</span>
+                <span className="hidden sm:inline">Feed</span>
               </motion.button>
             </motion.div>
           </div>
 
-          {/* Category filter - Modern chip design */}
+          {/* Category filter */}
           <motion.div
             ref={topicsRef}
             initial={{ y: 10, opacity: 0 }}
@@ -301,6 +475,65 @@ export default function ExploreHome() {
             onSeeAll={handleTrendingVideosSeeAll}
           />
 
+          {/* Section-based home focus selection (not tabs/chips) */}
+          <motion.section
+            className="px-4 sm:px-0"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            role="region"
+            aria-label="Choose your focus"
+          >
+            <div className="mb-4">
+              <h2 className="text-2xl font-semibold" style={{ color: designTokens.colors.text.primary }}>
+                Choose Your Focus
+              </h2>
+              <p className="text-sm mt-1" style={{ color: designTokens.colors.text.secondary }}>
+                Select what matters now and we will tune your feed instantly.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {FOCUS_TILES.map(tile => {
+                const Icon = tile.icon;
+                return (
+                  <motion.button
+                    key={tile.id}
+                    type="button"
+                    onClick={() => navigateToFeed(tile.focus, tile.subFocus)}
+                    className="text-left rounded-2xl p-4 border transition-all"
+                    style={{
+                      borderColor: designTokens.colors.bg.tertiary,
+                      backgroundColor: designTokens.colors.bg.primary,
+                      boxShadow: designTokens.shadows.sm,
+                    }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{
+                          backgroundColor: `${designTokens.colors.accent.primary}15`,
+                          color: designTokens.colors.accent.primary,
+                        }}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold" style={{ color: designTokens.colors.text.primary }}>
+                          {tile.title}
+                        </h3>
+                        <p className="text-sm mt-1" style={{ color: designTokens.colors.text.secondary }}>
+                          {tile.subtitle}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.section>
+
           {/* Personalized Content Sections with stagger animation */}
           {sectionsLoading ? (
             <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
@@ -323,10 +556,10 @@ export default function ExploreHome() {
             </motion.div>
           ) : (
             <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
-              {sections.map(section => (
+              {orderedSections.map(section => (
                 <motion.div
                   key={section.id}
-                  ref={section.type === 'partner' ? partnerContentRef : undefined}
+                  ref={normalizeSectionId(section) === 'top_contractors_builders' ? partnerContentRef : undefined}
                   variants={staggerItemVariants}
                   style={{ marginBottom: designTokens.spacing.xl }}
                 >
@@ -334,8 +567,9 @@ export default function ExploreHome() {
                     title={section.title}
                     subtitle={section.subtitle}
                     items={section.items}
+                    videoAspect={section.videoAspect}
                     onItemClick={handleItemClick}
-                    onSeeAll={() => handleSeeAll(section.type)}
+                    onSeeAll={() => handleSeeAll(normalizeSectionId(section))}
                   />
                 </motion.div>
               ))}
@@ -343,7 +577,7 @@ export default function ExploreHome() {
           )}
 
           {/* Empty state - Modern design */}
-          {!sectionsLoading && sections.length === 0 && (
+          {!sectionsLoading && orderedSections.length === 0 && (
             <motion.div
               className="text-center py-16 px-4"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -355,7 +589,7 @@ export default function ExploreHome() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1 }}
               >
-                <MapPin
+                <Grid3x3
                   className="w-20 h-20 mx-auto mb-6"
                   style={{ color: designTokens.colors.text.tertiary }}
                 />
@@ -382,7 +616,7 @@ export default function ExploreHome() {
                 Discover properties tailored to your preferences
               </motion.p>
               <motion.button
-                onClick={() => setLocation('/explore/map')}
+                onClick={() => navigateToFeed('buy')}
                 className="px-8 py-3 rounded-xl text-white font-medium"
                 style={{
                   background: designTokens.colors.accent.gradient,
@@ -396,7 +630,7 @@ export default function ExploreHome() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
               >
-                Browse All Properties
+                Open Feed
               </motion.button>
             </motion.div>
           )}
