@@ -58,12 +58,6 @@ export default function Overview() {
   const [range, setRange] = useState<Range>('30d');
   const [developmentFilter, setDevelopmentFilter] = useState<string>('all');
   const [isReferralAccessOpen, setIsReferralAccessOpen] = useState(false);
-  const [allowedTiers, setAllowedTiers] = useState({
-    tier_1: true,
-    tier_2: true,
-    tier_3: false,
-    tier_4: false,
-  });
 
   const isSuperAdmin = user?.role === 'super_admin';
 
@@ -212,10 +206,6 @@ export default function Overview() {
   }, [distributionDashboardQuery.data, selectedDevelopmentId]);
   const distributionPanelVisible =
     !!selectedDevelopmentId && distributionSettings?.distributionEnabled === true;
-
-  const toggleTier = (tier: keyof typeof allowedTiers) => {
-    setAllowedTiers(prev => ({ ...prev, [tier]: !prev[tier] }));
-  };
 
   const snapshotTiles = [
     { label: 'New', value: stageCounts.new || 0, stage: 'new' },
@@ -424,6 +414,12 @@ export default function Overview() {
               <Badge variant={distributionSettings?.distributionEnabled ? 'default' : 'outline'}>
                 {distributionSettings?.distributionEnabled ? 'Enabled' : 'Disabled'}
               </Badge>
+              <p className="text-xs text-muted-foreground">
+                Only eligible referral partners can see this development.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Referral partners can only claim leads from referral-origin channels.
+              </p>
             </div>
             <Button
               variant={distributionSettings?.distributionEnabled ? 'outline' : 'default'}
@@ -454,33 +450,60 @@ export default function Overview() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="border rounded-md p-3 space-y-2">
-              <p className="text-sm font-medium">Access</p>
+            <div className="border rounded-md p-3 space-y-3">
+              <p className="text-sm font-medium">Status</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Distribution</p>
+                  <p className="font-medium">
+                    {distributionSettings?.distributionEnabled ? 'Enabled' : 'Disabled'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Eligible Partners</p>
+                  <p className="font-medium">{formatNumber(distributionSettings?.eligiblePartnerCount || 0)}</p>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Allowed tiers for referral partners. Final enforcement remains server-side.
+                Visibility is enforced server-side: only eligible referral partners can access this
+                development.
               </p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+            </div>
+
+            <div className="border rounded-md p-3 space-y-2">
+              <p className="text-sm font-medium">Eligibility Controls</p>
+              <p className="text-xs text-muted-foreground">
+                Access model: <span className="font-medium text-foreground">{distributionSettings?.accessModel || 'unknown'}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Tier policy: <span className="font-medium text-foreground">{distributionSettings?.tierAccessPolicy || 'restricted'}</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
                 {(['tier_1', 'tier_2', 'tier_3', 'tier_4'] as const).map(tier => (
-                  <label key={tier} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={allowedTiers[tier]}
-                      onChange={() => toggleTier(tier)}
-                    />
-                    <span>{tier.replace('_', ' ').toUpperCase()}</span>
-                  </label>
+                  <div key={tier} className="border rounded-md p-2">
+                    <p className="text-muted-foreground">{tier.replace('_', ' ').toUpperCase()}</p>
+                    <p className="font-medium">
+                      {formatNumber(distributionSettings?.eligiblePartnersByTier?.[tier] || 0)} partner(s)
+                    </p>
+                  </div>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground">
+                Allowed tiers: {(distributionSettings?.allowedTiers || []).join(', ') || 'none'}
+              </p>
             </div>
 
             <div className="border rounded-md p-3 space-y-2">
               <p className="text-sm font-medium">Commission</p>
               <div className="text-sm space-y-1">
                 <p className="text-muted-foreground">
-                  Tier policy: <span className="font-medium text-foreground">{distributionSettings?.tierAccessPolicy || 'restricted'}</span>
+                  Model: <span className="font-medium text-foreground">{distributionSettings?.commissionModel || 'flat_percentage'}</span>
                 </p>
                 <p className="text-muted-foreground">
-                  Default commission: <span className="font-medium text-foreground">{distributionSettings?.defaultCommissionPercent ?? 0}%</span>
+                  Default percent: <span className="font-medium text-foreground">{distributionSettings?.defaultCommissionPercent ?? 0}%</span>
+                </p>
+                <p className="text-muted-foreground">
+                  Default amount: <span className="font-medium text-foreground">{formatNumber(distributionSettings?.defaultCommissionAmount || 0)}</span>
                 </p>
               </div>
             </div>
@@ -497,7 +520,7 @@ export default function Overview() {
             <Button variant="outline" onClick={() => setIsReferralAccessOpen(false)}>
               Close
             </Button>
-            <Button disabled>Save Changes (Coming Soon)</Button>
+            <Button disabled>Request Changes (Coming Soon)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

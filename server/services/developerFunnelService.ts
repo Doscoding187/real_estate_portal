@@ -798,8 +798,10 @@ export async function getDeveloperDistributionSettings(params: {
       id: distributionPrograms.id,
       isActive: distributionPrograms.isActive,
       isReferralEnabled: distributionPrograms.isReferralEnabled,
+      commissionModel: distributionPrograms.commissionModel,
       tierAccessPolicy: distributionPrograms.tierAccessPolicy,
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
+      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
       updatedAt: distributionPrograms.updatedAt,
     })
     .from(distributionPrograms)
@@ -809,6 +811,59 @@ export async function getDeveloperDistributionSettings(params: {
   const isActive = Number(program?.isActive || 0) === 1;
   const isReferralEnabled = Number(program?.isReferralEnabled || 0) === 1;
   const distributionEnabled = isActive && isReferralEnabled;
+  const accessModel =
+    !program
+      ? ('unknown' as const)
+      : program.tierAccessPolicy === 'open'
+        ? ('open' as const)
+        : program.tierAccessPolicy === 'invite_only'
+          ? ('partner_based' as const)
+          : ('tier_based' as const);
+
+  const eligibleRows = await db
+    .select({
+      agentId: distributionAgentAccess.agentId,
+      minTierRequired: distributionAgentAccess.minTierRequired,
+    })
+    .from(distributionAgentAccess)
+    .innerJoin(
+      distributionIdentities,
+      and(
+        eq(distributionIdentities.userId, distributionAgentAccess.agentId),
+        eq(distributionIdentities.identityType, 'referrer'),
+        eq(distributionIdentities.active, 1),
+      ),
+    )
+    .where(
+      and(
+        eq(distributionAgentAccess.developmentId, params.developmentId),
+        eq(distributionAgentAccess.accessStatus, 'active'),
+      ),
+    );
+
+  const eligiblePartnerIds = new Set<number>();
+  const eligiblePartnersByTier: Record<'tier_1' | 'tier_2' | 'tier_3' | 'tier_4', number> = {
+    tier_1: 0,
+    tier_2: 0,
+    tier_3: 0,
+    tier_4: 0,
+  };
+
+  for (const row of eligibleRows) {
+    const agentId = Number(row.agentId || 0);
+    if (agentId > 0) eligiblePartnerIds.add(agentId);
+    const tier = row.minTierRequired as keyof typeof eligiblePartnersByTier;
+    if (tier && tier in eligiblePartnersByTier) {
+      eligiblePartnersByTier[tier] += 1;
+    }
+  }
+
+  const allowedTiers =
+    program?.tierAccessPolicy === 'open'
+      ? ['tier_1', 'tier_2', 'tier_3', 'tier_4']
+      : (Object.entries(eligiblePartnersByTier)
+          .filter(([, count]) => count > 0)
+          .map(([tier]) => tier) as Array<'tier_1' | 'tier_2' | 'tier_3' | 'tier_4'>);
 
   return {
     developmentId: String(params.developmentId),
@@ -817,9 +872,16 @@ export async function getDeveloperDistributionSettings(params: {
     distributionEnabled,
     isActive,
     isReferralEnabled,
+    accessModel,
     tierAccessPolicy: program?.tierAccessPolicy || null,
+    commissionModel: program?.commissionModel || null,
     defaultCommissionPercent:
       program?.defaultCommissionPercent != null ? Number(program.defaultCommissionPercent) : null,
+    defaultCommissionAmount:
+      program?.defaultCommissionAmount != null ? Number(program.defaultCommissionAmount) : null,
+    eligiblePartnerCount: eligiblePartnerIds.size,
+    eligiblePartnersByTier,
+    allowedTiers,
     updatedAt: program?.updatedAt || null,
     availableOwnerTypes: distributionEnabled
       ? getAvailableLeadOwnerTypes(true)
