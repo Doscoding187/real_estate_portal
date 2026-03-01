@@ -25,6 +25,7 @@ const navigation = [
   { name: 'Overview', href: '/agent/dashboard', icon: Home },
   { name: 'Listings', href: '/agent/listings', icon: Building2 },
   { name: 'Leads & CRM', href: '/agent/leads', icon: Users },
+  { name: 'Referrals', href: '/agent/referrals', icon: Share2 },
   { name: 'Marketing Hub', href: '/agent/marketing', icon: Megaphone },
   { name: 'Earnings', href: '/agent/earnings', icon: DollarSign },
   { name: 'Analytics', href: '/agent/analytics', icon: BarChart3 },

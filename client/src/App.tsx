@@ -240,6 +240,9 @@ function Router() {
           <Route path="/agent/training" component={AgentTrainingSupport} />
           <Route path="/agent/settings" component={AgentSettings} />
           <Route path="/agent/setup" component={AgentSetup} />
+          <Route path="/agent/referrals">
+            <Redirect to="/referrer/dashboard" />
+          </Route>
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
 
@@ -669,4 +672,3 @@ function App() {
 }
 
 export default App;
-
