@@ -605,3 +605,123 @@ Updated blocker status:
 
 - `api.propertylistifysa.co.za` deployment ambiguity: **CLOSED**
 - `/api/explore*` hard 500 blocker: **CLOSED** (now `200` with degraded empty-state)
+
+## 19) Sequence Execution (No Override) - 2026-03-01
+
+Gate policy applied:
+
+- No override merges used in this sequence.
+- Normal merge path only (green checks required).
+
+### 19.1 Baseline Restore Merge (PR #16)
+
+```text
+PR #16: chore(ci): restore green baseline checks
+state: merged
+mergedAt: 2026-02-27T17:09:45Z
+merge commit: d78f777a9f781cde2b436de7ef1896e7500fc449
+```
+
+Main CI evidence after merge:
+
+```text
+workflow: CI Pipeline
+run id: 22496030569
+head sha: d78f777a9f781cde2b436de7ef1896e7500fc449
+conclusion: success
+```
+
+### 19.2 Explore Parity Merge (PR #15)
+
+```text
+PR #15: fix(explore): remove placeholder fallback from production explore paths
+state: merged
+mergedAt: 2026-03-01T06:22:40Z
+merge commit: bc8b014c3056505e0efab6326538020d69d2092a
+```
+
+PR checks before merge:
+
+```text
+DB Contract Verification: PASS
+Lint & TypeCheck: PASS
+Unit & Integration Tests: PASS
+Build Application: PASS
+Vercel: PASS
+```
+
+Main CI evidence after merge:
+
+```text
+workflow: CI Pipeline
+run id: 22537583073
+head sha: bc8b014c3056505e0efab6326538020d69d2092a
+conclusion: success
+```
+
+### 19.3 Production Verification (Post-Merge)
+
+Backend build proof:
+
+```text
+GET https://api.propertylistifysa.co.za/api/health -> 200
+x-build-sha: bc8b014c3056505e0efab6326538020d69d2092a
+body.build.sha: bc8b014c3056505e0efab6326538020d69d2092a
+```
+
+Explore endpoint behavior:
+
+```text
+GET https://api.propertylistifysa.co.za/api/explore -> 200
+-> {"items":[],"shorts":[],"feedType":"recommended","hasMore":false,"offset":0,"metadata":{"personalized":false,"degraded":true,"fallbackReason":"query_error"}}
+
+GET https://api.propertylistifysa.co.za/api/explore/by-area?location=Johannesburg&limit=6 -> 200
+-> {"items":[],"shorts":[],"feedType":"area","hasMore":false,"offset":0,"metadata":{"location":"Johannesburg","degraded":true,"fallbackReason":"query_error"}}
+```
+
+Frontend artifact checks (`https://www.propertylistifysa.co.za`):
+
+```text
+bundle contains VITE_API_URL:"https://api.propertylistifysa.co.za"
+bundle contains VITE_DEPLOY_ENV:"production"
+bundle contains VITE_VERCEL_GIT_COMMIT_SHA:"bc8b014c3056505e0efab6326538020d69d2092a"
+bundle contains no "explorePlaceholderData" token
+```
+
+### 19.4 Referral Parity Status
+
+Code + live route evidence:
+
+```text
+App route present: /referrer/dashboard
+Navbar entry present: "Referrer" (guarded by hasReferrerAccess)
+GET https://www.propertylistifysa.co.za/referrer/dashboard -> 200 (SPA route resolves)
+```
+
+Status:
+
+- Referral route/nav parity is already present on `main`; no additional parity PR was required for this slice.
+
+### 19.5 TiDB Flat Reset Gate
+
+Status: **NOT EXECUTED** from this environment.
+
+Reason:
+
+- Requires privileged production DB operation sequence (backup/snapshot, wipe data, recreate super admin).
+- Not safe to run without explicit production DB session + operator confirmation.
+
+Required before closed-pilot onboarding (5 agents):
+
+1. Take TiDB backup/snapshot.
+2. Wipe application data while preserving schema + migration tracking.
+3. Recreate new super admin.
+4. Validate login, empty Explore state, referral access, and first real upload/listing end-to-end.
+
+## 20) Gate Decision (Closed Pilot, 5 Agents)
+
+- Decision: **NO-GO (pending TiDB reset gate)**
+- Rationale:
+  - CI baseline and Explore parity merges are complete and live on production.
+  - Explore read-path hard failure is resolved (200 degraded empty-state).
+  - Closed-pilot operational cutover still depends on mandatory TiDB reset + new super-admin bootstrap + first-upload verification.
