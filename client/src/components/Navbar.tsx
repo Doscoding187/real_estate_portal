@@ -26,7 +26,7 @@ export function Navbar() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasIdentity);
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
