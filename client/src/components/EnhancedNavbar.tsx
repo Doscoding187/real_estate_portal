@@ -862,10 +862,11 @@ export function EnhancedNavbar() {
               <NavigationMenuItem>
                 <Link href="/distribution-network">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 transition-all duration-200 font-semibold"
                   >
+                    <Briefcase className="h-4 w-4 mr-2" />
                     Referrals
                   </Button>
                 </Link>
