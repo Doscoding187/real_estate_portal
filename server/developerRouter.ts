@@ -708,27 +708,48 @@ export const developerRouter = router({
         source: 'developments' | 'listings';
       }> => {
         if (input.tab === 'buy') {
-          const devs = await developmentService.listPublicDevelopments({
-            province: locationFilter.province,
-            city: locationFilter.city,
-            suburb: locationFilter.suburb,
+          const { propertySearchService } = await import('./services/propertySearchService');
+          const residentialListingTypes: Array<'house' | 'apartment' | 'townhouse' | 'plot'> = [
+            'house',
+            'apartment',
+            'townhouse',
+            'plot',
+          ];
+          const result = await propertySearchService.searchProperties(
+            {
+              province: locationFilter.province,
+              city: locationFilter.city,
+              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+              listingType: 'sale',
+              propertyType: residentialListingTypes,
+            } as any,
+            'date_desc',
+            1,
             limit,
-            developmentType: 'residential',
-            transactionType: 'for_sale',
-          });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+          );
+          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
         }
 
         if (input.tab === 'rent') {
-          const devs = await developmentService.listPublicDevelopments({
-            province: locationFilter.province,
-            city: locationFilter.city,
-            suburb: locationFilter.suburb,
+          const { propertySearchService } = await import('./services/propertySearchService');
+          const residentialListingTypes: Array<'house' | 'apartment' | 'townhouse'> = [
+            'house',
+            'apartment',
+            'townhouse',
+          ];
+          const result = await propertySearchService.searchProperties(
+            {
+              province: locationFilter.province,
+              city: locationFilter.city,
+              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+              listingType: 'rent',
+              propertyType: residentialListingTypes,
+            } as any,
+            'date_desc',
+            1,
             limit,
-            developmentType: 'residential',
-            transactionType: 'for_rent',
-          });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+          );
+          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
         }
 
         if (input.tab === 'developments') {

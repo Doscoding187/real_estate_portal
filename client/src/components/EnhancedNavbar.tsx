@@ -857,6 +857,19 @@ export function EnhancedNavbar() {
                   </Button>
                 </Link>
               </NavigationMenuItem>
+
+              {/* Referrals */}
+              <NavigationMenuItem>
+                <Link href="/distribution-network">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold"
+                  >
+                    Referrals
+                  </Button>
+                </Link>
+              </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
 
@@ -1004,6 +1017,14 @@ export function EnhancedNavbar() {
                   className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                 >
                   Explore
+                </button>
+              </Link>
+              <Link href="/distribution-network">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  Referrals
                 </button>
               </Link>
               <div className="pt-2 mt-2 border-t border-gray-100">
