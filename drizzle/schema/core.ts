@@ -37,6 +37,10 @@ export const users = mysqlTable(
     role: mysqlEnum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin'])
       .default('visitor')
       .notNull(),
+    plan: mysqlEnum(['trial', 'paid']).default('trial').notNull(),
+    trialStatus: mysqlEnum(['active', 'expired']).default('active').notNull(),
+    trialStartedAt: timestamp({ mode: 'string' }),
+    trialEndsAt: timestamp({ mode: 'string' }),
     agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
     isSubaccount: int().default(0).notNull(),
     createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
@@ -62,6 +66,28 @@ export const auditLogs = mysqlTable('audit_logs', {
   userAgent: text(),
   createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
+
+export const managerialAuditLogs = mysqlTable(
+  'managerial_audit_logs',
+  {
+    id: int().autoincrement().primaryKey(),
+    actorUserId: int('actor_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    action: varchar({ length: 120 }).notNull(),
+    targetType: varchar('target_type', { length: 80 }).notNull(),
+    targetId: int('target_id').notNull(),
+    beforeData: json('before_data'),
+    afterData: json('after_data'),
+    metadata: json(),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_managerial_audit_actor').on(table.actorUserId),
+    index('idx_managerial_audit_target').on(table.targetType, table.targetId),
+    index('idx_managerial_audit_created').on(table.createdAt),
+  ],
+);
 
 export const platformSettings = mysqlTable('platform_settings', {
   id: int().autoincrement().primaryKey(),
