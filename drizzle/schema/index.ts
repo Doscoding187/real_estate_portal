@@ -6,11 +6,15 @@ export * from './listings';
 export * from './developments';
 export * from './media';
 export * from './explore';
+export * from './economicActors';
 export * from './marketplace';
 export * from './views';
 export * from './analytics';
 export * from './leads';
+export * from './servicesEngine';
 export * from './distribution';
+export * from './demand';
+export * from './referrals';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';
