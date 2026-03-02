@@ -11,6 +11,9 @@ import { AMENITY_REGISTRY } from '@/config/amenityRegistry';
 import { WorkflowId, WizardStepId, WizardData } from '@/lib/types/wizard-workflows';
 import { WORKFLOWS, getWorkflow, getVisibleSteps } from '@/lib/workflows';
 
+export const DEVELOPMENT_WIZARD_STORAGE_KEY = 'development-wizard-storage-v2';
+export const PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY = 'publisher-development-wizard-storage-v1';
+
 // Media Item Interface
 // Media Item Interface
 export interface MediaItem {
@@ -106,9 +109,24 @@ export interface SpecVariation {
 // Unit Type Interface (with Inheritance)
 
 // CONSTANTS & HELPERS
-const initialResidentialConfig = { residentialType: null, communityTypes: [] };
+const initialResidentialConfig = {
+  residentialType: null,
+  freeholdCategory: null as FreeholdCategory | null,
+  communityTypes: [],
+};
 const initialLandConfig = { landType: null, infrastructure: [] };
 const initialCommercialConfig = { commercialType: null, features: [] };
+
+export type FreeholdCategory = 'freestanding' | 'security_estate';
+
+const derivePropertyTypesFromResidentialConfig = (config: {
+  residentialType: ResidentialType | null;
+}): string[] | null => {
+  if (config.residentialType === 'apartment') return ['apartment'];
+  if (config.residentialType === 'townhouse') return ['cluster_house'];
+  if (config.residentialType === 'freehold') return ['house'];
+  return null;
+};
 
 const normalizeTransactionType = (
   type: any,
@@ -147,6 +165,8 @@ export interface UnitType {
     | 'plot-and-plan'
     | 'townhouse'
     | 'studio';
+  unitCategory?: 'house' | 'apartment';
+  unitSubType?: string;
   floors?: 'single-storey' | 'double-storey' | 'triplex';
 
   usageType?: 'residential' | 'commercial'; // For Mixed-Use
@@ -310,6 +330,7 @@ export interface DevelopmentWizardState {
   // NEW: Residential Configuration (Step 1)
   residentialConfig: {
     residentialType: ResidentialType | null;
+    freeholdCategory?: FreeholdCategory | null;
     communityTypes: CommunityType[];
   };
 
@@ -353,6 +374,8 @@ export interface DevelopmentWizardState {
     status: import('@/types/wizardTypes').DevelopmentStatus;
     completionDate?: Date | null; // Expected or actual possession date
     launchDate?: Date | null; // When sales officially launch
+    expectedFirstHandoverDate?: Date | null;
+    handoverDuringConstruction?: boolean;
 
     // Legacy / Calculated (kept for compatibility)
     totalUnits?: number; // Total units across all types
@@ -552,6 +575,7 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
   // NEW: Residential Configuration
   residentialConfig: {
     residentialType: null,
+    freeholdCategory: null,
     communityTypes: [],
   },
 
@@ -582,6 +606,8 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
     status: undefined as any, // User must explicitly select
     completionDate: null,
     launchDate: null, // NEW: Launch Date field
+    expectedFirstHandoverDate: null,
+    handoverDuringConstruction: false,
     transactionType: undefined as any, // User must explicitly select
     ownershipType: undefined as any, // Legacy (Single)
     ownershipTypes: [], // New (Multiple) - Phase 2B
@@ -751,6 +777,12 @@ const createActions = (
       ownershipTypes: identity.ownershipTypes ?? state.developmentData.ownershipTypes,
       nature: identity.nature ?? state.developmentData.nature,
       auctionType: identity.auctionType ?? state.developmentData.auctionType,
+      launchDate: identity.launchDate ?? state.developmentData.launchDate,
+      completionDate: identity.completionDate ?? state.developmentData.completionDate,
+      expectedFirstHandoverDate:
+        identity.expectedFirstHandoverDate ?? state.developmentData.expectedFirstHandoverDate,
+      handoverDuringConstruction:
+        identity.handoverDuringConstruction ?? state.developmentData.handoverDuringConstruction,
 
       // Canonical Location Fields
       location: {
@@ -816,7 +848,11 @@ const createActions = (
         );
       }
 
-      if (!state.listingIdentity?.developerBrandProfileId) {
+      const linkedBrandProfileId =
+        state.listingIdentity?.developerBrandProfileId ??
+        (state.developmentData as any)?.developerBrandProfileId ??
+        null;
+      if (!linkedBrandProfileId) {
         recommendations.push(
           'Link a developer brand profile (with logo) to keep builder name/avatar consistent on cards.',
         );
@@ -973,7 +1009,21 @@ const createActions = (
       }),
 
     setResidentialConfig: (data: Partial<DevelopmentWizardState['residentialConfig']>) =>
-      set(state => ({ residentialConfig: { ...state.residentialConfig, ...data } })),
+      set(state => {
+        const nextResidentialConfig = { ...state.residentialConfig, ...data };
+        const derivedPropertyTypes = derivePropertyTypesFromResidentialConfig(nextResidentialConfig);
+
+        if (!derivedPropertyTypes) {
+          return { residentialConfig: nextResidentialConfig };
+        }
+
+        return {
+          residentialConfig: nextResidentialConfig,
+          developmentData: normalizeDevelopmentData(state.developmentData, {
+            propertyTypes: derivedPropertyTypes,
+          }),
+        };
+      }),
 
     setLandConfig: (data: Partial<DevelopmentWizardState['landConfig']>) =>
       set(state => ({ landConfig: { ...state.landConfig, ...data } })),
@@ -1061,12 +1111,31 @@ const createActions = (
           if (!state.developmentData?.status) errors.push('Please select a development status');
           if (!state.developmentData?.transactionType)
             errors.push('Please select a transaction type');
-          if (!state.developmentData?.ownershipType) errors.push('Please select an ownership type');
+          if ((state.developmentData?.ownershipTypes || []).length === 0) {
+            errors.push('Please select at least one ownership type');
+          }
           if (
-            state.developmentData?.status === 'launching-soon' &&
+            (state.developmentData?.status === 'launching-soon' ||
+              state.developmentData?.status === 'selling') &&
             !state.developmentData?.launchDate
-          )
-            errors.push('Launch date is required for "Launching Soon" status');
+          ) {
+            errors.push('Launch date is required for this status');
+          }
+          if (
+            (state.developmentData?.status === 'launching-soon' ||
+              state.developmentData?.status === 'selling') &&
+            !state.developmentData?.completionDate
+          ) {
+            errors.push('Expected completion date is required for this status');
+          }
+          if (
+            state.developmentData?.handoverDuringConstruction &&
+            !state.developmentData?.expectedFirstHandoverDate
+          ) {
+            errors.push(
+              'Expected first handover date is required when handovers occur during construction',
+            );
+          }
           break;
         case 5:
           if (!state.developmentData?.location?.address) errors.push('Location is required');
@@ -1080,11 +1149,6 @@ const createActions = (
             errors.push('Description is required');
           } else if (overviewDescLen < 50) {
             errors.push('Description must be at least 50 characters');
-          }
-          const status = state.developmentData?.status;
-          if (status === 'launching-soon' || status === 'selling') {
-            if (!state.developmentData?.completionDate)
-              errors.push('Expected completion date is required for this status');
           }
           break;
         }
@@ -1139,6 +1203,31 @@ const createActions = (
         errors.push('Description must be at least 50 characters');
       }
 
+      const status = wizardData.status ?? state.developmentData.status;
+      if (!status) {
+        errors.push('Development status is required');
+      }
+
+      if (status === 'launching-soon' || status === 'selling') {
+        if (!wizardData.launchDate) {
+          errors.push('Launch date is required for this status');
+        }
+        if (!wizardData.completionDate) {
+          errors.push('Expected completion date is required for this status');
+        }
+      }
+
+      const ownershipTypes = wizardData.ownershipTypes ?? state.developmentData.ownershipTypes ?? [];
+      if (!Array.isArray(ownershipTypes) || ownershipTypes.length === 0) {
+        errors.push('Select at least one ownership type');
+      }
+
+      if (wizardData.handoverDuringConstruction && !wizardData.expectedFirstHandoverDate) {
+        errors.push(
+          'Expected first handover date is required when handovers occur during construction',
+        );
+      }
+
       // Unit Types (canonical)
       if (state.classification?.type !== 'land') {
         const units = wizardData.unitTypes ?? [];
@@ -1186,13 +1275,26 @@ const createActions = (
             const validPrices = units.every((u: any) => (u.priceFrom || 0) > 0);
             if (!validPrices) errors.push('All unit types must have a base price');
           }
-        }
-      }
 
-      // Card-uniformity rules are now blocking publish rules.
-      const cardFieldRequirements = get().getCardFieldRecommendations();
-      for (const requirement of cardFieldRequirements) {
-        if (!errors.includes(requirement)) errors.push(requirement);
+          const validInventory = units.every((u: any) => {
+            const total = Number(u?.totalUnits ?? 0);
+            const available = Number(u?.availableUnits ?? 0);
+            const reserved = Number(u?.reservedUnits ?? 0);
+            if (
+              !Number.isFinite(total) ||
+              !Number.isFinite(available) ||
+              !Number.isFinite(reserved)
+            ) {
+              return false;
+            }
+            if (total < 0 || available < 0 || reserved < 0) return false;
+            return available + reserved <= total;
+          });
+
+          if (!validInventory) {
+            errors.push('Each unit type must have total >= available + reserved');
+          }
+        }
       }
 
       return { isValid: errors.length === 0, errors };
@@ -1501,6 +1603,15 @@ const createActions = (
             : source.developmentData?.completionDate
               ? new Date(source.developmentData.completionDate)
               : state.developmentData.completionDate,
+          expectedFirstHandoverDate: source.expectedFirstHandoverDate
+            ? new Date(source.expectedFirstHandoverDate)
+            : source.developmentData?.expectedFirstHandoverDate
+              ? new Date(source.developmentData.expectedFirstHandoverDate)
+              : state.developmentData.expectedFirstHandoverDate,
+          handoverDuringConstruction:
+            source.handoverDuringConstruction ??
+            source.developmentData?.handoverDuringConstruction ??
+            state.developmentData.handoverDuringConstruction,
 
           // Transaction & Ownership
           transactionType:
@@ -1594,6 +1705,7 @@ const createActions = (
           levy: { from: null, to: null },
           rates: { from: null, to: null },
           residentialType: null,
+          freeholdCategory: null,
           communityTypes: [],
         });
 
@@ -1642,6 +1754,34 @@ const createActions = (
               u.id = `unit-${Date.now()}-${idx}`;
             }
 
+            const parsedSpecifications = parse(u.specifications, {
+              builtInFeatures: {},
+              finishes: {},
+              electrical: {},
+            });
+            const storedClassification = parsedSpecifications?.classification ?? {};
+            const structuralTypeValue = u.structuralType || undefined;
+            const inferredUnitCategory =
+              ['freestanding-house', 'simplex', 'duplex', 'townhouse', 'plot-and-plan'].includes(
+                String(structuralTypeValue || ''),
+              )
+                ? 'house'
+                : 'apartment';
+            const unitCategory =
+              u.unitCategory === 'house' || u.unitCategory === 'apartment'
+                ? u.unitCategory
+                : storedClassification?.category === 'house' ||
+                    storedClassification?.category === 'apartment'
+                  ? storedClassification.category
+                  : inferredUnitCategory;
+            const unitSubType =
+              typeof u.unitSubType === 'string' && u.unitSubType.trim().length > 0
+                ? u.unitSubType
+                : typeof storedClassification?.subType === 'string' &&
+                    storedClassification.subType.trim().length > 0
+                  ? storedClassification.subType
+                  : structuralTypeValue || (unitCategory === 'house' ? 'freestanding-house' : 'apartment');
+
             return {
               id: u.id,
               label: u.label || u.name || 'Unnamed Unit',
@@ -1657,7 +1797,9 @@ const createActions = (
 
               // Type - Enums, undefined when unknown
               ownershipType: u.ownershipType || undefined,
-              structuralType: u.structuralType || undefined,
+              structuralType: structuralTypeValue,
+              unitCategory,
+              unitSubType,
 
               // Parking - Required fields with safe defaults
               parkingType: u.parkingType ?? 'none',
@@ -1681,16 +1823,13 @@ const createActions = (
 
               // Availability - Numbers, not null
               availableUnits: Number(u.availableUnits ?? 0),
+              reservedUnits: Number(u.reservedUnits ?? 0),
               totalUnits: Number(u.totalUnits ?? 0),
               completionDate: u.completionDate || undefined,
 
               // Complex fields
               amenities: parse(u.amenities, { standard: [], additional: [] }),
-              specifications: parse(u.specifications, {
-                builtInFeatures: {},
-                finishes: {},
-                electrical: {},
-              }),
+              specifications: parsedSpecifications,
               baseMedia: parse(u.baseMedia, { gallery: [], floorPlans: [], renders: [] }),
               features: parse(u.features, {
                 kitchen: [],
@@ -1787,6 +1926,8 @@ const createActions = (
                 marketingRole: canonicalDevelopmentData.marketingRole,
                 completionDate: canonicalDevelopmentData.completionDate,
                 launchDate: canonicalDevelopmentData.launchDate,
+                expectedFirstHandoverDate: canonicalDevelopmentData.expectedFirstHandoverDate,
+                handoverDuringConstruction: canonicalDevelopmentData.handoverDuringConstruction,
               },
               location: { ...canonicalDevelopmentData.location },
               governance_finances: {
@@ -2141,7 +2282,7 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
       ...createActions(set, get),
     }),
     {
-      name: 'development-wizard-storage-v2', // v2: Clean slate - no legacy state
+      name: DEVELOPMENT_WIZARD_STORAGE_KEY,
       partialize: state => ({
         // Always persist core state (never return empty object)
         currentPhase: state.currentPhase,

@@ -75,8 +75,12 @@ type UnitTypeV2 = {
   parkingBays: number;
   totalUnits?: number;
   availableUnits?: number;
+  reservedUnits?: number;
   isActive?: boolean;
   structuralType?: string;
+  unitCategory?: 'house' | 'apartment';
+  unitSubType?: string;
+  specifications?: Record<string, any>;
   baseMedia?: any;
 };
 
@@ -154,6 +158,9 @@ export function FinalisationPhase() {
   const createDevelopment = trpc.developer.createDevelopment.useMutation();
   const updateDevelopment = trpc.developer.updateDevelopment.useMutation();
   const publishDevelopment = trpc.developer.publishDevelopment.useMutation();
+  const createPublisherDevelopment = trpc.superAdminPublisher.createDevelopment.useMutation();
+  const updatePublisherDevelopment = trpc.superAdminPublisher.updateDevelopment.useMutation();
+  const publishPublisherDevelopment = trpc.superAdminPublisher.publishDevelopment.useMutation();
 
   // Run validation
   const validationResult = validateForPublish();
@@ -208,6 +215,21 @@ export function FinalisationPhase() {
     if (Number.isNaN(parsed.getTime())) return 'TBD';
     return parsed.toLocaleDateString();
   };
+
+  const ownershipDisplay = useMemo(() => {
+    const fromArray = Array.isArray((wizardData as any).ownershipTypes)
+      ? ((wizardData as any).ownershipTypes as unknown[])
+      : [];
+    const fromLegacy = (wizardData as any).ownershipType
+      ? [String((wizardData as any).ownershipType)]
+      : [];
+    const values = (fromArray.length ? fromArray : fromLegacy)
+      .map(value => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean);
+
+    if (values.length === 0) return 'N/A';
+    return values.map(value => value.replace(/-/g, ' ')).join(', ');
+  }, [wizardData]);
 
   const normalizeOwnershipType = (value: unknown): OwnershipType | undefined => {
     if (Array.isArray(value)) {
@@ -301,6 +323,23 @@ export function FinalisationPhase() {
       const totalUnits = u?.totalUnits != null ? Math.max(0, toInt(u.totalUnits, 0)) : undefined;
       const availableUnits =
         u?.availableUnits != null ? Math.max(0, toInt(u.availableUnits, 0)) : undefined;
+      const reservedUnits =
+        u?.reservedUnits != null ? Math.max(0, toInt(u.reservedUnits, 0)) : undefined;
+      const specifications =
+        u?.specifications && typeof u.specifications === 'object' ? u.specifications : undefined;
+      const classification = specifications?.classification ?? {};
+      const unitCategory =
+        u?.unitCategory === 'house' || u?.unitCategory === 'apartment'
+          ? u.unitCategory
+          : classification?.category === 'house' || classification?.category === 'apartment'
+            ? classification.category
+            : undefined;
+      const unitSubType =
+        typeof u?.unitSubType === 'string' && u.unitSubType.trim().length > 0
+          ? u.unitSubType
+          : typeof classification?.subType === 'string' && classification.subType.trim().length > 0
+            ? classification.subType
+            : undefined;
 
       const v2: UnitTypeV2 = {
         id: typeof u?.id === 'string' ? u.id : undefined,
@@ -327,8 +366,12 @@ export function FinalisationPhase() {
         parkingBays: parkingType === 'none' ? 0 : parkingBays,
         totalUnits,
         availableUnits,
+        reservedUnits,
         isActive: typeof u?.isActive === 'boolean' ? u.isActive : undefined,
         structuralType: u?.structuralType,
+        unitCategory,
+        unitSubType,
+        specifications,
         baseMedia: u?.baseMedia,
       };
 
@@ -344,6 +387,21 @@ export function FinalisationPhase() {
     return normalizeUnitTypesV2(canonicalUnitTypesRaw);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLand, canonicalUnitTypesRaw]);
+
+  const computedInventory = useMemo(() => {
+    if (isLand || canonicalUnitTypesV2.length === 0) {
+      return { totalUnits: undefined as number | undefined, availableUnits: undefined as number | undefined };
+    }
+
+    const totalUnits = canonicalUnitTypesV2.reduce((sum, unit) => {
+      return sum + Math.max(0, Number(unit.totalUnits ?? 0));
+    }, 0);
+    const availableUnits = canonicalUnitTypesV2.reduce((sum, unit) => {
+      return sum + Math.max(0, Number(unit.availableUnits ?? 0));
+    }, 0);
+
+    return { totalUnits, availableUnits };
+  }, [isLand, canonicalUnitTypesV2]);
 
   const computedDevPriceFromTo = useMemo(() => {
     if (isLand)
@@ -427,6 +485,11 @@ export function FinalisationPhase() {
         'WARNING: No unit types found in this submission.\n\nSaving now will DELETE ALL existing unit types.\n\nAre you sure you want to continue?',
       );
       if (!confirm) return;
+    }
+
+    if (isSuperAdmin && !publisherContext?.brandProfileId) {
+      toast.error('Select a publisher brand context before publishing.');
+      return;
     }
 
     if (isPublishing) return;
@@ -549,8 +612,8 @@ export function FinalisationPhase() {
         status: wizardData.status as any,
 
         // Metrics
-        totalUnits: (wizardData as any).totalUnits,
-        availableUnits: (wizardData as any).availableUnits,
+        totalUnits: computedInventory.totalUnits ?? (wizardData as any).totalUnits,
+        availableUnits: computedInventory.availableUnits ?? (wizardData as any).availableUnits,
         totalDevelopmentArea: (wizardData as any).totalDevelopmentArea,
 
         // Stand/Floor Sizes (left as-is; backend can ignore)
@@ -626,8 +689,25 @@ export function FinalisationPhase() {
       console.log('[FinalisationPhase] Payload Preview:', payload);
 
       let developmentId: number;
+      const publisherBrandProfileId = publisherContext?.brandProfileId ?? null;
+      const shouldUseSuperAdminFlow =
+        isSuperAdmin && typeof publisherBrandProfileId === 'number';
 
-      if (editingId) {
+      if (editingId && shouldUseSuperAdminFlow) {
+        console.log('[FinalisationPhase] Executing SUPER ADMIN UPDATE for ID:', editingId);
+        await updatePublisherDevelopment.mutateAsync({
+          brandProfileId: publisherBrandProfileId,
+          developmentId: editingId,
+          data: {
+            ...payload,
+            brandProfileId: publisherBrandProfileId,
+            developerBrandProfileId: publisherBrandProfileId,
+            devOwnerType: 'platform',
+          },
+        });
+        developmentId = editingId;
+        toast.success('Development saved successfully!');
+      } else if (editingId) {
         // UPDATE OPERATION
         console.log('[FinalisationPhase] Executing UPDATE for ID:', editingId);
         await updateDevelopment.mutateAsync({
@@ -640,25 +720,22 @@ export function FinalisationPhase() {
         // CREATE OPERATION
         console.log('[FinalisationPhase] Executing CREATE');
 
-        // Determine if using super admin flow (publisher context) or regular developer endpoint
-        const shouldUseSuperAdminFlow = isSuperAdmin && publisherContext?.brandProfileId;
-
         if (shouldUseSuperAdminFlow) {
-          // SUPER ADMIN WITH PUBLISHER CONTEXT: modify payload for brand context and use regular endpoint
+          // SUPER ADMIN WITH PUBLISHER CONTEXT: route through publisher endpoints
           console.log(
             '[FinalisationPhase] Using Super Admin flow with publisher context:',
-            publisherContext.brandProfileId,
+            publisherBrandProfileId,
           );
 
           const superAdminPayload = {
             ...payload,
             // Ensure brandProfileId is set from publisher context
-            brandProfileId: publisherContext.brandProfileId,
-            developerBrandProfileId: publisherContext.brandProfileId,
+            brandProfileId: publisherBrandProfileId,
+            developerBrandProfileId: publisherBrandProfileId,
             devOwnerType: 'platform',
           };
 
-          const result = await createDevelopment.mutateAsync(superAdminPayload);
+          const result = await createPublisherDevelopment.mutateAsync(superAdminPayload);
           developmentId = result.development.id;
         } else {
           // REGULAR FLOW: use existing developer endpoint
@@ -689,7 +766,14 @@ export function FinalisationPhase() {
 
       // Now publish (submit for review)
       console.log('[FinalisationPhase] Publishing development:', developmentId);
-      await publishDevelopment.mutateAsync({ id: developmentId });
+      if (shouldUseSuperAdminFlow) {
+        await publishPublisherDevelopment.mutateAsync({
+          brandProfileId: publisherBrandProfileId,
+          developmentId,
+        });
+      } else {
+        await publishDevelopment.mutateAsync({ id: developmentId });
+      }
 
       setShowConfirmPublish(false);
       confetti({
@@ -719,7 +803,12 @@ export function FinalisationPhase() {
           developmentName: 4,
           nature: 4,
           status: 4,
+          launchDate: 4,
+          completionDate: 4,
+          expectedFirstHandoverDate: 4,
+          handoverDuringConstruction: 4,
           ownershipType: 4,
+          ownershipTypes: 4,
           transactionType: 4,
 
           address: 5,
@@ -953,8 +1042,8 @@ export function FinalisationPhase() {
                       Type
                     </span>
                     <span className="font-medium text-slate-900 capitalize">
-                      {classification?.type?.replace('_', ' ')} •{' '}
-                      {(wizardData as any).ownershipType || 'N/A'}
+                      {classification?.type?.replace('_', ' ')} |{' '}
+                      {ownershipDisplay}
                     </span>
                   </div>
                 </div>

@@ -518,24 +518,36 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
   let salesMetrics: null | {
     totalUnits: number;
     availableUnits: number;
+    reservedUnits: number;
     soldUnits: number;
     soldPct: number;
   } = null;
 
   if (unitsWithMedia.length > 0) {
-    const totalUnits = unitsWithMedia.reduce(
-      (sum: number, u: any) => sum + (Number(u?.totalUnits) || 0),
-      0,
-    );
-    const availableUnits = unitsWithMedia.reduce(
-      (sum: number, u: any) => sum + (Number(u?.availableUnits) || 0),
-      0,
+    const totals = unitsWithMedia.reduce(
+      (acc: { total: number; available: number; reserved: number }, u: any) => {
+        const total = Math.max(0, Number(u?.totalUnits || 0));
+        const reserved = Math.min(Math.max(0, Number(u?.reservedUnits || 0)), total);
+        const available = Math.min(Math.max(0, Number(u?.availableUnits || 0)), total - reserved);
+        return {
+          total: acc.total + total,
+          available: acc.available + available,
+          reserved: acc.reserved + reserved,
+        };
+      },
+      { total: 0, available: 0, reserved: 0 },
     );
 
-    if (totalUnits > 0) {
-      const soldUnits = totalUnits - availableUnits;
-      const soldPct = Math.round((soldUnits / totalUnits) * 100);
-      salesMetrics = { totalUnits, availableUnits, soldUnits, soldPct };
+    if (totals.total > 0) {
+      const soldUnits = Math.max(totals.total - totals.available - totals.reserved, 0);
+      const soldPct = Math.round((soldUnits / totals.total) * 100);
+      salesMetrics = {
+        totalUnits: totals.total,
+        availableUnits: totals.available,
+        reservedUnits: totals.reserved,
+        soldUnits,
+        soldPct,
+      };
     }
   }
 
@@ -631,8 +643,9 @@ export async function listPublicDevelopments(options: {
       highlights: developments.highlights,
       developerBrandProfileId: developments.developerBrandProfileId,
       developerName: developers.name,
+      developerLogoUrl: developers.logo,
       brandName: developerBrandProfiles.brandName,
-      builderLogoUrl: developerBrandProfiles.logoUrl,
+      brandLogoUrl: developerBrandProfiles.logoUrl,
     })
     .from(developments)
     .leftJoin(developers, eq(developments.developerId, developers.id))
@@ -702,6 +715,7 @@ export async function listPublicDevelopments(options: {
     rating: d.rating != null ? Number(d.rating) : null,
     isFeatured: Number(d.isFeatured || 0) === 1,
     builderName: d.brandName || d.developerName || null,
+    builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
     configurations: unitsByDevelopment.get(Number(d.id)) || [],
   }));
 }
@@ -1127,8 +1141,9 @@ export async function createDevelopment(
 
 export async function updateDevelopment(
   id: number,
-  developerId: number,
+  userId: number,
   data: CreateDevelopmentData,
+  operatingContext?: { brandProfileId: number } | null,
 ) {
   console.log('[updateDevelopment] Starting update for development:', id);
   console.log('[updateDevelopment] Payload keys:', Object.keys(data));
@@ -1137,19 +1152,31 @@ export async function updateDevelopment(
   if (!db) throw new Error('Database not available');
 
   // ✅ Resolve developer PROFILE id from user id (same as createDevelopment)
-  const devProfile = await db.query.developers.findFirst({
-    where: eq(developers.userId, developerId),
-    columns: { id: true },
+  let developerProfileId: number | null = null;
+  let superAdminBrandProfileId: number | null = null;
+
+  const user = await db.query.users.findFirst({
+    where: (u, { eq }) => eq(u.id, userId),
+    columns: { id: true, role: true },
   });
 
-  if (!devProfile) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: `Developer profile for user ID ${developerId} not found`,
+  if (user?.role === 'super_admin' && operatingContext?.brandProfileId) {
+    superAdminBrandProfileId = operatingContext.brandProfileId;
+  } else {
+    const devProfile = await db.query.developers.findFirst({
+      where: eq(developers.userId, userId),
+      columns: { id: true },
     });
-  }
 
-  const developerProfileId = devProfile.id;
+    if (!devProfile) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: `Developer profile for user ID ${userId} not found`,
+      });
+    }
+
+    developerProfileId = devProfile.id;
+  }
 
   const {
     unitTypes: unitTypesData,
@@ -1482,13 +1509,31 @@ export async function updateDevelopment(
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
   // ✅ Ownership check done in WHERE by developerProfileId
-  await db
-    .update(developments)
-    .set(updatePayload)
-    .where(and(eq(developments.id, id), eq(developments.developerId, developerProfileId)));
+  if (superAdminBrandProfileId !== null) {
+    await db
+      .update(developments)
+      .set(updatePayload)
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.developerBrandProfileId, superAdminBrandProfileId),
+        ),
+      );
+  } else {
+    await db
+      .update(developments)
+      .set(updatePayload)
+      .where(and(eq(developments.id, id), eq(developments.developerId, developerProfileId!)));
+  }
 
   const updated = await db.query.developments.findFirst({
-    where: and(eq(developments.id, id), eq(developments.developerId, developerProfileId)),
+    where:
+      superAdminBrandProfileId !== null
+        ? and(
+            eq(developments.id, id),
+            eq(developments.developerBrandProfileId, superAdminBrandProfileId),
+          )
+        : and(eq(developments.id, id), eq(developments.developerId, developerProfileId!)),
   });
 
   if (!updated) {
@@ -1674,6 +1719,17 @@ export async function persistUnitTypes(
       return 0;
     })();
 
+    const totalUnits = Math.max(0, sanitizeInt(unit.totalUnits) ?? 0);
+    const availableUnits = Math.max(0, sanitizeInt(unit.availableUnits) ?? 0);
+    const reservedUnits = Math.max(0, sanitizeInt((unit as any).reservedUnits) ?? 0);
+    if (availableUnits + reservedUnits > totalUnits) {
+      const unitName = String(unit.label || unit.name || unitId).trim() || 'Unnamed Unit';
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Unit "${unitName}" has invalid inventory: available + reserved cannot exceed total.`,
+      });
+    }
+
     const unitPayload: Record<string, any> = {
       developmentId,
 
@@ -1733,8 +1789,9 @@ export async function persistUnitTypes(
         'scheduled',
       ),
 
-      availableUnits: sanitizeInt(unit.availableUnits) ?? 0,
-      totalUnits: sanitizeInt(unit.totalUnits) ?? 0,
+      availableUnits,
+      totalUnits,
+      reservedUnits,
 
       completionDate: asDateOnlyOrNull(unit.completionDate),
 

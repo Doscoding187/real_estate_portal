@@ -3,7 +3,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 
-import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
+import {
+  useDevelopmentWizard,
+  DEVELOPMENT_WIZARD_STORAGE_KEY,
+  PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY,
+} from '@/hooks/useDevelopmentWizard';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { DraftManager } from '@/components/wizard/DraftManager';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
@@ -12,6 +16,7 @@ import { wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionEx
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { getVisibleSteps, getWorkflow } from '@/lib/workflows';
+import { usePublisherContext } from '@/hooks/usePublisherContext';
 
 import {
   AlertDialog,
@@ -82,6 +87,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     hydrateDevelopment,
     initializeWorkflow,
     setWorkflowStep,
+    setListingIdentity,
   } = store;
 
   // Local guard: prevent double-hydration (edit/draft/create)
@@ -153,6 +159,44 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     prevPhaseRef.current = currentPhase;
   }, [currentPhase, saveNow, isHydrated]);
 
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const { context: publisherContext } = usePublisherContext();
+  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.brandProfileId;
+  const persistStorageKey = shouldUsePublisherApi
+    ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
+    : DEVELOPMENT_WIZARD_STORAGE_KEY;
+  const persistKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!shouldUsePublisherApi || !publisherContext?.brandProfileId) return;
+    setListingIdentity({
+      identityType: 'brand',
+      developerBrandProfileId: publisherContext.brandProfileId,
+    });
+  }, [shouldUsePublisherApi, publisherContext?.brandProfileId, setListingIdentity]);
+
+  // Isolate persisted wizard state between publisher-emulator and real-developer flows.
+  useEffect(() => {
+    const persistApi = useDevelopmentWizard.persist;
+    if (!persistApi?.setOptions || !persistApi?.rehydrate) return;
+    if (persistKeyRef.current === persistStorageKey) return;
+
+    persistKeyRef.current = persistStorageKey;
+    setPersistReady(false);
+    setIsHydrated(false);
+    reset();
+    persistApi.setOptions({ name: persistStorageKey });
+
+    Promise.resolve(persistApi.rehydrate())
+      .catch(() => {
+        // Keep a clean in-memory state if rehydration fails.
+      })
+      .finally(() => {
+        setPersistReady(true);
+      });
+  }, [persistStorageKey, reset]);
+
   // --- Queries ---
   const {
     data: loadedDraft,
@@ -161,7 +205,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   } = trpc.developer.getDraft.useQuery(
     { id: currentDraftId! },
     {
-      enabled: !!currentDraftId && !isEditMode,
+      enabled: !!currentDraftId && !isEditMode && !shouldUsePublisherApi,
       retry: false,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
@@ -170,17 +214,37 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   );
 
   const {
-    data: editData,
-    isLoading: isEditLoading,
-    error: loadError,
+    data: developerEditData,
+    isLoading: isDeveloperEditLoading,
+    error: developerLoadError,
   } = trpc.developer.getDevelopment.useQuery(
     { id: editId! },
     {
-      enabled: !!editId,
+      enabled: !!editId && !shouldUsePublisherApi,
       retry: false,
       refetchOnWindowFocus: false,
     },
   );
+
+  const {
+    data: publisherEditData,
+    isLoading: isPublisherEditLoading,
+    error: publisherLoadError,
+  } = trpc.superAdminPublisher.getDevelopmentById.useQuery(
+    {
+      brandProfileId: publisherContext?.brandProfileId ?? -1,
+      developmentId: editId ?? -1,
+    },
+    {
+      enabled: !!editId && shouldUsePublisherApi,
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  const editData = shouldUsePublisherApi ? publisherEditData : developerEditData;
+  const isEditLoading = shouldUsePublisherApi ? isPublisherEditLoading : isDeveloperEditLoading;
+  const loadError = shouldUsePublisherApi ? publisherLoadError : developerLoadError;
 
   // --- Error handling ---
   useEffect(() => {
@@ -227,6 +291,17 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     setWorkflowStep,
   ]);
 
+  // If edit mode cannot load data, force a clean state to avoid stale persisted wizard bleed-through.
+  useEffect(() => {
+    if (!persistReady || !isEditMode || isHydrated) return;
+    if (isEditLoading) return;
+    if (editData) return;
+
+    reset();
+    setIsHydrated(true);
+    toast.error('Unable to load development for editing.');
+  }, [persistReady, isEditMode, isHydrated, isEditLoading, editData, reset]);
+
   // --- Draft hydration (gated by persist rehydrate; never in edit mode) ---
   useEffect(() => {
     if (!persistReady) return;
@@ -252,9 +327,6 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       toast.success('Session restored');
     }
   }, []);
-
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
 
   const confirmExit = async () => {
     try {
