@@ -27,9 +27,15 @@ export const plans = mysqlTable('plans', {
   name: varchar({ length: 100 }).notNull(),
   displayName: varchar({ length: 100 }).notNull(),
   description: text(),
+  segment: mysqlEnum('segment', ['agent', 'agency', 'enterprise', 'developer'])
+    .default('agent')
+    .notNull(),
   price: int().notNull(),
+  priceMonthly: int('price_monthly').default(0).notNull(),
   currency: varchar({ length: 3 }).default('ZAR').notNull(),
   interval: mysqlEnum(['month', 'year']).default('month').notNull(),
+  trialDays: int('trial_days').default(14).notNull(),
+  metadata: json(),
   stripePriceId: varchar({ length: 100 }),
   features: text(),
   limits: text(),
@@ -39,6 +45,47 @@ export const plans = mysqlTable('plans', {
   createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
+
+export const planEntitlements = mysqlTable(
+  'plan_entitlements',
+  {
+    id: int().autoincrement().primaryKey(),
+    planId: int('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'cascade' }),
+    featureKey: varchar('feature_key', { length: 120 }).notNull(),
+    valueJson: json('value_json').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
+  },
+  table => [
+    index('idx_plan_entitlements_plan').on(table.planId),
+    unique('uq_plan_entitlements_plan_feature').on(table.planId, table.featureKey),
+  ],
+);
+
+export const subscriptions = mysqlTable(
+  'subscriptions',
+  {
+    id: int().autoincrement().primaryKey(),
+    ownerType: mysqlEnum('owner_type', ['agent', 'agency']).notNull(),
+    ownerId: int('owner_id').notNull(),
+    planId: int('plan_id').references(() => plans.id, { onDelete: 'set null' }),
+    status: mysqlEnum(['trial', 'active', 'expired', 'cancelled']).default('trial').notNull(),
+    trialEndsAt: timestamp('trial_ends_at', { mode: 'string' }),
+    billingCycleAnchor: timestamp('billing_cycle_anchor', { mode: 'string' }),
+    metadata: json(),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
+  },
+  table => [
+    index('idx_subscriptions_owner').on(table.ownerType, table.ownerId),
+    index('idx_subscriptions_status').on(table.status),
+    unique('uq_subscriptions_owner').on(table.ownerType, table.ownerId),
+  ],
+);
 
 export const coupons = mysqlTable('coupons', {
   id: int().autoincrement().notNull(),
