@@ -708,17 +708,20 @@ export default function DevelopmentDetail() {
     const unitTypes = dev.unitTypes || [];
     const totals = unitTypes.reduce(
       (acc: any, u: any) => {
-        const total = Number(u.totalUnits || 0);
-        const avail = Number(u.availableUnits || 0);
-        acc.total += total > 0 ? total : 0;
-        acc.available += avail > 0 ? avail : 0;
+        const total = Math.max(0, Number(u.totalUnits || 0));
+        const avail = Math.max(0, Number(u.availableUnits || 0));
+        const reserved = Math.max(0, Number(u.reservedUnits || 0));
+        acc.total += total;
+        acc.available += avail;
+        acc.reserved += reserved;
         return acc;
       },
-      { total: 0, available: 0 },
+      { total: 0, available: 0, reserved: 0 },
     );
 
     let totalUnits = totals.total;
     let availableUnits = totals.available;
+    let reservedUnits = totals.reserved;
 
     if (totalUnits <= 0) {
       totalUnits = Number(dev.totalUnits || 0);
@@ -727,21 +730,31 @@ export default function DevelopmentDetail() {
           ? dev.availableUnits
           : totalUnits,
       );
+      reservedUnits = Number((dev as any).reservedUnits || 0);
     }
 
-    if (totalUnits <= 0) return { soldPct: null, total: 0, available: 0 };
+    if (totalUnits <= 0) return { soldPct: null, total: 0, available: 0, reserved: 0, sold: 0 };
 
-    const clampedAvailable = Math.min(Math.max(availableUnits, 0), totalUnits);
-    const sold = totalUnits - clampedAvailable;
+    const clampedReserved = Math.min(Math.max(reservedUnits, 0), totalUnits);
+    const clampedAvailable = Math.min(Math.max(availableUnits, 0), totalUnits - clampedReserved);
+    const sold = Math.max(totalUnits - clampedAvailable - clampedReserved, 0);
     const soldPct = Math.round((sold / totalUnits) * 100);
 
-    return { soldPct, total: totalUnits, available: clampedAvailable };
+    return {
+      soldPct,
+      total: totalUnits,
+      available: clampedAvailable,
+      reserved: clampedReserved,
+      sold,
+    };
   })();
   const salesFromApi = dev.salesMetrics
     ? {
         soldPct: dev.salesMetrics.soldPct,
         total: dev.salesMetrics.totalUnits ?? dev.salesMetrics.total ?? 0,
         available: dev.salesMetrics.availableUnits ?? dev.salesMetrics.available ?? 0,
+        reserved: dev.salesMetrics.reservedUnits ?? dev.salesMetrics.reserved ?? 0,
+        sold: dev.salesMetrics.soldUnits ?? dev.salesMetrics.sold ?? 0,
       }
     : null;
   const sales = salesFromApi ?? fallbackSales;

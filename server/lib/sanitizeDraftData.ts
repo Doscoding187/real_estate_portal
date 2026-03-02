@@ -88,6 +88,12 @@ const normalizeMedia = (raw: any) => {
 
 const normalizeUnitType = (u: any) => {
   const cleaned = deepStripNonSerializable(u) ?? {};
+  const totalUnits = clampInt(cleaned.totalUnits, 0, 1_000_000, 0);
+  const reservedUnitsRaw = clampInt(cleaned.reservedUnits, 0, 1_000_000, 0);
+  const availableUnitsRaw = clampInt(cleaned.availableUnits, 0, 1_000_000, 0);
+  const reservedUnits = Math.min(reservedUnitsRaw, totalUnits);
+  const availableUnits = Math.min(availableUnitsRaw, Math.max(0, totalUnits - reservedUnits));
+
   return {
     ...cleaned,
     id: asString(cleaned.id ?? `unit-${Date.now()}-${Math.random()}`),
@@ -114,8 +120,9 @@ const normalizeUnitType = (u: any) => {
     auctionStartDate: asString(cleaned.auctionStartDate ?? ''),
     auctionEndDate: asString(cleaned.auctionEndDate ?? ''),
     auctionStatus: asString(cleaned.auctionStatus ?? 'scheduled'),
-    totalUnits: clampInt(cleaned.totalUnits, 0, 1_000_000, 0),
-    availableUnits: clampInt(cleaned.availableUnits, 0, 1_000_000, 0),
+    totalUnits,
+    availableUnits,
+    reservedUnits,
   };
 };
 

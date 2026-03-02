@@ -99,6 +99,99 @@ const UNIT_FEATURE_CATEGORIES = {
   other: ['Fibre Ready', 'Prepaid Electricity', 'Solar Geyser', 'Inverter Ready', 'Pet Friendly'],
 };
 
+const UNIT_CATEGORY_OPTIONS = [
+  { value: 'house', label: 'House' },
+  { value: 'apartment', label: 'Apartment' },
+] as const;
+
+const UNIT_SUBTYPE_OPTIONS = {
+  house: [
+    { value: 'freestanding-house', label: 'Freestanding House', structuralType: 'freestanding-house' },
+    { value: 'simplex', label: 'Simplex', structuralType: 'simplex' },
+    { value: 'duplex', label: 'Duplex', structuralType: 'duplex' },
+    { value: 'semi-detached', label: 'Semi-Detached', structuralType: 'townhouse' },
+    { value: 'townhouse', label: 'Townhouse', structuralType: 'townhouse' },
+    { value: 'plot-and-plan', label: 'Plot & Plan', structuralType: 'plot-and-plan' },
+  ],
+  apartment: [
+    { value: 'studio', label: 'Studio', structuralType: 'studio' },
+    { value: 'apartment', label: 'Apartment', structuralType: 'apartment' },
+    { value: 'loft', label: 'Loft', structuralType: 'apartment' },
+    { value: 'penthouse', label: 'Penthouse', structuralType: 'penthouse' },
+  ],
+} as const;
+
+const STRUCTURAL_TYPE_TO_CLASSIFICATION: Record<
+  string,
+  { unitCategory: 'house' | 'apartment'; unitSubType: string }
+> = {
+  apartment: { unitCategory: 'apartment', unitSubType: 'apartment' },
+  studio: { unitCategory: 'apartment', unitSubType: 'studio' },
+  penthouse: { unitCategory: 'apartment', unitSubType: 'penthouse' },
+  'freestanding-house': { unitCategory: 'house', unitSubType: 'freestanding-house' },
+  simplex: { unitCategory: 'house', unitSubType: 'simplex' },
+  duplex: { unitCategory: 'house', unitSubType: 'duplex' },
+  townhouse: { unitCategory: 'house', unitSubType: 'townhouse' },
+  'plot-and-plan': { unitCategory: 'house', unitSubType: 'plot-and-plan' },
+};
+
+const SUBTYPE_META = [...UNIT_SUBTYPE_OPTIONS.house, ...UNIT_SUBTYPE_OPTIONS.apartment].reduce(
+  (acc, item) => {
+    acc[item.value] = item;
+    return acc;
+  },
+  {} as Record<string, (typeof UNIT_SUBTYPE_OPTIONS.house)[number]>,
+);
+
+const toStructuralType = (unitSubType: string | undefined): string => {
+  if (!unitSubType) return 'apartment';
+  return SUBTYPE_META[unitSubType]?.structuralType ?? 'apartment';
+};
+
+const toSubtypeLabel = (unitSubType: string | undefined): string => {
+  if (!unitSubType) return 'Unspecified';
+  return SUBTYPE_META[unitSubType]?.label ?? unitSubType;
+};
+
+const inferClassification = (unit: any): { unitCategory: 'house' | 'apartment'; unitSubType: string } => {
+  const explicitCategory = unit?.unitCategory;
+  const explicitSubType = unit?.unitSubType;
+  if (
+    (explicitCategory === 'house' || explicitCategory === 'apartment') &&
+    typeof explicitSubType === 'string' &&
+    explicitSubType.trim().length > 0
+  ) {
+    return { unitCategory: explicitCategory, unitSubType: explicitSubType };
+  }
+
+  const rawSpecs = unit?.specifications;
+  const specs =
+    rawSpecs && typeof rawSpecs === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(rawSpecs);
+          } catch {
+            return null;
+          }
+        })()
+      : rawSpecs;
+  const classification = specs?.classification;
+  if (
+    (classification?.category === 'house' || classification?.category === 'apartment') &&
+    typeof classification?.subType === 'string' &&
+    classification.subType.trim().length > 0
+  ) {
+    return { unitCategory: classification.category, unitSubType: classification.subType };
+  }
+
+  const structuralType = String(unit?.structuralType || '').trim().toLowerCase();
+  if (STRUCTURAL_TYPE_TO_CLASSIFICATION[structuralType]) {
+    return STRUCTURAL_TYPE_TO_CLASSIFICATION[structuralType];
+  }
+
+  return { unitCategory: 'apartment', unitSubType: 'apartment' };
+};
+
 export function UnitTypesPhase() {
   const {
     unitTypes,
@@ -126,6 +219,7 @@ export function UnitTypesPhase() {
       // UI-specific parking state
       parkingKind?: 'none' | 'open' | 'covered' | 'carport' | 'garage';
       garageLayout?: 'side-by-side' | 'tandem';
+      soldUnitsHistorical?: number;
     }
   >({
     name: '',
@@ -140,6 +234,9 @@ export function UnitTypesPhase() {
 
     unitSize: 0,
     yardSize: 0,
+    unitCategory: 'apartment',
+    unitSubType: 'apartment',
+    structuralType: 'apartment',
 
     // Refactored Pricing
     priceFrom: 0, // Base Price
@@ -161,6 +258,7 @@ export function UnitTypesPhase() {
     totalUnits: 0,
     availableUnits: 0,
     reservedUnits: 0,
+    soldUnitsHistorical: 0,
     features: {
       kitchen: [],
       bathroom: [],
@@ -206,6 +304,9 @@ export function UnitTypesPhase() {
       garageLayout: undefined,
       unitSize: 0,
       yardSize: 0,
+      unitCategory: 'apartment',
+      unitSubType: 'apartment',
+      structuralType: 'apartment',
 
       priceFrom: 0,
       priceTo: 0,
@@ -224,6 +325,7 @@ export function UnitTypesPhase() {
       totalUnits: 0,
       availableUnits: 0,
       reservedUnits: 0,
+      soldUnitsHistorical: 0,
       features: {
         kitchen: [],
         bathroom: [],
@@ -244,6 +346,7 @@ export function UnitTypesPhase() {
   const handleOpenDialog = (unit?: UnitType) => {
     if (unit) {
       setEditingId(unit.id);
+      const classification = inferClassification(unit);
 
       // --- Hydrate Parking UI State ---
       let pKind: any = 'none';
@@ -281,9 +384,16 @@ export function UnitTypesPhase() {
       const auctionStartDateValue = formatDateTimeLocal((unit as any).auctionStartDate);
       const auctionEndDateValue = formatDateTimeLocal((unit as any).auctionEndDate);
       const auctionStatusValue = (unit as any).auctionStatus ?? 'scheduled';
+      const totalFromUnit = Math.max(0, Number((unit as any).totalUnits ?? 0));
+      const availableFromUnit = Math.max(0, Number((unit as any).availableUnits ?? 0));
+      const reservedFromUnit = Math.max(0, Number((unit as any).reservedUnits ?? 0));
+      const soldHistorical = Math.max(totalFromUnit - availableFromUnit - reservedFromUnit, 0);
 
       setFormData({
         ...unit,
+        unitCategory: classification.unitCategory,
+        unitSubType: classification.unitSubType,
+        structuralType: toStructuralType(classification.unitSubType),
         parkingKind: pKind,
         parkingBays: pBays,
         garageLayout: pLayout,
@@ -297,6 +407,7 @@ export function UnitTypesPhase() {
         auctionStartDate: auctionStartDateValue,
         auctionEndDate: auctionEndDateValue,
         auctionStatus: auctionStatusValue,
+        soldUnitsHistorical: soldHistorical,
         extras: unit.extras || [],
         features: unit.features || {
           kitchen: [],
@@ -317,8 +428,20 @@ export function UnitTypesPhase() {
         toast.info('Resumed your unsaved unit type', {
           icon: <Sparkles className="w-4 h-4 text-blue-500" />,
         });
+        const classification = inferClassification(unitTypeDraft);
+        const draftTotal = Math.max(0, Number((unitTypeDraft as any).totalUnits ?? 0));
+        const draftAvailable = Math.max(0, Number((unitTypeDraft as any).availableUnits ?? 0));
+        const draftReserved = Math.max(0, Number((unitTypeDraft as any).reservedUnits ?? 0));
+        const draftSoldHistorical =
+          typeof (unitTypeDraft as any).soldUnitsHistorical === 'number'
+            ? Math.max(0, Number((unitTypeDraft as any).soldUnitsHistorical))
+            : Math.max(draftTotal - draftAvailable - draftReserved, 0);
         setFormData({
           ...unitTypeDraft,
+          unitCategory: classification.unitCategory,
+          unitSubType: classification.unitSubType,
+          structuralType: toStructuralType(classification.unitSubType),
+          soldUnitsHistorical: draftSoldHistorical,
           features: unitTypeDraft.features || {
             kitchen: [],
             bathroom: [],
@@ -347,6 +470,7 @@ export function UnitTypesPhase() {
   };
 
   const handleDuplicate = (unit: UnitType) => {
+    const classification = inferClassification(unit);
     // --- Hydrate Parking UI State (Same as Edit) ---
     let pKind: any = 'none';
     let pBays = unit.parkingBays ?? (unit as any).parking_bays ?? 0;
@@ -382,10 +506,17 @@ export function UnitTypesPhase() {
     const auctionStartDateValue = formatDateTimeLocal((unit as any).auctionStartDate);
     const auctionEndDateValue = formatDateTimeLocal((unit as any).auctionEndDate);
     const auctionStatusValue = (unit as any).auctionStatus ?? 'scheduled';
+    const totalFromUnit = Math.max(0, Number((unit as any).totalUnits ?? 0));
+    const availableFromUnit = Math.max(0, Number((unit as any).availableUnits ?? 0));
+    const reservedFromUnit = Math.max(0, Number((unit as any).reservedUnits ?? 0));
+    const soldHistorical = Math.max(totalFromUnit - availableFromUnit - reservedFromUnit, 0);
 
     setFormData({
       ...unit,
       name: `${unit.name} (Copy)`,
+      unitCategory: classification.unitCategory,
+      unitSubType: classification.unitSubType,
+      structuralType: toStructuralType(classification.unitSubType),
       parkingKind: pKind,
       parkingBays: pBays,
       garageLayout: pLayout,
@@ -399,6 +530,7 @@ export function UnitTypesPhase() {
       auctionStartDate: auctionStartDateValue,
       auctionEndDate: auctionEndDateValue,
       auctionStatus: auctionStatusValue,
+      soldUnitsHistorical: soldHistorical,
       extras: unit.extras || [],
       features: unit.features || {
         kitchen: [],
@@ -472,12 +604,15 @@ export function UnitTypesPhase() {
     // Validation
     if (!formData.name) return toast.error('Unit Name is required');
     if (!formData.description) return toast.error('Description is required');
+    if (!formData.unitCategory) return toast.error('Unit category is required');
+    if (!formData.unitSubType) return toast.error('Unit subtype is required');
     if (!formData.bedrooms && formData.bedrooms !== 0) return toast.error('Bedrooms are required');
     if (!formData.bathrooms && formData.bathrooms !== 0)
       return toast.error('Bathrooms are required');
     if (!formData.unitSize || formData.unitSize <= 0) return toast.error('Unit Size is required');
-    if (!formData.yardSize || formData.yardSize <= 0)
-      return toast.error('Erf/Garden Size is required');
+    if (formData.unitCategory === 'house' && (!formData.yardSize || formData.yardSize <= 0)) {
+      toast.warning('Erf/Garden size is recommended for house unit types');
+    }
     if (isAuction) {
       if (!formData.startingBid || formData.startingBid <= 0)
         return toast.error('Starting bid is required');
@@ -510,8 +645,11 @@ export function UnitTypesPhase() {
     }
     if (formData.parkingKind !== 'none' && (!formData.parkingBays || formData.parkingBays <= 0))
       return toast.error('Parking Bays are required');
-    if (!formData.totalUnits && formData.totalUnits !== 0)
-      return toast.error('Total Units is required');
+
+    const availableUnits = Math.max(0, Number(formData.availableUnits || 0));
+    const reservedUnits = Math.max(0, Number(formData.reservedUnits || 0));
+    const soldUnitsHistorical = Math.max(0, Number(formData.soldUnitsHistorical || 0));
+    const totalUnits = availableUnits + reservedUnits + soldUnitsHistorical;
 
     const isSale = !isRental && !isAuction;
 
@@ -534,6 +672,15 @@ export function UnitTypesPhase() {
 
     const parkingKind = formData.parkingKind || 'none';
     const parkingBays = parkingKind === 'none' ? 0 : formData.parkingBays || 1;
+    const unitSubType = String(formData.unitSubType || '');
+    const unitCategory = formData.unitCategory === 'house' ? 'house' : 'apartment';
+    const structuralType = toStructuralType(unitSubType);
+    const existingSpecifications =
+      formData.specifications && typeof formData.specifications === 'object'
+        ? formData.specifications
+        : {};
+    const normalizedYardSize =
+      formData.yardSize != null && Number(formData.yardSize) > 0 ? Number(formData.yardSize) : undefined;
 
     const newUnit: any = {
       ...formData,
@@ -555,6 +702,14 @@ export function UnitTypesPhase() {
       // Explicit Parking Save
       parkingBays: parkingBays,
       parkingType: parkingKind === 'none' ? null : parkingKind,
+      unitCategory,
+      unitSubType,
+      structuralType,
+      yardSize: normalizedYardSize,
+      totalUnits,
+      availableUnits,
+      reservedUnits,
+      soldUnitsHistorical,
 
       features: formData.features,
       baseMedia: {
@@ -563,9 +718,14 @@ export function UnitTypesPhase() {
         renders: [],
       },
       specifications: {
-        builtInFeatures: {},
-        finishes: {},
-        electrical: { prepaidElectricity: false },
+        ...existingSpecifications,
+        builtInFeatures: existingSpecifications.builtInFeatures || {},
+        finishes: existingSpecifications.finishes || {},
+        electrical: existingSpecifications.electrical || { prepaidElectricity: false },
+        classification: {
+          category: unitCategory,
+          subType: unitSubType,
+        },
       }, // Legacy stub
       amenities: { standard: [], additional: [] }, // Legacy stub
       displayOrder: editingId
@@ -993,6 +1153,14 @@ export function UnitTypesPhase() {
     </div>
   );
 
+  const subtypeOptions =
+    UNIT_SUBTYPE_OPTIONS[(formData.unitCategory as 'house' | 'apartment') || 'apartment'];
+  const isHouseUnit = formData.unitCategory === 'house';
+  const stockAvailableUnits = Math.max(0, Number(formData.availableUnits || 0));
+  const stockReservedUnits = Math.max(0, Number(formData.reservedUnits || 0));
+  const stockSoldHistoricalUnits = Math.max(0, Number(formData.soldUnitsHistorical || 0));
+  const stockTotalUnits = stockAvailableUnits + stockReservedUnits + stockSoldHistoricalUnits;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center">
@@ -1028,8 +1196,10 @@ export function UnitTypesPhase() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {unitTypes.map(unit => (
-            <Card key={unit.id} className="group hover:shadow-lg transition-all border-slate-200">
+          {unitTypes.map(unit => {
+            const classification = inferClassification(unit as any);
+            return (
+              <Card key={unit.id} className="group hover:shadow-lg transition-all border-slate-200">
               <div className="h-40 bg-slate-100 relative">
                 {unit.baseMedia?.gallery?.[0] ? (
                   <img src={unit.baseMedia.gallery[0].url} className="w-full h-full object-cover" />
@@ -1068,7 +1238,13 @@ export function UnitTypesPhase() {
               </div>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{unit.name}</CardTitle>
+                  <div>
+                    <CardTitle className="text-lg">{unit.name}</CardTitle>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {classification.unitCategory === 'house' ? 'House' : 'Apartment'} -{' '}
+                      {toSubtypeLabel(classification.unitSubType)}
+                    </p>
+                  </div>
                   <Badge
                     variant="outline"
                     className={cn(
@@ -1127,7 +1303,8 @@ export function UnitTypesPhase() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1175,6 +1352,64 @@ export function UnitTypesPhase() {
                       onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
                       placeholder="Highlight unique features..."
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>
+                        Unit Category <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={(formData.unitCategory as string) || 'apartment'}
+                        onValueChange={v => {
+                          const category = v as 'house' | 'apartment';
+                          const fallbackSubType = UNIT_SUBTYPE_OPTIONS[category][0]?.value || 'apartment';
+                          setFormData(p => ({
+                            ...p,
+                            unitCategory: category,
+                            unitSubType: fallbackSubType,
+                            structuralType: toStructuralType(fallbackSubType),
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {UNIT_CATEGORY_OPTIONS.map(o => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Unit Subtype <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={(formData.unitSubType as string) || subtypeOptions?.[0]?.value || 'apartment'}
+                        onValueChange={v =>
+                          setFormData(p => ({
+                            ...p,
+                            unitSubType: v,
+                            structuralType: toStructuralType(v),
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subtypeOptions.map(o => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1317,7 +1552,10 @@ export function UnitTypesPhase() {
                     </div>
                     <div className="space-y-2">
                       <Label>
-                        Erf/Garden Size (m2) <span className="text-red-500">*</span>
+                        {isHouseUnit ? 'Erf/Garden Size (m2)' : 'Erf/Plot Size (m2)'}{' '}
+                        <span className="text-amber-600 text-xs font-normal">
+                          {isHouseUnit ? '(Recommended)' : '(Optional)'}
+                        </span>
                       </Label>
                       <Input
                         type="number"
@@ -1326,6 +1564,11 @@ export function UnitTypesPhase() {
                         onFocus={e => e.target.select()}
                         onChange={e => setFormData(p => ({ ...p, yardSize: +e.target.value }))}
                       />
+                      <p className="text-xs text-slate-500">
+                        {isHouseUnit
+                          ? 'Recommended for house unit types to improve matching and filters.'
+                          : 'Optional for apartment unit types where erf or garden is not applicable.'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1627,13 +1870,12 @@ export function UnitTypesPhase() {
                       <Label className="text-slate-600">Sold Units (Historical)</Label>
                       <Input
                         type="number"
-                        value={
-                          (formData.totalUnits || 0) -
-                          (formData.availableUnits || 0) -
-                          (formData.reservedUnits || 0)
+                        className="border-slate-300 focus:border-slate-500"
+                        value={formData.soldUnitsHistorical || ''}
+                        onFocus={e => e.target.select()}
+                        onChange={e =>
+                          setFormData(p => ({ ...p, soldUnitsHistorical: +e.target.value }))
                         }
-                        disabled
-                        className="bg-slate-100"
                       />
                     </div>
                   </div>
@@ -1641,29 +1883,28 @@ export function UnitTypesPhase() {
                   <div className="pt-4 border-t border-slate-200">
                     <div className="flex gap-4 items-end">
                       <div className="space-y-2 flex-1">
-                        <Label>Total Units (Auto-Calculated Override)</Label>
+                        <Label>Total Units (Auto-Calculated)</Label>
                         <Input
                           type="number"
-                          value={formData.totalUnits || ''}
-                          // Auto-calc total if user hasn't manually overridden (simplified here by allowing direct edit)
-                          onChange={e => setFormData(p => ({ ...p, totalUnits: +e.target.value }))}
+                          value={stockTotalUnits}
+                          disabled
                           className="font-semibold"
                         />
                         <p className="text-xs text-slate-500">
-                          Normally: Available {formData.availableUnits || 0} + Reserved{' '}
-                          {formData.reservedUnits || 0} + Sold = Total
+                          Available {stockAvailableUnits} + Reserved {stockReservedUnits} + Sold{' '}
+                          {stockSoldHistoricalUnits} = Total {stockTotalUnits}
                         </p>
                       </div>
                       <div className="flex-1">
                         <div
                           className={cn(
                             'p-3 rounded-lg text-center font-bold border',
-                            (formData.availableUnits || 0) > 0
+                            stockAvailableUnits > 0
                               ? 'bg-green-50 border-green-200 text-green-700'
                               : 'bg-red-50 border-red-200 text-red-700',
                           )}
                         >
-                          {(formData.availableUnits || 0) > 0 ? 'AVAILABLE' : 'SOLD OUT / LISTING'}
+                          {stockAvailableUnits > 0 ? 'AVAILABLE' : 'SOLD OUT / LISTING'}
                         </div>
                       </div>
                     </div>

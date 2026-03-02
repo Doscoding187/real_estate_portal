@@ -84,6 +84,7 @@ const UnitTypeSchemaV2 = z
 
     totalUnits: z.number().int().min(0).optional(),
     availableUnits: z.number().int().min(0).optional(),
+    reservedUnits: z.number().int().min(0).optional(),
 
     // isActive exists but is not a publish blocker (defaulting happens server-side)
     isActive: z.boolean().optional(),
@@ -149,11 +150,23 @@ function normalizeUnitType(raw: any) {
     u.basePriceFrom ?? u.base_price_from ?? u.priceFrom ?? u.price_from ?? 0,
   );
 
+  const toStockInt = (value: unknown): number => {
+    const n = Number(value ?? 0);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.floor(n));
+  };
+  const totalUnits = toStockInt(u.totalUnits);
+  const availableUnits = toStockInt(u.availableUnits);
+  const reservedUnits = toStockInt(u.reservedUnits);
+
   return {
     ...u,
     parkingType,
     parkingBays,
     basePriceFrom,
+    totalUnits,
+    availableUnits,
+    reservedUnits,
   };
 }
 
@@ -273,6 +286,40 @@ function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
         errors.push({
           field: `${unitPrefix}.parkingBays`,
           message: `Unit "${unitLabel}": parking bays must be 0 when parkingType is none.`,
+        });
+      }
+
+      const total = Number(u?.totalUnits ?? 0);
+      const available = Number(u?.availableUnits ?? 0);
+      const reserved = Number(u?.reservedUnits ?? 0);
+
+      if (!Number.isFinite(total) || total < 0) {
+        errors.push({
+          field: `${unitPrefix}.totalUnits`,
+          message: `Unit "${unitLabel}" has invalid total units.`,
+        });
+      }
+      if (!Number.isFinite(available) || available < 0) {
+        errors.push({
+          field: `${unitPrefix}.availableUnits`,
+          message: `Unit "${unitLabel}" has invalid available units.`,
+        });
+      }
+      if (!Number.isFinite(reserved) || reserved < 0) {
+        errors.push({
+          field: `${unitPrefix}.reservedUnits`,
+          message: `Unit "${unitLabel}" has invalid reserved units.`,
+        });
+      }
+      if (
+        Number.isFinite(total) &&
+        Number.isFinite(available) &&
+        Number.isFinite(reserved) &&
+        available + reserved > total
+      ) {
+        errors.push({
+          field: `${unitPrefix}.reservedUnits`,
+          message: `Unit "${unitLabel}" must satisfy available + reserved <= total units.`,
         });
       }
 
