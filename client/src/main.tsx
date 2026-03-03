@@ -16,6 +16,9 @@ import { queryClient } from './lib/queryClient';
 import './index.css';
 import './styles/reduced-motion.css';
 
+declare const __BUILD_GIT_SHA__: string;
+declare const __BUILD_TIME__: string;
+
 // Run critical environment checks before React boots
 validateEnvironmentConfig();
 
@@ -54,8 +57,8 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-// Build marker to confirm which code is running in production
-console.log('[BUILD_MARKER] main.tsx 2026-01-31 B (Reverted AuthProvider)');
+// Build marker to confirm exactly which frontend build is running in production
+console.log(`[BUILD_MARKER] main.tsx sha=${__BUILD_GIT_SHA__} builtAt=${__BUILD_TIME__}`);
 console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
