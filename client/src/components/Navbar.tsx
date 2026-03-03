@@ -73,6 +73,7 @@ export function Navbar() {
       : []),
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
+    { href: '/services', label: 'Services' },
     { href: '/distribution-network', label: 'Referrals', icon: Briefcase },
     { href: '/agents', label: 'Agents' },
     { href: '/listing-template', label: 'Listing Template' },
