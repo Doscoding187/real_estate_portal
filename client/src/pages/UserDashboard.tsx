@@ -33,6 +33,8 @@ export default function UserDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
+  const normalizeRole = (value?: string | null) => (value === 'user' ? 'visitor' : value);
+  const normalizedRole = normalizeRole(user?.role);
 
   // Fetch user dashboard data
   const { data: favorites, isLoading: favoritesLoading } = trpc.favorites.list.useQuery();
@@ -73,7 +75,7 @@ export default function UserDashboard() {
     return null;
   }
 
-  if (user?.role !== 'visitor') {
+  if (normalizedRole !== 'visitor') {
     setLocation('/dashboard');
     return null;
   }

@@ -34,4 +34,15 @@ describe('getUserByEmail query mapping', () => {
     expect(Object.keys(AUTH_LOGIN_USER_COLUMNS)).toContain('passwordHash');
     expect(Object.keys(AUTH_LOGIN_USER_COLUMNS)).not.toContain('password');
   });
+
+  it('throws when multiple accounts share the same email', async () => {
+    mockLimit.mockResolvedValue([
+      { id: 1, email: 'agent@example.com', passwordHash: 'hash', role: 'visitor' },
+      { id: 2, email: 'agent@example.com', passwordHash: 'hash', role: 'super_admin' },
+    ]);
+
+    await expect(getUserByEmail('agent@example.com')).rejects.toThrow(
+      'Multiple accounts found for this email. Please contact support.',
+    );
+  });
 });

@@ -211,11 +211,19 @@ export async function getUserByEmail(email: string): Promise<User | undefined> {
     return undefined;
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return undefined;
+
   const result = await db
     .select(AUTH_LOGIN_USER_COLUMNS)
     .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+    .where(sql`LOWER(TRIM(${users.email})) = ${normalizedEmail}`)
+    .limit(2);
+
+  if (result.length > 1) {
+    throw new Error('Multiple accounts found for this email. Please contact support.');
+  }
+
   return result.length > 0 ? (result[0] as User) : undefined;
 }
 
