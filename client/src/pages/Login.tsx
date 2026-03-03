@@ -142,8 +142,14 @@ export default function Login() {
 
       toast.success('Welcome back!');
 
+      const normalizeRole = (value?: string | null) => {
+        if (value === 'user') return 'visitor';
+        if (value === 'admin') return 'super_admin';
+        return value;
+      };
+
       // Role-based redirect
-      const role = result.user?.role;
+      const role = normalizeRole(result.user?.role);
       console.log('[Login] API result:', result);
       console.log('[Login] User role:', role);
 

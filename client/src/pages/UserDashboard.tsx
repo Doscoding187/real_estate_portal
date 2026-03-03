@@ -33,7 +33,11 @@ export default function UserDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
-  const normalizeRole = (value?: string | null) => (value === 'user' ? 'visitor' : value);
+  const normalizeRole = (value?: string | null) => {
+    if (value === 'user') return 'visitor';
+    if (value === 'admin') return 'super_admin';
+    return value;
+  };
   const normalizedRole = normalizeRole(user?.role);
 
   // Fetch user dashboard data

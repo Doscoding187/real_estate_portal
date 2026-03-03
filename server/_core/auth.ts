@@ -27,6 +27,13 @@ export type SessionPayload = {
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
 
+export const normalizeAuthRole = (role: unknown): User['role'] => {
+  const normalized = typeof role === 'string' ? role.trim().toLowerCase() : '';
+  if (normalized === 'admin') return 'super_admin';
+  if (normalized === 'user') return 'visitor';
+  return (role as User['role']) || 'visitor';
+};
+
 class AuthService {
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
@@ -162,10 +169,16 @@ class AuthService {
       throw ForbiddenError('User not found');
     }
 
-    // Update last signed in timestamp
-    await db.updateUserLastSignIn(user.id);
+    const normalizedRole = normalizeAuthRole(user.role);
+    const normalizedUser = {
+      ...user,
+      role: normalizedRole,
+    } as User;
 
-    return user;
+    // Update last signed in timestamp
+    await db.updateUserLastSignIn(normalizedUser.id);
+
+    return normalizedUser;
   }
 
   /**
@@ -263,25 +276,30 @@ class AuthService {
       throw ForbiddenError('Invalid email or password');
     }
 
+    const normalizedUser = {
+      ...user,
+      role: normalizeAuthRole(user.role),
+    } as User;
+
     // Check if user has password (not OAuth-only)
-    if (!user.passwordHash) {
+    if (!normalizedUser.passwordHash) {
       throw ForbiddenError('This account uses OAuth login. Please use your original login method.');
     }
 
     // Verify password
-    const isValid = await this.verifyPassword(password, user.passwordHash);
+    const isValid = await this.verifyPassword(password, normalizedUser.passwordHash);
     if (!isValid) {
       throw ForbiddenError('Invalid email or password');
     }
 
     // Check if email is verified
-    if (!user.emailVerified) {
+    if (!normalizedUser.emailVerified) {
       throw ForbiddenError('Please verify your email address before logging in.');
     }
 
     // Check agent status if user is an agent
-    if (user.role === 'agent') {
-      const agentProfile = await db.getAgentByUserId(user.id);
+    if (normalizedUser.role === 'agent') {
+      const agentProfile = await db.getAgentByUserId(normalizedUser.id);
       if (agentProfile) {
         if (agentProfile.status === 'pending') {
           throw new Error(
@@ -299,7 +317,7 @@ class AuthService {
     }
 
     // Update last signed in timestamp
-    await db.updateUserLastSignIn(user.id);
+    await db.updateUserLastSignIn(normalizedUser.id);
 
     // Create session token
     const expiresInMs = rememberMe
@@ -307,13 +325,13 @@ class AuthService {
       : 24 * 60 * 60 * 1000; // 24 hours
 
     const sessionToken = await this.createSessionToken(
-      user.id,
-      user.email!,
-      user.name || user.email!,
+      normalizedUser.id,
+      normalizedUser.email!,
+      normalizedUser.name || normalizedUser.email!,
       { expiresInMs },
     );
 
-    return { user, sessionToken };
+    return { user: normalizedUser, sessionToken };
   }
 
   /**
