@@ -74,6 +74,9 @@ const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestP
 const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
 const ServiceProviderProfilePage = lazy(() => import('./pages/services/ServiceProviderProfilePage'));
 const ServiceProviderReviewsPage = lazy(() => import('./pages/services/ServiceProviderReviewsPage'));
+const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
+const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
+const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 // Super Admin Dashboard Pages
@@ -383,6 +386,9 @@ function Router() {
           <Route path="/services/:category/:city/:province" component={ServicesLocalizedCategoryPage} />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
+          <Route path="/pro/dashboard" component={ProDashboardPage} />
+          <Route path="/pro/profile" component={ProProfilePage} />
+          <Route path="/pro/explore" component={ProExplorePage} />
 
           <Route path="/compare" component={CompareProperties} />
 
