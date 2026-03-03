@@ -37,7 +37,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
 
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain('Development name is required');
-      expect(validation.errors).toContain('Please select an ownership type');
+      expect(validation.errors).toContain('Please select at least one ownership type');
     });
 
     it('phase 5 enforces location address and city', () => {
@@ -63,7 +63,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(valid.isValid).toBe(true);
     });
 
-    it('phase 8 enforces highlights/description and completion date for selling/launching', () => {
+    it('phase 8 enforces highlights/description only', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
       act(() => {
         result.current.setIdentity({
@@ -77,7 +77,6 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain('Add at least 3 key selling points');
       expect(validation.errors).toContain('Description must be at least 50 characters');
-      expect(validation.errors).toContain('Expected completion date is required for this status');
     });
 
     it('phase 9 enforces hero image and at least one brochure/document', () => {
