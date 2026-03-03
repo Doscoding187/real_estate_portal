@@ -664,7 +664,7 @@ function Router() {
 
           {/* User Dashboard Route */}
           <Route path="/user/dashboard">
-            <RequireRole role="user">
+            <RequireRole role="visitor">
               <UserDashboard />
             </RequireRole>
           </Route>
