@@ -38,6 +38,7 @@
     "process-lovable": "node scripts/process-lovable-components.mjs",
     "extract-lovable": "node scripts/extract-lovable-components.mjs",
     "verify": "tsx scripts/verify-development-page.ts",
+    "reset:prod": "node scripts/reset-prod-tidb.mjs",
     "migration:tidb": "tsx server/migrations/tidbDevWizardMigration.ts",
     "migration:serverless": "tsx server/migrations/tidbServerlessMigration.ts",
     "migration:serverless:staging": "cross-env NODE_ENV=staging tsx server/migrations/tidbServerlessMigration.ts",
