@@ -14,6 +14,12 @@ export interface ApiHealthResponse {
   s3: { ok: boolean };
 }
 
+export interface ApiVersionResponse {
+  gitSha: string;
+  buildTime: string | null;
+  env: string;
+}
+
 const REQUIRED_S3_ENV_KEYS = [
   'AWS_REGION',
   'S3_BUCKET_NAME',
@@ -91,5 +97,19 @@ export function registerHealthEndpoint(app: express.Express): void {
     const payload = await buildApiHealthResponse();
     res.setHeader('x-build-sha', payload.build.sha);
     res.json(payload);
+  });
+}
+
+export function buildApiVersionResponse(): ApiVersionResponse {
+  return {
+    gitSha: resolveBuildSha(),
+    buildTime: resolveBuildTime(),
+    env: process.env.NODE_ENV || 'development',
+  };
+}
+
+export function registerVersionEndpoint(app: express.Express): void {
+  app.get('/api/version', (_req, res) => {
+    res.json(buildApiVersionResponse());
   });
 }

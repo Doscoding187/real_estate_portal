@@ -20,7 +20,7 @@ import { serveStatic, setupVite } from './vite';
 import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
-import { registerHealthEndpoint } from './health';
+import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -139,6 +139,7 @@ async function startServer() {
 
   registerAuthRoutes(app);
   registerHealthEndpoint(app);
+  registerVersionEndpoint(app);
 
   app.get('/api/test', async (req, res) => {
     try {

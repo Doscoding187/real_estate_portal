@@ -74,6 +74,19 @@ export type InsertProperty = InferInsertModel<typeof properties>;
 export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
 export type Prospect = InferSelectModel<typeof prospects>;
 
+// Explicitly scoped auth-read columns to keep login resilient when optional
+// non-auth columns drift across environments.
+export const AUTH_LOGIN_USER_COLUMNS = {
+  id: users.id,
+  openId: users.openId,
+  email: users.email,
+  passwordHash: users.passwordHash,
+  name: users.name,
+  emailVerified: users.emailVerified,
+  role: users.role,
+  emailVerificationToken: users.emailVerificationToken,
+} as const;
+
 function parseSessionUserId(sessionId: string): number {
   const parsed = Number(sessionId);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -198,8 +211,12 @@ export async function getUserByEmail(email: string): Promise<User | undefined> {
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  const result = await db
+    .select(AUTH_LOGIN_USER_COLUMNS)
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  return result.length > 0 ? (result[0] as User) : undefined;
 }
 
 /**
