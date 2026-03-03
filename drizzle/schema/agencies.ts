@@ -25,7 +25,7 @@ import { properties } from './listings';
 import { leads } from './leads';
 
 export const agencies = mysqlTable('agencies', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   slug: varchar({ length: 255 }).notNull(),
   description: text(),
@@ -45,7 +45,7 @@ export const agencies = mysqlTable('agencies', {
 });
 
 export const agencyBranding = mysqlTable('agency_branding', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -70,7 +70,7 @@ export const agencyBranding = mysqlTable('agency_branding', {
 });
 
 export const agencyJoinRequests = mysqlTable('agency_join_requests', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -86,7 +86,7 @@ export const agencyJoinRequests = mysqlTable('agency_join_requests', {
 });
 
 export const agencySubscriptions = mysqlTable('agency_subscriptions', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -116,39 +116,49 @@ export const agencySubscriptions = mysqlTable('agency_subscriptions', {
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export const agents = mysqlTable('agents', {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: 'cascade' }),
-  agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
-  firstName: varchar({ length: 100 }).notNull(),
-  lastName: varchar({ length: 100 }).notNull(),
-  displayName: varchar({ length: 200 }),
-  bio: text(),
-  profileImage: text(),
-  phone: varchar({ length: 50 }),
-  email: varchar({ length: 320 }),
-  whatsapp: varchar({ length: 50 }),
-  specialization: text(),
-  role: mysqlEnum(['agent', 'principal_agent', 'broker']).default('agent').notNull(),
-  licenseNumber: varchar({ length: 100 }),
-  yearsExperience: int(),
-  areasServed: text(),
-  languages: text(),
-  rating: int(),
-  reviewCount: int(),
-  totalSales: int(),
-  isVerified: int().notNull(),
-  isFeatured: int().notNull(),
-  status: mysqlEnum(['pending', 'approved', 'rejected', 'suspended']).default('pending').notNull(),
-  rejectionReason: text(),
-  approvedBy: int().references(() => users.id, { onDelete: 'set null' }),
-  approvedAt: timestamp({ mode: 'string' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+export const agents = mysqlTable(
+  'agents',
+  {
+    id: int().autoincrement().primaryKey(),
+    userId: int().references(() => users.id, { onDelete: 'cascade' }),
+    agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
+    firstName: varchar({ length: 100 }).notNull(),
+    lastName: varchar({ length: 100 }).notNull(),
+    displayName: varchar({ length: 200 }),
+    slug: varchar({ length: 200 }),
+    bio: text(),
+    profileImage: text(),
+    phone: varchar({ length: 50 }),
+    email: varchar({ length: 320 }),
+    whatsapp: varchar({ length: 50 }),
+    specialization: text(),
+    focus: mysqlEnum(['sales', 'rentals', 'both']),
+    propertyTypes: text(),
+    socialLinks: text(),
+    role: mysqlEnum(['agent', 'principal_agent', 'broker']).default('agent').notNull(),
+    licenseNumber: varchar({ length: 100 }),
+    yearsExperience: int(),
+    areasServed: text(),
+    languages: text(),
+    profileCompletionScore: int().default(0).notNull(),
+    profileCompletionFlags: text(),
+    rating: int(),
+    reviewCount: int(),
+    totalSales: int(),
+    isVerified: int().notNull(),
+    isFeatured: int().notNull(),
+    status: mysqlEnum(['pending', 'approved', 'rejected', 'suspended']).default('pending').notNull(),
+    rejectionReason: text(),
+    approvedBy: int().references(() => users.id, { onDelete: 'set null' }),
+    approvedAt: timestamp({ mode: 'string' }),
+    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [unique('uq_agents_slug').on(table.slug), index('idx_agents_slug').on(table.slug)],
+);
 
 export const agentCoverageAreas = mysqlTable('agent_coverage_areas', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agentId: int()
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
@@ -163,7 +173,7 @@ export const agentCoverageAreas = mysqlTable('agent_coverage_areas', {
 export const agentKnowledge = mysqlTable(
   'agent_knowledge',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     topic: varchar({ length: 200 }).notNull(),
     content: text().notNull(),
     category: varchar({ length: 100 }),
@@ -185,7 +195,7 @@ export const agentKnowledge = mysqlTable(
 export const agentMemory = mysqlTable(
   'agent_memory',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     sessionId: varchar('session_id', { length: 100 }).notNull(),
     conversationId: varchar('conversation_id', { length: 100 }),
     userId: int('user_id').references(() => users.id),
@@ -205,12 +215,18 @@ export const agentMemory = mysqlTable(
 export const agentTasks = mysqlTable(
   'agent_tasks',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     taskId: varchar('task_id', { length: 100 }).notNull(),
     sessionId: varchar('session_id', { length: 100 }),
     userId: int('user_id').references(() => users.id),
     taskType: varchar('task_type', { length: 50 }).notNull(),
     status: mysqlEnum(['pending', 'running', 'completed', 'failed']).default('pending').notNull(),
+    ownerType: mysqlEnum('owner_type', ['agent', 'agency']).default('agent').notNull(),
+    ownerId: int('owner_id'),
+    assignedAgentId: int('assigned_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    visibilityScope: mysqlEnum('visibility_scope', ['private', 'team', 'agency'])
+      .default('private')
+      .notNull(),
     priority: int().default(0).notNull(),
     inputData: json('input_data'),
     outputData: json('output_data'),
@@ -226,12 +242,14 @@ export const agentTasks = mysqlTable(
     index('idx_agent_tasks_user').on(table.userId),
     index('idx_agent_tasks_session').on(table.sessionId),
     index('idx_agent_tasks_created').on(table.createdAt),
+    index('idx_agent_tasks_owner').on(table.ownerType, table.ownerId),
+    index('idx_agent_tasks_assigned_agent').on(table.assignedAgentId),
     index('task_id').on(table.taskId),
   ],
 );
 
 export const invitations = mysqlTable('invitations', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -249,8 +267,38 @@ export const invitations = mysqlTable('invitations', {
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+export const agencyAgentMemberships = mysqlTable(
+  'agency_agent_memberships',
+  {
+    id: int().autoincrement().primaryKey(),
+    agencyId: int('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'cascade' }),
+    agentId: int('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    status: mysqlEnum(['invited', 'active', 'suspended', 'left']).default('invited').notNull(),
+    governanceMode: mysqlEnum('governance_mode', ['affiliated', 'managed'])
+      .default('affiliated')
+      .notNull(),
+    role: mysqlEnum(['agent', 'team_lead', 'manager']).default('agent').notNull(),
+    permissionsOverrides: json('permissions_overrides'),
+    effectiveFrom: timestamp('effective_from', { mode: 'string' }),
+    effectiveTo: timestamp('effective_to', { mode: 'string' }),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_agency_agent_memberships_pair').on(table.agencyId, table.agentId),
+    index('idx_agency_agent_memberships_agency').on(table.agencyId, table.status),
+    index('idx_agency_agent_memberships_agent').on(table.agentId, table.status),
+  ],
+);
+
 export const invites = mysqlTable('invites', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -265,7 +313,7 @@ export const invites = mysqlTable('invites', {
 });
 
 export const commissions = mysqlTable('commissions', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agentId: int()
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),

@@ -56,6 +56,9 @@ import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
 import { distributionRouter } from './distributionRouter';
+import { demandRouter } from './demandRouter';
+import { servicesEngineRouter } from './servicesEngineRouter';
+import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 
 export const appRouter = router({
   system: systemRouter,
@@ -100,11 +103,40 @@ export const appRouter = router({
   reviews: reviewsRouter,
   leads: leadsRouter,
   distribution: distributionRouter,
+  demand: demandRouter,
+  servicesEngine: servicesEngineRouter,
 
   propertyResults: propertyResultsRouter,
 
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(async opts => {
+      const user = opts.ctx.user;
+      if (!user) return null;
+      let entitlements: Awaited<ReturnType<typeof getAgentEntitlementsForUserId>> | null = null;
+      try {
+        entitlements = await getAgentEntitlementsForUserId(user.id);
+      } catch (error) {
+        console.warn('[Auth.me] Entitlement projection failed; returning base user context.', {
+          userId: user.id,
+          code: (error as any)?.code,
+          message: (error as any)?.message,
+        });
+      }
+      const currentPlan = entitlements?.currentPlan || null;
+      const trialStatus = entitlements?.trialStatusDetail || {
+        status: entitlements?.trialStatus || 'none',
+        trialEndsAt: entitlements?.trialEndsAt || null,
+        daysRemaining: null,
+      };
+      return {
+        ...user,
+        entitlements,
+        current_plan: currentPlan,
+        trial_status: trialStatus,
+        currentPlan,
+        trialStatus,
+      };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
