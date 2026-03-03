@@ -65,6 +65,18 @@ const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
+const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
+const ServicesLocalizedCategoryPage = lazy(
+  () => import('./pages/services/ServicesLocalizedCategoryPage'),
+);
+const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
+const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
+const ServiceProviderProfilePage = lazy(() => import('./pages/services/ServiceProviderProfilePage'));
+const ServiceProviderReviewsPage = lazy(() => import('./pages/services/ServiceProviderReviewsPage'));
+const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
+const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
+const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 // Super Admin Dashboard Pages
@@ -365,6 +377,18 @@ function Router() {
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
           <Route path="/referrer/dashboard" component={ReferrerDashboard} />
+
+          {/* Services marketplace routes */}
+          <Route path="/services/request/:category" component={ServicesRequestPage} />
+          <Route path="/services/results/:leadId" component={ServicesResultsPage} />
+          <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
+          <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
+          <Route path="/services/:category/:city/:province" component={ServicesLocalizedCategoryPage} />
+          <Route path="/services/:category" component={ServicesCategoryPage} />
+          <Route path="/services" component={ServicesHomePage} />
+          <Route path="/pro/dashboard" component={ProDashboardPage} />
+          <Route path="/pro/profile" component={ProProfilePage} />
+          <Route path="/pro/explore" component={ProExplorePage} />
 
           <Route path="/compare" component={CompareProperties} />
 
