@@ -7,7 +7,11 @@ import { useLocation } from 'wouter';
 export const RequireRole = ({ role, children }: { role: string; children: React.ReactNode }) => {
   const { isAuthenticated, user, loading, error } = useAuth();
   const [, setLocation] = useLocation();
-  const normalizeRole = (value?: string | null) => (value === 'user' ? 'visitor' : value);
+  const normalizeRole = (value?: string | null) => {
+    if (value === 'user') return 'visitor';
+    if (value === 'admin') return 'super_admin';
+    return value;
+  };
   const requiredRole = normalizeRole(role);
   const actualRole = normalizeRole(user?.role);
 
