@@ -84,7 +84,10 @@ export function registerAuthRoutes(app: Express) {
     } catch (error: any) {
       console.error('[Auth] Registration failed', error);
 
-      if (error.message?.includes('already exists')) {
+      if (
+        error.message?.includes('already exists') ||
+        error.message?.includes('Multiple accounts found for this email')
+      ) {
         return res.status(409).json({ error: error.message });
       }
 
@@ -192,6 +195,10 @@ export function registerAuthRoutes(app: Express) {
 
       if (errorMessage.includes('OAuth login')) {
         return res.status(403).json({ error: errorMessage });
+      }
+
+      if (errorMessage.includes('Multiple accounts found for this email')) {
+        return res.status(409).json({ error: errorMessage, requestId });
       }
 
       if (
