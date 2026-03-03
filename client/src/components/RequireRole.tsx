@@ -1,36 +1,69 @@
 import { useAuth } from '@/_core/hooks/useAuth';
+import { UNAUTHED_ERR_MSG } from '@shared/const';
+import { TRPCClientError } from '@trpc/client';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export const RequireRole = ({ role, children }: { role: string; children: React.ReactNode }) => {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, loading, error } = useAuth();
   const [, setLocation] = useLocation();
+  const normalizeRole = (value?: string | null) => (value === 'user' ? 'visitor' : value);
+  const requiredRole = normalizeRole(role);
+  const actualRole = normalizeRole(user?.role);
+
+  const getRoleHomePath = (currentRole?: string | null) => {
+    switch (normalizeRole(currentRole)) {
+      case 'super_admin':
+        return '/admin/overview';
+      case 'property_developer':
+        return '/developer/dashboard';
+      case 'agency_admin':
+        return '/agency/dashboard';
+      case 'agent':
+        return '/agent/dashboard';
+      case 'visitor':
+        return '/user/dashboard';
+      default:
+        return '/dashboard';
+    }
+  };
+
+  const isUnauthorizedError =
+    error instanceof TRPCClientError &&
+    (error.data?.code === 'UNAUTHORIZED' || error.message === UNAUTHED_ERR_MSG);
 
   useEffect(() => {
-    // Bail out while the auth status is still loading (prevents flash-of-unauthenticated)
     if (loading) return;
+    if (error && !isUnauthorizedError) return;
 
-    // If NOT authorized → client-side navigation
-    if (!isAuthenticated || user?.role !== role) {
-      // Only trigger if we're not already on the login page
-      if (window.location.pathname !== '/login') {
-        setLocation('/login');
-      }
+    if (!isAuthenticated) {
+      if (window.location.pathname !== '/login') setLocation('/login');
+      return;
     }
-  }, [isAuthenticated, user, loading, role, setLocation]);
 
-  // While we decide whether to redirect, render nothing (or a loader)
+    if (actualRole !== requiredRole) {
+      const fallbackPath = getRoleHomePath(actualRole);
+      if (window.location.pathname !== fallbackPath) setLocation(fallbackPath);
+    }
+  }, [actualRole, error, isAuthenticated, isUnauthorizedError, loading, requiredRole, setLocation]);
+
   if (loading) {
-    // Optionally render a spinner or skeleton
     return (
       <div className="flex h-screen items-center justify-center">
-        <span className="text-slate-600">Checking access…</span>
+        <span className="text-slate-600">Checking access...</span>
       </div>
     );
   }
 
-  // If we made it here, the user is authorized
-  if (!isAuthenticated || user?.role !== role) {
+  if (error && !isUnauthorizedError) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <span className="text-slate-600">Unable to verify your session right now.</span>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || actualRole !== requiredRole) {
     return null;
   }
 
