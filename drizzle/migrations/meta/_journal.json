@@ -22,6 +22,20 @@
       "when": 1771525470213,
       "tag": "0002_30003_google_places_api_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1772547000000,
+      "tag": "0003_30004_add_users_trial_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1772559000000,
+      "tag": "0004_30005_add_agents_listing_columns",
+      "breakpoints": true
     }
   ]
 }

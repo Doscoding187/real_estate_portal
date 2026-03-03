@@ -7,6 +7,14 @@ import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { distributionIdentities } from '../../drizzle/schema';
 
+const getRequestId = (req: Request): string => {
+  const requestId = (req as any).requestId;
+  return typeof requestId === 'string' && requestId.trim().length > 0 ? requestId : 'unknown';
+};
+
+const isDatabaseQueryError = (message: string): boolean =>
+  message.includes('Failed query:') || message.includes('ECONNREFUSED') || message.includes('connect');
+
 /**
  * Register authentication routes
  * This replaces the Manus OAuth routes
@@ -90,8 +98,12 @@ export function registerAuthRoutes(app: Express) {
    * Body: { email: string, password: string, rememberMe?: boolean }
    */
   app.post('/api/auth/login', async (req: Request, res: Response) => {
+    const requestId = getRequestId(req);
+    const emailFromBody = req.body?.email;
+    const normalizedEmail =
+      typeof emailFromBody === 'string' ? emailFromBody.trim().toLowerCase() : null;
+
     try {
-      console.log('🔐 Login attempt:', req.body);
       const { email, password, rememberMe } = req.body;
 
       // Validate input
@@ -103,10 +115,15 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid input types' });
       }
 
-      console.log('🔍 Validating credentials for:', email);
+      console.info('[Auth][Login] Attempt', { requestId, email: normalizedEmail });
+
       // Login user
       const { user, sessionToken } = await authService.login(email, password, rememberMe);
-      console.log('✅ Auth service returned user:', user.email);
+      console.info('[Auth][Login] Success', {
+        requestId,
+        userId: user.id,
+        email: user.email || null,
+      });
 
       let hasReferrerIdentity = false;
       try {
@@ -134,14 +151,12 @@ export function registerAuthRoutes(app: Express) {
         ? 30 * 24 * 60 * 60 * 1000 // 30 days
         : 24 * 60 * 60 * 1000; // 24 hours
 
-      console.log('🍪 Setting cookie with name:', COOKIE_NAME);
       // Set session cookie
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, {
         ...cookieOptions,
         maxAge,
       });
-      console.log('✅ Cookie set successfully');
 
       // Return success with user info
       res.json({
@@ -155,11 +170,18 @@ export function registerAuthRoutes(app: Express) {
         },
       });
     } catch (error: any) {
-      console.error('❌ Login failed:', error);
-      console.error('Error stack:', error.stack);
-
       // Handle specific error cases with appropriate status codes
-      const errorMessage = error.message || 'Unknown error';
+      const errorMessage = error?.message || 'Unknown error';
+      const dbErrorMessage = isDatabaseQueryError(errorMessage) ? errorMessage : null;
+
+      console.error('[Auth][Login] Failure', {
+        requestId,
+        email: normalizedEmail,
+        errorMessage,
+        dbErrorMessage,
+        code: error?.code || null,
+        name: error?.name || null,
+      });
 
       if (
         errorMessage.includes('Invalid email or password') ||
@@ -183,20 +205,20 @@ export function registerAuthRoutes(app: Express) {
       if (errorMessage.includes('JWT_SECRET')) {
         return res
           .status(500)
-          .json({ error: 'Server configuration error. Please contact support.' });
+          .json({ error: 'Server configuration error. Please contact support.', requestId });
       }
 
       // Database connection errors
       if (errorMessage.includes('connect') || errorMessage.includes('ECONNREFUSED')) {
         return res
           .status(503)
-          .json({ error: 'Database service unavailable. Please try again later.' });
+          .json({ error: 'Database service unavailable. Please try again later.', requestId });
       }
 
       res.status(500).json({
         error: 'Login failed',
-        message: errorMessage,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        message: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        requestId,
       });
     }
   });
