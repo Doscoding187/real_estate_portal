@@ -4,9 +4,12 @@ import {
   ArrowRight,
   Building2,
   Check,
+  Clock3,
   CircleDollarSign,
   ClipboardCheck,
+  Eye,
   LogIn,
+  ShieldCheck,
   Target,
   X,
 } from 'lucide-react';
@@ -82,6 +85,35 @@ const howItWorksSteps = [
       'Follow the deal through to attorney signing with full visibility. Referral payout is paid once the transaction confirms.',
     icon: CircleDollarSign,
   },
+];
+
+const workflowMilestones = [
+  {
+    stage: 'Application Review',
+    timeline: '24-72 hours',
+    detail: 'Your referral-access application is reviewed by operations before program activation.',
+  },
+  {
+    stage: 'Access Activation',
+    timeline: '1 business day',
+    detail: 'Once approved, your profile is linked to active partner developments and payout rules.',
+  },
+  {
+    stage: 'Deal Pipeline',
+    timeline: 'Ongoing',
+    detail: 'Submitted buyers progress through qualification, viewing, and contract stages with audit history.',
+  },
+  {
+    stage: 'Attorney Signing',
+    timeline: 'Deal milestone',
+    detail: 'Commission status switches to payout-ready only after legal signing confirmation.',
+  },
+];
+
+const workflowVisibilityChecks = [
+  'Referrer sees stage progression from submission to signing.',
+  'Manager validates viewings and controls progression events.',
+  'Commission payout state remains visible until settlement.',
 ];
 
 export default function DistributionNetworkPublicPage() {
@@ -288,6 +320,70 @@ export default function DistributionNetworkPublicPage() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </section>
+
+          <section id="workflow-milestones" className="scroll-mt-24 bg-slate-100/70 py-16 md:py-24">
+            <div className="container">
+              <div className="mx-auto mb-12 max-w-3xl text-center">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  Workflow clarity
+                </div>
+                <h2 className="mb-4 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
+                  See How Referrals Move Through the Network
+                </h2>
+                <p className="text-slate-600">
+                  The distribution workflow is structured into explicit milestones so referrers and managers stay
+                  aligned on what happens next.
+                </p>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+                <Card className="border-slate-200 bg-white shadow-[0_12px_30px_-16px_rgba(15,23,42,0.18)]">
+                  <CardContent className="space-y-4 p-6 sm:p-7">
+                    {workflowMilestones.map((milestone, index) => (
+                      <div key={milestone.stage} className="flex gap-3 rounded-xl border border-slate-200 p-4">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{milestone.stage}</p>
+                          <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-blue-700">
+                            Typical timing: {milestone.timeline}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">{milestone.detail}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200 bg-white shadow-[0_12px_30px_-16px_rgba(15,23,42,0.18)]">
+                  <CardContent className="p-6 sm:p-7">
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                      <Eye className="h-3.5 w-3.5" />
+                      Visibility rules
+                    </div>
+                    <ul className="space-y-3">
+                      {workflowVisibilityChecks.map(item => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
+                          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
+                      <p className="flex items-center gap-2 font-medium text-slate-900">
+                        <Clock3 className="h-4 w-4 text-blue-700" />
+                        Time to first response
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Most complete applications are reviewed within 72 hours.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </section>
