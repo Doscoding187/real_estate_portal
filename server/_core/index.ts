@@ -98,8 +98,11 @@ async function startServer() {
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
+        const isLocalDevOrigin =
+          process.env.NODE_ENV === 'development' &&
+          /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 
-        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        if (isLocalDevOrigin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
           console.log(`✅ CORS: Allowed origin: ${origin}`);
           callback(null, true);
         } else {

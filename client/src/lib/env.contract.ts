@@ -19,8 +19,10 @@ export const BACKEND_HOSTS = {
   development: new Set([
     'localhost:3000',
     'localhost:5000',
+    'localhost:5011',
     '127.0.0.1:3000',
     '127.0.0.1:5000',
+    '127.0.0.1:5011',
     'realestateportal-staging.up.railway.app', // allow dev to point to staging when needed
   ]),
 } as const;
