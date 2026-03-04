@@ -87,6 +87,31 @@ export const AUTH_LOGIN_USER_COLUMNS = {
   emailVerificationToken: users.emailVerificationToken,
 } as const;
 
+// Session/context read columns.
+// Keep this scoped to auth-critical fields so auth.me stays resilient when
+// optional subscription/trial columns drift across environments.
+export const AUTH_SESSION_USER_COLUMNS = {
+  id: users.id,
+  openId: users.openId,
+  email: users.email,
+  passwordHash: users.passwordHash,
+  name: users.name,
+  firstName: users.firstName,
+  lastName: users.lastName,
+  phone: users.phone,
+  loginMethod: users.loginMethod,
+  emailVerified: users.emailVerified,
+  role: users.role,
+  agencyId: users.agencyId,
+  isSubaccount: users.isSubaccount,
+  createdAt: users.createdAt,
+  updatedAt: users.updatedAt,
+  lastSignedIn: users.lastSignedIn,
+  passwordResetToken: users.passwordResetToken,
+  passwordResetTokenExpiresAt: users.passwordResetTokenExpiresAt,
+  emailVerificationToken: users.emailVerificationToken,
+} as const;
+
 function parseSessionUserId(sessionId: string): number {
   const parsed = Number(sessionId);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -197,8 +222,19 @@ export async function getUserById(id: number): Promise<User | undefined> {
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const result = await db.select(AUTH_SESSION_USER_COLUMNS).from(users).where(eq(users.id, id)).limit(1);
+    return result.length > 0 ? (result[0] as User) : undefined;
+  } catch (error) {
+    // Fallback to minimal auth-safe shape if session columns drift in legacy environments.
+    console.warn('[Database] getUserById scoped select failed, falling back to minimal auth columns', {
+      userId: id,
+      message: (error as any)?.message || String(error),
+      code: (error as any)?.code || null,
+    });
+    const fallback = await db.select(AUTH_LOGIN_USER_COLUMNS).from(users).where(eq(users.id, id)).limit(1);
+    return fallback.length > 0 ? (fallback[0] as User) : undefined;
+  }
 }
 
 /**
