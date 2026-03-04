@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ListingNavbar } from '@/components/ListingNavbar';
+import { DistributionFunnelNavbar } from '@/components/distribution/DistributionFunnelNavbar';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -132,10 +132,10 @@ export default function DistributionReferralApplyPage() {
         ogType="website"
       />
       <div className="min-h-screen bg-slate-50">
-        <ListingNavbar />
+        <DistributionFunnelNavbar />
 
         <main id="main-content" className="advertise-page relative overflow-x-hidden bg-slate-50 pt-16 text-slate-900">
-          <section className="hero-section relative overflow-hidden py-10 md:py-14">
+          <section className="distribution-funnel-hero relative overflow-hidden py-10 md:py-14">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(14,165,233,0.12),transparent_40%),radial-gradient(circle_at_0%_30%,rgba(37,99,235,0.14),transparent_35%)]" />
 
             <div className="container relative max-w-6xl">

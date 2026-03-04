@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import {
   ArrowRight,
-  Building2,
   Check,
   Clock3,
   CircleDollarSign,
   ClipboardCheck,
   Eye,
-  LogIn,
   ShieldCheck,
   Target,
   X,
@@ -16,6 +14,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DistributionFunnelNavbar } from '@/components/distribution/DistributionFunnelNavbar';
 import { MobileStickyCTA, useMobileStickyCTA } from '@/components/advertise/MobileStickyCTA';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import '@/styles/advertise-responsive.css';
@@ -140,43 +139,7 @@ export default function DistributionNetworkPublicPage() {
         ogType="website"
       />
       <div className="min-h-screen bg-slate-50">
-        <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-lg">
-          <div className="container flex h-16 items-center justify-between">
-            <Link href="/">
-              <span className="flex cursor-pointer items-center gap-2 text-lg font-bold text-slate-900">
-                <Building2 className="h-5 w-5 text-blue-600" />
-                Property Listify
-              </span>
-            </Link>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="hidden border-slate-300 bg-white text-slate-700 sm:inline-flex"
-                onClick={() => setLocation('/book-strategy')}
-              >
-                Book Strategy Call
-              </Button>
-              <Button
-                size="sm"
-                className="border-0 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white hover:opacity-95"
-                onClick={() => setLocation(REFERRAL_APPLY_PATH)}
-              >
-                Apply to Join
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-9 w-9 text-slate-600 hover:text-slate-900"
-                aria-label="Sign in"
-                onClick={() => setLocation('/login')}
-              >
-                <LogIn className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </header>
+        <DistributionFunnelNavbar />
         <main id="main-content" className="advertise-page relative overflow-x-hidden bg-slate-50 pt-16 text-slate-900">
           <section
             id="distribution-network-hero"
