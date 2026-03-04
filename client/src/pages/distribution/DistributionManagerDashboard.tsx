@@ -6,7 +6,6 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -17,49 +16,11 @@ import {
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const managerStageActions = [
-  'application_submitted',
-  'contract_signed',
-  'bond_approved',
-  'commission_pending',
-  'cancelled',
-] as const;
-
-const stageLabels: Record<string, string> = {
-  application_submitted: 'Application Submitted',
-  contract_signed: 'Contract Signed',
-  bond_approved: 'Bond Approved',
-  commission_pending: 'Commission Pending',
-  commission_released: 'Commission Released',
-  cancelled: 'Cancelled',
-};
-
-function formatStage(stage: string | null | undefined) {
-  if (!stage) return 'Unknown';
-  return stageLabels[stage] || stage.replace(/_/g, ' ');
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return 'Unknown time';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat('en-ZA', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
-
 export default function DistributionManagerDashboard() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<number | null>(null);
   const [selectedDealId, setSelectedDealId] = useState<number | null>(null);
-  const [pipelineSearch, setPipelineSearch] = useState('');
-  const [stageFilter, setStageFilter] = useState<string>('all');
-  const [stageDraftByDealId, setStageDraftByDealId] = useState<Record<number, string>>({});
 
   const assignmentsQuery = trpc.distribution.manager.myAssignments.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -140,37 +101,6 @@ export default function DistributionManagerDashboard() {
     onError: err => toast.error(err.message),
   });
 
-  const pipelineDeals = useMemo(() => ((pipelineQuery.data || []) as any[]).slice(0, 150), [pipelineQuery.data]);
-  const validationQueue = useMemo(
-    () => ((validationQueueQuery.data || []) as any[]).slice(0, 150),
-    [validationQueueQuery.data],
-  );
-
-  const pipelineStageCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const deal of pipelineDeals) {
-      const stage = String(deal.currentStage || 'unknown');
-      counts.set(stage, (counts.get(stage) || 0) + 1);
-    }
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-  }, [pipelineDeals]);
-
-  const filteredPipelineDeals = useMemo(() => {
-    const query = pipelineSearch.trim().toLowerCase();
-    return pipelineDeals.filter(deal => {
-      const stageMatch = stageFilter === 'all' || String(deal.currentStage) === stageFilter;
-      const textMatch =
-        !query ||
-        String(deal.developmentName || '')
-          .toLowerCase()
-          .includes(query) ||
-        String(deal.buyerName || '')
-          .toLowerCase()
-          .includes(query);
-      return stageMatch && textMatch;
-    });
-  }, [pipelineDeals, pipelineSearch, stageFilter]);
-
   if (loading || assignmentsQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -231,11 +161,11 @@ export default function DistributionManagerDashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>
               <CardDescription>Open Pipeline Deals</CardDescription>
-              <CardTitle>{pipelineDeals.length}</CardTitle>
+              <CardTitle>{(pipelineQuery.data || []).length}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -247,64 +177,27 @@ export default function DistributionManagerDashboard() {
           <Card>
             <CardHeader>
               <CardDescription>Validation Queue</CardDescription>
-              <CardTitle>{validationQueue.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardDescription>Filtered Deals</CardDescription>
-              <CardTitle>{filteredPipelineDeals.length}</CardTitle>
+              <CardTitle>{(validationQueueQuery.data || []).length}</CardTitle>
             </CardHeader>
           </Card>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Workflow Snapshot</CardTitle>
-            <CardDescription>Current deal distribution by stage for your active assignment.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {pipelineStageCounts.map(([stage, count]) => (
-              <Button
-                key={stage}
-                size="sm"
-                variant={stageFilter === stage ? 'default' : 'outline'}
-                onClick={() => setStageFilter(stage)}
-              >
-                {formatStage(stage)} ({count})
-              </Button>
-            ))}
-            <Button
-              size="sm"
-              variant={stageFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setStageFilter('all')}
-            >
-              All stages
-            </Button>
-          </CardContent>
-        </Card>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle>Validation Queue</CardTitle>
-              <CardDescription>Confirm viewing outcomes before deals progress.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {validationQueueQuery.isLoading && (
-                <p className="text-sm text-slate-500">Loading validation queue...</p>
-              )}
-              {validationQueue.slice(0, 20).map((row: any) => (
-                <div key={row.id} className="space-y-2 rounded border p-3">
+              {(validationQueueQuery.data || []).slice(0, 20).map((row: any) => (
+                <div key={row.id} className="rounded border p-3 space-y-2">
                   <p className="font-medium">
                     {row.developmentName} - {row.buyerName}
                   </p>
-                  <p className="text-xs text-slate-500">Current stage: {formatStage(row.currentStage)}</p>
+                  <p className="text-xs text-slate-500">Current stage: {row.currentStage}</p>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={validateMutation.isPending}
                       onClick={() =>
                         validateMutation.mutate({
                           dealId: Number(row.id),
@@ -317,7 +210,6 @@ export default function DistributionManagerDashboard() {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={validateMutation.isPending}
                       onClick={() =>
                         validateMutation.mutate({
                           dealId: Number(row.id),
@@ -330,7 +222,6 @@ export default function DistributionManagerDashboard() {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={validateMutation.isPending}
                       onClick={() =>
                         validateMutation.mutate({ dealId: Number(row.id), outcome: 'no_show' })
                       }
@@ -340,98 +231,54 @@ export default function DistributionManagerDashboard() {
                   </div>
                 </div>
               ))}
-              {!validationQueueQuery.isLoading && !validationQueue.length && (
-                <p className="text-sm text-slate-500">No deals currently need viewing validation.</p>
-              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Pipeline & Stage Controls</CardTitle>
-              <CardDescription>Search deals, inspect current stage, and apply controlled stage updates.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Input
-                  value={pipelineSearch}
-                  onChange={e => setPipelineSearch(e.target.value)}
-                  placeholder="Search development or buyer"
-                />
-                <Select value={stageFilter} onValueChange={setStageFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by stage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All stages</SelectItem>
-                    {pipelineStageCounts.map(([stage]) => (
-                      <SelectItem key={stage} value={stage}>
-                        {formatStage(stage)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {filteredPipelineDeals.slice(0, 24).map((deal: any) => {
-                const dealId = Number(deal.id);
-                const draftStage = stageDraftByDealId[dealId] || 'contract_signed';
-                return (
-                <div key={deal.id} className="space-y-2 rounded border p-3">
+            <CardContent className="space-y-2">
+              {(pipelineQuery.data || []).slice(0, 24).map((deal: any) => (
+                <div key={deal.id} className="rounded border p-3 space-y-2">
                   <button
-                    className="w-full text-left"
-                    onClick={() => setSelectedDealId(dealId)}
+                    className="text-left w-full"
+                    onClick={() => setSelectedDealId(Number(deal.id))}
                   >
                     <p className="font-medium">
                       {deal.developmentName} - {deal.buyerName}
                     </p>
                     <p className="text-xs text-slate-500">
-                      Stage: {formatStage(deal.currentStage)} | Commission: {deal.commissionStatus}
+                      Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
                     </p>
                   </button>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={draftStage}
-                      onChange={e =>
-                        setStageDraftByDealId(prev => ({
-                          ...prev,
-                          [dealId]: e.target.value,
-                        }))
-                      }
-                      className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
-                    >
-                      {managerStageActions.map(stage => (
-                        <option key={stage} value={stage}>
-                          {formatStage(stage)}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={advanceStageMutation.isPending}
-                      onClick={() =>
-                        advanceStageMutation.mutate({
-                          dealId,
-                          toStage: draftStage as any,
-                          notes: null,
-                          rejectionReason:
-                            draftStage === 'cancelled' ? 'Cancelled by manager' : null,
-                        })
-                      }
-                    >
-                      Apply Stage
-                    </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      'application_submitted',
+                      'contract_signed',
+                      'bond_approved',
+                      'commission_pending',
+                      'cancelled',
+                    ].map(stage => (
+                      <Button
+                        key={stage}
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          advanceStageMutation.mutate({
+                            dealId: Number(deal.id),
+                            toStage: stage as any,
+                            notes: null,
+                            rejectionReason: stage === 'cancelled' ? 'Cancelled by manager' : null,
+                          })
+                        }
+                      >
+                        {stage}
+                      </Button>
+                    ))}
                   </div>
                 </div>
-              );
-              })}
-              {!pipelineQuery.isLoading && !filteredPipelineDeals.length && (
-                <p className="text-sm text-slate-500">
-                  No pipeline deals match this search/filter combination.
-                </p>
-              )}
+              ))}
             </CardContent>
           </Card>
         </div>
@@ -446,10 +293,9 @@ export default function DistributionManagerDashboard() {
               {(timelineQuery.data?.events || []).map((event: any) => (
                 <div key={event.id} className="rounded border p-3">
                   <p className="font-medium">
-                    {event.eventType} | {formatStage(event.fromStage || 'start')} {'->'}{' '}
-                    {formatStage(event.toStage || 'n/a')}
+                    {event.eventType} | {event.fromStage || 'start'} {'->'} {event.toStage || 'n/a'}
                   </p>
-                  <p className="text-xs text-slate-500">{formatDateTime(event.eventAt)}</p>
+                  <p className="text-xs text-slate-500">{event.eventAt}</p>
                   {event.notes ? <p className="text-sm mt-1">{event.notes}</p> : null}
                 </div>
               ))}

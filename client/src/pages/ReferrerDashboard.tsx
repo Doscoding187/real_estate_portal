@@ -25,15 +25,6 @@ type UnitTypeSummary = {
   priceTo: number | null;
 };
 
-type YesNo = 'yes' | 'no' | '';
-type PipelineStage = 'ready_now' | 'within_90_days' | 'building_pipeline' | '';
-
-const pipelineStageLabels: Record<Exclude<PipelineStage, ''>, string> = {
-  ready_now: 'Buyer is ready now',
-  within_90_days: 'Likely within 90 days',
-  building_pipeline: 'Building pipeline',
-};
-
 function formatMoney(value: number | null) {
   if (value === null || Number.isNaN(value)) return 'N/A';
   return new Intl.NumberFormat('en-ZA', {
@@ -75,15 +66,6 @@ export default function ReferrerDashboard() {
   const [prospectName, setProspectName] = useState('');
   const [prospectEmail, setProspectEmail] = useState('');
   const [prospectPhone, setProspectPhone] = useState('');
-  const [onboardingQualification, setOnboardingQualification] = useState<{
-    licensed: YesNo;
-    hasBuyerNow: YesNo;
-    pipelineStage: PipelineStage;
-  }>({
-    licensed: '',
-    hasBuyerNow: '',
-    pipelineStage: '',
-  });
 
   const accessQuery = trpc.distribution.referrer.myAccess.useQuery({
     includePaused: true,
@@ -206,17 +188,6 @@ export default function ReferrerDashboard() {
     },
   );
 
-  const onboardingReady =
-    onboardingQualification.licensed !== '' &&
-    onboardingQualification.hasBuyerNow !== '' &&
-    onboardingQualification.pipelineStage !== '';
-
-  const jumpToSubmitReferral = () => {
-    const el = document.getElementById('referral-submit-card');
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   return (
     <div className="min-h-screen bg-slate-50">
       <ListingNavbar />
@@ -265,238 +236,126 @@ export default function ReferrerDashboard() {
             </CardHeader>
           </Card>
         ) : (
-          <div className="space-y-6">
-            <Card>
+          <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+            <Card className="h-fit">
               <CardHeader>
-                <CardTitle>Ready to submit your first referral?</CardTitle>
-                <CardDescription>
-                  Qualification happens here in your dashboard after you have seen developments and payout visibility.
-                </CardDescription>
+                <CardTitle>Developments</CardTitle>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <Input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search by name, city, province"
+                    className="pl-9"
+                  />
+                </div>
               </CardHeader>
-              <CardContent className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Are you a licensed property practitioner?
-                    </label>
-                    <select
-                      value={onboardingQualification.licensed}
-                      onChange={e =>
-                        setOnboardingQualification(prev => ({
-                          ...prev,
-                          licensed: e.target.value as YesNo,
-                        }))
-                      }
-                      className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500"
-                    >
-                      <option value="">Select</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Do you currently have a buyer to refer?
-                    </label>
-                    <select
-                      value={onboardingQualification.hasBuyerNow}
-                      onChange={e =>
-                        setOnboardingQualification(prev => ({
-                          ...prev,
-                          hasBuyerNow: e.target.value as YesNo,
-                        }))
-                      }
-                      className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500"
-                    >
-                      <option value="">Select</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Which best describes your referral pipeline right now?
-                    </label>
-                    <select
-                      value={onboardingQualification.pipelineStage}
-                      onChange={e =>
-                        setOnboardingQualification(prev => ({
-                          ...prev,
-                          pipelineStage: e.target.value as PipelineStage,
-                        }))
-                      }
-                      className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500"
-                    >
-                      <option value="">Select</option>
-                      <option value="ready_now">Buyer is ready now</option>
-                      <option value="within_90_days">Likely within 90 days</option>
-                      <option value="building_pipeline">Building pipeline</option>
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2 flex flex-wrap items-center gap-3">
-                    <Button
-                      disabled={!onboardingReady || !selectedDevelopment?.programId}
-                      onClick={jumpToSubmitReferral}
-                    >
-                      Continue to Referral Submission
-                    </Button>
-                    <p className="text-xs text-slate-500">
-                      {onboardingReady
-                        ? `Pipeline status: ${pipelineStageLabels[onboardingQualification.pipelineStage as Exclude<PipelineStage, ''>]}`
-                        : 'Complete this quick check, then submit your first referral below.'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    First-run flow
-                  </p>
-                  <div className="mt-3 space-y-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">1. Browse developments</p>
-                      <p className="text-xs text-slate-600">Understand stock, pricing, and referral opportunity.</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">2. Check referral readiness</p>
-                      <p className="text-xs text-slate-600">
-                        Confirm if your buyer is ready now, within 90 days, or pipeline stage.
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">3. Submit buyer referral</p>
-                      <p className="text-xs text-slate-600">
-                        Use the referral form below only when you are ready to submit details.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              <CardContent className="space-y-2">
+                {filteredDevelopments.length === 0 ? (
+                  <p className="text-sm text-slate-500">No developments match your search.</p>
+                ) : (
+                  filteredDevelopments.map(dev => {
+                    const isSelected = Number(dev.developmentId) === Number(selectedDevelopmentId);
+                    return (
+                      <button
+                        key={dev.developmentId}
+                        className={`w-full rounded-lg border px-3 py-3 text-left transition ${
+                          isSelected
+                            ? 'border-slate-900 bg-slate-900 text-white'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                        onClick={() => setSelectedDevelopmentId(Number(dev.developmentId))}
+                      >
+                        <p className="font-semibold">{dev.developmentName}</p>
+                        <p
+                          className={`text-xs ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}
+                        >
+                          {dev.city}, {dev.province}
+                        </p>
+                      </button>
+                    );
+                  })
+                )}
               </CardContent>
             </Card>
 
-            <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-              <Card className="h-fit">
-                <CardHeader>
-                  <CardTitle>Developments</CardTitle>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <Input
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                      placeholder="Search by name, city, province"
-                      className="pl-9"
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {filteredDevelopments.length === 0 ? (
-                    <p className="text-sm text-slate-500">No developments match your search.</p>
-                  ) : (
-                    filteredDevelopments.map(dev => {
-                      const isSelected = Number(dev.developmentId) === Number(selectedDevelopmentId);
-                      return (
-                        <button
-                          key={dev.developmentId}
-                          className={`w-full rounded-lg border px-3 py-3 text-left transition ${
-                            isSelected
-                              ? 'border-slate-900 bg-slate-900 text-white'
-                              : 'border-slate-200 bg-white hover:border-slate-300'
-                          }`}
-                          onClick={() => setSelectedDevelopmentId(Number(dev.developmentId))}
-                        >
-                          <p className="font-semibold">{dev.developmentName}</p>
-                          <p
-                            className={`text-xs ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}
-                          >
-                            {dev.city}, {dev.province}
-                          </p>
-                        </button>
-                      );
-                    })
-                  )}
-                </CardContent>
-              </Card>
-
-              <div className="space-y-6">
-                {!selectedDevelopment ? (
+            <div className="space-y-6">
+              {!selectedDevelopment ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>No development selected</CardTitle>
+                  </CardHeader>
+                </Card>
+              ) : (
+                <>
                   <Card>
                     <CardHeader>
-                      <CardTitle>No development selected</CardTitle>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="text-2xl">
+                            {selectedDevelopment.developmentName}
+                          </CardTitle>
+                          <CardDescription className="mt-2 flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            {selectedDevelopment.suburb ? `${selectedDevelopment.suburb}, ` : ''}
+                            {selectedDevelopment.city}, {selectedDevelopment.province}
+                          </CardDescription>
+                        </div>
+                        <Badge
+                          variant={
+                            selectedDevelopment.accessStatus === 'active' ? 'default' : 'secondary'
+                          }
+                        >
+                          {selectedDevelopment.accessStatus}
+                        </Badge>
+                      </div>
                     </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-md border p-2.5">
+                          <p className="text-[11px] text-slate-500">Development Price Range</p>
+                          <p className="mt-1 text-sm font-semibold leading-tight">
+                            {formatMoney(selectedDevelopment.priceFrom)} -{' '}
+                            {formatMoney(selectedDevelopment.priceTo)}
+                          </p>
+                        </div>
+                        <div className="rounded-md border p-2.5">
+                          <p className="text-[11px] text-slate-500">Commission Model</p>
+                          <p className="mt-1 text-sm font-semibold leading-tight">
+                            {String(selectedDevelopment.commissionModel || 'N/A').replace('_', ' ')}
+                          </p>
+                        </div>
+                        <div className="rounded-md border p-2.5">
+                          <p className="text-[11px] text-slate-500">Referral Status</p>
+                          <p className="mt-1 text-sm font-semibold leading-tight">
+                            {selectedDevelopment.isReferralEnabled ? 'Enabled' : 'Disabled'}
+                          </p>
+                        </div>
+                        <div className="rounded-md border p-2.5">
+                          <p className="text-[11px] text-slate-500">Unit Types</p>
+                          <p className="mt-1 text-sm font-semibold leading-tight">
+                            {(selectedDevelopment.unitTypes || []).length}
+                          </p>
+                        </div>
+                      </div>
+
+                      {selectedDevelopment.description && (
+                        <p className="text-sm text-slate-600">{selectedDevelopment.description}</p>
+                      )}
+
+                      {parseTagList(selectedDevelopment.amenities).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {parseTagList(selectedDevelopment.amenities)
+                            .slice(0, 12)
+                            .map((tag, idx) => (
+                              <Badge key={`${tag}-${idx}`} variant="secondary">
+                                {tag}
+                              </Badge>
+                            ))}
+                        </div>
+                      )}
+                    </CardContent>
                   </Card>
-                ) : (
-                  <>
-                    <Card>
-                      <CardHeader>
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <CardTitle className="text-2xl">
-                              {selectedDevelopment.developmentName}
-                            </CardTitle>
-                            <CardDescription className="mt-2 flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              {selectedDevelopment.suburb ? `${selectedDevelopment.suburb}, ` : ''}
-                              {selectedDevelopment.city}, {selectedDevelopment.province}
-                            </CardDescription>
-                          </div>
-                          <Badge
-                            variant={
-                              selectedDevelopment.accessStatus === 'active' ? 'default' : 'secondary'
-                            }
-                          >
-                            {selectedDevelopment.accessStatus}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                          <div className="rounded-md border p-2.5">
-                            <p className="text-[11px] text-slate-500">Development Price Range</p>
-                            <p className="mt-1 text-sm font-semibold leading-tight">
-                              {formatMoney(selectedDevelopment.priceFrom)} -{' '}
-                              {formatMoney(selectedDevelopment.priceTo)}
-                            </p>
-                          </div>
-                          <div className="rounded-md border p-2.5">
-                            <p className="text-[11px] text-slate-500">Commission Model</p>
-                            <p className="mt-1 text-sm font-semibold leading-tight">
-                              {String(selectedDevelopment.commissionModel || 'N/A').replace('_', ' ')}
-                            </p>
-                          </div>
-                          <div className="rounded-md border p-2.5">
-                            <p className="text-[11px] text-slate-500">Referral Status</p>
-                            <p className="mt-1 text-sm font-semibold leading-tight">
-                              {selectedDevelopment.isReferralEnabled ? 'Enabled' : 'Disabled'}
-                            </p>
-                          </div>
-                          <div className="rounded-md border p-2.5">
-                            <p className="text-[11px] text-slate-500">Unit Types</p>
-                            <p className="mt-1 text-sm font-semibold leading-tight">
-                              {(selectedDevelopment.unitTypes || []).length}
-                            </p>
-                          </div>
-                        </div>
-
-                        {selectedDevelopment.description && (
-                          <p className="text-sm text-slate-600">{selectedDevelopment.description}</p>
-                        )}
-
-                        {parseTagList(selectedDevelopment.amenities).length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {parseTagList(selectedDevelopment.amenities)
-                              .slice(0, 12)
-                              .map((tag, idx) => (
-                                <Badge key={`${tag}-${idx}`} variant="secondary">
-                                  {tag}
-                                </Badge>
-                              ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
 
                   <Card>
                     <CardHeader>
@@ -631,7 +490,7 @@ export default function ReferrerDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card id="referral-submit-card">
+                    <Card>
                       <CardHeader>
                         <CardTitle>Add Prospect to Deal Pipeline</CardTitle>
                         <CardDescription>
@@ -775,7 +634,6 @@ export default function ReferrerDashboard() {
                 </>
               )}
             </div>
-          </div>
           </div>
         )}
       </div>
