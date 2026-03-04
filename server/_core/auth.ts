@@ -27,6 +27,11 @@ export type SessionPayload = {
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
 
+const getRequestId = (req: Request): string => {
+  const value = (req as any)?.requestId;
+  return typeof value === 'string' && value.trim().length > 0 ? value : 'unknown';
+};
+
 export const normalizeAuthRole = (role: unknown): User['role'] => {
   const normalized = typeof role === 'string' ? role.trim().toLowerCase() : '';
   if (normalized === 'admin') return 'super_admin';
@@ -86,8 +91,12 @@ class AuthService {
   /**
    * Verify a session token from a cookie
    */
-  async verifySession(cookieValue: string | undefined | null): Promise<SessionPayload | null> {
+  async verifySession(
+    cookieValue: string | undefined | null,
+    requestId = 'unknown',
+  ): Promise<SessionPayload | null> {
     if (!cookieValue) {
+      console.warn('[Auth][Session] Cookie missing', { requestId });
       return null;
     }
 
@@ -100,7 +109,11 @@ class AuthService {
       const { userId, email, name } = payload as Record<string, unknown>;
 
       if (typeof userId !== 'number' || !isNonEmptyString(email)) {
-        console.warn('[Auth] Session payload missing required fields');
+        console.warn('[Auth][Session] Payload missing required fields', {
+          requestId,
+          hasUserId: typeof userId === 'number',
+          hasEmail: isNonEmptyString(email),
+        });
         return null;
       }
 
@@ -112,16 +125,19 @@ class AuthService {
     } catch (error: any) {
       // Provide specific error messages for common JWT issues
       if (error?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
-        console.error('[Auth] ❌ INVALID SIGNATURE: Token was signed with a different secret key.');
-        console.error('[Auth] This usually means:');
-        console.error('[Auth]   1. JWT_SECRET in .env was changed after token was created');
-        console.error('[Auth]   2. Token was created by old OAuth system (Manus)');
-        console.error('[Auth]   3. Token is corrupted');
-        console.error('[Auth] 💡 Solution: Clear browser cookies and login again');
+        console.error('[Auth][Session] JWT signature verification failed', {
+          requestId,
+          code: error?.code || null,
+        });
       } else if (error?.code === 'ERR_JWT_EXPIRED') {
-        console.warn('[Auth] Token expired');
+        console.warn('[Auth][Session] JWT expired', { requestId });
       } else {
-        console.warn('[Auth] Session verification failed:', error?.message || String(error));
+        console.warn('[Auth][Session] Verification failed', {
+          requestId,
+          message: error?.message || String(error),
+          code: error?.code || null,
+          name: error?.name || null,
+        });
       }
       return null;
     }
@@ -143,27 +159,30 @@ class AuthService {
    * This is the main authentication method used in tRPC context
    */
   async authenticateRequest(req: Request): Promise<User> {
-    console.log('[Auth] authenticateRequest called');
-    console.log('[Auth] Cookie header:', req.headers.cookie);
-
+    const requestId = getRequestId(req);
     const cookies = this.parseCookies(req.headers.cookie);
-    console.log('[Auth] Parsed cookies:', Array.from(cookies.entries()));
-
     const sessionCookie = cookies.get(COOKIE_NAME);
-    console.log('[Auth] COOKIE_NAME:', COOKIE_NAME);
-    console.log('[Auth] sessionCookie value:', sessionCookie ? '(exists)' : '(missing)');
-    console.log('[Auth] Session cookie value:', sessionCookie ? '(exists)' : '(missing)');
+    console.info('[Auth][Session] authenticateRequest', {
+      requestId,
+      hasCookieHeader: Boolean(req.headers.cookie),
+      cookieCount: cookies.size,
+      hasSessionCookie: Boolean(sessionCookie),
+    });
 
-    const session = await this.verifySession(sessionCookie);
-    console.log('[Auth] Session verification result:', session ? 'valid' : 'invalid');
+    const session = await this.verifySession(sessionCookie, requestId);
 
     if (!session) {
+      console.warn('[Auth][Session] No valid session', { requestId });
       throw ForbiddenError('Invalid or missing session cookie');
     }
 
     // Get user from database using userId from session
     const user = await db.getUserById(session.userId);
-    console.log('[Auth] User from DB:', user ? `${user.email} (role: ${user.role})` : 'not found');
+    console.info('[Auth][Session] User lookup', {
+      requestId,
+      userId: session.userId,
+      userFound: Boolean(user),
+    });
 
     if (!user) {
       throw ForbiddenError('User not found');
@@ -447,7 +466,12 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     (req as any).user = user;
     next();
   } catch (error) {
-    console.warn('[AuthMiddleware] Unauthorized access attempt:', error);
+    console.warn('[AuthMiddleware] Unauthorized access attempt', {
+      requestId: getRequestId(req),
+      message: (error as any)?.message || String(error),
+      code: (error as any)?.code || null,
+      name: (error as any)?.name || null,
+    });
     res.status(401).json({ error: 'Unauthorized' });
   }
 };
