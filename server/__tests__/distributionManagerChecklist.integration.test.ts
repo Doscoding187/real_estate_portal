@@ -13,7 +13,12 @@ import {
   users,
 } from '../../drizzle/schema';
 
-const describeWithDb = process.env.DATABASE_URL ? describe : describe.skip;
+// Requires DATABASE_URL test DB; skipped in local env when not set.
+const hasDb = Boolean(process.env.DATABASE_URL);
+const describeWithDb: typeof describe = hasDb
+  ? describe
+  : ((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe;
 
 type SeedOptions = {
   includePrimaryAssignment?: boolean;

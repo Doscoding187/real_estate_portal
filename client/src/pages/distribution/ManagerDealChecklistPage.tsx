@@ -43,6 +43,7 @@ export default function ManagerDealChecklistPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [savingTemplateId, setSavingTemplateId] = useState<number | null>(null);
+  const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [localChecklist, setLocalChecklist] = useState<any | null>(null);
 
   const dealId = Number(params?.dealId || 0);
@@ -120,6 +121,48 @@ export default function ManagerDealChecklistPage() {
     }
   }
 
+  async function handleBatchUpdateRequired(status: 'received' | 'verified') {
+    if (!localChecklist) return;
+    const requiredDocuments = (localChecklist.requiredDocuments || []).filter((document: any) =>
+      Boolean(document.isRequired),
+    );
+    if (!requiredDocuments.length) {
+      toast.error('No required documents configured for this deal.');
+      return;
+    }
+
+    if (status === 'verified') {
+      const confirmed = window.confirm(
+        `Mark all ${requiredDocuments.length} required documents as verified?`,
+      );
+      if (!confirmed) return;
+    }
+
+    setIsBatchSaving(true);
+    try {
+      let latestChecklist = localChecklist;
+      for (const document of requiredDocuments) {
+        latestChecklist = await updateDocumentStatusMutation.mutateAsync({
+          dealId,
+          templateId: Number(document.templateId),
+          status,
+          notes: document.notes || null,
+        });
+      }
+      setLocalChecklist(latestChecklist);
+      toast.success(
+        status === 'verified'
+          ? 'All required documents marked as verified.'
+          : 'All required documents marked as received.',
+      );
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to apply batch document update');
+      await checklistQuery.refetch();
+    } finally {
+      setIsBatchSaving(false);
+    }
+  }
+
   if (loading || checklistQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -168,7 +211,10 @@ export default function ManagerDealChecklistPage() {
         <ManagerDealChecklistPanel
           checklist={localChecklist}
           savingTemplateId={savingTemplateId}
+          isBatchSaving={isBatchSaving}
           onUpdateDocumentStatus={handleUpdateDocumentStatus}
+          onMarkAllRequiredReceived={() => handleBatchUpdateRequired('received')}
+          onMarkAllRequiredVerified={() => handleBatchUpdateRequired('verified')}
         />
       </div>
     </div>

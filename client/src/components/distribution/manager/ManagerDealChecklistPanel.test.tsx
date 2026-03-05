@@ -135,4 +135,25 @@ describe('ManagerDealChecklistPanel', () => {
     expect(screen.getByText('Payout Ready')).toBeInTheDocument();
     expect(screen.getByText('Verified required documents: 2/2')).toBeInTheDocument();
   });
+
+  it('triggers batch callbacks from quick actions', async () => {
+    const onMarkAllRequiredReceived = vi.fn().mockResolvedValue(undefined);
+    const onMarkAllRequiredVerified = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <ManagerDealChecklistPanel
+        checklist={checklistFixture as any}
+        savingTemplateId={null}
+        onUpdateDocumentStatus={vi.fn().mockResolvedValue(undefined)}
+        onMarkAllRequiredReceived={onMarkAllRequiredReceived}
+        onMarkAllRequiredVerified={onMarkAllRequiredVerified}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Mark All Required as Received'));
+    fireEvent.click(screen.getByText('Mark All Required as Verified'));
+
+    await waitFor(() => expect(onMarkAllRequiredReceived).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onMarkAllRequiredVerified).toHaveBeenCalledTimes(1));
+  });
 });

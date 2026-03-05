@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
 
@@ -63,15 +64,21 @@ function formatActor(actor: { userId: number; name?: string } | null) {
 export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
+  isBatchSaving,
   onUpdateDocumentStatus,
+  onMarkAllRequiredReceived,
+  onMarkAllRequiredVerified,
 }: {
   checklist: DealChecklist;
   savingTemplateId: number | null;
+  isBatchSaving?: boolean;
   onUpdateDocumentStatus: (input: {
     templateId: number;
     status: DealDocumentStatus;
     notes?: string | null;
   }) => Promise<void>;
+  onMarkAllRequiredReceived?: () => Promise<void>;
+  onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
   const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
 
@@ -147,6 +154,25 @@ export function ManagerDealChecklistPanel({
           <CardDescription>Update received and verification status per required template.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2 rounded border bg-slate-50 p-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={Boolean(isBatchSaving)}
+              onClick={() => void onMarkAllRequiredReceived?.()}
+            >
+              Mark All Required as Received
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={Boolean(isBatchSaving)}
+              onClick={() => void onMarkAllRequiredVerified?.()}
+            >
+              Mark All Required as Verified
+            </Button>
+            {isBatchSaving ? <p className="self-center text-xs text-blue-600">Applying batch update...</p> : null}
+          </div>
           {orderedDocuments.map(document => (
             <div key={document.templateId} className="rounded border p-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -166,7 +192,7 @@ export function ManagerDealChecklistPanel({
                     id={`status-${document.templateId}`}
                     className="h-9 w-full rounded border border-input bg-background px-2 text-sm"
                     value={document.status}
-                    disabled={savingTemplateId === document.templateId}
+                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
                     onChange={event =>
                       void onUpdateDocumentStatus({
                         templateId: document.templateId,
@@ -187,7 +213,7 @@ export function ManagerDealChecklistPanel({
                   <Input
                     id={`notes-${document.templateId}`}
                     value={notesByTemplateId[document.templateId] || ''}
-                    disabled={savingTemplateId === document.templateId}
+                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
                     onChange={event =>
                       setNotesByTemplateId(current => ({
                         ...current,
