@@ -6063,16 +6063,21 @@ export const distributionRouter = router({
       if (!db) throw new Error('Database not available');
 
       const normalizedEmail = input.email.trim().toLowerCase();
-      const [existingPending] = await db
-        .select({ id: distributionReferrerApplications.id })
-        .from(distributionReferrerApplications)
-        .where(
-          and(
-            eq(distributionReferrerApplications.email, normalizedEmail),
-            eq(distributionReferrerApplications.status, 'pending'),
-          ),
-        )
-        .limit(1);
+      // NOTE: this public entrypoint must remain resilient even when distribution
+      // schema exports are running in "stub" mode on main.
+      // Use raw SQL for the public apply path so real production registration does
+      // not depend on Drizzle table metadata shape.
+      const existingPendingResult = (await db.execute(sql`
+        SELECT id
+        FROM distribution_referrer_applications
+        WHERE email = ${normalizedEmail}
+          AND status = 'pending'
+        LIMIT 1
+      `)) as any;
+      const existingPendingRows = Array.isArray(existingPendingResult)
+        ? existingPendingResult[0]
+        : [];
+      const existingPending = Array.isArray(existingPendingRows) ? existingPendingRows[0] : undefined;
 
       if (existingPending) {
         throw new TRPCError({
@@ -6081,18 +6086,24 @@ export const distributionRouter = router({
         });
       }
 
-      const [insertResult] = await db.insert(distributionReferrerApplications).values({
-        requestedIdentity: 'referrer',
-        fullName: input.fullName.trim(),
-        email: normalizedEmail,
-        phone: input.phone?.trim() || null,
-        notes: input.notes?.trim() || null,
-        status: 'pending',
-      });
+      const insertResult = (await db.execute(sql`
+        INSERT INTO distribution_referrer_applications
+          (requested_identity, full_name, email, phone, notes, status)
+        VALUES
+          (
+            'referrer',
+            ${input.fullName.trim()},
+            ${normalizedEmail},
+            ${input.phone?.trim() || null},
+            ${input.notes?.trim() || null},
+            'pending'
+          )
+      `)) as any;
+      const applicationId = Number(insertResult?.[0]?.insertId ?? insertResult?.insertId ?? 0);
 
       return {
         success: true,
-        applicationId: Number((insertResult as any).insertId || 0),
+        applicationId,
         status: 'pending' as const,
       };
     }),
