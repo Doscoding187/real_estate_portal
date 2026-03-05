@@ -98,7 +98,11 @@ export async function getProgramReadinessByDevelopmentId(
     programExists: Boolean(program),
     isActive: program ? boolFromTinyInt(program.isActive) : false,
     isReferralEnabled: program ? boolFromTinyInt(program.isReferralEnabled) : false,
-    commissionModel: program?.commissionModel ? String(program.commissionModel) : null,
+    commissionModel: program?.commissionModel
+      ? String(program.commissionModel) === 'fixed_amount'
+        ? 'flat_amount'
+        : String(program.commissionModel)
+      : null,
     defaultCommissionPercent: program ? toNumberOrNull(program.defaultCommissionPercent) : null,
     defaultCommissionAmount: program ? toNumberOrNull(program.defaultCommissionAmount) : null,
     payoutMilestone: program?.payoutMilestone ? String(program.payoutMilestone) : null,

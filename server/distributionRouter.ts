@@ -9,6 +9,7 @@ import {
   developers,
   developerBrandProfiles,
   developments,
+  developmentRequiredDocuments,
   distributionAgentAccess,
   distributionAgentTiers,
   distributionCommissionEntries,
@@ -931,7 +932,13 @@ const upsertProgramInput = z.object({
   developmentId: z.number().int().positive(),
   isReferralEnabled: z.boolean(),
   isActive: z.boolean().default(true),
-  commissionModel: z.enum(['flat_percentage', 'tiered_percentage', 'fixed_amount', 'hybrid']),
+  commissionModel: z.enum([
+    'flat_percentage',
+    'flat_amount',
+    'tiered_percentage',
+    'fixed_amount',
+    'hybrid',
+  ]),
   defaultCommissionPercent: z.number().min(0).max(100).nullable().optional(),
   defaultCommissionAmount: z.number().int().min(0).nullable().optional(),
   tierAccessPolicy: z.enum(['open', 'restricted', 'invite_only']),
@@ -964,11 +971,17 @@ async function upsertProgram(
     .limit(1);
 
   if (input.isReferralEnabled) {
+    const normalizedCommissionModel =
+      input.commissionModel === 'flat_amount' ? 'fixed_amount' : input.commissionModel;
     const hasPrimaryManager = existing?.id
       ? await hasPrimaryActiveManagerAssignment(db, Number(existing.id))
       : false;
     const readiness = getProgramActivationReadiness({
-      commissionModel: input.commissionModel,
+      commissionModel: normalizedCommissionModel as
+        | 'flat_percentage'
+        | 'tiered_percentage'
+        | 'fixed_amount'
+        | 'hybrid',
       defaultCommissionPercent: toNumberOrNull(input.defaultCommissionPercent),
       defaultCommissionAmount: toNumberOrNull(input.defaultCommissionAmount),
       tierAccessPolicy: input.tierAccessPolicy,
@@ -985,11 +998,13 @@ async function upsertProgram(
     }
   }
 
+  const normalizedCommissionModel =
+    input.commissionModel === 'flat_amount' ? 'fixed_amount' : input.commissionModel;
   const payload = {
     developmentId: input.developmentId,
     isReferralEnabled: input.isReferralEnabled ? 1 : 0,
     isActive: input.isActive ? 1 : 0,
-    commissionModel: input.commissionModel,
+    commissionModel: normalizedCommissionModel,
     defaultCommissionPercent:
       input.defaultCommissionPercent === undefined ? null : input.defaultCommissionPercent,
     defaultCommissionAmount:
@@ -1822,6 +1837,160 @@ const adminDistributionRouter = router({
     .query(async ({ input }) => {
       assertDistributionEnabled();
       return await getProgramReadinessByDevelopmentId(input.developmentId);
+    }),
+
+  getDevelopmentRequiredDocuments: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const rows = await db
+        .select({
+          id: developmentRequiredDocuments.id,
+          developmentId: developmentRequiredDocuments.developmentId,
+          documentCode: developmentRequiredDocuments.documentCode,
+          documentLabel: developmentRequiredDocuments.documentLabel,
+          isRequired: developmentRequiredDocuments.isRequired,
+          sortOrder: developmentRequiredDocuments.sortOrder,
+          isActive: developmentRequiredDocuments.isActive,
+        })
+        .from(developmentRequiredDocuments)
+        .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
+        .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
+
+      return rows.map(row => ({
+        id: Number(row.id),
+        developmentId: Number(row.developmentId),
+        documentCode: String(row.documentCode),
+        documentLabel: String(row.documentLabel || ''),
+        isRequired: boolFromTinyInt(row.isRequired),
+        sortOrder: Number(row.sortOrder || 0),
+        isActive: boolFromTinyInt(row.isActive),
+      }));
+    }),
+
+  setDevelopmentRequiredDocuments: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        documents: z.array(
+          z.object({
+            id: z.number().int().positive().optional(),
+            documentCode: z.enum([
+              'id_document',
+              'proof_of_address',
+              'proof_of_income',
+              'bank_statement',
+              'pre_approval',
+              'signed_offer_to_purchase',
+              'sale_agreement',
+              'attorney_instruction_letter',
+              'transfer_documents',
+              'custom',
+            ]),
+            documentLabel: z.string().trim().min(2).max(160),
+            isRequired: z.boolean().default(true),
+            sortOrder: z.number().int().min(0).default(0),
+            isActive: z.boolean().default(true),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const result = await db.transaction(async tx => {
+        const existing = await tx
+          .select({
+            id: developmentRequiredDocuments.id,
+          })
+          .from(developmentRequiredDocuments)
+          .where(eq(developmentRequiredDocuments.developmentId, input.developmentId));
+
+        const existingIdSet = new Set<number>(existing.map(row => Number(row.id)));
+        const retainedIds = new Set<number>();
+
+        for (const document of input.documents) {
+          if (document.id && existingIdSet.has(document.id)) {
+            retainedIds.add(document.id);
+            await tx
+              .update(developmentRequiredDocuments)
+              .set({
+                documentCode: document.documentCode,
+                documentLabel: document.documentLabel,
+                isRequired: document.isRequired ? 1 : 0,
+                sortOrder: document.sortOrder,
+                isActive: document.isActive ? 1 : 0,
+              })
+              .where(
+                and(
+                  eq(developmentRequiredDocuments.id, document.id),
+                  eq(developmentRequiredDocuments.developmentId, input.developmentId),
+                ),
+              );
+            continue;
+          }
+
+          const [insertResult] = await tx.insert(developmentRequiredDocuments).values({
+            developmentId: input.developmentId,
+            documentCode: document.documentCode,
+            documentLabel: document.documentLabel,
+            isRequired: document.isRequired ? 1 : 0,
+            sortOrder: document.sortOrder,
+            isActive: document.isActive ? 1 : 0,
+          });
+          const insertedId = Number((insertResult as any).insertId || 0);
+          if (insertedId > 0) retainedIds.add(insertedId);
+        }
+
+        const idsToDeactivate = existing
+          .map(row => Number(row.id))
+          .filter(id => !retainedIds.has(id));
+        if (idsToDeactivate.length) {
+          await tx
+            .update(developmentRequiredDocuments)
+            .set({ isActive: 0 })
+            .where(inArray(developmentRequiredDocuments.id, idsToDeactivate));
+        }
+
+        const rows = await tx
+          .select({
+            id: developmentRequiredDocuments.id,
+            developmentId: developmentRequiredDocuments.developmentId,
+            documentCode: developmentRequiredDocuments.documentCode,
+            documentLabel: developmentRequiredDocuments.documentLabel,
+            isRequired: developmentRequiredDocuments.isRequired,
+            sortOrder: developmentRequiredDocuments.sortOrder,
+            isActive: developmentRequiredDocuments.isActive,
+          })
+          .from(developmentRequiredDocuments)
+          .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
+          .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
+
+        return rows.map(row => ({
+          id: Number(row.id),
+          developmentId: Number(row.developmentId),
+          documentCode: String(row.documentCode),
+          documentLabel: String(row.documentLabel || ''),
+          isRequired: boolFromTinyInt(row.isRequired),
+          sortOrder: Number(row.sortOrder || 0),
+          isActive: boolFromTinyInt(row.isActive),
+        }));
+      });
+
+      return {
+        success: true,
+        developmentId: input.developmentId,
+        documents: result,
+      };
     }),
 
   setProgramActive: superAdminProcedure

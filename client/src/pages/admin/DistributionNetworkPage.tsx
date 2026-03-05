@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { PartnerDevelopmentOnboardingDrawer } from '@/components/admin/distribution/PartnerDevelopmentOnboardingDrawer';
 
 const DEFAULT_SUBMODULE = 'partner-developments';
 
@@ -25,6 +26,7 @@ export default function DistributionNetworkPage() {
   const [brandSearch, setBrandSearch] = useState('');
   const [selectedBrandProfileId, setSelectedBrandProfileId] = useState<number | null>(null);
   const [selectedBrandName, setSelectedBrandName] = useState('');
+  const [onboardingDrawerOpen, setOnboardingDrawerOpen] = useState(false);
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
@@ -81,7 +83,10 @@ export default function DistributionNetworkPage() {
   );
   const teamRegistrationsQuery = trpc.distribution.admin.listTeamRegistrations.useQuery(
     { limit: 200, requestedArea: 'distribution_manager' },
-    { enabled: submoduleSlug === 'distribution-managers' },
+    {
+      enabled:
+        submoduleSlug === 'distribution-managers' || submoduleSlug === 'partner-developments',
+    },
   );
   const brandProfilesQuery = trpc.superAdminPublisher.listBrandProfiles.useQuery(
     {
@@ -168,6 +173,14 @@ export default function DistributionNetworkPage() {
       row => !(Boolean(row.program) || programByDevelopmentId.has(Number(row.developmentId))),
     );
   }, [brandProfileDevelopmentRows, programByDevelopmentId]);
+  const managerOptions = useMemo(() => {
+    return (teamRegistrationsQuery.data || [])
+      .filter((row: any) => row.status === 'approved' && row.userId)
+      .map((row: any) => ({
+        userId: Number(row.userId),
+        label: `${row.fullName || row.email} (${row.email})`,
+      }));
+  }, [teamRegistrationsQuery.data]);
 
   return (
     <div className="space-y-6">
@@ -244,6 +257,7 @@ export default function DistributionNetworkPage() {
                             setSelectedBrandProfileId(Number(brand.id));
                             setSelectedBrandName(String(brand.brandName || 'Brand'));
                             setBrandSearch('');
+                            setOnboardingDrawerOpen(true);
                           }}
                         >
                           {brand.brandName}
@@ -266,9 +280,17 @@ export default function DistributionNetworkPage() {
                         setSelectedBrandProfileId(null);
                         setSelectedBrandName('');
                         setBrandSearch('');
+                        setOnboardingDrawerOpen(false);
                       }}
                     >
                       Clear
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setOnboardingDrawerOpen(true)}
+                    >
+                      Open Onboarding
                     </Button>
                   </div>
                 ) : null}
@@ -372,6 +394,22 @@ export default function DistributionNetworkPage() {
           </CardContent>
         </Card>
       )}
+      <PartnerDevelopmentOnboardingDrawer
+        open={onboardingDrawerOpen}
+        onOpenChange={setOnboardingDrawerOpen}
+        brandProfileId={selectedBrandProfileId}
+        brandProfileName={selectedBrandName}
+        developments={brandProfileDevelopmentRows}
+        isLoading={catalogQuery.isLoading}
+        isError={Boolean(catalogQuery.error)}
+        onRetry={() => {
+          void catalogQuery.refetch();
+        }}
+        managerOptions={managerOptions}
+        onRefreshCatalog={async () => {
+          await Promise.all([catalogQuery.refetch(), programsQuery.refetch()]);
+        }}
+      />
 
       {submoduleSlug === 'distribution-managers' && (
         <div className="grid gap-4 md:grid-cols-2">
