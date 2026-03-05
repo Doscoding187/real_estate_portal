@@ -33,6 +33,7 @@ import {
   ensureDistributionProgramForDevelopment,
   getProgramActivationReadiness,
 } from './services/distributionProgramService';
+import { getProgramReadinessByDevelopmentId } from './services/distributionProgramReadinessService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -377,6 +378,11 @@ async function getActiveAgentAccessForProgram(db: any, programId: number, agentI
 }
 
 async function getPrimaryManagerUserIdForProgram(db: any, programId: number) {
+  const program = await getProgramById(db, programId);
+  if (!program) {
+    return null;
+  }
+
   const [primary] = await db
     .select({
       managerUserId: distributionManagerAssignments.managerUserId,
@@ -384,12 +390,12 @@ async function getPrimaryManagerUserIdForProgram(db: any, programId: number) {
     .from(distributionManagerAssignments)
     .where(
       and(
-        eq(distributionManagerAssignments.programId, programId),
+        eq(distributionManagerAssignments.developmentId, Number(program.developmentId)),
         eq(distributionManagerAssignments.isActive, 1),
         eq(distributionManagerAssignments.isPrimary, 1),
       ),
     )
-    .orderBy(desc(distributionManagerAssignments.updatedAt))
+    .orderBy(desc(distributionManagerAssignments.assignedAt))
     .limit(1);
 
   if (primary?.managerUserId) {
@@ -403,23 +409,28 @@ async function getPrimaryManagerUserIdForProgram(db: any, programId: number) {
     .from(distributionManagerAssignments)
     .where(
       and(
-        eq(distributionManagerAssignments.programId, programId),
+        eq(distributionManagerAssignments.developmentId, Number(program.developmentId)),
         eq(distributionManagerAssignments.isActive, 1),
       ),
     )
-    .orderBy(desc(distributionManagerAssignments.updatedAt))
+    .orderBy(desc(distributionManagerAssignments.assignedAt))
     .limit(1);
 
   return fallback?.managerUserId ? Number(fallback.managerUserId) : null;
 }
 
 async function hasPrimaryActiveManagerAssignment(db: any, programId: number) {
+  const program = await getProgramById(db, programId);
+  if (!program) {
+    return false;
+  }
+
   const [row] = await db
     .select({ assignmentId: distributionManagerAssignments.id })
     .from(distributionManagerAssignments)
     .where(
       and(
-        eq(distributionManagerAssignments.programId, programId),
+        eq(distributionManagerAssignments.developmentId, Number(program.developmentId)),
         eq(distributionManagerAssignments.isPrimary, 1),
         eq(distributionManagerAssignments.isActive, 1),
       ),
@@ -855,12 +866,17 @@ async function assertManagerScope(
     eq(distributionManagerAssignments.isActive, 1),
   ];
 
+  let resolvedDevelopmentId = scope.developmentId;
   if (typeof scope.programId === 'number') {
-    conditions.push(eq(distributionManagerAssignments.programId, scope.programId));
+    const program = await getProgramById(db, scope.programId);
+    if (!program) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution program not found.' });
+    }
+    resolvedDevelopmentId = Number(program.developmentId);
   }
 
-  if (typeof scope.developmentId === 'number') {
-    conditions.push(eq(distributionManagerAssignments.developmentId, scope.developmentId));
+  if (typeof resolvedDevelopmentId === 'number') {
+    conditions.push(eq(distributionManagerAssignments.developmentId, resolvedDevelopmentId));
   }
 
   const [assignment] = await db
@@ -894,6 +910,9 @@ async function listProgramsForAdmin() {
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
       tierAccessPolicy: distributionPrograms.tierAccessPolicy,
+      payoutMilestone: distributionPrograms.payoutMilestone,
+      payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+      currencyCode: distributionPrograms.currencyCode,
       createdAt: distributionPrograms.createdAt,
       updatedAt: distributionPrograms.updatedAt,
     })
@@ -916,6 +935,19 @@ const upsertProgramInput = z.object({
   defaultCommissionPercent: z.number().min(0).max(100).nullable().optional(),
   defaultCommissionAmount: z.number().int().min(0).nullable().optional(),
   tierAccessPolicy: z.enum(['open', 'restricted', 'invite_only']),
+  payoutMilestone: z.enum([
+    'attorney_instruction',
+    'attorney_signing',
+    'bond_approval',
+    'transfer_registration',
+    'occupation',
+    'custom',
+  ]),
+  payoutMilestoneNotes: z.string().max(2000).nullable().optional(),
+  currencyCode: z
+    .string()
+    .length(3)
+    .transform(value => value.toUpperCase()),
 });
 
 async function upsertProgram(
@@ -940,6 +972,8 @@ async function upsertProgram(
       defaultCommissionPercent: toNumberOrNull(input.defaultCommissionPercent),
       defaultCommissionAmount: toNumberOrNull(input.defaultCommissionAmount),
       tierAccessPolicy: input.tierAccessPolicy,
+      payoutMilestone: input.payoutMilestone,
+      currencyCode: input.currencyCode,
       hasPrimaryManager,
     });
 
@@ -961,6 +995,10 @@ async function upsertProgram(
     defaultCommissionAmount:
       input.defaultCommissionAmount === undefined ? null : input.defaultCommissionAmount,
     tierAccessPolicy: input.tierAccessPolicy,
+    payoutMilestone: input.payoutMilestone,
+    payoutMilestoneNotes:
+      input.payoutMilestoneNotes === undefined ? null : input.payoutMilestoneNotes,
+    currencyCode: input.currencyCode,
     updatedBy: ctx.user.id,
   };
 
@@ -1126,7 +1164,7 @@ async function getViewingById(db: any, viewingId: number) {
 
 async function getActiveManagerProgramIdsForUser(db: any, userId: number) {
   const assignments = await db
-    .select({ programId: distributionManagerAssignments.programId })
+    .select({ developmentId: distributionManagerAssignments.developmentId })
     .from(distributionManagerAssignments)
     .where(
       and(
@@ -1135,7 +1173,19 @@ async function getActiveManagerProgramIdsForUser(db: any, userId: number) {
       ),
     );
 
-  return Array.from(new Set<number>(assignments.map(row => Number(row.programId))));
+  const developmentIds = Array.from(
+    new Set<number>(assignments.map(row => Number(row.developmentId)).filter(Boolean)),
+  );
+  if (!developmentIds.length) {
+    return [];
+  }
+
+  const programs = await db
+    .select({ id: distributionPrograms.id })
+    .from(distributionPrograms)
+    .where(inArray(distributionPrograms.developmentId, developmentIds));
+
+  return Array.from(new Set<number>(programs.map(row => Number(row.id)).filter(Boolean)));
 }
 
 const adminDistributionRouter = router({
@@ -1218,6 +1268,9 @@ const adminDistributionRouter = router({
           defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
           defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
           tierAccessPolicy: distributionPrograms.tierAccessPolicy,
+          payoutMilestone: distributionPrograms.payoutMilestone,
+          payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+          currencyCode: distributionPrograms.currencyCode,
           programUpdatedAt: distributionPrograms.updatedAt,
         })
         .from(developments)
@@ -1275,6 +1328,9 @@ const adminDistributionRouter = router({
             defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
             defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
             tierAccessPolicy: distributionPrograms.tierAccessPolicy,
+            payoutMilestone: distributionPrograms.payoutMilestone,
+            payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+            currencyCode: distributionPrograms.currencyCode,
             programUpdatedAt: distributionPrograms.updatedAt,
           })
           .from(developments)
@@ -1336,17 +1392,17 @@ const adminDistributionRouter = router({
             .orderBy(unitTypes.displayOrder, unitTypes.name)
         : [];
 
-      const managerRows = programIds.length
+      const managerRows = developmentIds.length
         ? await db
             .select({
-              programId: distributionManagerAssignments.programId,
+              developmentId: distributionManagerAssignments.developmentId,
               assignmentId: distributionManagerAssignments.id,
               managerUserId: distributionManagerAssignments.managerUserId,
               isPrimary: distributionManagerAssignments.isPrimary,
               isActive: distributionManagerAssignments.isActive,
               workloadCapacity: distributionManagerAssignments.workloadCapacity,
               timezone: distributionManagerAssignments.timezone,
-              updatedAt: distributionManagerAssignments.updatedAt,
+              assignedAt: distributionManagerAssignments.assignedAt,
               managerName: users.name,
               managerFirstName: users.firstName,
               managerLastName: users.lastName,
@@ -1354,8 +1410,8 @@ const adminDistributionRouter = router({
             })
             .from(distributionManagerAssignments)
             .innerJoin(users, eq(distributionManagerAssignments.managerUserId, users.id))
-            .where(inArray(distributionManagerAssignments.programId, programIds))
-            .orderBy(desc(distributionManagerAssignments.updatedAt))
+            .where(inArray(distributionManagerAssignments.developmentId, developmentIds))
+            .orderBy(desc(distributionManagerAssignments.assignedAt))
         : [];
 
       const unitSummaryByDevelopment = new Map<
@@ -1416,7 +1472,7 @@ const adminDistributionRouter = router({
         unitSummaryByDevelopment.set(developmentId, next);
       }
 
-      const managerByProgram = new Map<
+      const managerByDevelopment = new Map<
         number,
         {
           hasPrimaryManager: boolean;
@@ -1429,14 +1485,14 @@ const adminDistributionRouter = router({
             isActive: boolean;
             workloadCapacity: number;
             timezone: string | null;
-            updatedAt: string;
+            assignedAt: string;
           }>;
         }
       >();
       for (const row of managerRows) {
-        const programId = Number(row.programId);
+        const developmentId = Number(row.developmentId);
         const current =
-          managerByProgram.get(programId) ||
+          managerByDevelopment.get(developmentId) ||
           ({
             hasPrimaryManager: false,
             assignments: [],
@@ -1461,11 +1517,11 @@ const adminDistributionRouter = router({
               isActive,
               workloadCapacity: Number(row.workloadCapacity || 0),
               timezone: row.timezone || null,
-              updatedAt: row.updatedAt,
+              assignedAt: row.assignedAt,
             },
           ],
         };
-        managerByProgram.set(programId, next);
+        managerByDevelopment.set(developmentId, next);
       }
 
       return rows.map(row => {
@@ -1478,7 +1534,7 @@ const adminDistributionRouter = router({
         const priceTo = unitSummary?.priceTo ?? fallbackPriceTo;
         const hasProgram = Boolean(row.programId);
         const programId = Number(row.programId || 0);
-        const managerInfo = managerByProgram.get(programId);
+        const managerInfo = managerByDevelopment.get(developmentId);
         const hasPrimaryManager = Boolean(managerInfo?.hasPrimaryManager);
 
         const activationReadiness = hasProgram
@@ -1491,6 +1547,14 @@ const adminDistributionRouter = router({
               defaultCommissionPercent: toNumberOrNull(row.defaultCommissionPercent),
               defaultCommissionAmount: toNumberOrNull(row.defaultCommissionAmount),
               tierAccessPolicy: row.tierAccessPolicy as 'open' | 'restricted' | 'invite_only',
+              payoutMilestone: row.payoutMilestone as
+                | 'attorney_instruction'
+                | 'attorney_signing'
+                | 'bond_approval'
+                | 'transfer_registration'
+                | 'occupation'
+                | 'custom',
+              currencyCode: row.currencyCode ? String(row.currencyCode) : null,
               hasPrimaryManager,
             })
           : null;
@@ -1540,6 +1604,9 @@ const adminDistributionRouter = router({
                 defaultCommissionPercent: toNumberOrNull(row.defaultCommissionPercent),
                 defaultCommissionAmount: toNumberOrNull(row.defaultCommissionAmount),
                 tierAccessPolicy: row.tierAccessPolicy,
+                payoutMilestone: row.payoutMilestone,
+                payoutMilestoneNotes: row.payoutMilestoneNotes,
+                currencyCode: row.currencyCode,
                 updatedAt: row.programUpdatedAt,
                 hasPrimaryManager,
                 managerAssignments: managerInfo?.assignments || [],
@@ -1685,8 +1752,8 @@ const adminDistributionRouter = router({
   setProgramReferralEnabled: superAdminProcedure
     .input(
       z.object({
-        programId: z.number().int().positive(),
-        isReferralEnabled: z.boolean(),
+        developmentId: z.number().int().positive(),
+        enabled: z.boolean(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1694,56 +1761,67 @@ const adminDistributionRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      const [program] = await db
-        .select({
-          id: distributionPrograms.id,
-          commissionModel: distributionPrograms.commissionModel,
-          defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-          defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-          tierAccessPolicy: distributionPrograms.tierAccessPolicy,
-        })
-        .from(distributionPrograms)
-        .where(eq(distributionPrograms.id, input.programId))
-        .limit(1);
+      if (!input.enabled) {
+        await db
+          .update(distributionPrograms)
+          .set({
+            isReferralEnabled: 0,
+            updatedBy: ctx.user.id,
+          })
+          .where(eq(distributionPrograms.developmentId, input.developmentId));
 
-      if (!program) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution program not found.' });
+        return {
+          success: true,
+          developmentId: input.developmentId,
+          enabled: false,
+        };
       }
 
-      const hasPrimaryManager = await hasPrimaryActiveManagerAssignment(db, Number(program.id));
-      const readiness = getProgramActivationReadiness({
-        commissionModel: program.commissionModel as
-          | 'flat_percentage'
-          | 'tiered_percentage'
-          | 'fixed_amount'
-          | 'hybrid',
-        defaultCommissionPercent: toNumberOrNull(program.defaultCommissionPercent),
-        defaultCommissionAmount: toNumberOrNull(program.defaultCommissionAmount),
-        tierAccessPolicy: program.tierAccessPolicy as 'open' | 'restricted' | 'invite_only',
-        hasPrimaryManager,
-      });
-
-      if (input.isReferralEnabled && !readiness.canEnable) {
-        throw new TRPCError({
+      const readiness = await getProgramReadinessByDevelopmentId(input.developmentId);
+      if (!readiness.canEnableReferral) {
+        const error = new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Referral enable blocked: ${readiness.missingRequirements.join(', ')}.`,
-        });
+          message: 'Program is not ready to enable referrals.',
+        }) as TRPCError & {
+          data?: {
+            errorCode: 'PROGRAM_NOT_READY';
+            blockers: typeof readiness.blockers;
+            state: typeof readiness.state;
+          };
+        };
+        error.data = {
+          errorCode: 'PROGRAM_NOT_READY',
+          blockers: readiness.blockers,
+          state: readiness.state,
+        };
+        throw error;
       }
 
       await db
         .update(distributionPrograms)
         .set({
-          isReferralEnabled: input.isReferralEnabled ? 1 : 0,
+          isReferralEnabled: 1,
           updatedBy: ctx.user.id,
         })
-        .where(eq(distributionPrograms.id, input.programId));
+        .where(eq(distributionPrograms.developmentId, input.developmentId));
 
       return {
         success: true,
-        programId: input.programId,
-        isReferralEnabled: input.isReferralEnabled,
-        activationReadiness: readiness,
+        developmentId: input.developmentId,
+        programId: readiness.programId,
+        enabled: true,
       };
+    }),
+
+  getProgramReadiness: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ input }) => {
+      assertDistributionEnabled();
+      return await getProgramReadinessByDevelopmentId(input.developmentId);
     }),
 
   setProgramActive: superAdminProcedure
@@ -1771,10 +1849,16 @@ const adminDistributionRouter = router({
         })
         .where(eq(distributionPrograms.id, input.programId));
 
+      const warnings =
+        input.isActive === true
+          ? (await getProgramReadinessByDevelopmentId(Number(program.developmentId))).blockers
+          : [];
+
       return {
         success: true,
         programId: input.programId,
         isActive: input.isActive,
+        warnings,
       };
     }),
 
@@ -1831,13 +1915,13 @@ const adminDistributionRouter = router({
       await db
         .insert(distributionManagerAssignments)
         .values({
-          programId: input.programId,
           developmentId: program.developmentId,
           managerUserId: input.managerUserId,
           isPrimary: input.isPrimary ? 1 : 0,
           workloadCapacity: input.workloadCapacity,
           timezone: input.timezone ?? null,
           isActive: input.isActive ? 1 : 0,
+          assignedAt: normalizeDateForSql(new Date()),
         })
         .onDuplicateKeyUpdate({
           set: {
@@ -1846,6 +1930,7 @@ const adminDistributionRouter = router({
             workloadCapacity: input.workloadCapacity,
             timezone: input.timezone ?? null,
             isActive: input.isActive ? 1 : 0,
+            assignedAt: normalizeDateForSql(new Date()),
           },
         });
 
@@ -1870,13 +1955,17 @@ const adminDistributionRouter = router({
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
+      const program = await getProgramById(db, input.programId);
+      if (!program) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution program not found.' });
+      }
 
       if (input.hardDelete) {
         await db
           .delete(distributionManagerAssignments)
           .where(
             and(
-              eq(distributionManagerAssignments.programId, input.programId),
+              eq(distributionManagerAssignments.developmentId, Number(program.developmentId)),
               eq(distributionManagerAssignments.managerUserId, input.managerUserId),
             ),
           );
@@ -1891,10 +1980,10 @@ const adminDistributionRouter = router({
 
       await db
         .update(distributionManagerAssignments)
-        .set({ isActive: 0 })
+        .set({ isActive: 0, updatedAt: normalizeDateForSql(new Date()) })
         .where(
           and(
-            eq(distributionManagerAssignments.programId, input.programId),
+            eq(distributionManagerAssignments.developmentId, Number(program.developmentId)),
             eq(distributionManagerAssignments.managerUserId, input.managerUserId),
           ),
         );
@@ -1925,13 +2014,18 @@ const adminDistributionRouter = router({
       if (!db) throw new Error('Database not available');
 
       const conditions: SQL[] = [];
+      let resolvedDevelopmentId = input.developmentId;
 
       if (typeof input.programId === 'number') {
-        conditions.push(eq(distributionManagerAssignments.programId, input.programId));
+        const program = await getProgramById(db, input.programId);
+        if (!program) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution program not found.' });
+        }
+        resolvedDevelopmentId = Number(program.developmentId);
       }
 
-      if (typeof input.developmentId === 'number') {
-        conditions.push(eq(distributionManagerAssignments.developmentId, input.developmentId));
+      if (typeof resolvedDevelopmentId === 'number') {
+        conditions.push(eq(distributionManagerAssignments.developmentId, resolvedDevelopmentId));
       }
 
       if (!input.includeInactive) {
@@ -1941,7 +2035,7 @@ const adminDistributionRouter = router({
       const rows = await db
         .select({
           assignmentId: distributionManagerAssignments.id,
-          programId: distributionManagerAssignments.programId,
+          programId: distributionPrograms.id,
           developmentId: distributionManagerAssignments.developmentId,
           developmentName: developments.name,
           managerUserId: distributionManagerAssignments.managerUserId,
@@ -1960,12 +2054,12 @@ const adminDistributionRouter = router({
         .from(distributionManagerAssignments)
         .innerJoin(
           distributionPrograms,
-          eq(distributionManagerAssignments.programId, distributionPrograms.id),
+          eq(distributionManagerAssignments.developmentId, distributionPrograms.developmentId),
         )
         .innerJoin(developments, eq(distributionManagerAssignments.developmentId, developments.id))
         .innerJoin(users, eq(distributionManagerAssignments.managerUserId, users.id))
         .where(withConditions(conditions))
-        .orderBy(desc(distributionManagerAssignments.updatedAt));
+        .orderBy(desc(distributionManagerAssignments.assignedAt));
 
       return rows.map(row => ({
         assignmentId: row.assignmentId,
@@ -2316,8 +2410,8 @@ const adminDistributionRouter = router({
         rows.flatMap(row => [Number(row.userId || 0), Number(row.reviewedBy || 0)]),
       );
 
-      const registrationUserIds = Array.from(
-        new Set(rows.map(row => Number(row.userId || 0)).filter(id => id > 0)),
+      const registrationUserIds: number[] = Array.from(
+        new Set<number>(rows.map(row => Number(row.userId || 0)).filter(id => id > 0)),
       );
       const managerIdentityByUserId = new Map<number, boolean>();
       if (registrationUserIds.length) {
@@ -3462,7 +3556,7 @@ const managerDistributionRouter = router({
       .select({
         assignmentId: distributionManagerAssignments.id,
         managerUserId: distributionManagerAssignments.managerUserId,
-        programId: distributionManagerAssignments.programId,
+        programId: distributionPrograms.id,
         developmentId: distributionManagerAssignments.developmentId,
         developmentName: developments.name,
         isPrimary: distributionManagerAssignments.isPrimary,
@@ -3474,11 +3568,11 @@ const managerDistributionRouter = router({
       .from(distributionManagerAssignments)
       .innerJoin(
         distributionPrograms,
-        eq(distributionManagerAssignments.programId, distributionPrograms.id),
+        eq(distributionManagerAssignments.developmentId, distributionPrograms.developmentId),
       )
       .innerJoin(developments, eq(distributionManagerAssignments.developmentId, developments.id))
       .where(withConditions(conditions))
-      .orderBy(desc(distributionManagerAssignments.updatedAt));
+      .orderBy(desc(distributionManagerAssignments.assignedAt));
 
     return rows.map(row => ({
       ...row,
@@ -3730,7 +3824,7 @@ const managerDistributionRouter = router({
           .from(distributionManagerAssignments)
           .where(
             and(
-              eq(distributionManagerAssignments.programId, deal.programId),
+              eq(distributionManagerAssignments.developmentId, deal.developmentId),
               eq(distributionManagerAssignments.managerUserId, managerUserId),
               eq(distributionManagerAssignments.isActive, 1),
             ),
@@ -3873,19 +3967,7 @@ const managerDistributionRouter = router({
             developmentId: input.developmentId,
           });
         } else {
-          const assignments = await db
-            .select({ programId: distributionManagerAssignments.programId })
-            .from(distributionManagerAssignments)
-            .where(
-              and(
-                eq(distributionManagerAssignments.managerUserId, ctx.user!.id),
-                eq(distributionManagerAssignments.isActive, 1),
-              ),
-            );
-
-          const scopedProgramIds: number[] = Array.from(
-            new Set(assignments.map(row => Number(row.programId))),
-          );
+          const scopedProgramIds = await getActiveManagerProgramIdsForUser(db, ctx.user!.id);
           if (!scopedProgramIds.length) {
             return [];
           }
@@ -4093,19 +4175,7 @@ const managerDistributionRouter = router({
           developmentId: input.developmentId,
         });
       } else {
-        const assignments = await db
-          .select({ programId: distributionManagerAssignments.programId })
-          .from(distributionManagerAssignments)
-          .where(
-            and(
-              eq(distributionManagerAssignments.managerUserId, ctx.user!.id),
-              eq(distributionManagerAssignments.isActive, 1),
-            ),
-          );
-
-        const scopedProgramIds: number[] = Array.from(
-          new Set(assignments.map(row => Number(row.programId))),
-        );
+        const scopedProgramIds = await getActiveManagerProgramIdsForUser(db, ctx.user!.id);
         if (!scopedProgramIds.length) {
           return [];
         }

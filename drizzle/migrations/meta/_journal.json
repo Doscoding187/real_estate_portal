@@ -36,6 +36,13 @@
       "when": 1772559000000,
       "tag": "0004_30005_add_agents_listing_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772721341100,
+      "tag": "0005_30006_distribution_onboarding_model_refactor",
+      "breakpoints": true
     }
   ]
 }
