@@ -13,6 +13,7 @@ import {
   distributionAgentAccess,
   distributionAgentTiers,
   distributionCommissionEntries,
+  distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
   distributionIdentities,
@@ -35,6 +36,10 @@ import {
   getProgramActivationReadiness,
 } from './services/distributionProgramService';
 import { getProgramReadinessByDevelopmentId } from './services/distributionProgramReadinessService';
+import {
+  getDealChecklist,
+  upsertDealDocumentStatus,
+} from './services/distributionDealDocumentsService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -3749,6 +3754,212 @@ const managerDistributionRouter = router({
       isActive: boolFromTinyInt(row.isActive),
     }));
   }),
+
+  getAssignedDevelopments: protectedProcedure.query(async ({ ctx }) => {
+    assertDistributionEnabled();
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+    const conditions: SQL[] = [eq(distributionManagerAssignments.isActive, 1)];
+    if (ctx.user!.role !== 'super_admin') {
+      conditions.push(eq(distributionManagerAssignments.managerUserId, ctx.user!.id));
+    }
+
+    const rows = await db
+      .select({
+        developmentId: distributionManagerAssignments.developmentId,
+        developmentName: developments.name,
+        city: developments.city,
+        province: developments.province,
+        assignedAt: distributionManagerAssignments.assignedAt,
+        isPrimary: distributionManagerAssignments.isPrimary,
+      })
+      .from(distributionManagerAssignments)
+      .innerJoin(developments, eq(distributionManagerAssignments.developmentId, developments.id))
+      .where(withConditions(conditions))
+      .orderBy(desc(distributionManagerAssignments.assignedAt));
+
+    return rows.map(row => ({
+      developmentId: Number(row.developmentId),
+      developmentName: String(row.developmentName || `Development #${row.developmentId}`),
+      city: row.city || null,
+      province: row.province || null,
+      assignedAt: row.assignedAt,
+      isPrimary: boolFromTinyInt(row.isPrimary),
+    }));
+  }),
+
+  listDealsForDevelopment: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        statusFilter: z.enum(['needs_docs', 'all']).default('needs_docs'),
+        limit: z.number().int().min(1).max(500).default(100),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      if (ctx.user!.role !== 'super_admin') {
+        await assertManagerScope(db, ctx.user!.id, {
+          developmentId: input.developmentId,
+        });
+      }
+
+      const requiredTemplates = await db
+        .select({
+          id: developmentRequiredDocuments.id,
+        })
+        .from(developmentRequiredDocuments)
+        .where(
+          and(
+            eq(developmentRequiredDocuments.developmentId, input.developmentId),
+            eq(developmentRequiredDocuments.isActive, 1),
+            eq(developmentRequiredDocuments.isRequired, 1),
+          ),
+        );
+
+      const requiredTemplateIds = requiredTemplates.map(row => Number(row.id));
+      const requiredCount = requiredTemplateIds.length;
+
+      const dealRows = await db
+        .select({
+          dealId: distributionDeals.id,
+          externalRef: distributionDeals.externalRef,
+          buyerName: distributionDeals.buyerName,
+          createdAt: distributionDeals.createdAt,
+        })
+        .from(distributionDeals)
+        .where(eq(distributionDeals.developmentId, input.developmentId))
+        .orderBy(desc(distributionDeals.createdAt))
+        .limit(input.limit);
+
+      if (!dealRows.length) {
+        return [];
+      }
+
+      const dealIds = dealRows.map(row => Number(row.dealId));
+      const dealDocsRows =
+        dealIds.length && requiredTemplateIds.length
+          ? await db
+              .select({
+                dealId: distributionDealDocuments.dealId,
+                templateId: distributionDealDocuments.developmentRequiredDocumentId,
+                status: distributionDealDocuments.status,
+              })
+              .from(distributionDealDocuments)
+              .where(
+                and(
+                  inArray(distributionDealDocuments.dealId, dealIds),
+                  inArray(
+                    distributionDealDocuments.developmentRequiredDocumentId,
+                    requiredTemplateIds,
+                  ),
+                ),
+              )
+          : [];
+
+      const docStateByDealId = new Map<
+        number,
+        {
+          verifiedTemplateIds: Set<number>;
+          hasRejections: boolean;
+        }
+      >();
+
+      for (const row of dealDocsRows) {
+        const dealId = Number(row.dealId);
+        const templateId = Number(row.templateId);
+        const existing = docStateByDealId.get(dealId) || {
+          verifiedTemplateIds: new Set<number>(),
+          hasRejections: false,
+        };
+        if (row.status === 'verified') {
+          existing.verifiedTemplateIds.add(templateId);
+        }
+        if (row.status === 'rejected') {
+          existing.hasRejections = true;
+        }
+        docStateByDealId.set(dealId, existing);
+      }
+
+      const rows = dealRows
+        .map(row => {
+          const dealId = Number(row.dealId);
+          const docState = docStateByDealId.get(dealId) || {
+            verifiedTemplateIds: new Set<number>(),
+            hasRejections: false,
+          };
+          const verifiedRequiredCount = docState.verifiedTemplateIds.size;
+          const needsDocs =
+            requiredCount === 0 || verifiedRequiredCount < requiredCount || docState.hasRejections;
+
+          return {
+            dealId,
+            dealRef: String(row.externalRef || `DEAL-${dealId}`),
+            buyerName: row.buyerName || null,
+            createdAt: row.createdAt,
+            docs: {
+              requiredCount,
+              verifiedRequiredCount,
+              hasRejections: docState.hasRejections,
+            },
+            needsDocs,
+          };
+        })
+        .filter(row => (input.statusFilter === 'needs_docs' ? row.needsDocs : true))
+        .map(({ needsDocs: _needsDocs, ...row }) => row);
+
+      return rows;
+    }),
+
+  getDealChecklist: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      return await getDealChecklist(input.dealId, ctx.user!.id, {
+        skipAssignmentCheck: ctx.user!.role === 'super_admin',
+      });
+    }),
+
+  updateDealDocumentStatus: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        templateId: z.number().int().positive(),
+        status: z.enum(['pending', 'received', 'verified', 'rejected']),
+        notes: z.string().max(2000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      return await upsertDealDocumentStatus(
+        {
+          dealId: input.dealId,
+          templateId: input.templateId,
+          status: input.status,
+          notes: input.notes,
+        },
+        ctx.user!.id,
+        { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
+      );
+    }),
 
   listAgentsForDevelopment: protectedProcedure
     .input(

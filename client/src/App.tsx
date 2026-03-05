@@ -142,6 +142,15 @@ const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
+const ManagerDevelopmentOpsPage = lazy(
+  () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
+);
+const ManagerDevelopmentDealsPage = lazy(
+  () => import('./pages/distribution/ManagerDevelopmentDealsPage'),
+);
+const ManagerDealChecklistPage = lazy(
+  () => import('./pages/distribution/ManagerDealChecklistPage'),
+);
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
@@ -644,7 +653,19 @@ function Router() {
           <Route path="/dashboard" component={Dashboard} />
 
           <Route path="/agency/dashboard" component={AgencyDashboard} />
-          <Route path="/distribution/manager" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager">
+            <Redirect to="/distribution/manager/developments" />
+          </Route>
+          <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
+          <Route
+            path="/distribution/manager/developments"
+            component={ManagerDevelopmentOpsPage}
+          />
+          <Route
+            path="/distribution/manager/developments/:developmentId"
+            component={ManagerDevelopmentDealsPage}
+          />
+          <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
