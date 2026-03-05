@@ -44,6 +44,11 @@ import {
   getPartnerProgramTermsByDevelopmentId,
   listPartnerProgramTerms,
 } from './services/distributionPartnerTermsService';
+import {
+  createReferralDeal,
+  getMyReferralDeal,
+  listMyReferralDeals,
+} from './services/distributionReferralSubmissionService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -4922,6 +4927,27 @@ const managerDistributionRouter = router({
 });
 
 const partnerDistributionRouter = router({
+  listEligibleDevelopmentsForSubmission: protectedProcedure
+    .input(
+      z
+        .object({
+          brandProfileId: z.number().int().positive().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await listPartnerProgramTerms({
+        brandProfileId: input?.brandProfileId,
+        includeDisabled: false,
+      });
+    }),
+
   listProgramTerms: protectedProcedure
     .input(
       z
@@ -4943,6 +4969,84 @@ const partnerDistributionRouter = router({
         brandProfileId: input?.brandProfileId,
         developmentIds: input?.developmentIds,
         includeDisabled: input?.includeDisabled ?? false,
+      });
+    }),
+
+  submitReferral: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        buyerName: z.string().trim().max(200).optional(),
+        buyerPhone: z.string().trim().max(50).optional(),
+        buyerEmail: z.string().email().max(320).optional(),
+        notes: z.string().max(2000).nullable().optional(),
+        clientReference: z.string().trim().max(100).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await createReferralDeal({
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        developmentId: input.developmentId,
+        buyerName: input.buyerName ?? null,
+        buyerPhone: input.buyerPhone ?? null,
+        buyerEmail: input.buyerEmail ?? null,
+        notes: input.notes ?? null,
+        clientReference: input.clientReference ?? null,
+      });
+    }),
+
+  listMyReferrals: protectedProcedure
+    .input(
+      z
+        .object({
+          status: z.string().trim().max(64).optional(),
+          developmentId: z.number().int().positive().optional(),
+          limit: z.number().int().min(1).max(100).default(20),
+          cursor: z.string().trim().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await listMyReferralDeals({
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        status: input?.status,
+        developmentId: input?.developmentId,
+        limit: input?.limit ?? 20,
+        cursor: input?.cursor,
+      });
+    }),
+
+  getReferral: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await getMyReferralDeal({
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        dealId: input.dealId,
       });
     }),
 

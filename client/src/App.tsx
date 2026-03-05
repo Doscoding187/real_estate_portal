@@ -151,6 +151,15 @@ const ManagerDevelopmentDealsPage = lazy(
 const ManagerDealChecklistPage = lazy(
   () => import('./pages/distribution/ManagerDealChecklistPage'),
 );
+const PartnerSubmitReferralPage = lazy(
+  () => import('./pages/distribution/PartnerSubmitReferralPage'),
+);
+const PartnerMyReferralsPage = lazy(
+  () => import('./pages/distribution/PartnerMyReferralsPage'),
+);
+const PartnerReferralDetailPage = lazy(
+  () => import('./pages/distribution/PartnerReferralDetailPage'),
+);
 const PartnerDevelopmentsPage = lazy(
   () => import('./pages/distribution/PartnerDevelopmentsPage'),
 );
@@ -673,6 +682,12 @@ function Router() {
           <Route
             path="/distribution/partner/developments"
             component={PartnerDevelopmentsPage}
+          />
+          <Route path="/distribution/partner/submit" component={PartnerSubmitReferralPage} />
+          <Route path="/distribution/partner/referrals" component={PartnerMyReferralsPage} />
+          <Route
+            path="/distribution/partner/referrals/:dealId"
+            component={PartnerReferralDetailPage}
           />
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
