@@ -40,6 +40,10 @@ import {
   getDealChecklist,
   upsertDealDocumentStatus,
 } from './services/distributionDealDocumentsService';
+import {
+  getPartnerProgramTermsByDevelopmentId,
+  listPartnerProgramTerms,
+} from './services/distributionPartnerTermsService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -362,6 +366,22 @@ async function assertDistributionIdentity(
       message: `You need an active distribution ${identityType} identity to access this feature.`,
     });
   }
+}
+
+async function assertPartnerTermsAccess(db: any, user: { id: number; role: string }) {
+  if (user.role === 'agent' || user.role === 'agency_admin') {
+    return;
+  }
+
+  const hasReferrerIdentity = await hasActiveDistributionIdentity(db, user.id, 'referrer');
+  if (hasReferrerIdentity) {
+    return;
+  }
+
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message: 'Partner program terms are available to partner and agent accounts only.',
+  });
 }
 
 async function getActiveAgentAccessForProgram(db: any, programId: number, agentId: number) {
@@ -4901,6 +4921,56 @@ const managerDistributionRouter = router({
     }),
 });
 
+const partnerDistributionRouter = router({
+  listProgramTerms: protectedProcedure
+    .input(
+      z
+        .object({
+          brandProfileId: z.number().int().positive().optional(),
+          developmentIds: z.array(z.number().int().positive()).max(200).optional(),
+          includeDisabled: z.boolean().default(false),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await listPartnerProgramTerms({
+        brandProfileId: input?.brandProfileId,
+        developmentIds: input?.developmentIds,
+        includeDisabled: input?.includeDisabled ?? false,
+      });
+    }),
+
+  getProgramTerms: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      const item = await getPartnerProgramTermsByDevelopmentId(input.developmentId);
+      if (!item) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Program terms not found for this development.',
+        });
+      }
+
+      return item;
+    }),
+});
+
 const referrerDistributionRouter = router({
   status: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
@@ -6805,6 +6875,7 @@ export const distributionRouter = router({
 
   admin: adminDistributionRouter,
   manager: managerDistributionRouter,
+  partner: partnerDistributionRouter,
   referrer: referrerDistributionRouter,
   agent: referrerDistributionRouter,
   developer: developerDistributionRouter,

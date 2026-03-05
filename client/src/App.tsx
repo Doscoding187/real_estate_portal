@@ -151,6 +151,9 @@ const ManagerDevelopmentDealsPage = lazy(
 const ManagerDealChecklistPage = lazy(
   () => import('./pages/distribution/ManagerDealChecklistPage'),
 );
+const PartnerDevelopmentsPage = lazy(
+  () => import('./pages/distribution/PartnerDevelopmentsPage'),
+);
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
@@ -667,6 +670,10 @@ function Router() {
           />
           <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
+          <Route
+            path="/distribution/partner/developments"
+            component={PartnerDevelopmentsPage}
+          />
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
           <Route path="/referral/apply">
