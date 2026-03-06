@@ -52,6 +52,7 @@ import {
 import {
   createAffordabilityAssessment,
   exportQualificationPackPdf,
+  exportQualificationPackPdfForReferral,
   getAffordabilityAssessment,
   getAffordabilityMatches,
   requestCreditCheckPlaceholder,
@@ -5033,6 +5034,26 @@ const partnerDistributionRouter = router({
 
       return await exportQualificationPackPdf({
         assessmentId: input.assessmentId,
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        db,
+      });
+    }),
+
+  exportQualificationPackPdfForReferral: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await exportQualificationPackPdfForReferral({
+        dealId: input.dealId,
         actorUserId: Number(ctx.user!.id),
         actorRole: String(ctx.user!.role || ''),
         db,

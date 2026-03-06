@@ -8,6 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
+import { toast } from 'sonner';
+
+function base64ToBlob(base64: string, mimeType: string) {
+  const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+  return new Blob([bytes], { type: mimeType });
+}
 
 export default function PartnerReferralDetailPage() {
   const [match, params] = useRoute('/distribution/partner/referrals/:dealId');
@@ -33,6 +39,25 @@ export default function PartnerReferralDetailPage() {
       retry: false,
     },
   );
+
+  const exportQualificationPackMutation =
+    trpc.distribution.partner.exportQualificationPackPdfForReferral.useMutation({
+      onSuccess: payload => {
+        const blob = base64ToBlob(payload.base64, payload.mimeType);
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = payload.fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        toast.success('Qualification Pack downloaded.');
+      },
+      onError: error => {
+        toast.error(error.message || 'Unable to export qualification pack.');
+      },
+    });
 
   if (loading || referralQuery.isLoading) {
     return (
@@ -69,6 +94,15 @@ export default function PartnerReferralDetailPage() {
     );
   }
 
+  const affordabilityAssumptions = (referral.affordability?.assumptions || null) as
+    | {
+        interestRateAnnual?: number | null;
+        termMonths?: number | null;
+        maxRepaymentRatio?: number | null;
+        calcVersion?: string | null;
+      }
+    | null;
+
   return (
     <div className="min-h-screen bg-slate-50">
       <ListingNavbar />
@@ -90,6 +124,21 @@ export default function PartnerReferralDetailPage() {
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
               Submit Another Referral
             </Button>
+            {referral.matchSnapshotId ? (
+              <Button
+                variant="outline"
+                disabled={exportQualificationPackMutation.isPending}
+                onClick={() =>
+                  exportQualificationPackMutation.mutate({
+                    dealId: Number(referral.dealId),
+                  })
+                }
+              >
+                {exportQualificationPackMutation.isPending
+                  ? 'Preparing Qualification Pack...'
+                  : 'Download Qualification Pack'}
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -115,6 +164,38 @@ export default function PartnerReferralDetailPage() {
                 <span className="text-slate-500">Document progress:</span>{' '}
                 {referral.docProgress.verifiedRequiredCount}/{referral.docProgress.requiredCount}
               </p>
+              {referral.affordability?.purchasePriceEstimate ? (
+                <p>
+                  <span className="text-slate-500">Purchase price estimate:</span> R
+                  {Number(referral.affordability.purchasePriceEstimate).toLocaleString('en-ZA')}
+                </p>
+              ) : null}
+              {affordabilityAssumptions ? (
+                <>
+                  <p>
+                    <span className="text-slate-500">Assumptions:</span>{' '}
+                    {[
+                      affordabilityAssumptions.interestRateAnnual
+                        ? `${affordabilityAssumptions.interestRateAnnual}% interest`
+                        : null,
+                      affordabilityAssumptions.termMonths
+                        ? `${affordabilityAssumptions.termMonths} months`
+                        : null,
+                      affordabilityAssumptions.maxRepaymentRatio
+                        ? `${Math.round(affordabilityAssumptions.maxRepaymentRatio * 100)}% ratio`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' | ') || 'Not available'}
+                  </p>
+                  {affordabilityAssumptions.calcVersion ? (
+                    <p>
+                      <span className="text-slate-500">Calculation version:</span>{' '}
+                      {affordabilityAssumptions.calcVersion}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
               {referral.manager ? (
                 <p>
                   <span className="text-slate-500">Assigned manager:</span>{' '}

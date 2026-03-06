@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { inArray } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+import { eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
 import {
+  affordabilityAssessments,
+  affordabilityMatchSnapshots,
   developmentManagerAssignments,
   developments,
   distributionDealDocuments,
@@ -26,9 +29,15 @@ const createdState = {
   programIds: [] as number[],
   assignmentIds: [] as number[],
   dealIds: [] as number[],
+  assessmentIds: [] as string[],
+  snapshotIds: [] as string[],
 };
 
 function uniqueIds(values: number[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function uniqueStringIds(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
@@ -127,6 +136,62 @@ async function insertManagerAssignment(input: {
   return assignmentId;
 }
 
+async function insertAssessment(input: {
+  actorUserId: number;
+  purchasePrice: number;
+  includeSnapshot?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const id = randomUUID();
+  await db.insert(affordabilityAssessments).values({
+    id,
+    actorUserId: input.actorUserId,
+    grossIncomeMonthly: 50000,
+    deductionsMonthly: 0,
+    depositAmount: 0,
+    assumptionsJson: {
+      interestRateAnnual: 11.75,
+      termMonths: 240,
+      maxRepaymentRatio: 0.3,
+      calcVersion: 'v1',
+    } as any,
+    outputsJson: {
+      maxMonthlyRepayment: 15000,
+      indicativeLoanAmount: input.purchasePrice,
+      indicativePurchaseMin: input.purchasePrice,
+      indicativePurchaseMax: input.purchasePrice,
+      purchasePrice: input.purchasePrice,
+      confidenceLabel: 'Indicative - needs credit verification',
+      confidenceLevel: 'standard',
+    } as any,
+    locationFilterJson: null,
+  });
+  createdState.assessmentIds.push(id);
+
+  let snapshotId: string | null = null;
+  if (input.includeSnapshot) {
+    snapshotId = randomUUID();
+    await db.insert(affordabilityMatchSnapshots).values({
+      id: snapshotId,
+      assessmentId: id,
+      matchesJson: {
+        assessmentId: id,
+        generatedAt: new Date().toISOString(),
+        purchasePrice: input.purchasePrice,
+        matches: [],
+      } as any,
+    });
+    createdState.snapshotIds.push(snapshotId);
+  }
+
+  return {
+    assessmentId: id,
+    matchSnapshotId: snapshotId,
+  };
+}
+
 describeWithDb('distribution.partner.submitReferral integration', () => {
   afterEach(async () => {
     const db = await getDb();
@@ -137,6 +202,16 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       await db.delete(distributionDealDocuments).where(inArray(distributionDealDocuments.dealId, dealIds));
       await db.delete(distributionDealEvents).where(inArray(distributionDealEvents.dealId, dealIds));
       await db.delete(distributionDeals).where(inArray(distributionDeals.id, dealIds));
+    }
+
+    const snapshotIds = uniqueStringIds(createdState.snapshotIds);
+    if (snapshotIds.length) {
+      await db.delete(affordabilityMatchSnapshots).where(inArray(affordabilityMatchSnapshots.id, snapshotIds));
+    }
+
+    const assessmentIds = uniqueStringIds(createdState.assessmentIds);
+    if (assessmentIds.length) {
+      await db.delete(affordabilityAssessments).where(inArray(affordabilityAssessments.id, assessmentIds));
     }
 
     const assignmentIds = uniqueIds(createdState.assignmentIds);
@@ -166,6 +241,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.programIds = [];
     createdState.assignmentIds = [];
     createdState.dealIds = [];
+    createdState.assessmentIds = [];
+    createdState.snapshotIds = [];
   });
 
   it('blocks submission when program is inactive or referrals are disabled', async () => {
@@ -317,6 +394,114 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     expect(Number(second.dealId)).toBe(Number(first.dealId));
     expect(Boolean((second as any).wasDuplicate)).toBe(true);
+  });
+
+  it("blocks attaching another partner's assessmentId", async () => {
+    const ownerUserId = await insertUser('agent');
+    const actorUserId = await insertUser('agent');
+    const caller = createCaller(actorUserId, 'agent');
+
+    const developmentId = await insertDevelopment(`Assessment Ownership ${Date.now()}`);
+    await insertProgram({
+      developmentId,
+      isActive: true,
+      isReferralEnabled: true,
+    });
+
+    const assessment = await insertAssessment({
+      actorUserId: ownerUserId,
+      purchasePrice: 1200000,
+      includeSnapshot: false,
+    });
+
+    const error = (await caller.distribution.partner
+      .submitReferral({
+        developmentId,
+        buyerName: 'Ownership Blocked',
+        assessmentId: assessment.assessmentId,
+      })
+      .catch(err => err)) as TRPCError;
+
+    expect(error).toBeInstanceOf(TRPCError);
+    expect(error.code).toBe('BAD_REQUEST');
+    expect(error.message).toContain('assessmentId is invalid or not accessible');
+  });
+
+  it('attaching assessment creates snapshot when missing and stores lock linkage', async () => {
+    const actorUserId = await insertUser('agent');
+    const caller = createCaller(actorUserId, 'agent');
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const developmentId = await insertDevelopment(`Assessment Attach ${Date.now()}`);
+    await insertProgram({
+      developmentId,
+      isActive: true,
+      isReferralEnabled: true,
+    });
+
+    const assessment = await insertAssessment({
+      actorUserId,
+      purchasePrice: 1350000,
+      includeSnapshot: false,
+    });
+
+    const beforeSnapshots = await db
+      .select({ id: affordabilityMatchSnapshots.id })
+      .from(affordabilityMatchSnapshots)
+      .where(eq(affordabilityMatchSnapshots.assessmentId, assessment.assessmentId));
+    expect(beforeSnapshots.length).toBe(0);
+
+    const result = await caller.distribution.partner.submitReferral({
+      developmentId,
+      buyerName: 'Snapshot Attach Buyer',
+      assessmentId: assessment.assessmentId,
+    });
+    createdState.dealIds.push(Number(result.dealId));
+
+    const [deal] = await db
+      .select({
+        assessmentId: distributionDeals.affordabilityAssessmentId,
+        matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
+        affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, Number(result.dealId)))
+      .limit(1);
+
+    expect(String(deal?.assessmentId || '')).toBe(assessment.assessmentId);
+    expect(String(deal?.matchSnapshotId || '')).not.toBe('');
+    expect(Number(deal?.affordabilityPurchasePrice || 0)).toBeGreaterThan(0);
+
+    const snapshotRows = await db
+      .select({
+        id: affordabilityMatchSnapshots.id,
+      })
+      .from(affordabilityMatchSnapshots)
+      .where(eq(affordabilityMatchSnapshots.assessmentId, assessment.assessmentId));
+    expect(snapshotRows.length).toBe(1);
+    createdState.snapshotIds.push(String(snapshotRows[0].id));
+
+    const [assessmentRow] = await db
+      .select({
+        lockedAt: affordabilityAssessments.lockedAt,
+        lockedByDealId: affordabilityAssessments.lockedByDealId,
+      })
+      .from(affordabilityAssessments)
+      .where(eq(affordabilityAssessments.id, assessment.assessmentId))
+      .limit(1);
+    expect(assessmentRow?.lockedAt).toBeTruthy();
+    expect(Number(assessmentRow?.lockedByDealId || 0)).toBe(Number(result.dealId));
+
+    const affordabilityEvents = await db
+      .select({
+        note: distributionDealEvents.notes,
+      })
+      .from(distributionDealEvents)
+      .where(eq(distributionDealEvents.dealId, Number(result.dealId)));
+    expect(
+      affordabilityEvents.some(event => String(event.note || '').includes('Affordability Snapshot Attached')),
+    ).toBe(true);
   });
 
   it('listMyReferrals returns only the actor own referrals', async () => {

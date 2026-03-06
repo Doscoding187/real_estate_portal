@@ -296,6 +296,9 @@ export const affordabilityAssessments = mysqlTable(
     locationFilterJson: json('location_filter_json'),
     creditCheckConsentGiven: tinyint('credit_check_consent_given').default(0).notNull(),
     creditCheckRequestedAt: timestamp('credit_check_requested_at', { mode: 'string' }),
+    lockedAt: timestamp('locked_at', { mode: 'string' }),
+    lockedByDealId: int('locked_by_deal_id'),
+    lockedByUserId: int('locked_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
@@ -303,6 +306,7 @@ export const affordabilityAssessments = mysqlTable(
     index('idx_affordability_assessments_actor').on(table.actorUserId),
     index('idx_affordability_assessments_created_at').on(table.createdAt),
     index('idx_affordability_assessments_credit_check').on(table.creditCheckConsentGiven),
+    index('idx_affordability_assessments_locked_at').on(table.lockedAt),
   ],
 );
 
@@ -434,6 +438,12 @@ export const distributionDeals = mysqlTable(
       () => affordabilityAssessments.id,
       { onDelete: 'set null' },
     ),
+    affordabilityMatchSnapshotId: varchar('affordability_match_snapshot_id', { length: 36 }).references(
+      () => affordabilityMatchSnapshots.id,
+      { onDelete: 'set null' },
+    ),
+    affordabilityPurchasePrice: int('affordability_purchase_price'),
+    affordabilityAssumptionsJson: json('affordability_assumptions_json'),
     externalRef: varchar('external_ref', { length: 100 }),
     buyerName: varchar('buyer_name', { length: 200 }).notNull(),
     buyerEmail: varchar('buyer_email', { length: 320 }),
@@ -505,6 +515,7 @@ export const distributionDeals = mysqlTable(
     index('idx_distribution_deals_owner').on(table.ownerType, table.ownerId),
     index('idx_distribution_deals_assigned_agent').on(table.assignedAgentId),
     index('idx_distribution_deals_affordability_assessment').on(table.affordabilityAssessmentId),
+    index('idx_distribution_deals_affordability_snapshot').on(table.affordabilityMatchSnapshotId),
     index('idx_distribution_deals_deal_amount').on(table.dealAmount),
     index('idx_distribution_deals_platform_amount').on(table.platformAmount),
   ],

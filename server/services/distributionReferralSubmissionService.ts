@@ -15,6 +15,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { getAffordabilityMatches } from './affordabilityAssessmentService';
 import { getPartnerProgramTermsByDevelopmentId } from './distributionPartnerTermsService';
 
 const DUPLICATE_WINDOW_DAYS = 30;
@@ -61,6 +62,25 @@ function toNumberOrNull(value: unknown) {
 
 function toSqlDateTime(input: Date) {
   return input.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
 }
 
 function normalizePhone(value: string | null | undefined) {
@@ -341,6 +361,8 @@ async function findExistingByClientReference(
       developmentId: distributionDeals.developmentId,
       programId: distributionDeals.programId,
       managerUserId: distributionDeals.managerUserId,
+      assessmentId: distributionDeals.affordabilityAssessmentId,
+      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
       currentStage: distributionDeals.currentStage,
       createdAt: distributionDeals.createdAt,
     })
@@ -444,6 +466,8 @@ export async function createReferralDeal(
         developmentId: Number(existing.developmentId),
         programId: Number(existing.programId),
         managerUserId: toNumberOrNull(existing.managerUserId),
+        assessmentId: existing.assessmentId ? String(existing.assessmentId) : null,
+        matchSnapshotId: existing.matchSnapshotId ? String(existing.matchSnapshotId) : null,
         status: 'submitted',
         createdAt: String(existing.createdAt || ''),
         checklistSeededCount: 0,
@@ -468,27 +492,69 @@ export async function createReferralDeal(
   const buyerPhone = String(input.buyerPhone || '').trim() || null;
   const buyerEmail = String(input.buyerEmail || '').trim() || null;
   const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
+  let assessmentAttachment:
+    | {
+        assessmentId: string;
+        matchSnapshotId: string;
+        purchasePrice: number;
+        assumptionsSummary: {
+          interestRateAnnual: number | null;
+          termMonths: number | null;
+          maxRepaymentRatio: number | null;
+          calcVersion: string | null;
+        };
+      }
+    | null = null;
 
   if (normalizedAssessmentId) {
+    const assessmentConditions: SQL[] = [eq(affordabilityAssessments.id, normalizedAssessmentId)];
+    if (input.actorRole !== 'super_admin') {
+      assessmentConditions.push(eq(affordabilityAssessments.actorUserId, input.actorUserId));
+    }
+
     const [assessment] = await db
       .select({
         id: affordabilityAssessments.id,
+        assumptionsJson: affordabilityAssessments.assumptionsJson,
+        lockedAt: affordabilityAssessments.lockedAt,
+        lockedByDealId: affordabilityAssessments.lockedByDealId,
       })
       .from(affordabilityAssessments)
-      .where(
-        and(
-          eq(affordabilityAssessments.id, normalizedAssessmentId),
-          eq(affordabilityAssessments.actorUserId, input.actorUserId),
-        ),
-      )
+      .where(withConditions(assessmentConditions))
       .limit(1);
 
     if (!assessment?.id) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'assessmentId is invalid or not owned by this partner account.',
+        message: 'assessmentId is invalid or not accessible for this actor.',
       });
     }
+
+    if (assessment.lockedAt && Number(assessment.lockedByDealId || 0) > 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'This affordability assessment is already attached to another referral.',
+      });
+    }
+
+    const snapshot = await getAffordabilityMatches({
+      assessmentId: normalizedAssessmentId,
+      actorUserId: input.actorUserId,
+      actorRole: input.actorRole,
+      db,
+    });
+    const assumptionsJson = parseJsonObject(assessment.assumptionsJson) || {};
+    assessmentAttachment = {
+      assessmentId: normalizedAssessmentId,
+      matchSnapshotId: String(snapshot.matchSnapshotId),
+      purchasePrice: Math.max(0, Math.round(Number(snapshot.purchasePrice || 0))),
+      assumptionsSummary: {
+        interestRateAnnual: toNumberOrNull(assumptionsJson.interestRateAnnual),
+        termMonths: toNumberOrNull(assumptionsJson.termMonths),
+        maxRepaymentRatio: toNumberOrNull(assumptionsJson.maxRepaymentRatio),
+        calcVersion: assumptionsJson.calcVersion ? String(assumptionsJson.calcVersion) : null,
+      },
+    };
   }
 
   const result = await db.transaction(async tx => {
@@ -497,7 +563,10 @@ export async function createReferralDeal(
       developmentId: input.developmentId,
       agentId: input.actorUserId,
       managerUserId,
-      affordabilityAssessmentId: normalizedAssessmentId,
+      affordabilityAssessmentId: assessmentAttachment?.assessmentId || null,
+      affordabilityMatchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
+      affordabilityPurchasePrice: assessmentAttachment?.purchasePrice ?? null,
+      affordabilityAssumptionsJson: assessmentAttachment?.assumptionsSummary as any,
       externalRef: normalizedClientReference,
       buyerName,
       buyerPhone,
@@ -527,10 +596,38 @@ export async function createReferralDeal(
         programId: eligibility.programId,
         developmentId: input.developmentId,
         managerAssigned: managerUserId,
-        assessmentId: normalizedAssessmentId,
+        assessmentId: assessmentAttachment?.assessmentId || null,
+        matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
       } as any,
       notes: input.notes ?? null,
     });
+
+    if (assessmentAttachment) {
+      await tx
+        .update(affordabilityAssessments)
+        .set({
+          lockedAt: toSqlDateTime(new Date()),
+          lockedByDealId: dealId,
+          lockedByUserId: input.actorUserId,
+        })
+        .where(eq(affordabilityAssessments.id, assessmentAttachment.assessmentId));
+
+      await tx.insert(distributionDealEvents).values({
+        dealId,
+        fromStage: null,
+        toStage: 'viewing_scheduled',
+        eventType: 'note',
+        actorUserId: input.actorUserId,
+        metadata: {
+          source: 'partner.attachAssessment',
+          assessmentId: assessmentAttachment.assessmentId,
+          matchSnapshotId: assessmentAttachment.matchSnapshotId,
+          purchasePrice: assessmentAttachment.purchasePrice,
+          assumptions: assessmentAttachment.assumptionsSummary,
+        } as any,
+        notes: 'Affordability Snapshot Attached',
+      });
+    }
 
     const templateIds = await getRequiredTemplateIdsForDevelopment(tx, input.developmentId);
     if (templateIds.length) {
@@ -558,11 +655,12 @@ export async function createReferralDeal(
     return {
       dealId,
       developmentId: Number(createdDeal?.developmentId || input.developmentId),
-        programId: Number(createdDeal?.programId || eligibility.programId),
-        managerUserId: toNumberOrNull(createdDeal?.managerUserId),
-        assessmentId: normalizedAssessmentId,
-        status: 'submitted',
-        createdAt: String(createdDeal?.createdAt || ''),
+      programId: Number(createdDeal?.programId || eligibility.programId),
+      managerUserId: toNumberOrNull(createdDeal?.managerUserId),
+      assessmentId: assessmentAttachment?.assessmentId || null,
+      matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
+      status: 'submitted',
+      createdAt: String(createdDeal?.createdAt || ''),
       checklistSeededCount: templateIds.length,
       wasDuplicate: false,
     };
@@ -686,6 +784,8 @@ export async function listMyReferralDeals(
       developmentName: developments.name,
       programId: distributionDeals.programId,
       assessmentId: distributionDeals.affordabilityAssessmentId,
+      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
+      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
       status: distributionDeals.currentStage,
       createdAt: distributionDeals.createdAt,
     })
@@ -714,6 +814,8 @@ export async function listMyReferralDeals(
       },
       status: String(row.status || 'viewing_scheduled'),
       assessmentId: row.assessmentId ? String(row.assessmentId) : null,
+      matchSnapshotId: row.matchSnapshotId ? String(row.matchSnapshotId) : null,
+      affordabilityPurchasePrice: toNumberOrNull(row.affordabilityPurchasePrice),
       createdAt: row.createdAt,
       docProgress: progressMap.get(Number(row.dealId)) || {
         requiredCount: 0,
@@ -744,6 +846,9 @@ export async function getMyReferralDeal(
       buyerPhone: distributionDeals.buyerPhone,
       status: distributionDeals.currentStage,
       assessmentId: distributionDeals.affordabilityAssessmentId,
+      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
+      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      affordabilityAssumptionsJson: distributionDeals.affordabilityAssumptionsJson,
       managerUserId: distributionDeals.managerUserId,
       managerName: users.name,
       managerFirstName: users.firstName,
@@ -791,6 +896,7 @@ export async function getMyReferralDeal(
       at: distributionDealEvents.eventAt,
       event: distributionDealEvents.eventType,
       note: distributionDealEvents.notes,
+      metadata: distributionDealEvents.metadata,
       actorRole: users.role,
     })
     .from(distributionDealEvents)
@@ -812,6 +918,7 @@ export async function getMyReferralDeal(
     },
     status: String(deal.status || 'viewing_scheduled'),
     assessmentId: deal.assessmentId ? String(deal.assessmentId) : null,
+    matchSnapshotId: deal.matchSnapshotId ? String(deal.matchSnapshotId) : null,
     createdAt: deal.createdAt,
     updatedAt: deal.updatedAt,
     buyer: {
@@ -830,13 +937,25 @@ export async function getMyReferralDeal(
             email: deal.managerEmail || null,
           }
         : null,
+    affordability:
+      deal.assessmentId && deal.matchSnapshotId
+        ? {
+            purchasePriceEstimate: toNumberOrNull(deal.affordabilityPurchasePrice),
+            assumptions: parseJsonObject(deal.affordabilityAssumptionsJson),
+          }
+        : null,
     docProgress,
     programTerms,
-    timeline: events.map(event => ({
-      at: event.at,
-      event: String(event.event || 'system'),
-      byRole: event.actorRole ? String(event.actorRole) : 'system',
-      note: event.note || null,
-    })),
+    timeline: events.map(event => {
+      const metadata = parseJsonObject(event.metadata);
+      const isAssessmentAttachment = metadata?.source === 'partner.attachAssessment';
+      return {
+        at: event.at,
+        event: isAssessmentAttachment ? 'Affordability Snapshot Attached' : String(event.event || 'system'),
+        byRole: event.actorRole ? String(event.actorRole) : 'system',
+        note: event.note || null,
+        metadata,
+      };
+    }),
   };
 }

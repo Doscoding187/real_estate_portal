@@ -6,6 +6,7 @@ import {
   affordabilityMatchSnapshots,
   developerBrandProfiles,
   developments,
+  distributionDeals,
   distributionPrograms,
   qualificationPackExports,
   unitTypes,
@@ -73,6 +74,9 @@ type SerializedAssessmentRecord = {
   locationFilter: AffordabilityLocationFilter | null;
   creditCheckConsentGiven: boolean;
   creditCheckRequestedAt: string | null;
+  lockedAt: string | null;
+  lockedByDealId: number | null;
+  lockedByUserId: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -272,6 +276,9 @@ function serializeAssessmentRow(row: any): SerializedAssessmentRecord {
     locationFilter: parseJsonField<AffordabilityLocationFilter | null>(row.locationFilterJson, null),
     creditCheckConsentGiven: Number(row.creditCheckConsentGiven || 0) === 1,
     creditCheckRequestedAt: row.creditCheckRequestedAt ? String(row.creditCheckRequestedAt) : null,
+    lockedAt: row.lockedAt ? String(row.lockedAt) : null,
+    lockedByDealId: toNumberOrNull(row.lockedByDealId),
+    lockedByUserId: toNumberOrNull(row.lockedByUserId),
     createdAt: String(row.createdAt || ''),
     updatedAt: String(row.updatedAt || row.createdAt || ''),
   };
@@ -308,6 +315,9 @@ async function getAssessmentForActor(
       locationFilterJson: affordabilityAssessments.locationFilterJson,
       creditCheckConsentGiven: affordabilityAssessments.creditCheckConsentGiven,
       creditCheckRequestedAt: affordabilityAssessments.creditCheckRequestedAt,
+      lockedAt: affordabilityAssessments.lockedAt,
+      lockedByDealId: affordabilityAssessments.lockedByDealId,
+      lockedByUserId: affordabilityAssessments.lockedByUserId,
       createdAt: affordabilityAssessments.createdAt,
       updatedAt: affordabilityAssessments.updatedAt,
     })
@@ -648,6 +658,11 @@ export async function getAffordabilityAssessment(input: {
       consentGiven: assessment.creditCheckConsentGiven,
       requestedAt: assessment.creditCheckRequestedAt,
     },
+    lock: {
+      lockedAt: assessment.lockedAt,
+      lockedByDealId: assessment.lockedByDealId,
+      lockedByUserId: assessment.lockedByUserId,
+    },
     disclaimers: [...QUALIFICATION_DISCLAIMER_LINES],
     createdAt: assessment.createdAt,
     updatedAt: assessment.updatedAt,
@@ -881,6 +896,12 @@ export async function requestCreditCheckPlaceholder(input: {
 
   const db = await resolveDbOrThrow(input.db);
   const assessment = await getAssessmentForActor(db, input);
+  if (assessment.lockedAt) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'This affordability assessment has already been attached and is immutable.',
+    });
+  }
   const requestedAt = normalizeDateTimeForSql(new Date());
 
   await db
@@ -938,6 +959,109 @@ export async function exportQualificationPackPdf(input: {
     exportId,
     assessmentId: assessment.id,
     matchSnapshotId: snapshot.matchSnapshotId,
+    mimeType: 'application/pdf',
+    fileName: `qualification-pack-${assessment.id}.pdf`,
+    base64,
+  };
+}
+
+export async function exportQualificationPackPdfForReferral(input: {
+  dealId: number;
+  actorUserId: number;
+  actorRole: string;
+  db?: DbExecutor;
+}) {
+  const db = await resolveDbOrThrow(input.db);
+  const [deal] = await db
+    .select({
+      id: distributionDeals.id,
+      agentId: distributionDeals.agentId,
+      assessmentId: distributionDeals.affordabilityAssessmentId,
+      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
+    })
+    .from(distributionDeals)
+    .where(eq(distributionDeals.id, input.dealId))
+    .limit(1);
+
+  if (!deal) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Referral deal not found.',
+    });
+  }
+
+  if (input.actorRole !== 'super_admin' && Number(deal.agentId) !== Number(input.actorUserId)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You can only export qualification packs for your own referrals.',
+    });
+  }
+
+  const assessmentId = String(deal.assessmentId || '').trim();
+  const matchSnapshotId = String(deal.matchSnapshotId || '').trim();
+  if (!assessmentId || !matchSnapshotId) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'No attached affordability snapshot is available for this referral.',
+    });
+  }
+
+  const assessment = await getAssessmentForActor(db, {
+    assessmentId,
+    actorUserId: input.actorUserId,
+    actorRole: input.actorRole,
+  });
+
+  const [snapshotRow] = await db
+    .select({
+      id: affordabilityMatchSnapshots.id,
+      assessmentId: affordabilityMatchSnapshots.assessmentId,
+      matchesJson: affordabilityMatchSnapshots.matchesJson,
+      createdAt: affordabilityMatchSnapshots.createdAt,
+    })
+    .from(affordabilityMatchSnapshots)
+    .where(
+      and(
+        eq(affordabilityMatchSnapshots.id, matchSnapshotId),
+        eq(affordabilityMatchSnapshots.assessmentId, assessment.id),
+      ),
+    )
+    .limit(1);
+
+  if (!snapshotRow) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Attached affordability match snapshot could not be found.',
+    });
+  }
+
+  const payload = normalizeMatchSnapshotPayload(snapshotRow.matchesJson);
+  const snapshot = {
+    assessmentId: assessment.id,
+    generatedAt: String(snapshotRow.createdAt || payload.generatedAt || new Date().toISOString()),
+    purchasePrice: Number(payload.purchasePrice || assessment.outputs.purchasePrice || 0),
+    matches: Array.isArray(payload.matches) ? (payload.matches as MatchItem[]) : [],
+  };
+
+  const pdfBuffer = buildPdfFromLines(
+    makeQualificationPdfLines({
+      assessment,
+      snapshot,
+    }),
+  );
+  const base64 = pdfBuffer.toString('base64');
+  const exportId = randomUUID();
+  await db.insert(qualificationPackExports).values({
+    id: exportId,
+    assessmentId: assessment.id,
+    matchSnapshotId: matchSnapshotId,
+    pdfBytes: base64,
+  });
+
+  return {
+    exportId,
+    assessmentId: assessment.id,
+    matchSnapshotId,
     mimeType: 'application/pdf',
     fileName: `qualification-pack-${assessment.id}.pdf`,
     base64,
