@@ -1,5 +1,5 @@
 ALTER TABLE `distribution_programs`
-  ADD COLUMN IF NOT EXISTS `payout_milestone` ENUM(
+  ADD COLUMN `payout_milestone` ENUM(
     'attorney_instruction',
     'attorney_signing',
     'bond_approval',
@@ -7,8 +7,8 @@ ALTER TABLE `distribution_programs`
     'occupation',
     'custom'
   ) NOT NULL DEFAULT 'attorney_signing' AFTER `tier_access_policy`,
-  ADD COLUMN IF NOT EXISTS `payout_milestone_notes` text NULL AFTER `payout_milestone`,
-  ADD COLUMN IF NOT EXISTS `currency_code` varchar(3) NOT NULL DEFAULT 'ZAR' AFTER `payout_milestone_notes`;
+  ADD COLUMN `payout_milestone_notes` text NULL AFTER `payout_milestone`,
+  ADD COLUMN `currency_code` varchar(3) NOT NULL DEFAULT 'ZAR' AFTER `payout_milestone_notes`;
 
 UPDATE `distribution_programs`
 SET `currency_code` = UPPER(COALESCE(NULLIF(`currency_code`, ''), 'ZAR'));
