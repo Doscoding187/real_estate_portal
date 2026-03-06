@@ -9,9 +9,11 @@ ALTER TABLE `distribution_programs`
   ) NOT NULL DEFAULT 'attorney_signing' AFTER `tier_access_policy`,
   ADD COLUMN `payout_milestone_notes` text NULL AFTER `payout_milestone`,
   ADD COLUMN `currency_code` varchar(3) NOT NULL DEFAULT 'ZAR' AFTER `payout_milestone_notes`;
+--> statement-breakpoint
 
 UPDATE `distribution_programs`
 SET `currency_code` = UPPER(COALESCE(NULLIF(`currency_code`, ''), 'ZAR'));
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS `development_required_documents` (
   `id` int AUTO_INCREMENT NOT NULL,
@@ -39,15 +41,20 @@ CREATE TABLE IF NOT EXISTS `development_required_documents` (
     FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE cascade,
   CONSTRAINT `ux_development_required_documents_code` UNIQUE(`development_id`, `document_code`)
 );
+--> statement-breakpoint
 
 CREATE INDEX `idx_development_required_documents_development`
   ON `development_required_documents` (`development_id`);
+--> statement-breakpoint
 CREATE INDEX `idx_development_required_documents_required`
   ON `development_required_documents` (`is_required`);
+--> statement-breakpoint
 CREATE INDEX `idx_development_required_documents_active`
   ON `development_required_documents` (`is_active`);
+--> statement-breakpoint
 CREATE INDEX `idx_development_required_documents_order`
   ON `development_required_documents` (`development_id`, `sort_order`);
+--> statement-breakpoint
 
 INSERT INTO `development_required_documents` (
   `development_id`,
@@ -83,6 +90,7 @@ ON DUPLICATE KEY UPDATE
   `is_required` = VALUES(`is_required`),
   `sort_order` = VALUES(`sort_order`),
   `is_active` = VALUES(`is_active`);
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS `distribution_deal_documents` (
   `id` int AUTO_INCREMENT NOT NULL,
@@ -108,15 +116,20 @@ CREATE TABLE IF NOT EXISTS `distribution_deal_documents` (
   CONSTRAINT `ux_distribution_deal_documents_required_document`
     UNIQUE(`deal_id`, `development_required_document_id`)
 );
+--> statement-breakpoint
 
 CREATE INDEX `idx_distribution_deal_documents_deal`
   ON `distribution_deal_documents` (`deal_id`);
+--> statement-breakpoint
 CREATE INDEX `idx_distribution_deal_documents_required_document`
   ON `distribution_deal_documents` (`development_required_document_id`);
+--> statement-breakpoint
 CREATE INDEX `idx_distribution_deal_documents_status`
   ON `distribution_deal_documents` (`status`);
+--> statement-breakpoint
 CREATE INDEX `idx_distribution_deal_documents_updated_at`
   ON `distribution_deal_documents` (`updated_at`);
+--> statement-breakpoint
 
 INSERT INTO `distribution_deal_documents` (
   `deal_id`,
@@ -157,6 +170,7 @@ ON DUPLICATE KEY UPDATE
   `status` = VALUES(`status`),
   `received_at` = VALUES(`received_at`),
   `notes` = VALUES(`notes`);
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS `development_manager_assignments` (
   `id` int AUTO_INCREMENT NOT NULL,
@@ -177,13 +191,17 @@ CREATE TABLE IF NOT EXISTS `development_manager_assignments` (
   CONSTRAINT `ux_development_manager_assignment_development_manager`
     UNIQUE(`development_id`, `manager_user_id`)
 );
+--> statement-breakpoint
 
 CREATE INDEX `idx_development_manager_assignments_manager`
   ON `development_manager_assignments` (`manager_user_id`);
+--> statement-breakpoint
 CREATE INDEX `idx_development_manager_assignments_development`
   ON `development_manager_assignments` (`development_id`);
+--> statement-breakpoint
 CREATE INDEX `idx_development_manager_assignments_active`
   ON `development_manager_assignments` (`is_active`);
+--> statement-breakpoint
 
 INSERT INTO `development_manager_assignments` (
   `development_id`,
@@ -210,7 +228,11 @@ ON DUPLICATE KEY UPDATE
   `timezone` = VALUES(`timezone`),
   `is_active` = VALUES(`is_active`),
   `assigned_at` = VALUES(`assigned_at`);
+--> statement-breakpoint
 
 DROP TABLE IF EXISTS `distribution_deal_document_statuses`;
+--> statement-breakpoint
 DROP TABLE IF EXISTS `distribution_program_required_documents`;
+--> statement-breakpoint
 DROP TABLE IF EXISTS `distribution_manager_assignments`;
+--> statement-breakpoint
