@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
+  affordabilityAssessments,
   developmentManagerAssignments,
   developmentRequiredDocuments,
   developments,
@@ -418,6 +419,7 @@ export async function createReferralDeal(
     buyerEmail?: string | null;
     notes?: string | null;
     clientReference?: string | null;
+    assessmentId?: string | null;
   },
 ) {
   const db = await resolveDb();
@@ -465,6 +467,29 @@ export async function createReferralDeal(
   const buyerName = String(input.buyerName || '').trim() || 'Buyer Pending';
   const buyerPhone = String(input.buyerPhone || '').trim() || null;
   const buyerEmail = String(input.buyerEmail || '').trim() || null;
+  const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
+
+  if (normalizedAssessmentId) {
+    const [assessment] = await db
+      .select({
+        id: affordabilityAssessments.id,
+      })
+      .from(affordabilityAssessments)
+      .where(
+        and(
+          eq(affordabilityAssessments.id, normalizedAssessmentId),
+          eq(affordabilityAssessments.actorUserId, input.actorUserId),
+        ),
+      )
+      .limit(1);
+
+    if (!assessment?.id) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'assessmentId is invalid or not owned by this partner account.',
+      });
+    }
+  }
 
   const result = await db.transaction(async tx => {
     const [insertDealResult] = await tx.insert(distributionDeals).values({
@@ -472,6 +497,7 @@ export async function createReferralDeal(
       developmentId: input.developmentId,
       agentId: input.actorUserId,
       managerUserId,
+      affordabilityAssessmentId: normalizedAssessmentId,
       externalRef: normalizedClientReference,
       buyerName,
       buyerPhone,
@@ -501,6 +527,7 @@ export async function createReferralDeal(
         programId: eligibility.programId,
         developmentId: input.developmentId,
         managerAssigned: managerUserId,
+        assessmentId: normalizedAssessmentId,
       } as any,
       notes: input.notes ?? null,
     });
@@ -531,10 +558,11 @@ export async function createReferralDeal(
     return {
       dealId,
       developmentId: Number(createdDeal?.developmentId || input.developmentId),
-      programId: Number(createdDeal?.programId || eligibility.programId),
-      managerUserId: toNumberOrNull(createdDeal?.managerUserId),
-      status: 'submitted',
-      createdAt: String(createdDeal?.createdAt || ''),
+        programId: Number(createdDeal?.programId || eligibility.programId),
+        managerUserId: toNumberOrNull(createdDeal?.managerUserId),
+        assessmentId: normalizedAssessmentId,
+        status: 'submitted',
+        createdAt: String(createdDeal?.createdAt || ''),
       checklistSeededCount: templateIds.length,
       wasDuplicate: false,
     };
@@ -657,6 +685,7 @@ export async function listMyReferralDeals(
       developmentId: distributionDeals.developmentId,
       developmentName: developments.name,
       programId: distributionDeals.programId,
+      assessmentId: distributionDeals.affordabilityAssessmentId,
       status: distributionDeals.currentStage,
       createdAt: distributionDeals.createdAt,
     })
@@ -684,6 +713,7 @@ export async function listMyReferralDeals(
         name: String(row.developmentName || `Development #${row.developmentId}`),
       },
       status: String(row.status || 'viewing_scheduled'),
+      assessmentId: row.assessmentId ? String(row.assessmentId) : null,
       createdAt: row.createdAt,
       docProgress: progressMap.get(Number(row.dealId)) || {
         requiredCount: 0,
@@ -713,6 +743,7 @@ export async function getMyReferralDeal(
       buyerEmail: distributionDeals.buyerEmail,
       buyerPhone: distributionDeals.buyerPhone,
       status: distributionDeals.currentStage,
+      assessmentId: distributionDeals.affordabilityAssessmentId,
       managerUserId: distributionDeals.managerUserId,
       managerName: users.name,
       managerFirstName: users.firstName,
@@ -780,6 +811,7 @@ export async function getMyReferralDeal(
       province: deal.province || null,
     },
     status: String(deal.status || 'viewing_scheduled'),
+    assessmentId: deal.assessmentId ? String(deal.assessmentId) : null,
     createdAt: deal.createdAt,
     updatedAt: deal.updatedAt,
     buyer: {

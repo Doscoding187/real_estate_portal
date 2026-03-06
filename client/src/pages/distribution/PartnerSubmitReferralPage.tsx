@@ -26,6 +26,7 @@ export default function PartnerSubmitReferralPage() {
   const [buyerEmail, setBuyerEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [clientReference, setClientReference] = useState('');
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [eligibilityBlockers, setEligibilityBlockers] = useState<string[]>([]);
   const [duplicateDealId, setDuplicateDealId] = useState<number | null>(null);
 
@@ -35,6 +36,16 @@ export default function PartnerSubmitReferralPage() {
       setLocation('/login');
     }
   }, [isAuthenticated, loading, setLocation]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const preselectedDevelopmentId = Number(params.get('developmentId') || 0);
+    const preselectedAssessmentId = String(params.get('assessmentId') || '').trim();
+    if (preselectedDevelopmentId > 0) {
+      setSelectedDevelopmentId(preselectedDevelopmentId);
+    }
+    setAssessmentId(preselectedAssessmentId || null);
+  }, []);
 
   const eligibleDevelopmentsQuery =
     trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(undefined, {
@@ -178,6 +189,11 @@ export default function PartnerSubmitReferralPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {assessmentId ? (
+                    <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
+                      This referral will attach affordability assessment <code>{assessmentId}</code>.
+                    </div>
+                  ) : null}
                   <Input
                     placeholder="Buyer full name"
                     value={buyerName}
@@ -253,6 +269,7 @@ export default function PartnerSubmitReferralPage() {
                         buyerEmail: buyerEmail.trim() || undefined,
                         notes: notes.trim() || undefined,
                         clientReference: clientReference.trim() || undefined,
+                        assessmentId: assessmentId || undefined,
                       });
                     }}
                   >

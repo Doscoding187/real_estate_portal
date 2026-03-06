@@ -279,6 +279,70 @@ export const developmentRequiredDocuments = mysqlTable(
 
 export const distributionProgramRequiredDocuments = developmentRequiredDocuments;
 
+export const affordabilityAssessments = mysqlTable(
+  'affordability_assessments',
+  {
+    id: varchar({ length: 36 }).primaryKey(),
+    actorUserId: int('actor_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    subjectName: varchar('subject_name', { length: 200 }),
+    subjectPhone: varchar('subject_phone', { length: 50 }),
+    grossIncomeMonthly: int('gross_income_monthly').notNull(),
+    deductionsMonthly: int('deductions_monthly').default(0).notNull(),
+    depositAmount: int('deposit_amount').default(0).notNull(),
+    assumptionsJson: json('assumptions_json').notNull(),
+    outputsJson: json('outputs_json').notNull(),
+    locationFilterJson: json('location_filter_json'),
+    creditCheckConsentGiven: tinyint('credit_check_consent_given').default(0).notNull(),
+    creditCheckRequestedAt: timestamp('credit_check_requested_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index('idx_affordability_assessments_actor').on(table.actorUserId),
+    index('idx_affordability_assessments_created_at').on(table.createdAt),
+    index('idx_affordability_assessments_credit_check').on(table.creditCheckConsentGiven),
+  ],
+);
+
+export const affordabilityMatchSnapshots = mysqlTable(
+  'affordability_match_snapshots',
+  {
+    id: varchar({ length: 36 }).primaryKey(),
+    assessmentId: varchar('assessment_id', { length: 36 })
+      .notNull()
+      .references(() => affordabilityAssessments.id, { onDelete: 'cascade' }),
+    matchesJson: json('matches_json').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_affordability_match_snapshots_assessment').on(table.assessmentId),
+    index('idx_affordability_match_snapshots_created_at').on(table.createdAt),
+  ],
+);
+
+export const qualificationPackExports = mysqlTable(
+  'qualification_pack_exports',
+  {
+    id: varchar({ length: 36 }).primaryKey(),
+    assessmentId: varchar('assessment_id', { length: 36 })
+      .notNull()
+      .references(() => affordabilityAssessments.id, { onDelete: 'cascade' }),
+    matchSnapshotId: varchar('match_snapshot_id', { length: 36 })
+      .notNull()
+      .references(() => affordabilityMatchSnapshots.id, { onDelete: 'cascade' }),
+    pdfStorageKey: varchar('pdf_storage_key', { length: 500 }),
+    pdfBytes: text('pdf_bytes'),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_qualification_pack_exports_assessment').on(table.assessmentId),
+    index('idx_qualification_pack_exports_snapshot').on(table.matchSnapshotId),
+    index('idx_qualification_pack_exports_created_at').on(table.createdAt),
+  ],
+);
+
 export const distributionAgentAccess = mysqlTable(
   'distribution_agent_access',
   {
@@ -366,6 +430,10 @@ export const distributionDeals = mysqlTable(
       .default('private')
       .notNull(),
     managerUserId: int('manager_user_id').references(() => users.id, { onDelete: 'set null' }),
+    affordabilityAssessmentId: varchar('affordability_assessment_id', { length: 36 }).references(
+      () => affordabilityAssessments.id,
+      { onDelete: 'set null' },
+    ),
     externalRef: varchar('external_ref', { length: 100 }),
     buyerName: varchar('buyer_name', { length: 200 }).notNull(),
     buyerEmail: varchar('buyer_email', { length: 320 }),
@@ -436,6 +504,7 @@ export const distributionDeals = mysqlTable(
     index('idx_distribution_deals_submitted_at').on(table.submittedAt),
     index('idx_distribution_deals_owner').on(table.ownerType, table.ownerId),
     index('idx_distribution_deals_assigned_agent').on(table.assignedAgentId),
+    index('idx_distribution_deals_affordability_assessment').on(table.affordabilityAssessmentId),
     index('idx_distribution_deals_deal_amount').on(table.dealAmount),
     index('idx_distribution_deals_platform_amount').on(table.platformAmount),
   ],

@@ -49,6 +49,13 @@ import {
   getMyReferralDeal,
   listMyReferralDeals,
 } from './services/distributionReferralSubmissionService';
+import {
+  createAffordabilityAssessment,
+  exportQualificationPackPdf,
+  getAffordabilityAssessment,
+  getAffordabilityMatches,
+  requestCreditCheckPlaceholder,
+} from './services/affordabilityAssessmentService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -113,6 +120,21 @@ const TEAM_REGISTRATION_AREA_VALUES = [
 const VIEWING_RESCHEDULE_LIMIT = 3;
 const VIEWING_RESCHEDULE_LOCK_HOURS = 4;
 const DISTRIBUTION_IDENTITY_VALUES = [...DISTRIBUTION_IDENTITY_TYPE_VALUES] as const;
+const AFFORDABILITY_LOCATION_FILTER_SCHEMA = z
+  .object({
+    province: z.string().trim().max(100).optional(),
+    city: z.string().trim().max(100).optional(),
+    suburb: z.string().trim().max(100).optional(),
+    bounds: z
+      .object({
+        north: z.number(),
+        south: z.number(),
+        east: z.number(),
+        west: z.number(),
+      })
+      .optional(),
+  })
+  .optional();
 
 type DistributionDealStage = (typeof DISTRIBUTION_DEAL_STAGE_VALUES)[number];
 type DistributionTier = (typeof DISTRIBUTION_TIER_VALUES)[number];
@@ -4927,6 +4949,118 @@ const managerDistributionRouter = router({
 });
 
 const partnerDistributionRouter = router({
+  createAffordabilityAssessment: protectedProcedure
+    .input(
+      z.object({
+        subjectName: z.string().trim().max(200).optional(),
+        subjectPhone: z.string().trim().max(50).optional(),
+        grossIncomeMonthly: z.number().int().positive(),
+        deductionsMonthly: z.number().int().min(0).default(0),
+        depositAmount: z.number().int().min(0).default(0),
+        locationFilter: AFFORDABILITY_LOCATION_FILTER_SCHEMA,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await createAffordabilityAssessment({
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        subjectName: input.subjectName ?? null,
+        subjectPhone: input.subjectPhone ?? null,
+        grossIncomeMonthly: input.grossIncomeMonthly,
+        deductionsMonthly: input.deductionsMonthly,
+        depositAmount: input.depositAmount,
+        locationFilter: input.locationFilter,
+        db,
+      });
+    }),
+
+  getAffordabilityAssessment: protectedProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await getAffordabilityAssessment({
+        assessmentId: input.assessmentId,
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        db,
+      });
+    }),
+
+  getAffordabilityMatches: protectedProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await getAffordabilityMatches({
+        assessmentId: input.assessmentId,
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        db,
+      });
+    }),
+
+  exportQualificationPackPdf: protectedProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await exportQualificationPackPdf({
+        assessmentId: input.assessmentId,
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        db,
+      });
+    }),
+
+  requestCreditCheckPlaceholder: protectedProcedure
+    .input(
+      z.object({
+        assessmentId: z.string().uuid(),
+        consentGiven: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await requestCreditCheckPlaceholder({
+        assessmentId: input.assessmentId,
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        consentGiven: input.consentGiven,
+        db,
+      });
+    }),
+
   listEligibleDevelopmentsForSubmission: protectedProcedure
     .input(
       z
@@ -4976,6 +5110,7 @@ const partnerDistributionRouter = router({
     .input(
       z.object({
         developmentId: z.number().int().positive(),
+        assessmentId: z.string().uuid().optional(),
         buyerName: z.string().trim().max(200).optional(),
         buyerPhone: z.string().trim().max(50).optional(),
         buyerEmail: z.string().email().max(320).optional(),
@@ -4999,6 +5134,7 @@ const partnerDistributionRouter = router({
         buyerEmail: input.buyerEmail ?? null,
         notes: input.notes ?? null,
         clientReference: input.clientReference ?? null,
+        assessmentId: input.assessmentId ?? null,
       });
     }),
 

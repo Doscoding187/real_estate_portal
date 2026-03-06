@@ -52,6 +52,12 @@ export default function PartnerMyReferralsPage() {
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
               Submit New Referral
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation('/partner/referrals/accelerator')}
+            >
+              Open Referral Accelerator
+            </Button>
             <label className="ml-auto flex items-center gap-2 text-sm">
               Status
               <select

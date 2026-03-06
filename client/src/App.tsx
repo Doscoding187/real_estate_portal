@@ -160,6 +160,9 @@ const PartnerMyReferralsPage = lazy(
 const PartnerReferralDetailPage = lazy(
   () => import('./pages/distribution/PartnerReferralDetailPage'),
 );
+const PartnerReferralAcceleratorPage = lazy(
+  () => import('./pages/distribution/PartnerReferralAcceleratorPage'),
+);
 const PartnerDevelopmentsPage = lazy(
   () => import('./pages/distribution/PartnerDevelopmentsPage'),
 );
@@ -683,6 +686,11 @@ function Router() {
             path="/distribution/partner/developments"
             component={PartnerDevelopmentsPage}
           />
+          <Route
+            path="/distribution/partner/accelerator"
+            component={PartnerReferralAcceleratorPage}
+          />
+          <Route path="/partner/referrals/accelerator" component={PartnerReferralAcceleratorPage} />
           <Route path="/distribution/partner/submit" component={PartnerSubmitReferralPage} />
           <Route path="/distribution/partner/referrals" component={PartnerMyReferralsPage} />
           <Route
