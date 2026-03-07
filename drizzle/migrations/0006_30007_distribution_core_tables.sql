@@ -186,6 +186,7 @@ CREATE TABLE IF NOT EXISTS `distribution_deals` (
   `commission_status` ENUM('not_ready', 'pending', 'approved', 'paid', 'cancelled') NOT NULL DEFAULT 'not_ready',
   `status` ENUM('submitted', 'in_review', 'docs_pending', 'docs_verified', 'rejected', 'payout_ready', 'closed') NOT NULL DEFAULT 'submitted',
   `submitted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `closed_at` timestamp NULL,
   `attribution_locked_at` timestamp NULL,
   `attribution_locked_by` int NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -197,11 +198,14 @@ CREATE TABLE IF NOT EXISTS `distribution_deals` (
   KEY `idx_distribution_deals_agent` (`agent_id`),
   KEY `idx_distribution_deals_manager` (`manager_user_id`),
   KEY `idx_distribution_deals_current_stage` (`current_stage`),
+  KEY `idx_distribution_deals_commission_status` (`commission_status`),
   KEY `idx_distribution_deals_submitted_at` (`submitted_at`),
   KEY `idx_distribution_deals_assigned_agent` (`assigned_agent_id`),
   KEY `idx_distribution_deals_owner` (`owner_type`, `owner_id`),
   KEY `idx_distribution_deals_affordability_assessment` (`affordability_assessment_id`),
-  KEY `idx_distribution_deals_affordability_snapshot` (`affordability_match_snapshot_id`)
+  KEY `idx_distribution_deals_affordability_snapshot` (`affordability_match_snapshot_id`),
+  KEY `idx_distribution_deals_deal_amount` (`deal_amount`),
+  KEY `idx_distribution_deals_platform_amount` (`platform_amount`)
 );
 --> statement-breakpoint
 
