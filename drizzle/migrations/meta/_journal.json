@@ -43,6 +43,13 @@
       "when": 1772721341100,
       "tag": "0005_30006_distribution_onboarding_model_refactor",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772849000000,
+      "tag": "0006_30007_distribution_core_tables",
+      "breakpoints": true
     }
   ]
 }
