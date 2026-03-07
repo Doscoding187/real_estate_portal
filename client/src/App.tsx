@@ -142,6 +142,30 @@ const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
+const ManagerDevelopmentOpsPage = lazy(
+  () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
+);
+const ManagerDevelopmentDealsPage = lazy(
+  () => import('./pages/distribution/ManagerDevelopmentDealsPage'),
+);
+const ManagerDealChecklistPage = lazy(
+  () => import('./pages/distribution/ManagerDealChecklistPage'),
+);
+const PartnerSubmitReferralPage = lazy(
+  () => import('./pages/distribution/PartnerSubmitReferralPage'),
+);
+const PartnerMyReferralsPage = lazy(
+  () => import('./pages/distribution/PartnerMyReferralsPage'),
+);
+const PartnerReferralDetailPage = lazy(
+  () => import('./pages/distribution/PartnerReferralDetailPage'),
+);
+const PartnerReferralAcceleratorPage = lazy(
+  () => import('./pages/distribution/PartnerReferralAcceleratorPage'),
+);
+const PartnerDevelopmentsPage = lazy(
+  () => import('./pages/distribution/PartnerDevelopmentsPage'),
+);
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
@@ -644,8 +668,35 @@ function Router() {
           <Route path="/dashboard" component={Dashboard} />
 
           <Route path="/agency/dashboard" component={AgencyDashboard} />
-          <Route path="/distribution/manager" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager">
+            <Redirect to="/distribution/manager/developments" />
+          </Route>
+          <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
+          <Route
+            path="/distribution/manager/developments"
+            component={ManagerDevelopmentOpsPage}
+          />
+          <Route
+            path="/distribution/manager/developments/:developmentId"
+            component={ManagerDevelopmentDealsPage}
+          />
+          <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
+          <Route
+            path="/distribution/partner/developments"
+            component={PartnerDevelopmentsPage}
+          />
+          <Route
+            path="/distribution/partner/accelerator"
+            component={PartnerReferralAcceleratorPage}
+          />
+          <Route path="/partner/referrals/accelerator" component={PartnerReferralAcceleratorPage} />
+          <Route path="/distribution/partner/submit" component={PartnerSubmitReferralPage} />
+          <Route path="/distribution/partner/referrals" component={PartnerMyReferralsPage} />
+          <Route
+            path="/distribution/partner/referrals/:dealId"
+            component={PartnerReferralDetailPage}
+          />
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
           <Route path="/referral/apply">
