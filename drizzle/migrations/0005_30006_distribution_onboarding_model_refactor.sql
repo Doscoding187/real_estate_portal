@@ -371,4 +371,3 @@ DROP TABLE IF EXISTS `distribution_deal_document_statuses`;
 DROP TABLE IF EXISTS `distribution_program_required_documents`;
 --> statement-breakpoint
 DROP TABLE IF EXISTS `distribution_manager_assignments`;
---> statement-breakpoint
