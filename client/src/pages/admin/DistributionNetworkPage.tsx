@@ -46,8 +46,20 @@ export default function DistributionNetworkPage() {
     }
   }, [location, setLocation]);
 
-  const moduleStatusQuery = trpc.distribution.getModuleStatus.useQuery();
-  const submodulesQuery = trpc.distribution.listSubmodules.useQuery();
+  const distributionQueryStabilityOptions = {
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  } as const;
+
+  const moduleStatusQuery = trpc.distribution.getModuleStatus.useQuery(
+    undefined,
+    distributionQueryStabilityOptions,
+  );
+  const submodulesQuery = trpc.distribution.listSubmodules.useQuery(
+    undefined,
+    distributionQueryStabilityOptions,
+  );
   const catalogQuery = trpc.distribution.admin.listDevelopmentCatalog.useQuery(
     {
       search,
@@ -57,35 +69,38 @@ export default function DistributionNetworkPage() {
       limit: 300,
     },
     {
-      enabled:
-        submoduleSlug === 'partner-developments' || submoduleSlug === 'distribution-managers',
+      ...distributionQueryStabilityOptions,
+      enabled: submoduleSlug === 'partner-developments',
     },
   );
   const dealsQuery = trpc.distribution.admin.listDeals.useQuery(
     { limit: 200 },
-    { enabled: submoduleSlug === 'deal-pipeline' || submoduleSlug === 'viewing-scheduler' },
+    {
+      ...distributionQueryStabilityOptions,
+      enabled: submoduleSlug === 'deal-pipeline' || submoduleSlug === 'viewing-scheduler',
+    },
   );
   const commissionQuery = trpc.distribution.admin.listCommissionEntries.useQuery(
     { limit: 200 },
-    { enabled: submoduleSlug === 'commission-incentives' },
+    { ...distributionQueryStabilityOptions, enabled: submoduleSlug === 'commission-incentives' },
   );
   const tiersQuery = trpc.distribution.admin.listAgentTiers.useQuery(
     { limit: 200 },
-    { enabled: submoduleSlug === 'agent-network' },
+    { ...distributionQueryStabilityOptions, enabled: submoduleSlug === 'agent-network' },
   );
   const accessQuery = trpc.distribution.admin.listAgentAccess.useQuery(
     { limit: 200, includeRevoked: false },
-    { enabled: submoduleSlug === 'agent-network' },
+    { ...distributionQueryStabilityOptions, enabled: submoduleSlug === 'agent-network' },
   );
   const applicationsQuery = trpc.distribution.admin.listReferrerApplications.useQuery(
     { limit: 200 },
-    { enabled: submoduleSlug === 'agent-network' },
+    { ...distributionQueryStabilityOptions, enabled: submoduleSlug === 'agent-network' },
   );
   const teamRegistrationsQuery = trpc.distribution.admin.listTeamRegistrations.useQuery(
     { limit: 200, requestedArea: 'distribution_manager' },
     {
-      enabled:
-        submoduleSlug === 'distribution-managers' || submoduleSlug === 'partner-developments',
+      ...distributionQueryStabilityOptions,
+      enabled: submoduleSlug === 'distribution-managers',
     },
   );
   const brandProfilesQuery = trpc.superAdminPublisher.listBrandProfiles.useQuery(
@@ -94,13 +109,13 @@ export default function DistributionNetworkPage() {
       limit: 20,
     },
     {
-      enabled:
-        submoduleSlug === 'partner-developments' || submoduleSlug === 'distribution-managers',
+      ...distributionQueryStabilityOptions,
+      enabled: submoduleSlug === 'partner-developments',
     },
   );
   const programsQuery = trpc.distribution.admin.listPrograms.useQuery(undefined, {
-    enabled:
-      submoduleSlug === 'partner-developments' || submoduleSlug === 'distribution-managers',
+    ...distributionQueryStabilityOptions,
+    enabled: submoduleSlug === 'partner-developments',
   });
   const ensureProgramMutation = trpc.distribution.admin.ensureProgramForDevelopment.useMutation({
     onSuccess: () => {
