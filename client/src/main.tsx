@@ -26,7 +26,8 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === 'undefined') return;
 
-  const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
+  const isUnauthorized =
+    error.message === UNAUTHED_ERR_MSG || (error as any)?.data?.code === 'UNAUTHORIZED';
 
   if (!isUnauthorized) return;
 
@@ -37,7 +38,9 @@ queryClient.getQueryCache().subscribe(event => {
   if (event.type === 'updated' && event.action.type === 'error') {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error('[API Query Error]', error);
+    console.error('[API Query Error]', (error as Error)?.message, {
+      code: (error as any)?.data?.code,
+    });
   }
 });
 
@@ -58,8 +61,10 @@ queryClient.getMutationCache().subscribe(event => {
 });
 
 // Build marker to confirm exactly which frontend build is running in production
-console.log(`[BUILD_MARKER] main.tsx sha=${__BUILD_GIT_SHA__} builtAt=${__BUILD_TIME__}`);
-console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
+if (import.meta.env.DEV) {
+  console.log(`[BUILD_MARKER] main.tsx sha=${__BUILD_GIT_SHA__} builtAt=${__BUILD_TIME__}`);
+  console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 const TRPC_URL = new URL(
@@ -69,7 +74,9 @@ const TRPC_URL = new URL(
   .toString()
   .replace(/\/api\/api\//, '/api/');
 
-console.log('[tRPC] URL =', TRPC_URL);
+if (import.meta.env.DEV) {
+  console.log('[tRPC] URL =', TRPC_URL);
+}
 
 const links = [
   // Debug link to log tRPC paths
@@ -172,4 +179,6 @@ createRoot(document.getElementById('root')!).render(
 );
 
 // Debug: Ensure all providers are properly initialized
-console.log('[Main] App rendered with TRPC and QueryClient providers');
+if (import.meta.env.DEV) {
+  console.log('[Main] App rendered with TRPC and QueryClient providers');
+}

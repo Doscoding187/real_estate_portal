@@ -93,13 +93,20 @@ async function startServer() {
     'https://propertylistifysa.co.za',
     'http://localhost:3009',
   ];
+  const allowedOriginPatterns = [
+    /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/i,
+    /^https?:\/\/([a-z0-9-]+\.)*propertylistifysa\.co\.za(?::\d+)?$/i,
+    /^https?:\/\/([a-z0-9-]+\.)*vercel\.app(?::\d+)?$/i,
+    /^https?:\/\/([a-z0-9-]+\.)*up\.railway\.app(?::\d+)?$/i,
+  ];
 
   app.use(
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        const isAllowedPattern = allowedOriginPatterns.some(pattern => pattern.test(origin));
+        if (allowedOrigins.includes(origin) || isAllowedPattern) {
           console.log(`✅ CORS: Allowed origin: ${origin}`);
           callback(null, true);
         } else {
@@ -118,6 +125,7 @@ async function startServer() {
   // Apply auth rate limits after CORS so even 429 responses include CORS headers.
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
+  app.use('/api/auth/resend-verification', authLimiter);
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -175,7 +183,16 @@ async function startServer() {
           code: error.code,
           message: error.message,
           stack: error.stack,
-          cause: (error as any).cause,
+          causeMessage:
+            typeof (error as any)?.cause?.message === 'string'
+              ? (error as any).cause.message
+              : typeof (error as any)?.cause?.sqlMessage === 'string'
+                ? (error as any).cause.sqlMessage
+                : typeof (error as any)?.cause === 'string'
+                  ? (error as any).cause
+                  : undefined,
+          causeCode:
+            typeof (error as any)?.cause?.code === 'string' ? (error as any).cause.code : undefined,
         });
       },
     }),
