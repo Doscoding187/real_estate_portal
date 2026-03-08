@@ -242,73 +242,6 @@ function assertDistributionEnabled() {
   }
 }
 
-const DISTRIBUTION_SCHEMA_ERROR_CODES = new Set([
-  'ER_BAD_FIELD_ERROR',
-  'ER_BAD_TABLE_ERROR',
-  'ER_NO_SUCH_TABLE',
-  'ER_UNKNOWN_TABLE',
-]);
-
-function getErrorCause(error: unknown): any {
-  if (!error || typeof error !== 'object') return null;
-  return (error as any).cause ?? null;
-}
-
-function extractSqlErrorCode(error: unknown): string | null {
-  const directCode = error && typeof error === 'object' ? (error as any).code : null;
-  if (typeof directCode === 'string') return directCode;
-
-  const cause = getErrorCause(error);
-  if (cause && typeof cause.code === 'string') return cause.code;
-
-  return null;
-}
-
-function extractSqlErrorMessage(error: unknown): string {
-  const directMessage = error && typeof error === 'object' ? (error as any).message : '';
-  if (typeof directMessage === 'string' && directMessage.trim().length > 0) return directMessage;
-
-  const cause = getErrorCause(error);
-  const causeMessage = cause?.sqlMessage ?? cause?.message;
-  if (typeof causeMessage === 'string' && causeMessage.trim().length > 0) return causeMessage;
-
-  return '';
-}
-
-function isDistributionSchemaError(error: unknown): boolean {
-  const code = extractSqlErrorCode(error);
-  if (!code) return false;
-  if (DISTRIBUTION_SCHEMA_ERROR_CODES.has(code)) return true;
-  const message = extractSqlErrorMessage(error).toLowerCase();
-  return (
-    message.includes('unknown column') ||
-    message.includes('doesn\'t exist') ||
-    message.includes('no such table')
-  );
-}
-
-function isMissingColumnError(error: unknown, columns: string[]): boolean {
-  if (extractSqlErrorCode(error) !== 'ER_BAD_FIELD_ERROR') return false;
-  const message = extractSqlErrorMessage(error).toLowerCase();
-  return columns.some(column => message.includes(column.toLowerCase()));
-}
-
-async function runDistributionDbOperation<T>(operationName: string, operation: () => Promise<T>) {
-  try {
-    return await operation();
-  } catch (error) {
-    if (isDistributionSchemaError(error)) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message:
-          'Distribution module schema is out of date for this environment. Apply latest distribution migrations and retry.',
-        cause: `${operationName}: ${extractSqlErrorMessage(error) || 'schema mismatch'}`,
-      });
-    }
-    throw error;
-  }
-}
-
 function boolFromTinyInt(value: unknown) {
   return Number(value || 0) === 1;
 }
@@ -1015,39 +948,37 @@ async function assertManagerScope(
 }
 
 async function listProgramsForAdmin() {
-  return await runDistributionDbOperation('distribution.admin.listPrograms', async () => {
-    const db = await getDb();
-    if (!db) throw new Error('Database not available');
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
 
-    const rows = await db
-      .select({
-        id: distributionPrograms.id,
-        developmentId: distributionPrograms.developmentId,
-        developmentName: developments.name,
-        city: developments.city,
-        province: developments.province,
-        isActive: distributionPrograms.isActive,
-        isReferralEnabled: distributionPrograms.isReferralEnabled,
-        commissionModel: distributionPrograms.commissionModel,
-        defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-        defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-        tierAccessPolicy: distributionPrograms.tierAccessPolicy,
-        payoutMilestone: distributionPrograms.payoutMilestone,
-        payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
-        currencyCode: distributionPrograms.currencyCode,
-        createdAt: distributionPrograms.createdAt,
-        updatedAt: distributionPrograms.updatedAt,
-      })
-      .from(distributionPrograms)
-      .innerJoin(developments, eq(distributionPrograms.developmentId, developments.id))
-      .orderBy(desc(distributionPrograms.updatedAt));
+  const rows = await db
+    .select({
+      id: distributionPrograms.id,
+      developmentId: distributionPrograms.developmentId,
+      developmentName: developments.name,
+      city: developments.city,
+      province: developments.province,
+      isActive: distributionPrograms.isActive,
+      isReferralEnabled: distributionPrograms.isReferralEnabled,
+      commissionModel: distributionPrograms.commissionModel,
+      defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
+      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+      tierAccessPolicy: distributionPrograms.tierAccessPolicy,
+      payoutMilestone: distributionPrograms.payoutMilestone,
+      payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+      currencyCode: distributionPrograms.currencyCode,
+      createdAt: distributionPrograms.createdAt,
+      updatedAt: distributionPrograms.updatedAt,
+    })
+    .from(distributionPrograms)
+    .innerJoin(developments, eq(distributionPrograms.developmentId, developments.id))
+    .orderBy(desc(distributionPrograms.updatedAt));
 
-    return rows.map(row => ({
-      ...row,
-      isActive: boolFromTinyInt(row.isActive),
-      isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
-    }));
-  });
+  return rows.map(row => ({
+    ...row,
+    isActive: boolFromTinyInt(row.isActive),
+    isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
+  }));
 }
 
 const upsertProgramInput = z.object({
@@ -1174,58 +1105,56 @@ const listDealsInput = z.object({
 });
 
 async function listDeals(input: z.infer<typeof listDealsInput>) {
-  return await runDistributionDbOperation('distribution.admin.listDeals', async () => {
-    const db = await getDb();
-    if (!db) throw new Error('Database not available');
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
 
-    const conditions: SQL[] = [];
+  const conditions: SQL[] = [];
 
-    if (typeof input.developmentId === 'number') {
-      conditions.push(sql`${distributionDeals.developmentId} = ${input.developmentId}`);
-    }
+  if (typeof input.developmentId === 'number') {
+    conditions.push(sql`${distributionDeals.developmentId} = ${input.developmentId}`);
+  }
 
-    if (typeof input.agentId === 'number') {
-      conditions.push(sql`${distributionDeals.agentId} = ${input.agentId}`);
-    }
+  if (typeof input.agentId === 'number') {
+    conditions.push(sql`${distributionDeals.agentId} = ${input.agentId}`);
+  }
 
-    if (input.stage) {
-      conditions.push(sql`${distributionDeals.currentStage} = ${input.stage}`);
-    }
+  if (input.stage) {
+    conditions.push(sql`${distributionDeals.currentStage} = ${input.stage}`);
+  }
 
-    const rows = await db
-      .select({
-        id: distributionDeals.id,
-        developmentId: distributionDeals.developmentId,
-        developmentName: developments.name,
-        agentId: distributionDeals.agentId,
-        currentStage: distributionDeals.currentStage,
-        commissionStatus: distributionDeals.commissionStatus,
-        submittedAt: distributionDeals.submittedAt,
-        updatedAt: distributionDeals.updatedAt,
-      })
-      .from(distributionDeals)
-      .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
-      .where(withConditions(conditions))
-      .orderBy(desc(distributionDeals.updatedAt))
-      .limit(input.limit);
+  const rows = await db
+    .select({
+      id: distributionDeals.id,
+      developmentId: distributionDeals.developmentId,
+      developmentName: developments.name,
+      agentId: distributionDeals.agentId,
+      currentStage: distributionDeals.currentStage,
+      commissionStatus: distributionDeals.commissionStatus,
+      submittedAt: distributionDeals.submittedAt,
+      updatedAt: distributionDeals.updatedAt,
+    })
+    .from(distributionDeals)
+    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
+    .where(withConditions(conditions))
+    .orderBy(desc(distributionDeals.updatedAt))
+    .limit(input.limit);
 
-    const referralSnapshotsByDeal = await getReferralSubmissionSnapshotByDealIds(
-      db,
-      rows.map(row => Number(row.id)),
-    );
+  const referralSnapshotsByDeal = await getReferralSubmissionSnapshotByDealIds(
+    db,
+    rows.map(row => Number(row.id)),
+  );
 
-    const userDirectory = await getUserDirectoryByIds(
-      db,
-      rows.map(row => Number(row.agentId)),
-    );
+  const userDirectory = await getUserDirectoryByIds(
+    db,
+    rows.map(row => Number(row.agentId)),
+  );
 
-    return rows.map(row => ({
-      ...row,
-      agentDisplayName:
-        userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
-      documentsComplete: hasCompleteDocuments(referralSnapshotsByDeal.get(Number(row.id)) || null),
-    }));
-  });
+  return rows.map(row => ({
+    ...row,
+    agentDisplayName:
+      userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
+    documentsComplete: hasCompleteDocuments(referralSnapshotsByDeal.get(Number(row.id)) || null),
+  }));
 }
 
 async function getDealById(db: any, dealId: number) {
@@ -2664,109 +2593,79 @@ const adminDistributionRouter = router({
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation('distribution.admin.listTeamRegistrations', async () => {
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
-        const conditions: SQL[] = [];
-        if (input?.status) {
-          conditions.push(eq(platformTeamRegistrations.status, input.status));
+      const conditions: SQL[] = [];
+      if (input?.status) {
+        conditions.push(eq(platformTeamRegistrations.status, input.status));
+      }
+      if (input?.requestedArea) {
+        conditions.push(eq(platformTeamRegistrations.requestedArea, input.requestedArea));
+      }
+
+      const rows = await db
+        .select({
+          id: platformTeamRegistrations.id,
+          fullName: platformTeamRegistrations.fullName,
+          email: platformTeamRegistrations.email,
+          phone: platformTeamRegistrations.phone,
+          company: platformTeamRegistrations.company,
+          currentRole: platformTeamRegistrations.currentRole,
+          requestedArea: platformTeamRegistrations.requestedArea,
+          notes: platformTeamRegistrations.notes,
+          status: platformTeamRegistrations.status,
+          userId: platformTeamRegistrations.userId,
+          reviewedBy: platformTeamRegistrations.reviewedBy,
+          reviewedAt: platformTeamRegistrations.reviewedAt,
+          reviewNotes: platformTeamRegistrations.reviewNotes,
+          createdAt: platformTeamRegistrations.createdAt,
+          updatedAt: platformTeamRegistrations.updatedAt,
+        })
+        .from(platformTeamRegistrations)
+        .where(withConditions(conditions))
+        .orderBy(desc(platformTeamRegistrations.createdAt))
+        .limit(input?.limit ?? 200);
+
+      const directory = await getUserDirectoryByIds(
+        db,
+        rows.flatMap(row => [Number(row.userId || 0), Number(row.reviewedBy || 0)]),
+      );
+
+      const registrationUserIds: number[] = Array.from(
+        new Set<number>(rows.map(row => Number(row.userId || 0)).filter(id => id > 0)),
+      );
+      const managerIdentityByUserId = new Map<number, boolean>();
+      if (registrationUserIds.length) {
+        const identityRows = await db
+          .select({
+            userId: distributionIdentities.userId,
+            active: distributionIdentities.active,
+          })
+          .from(distributionIdentities)
+          .where(
+            and(
+              inArray(distributionIdentities.userId, registrationUserIds),
+              eq(distributionIdentities.identityType, 'manager'),
+            ),
+          );
+        for (const row of identityRows) {
+          managerIdentityByUserId.set(Number(row.userId), boolFromTinyInt(row.active));
         }
-        if (input?.requestedArea) {
-          conditions.push(eq(platformTeamRegistrations.requestedArea, input.requestedArea));
-        }
+      }
 
-        let rows: any[];
-        try {
-          rows = await db
-            .select({
-              id: platformTeamRegistrations.id,
-              fullName: platformTeamRegistrations.fullName,
-              email: platformTeamRegistrations.email,
-              phone: platformTeamRegistrations.phone,
-              company: platformTeamRegistrations.company,
-              currentRole: platformTeamRegistrations.currentRole,
-              requestedArea: platformTeamRegistrations.requestedArea,
-              notes: platformTeamRegistrations.notes,
-              status: platformTeamRegistrations.status,
-              userId: platformTeamRegistrations.userId,
-              reviewedBy: platformTeamRegistrations.reviewedBy,
-              reviewedAt: platformTeamRegistrations.reviewedAt,
-              reviewNotes: platformTeamRegistrations.reviewNotes,
-              createdAt: platformTeamRegistrations.createdAt,
-              updatedAt: platformTeamRegistrations.updatedAt,
-            })
-            .from(platformTeamRegistrations)
-            .where(withConditions(conditions))
-            .orderBy(desc(platformTeamRegistrations.createdAt))
-            .limit(input?.limit ?? 200);
-        } catch (error) {
-          if (!isMissingColumnError(error, ['company', 'current_role'])) {
-            throw error;
-          }
-
-          const legacyRows = await db
-            .select({
-              id: platformTeamRegistrations.id,
-              fullName: platformTeamRegistrations.fullName,
-              email: platformTeamRegistrations.email,
-              phone: platformTeamRegistrations.phone,
-              requestedArea: platformTeamRegistrations.requestedArea,
-              notes: platformTeamRegistrations.notes,
-              status: platformTeamRegistrations.status,
-              userId: platformTeamRegistrations.userId,
-              reviewedBy: platformTeamRegistrations.reviewedBy,
-              reviewedAt: platformTeamRegistrations.reviewedAt,
-              reviewNotes: platformTeamRegistrations.reviewNotes,
-              createdAt: platformTeamRegistrations.createdAt,
-              updatedAt: platformTeamRegistrations.updatedAt,
-            })
-            .from(platformTeamRegistrations)
-            .where(withConditions(conditions))
-            .orderBy(desc(platformTeamRegistrations.createdAt))
-            .limit(input?.limit ?? 200);
-
-          rows = legacyRows.map(row => ({ ...row, company: null, currentRole: null }));
-        }
-
-        const directory = await getUserDirectoryByIds(
-          db,
-          rows.flatMap(row => [Number(row.userId || 0), Number(row.reviewedBy || 0)]),
-        );
-
-        const registrationUserIds: number[] = Array.from(
-          new Set<number>(rows.map(row => Number(row.userId || 0)).filter(id => id > 0)),
-        );
-        const managerIdentityByUserId = new Map<number, boolean>();
-        if (registrationUserIds.length) {
-          const identityRows = await db
-            .select({
-              userId: distributionIdentities.userId,
-              active: distributionIdentities.active,
-            })
-            .from(distributionIdentities)
-            .where(
-              and(
-                inArray(distributionIdentities.userId, registrationUserIds),
-                eq(distributionIdentities.identityType, 'manager'),
-              ),
-            );
-          for (const row of identityRows) {
-            managerIdentityByUserId.set(Number(row.userId), boolFromTinyInt(row.active));
-          }
-        }
-
-        return rows.map(row => ({
-          ...row,
-          userDisplayName: row.userId ? (directory.get(Number(row.userId))?.displayName ?? null) : null,
-          reviewedByDisplayName: row.reviewedBy
-            ? (directory.get(Number(row.reviewedBy))?.displayName ?? null)
-            : null,
-          managerAccessActive: row.userId
-            ? (managerIdentityByUserId.get(Number(row.userId)) ?? null)
-            : null,
-        }));
-      });
+      return rows.map(row => ({
+        ...row,
+        userDisplayName: row.userId
+          ? (directory.get(Number(row.userId))?.displayName ?? null)
+          : null,
+        reviewedByDisplayName: row.reviewedBy
+          ? (directory.get(Number(row.reviewedBy))?.displayName ?? null)
+          : null,
+        managerAccessActive: row.userId
+          ? (managerIdentityByUserId.get(Number(row.userId)) ?? null)
+          : null,
+      }));
     }),
 
   reviewTeamRegistration: superAdminProcedure
@@ -2885,103 +2784,63 @@ const adminDistributionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation('distribution.admin.createManagerInvite', async () => {
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
-        const normalizedEmail = input.email.trim().toLowerCase();
-        const [existingPending] = await db
-          .select({
-            id: platformTeamRegistrations.id,
-            email: platformTeamRegistrations.email,
-            status: platformTeamRegistrations.status,
-          })
-          .from(platformTeamRegistrations)
-          .where(
-            and(
-              eq(platformTeamRegistrations.email, normalizedEmail),
-              eq(platformTeamRegistrations.requestedArea, 'distribution_manager'),
-              eq(platformTeamRegistrations.status, 'pending'),
-            ),
-          )
-          .limit(1);
+      const normalizedEmail = input.email.trim().toLowerCase();
+      const [existingPending] = await db
+        .select({
+          id: platformTeamRegistrations.id,
+          email: platformTeamRegistrations.email,
+          status: platformTeamRegistrations.status,
+        })
+        .from(platformTeamRegistrations)
+        .where(
+          and(
+            eq(platformTeamRegistrations.email, normalizedEmail),
+            eq(platformTeamRegistrations.requestedArea, 'distribution_manager'),
+            eq(platformTeamRegistrations.status, 'pending'),
+          ),
+        )
+        .limit(1);
 
-        const baseNotes = [input.notes?.trim(), `Invited by user #${ctx.user.id}`]
-          .filter(Boolean)
-          .join('\n');
+      const baseNotes = [input.notes?.trim(), `Invited by user #${ctx.user.id}`]
+        .filter(Boolean)
+        .join('\n');
 
-        if (existingPending) {
-          return {
-            success: true,
-            mode: 'existing_pending' as const,
-            registrationId: Number(existingPending.id),
-            email: normalizedEmail,
-            inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${Number(
-              existingPending.id,
-            )}&email=${encodeURIComponent(normalizedEmail)}`,
-          };
-        }
-
-        let insertResult: unknown;
-        try {
-          [insertResult] = await db.insert(platformTeamRegistrations).values({
-            fullName: input.fullName.trim(),
-            email: normalizedEmail,
-            phone: input.phone?.trim() || null,
-            company: input.company?.trim() || null,
-            currentRole: input.currentRole?.trim() || null,
-            requestedArea: 'distribution_manager',
-            notes: baseNotes || null,
-            status: 'pending',
-          });
-        } catch (error) {
-          if (!isMissingColumnError(error, ['company', 'current_role'])) {
-            throw error;
-          }
-          [insertResult] = await db.insert(platformTeamRegistrations).values({
-            fullName: input.fullName.trim(),
-            email: normalizedEmail,
-            phone: input.phone?.trim() || null,
-            requestedArea: 'distribution_manager',
-            notes: baseNotes || null,
-            status: 'pending',
-          });
-        }
-
-        let registrationId = Number((insertResult as any)?.insertId || 0);
-        if (!registrationId) {
-          const [createdRow] = await db
-            .select({ id: platformTeamRegistrations.id })
-            .from(platformTeamRegistrations)
-            .where(
-              and(
-                eq(platformTeamRegistrations.email, normalizedEmail),
-                eq(platformTeamRegistrations.requestedArea, 'distribution_manager'),
-                eq(platformTeamRegistrations.status, 'pending'),
-              ),
-            )
-            .orderBy(desc(platformTeamRegistrations.id))
-            .limit(1);
-          registrationId = Number(createdRow?.id || 0);
-        }
-
-        if (!registrationId) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Manager invite was created but registration id could not be resolved.',
-          });
-        }
-
+      if (existingPending) {
         return {
           success: true,
-          mode: 'created' as const,
-          registrationId,
+          mode: 'existing_pending' as const,
+          registrationId: Number(existingPending.id),
           email: normalizedEmail,
-          inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${registrationId}&email=${encodeURIComponent(
-            normalizedEmail,
-          )}`,
+          inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${Number(
+            existingPending.id,
+          )}&email=${encodeURIComponent(normalizedEmail)}`,
         };
+      }
+
+      const [insertResult] = await db.insert(platformTeamRegistrations).values({
+        fullName: input.fullName.trim(),
+        email: normalizedEmail,
+        phone: input.phone?.trim() || null,
+        company: input.company?.trim() || null,
+        currentRole: input.currentRole?.trim() || null,
+        requestedArea: 'distribution_manager',
+        notes: baseNotes || null,
+        status: 'pending',
       });
+
+      const registrationId = Number((insertResult as any).insertId || 0);
+      return {
+        success: true,
+        mode: 'created' as const,
+        registrationId,
+        email: normalizedEmail,
+        inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${registrationId}&email=${encodeURIComponent(
+          normalizedEmail,
+        )}`,
+      };
     }),
 
   resendManagerInvite: superAdminProcedure
@@ -2992,58 +2851,56 @@ const adminDistributionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation('distribution.admin.resendManagerInvite', async () => {
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
-        const [registration] = await db
-          .select({
-            id: platformTeamRegistrations.id,
-            email: platformTeamRegistrations.email,
-            requestedArea: platformTeamRegistrations.requestedArea,
-            status: platformTeamRegistrations.status,
-            notes: platformTeamRegistrations.notes,
-          })
-          .from(platformTeamRegistrations)
-          .where(eq(platformTeamRegistrations.id, input.registrationId))
-          .limit(1);
+      const [registration] = await db
+        .select({
+          id: platformTeamRegistrations.id,
+          email: platformTeamRegistrations.email,
+          requestedArea: platformTeamRegistrations.requestedArea,
+          status: platformTeamRegistrations.status,
+          notes: platformTeamRegistrations.notes,
+        })
+        .from(platformTeamRegistrations)
+        .where(eq(platformTeamRegistrations.id, input.registrationId))
+        .limit(1);
 
-        if (!registration) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Manager invite not found.' });
-        }
-        if (registration.requestedArea !== 'distribution_manager') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Registration is not a manager invite.',
-          });
-        }
-        if (registration.status !== 'pending') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `Only pending invites can be resent. Current status: ${registration.status}.`,
-          });
-        }
+      if (!registration) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Manager invite not found.' });
+      }
+      if (registration.requestedArea !== 'distribution_manager') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Registration is not a manager invite.',
+        });
+      }
+      if (registration.status !== 'pending') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Only pending invites can be resent. Current status: ${registration.status}.`,
+        });
+      }
 
-        const resendMarker = `Invite resent by user #${ctx.user.id} at ${new Date().toISOString()}`;
-        const nextNotes = [registration.notes, resendMarker].filter(Boolean).join('\n');
-        await db
-          .update(platformTeamRegistrations)
-          .set({
-            notes: nextNotes,
-            updatedAt: sql`CURRENT_TIMESTAMP`,
-          } as any)
-          .where(eq(platformTeamRegistrations.id, input.registrationId));
+      const resendMarker = `Invite resent by user #${ctx.user.id} at ${new Date().toISOString()}`;
+      const nextNotes = [registration.notes, resendMarker].filter(Boolean).join('\n');
+      await db
+        .update(platformTeamRegistrations)
+        .set({
+          notes: nextNotes,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        } as any)
+        .where(eq(platformTeamRegistrations.id, input.registrationId));
 
-        const normalizedEmail = String(registration.email || '').toLowerCase();
-        return {
-          success: true,
-          registrationId: Number(registration.id),
-          email: normalizedEmail,
-          inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${Number(
-            registration.id,
-          )}&email=${encodeURIComponent(normalizedEmail)}`,
-        };
-      });
+      const normalizedEmail = String(registration.email || '').toLowerCase();
+      return {
+        success: true,
+        registrationId: Number(registration.id),
+        email: normalizedEmail,
+        inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${Number(
+          registration.id,
+        )}&email=${encodeURIComponent(normalizedEmail)}`,
+      };
     }),
 
   setManagerAccess: superAdminProcedure
@@ -7034,61 +6891,44 @@ export const distributionRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      return await runDistributionDbOperation('distribution.submitTeamRegistration', async () => {
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
-        const normalizedEmail = input.email.trim().toLowerCase();
-        const [existingPending] = await db
-          .select({ id: platformTeamRegistrations.id })
-          .from(platformTeamRegistrations)
-          .where(
-            and(
-              eq(platformTeamRegistrations.email, normalizedEmail),
-              eq(platformTeamRegistrations.status, 'pending'),
-            ),
-          )
-          .limit(1);
+      const normalizedEmail = input.email.trim().toLowerCase();
+      const [existingPending] = await db
+        .select({ id: platformTeamRegistrations.id })
+        .from(platformTeamRegistrations)
+        .where(
+          and(
+            eq(platformTeamRegistrations.email, normalizedEmail),
+            eq(platformTeamRegistrations.status, 'pending'),
+          ),
+        )
+        .limit(1);
 
-        if (existingPending) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'A team registration for this email is already pending review.',
-          });
-        }
+      if (existingPending) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'A team registration for this email is already pending review.',
+        });
+      }
 
-        let insertResult: unknown;
-        try {
-          [insertResult] = await db.insert(platformTeamRegistrations).values({
-            fullName: input.fullName.trim(),
-            email: normalizedEmail,
-            phone: input.phone?.trim() || null,
-            company: input.company?.trim() || null,
-            currentRole: input.currentRole?.trim() || null,
-            requestedArea: input.requestedArea,
-            notes: input.notes?.trim() || null,
-            status: 'pending',
-          });
-        } catch (error) {
-          if (!isMissingColumnError(error, ['company', 'current_role'])) {
-            throw error;
-          }
-          [insertResult] = await db.insert(platformTeamRegistrations).values({
-            fullName: input.fullName.trim(),
-            email: normalizedEmail,
-            phone: input.phone?.trim() || null,
-            requestedArea: input.requestedArea,
-            notes: input.notes?.trim() || null,
-            status: 'pending',
-          });
-        }
-
-        return {
-          success: true,
-          registrationId: Number((insertResult as any).insertId || 0),
-          status: 'pending' as const,
-        };
+      const [insertResult] = await db.insert(platformTeamRegistrations).values({
+        fullName: input.fullName.trim(),
+        email: normalizedEmail,
+        phone: input.phone?.trim() || null,
+        company: input.company?.trim() || null,
+        currentRole: input.currentRole?.trim() || null,
+        requestedArea: input.requestedArea,
+        notes: input.notes?.trim() || null,
+        status: 'pending',
       });
+
+      return {
+        success: true,
+        registrationId: Number((insertResult as any).insertId || 0),
+        status: 'pending' as const,
+      };
     }),
 
   getManagerInvite: publicProcedure
@@ -7100,73 +6940,50 @@ export const distributionRouter = router({
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation('distribution.getManagerInvite', async () => {
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
-        const normalizedEmail = input.email.trim().toLowerCase();
-        let registration: any;
-        try {
-          [registration] = await db
-            .select({
-              id: platformTeamRegistrations.id,
-              fullName: platformTeamRegistrations.fullName,
-              email: platformTeamRegistrations.email,
-              phone: platformTeamRegistrations.phone,
-              company: platformTeamRegistrations.company,
-              currentRole: platformTeamRegistrations.currentRole,
-              requestedArea: platformTeamRegistrations.requestedArea,
-              status: platformTeamRegistrations.status,
-              createdAt: platformTeamRegistrations.createdAt,
-            })
-            .from(platformTeamRegistrations)
-            .where(eq(platformTeamRegistrations.id, input.registrationId))
-            .limit(1);
-        } catch (error) {
-          if (!isMissingColumnError(error, ['company', 'current_role'])) {
-            throw error;
-          }
-          const [legacyRegistration] = await db
-            .select({
-              id: platformTeamRegistrations.id,
-              fullName: platformTeamRegistrations.fullName,
-              email: platformTeamRegistrations.email,
-              phone: platformTeamRegistrations.phone,
-              requestedArea: platformTeamRegistrations.requestedArea,
-              status: platformTeamRegistrations.status,
-              createdAt: platformTeamRegistrations.createdAt,
-            })
-            .from(platformTeamRegistrations)
-            .where(eq(platformTeamRegistrations.id, input.registrationId))
-            .limit(1);
-          registration = legacyRegistration ? { ...legacyRegistration, company: null, currentRole: null } : null;
-        }
+      const normalizedEmail = input.email.trim().toLowerCase();
+      const [registration] = await db
+        .select({
+          id: platformTeamRegistrations.id,
+          fullName: platformTeamRegistrations.fullName,
+          email: platformTeamRegistrations.email,
+          phone: platformTeamRegistrations.phone,
+          company: platformTeamRegistrations.company,
+          currentRole: platformTeamRegistrations.currentRole,
+          requestedArea: platformTeamRegistrations.requestedArea,
+          status: platformTeamRegistrations.status,
+          createdAt: platformTeamRegistrations.createdAt,
+        })
+        .from(platformTeamRegistrations)
+        .where(eq(platformTeamRegistrations.id, input.registrationId))
+        .limit(1);
 
-        if (!registration) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Manager invite not found.' });
-        }
-        if (registration.requestedArea !== 'distribution_manager') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Invite is not for a distribution manager.',
-          });
-        }
-        if ((registration.email || '').toLowerCase() !== normalizedEmail) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Invite email does not match.' });
-        }
+      if (!registration) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Manager invite not found.' });
+      }
+      if (registration.requestedArea !== 'distribution_manager') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invite is not for a distribution manager.',
+        });
+      }
+      if ((registration.email || '').toLowerCase() !== normalizedEmail) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Invite email does not match.' });
+      }
 
-        return {
-          id: Number(registration.id),
-          fullName: registration.fullName || '',
-          email: registration.email,
-          phone: registration.phone || '',
-          company: registration.company || '',
-          currentRole: registration.currentRole || '',
-          status: registration.status,
-          canComplete: registration.status === 'pending',
-          createdAt: registration.createdAt,
-        };
-      });
+      return {
+        id: Number(registration.id),
+        fullName: registration.fullName || '',
+        email: registration.email,
+        phone: registration.phone || '',
+        company: registration.company || '',
+        currentRole: registration.currentRole || '',
+        status: registration.status,
+        canComplete: registration.status === 'pending',
+        createdAt: registration.createdAt,
+      };
     }),
 
   completeManagerInviteRegistration: publicProcedure
@@ -7189,156 +7006,132 @@ export const distributionRouter = router({
     )
     .mutation(async ({ input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation(
-        'distribution.completeManagerInviteRegistration',
-        async () => {
-          const db = await getDb();
-          if (!db) throw new Error('Database not available');
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
-          const normalizedEmail = input.email.trim().toLowerCase();
-          const [registration] = await db
-            .select({
-              id: platformTeamRegistrations.id,
-              email: platformTeamRegistrations.email,
-              requestedArea: platformTeamRegistrations.requestedArea,
-              status: platformTeamRegistrations.status,
-              notes: platformTeamRegistrations.notes,
-            })
-            .from(platformTeamRegistrations)
-            .where(eq(platformTeamRegistrations.id, input.registrationId))
-            .limit(1);
+      const normalizedEmail = input.email.trim().toLowerCase();
+      const [registration] = await db
+        .select({
+          id: platformTeamRegistrations.id,
+          email: platformTeamRegistrations.email,
+          requestedArea: platformTeamRegistrations.requestedArea,
+          status: platformTeamRegistrations.status,
+          notes: platformTeamRegistrations.notes,
+        })
+        .from(platformTeamRegistrations)
+        .where(eq(platformTeamRegistrations.id, input.registrationId))
+        .limit(1);
 
-          if (!registration) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Manager invite not found.' });
-          }
-          if (registration.requestedArea !== 'distribution_manager') {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Invite is not for a distribution manager.',
-            });
-          }
-          if ((registration.email || '').toLowerCase() !== normalizedEmail) {
-            throw new TRPCError({ code: 'FORBIDDEN', message: 'Invite email does not match.' });
-          }
-          if (registration.status !== 'pending') {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: `Invite is already ${registration.status}.`,
-            });
-          }
+      if (!registration) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Manager invite not found.' });
+      }
+      if (registration.requestedArea !== 'distribution_manager') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invite is not for a distribution manager.',
+        });
+      }
+      if ((registration.email || '').toLowerCase() !== normalizedEmail) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Invite email does not match.' });
+      }
+      if (registration.status !== 'pending') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Invite is already ${registration.status}.`,
+        });
+      }
 
-          const [existingUser] = await db
-            .select({
-              id: users.id,
-              email: users.email,
-              passwordHash: users.passwordHash,
-            })
-            .from(users)
-            .where(eq(users.email, normalizedEmail))
-            .limit(1);
+      const [existingUser] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          passwordHash: users.passwordHash,
+        })
+        .from(users)
+        .where(eq(users.email, normalizedEmail))
+        .limit(1);
 
-          let userId: number;
-          if (existingUser) {
-            userId = Number(existingUser.id);
-            const { firstName, lastName } = splitFullName(input.fullName);
-            const updatePayload: Record<string, unknown> = {
-              name: input.fullName.trim(),
-              firstName,
-              lastName,
-              phone: input.phone?.trim() || null,
-              emailVerified: 1,
-            };
-            if (!existingUser.passwordHash) {
-              updatePayload.passwordHash = await authService.hashPassword(input.password);
-            }
-            await db
-              .update(users)
-              .set(updatePayload as any)
-              .where(eq(users.id, userId));
-          } else {
-            userId = await authService.register(
-              normalizedEmail,
-              input.password,
-              input.fullName.trim(),
-              'visitor',
-            );
-            const { firstName, lastName } = splitFullName(input.fullName);
-            await db
-              .update(users)
-              .set({
-                name: input.fullName.trim(),
-                firstName,
-                lastName,
-                phone: input.phone?.trim() || null,
-                emailVerified: 1,
-              } as any)
-              .where(eq(users.id, userId));
-          }
+      let userId: number;
+      if (existingUser) {
+        userId = Number(existingUser.id);
+        const { firstName, lastName } = splitFullName(input.fullName);
+        const updatePayload: Record<string, unknown> = {
+          name: input.fullName.trim(),
+          firstName,
+          lastName,
+          phone: input.phone?.trim() || null,
+          emailVerified: 1,
+        };
+        if (!existingUser.passwordHash) {
+          updatePayload.passwordHash = await authService.hashPassword(input.password);
+        }
+        await db
+          .update(users)
+          .set(updatePayload as any)
+          .where(eq(users.id, userId));
+      } else {
+        userId = await authService.register(
+          normalizedEmail,
+          input.password,
+          input.fullName.trim(),
+          'visitor',
+        );
+        const { firstName, lastName } = splitFullName(input.fullName);
+        await db
+          .update(users)
+          .set({
+            name: input.fullName.trim(),
+            firstName,
+            lastName,
+            phone: input.phone?.trim() || null,
+            emailVerified: 1,
+          } as any)
+          .where(eq(users.id, userId));
+      }
 
-          await db
-            .insert(distributionIdentities)
-            .values({
-              userId,
-              identityType: 'manager',
-              active: 1,
-              displayName: input.fullName.trim(),
-            })
-            .onDuplicateKeyUpdate({
-              set: {
-                active: 1,
-                displayName: input.fullName.trim(),
-              },
-            });
+      await db
+        .insert(distributionIdentities)
+        .values({
+          userId,
+          identityType: 'manager',
+          active: 1,
+          displayName: input.fullName.trim(),
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            active: 1,
+            displayName: input.fullName.trim(),
+          },
+        });
 
-          const registrationNotes = [
-            registration.notes,
-            input.profileImageUrl ? `Manager profile image: ${input.profileImageUrl}` : null,
-          ]
-            .filter(Boolean)
-            .join('\n')
-            .trim();
+      const registrationNotes = [
+        registration.notes,
+        input.profileImageUrl ? `Manager profile image: ${input.profileImageUrl}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n')
+        .trim();
 
-          try {
-            await db
-              .update(platformTeamRegistrations)
-              .set({
-                fullName: input.fullName.trim(),
-                phone: input.phone?.trim() || null,
-                currentRole: input.currentRole?.trim() || null,
-                notes: registrationNotes || null,
-                status: 'approved',
-                userId,
-                reviewedAt: sql`CURRENT_TIMESTAMP`,
-                reviewNotes: 'Approved via manager invite completion.',
-              })
-              .where(eq(platformTeamRegistrations.id, input.registrationId));
-          } catch (error) {
-            if (!isMissingColumnError(error, ['current_role'])) {
-              throw error;
-            }
+      await db
+        .update(platformTeamRegistrations)
+        .set({
+          fullName: input.fullName.trim(),
+          phone: input.phone?.trim() || null,
+          currentRole: input.currentRole?.trim() || null,
+          notes: registrationNotes || null,
+          status: 'approved',
+          userId,
+          reviewedAt: sql`CURRENT_TIMESTAMP`,
+          reviewNotes: 'Approved via manager invite completion.',
+        })
+        .where(eq(platformTeamRegistrations.id, input.registrationId));
 
-            await db
-              .update(platformTeamRegistrations)
-              .set({
-                fullName: input.fullName.trim(),
-                phone: input.phone?.trim() || null,
-                notes: registrationNotes || null,
-                status: 'approved',
-                userId,
-                reviewedAt: sql`CURRENT_TIMESTAMP`,
-                reviewNotes: 'Approved via manager invite completion.',
-              })
-              .where(eq(platformTeamRegistrations.id, input.registrationId));
-          }
-
-          return {
-            success: true,
-            registrationId: input.registrationId,
-            userId,
-            redirectPath: '/login',
-          };
-        },
-      );
+      return {
+        success: true,
+        registrationId: input.registrationId,
+        userId,
+        redirectPath: '/login',
+      };
     }),
 
   admin: adminDistributionRouter,
