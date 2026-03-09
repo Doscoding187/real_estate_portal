@@ -57,6 +57,11 @@ import {
   getAffordabilityMatches,
   requestCreditCheckPlaceholder,
 } from './services/affordabilityAssessmentService';
+import {
+  getDistributionSchemaReadinessSnapshot,
+  type DistributionSchemaOperation,
+  warnSchemaCapabilityOnce,
+} from './services/runtimeSchemaCapabilities';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -240,6 +245,105 @@ function assertDistributionEnabled() {
         'Distribution Network is disabled. Set FEATURE_DISTRIBUTION_NETWORK=true to enable this module.',
     });
   }
+}
+
+const DISTRIBUTION_SCHEMA_ERROR_CODES = new Set([
+  'ER_NO_SUCH_TABLE',
+  'ER_BAD_FIELD_ERROR',
+  'ER_DUP_FIELDNAME',
+  'ER_CANT_DROP_FIELD_OR_KEY',
+  'ER_EMPTY_QUERY',
+  'ER_BAD_DB_ERROR',
+  'ER_PARSE_ERROR',
+  'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+  'ER_WRONG_VALUE_FOR_TYPE',
+  'ER_INVALID_DEFAULT',
+]);
+
+function extractSqlErrorCode(error: unknown): string | null {
+  const visited = new Set<unknown>();
+  let cursor: any = error;
+  while (cursor && typeof cursor === 'object' && !visited.has(cursor)) {
+    visited.add(cursor);
+    const code = String(cursor?.code || '').trim();
+    if (code.startsWith('ER_')) {
+      return code;
+    }
+    cursor = cursor?.cause;
+  }
+  return null;
+}
+
+function extractSqlErrorMessage(error: unknown): string {
+  const visited = new Set<unknown>();
+  let cursor: any = error;
+  while (cursor && typeof cursor === 'object' && !visited.has(cursor)) {
+    visited.add(cursor);
+    const message = String(cursor?.sqlMessage || cursor?.message || '').trim();
+    if (message) {
+      return message;
+    }
+    cursor = cursor?.cause;
+  }
+  return '';
+}
+
+function isDistributionSchemaError(error: unknown) {
+  const code = extractSqlErrorCode(error);
+  if (code && DISTRIBUTION_SCHEMA_ERROR_CODES.has(code)) {
+    return true;
+  }
+
+  const message = extractSqlErrorMessage(error).toLowerCase();
+  if (!message) return false;
+
+  return (
+    message.includes("doesn't exist") ||
+    message.includes('unknown column') ||
+    message.includes('unknown table') ||
+    (message.includes('table') && message.includes('missing')) ||
+    message.includes('query was empty') ||
+    (message.includes('column') && message.includes('not found'))
+  );
+}
+
+async function runDistributionDbOperation<T>(operation: string, runner: () => Promise<T>): Promise<T> {
+  try {
+    return await runner();
+  } catch (error) {
+    if (isDistributionSchemaError(error)) {
+      const dbCode = extractSqlErrorCode(error);
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `DISTRIBUTION_SCHEMA_NOT_READY: Distribution module is not fully migrated in this environment for ${operation}. Run pending distribution SQL migrations and retry.`,
+        cause: dbCode ? `DB_CODE:${dbCode}` : undefined,
+      });
+    }
+    throw error;
+  }
+}
+
+async function assertDistributionSchemaReady(operation: DistributionSchemaOperation) {
+  const snapshot = await getDistributionSchemaReadinessSnapshot();
+  const status = snapshot.operations[operation];
+  if (status.ready) {
+    return;
+  }
+
+  const missingSummary = status.missingItems.join(', ');
+  warnSchemaCapabilityOnce(
+    `distribution-schema-not-ready:${operation}:${missingSummary}`,
+    `[DistributionSchema] ${operation} blocked because required schema items are missing: ${missingSummary}`,
+  );
+
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `DISTRIBUTION_SCHEMA_NOT_READY: Distribution module is not fully migrated in this environment. Missing schema items for ${operation}: ${missingSummary}.`,
+    cause: {
+      operation,
+      missingItems: status.missingItems,
+    } as any,
+  });
 }
 
 function boolFromTinyInt(value: unknown) {
@@ -948,37 +1052,41 @@ async function assertManagerScope(
 }
 
 async function listProgramsForAdmin() {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  return await runDistributionDbOperation('distribution.admin.listPrograms', async () => {
+    await assertDistributionSchemaReady('distribution.admin.listPrograms');
 
-  const rows = await db
-    .select({
-      id: distributionPrograms.id,
-      developmentId: distributionPrograms.developmentId,
-      developmentName: developments.name,
-      city: developments.city,
-      province: developments.province,
-      isActive: distributionPrograms.isActive,
-      isReferralEnabled: distributionPrograms.isReferralEnabled,
-      commissionModel: distributionPrograms.commissionModel,
-      defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-      tierAccessPolicy: distributionPrograms.tierAccessPolicy,
-      payoutMilestone: distributionPrograms.payoutMilestone,
-      payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
-      currencyCode: distributionPrograms.currencyCode,
-      createdAt: distributionPrograms.createdAt,
-      updatedAt: distributionPrograms.updatedAt,
-    })
-    .from(distributionPrograms)
-    .innerJoin(developments, eq(distributionPrograms.developmentId, developments.id))
-    .orderBy(desc(distributionPrograms.updatedAt));
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
 
-  return rows.map(row => ({
-    ...row,
-    isActive: boolFromTinyInt(row.isActive),
-    isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
-  }));
+    const rows = await db
+      .select({
+        id: distributionPrograms.id,
+        developmentId: distributionPrograms.developmentId,
+        developmentName: developments.name,
+        city: developments.city,
+        province: developments.province,
+        isActive: distributionPrograms.isActive,
+        isReferralEnabled: distributionPrograms.isReferralEnabled,
+        commissionModel: distributionPrograms.commissionModel,
+        defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
+        defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+        tierAccessPolicy: distributionPrograms.tierAccessPolicy,
+        payoutMilestone: distributionPrograms.payoutMilestone,
+        payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+        currencyCode: distributionPrograms.currencyCode,
+        createdAt: distributionPrograms.createdAt,
+        updatedAt: distributionPrograms.updatedAt,
+      })
+      .from(distributionPrograms)
+      .innerJoin(developments, eq(distributionPrograms.developmentId, developments.id))
+      .orderBy(desc(distributionPrograms.updatedAt));
+
+    return rows.map(row => ({
+      ...row,
+      isActive: boolFromTinyInt(row.isActive),
+      isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
+    }));
+  });
 }
 
 const upsertProgramInput = z.object({
@@ -1276,6 +1384,8 @@ const adminDistributionRouter = router({
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
+      return await runDistributionDbOperation('distribution.admin.listDevelopmentCatalog', async () => {
+        await assertDistributionSchemaReady('distribution.admin.listDevelopmentCatalog');
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -1683,6 +1793,7 @@ const adminDistributionRouter = router({
             : null,
           developmentUpdatedAt: row.developmentUpdatedAt,
         };
+      });
       });
     }),
 
@@ -2593,6 +2704,8 @@ const adminDistributionRouter = router({
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
+      return await runDistributionDbOperation('distribution.admin.listTeamRegistrations', async () => {
+        await assertDistributionSchemaReady('distribution.admin.listTeamRegistrations');
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -2666,6 +2779,7 @@ const adminDistributionRouter = router({
           ? (managerIdentityByUserId.get(Number(row.userId)) ?? null)
           : null,
       }));
+      });
     }),
 
   reviewTeamRegistration: superAdminProcedure
@@ -2784,6 +2898,8 @@ const adminDistributionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
+      return await runDistributionDbOperation('distribution.admin.createManagerInvite', async () => {
+        await assertDistributionSchemaReady('distribution.admin.createManagerInvite');
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -2841,6 +2957,7 @@ const adminDistributionRouter = router({
           normalizedEmail,
         )}`,
       };
+      });
     }),
 
   resendManagerInvite: superAdminProcedure
