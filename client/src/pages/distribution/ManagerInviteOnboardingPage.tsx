@@ -70,6 +70,7 @@ export default function ManagerInviteOnboardingPage() {
     canComplete: inviteQuery.data?.canComplete,
   });
   const stateCopy = getManagerInviteStateCopy(presentationState, inviteQuery.data?.status);
+  const inviteData = inviteQuery.data;
 
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -167,16 +168,16 @@ export default function ManagerInviteOnboardingPage() {
                   Continue to Login
                 </Button>
               </div>
-            ) : (
+            ) : inviteData ? (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="rounded border bg-white p-3 text-sm">
                     <p>
-                      <strong>Email:</strong> {inviteQuery.data.email}
+                      <strong>Email:</strong> {inviteData.email}
                     </p>
-                    {inviteQuery.data.company ? (
+                    {inviteData.company ? (
                       <p>
-                        <strong>Company:</strong> {inviteQuery.data.company}
+                        <strong>Company:</strong> {inviteData.company}
                       </p>
                     ) : null}
                   </div>
@@ -280,7 +281,7 @@ export default function ManagerInviteOnboardingPage() {
                   </Button>
                 </form>
               </Form>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </div>
