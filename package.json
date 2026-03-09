@@ -16,7 +16,7 @@
     "build:prod": "cross-env NODE_ENV=production pnpm build",
     "build:frontend": "vite build",
     "build:backend": "echo 'Backend build not required; run with tsx directly'",
-    "build:railway": "pnpm build:backend",
+    "build:railway": "pnpm build:frontend",
     "start": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "check": "tsc -p tsconfig.check.json --noEmit",
     "type-check": "pnpm run check",

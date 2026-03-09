@@ -19,6 +19,46 @@ import './styles/reduced-motion.css';
 declare const __BUILD_GIT_SHA__: string;
 declare const __BUILD_TIME__: string;
 
+const STALE_CHUNK_RELOAD_KEY = 'plsa:stale-chunk-reload-at';
+const STALE_CHUNK_RELOAD_WINDOW_MS = 15000;
+
+function shouldHandleStaleChunkError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : typeof (error as any)?.message === 'string'
+          ? (error as any).message
+          : '';
+
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('failed to fetch dynamically imported module') ||
+    normalized.includes('importing a module script failed') ||
+    normalized.includes('unable to preload css')
+  );
+}
+
+function reloadOnceForStaleChunk(reason: unknown) {
+  if (typeof window === 'undefined') return false;
+  if (!shouldHandleStaleChunkError(reason)) return false;
+
+  const lastReloadAt = Number(sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) || '0');
+  const now = Date.now();
+
+  if (Number.isFinite(lastReloadAt) && now - lastReloadAt < STALE_CHUNK_RELOAD_WINDOW_MS) {
+    sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY);
+    console.error('[ChunkRecovery] Reload already attempted recently; leaving error visible.', reason);
+    return false;
+  }
+
+  sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, String(now));
+  console.warn('[ChunkRecovery] Reloading once after stale lazy-chunk failure.');
+  window.location.reload();
+  return true;
+}
+
 // Run critical environment checks before React boots
 validateEnvironmentConfig();
 
@@ -60,6 +100,21 @@ queryClient.getMutationCache().subscribe(event => {
 // Build marker to confirm exactly which frontend build is running in production
 console.log(`[BUILD_MARKER] main.tsx sha=${__BUILD_GIT_SHA__} builtAt=${__BUILD_TIME__}`);
 console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', event => {
+    const preloadEvent = event as Event & { payload?: unknown };
+    if (reloadOnceForStaleChunk(preloadEvent.payload)) {
+      preloadEvent.preventDefault();
+    }
+  });
+
+  window.addEventListener('unhandledrejection', event => {
+    if (reloadOnceForStaleChunk(event.reason)) {
+      event.preventDefault();
+    }
+  });
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 const TRPC_URL = new URL(
