@@ -21,6 +21,7 @@ import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
+import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -70,6 +71,21 @@ async function startServer() {
   console.log('[Server] Initializing cache...');
   await initializeCache();
   console.log('[Server] Cache initialized');
+
+  console.log('[Server] Probing distribution schema readiness...');
+  try {
+    const distributionSchemaSnapshot = await getDistributionSchemaReadinessSnapshot({
+      forceRefresh: true,
+    });
+    console.log('[DistributionSchema] Snapshot', distributionSchemaSnapshot);
+    if (!distributionSchemaSnapshot.ready) {
+      console.warn(
+        '[DistributionSchema] Distribution admin routes are not fully ready in this environment.',
+      );
+    }
+  } catch (error) {
+    console.warn('[DistributionSchema] Failed to capture startup schema snapshot.', error);
+  }
 
   const app = express();
   const server = createServer(app);
