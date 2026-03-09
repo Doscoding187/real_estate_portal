@@ -9,6 +9,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { PartnerDevelopmentOnboardingDrawer } from '@/components/admin/distribution/PartnerDevelopmentOnboardingDrawer';
 import {
+  buildDistributionManagerInviteMailtoUrl,
+  buildDistributionManagerInviteWhatsappUrl,
+} from '../../../../shared/distributionManagerInvite';
+import {
   getPartnerDevelopmentSetupDescription,
   getPartnerDevelopmentSetupLabel,
   getPartnerDevelopmentSetupState,
@@ -29,6 +33,10 @@ function collectErrorMessages(...errors: Array<{ message?: string } | null | und
   return Array.from(
     new Set(errors.map(error => error?.message?.trim()).filter((value): value is string => Boolean(value))),
   );
+}
+
+function openInviteShareWindow(url: string) {
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 export default function DistributionNetworkPage() {
@@ -216,6 +224,23 @@ export default function DistributionNetworkPage() {
     () => collectErrorMessages(teamRegistrationsQuery.error, createManagerInviteMutation.error),
     [createManagerInviteMutation.error, teamRegistrationsQuery.error],
   );
+  const copyLatestInviteUrl = async () => {
+    if (!latestInviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(latestInviteUrl);
+      toast.success('Invite URL copied');
+    } catch {
+      toast.error('Failed to copy invite URL');
+    }
+  };
+  const shareLatestInviteViaWhatsapp = () => {
+    if (!latestInviteUrl) return;
+    openInviteShareWindow(buildDistributionManagerInviteWhatsappUrl(latestInviteUrl));
+  };
+  const shareLatestInviteViaEmail = () => {
+    if (!latestInviteUrl) return;
+    window.location.href = buildDistributionManagerInviteMailtoUrl(latestInviteUrl);
+  };
   const managerOptions = useMemo(() => {
     return (teamRegistrationsQuery.data || [])
       .filter((row: any) => row.status === 'approved' && row.userId)
@@ -606,21 +631,17 @@ export default function DistributionNetworkPage() {
                 <div className="rounded border bg-slate-50 p-3 text-xs">
                   <p className="font-medium text-slate-700">Invite URL</p>
                   <p className="break-all text-slate-600">{latestInviteUrl}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(latestInviteUrl);
-                        toast.success('Invite URL copied');
-                      } catch {
-                        toast.error('Failed to copy invite URL');
-                      }
-                    }}
-                  >
-                    Copy Link
-                  </Button>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={copyLatestInviteUrl}>
+                      Copy Link
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={shareLatestInviteViaWhatsapp}>
+                      Share via WhatsApp
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={shareLatestInviteViaEmail}>
+                      Share via Email
+                    </Button>
+                  </div>
                 </div>
               ) : null}
             </CardContent>

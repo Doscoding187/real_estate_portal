@@ -19,6 +19,11 @@ import {
 } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { parseDistributionManagerInviteParams } from '../../../../shared/distributionManagerInvite';
+import {
+  getManagerInviteStateCopy,
+  resolveManagerInvitePresentationState,
+} from './managerInviteOnboarding';
 
 const onboardingSchema = z
   .object({
@@ -45,17 +50,26 @@ type OnboardingFormData = z.infer<typeof onboardingSchema>;
 export default function ManagerInviteOnboardingPage() {
   const [, setLocation] = useLocation();
   const search = useSearch();
-  const queryParams = useMemo(() => new URLSearchParams(search), [search]);
-  const registrationId = Number(queryParams.get('registrationId') || 0);
-  const email = (queryParams.get('email') || '').trim().toLowerCase();
+  const inviteParams = useMemo(() => parseDistributionManagerInviteParams(search), [search]);
+  const registrationId = inviteParams.registrationId || 0;
+  const email = inviteParams.email;
 
   const inviteQuery = trpc.distribution.getManagerInvite.useQuery(
     { registrationId, email },
     {
-      enabled: Boolean(registrationId && email),
+      enabled: inviteParams.isComplete,
       retry: false,
     },
   );
+
+  const presentationState = resolveManagerInvitePresentationState({
+    hasInviteParams: inviteParams.isComplete,
+    isLoading: inviteQuery.isLoading,
+    errorMessage: inviteQuery.error?.message,
+    status: inviteQuery.data?.status,
+    canComplete: inviteQuery.data?.canComplete,
+  });
+  const stateCopy = getManagerInviteStateCopy(presentationState, inviteQuery.data?.status);
 
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -84,7 +98,9 @@ export default function ManagerInviteOnboardingPage() {
   const completeMutation = trpc.distribution.completeManagerInviteRegistration.useMutation({
     onSuccess: () => {
       toast.success('Registration complete. You can now log in to your manager dashboard.');
-      setLocation(`/login?email=${encodeURIComponent(email)}`);
+      setLocation(
+        `/login?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/distribution/manager')}`,
+      );
     },
     onError: error => {
       toast.error(error.message);
@@ -92,7 +108,7 @@ export default function ManagerInviteOnboardingPage() {
   });
 
   const onSubmit = (values: OnboardingFormData) => {
-    if (!registrationId || !email) {
+    if (!inviteParams.isComplete || !registrationId || !email) {
       toast.error('Invite link is invalid.');
       return;
     }
@@ -113,25 +129,44 @@ export default function ManagerInviteOnboardingPage() {
       <div className="mx-auto max-w-3xl px-4 pt-24 pb-10">
         <Card>
           <CardHeader>
-            <CardTitle>Manager Invite Registration</CardTitle>
-            <CardDescription>
-              Complete your profile and credentials to activate manager dashboard access.
-            </CardDescription>
+            <CardTitle>{stateCopy.title}</CardTitle>
+            <CardDescription>{stateCopy.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!registrationId || !email ? (
-              <p className="text-sm text-red-600">Invite link is incomplete.</p>
-            ) : inviteQuery.isLoading ? (
+            {inviteParams.recovered ? (
+              <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                We recovered your invite details from a malformed link and loaded the current onboarding
+                invite.
+              </div>
+            ) : null}
+            {presentationState === 'loading' ? (
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading invite...
               </div>
-            ) : inviteQuery.error ? (
-              <p className="text-sm text-red-600">{inviteQuery.error.message}</p>
-            ) : !inviteQuery.data?.canComplete ? (
-              <p className="text-sm text-slate-700">
-                This invite is already {inviteQuery.data?.status || 'processed'}.
-              </p>
+            ) : presentationState === 'invalid' ? (
+              <div className="space-y-3 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <p>{stateCopy.description}</p>
+                {inviteQuery.error?.message ? (
+                  <p className="text-xs text-red-600">{inviteQuery.error.message}</p>
+                ) : null}
+                <Button variant="outline" onClick={() => setLocation('/login')}>
+                  Go to Login
+                </Button>
+              </div>
+            ) : presentationState === 'accepted' ? (
+              <div className="space-y-3 rounded border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                <p>{stateCopy.description}</p>
+                <Button
+                  onClick={() =>
+                    setLocation(
+                      `/login?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/distribution/manager')}`,
+                    )
+                  }
+                >
+                  Continue to Login
+                </Button>
+              </div>
             ) : (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -237,10 +272,10 @@ export default function ManagerInviteOnboardingPage() {
                     {completeMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Completing...
+                        Accepting invite...
                       </>
                     ) : (
-                      'Complete Registration'
+                      'Accept Invite and Continue'
                     )}
                   </Button>
                 </form>
