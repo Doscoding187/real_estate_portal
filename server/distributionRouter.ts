@@ -31,6 +31,7 @@ import { protectedProcedure, publicProcedure, router, superAdminProcedure } from
 import { getDb } from './db';
 import { authService } from './_core/auth';
 import { ensureCommissionEntryForDeal } from './services/distributionCommissionService';
+import { buildDistributionManagerInviteUrl } from '../shared/distributionManagerInvite';
 import {
   ensureDistributionProgramForDevelopment,
   getProgramActivationReadiness,
@@ -2900,63 +2901,65 @@ const adminDistributionRouter = router({
       assertDistributionEnabled();
       return await runDistributionDbOperation('distribution.admin.createManagerInvite', async () => {
         await assertDistributionSchemaReady('distribution.admin.createManagerInvite');
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
 
-      const normalizedEmail = input.email.trim().toLowerCase();
-      const [existingPending] = await db
-        .select({
-          id: platformTeamRegistrations.id,
-          email: platformTeamRegistrations.email,
-          status: platformTeamRegistrations.status,
-        })
-        .from(platformTeamRegistrations)
-        .where(
-          and(
-            eq(platformTeamRegistrations.email, normalizedEmail),
-            eq(platformTeamRegistrations.requestedArea, 'distribution_manager'),
-            eq(platformTeamRegistrations.status, 'pending'),
-          ),
-        )
-        .limit(1);
+        const normalizedEmail = input.email.trim().toLowerCase();
+        const [existingPending] = await db
+          .select({
+            id: platformTeamRegistrations.id,
+            email: platformTeamRegistrations.email,
+            status: platformTeamRegistrations.status,
+          })
+          .from(platformTeamRegistrations)
+          .where(
+            and(
+              eq(platformTeamRegistrations.email, normalizedEmail),
+              eq(platformTeamRegistrations.requestedArea, 'distribution_manager'),
+              eq(platformTeamRegistrations.status, 'pending'),
+            ),
+          )
+          .limit(1);
 
-      const baseNotes = [input.notes?.trim(), `Invited by user #${ctx.user.id}`]
-        .filter(Boolean)
-        .join('\n');
+        const baseNotes = [input.notes?.trim(), `Invited by user #${ctx.user.id}`]
+          .filter(Boolean)
+          .join('\n');
 
-      if (existingPending) {
+        if (existingPending) {
+          return {
+            success: true,
+            mode: 'existing_pending' as const,
+            registrationId: Number(existingPending.id),
+            email: normalizedEmail,
+            inviteUrl: buildDistributionManagerInviteUrl(ENV.appUrl, {
+              registrationId: Number(existingPending.id),
+              email: normalizedEmail,
+            }),
+          };
+        }
+
+        const [insertResult] = await db.insert(platformTeamRegistrations).values({
+          fullName: input.fullName.trim(),
+          email: normalizedEmail,
+          phone: input.phone?.trim() || null,
+          company: input.company?.trim() || null,
+          currentRole: input.currentRole?.trim() || null,
+          requestedArea: 'distribution_manager',
+          notes: baseNotes || null,
+          status: 'pending',
+        });
+
+        const registrationId = Number((insertResult as any).insertId || 0);
         return {
           success: true,
-          mode: 'existing_pending' as const,
-          registrationId: Number(existingPending.id),
+          mode: 'created' as const,
+          registrationId,
           email: normalizedEmail,
-          inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${Number(
-            existingPending.id,
-          )}&email=${encodeURIComponent(normalizedEmail)}`,
+          inviteUrl: buildDistributionManagerInviteUrl(ENV.appUrl, {
+            registrationId,
+            email: normalizedEmail,
+          }),
         };
-      }
-
-      const [insertResult] = await db.insert(platformTeamRegistrations).values({
-        fullName: input.fullName.trim(),
-        email: normalizedEmail,
-        phone: input.phone?.trim() || null,
-        company: input.company?.trim() || null,
-        currentRole: input.currentRole?.trim() || null,
-        requestedArea: 'distribution_manager',
-        notes: baseNotes || null,
-        status: 'pending',
-      });
-
-      const registrationId = Number((insertResult as any).insertId || 0);
-      return {
-        success: true,
-        mode: 'created' as const,
-        registrationId,
-        email: normalizedEmail,
-        inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${registrationId}&email=${encodeURIComponent(
-          normalizedEmail,
-        )}`,
-      };
       });
     }),
 
@@ -3014,9 +3017,10 @@ const adminDistributionRouter = router({
         success: true,
         registrationId: Number(registration.id),
         email: normalizedEmail,
-        inviteUrl: `${ENV.appUrl}/distribution/manager/onboarding?registrationId=${Number(
-          registration.id,
-        )}&email=${encodeURIComponent(normalizedEmail)}`,
+        inviteUrl: buildDistributionManagerInviteUrl(ENV.appUrl, {
+          registrationId: Number(registration.id),
+          email: normalizedEmail,
+        }),
       };
     }),
 
