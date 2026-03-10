@@ -11,6 +11,10 @@ import {
   users,
 } from '../../drizzle/schema';
 import {
+  evaluateDevelopmentDistributionAccess,
+  summarizeDistributionBlockers,
+} from './distributionAccessPolicy';
+import {
   DEFAULT_LEAD_SLA_POLICY,
   LEAD_ALLOWED_TRANSITIONS,
   type LeadOwnerType,
@@ -808,9 +812,17 @@ export async function getDeveloperDistributionSettings(params: {
     .where(eq(distributionPrograms.developmentId, params.developmentId))
     .limit(1);
 
+  const evaluation = await evaluateDevelopmentDistributionAccess({
+    db: db as any,
+    developmentId: params.developmentId,
+    actor: { role: 'developer' },
+    channel: 'developer_settings',
+  });
+  const blockerSummary = summarizeDistributionBlockers(evaluation);
+
   const isActive = Number(program?.isActive || 0) === 1;
   const isReferralEnabled = Number(program?.isReferralEnabled || 0) === 1;
-  const distributionEnabled = isActive && isReferralEnabled;
+  const distributionEnabled = evaluation.submitReady;
   const accessModel =
     !program
       ? ('unknown' as const)
@@ -872,6 +884,15 @@ export async function getDeveloperDistributionSettings(params: {
     distributionEnabled,
     isActive,
     isReferralEnabled,
+    partnershipStatus: evaluation.brandPartnershipStatus,
+    accessStatus: evaluation.developmentAccessStatus,
+    inventoryState: evaluation.inventoryState,
+    submitReady: evaluation.submitReady,
+    submissionAllowed: evaluation.submissionAllowed,
+    legacyFallbackUsed: evaluation.legacyFallbackUsed,
+    accessBlockers: blockerSummary.accessBlockers,
+    readinessBlockers: blockerSummary.readinessBlockers,
+    programBlockers: blockerSummary.programBlockers,
     accessModel,
     tierAccessPolicy: program?.tierAccessPolicy || null,
     commissionModel: program?.commissionModel || null,
@@ -913,26 +934,46 @@ export async function setDeveloperDistributionEnabled(params: {
   const [program] = await db
     .select({
       id: distributionPrograms.id,
+      isActive: distributionPrograms.isActive,
     })
     .from(distributionPrograms)
     .where(eq(distributionPrograms.developmentId, params.developmentId))
     .limit(1);
 
-  if (!program && params.enabled) {
-    await db.insert(distributionPrograms).values({
-      developmentId: params.developmentId,
-      isActive: 1,
-      isReferralEnabled: 1,
-      commissionModel: 'flat_percentage',
-      tierAccessPolicy: 'restricted',
-      createdBy: params.userId,
-      updatedBy: params.userId,
+  const evaluation = await evaluateDevelopmentDistributionAccess({
+    db: db as any,
+    developmentId: params.developmentId,
+    actor: { role: 'developer', userId: params.userId },
+    channel: 'developer_settings',
+  });
+  const blockerSummary = summarizeDistributionBlockers(evaluation);
+
+  if (params.enabled && blockerSummary.accessBlockers.length > 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Distribution enable blocked by access requirements: ${blockerSummary.accessBlockers.join(', ')}.`,
     });
-  } else if (program) {
+  }
+
+  if (params.enabled && !program) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Distribution enable blocked by readiness requirements: program_not_configured.',
+    });
+  }
+
+  if (params.enabled && blockerSummary.readinessBlockers.length > 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Distribution enable blocked by readiness requirements: ${blockerSummary.readinessBlockers.join(', ')}.`,
+    });
+  }
+
+  if (program) {
     await db
       .update(distributionPrograms)
       .set({
-        isActive: 1,
+        isActive: params.enabled ? 1 : Number(program.isActive || 0),
         isReferralEnabled: params.enabled ? 1 : 0,
         updatedBy: params.userId,
       })

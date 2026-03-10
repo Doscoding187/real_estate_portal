@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
+import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
@@ -49,6 +50,16 @@ import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
+
+function assertDeveloperDistributionEnabled() {
+  if (!ENV.distributionNetworkEnabled) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message:
+        'Distribution Network is disabled. Set FEATURE_DISTRIBUTION_NETWORK=true to enable this module.',
+    });
+  }
+}
 
 /**
  * Wizard v2 canonical parking types.
@@ -1155,6 +1166,7 @@ export const developerRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await getDeveloperDistributionSettings({
         developerId: profile.id,
@@ -1170,6 +1182,7 @@ export const developerRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await setDeveloperDistributionEnabled({
