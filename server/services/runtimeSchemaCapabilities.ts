@@ -61,7 +61,12 @@ export type DistributionSchemaOperation =
   | 'distribution.admin.listDevelopmentCatalog'
   | 'distribution.admin.listPrograms'
   | 'distribution.admin.listTeamRegistrations'
-  | 'distribution.admin.createManagerInvite';
+  | 'distribution.admin.createManagerInvite'
+  | 'distribution.admin.upsertBrandPartnership'
+  | 'distribution.admin.upsertDevelopmentAccess'
+  | 'distribution.admin.getBrandPartnership'
+  | 'distribution.admin.getDevelopmentAccess'
+  | 'distribution.admin.listDevelopmentAccess';
 
 export type DistributionSchemaRequirement = {
   tableName: string;
@@ -142,6 +147,14 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_programs', columnName: 'payout_milestone_notes' },
     { tableName: 'distribution_programs', columnName: 'currency_code' },
     { tableName: 'distribution_programs', columnName: 'updated_at' },
+    { tableName: 'distribution_brand_partnerships' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'brand_profile_id' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'status' },
+    { tableName: 'distribution_development_access' },
+    { tableName: 'distribution_development_access', columnName: 'development_id' },
+    { tableName: 'distribution_development_access', columnName: 'brand_partnership_id' },
+    { tableName: 'distribution_development_access', columnName: 'status' },
+    { tableName: 'distribution_development_access', columnName: 'submission_allowed' },
     { tableName: 'users' },
     { tableName: 'users', columnName: 'id' },
     { tableName: 'users', columnName: 'name' },
@@ -210,6 +223,59 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'platform_team_registrations', columnName: 'requested_area' },
     { tableName: 'platform_team_registrations', columnName: 'notes' },
     { tableName: 'platform_team_registrations', columnName: 'status' },
+  ],
+  'distribution.admin.upsertBrandPartnership': [
+    { tableName: 'distribution_brand_partnerships' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'brand_profile_id' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'status' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'partnered_at' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'ended_at' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'reason_code' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'notes' },
+  ],
+  'distribution.admin.upsertDevelopmentAccess': [
+    { tableName: 'distribution_brand_partnerships' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'id' },
+    { tableName: 'distribution_development_access' },
+    { tableName: 'distribution_development_access', columnName: 'development_id' },
+    { tableName: 'distribution_development_access', columnName: 'brand_partnership_id' },
+    { tableName: 'distribution_development_access', columnName: 'brand_profile_id' },
+    { tableName: 'distribution_development_access', columnName: 'status' },
+    { tableName: 'distribution_development_access', columnName: 'submission_allowed' },
+    { tableName: 'distribution_development_access', columnName: 'excluded_by_mandate' },
+    { tableName: 'distribution_development_access', columnName: 'excluded_by_exclusivity' },
+    { tableName: 'distribution_development_access', columnName: 'reason_code' },
+    { tableName: 'distribution_development_access', columnName: 'notes' },
+  ],
+  'distribution.admin.getBrandPartnership': [
+    { tableName: 'developer_brand_profiles' },
+    { tableName: 'developer_brand_profiles', columnName: 'id' },
+    { tableName: 'developer_brand_profiles', columnName: 'brand_name' },
+    { tableName: 'distribution_brand_partnerships' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'brand_profile_id' },
+    { tableName: 'distribution_development_access' },
+    { tableName: 'distribution_development_access', columnName: 'brand_partnership_id' },
+  ],
+  'distribution.admin.getDevelopmentAccess': [
+    { tableName: 'developments' },
+    { tableName: 'developments', columnName: 'id' },
+    { tableName: 'developments', columnName: 'developer_brand_profile_id' },
+    { tableName: 'developments', columnName: 'marketing_brand_profile_id' },
+    { tableName: 'distribution_development_access' },
+    { tableName: 'distribution_development_access', columnName: 'development_id' },
+    { tableName: 'distribution_brand_partnerships' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'brand_profile_id' },
+  ],
+  'distribution.admin.listDevelopmentAccess': [
+    { tableName: 'developments' },
+    { tableName: 'developments', columnName: 'id' },
+    { tableName: 'distribution_brand_partnerships' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'brand_profile_id' },
+    { tableName: 'distribution_brand_partnerships', columnName: 'status' },
+    { tableName: 'distribution_development_access' },
+    { tableName: 'distribution_development_access', columnName: 'development_id' },
+    { tableName: 'distribution_development_access', columnName: 'status' },
+    { tableName: 'distribution_development_access', columnName: 'submission_allowed' },
   ],
 };
 

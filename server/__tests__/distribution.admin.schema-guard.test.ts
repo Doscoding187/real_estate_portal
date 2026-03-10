@@ -62,6 +62,31 @@ function createNotReadySnapshot() {
         missingItems: ['platform_team_registrations.status'],
         requiredItems: [],
       },
+      'distribution.admin.upsertBrandPartnership': {
+        ready: false,
+        missingItems: ['distribution_brand_partnerships.status'],
+        requiredItems: [],
+      },
+      'distribution.admin.upsertDevelopmentAccess': {
+        ready: false,
+        missingItems: ['distribution_development_access.status'],
+        requiredItems: [],
+      },
+      'distribution.admin.getBrandPartnership': {
+        ready: false,
+        missingItems: ['distribution_brand_partnerships.brand_profile_id'],
+        requiredItems: [],
+      },
+      'distribution.admin.getDevelopmentAccess': {
+        ready: false,
+        missingItems: ['distribution_development_access.development_id'],
+        requiredItems: [],
+      },
+      'distribution.admin.listDevelopmentAccess': {
+        ready: false,
+        missingItems: ['distribution_development_access.status'],
+        requiredItems: [],
+      },
     },
   };
 }
@@ -94,6 +119,48 @@ describe('distribution admin schema guards', () => {
       caller.admin.createManagerInvite({
         fullName: 'Manager Example',
         email: 'manager@example.com',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
+    });
+    await expect(
+      caller.admin.upsertBrandPartnership({
+        brandProfileId: 12,
+        status: 'active',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
+    });
+    await expect(
+      caller.admin.upsertDevelopmentAccess({
+        developmentId: 99,
+        status: 'included',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
+    });
+    await expect(
+      caller.admin.getBrandPartnership({
+        brandProfileId: 12,
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
+    });
+    await expect(
+      caller.admin.getDevelopmentAccess({
+        developmentId: 99,
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
+    });
+    await expect(
+      caller.admin.listDevelopmentAccess({
+        limit: 10,
       }),
     ).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
