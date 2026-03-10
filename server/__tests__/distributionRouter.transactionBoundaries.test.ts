@@ -5,13 +5,24 @@ import type { ProgramReadiness } from '../services/distributionProgramReadinessS
 
 const source = readFileSync(new URL('../distributionRouter.ts', import.meta.url), 'utf8');
 
-const { mockGetDb, mockUpdate, mockSet, mockWhere, mockGetProgramReadinessByDevelopmentId } =
-  vi.hoisted(() => ({
+const {
+  mockGetDb,
+  mockUpdate,
+  mockSet,
+  mockWhere,
+  mockGetProgramReadinessByDevelopmentId,
+  mockGetDistributionSchemaReadinessSnapshot,
+  mockEvaluateDevelopmentDistributionAccess,
+  mockSummarizeDistributionBlockers,
+} = vi.hoisted(() => ({
     mockGetDb: vi.fn(),
     mockUpdate: vi.fn(),
     mockSet: vi.fn(),
     mockWhere: vi.fn(),
     mockGetProgramReadinessByDevelopmentId: vi.fn(),
+    mockGetDistributionSchemaReadinessSnapshot: vi.fn(),
+    mockEvaluateDevelopmentDistributionAccess: vi.fn(),
+    mockSummarizeDistributionBlockers: vi.fn(),
   }));
 
 vi.mock('../db', () => ({
@@ -20,6 +31,17 @@ vi.mock('../db', () => ({
 
 vi.mock('../services/distributionProgramReadinessService', () => ({
   getProgramReadinessByDevelopmentId: mockGetProgramReadinessByDevelopmentId,
+}));
+
+vi.mock('../services/runtimeSchemaCapabilities', () => ({
+  getDistributionSchemaReadinessSnapshot: mockGetDistributionSchemaReadinessSnapshot,
+  warnSchemaCapabilityOnce: vi.fn(),
+}));
+
+vi.mock('../services/distributionAccessPolicy', () => ({
+  evaluateDevelopmentDistributionAccess: mockEvaluateDevelopmentDistributionAccess,
+  summarizeDistributionBlockers: mockSummarizeDistributionBlockers,
+  assertDevelopmentSubmissionEligible: vi.fn(),
 }));
 
 import { appRouter } from '../routers';
@@ -98,6 +120,10 @@ describe('distributionRouter transactional boundaries', () => {
     expect(submitDealSection).toContain('.insert(distributionDeals)');
     expect(submitDealSection).toContain('.update(distributionDeals)');
     expect(submitDealSection).toContain('.insert(distributionDealEvents)');
+    expect(submitDealSection).toContain('await assertDevelopmentSubmissionEligible({');
+    expect(submitDealSection.indexOf('await assertDevelopmentSubmissionEligible({')).toBeLessThan(
+      submitDealSection.indexOf('const managerUserId = await getPrimaryManagerUserIdForProgram'),
+    );
     expect(referrerSection).toContain("submittedVia: 'referrer.submitDeal'");
     expect(source).not.toContain('if (insertedDealId > 0)');
   });
@@ -146,6 +172,70 @@ describe('distribution.admin.setProgramReferralEnabled readiness gating', () => 
     mockUpdate.mockReturnValue({ set: mockSet });
     mockGetDb.mockResolvedValue({
       update: mockUpdate,
+    });
+    mockGetDistributionSchemaReadinessSnapshot.mockResolvedValue({
+      checkedAt: '2026-03-10T00:00:00.000Z',
+      ready: true,
+      missingItems: [],
+      operations: {
+        'distribution.admin.listDevelopmentCatalog': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.listPrograms': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.listTeamRegistrations': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.createManagerInvite': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.upsertBrandPartnership': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.upsertDevelopmentAccess': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.getBrandPartnership': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.getDevelopmentAccess': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.listDevelopmentAccess': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+      },
+    });
+    mockEvaluateDevelopmentDistributionAccess.mockResolvedValue({
+      inventoryState: 'enabled',
+      brandPartnershipStatus: 'active',
+      developmentAccessStatus: 'included',
+      submissionAllowed: true,
+      legacyFallbackUsed: false,
+    });
+    mockSummarizeDistributionBlockers.mockReturnValue({
+      accessBlockers: [],
+      readinessBlockers: [],
+      programBlockers: [],
     });
   });
 

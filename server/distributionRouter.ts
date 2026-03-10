@@ -2,7 +2,9 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import {
+  DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES,
   DISTRIBUTION_DEAL_STAGE_VALUES,
+  DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES,
   DISTRIBUTION_TIER_VALUES,
   DISTRIBUTION_VIEWING_STATUS_VALUES,
   DISTRIBUTION_IDENTITY_TYPE_VALUES,
@@ -32,6 +34,20 @@ import { getDb } from './db';
 import { authService } from './_core/auth';
 import { ensureCommissionEntryForDeal } from './services/distributionCommissionService';
 import { buildDistributionManagerInviteUrl } from '../shared/distributionManagerInvite';
+import {
+  upsertBrandPartnershipWithAudit,
+  upsertDevelopmentAccessWithAudit,
+} from './services/distributionAccessAdminService';
+import {
+  getBrandPartnershipDetails,
+  getDevelopmentAccessDetails,
+  listDevelopmentAccessDetails,
+} from './services/distributionAccessReadService';
+import {
+  assertDevelopmentSubmissionEligible,
+  evaluateDevelopmentDistributionAccess,
+  summarizeDistributionBlockers,
+} from './services/distributionAccessPolicy';
 import {
   ensureDistributionProgramForDevelopment,
   getProgramActivationReadiness,
@@ -1119,6 +1135,42 @@ const upsertProgramInput = z.object({
     .transform(value => value.toUpperCase()),
 });
 
+const upsertBrandPartnershipInput = z.object({
+  brandProfileId: z.number().int().positive(),
+  status: z.enum(DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES),
+  reasonCode: z.string().trim().max(80).nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
+
+const upsertDevelopmentAccessInput = z.object({
+  developmentId: z.number().int().positive(),
+  status: z.enum(DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES),
+  submissionAllowed: z.boolean().optional(),
+  excludedByMandate: z.boolean().optional(),
+  excludedByExclusivity: z.boolean().optional(),
+  reasonCode: z.string().trim().max(80).nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
+
+const getBrandPartnershipInput = z.object({
+  brandProfileId: z.number().int().positive(),
+});
+
+const getDevelopmentAccessInput = z.object({
+  developmentId: z.number().int().positive(),
+});
+
+const listDevelopmentAccessInput = z
+  .object({
+    brandProfileId: z.number().int().positive().optional(),
+    partnershipStatus: z.array(z.enum(DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES)).optional(),
+    accessStatus: z.array(z.enum(DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES)).optional(),
+    submitReady: z.boolean().optional(),
+    search: z.string().trim().max(200).optional(),
+    limit: z.number().int().min(1).max(500).default(200),
+  })
+  .optional();
+
 async function upsertProgram(
   ctx: { user: { id: number } },
   input: z.infer<typeof upsertProgramInput>,
@@ -1703,7 +1755,7 @@ const adminDistributionRouter = router({
         managerByDevelopment.set(developmentId, next);
       }
 
-      return rows.map(row => {
+      const catalogRows = rows.map(row => {
         const developmentId = Number(row.developmentId);
         const published = boolFromTinyInt(row.isPublished);
         const unitSummary = unitSummaryByDevelopment.get(developmentId);
@@ -1795,6 +1847,33 @@ const adminDistributionRouter = router({
           developmentUpdatedAt: row.developmentUpdatedAt,
         };
       });
+
+      return await Promise.all(
+        catalogRows.map(async row => {
+          const evaluation = await evaluateDevelopmentDistributionAccess({
+            db,
+            developmentId: Number(row.developmentId),
+            actor: { role: 'admin' },
+            channel: 'admin_catalog',
+          });
+
+          return {
+            ...row,
+            partnershipStatus: evaluation.brandPartnershipStatus,
+            accessStatus: evaluation.developmentAccessStatus,
+            inventoryState: evaluation.inventoryState,
+            submissionAllowed: evaluation.submissionAllowed,
+            excludedByMandate: evaluation.excludedByMandate,
+            excludedByExclusivity: evaluation.excludedByExclusivity,
+            submitReady: evaluation.submitReady,
+            reasons: evaluation.reasons,
+            legacyFallbackUsed: evaluation.legacyFallbackUsed,
+            readiness: evaluation.readiness,
+            brandPartnered: evaluation.brandPartnered,
+            developmentIncluded: evaluation.developmentIncluded,
+          };
+        }),
+      );
       });
     }),
 
@@ -1875,6 +1954,152 @@ const adminDistributionRouter = router({
       };
     }),
 
+  upsertBrandPartnership: superAdminProcedure
+    .input(upsertBrandPartnershipInput)
+    .mutation(async ({ ctx, input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.upsertBrandPartnership',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.upsertBrandPartnership');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          const result = await upsertBrandPartnershipWithAudit({
+            db,
+            actorUserId: ctx.user.id,
+            brandProfileId: input.brandProfileId,
+            status: input.status,
+            reasonCode: input.reasonCode,
+            notes: input.notes,
+          });
+
+          return {
+            success: true as const,
+            changed: result.changed,
+            entity: result.partnership,
+            derivedState: {
+              childAccessStatusCounts: result.derivedState.childAccessStatusCounts,
+              submissionBlockedByParent: result.derivedState.submissionBlockedByParent,
+              reasons: result.derivedState.reasons,
+            },
+          };
+        },
+      );
+    }),
+
+  upsertDevelopmentAccess: superAdminProcedure
+    .input(upsertDevelopmentAccessInput)
+    .mutation(async ({ ctx, input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.upsertDevelopmentAccess',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.upsertDevelopmentAccess');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          const result = await upsertDevelopmentAccessWithAudit({
+            db,
+            actorUserId: ctx.user.id,
+            developmentId: input.developmentId,
+            status: input.status,
+            submissionAllowed: input.submissionAllowed,
+            excludedByMandate: input.excludedByMandate,
+            excludedByExclusivity: input.excludedByExclusivity,
+            reasonCode: input.reasonCode,
+            notes: input.notes,
+          });
+
+          return {
+            success: true as const,
+            changed: result.changed,
+            entity: result.access,
+            derivedState: {
+              inventoryState: result.evaluation.inventoryState,
+              submitReady: result.evaluation.submitReady,
+              reasons: result.evaluation.reasons,
+              legacyFallbackUsed: result.evaluation.legacyFallbackUsed,
+            },
+          };
+        },
+      );
+    }),
+
+  getBrandPartnership: superAdminProcedure
+    .input(getBrandPartnershipInput)
+    .query(async ({ input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.getBrandPartnership',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.getBrandPartnership');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          const result = await getBrandPartnershipDetails(db, input.brandProfileId);
+          return {
+            success: true as const,
+            entity: result.entity,
+            brand: result.brand,
+            derivedState: result.derivedState,
+          };
+        },
+      );
+    }),
+
+  getDevelopmentAccess: superAdminProcedure
+    .input(getDevelopmentAccessInput)
+    .query(async ({ input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.getDevelopmentAccess',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.getDevelopmentAccess');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          const result = await getDevelopmentAccessDetails(db, input.developmentId);
+          return {
+            success: true as const,
+            entity: result.entity,
+            development: result.development,
+            derivedState: result.evaluation,
+          };
+        },
+      );
+    }),
+
+  listDevelopmentAccess: superAdminProcedure
+    .input(listDevelopmentAccessInput)
+    .query(async ({ input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.listDevelopmentAccess',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.listDevelopmentAccess');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          const rows = await listDevelopmentAccessDetails(db, {
+            brandProfileId: input?.brandProfileId,
+            partnershipStatus: input?.partnershipStatus,
+            accessStatus: input?.accessStatus,
+            submitReady: input?.submitReady,
+            search: input?.search,
+            limit: input?.limit,
+          });
+
+          return rows.map(row => ({
+            development: row.development,
+            partnership: row.partnership,
+            access: row.access,
+            derivedState: row.evaluation,
+          }));
+        },
+      );
+    }),
+
   upsertProgram: superAdminProcedure.input(upsertProgramInput).mutation(async ({ ctx, input }) => {
     assertDistributionEnabled();
     return await upsertProgram(ctx as any, input);
@@ -1887,46 +2112,71 @@ const adminDistributionRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      return await runDistributionDbOperation('distribution.admin.listPrograms', async () => {
+        await assertDistributionSchemaReady('distribution.admin.listPrograms');
+        assertDistributionEnabled();
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
 
-      const [development] = await db
-        .select({ id: developments.id })
-        .from(developments)
-        .where(eq(developments.id, input.developmentId))
-        .limit(1);
+        const [development] = await db
+          .select({ id: developments.id })
+          .from(developments)
+          .where(eq(developments.id, input.developmentId))
+          .limit(1);
 
-      if (!development) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
-      }
+        if (!development) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
+        }
 
-      const ensured = await ensureDistributionProgramForDevelopment(
-        {
+        const accessEvaluation = await evaluateDevelopmentDistributionAccess({
+          db,
           developmentId: input.developmentId,
-          actorUserId: ctx.user.id,
-        },
-        {
-          findExistingProgramByDevelopmentId: async developmentId => {
-            const [row] = await db
-              .select({ id: distributionPrograms.id })
-              .from(distributionPrograms)
-              .where(eq(distributionPrograms.developmentId, developmentId))
-              .limit(1);
-            return row ? { id: Number(row.id) } : null;
-          },
-          createProgram: async payload => {
-            const [insertResult] = await db.insert(distributionPrograms).values(payload);
-            return { id: Number((insertResult as any).insertId || 0) };
-          },
-        },
-      );
+          actor: { role: 'admin', userId: ctx.user.id },
+          channel: 'admin_catalog',
+        });
+        const blockerSummary = summarizeDistributionBlockers(accessEvaluation);
 
-      return {
-        success: true,
-        mode: ensured.created ? ('created' as const) : ('existing' as const),
-        programId: ensured.programId,
-      };
+        const ensured = await ensureDistributionProgramForDevelopment(
+          {
+            developmentId: input.developmentId,
+            actorUserId: ctx.user.id,
+          },
+          {
+            findExistingProgramByDevelopmentId: async developmentId => {
+              const [row] = await db
+                .select({ id: distributionPrograms.id })
+                .from(distributionPrograms)
+                .where(eq(distributionPrograms.developmentId, developmentId))
+                .limit(1);
+              return row ? { id: Number(row.id) } : null;
+            },
+            createProgram: async payload => {
+              if (blockerSummary.accessBlockers.length > 0) {
+                throw new TRPCError({
+                  code: 'BAD_REQUEST',
+                  message: `Program creation blocked by access requirements: ${blockerSummary.accessBlockers.join(', ')}.`,
+                });
+              }
+              const [insertResult] = await db.insert(distributionPrograms).values(payload);
+              return { id: Number((insertResult as any).insertId || 0) };
+            },
+          },
+        );
+
+        return {
+          success: true,
+          mode: ensured.created ? ('created' as const) : ('existing' as const),
+          programId: ensured.programId,
+          accessBlockers: blockerSummary.accessBlockers,
+          accessState: {
+            inventoryState: accessEvaluation.inventoryState,
+            partnershipStatus: accessEvaluation.brandPartnershipStatus,
+            accessStatus: accessEvaluation.developmentAccessStatus,
+            submissionAllowed: accessEvaluation.submissionAllowed,
+            legacyFallbackUsed: accessEvaluation.legacyFallbackUsed,
+          },
+        };
+      });
     }),
 
   setProgramReferralEnabled: superAdminProcedure
@@ -1937,15 +2187,71 @@ const adminDistributionRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      return await runDistributionDbOperation('distribution.admin.listPrograms', async () => {
+        await assertDistributionSchemaReady('distribution.admin.listPrograms');
+        assertDistributionEnabled();
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
 
-      if (!input.enabled) {
+        if (!input.enabled) {
+          await db
+            .update(distributionPrograms)
+            .set({
+              isReferralEnabled: 0,
+              updatedBy: ctx.user.id,
+            })
+            .where(eq(distributionPrograms.developmentId, input.developmentId));
+
+          return {
+            success: true,
+            developmentId: input.developmentId,
+            enabled: false,
+            accessBlockers: [] as string[],
+            readinessBlockers: [] as string[],
+          };
+        }
+
+        const accessEvaluation = await evaluateDevelopmentDistributionAccess({
+          db,
+          developmentId: input.developmentId,
+          actor: { role: 'admin', userId: ctx.user.id },
+          channel: 'admin_catalog',
+        });
+        const blockerSummary = summarizeDistributionBlockers(accessEvaluation);
+
+        if (blockerSummary.accessBlockers.length > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Referral enable blocked by access requirements: ${blockerSummary.accessBlockers.join(', ')}.`,
+          });
+        }
+
+        const readiness = await getProgramReadinessByDevelopmentId(input.developmentId);
+        if (!readiness.canEnableReferral) {
+          const error = new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Program is not ready to enable referrals.',
+          }) as TRPCError & {
+            data?: {
+              errorCode: 'PROGRAM_NOT_READY';
+              blockers: typeof readiness.blockers;
+              state: typeof readiness.state;
+              accessBlockers: string[];
+            };
+          };
+          error.data = {
+            errorCode: 'PROGRAM_NOT_READY',
+            blockers: readiness.blockers,
+            state: readiness.state,
+            accessBlockers: blockerSummary.accessBlockers,
+          };
+          throw error;
+        }
+
         await db
           .update(distributionPrograms)
           .set({
-            isReferralEnabled: 0,
+            isReferralEnabled: 1,
             updatedBy: ctx.user.id,
           })
           .where(eq(distributionPrograms.developmentId, input.developmentId));
@@ -1953,44 +2259,12 @@ const adminDistributionRouter = router({
         return {
           success: true,
           developmentId: input.developmentId,
-          enabled: false,
+          programId: readiness.programId,
+          enabled: true,
+          accessBlockers: blockerSummary.accessBlockers,
+          readinessBlockers: readiness.blockers,
         };
-      }
-
-      const readiness = await getProgramReadinessByDevelopmentId(input.developmentId);
-      if (!readiness.canEnableReferral) {
-        const error = new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Program is not ready to enable referrals.',
-        }) as TRPCError & {
-          data?: {
-            errorCode: 'PROGRAM_NOT_READY';
-            blockers: typeof readiness.blockers;
-            state: typeof readiness.state;
-          };
-        };
-        error.data = {
-          errorCode: 'PROGRAM_NOT_READY',
-          blockers: readiness.blockers,
-          state: readiness.state,
-        };
-        throw error;
-      }
-
-      await db
-        .update(distributionPrograms)
-        .set({
-          isReferralEnabled: 1,
-          updatedBy: ctx.user.id,
-        })
-        .where(eq(distributionPrograms.developmentId, input.developmentId));
-
-      return {
-        success: true,
-        developmentId: input.developmentId,
-        programId: readiness.programId,
-        enabled: true,
-      };
+      });
     }),
 
   getProgramReadiness: superAdminProcedure
@@ -5827,6 +6101,13 @@ const referrerDistributionRouter = router({
           message: 'Your current tier does not meet program access requirements.',
         });
       }
+
+      await assertDevelopmentSubmissionEligible({
+        db,
+        developmentId: Number(program.developmentId),
+        actor: { role: 'referrer', userId: agentId },
+        channel: 'submission',
+      });
 
       const managerUserId = await getPrimaryManagerUserIdForProgram(db, input.programId);
       const normalizedExternalRef = input.externalRef?.trim() || null;

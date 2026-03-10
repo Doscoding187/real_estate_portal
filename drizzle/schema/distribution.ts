@@ -12,7 +12,7 @@ import {
   decimal,
 } from 'drizzle-orm/mysql-core';
 import { users } from './core';
-import { developments } from './developments';
+import { developments, developerBrandProfiles } from './developments';
 
 export const DISTRIBUTION_DEAL_STAGE_VALUES = [
   'viewing_scheduled',
@@ -35,6 +35,18 @@ export const DISTRIBUTION_VIEWING_STATUS_VALUES = [
 ] as const;
 
 export const DISTRIBUTION_IDENTITY_TYPE_VALUES = ['referrer', 'manager'] as const;
+export const DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES = [
+  'pending',
+  'active',
+  'paused',
+  'ended',
+] as const;
+export const DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES = [
+  'listed',
+  'included',
+  'excluded',
+  'paused',
+] as const;
 
 const DISTRIBUTION_COMMISSION_MODEL_VALUES = [
   'flat_percentage',
@@ -189,6 +201,76 @@ export const distributionPrograms = mysqlTable(
     index('idx_distribution_programs_is_active').on(table.isActive),
     index('idx_distribution_programs_referral_enabled').on(table.isReferralEnabled),
     index('idx_distribution_programs_updated_at').on(table.updatedAt),
+  ],
+);
+
+export const distributionBrandPartnerships = mysqlTable(
+  'distribution_brand_partnerships',
+  {
+    id: int().autoincrement().primaryKey(),
+    brandProfileId: int('brand_profile_id')
+      .notNull()
+      .references(() => developerBrandProfiles.id, { onDelete: 'cascade' }),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('pending')
+      .notNull(),
+    partneredAt: timestamp('partnered_at', { mode: 'string' }),
+    endedAt: timestamp('ended_at', { mode: 'string' }),
+    reasonCode: varchar('reason_code', { length: 80 }),
+    notes: text('notes'),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_brand_partnerships_brand').on(table.brandProfileId),
+    index('idx_distribution_brand_partnerships_status').on(table.status),
+    index('idx_distribution_brand_partnerships_updated_at').on(table.updatedAt),
+  ],
+);
+
+export const distributionDevelopmentAccess = mysqlTable(
+  'distribution_development_access',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    brandPartnershipId: int('brand_partnership_id')
+      .notNull()
+      .references(() => distributionBrandPartnerships.id, { onDelete: 'cascade' }),
+    brandProfileId: int('brand_profile_id')
+      .notNull()
+      .references(() => developerBrandProfiles.id, { onDelete: 'cascade' }),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('listed')
+      .notNull(),
+    submissionAllowed: tinyint('submission_allowed').default(0).notNull(),
+    excludedByMandate: tinyint('excluded_by_mandate').default(0).notNull(),
+    excludedByExclusivity: tinyint('excluded_by_exclusivity').default(0).notNull(),
+    reasonCode: varchar('reason_code', { length: 80 }),
+    notes: text('notes'),
+    includedAt: timestamp('included_at', { mode: 'string' }),
+    excludedAt: timestamp('excluded_at', { mode: 'string' }),
+    pausedAt: timestamp('paused_at', { mode: 'string' }),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_development_access_development').on(table.developmentId),
+    index('idx_distribution_development_access_partnership').on(table.brandPartnershipId),
+    index('idx_distribution_development_access_brand').on(table.brandProfileId),
+    index('idx_distribution_development_access_status').on(table.status),
+    index('idx_distribution_development_access_submit').on(table.submissionAllowed),
   ],
 );
 
