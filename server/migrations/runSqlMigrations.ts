@@ -17,8 +17,15 @@ type SqlConnection = ReturnType<typeof connect>;
 function parseSqlStatements(sql: string): string[] {
   const withoutBlockComments = sql.replace(/\/\*[\s\S]*?\*\//g, '');
   const withoutLineComments = withoutBlockComments
-    .split('\n')
-    .map(line => line.replace(/^\s*--.*$/, ''))
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .map(line => {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith('--') || trimmed.startsWith('#')) {
+        return '';
+      }
+      return line;
+    })
     .join('\n');
 
   return withoutLineComments
