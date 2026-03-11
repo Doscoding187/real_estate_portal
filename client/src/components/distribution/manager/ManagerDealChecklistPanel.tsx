@@ -143,7 +143,8 @@ export function ManagerDealChecklistPanel({
               </p>
             ))}
           <p className="text-xs text-slate-500">
-            Milestone automation is not yet implemented. Readiness is currently document-based.
+            Payout readiness uses verified documents and any milestone checks the system can prove
+            today. Unsupported milestones still require manual confirmation.
           </p>
         </CardContent>
       </Card>

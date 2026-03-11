@@ -10,6 +10,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 
 export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
 
@@ -121,6 +122,7 @@ async function getDealScope(db: any, dealId: number) {
       buyerName: distributionDeals.buyerName,
       developmentId: distributionDeals.developmentId,
       developmentName: developments.name,
+      currentStage: distributionDeals.currentStage,
     })
     .from(distributionDeals)
     .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
@@ -140,6 +142,7 @@ async function getDealScope(db: any, dealId: number) {
     buyerName: deal.buyerName || null,
     developmentId: Number(deal.developmentId),
     developmentName: String(deal.developmentName || `Development #${deal.developmentId}`),
+    currentStage: deal.currentStage ? String(deal.currentStage) : null,
   };
 }
 
@@ -272,7 +275,16 @@ export async function getDealChecklist(
   const requiredCount = requiredOnly.length;
   const verifiedRequiredCount = requiredOnly.filter(document => document.status === 'verified').length;
   const allRequiredVerified = requiredCount > 0 && verifiedRequiredCount >= requiredCount;
-  const payoutMilestoneSatisfied = true;
+  const payoutMilestone = program?.payoutMilestone ? String(program.payoutMilestone) : null;
+  const payoutMilestoneEvaluation = evaluatePayoutMilestone({
+    payoutMilestone,
+    currentStage: dealScope.currentStage,
+    documents: requiredDocuments.map(document => ({
+      documentCode: document.documentCode,
+      status: document.status,
+    })),
+  });
+  const payoutMilestoneSatisfied = payoutMilestoneEvaluation.satisfied;
   const payoutReady = allRequiredVerified && payoutMilestoneSatisfied;
   const blockers: string[] = [];
 
@@ -285,6 +297,8 @@ export async function getDealChecklist(
     );
   }
 
+  blockers.push(...payoutMilestoneEvaluation.blockers);
+
   return {
     dealId: dealScope.dealId,
     dealRef: dealScope.dealRef,
@@ -292,7 +306,7 @@ export async function getDealChecklist(
     developmentId: dealScope.developmentId,
     developmentName: dealScope.developmentName,
     programId: program ? Number(program.id) : null,
-    payoutMilestone: program?.payoutMilestone ? String(program.payoutMilestone) : null,
+    payoutMilestone,
     currencyCode: program?.currencyCode ? String(program.currencyCode) : null,
     commissionSummary: {
       commissionModel: normalizeCommissionModel(program?.commissionModel),
