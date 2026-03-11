@@ -7,6 +7,7 @@ import { getDb } from '../db-connection';
 import {
   affordabilityAssessments,
   affordabilityMatchSnapshots,
+  developerBrandProfiles,
   developmentManagerAssignments,
   developments,
   distributionDealDocuments,
@@ -25,6 +26,7 @@ const describeWithDb: typeof describe = hasDb
 
 const createdState = {
   userIds: [] as number[],
+  brandProfileIds: [] as number[],
   developmentIds: [] as number[],
   programIds: [] as number[],
   assignmentIds: [] as number[],
@@ -72,11 +74,24 @@ async function insertDevelopment(name: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const [brandInsertResult] = await db.insert(developerBrandProfiles).values({
+    brandName: `${name} Brand`,
+    slug: `distribution-brand-${suffix}`,
+    ownerType: 'platform',
+    profileType: 'industry_reference',
+    isVisible: 1,
+    identityType: 'developer',
+  } as any);
+  const brandProfileId = Number((brandInsertResult as any).insertId || 0);
+  createdState.brandProfileIds.push(brandProfileId);
+
   const [insertResult] = await db.insert(developments).values({
     name,
     developmentType: 'residential',
     city: 'Johannesburg',
     province: 'Gauteng',
+    developerBrandProfileId: brandProfileId,
     isPublished: 1,
     approvalStatus: 'approved',
   } as any);
@@ -231,12 +246,20 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
+    const brandProfileIds = uniqueIds(createdState.brandProfileIds);
+    if (brandProfileIds.length) {
+      await db
+        .delete(developerBrandProfiles)
+        .where(inArray(developerBrandProfiles.id, brandProfileIds));
+    }
+
     const userIds = uniqueIds(createdState.userIds);
     if (userIds.length) {
       await db.delete(users).where(inArray(users.id, userIds));
     }
 
     createdState.userIds = [];
+    createdState.brandProfileIds = [];
     createdState.developmentIds = [];
     createdState.programIds = [];
     createdState.assignmentIds = [];
@@ -369,6 +392,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
   it('supports idempotent submission via clientReference', async () => {
     const actorUserId = await insertUser('agent');
+    const managerUserId = await insertUser('agent');
     const caller = createCaller(actorUserId, 'agent');
 
     const developmentId = await insertDevelopment(`Idempotent Program ${Date.now()}`);
@@ -376,6 +400,12 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       developmentId,
       isActive: true,
       isReferralEnabled: true,
+    });
+    await insertManagerAssignment({
+      developmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
     });
 
     const clientReference = `CLIENT-REF-${Date.now()}`;
@@ -399,6 +429,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
   it("blocks attaching another partner's assessmentId", async () => {
     const ownerUserId = await insertUser('agent');
     const actorUserId = await insertUser('agent');
+    const managerUserId = await insertUser('agent');
     const caller = createCaller(actorUserId, 'agent');
 
     const developmentId = await insertDevelopment(`Assessment Ownership ${Date.now()}`);
@@ -406,6 +437,12 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       developmentId,
       isActive: true,
       isReferralEnabled: true,
+    });
+    await insertManagerAssignment({
+      developmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
     });
 
     const assessment = await insertAssessment({
@@ -429,6 +466,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
   it('attaching assessment creates snapshot when missing and stores lock linkage', async () => {
     const actorUserId = await insertUser('agent');
+    const managerUserId = await insertUser('agent');
     const caller = createCaller(actorUserId, 'agent');
     const db = await getDb();
     if (!db) throw new Error('Database not available');
@@ -438,6 +476,12 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       developmentId,
       isActive: true,
       isReferralEnabled: true,
+    });
+    await insertManagerAssignment({
+      developmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
     });
 
     const assessment = await insertAssessment({
@@ -507,6 +551,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
   it('listMyReferrals returns only the actor own referrals', async () => {
     const actorAUserId = await insertUser('agent');
     const actorBUserId = await insertUser('agent');
+    const managerUserId = await insertUser('agent');
     const callerA = createCaller(actorAUserId, 'agent');
     const callerB = createCaller(actorBUserId, 'agent');
 
@@ -515,6 +560,12 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       developmentId,
       isActive: true,
       isReferralEnabled: true,
+    });
+    await insertManagerAssignment({
+      developmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
     });
 
     const actorADeal = await callerA.distribution.partner.submitReferral({

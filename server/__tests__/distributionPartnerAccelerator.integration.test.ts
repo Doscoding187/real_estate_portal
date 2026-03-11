@@ -5,6 +5,7 @@ import { getDb } from '../db-connection';
 import {
   affordabilityAssessments,
   affordabilityMatchSnapshots,
+  developerBrandProfiles,
   developmentManagerAssignments,
   developments,
   distributionPrograms,
@@ -22,6 +23,7 @@ const describeWithDb: typeof describe = hasDb
 
 const createdState = {
   userIds: [] as number[],
+  brandProfileIds: [] as number[],
   developmentIds: [] as number[],
   programIds: [] as number[],
   assessmentIds: [] as string[],
@@ -65,12 +67,25 @@ async function insertUser(role: 'agent' | 'agency_admin' | 'super_admin' = 'agen
 async function insertDevelopment(input: { name: string; city: string; province: string; suburb: string }) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const [brandInsertResult] = await db.insert(developerBrandProfiles).values({
+    brandName: `${input.name} Brand`,
+    slug: `distribution-accelerator-brand-${suffix}`,
+    ownerType: 'platform',
+    profileType: 'industry_reference',
+    isVisible: 1,
+    identityType: 'developer',
+  } as any);
+  const brandProfileId = Number((brandInsertResult as any).insertId || 0);
+  createdState.brandProfileIds.push(brandProfileId);
+
   const [insertResult] = await db.insert(developments).values({
     name: input.name,
     developmentType: 'residential',
     city: input.city,
     province: input.province,
     suburb: input.suburb,
+    developerBrandProfileId: brandProfileId,
     isPublished: 1,
     approvalStatus: 'approved',
   } as any);
@@ -166,12 +181,20 @@ describeWithDb('distribution.partner accelerator integration', () => {
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
+    const brandProfileIds = uniqueNumberIds(createdState.brandProfileIds);
+    if (brandProfileIds.length) {
+      await db
+        .delete(developerBrandProfiles)
+        .where(inArray(developerBrandProfiles.id, brandProfileIds));
+    }
+
     const userIds = uniqueNumberIds(createdState.userIds);
     if (userIds.length) {
       await db.delete(users).where(inArray(users.id, userIds));
     }
 
     createdState.userIds = [];
+    createdState.brandProfileIds = [];
     createdState.developmentIds = [];
     createdState.programIds = [];
     createdState.assessmentIds = [];

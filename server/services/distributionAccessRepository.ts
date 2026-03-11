@@ -9,6 +9,15 @@ import { getDb } from '../db';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
+function isMissingSchemaError(error: unknown) {
+  const candidate = error as { code?: string; errno?: number; cause?: unknown } | null;
+  if (!candidate) return false;
+  if (candidate.code === 'ER_NO_SUCH_TABLE' || candidate.code === 'ER_BAD_FIELD_ERROR') return true;
+  if (candidate.errno === 1146 || candidate.errno === 1054) return true;
+  if (candidate.cause && candidate.cause !== error) return isMissingSchemaError(candidate.cause);
+  return false;
+}
+
 export type DistributionBrandPartnershipRow = typeof distributionBrandPartnerships.$inferSelect;
 export type DistributionDevelopmentAccessRow = typeof distributionDevelopmentAccess.$inferSelect;
 
@@ -41,13 +50,18 @@ export async function getBrandPartnershipByBrandProfileId(
   db: DbHandle,
   brandProfileId: number,
 ): Promise<DistributionBrandPartnershipRow | null> {
-  const [row] = await db
-    .select()
-    .from(distributionBrandPartnerships)
-    .where(eq(distributionBrandPartnerships.brandProfileId, brandProfileId))
-    .limit(1);
+  try {
+    const [row] = await db
+      .select()
+      .from(distributionBrandPartnerships)
+      .where(eq(distributionBrandPartnerships.brandProfileId, brandProfileId))
+      .limit(1);
 
-  return row || null;
+    return row || null;
+  } catch (error) {
+    if (isMissingSchemaError(error)) return null;
+    throw error;
+  }
 }
 
 export async function upsertBrandPartnership(
@@ -112,13 +126,18 @@ export async function getDevelopmentAccessByDevelopmentId(
   db: DbHandle,
   developmentId: number,
 ): Promise<DistributionDevelopmentAccessRow | null> {
-  const [row] = await db
-    .select()
-    .from(distributionDevelopmentAccess)
-    .where(eq(distributionDevelopmentAccess.developmentId, developmentId))
-    .limit(1);
+  try {
+    const [row] = await db
+      .select()
+      .from(distributionDevelopmentAccess)
+      .where(eq(distributionDevelopmentAccess.developmentId, developmentId))
+      .limit(1);
 
-  return row || null;
+    return row || null;
+  } catch (error) {
+    if (isMissingSchemaError(error)) return null;
+    throw error;
+  }
 }
 
 export async function upsertDevelopmentAccess(
