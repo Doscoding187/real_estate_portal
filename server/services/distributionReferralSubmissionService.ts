@@ -566,6 +566,7 @@ export async function createReferralDeal(
       affordabilityAssessmentId: assessmentAttachment?.assessmentId || null,
       affordabilityMatchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
       affordabilityPurchasePrice: assessmentAttachment?.purchasePrice ?? null,
+      commissionBaseAmount: assessmentAttachment?.purchasePrice ?? null,
       affordabilityAssumptionsJson: assessmentAttachment?.assumptionsSummary as any,
       externalRef: normalizedClientReference,
       buyerName,

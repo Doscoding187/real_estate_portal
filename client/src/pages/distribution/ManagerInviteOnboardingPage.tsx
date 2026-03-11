@@ -53,9 +53,10 @@ export default function ManagerInviteOnboardingPage() {
   const inviteParams = useMemo(() => parseDistributionManagerInviteParams(search), [search]);
   const registrationId = inviteParams.registrationId || 0;
   const email = inviteParams.email;
+  const token = inviteParams.token || undefined;
 
   const inviteQuery = trpc.distribution.getManagerInvite.useQuery(
-    { registrationId, email },
+    token ? { token } : { registrationId, email },
     {
       enabled: inviteParams.isComplete,
       retry: false,
@@ -99,8 +100,9 @@ export default function ManagerInviteOnboardingPage() {
   const completeMutation = trpc.distribution.completeManagerInviteRegistration.useMutation({
     onSuccess: () => {
       toast.success('Registration complete. You can now log in to your manager dashboard.');
+      const loginEmail = inviteQuery.data?.email || email;
       setLocation(
-        `/login?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/distribution/manager')}`,
+        `/login?email=${encodeURIComponent(loginEmail)}&next=${encodeURIComponent('/distribution/manager')}`,
       );
     },
     onError: error => {
@@ -109,13 +111,12 @@ export default function ManagerInviteOnboardingPage() {
   });
 
   const onSubmit = (values: OnboardingFormData) => {
-    if (!inviteParams.isComplete || !registrationId || !email) {
+    if (!inviteParams.isComplete || (!token && (!registrationId || !email))) {
       toast.error('Invite link is invalid.');
       return;
     }
     completeMutation.mutate({
-      registrationId,
-      email,
+      ...(token ? { token } : { registrationId, email }),
       fullName: values.fullName.trim(),
       phone: values.phone.trim(),
       currentRole: values.currentRole?.trim() || undefined,
@@ -161,7 +162,7 @@ export default function ManagerInviteOnboardingPage() {
                 <Button
                   onClick={() =>
                     setLocation(
-                      `/login?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/distribution/manager')}`,
+                      `/login?email=${encodeURIComponent(inviteData?.email || email)}&next=${encodeURIComponent('/distribution/manager')}`,
                     )
                   }
                 >

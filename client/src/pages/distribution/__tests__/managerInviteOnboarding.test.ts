@@ -12,10 +12,23 @@ describe('manager invite onboarding helpers', () => {
     );
 
     expect(parsed).toEqual({
+      token: '',
       registrationId: 27,
       email: 'manager@example.com',
       isComplete: true,
       recovered: true,
+    });
+  });
+
+  it('accepts token-based invite links as complete', () => {
+    const parsed = parseDistributionManagerInviteParams('?token=signed.invite.token');
+
+    expect(parsed).toEqual({
+      token: 'signed.invite.token',
+      registrationId: null,
+      email: '',
+      isComplete: true,
+      recovered: false,
     });
   });
 

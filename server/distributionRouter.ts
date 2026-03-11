@@ -79,6 +79,10 @@ import {
   type DistributionSchemaOperation,
   warnSchemaCapabilityOnce,
 } from './services/runtimeSchemaCapabilities';
+import {
+  createDistributionManagerInviteToken,
+  verifyDistributionManagerInviteToken,
+} from './services/distributionManagerInviteTokenService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -244,6 +248,51 @@ function splitFullName(fullName: string) {
   return {
     firstName: firstName || null,
     lastName,
+  };
+}
+
+function issueManagerInviteUrl(input: { registrationId: number; email: string }) {
+  const token = createDistributionManagerInviteToken(input, {
+    secret: ENV.cookieSecret,
+  });
+  return buildDistributionManagerInviteUrl(ENV.appUrl, { token });
+}
+
+function resolveManagerInviteIdentity(input: {
+  token?: string | null;
+  registrationId?: number | null;
+  email?: string | null;
+}) {
+  const token = input.token?.trim();
+  if (token) {
+    try {
+      return verifyDistributionManagerInviteToken(token, {
+        secret: ENV.cookieSecret,
+      });
+    } catch (error) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: (error as Error)?.message || 'Invalid invite token.',
+      });
+    }
+  }
+
+  const registrationId = Number(input.registrationId || 0);
+  const email = String(input.email || '')
+    .trim()
+    .toLowerCase();
+  if (!registrationId || !email) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invite token or legacy invite parameters are required.',
+    });
+  }
+
+  return {
+    registrationId,
+    email,
+    issuedAt: null,
+    expiresAt: null,
   };
 }
 
@@ -1326,6 +1375,9 @@ async function getDealById(db: any, dealId: number) {
       developmentId: distributionDeals.developmentId,
       agentId: distributionDeals.agentId,
       managerUserId: distributionDeals.managerUserId,
+      dealAmount: distributionDeals.dealAmount,
+      commissionBaseAmount: distributionDeals.commissionBaseAmount,
+      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
       currentStage: distributionDeals.currentStage,
       commissionTriggerStage: distributionDeals.commissionTriggerStage,
       commissionStatus: distributionDeals.commissionStatus,
@@ -3205,7 +3257,7 @@ const adminDistributionRouter = router({
             mode: 'existing_pending' as const,
             registrationId: Number(existingPending.id),
             email: normalizedEmail,
-            inviteUrl: buildDistributionManagerInviteUrl(ENV.appUrl, {
+            inviteUrl: issueManagerInviteUrl({
               registrationId: Number(existingPending.id),
               email: normalizedEmail,
             }),
@@ -3229,10 +3281,7 @@ const adminDistributionRouter = router({
           mode: 'created' as const,
           registrationId,
           email: normalizedEmail,
-          inviteUrl: buildDistributionManagerInviteUrl(ENV.appUrl, {
-            registrationId,
-            email: normalizedEmail,
-          }),
+          inviteUrl: issueManagerInviteUrl({ registrationId, email: normalizedEmail }),
         };
       });
     }),
@@ -3291,7 +3340,7 @@ const adminDistributionRouter = router({
         success: true,
         registrationId: Number(registration.id),
         email: normalizedEmail,
-        inviteUrl: buildDistributionManagerInviteUrl(ENV.appUrl, {
+        inviteUrl: issueManagerInviteUrl({
           registrationId: Number(registration.id),
           email: normalizedEmail,
         }),
@@ -3831,6 +3880,9 @@ const adminDistributionRouter = router({
             programId: Number(deal.programId),
             developmentId: Number(deal.developmentId),
             agentId: Number(deal.agentId),
+            dealAmount: Number(deal.dealAmount ?? 0),
+            commissionBaseAmount: Number(deal.commissionBaseAmount ?? 0),
+            affordabilityPurchasePrice: Number(deal.affordabilityPurchasePrice ?? 0),
             commissionTriggerStage: deal.commissionTriggerStage as
               | 'contract_signed'
               | 'bond_approved',
@@ -3858,6 +3910,7 @@ const adminDistributionRouter = router({
                   commissionModel: distributionPrograms.commissionModel,
                   defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
                   defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+                  currencyCode: distributionPrograms.currencyCode,
                 })
                 .from(distributionPrograms)
                 .where(eq(distributionPrograms.id, programId))
@@ -5263,6 +5316,9 @@ const managerDistributionRouter = router({
             programId: Number(deal.programId),
             developmentId: Number(deal.developmentId),
             agentId: Number(deal.agentId),
+            dealAmount: Number(deal.dealAmount ?? 0),
+            commissionBaseAmount: Number(deal.commissionBaseAmount ?? 0),
+            affordabilityPurchasePrice: Number(deal.affordabilityPurchasePrice ?? 0),
             commissionTriggerStage: deal.commissionTriggerStage as
               | 'contract_signed'
               | 'bond_approved',
@@ -5290,6 +5346,7 @@ const managerDistributionRouter = router({
                   commissionModel: distributionPrograms.commissionModel,
                   defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
                   defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+                  currencyCode: distributionPrograms.currencyCode,
                 })
                 .from(distributionPrograms)
                 .where(eq(distributionPrograms.id, programId))
@@ -7293,6 +7350,7 @@ export const distributionRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
+      assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -7335,17 +7393,23 @@ export const distributionRouter = router({
 
   getManagerInvite: publicProcedure
     .input(
-      z.object({
-        registrationId: z.number().int().positive(),
-        email: z.string().trim().email().max(320),
-      }),
+      z
+        .object({
+          token: z.string().trim().min(1).max(2000).optional(),
+          registrationId: z.number().int().positive().optional(),
+          email: z.string().trim().email().max(320).optional(),
+        })
+        .refine(input => Boolean(input.token || (input.registrationId && input.email)), {
+          message: 'Invite token or legacy invite parameters are required.',
+        }),
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      const normalizedEmail = input.email.trim().toLowerCase();
+      const identity = resolveManagerInviteIdentity(input);
+      const registrationId = Number(identity.registrationId);
       const [registration] = await db
         .select({
           id: platformTeamRegistrations.id,
@@ -7359,7 +7423,7 @@ export const distributionRouter = router({
           createdAt: platformTeamRegistrations.createdAt,
         })
         .from(platformTeamRegistrations)
-        .where(eq(platformTeamRegistrations.id, input.registrationId))
+        .where(eq(platformTeamRegistrations.id, registrationId))
         .limit(1);
 
       if (!registration) {
@@ -7371,7 +7435,7 @@ export const distributionRouter = router({
           message: 'Invite is not for a distribution manager.',
         });
       }
-      if ((registration.email || '').toLowerCase() !== normalizedEmail) {
+      if ((registration.email || '').toLowerCase() !== identity.email) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Invite email does not match.' });
       }
 
@@ -7385,33 +7449,41 @@ export const distributionRouter = router({
         status: registration.status,
         canComplete: registration.status === 'pending',
         createdAt: registration.createdAt,
+        expiresAt: identity.expiresAt ? new Date(identity.expiresAt * 1000).toISOString() : null,
       };
     }),
 
   completeManagerInviteRegistration: publicProcedure
     .input(
-      z.object({
-        registrationId: z.number().int().positive(),
-        email: z.string().trim().email().max(320),
-        fullName: z.string().trim().min(2).max(200),
-        phone: z.string().trim().max(50).optional(),
-        currentRole: z.string().trim().max(150).optional(),
-        profileImageUrl: z.string().trim().url().max(1000).optional(),
-        password: z
-          .string()
-          .min(8)
-          .regex(/[a-z]/)
-          .regex(/[A-Z]/)
-          .regex(/\d/)
-          .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?/]/),
-      }),
+      z
+        .object({
+          token: z.string().trim().min(1).max(2000).optional(),
+          registrationId: z.number().int().positive().optional(),
+          email: z.string().trim().email().max(320).optional(),
+          fullName: z.string().trim().min(2).max(200),
+          phone: z.string().trim().max(50).optional(),
+          currentRole: z.string().trim().max(150).optional(),
+          profileImageUrl: z.string().trim().url().max(1000).optional(),
+          password: z
+            .string()
+            .min(8)
+            .regex(/[a-z]/)
+            .regex(/[A-Z]/)
+            .regex(/\d/)
+            .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?/]/),
+        })
+        .refine(input => Boolean(input.token || (input.registrationId && input.email)), {
+          message: 'Invite token or legacy invite parameters are required.',
+        }),
     )
     .mutation(async ({ input }) => {
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      const normalizedEmail = input.email.trim().toLowerCase();
+      const identity = resolveManagerInviteIdentity(input);
+      const registrationId = Number(identity.registrationId);
+      const normalizedEmail = identity.email;
       const [registration] = await db
         .select({
           id: platformTeamRegistrations.id,
@@ -7421,7 +7493,7 @@ export const distributionRouter = router({
           notes: platformTeamRegistrations.notes,
         })
         .from(platformTeamRegistrations)
-        .where(eq(platformTeamRegistrations.id, input.registrationId))
+        .where(eq(platformTeamRegistrations.id, registrationId))
         .limit(1);
 
       if (!registration) {
@@ -7526,11 +7598,11 @@ export const distributionRouter = router({
           reviewedAt: sql`CURRENT_TIMESTAMP`,
           reviewNotes: 'Approved via manager invite completion.',
         })
-        .where(eq(platformTeamRegistrations.id, input.registrationId));
+        .where(eq(platformTeamRegistrations.id, registrationId));
 
       return {
         success: true,
-        registrationId: input.registrationId,
+        registrationId,
         userId,
         redirectPath: '/login',
       };
