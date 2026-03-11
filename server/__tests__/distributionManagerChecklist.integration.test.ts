@@ -23,6 +23,25 @@ const describeWithDb: typeof describe = hasDb
 type SeedOptions = {
   includePrimaryAssignment?: boolean;
   requiredDocsCount?: number;
+  payoutMilestone?:
+    | 'attorney_instruction'
+    | 'attorney_signing'
+    | 'bond_approval'
+    | 'transfer_registration'
+    | 'occupation'
+    | 'custom';
+  templateDocumentCodes?: Array<
+    | 'id_document'
+    | 'proof_of_address'
+    | 'proof_of_income'
+    | 'bank_statement'
+    | 'pre_approval'
+    | 'signed_offer_to_purchase'
+    | 'sale_agreement'
+    | 'attorney_instruction_letter'
+    | 'transfer_documents'
+    | 'custom'
+  >;
 };
 
 const createdState = {
@@ -76,6 +95,13 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
 
   const requiredDocsCount = Math.max(0, options.requiredDocsCount ?? 2);
   const includePrimaryAssignment = options.includePrimaryAssignment ?? true;
+  const payoutMilestone = options.payoutMilestone ?? 'attorney_signing';
+  const templateDocumentCodes = options.templateDocumentCodes ?? [
+    'id_document',
+    'proof_of_address',
+    'proof_of_income',
+    'bank_statement',
+  ];
 
   const managerUserId = await insertUser('distribution-manager');
   await insertManagerIdentity(managerUserId);
@@ -103,7 +129,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
     commissionModel: 'flat_percentage',
     defaultCommissionPercent: 2.5,
     tierAccessPolicy: 'restricted',
-    payoutMilestone: 'attorney_signing',
+    payoutMilestone,
     currencyCode: 'ZAR',
   });
   const programId = Number((programInsert as any).insertId || 0);
@@ -123,12 +149,12 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
     createdState.assignmentIds.push(assignmentId);
   }
 
-  const templateCodes = ['id_document', 'proof_of_address', 'proof_of_income', 'bank_statement'];
   const templateIds: number[] = [];
   for (let index = 0; index < requiredDocsCount; index += 1) {
+    const templateCode = templateDocumentCodes[index] || 'custom';
     const [templateInsert] = await db.insert(developmentRequiredDocuments).values({
       developmentId,
-      documentCode: templateCodes[index] as any,
+      documentCode: templateCode as any,
       documentLabel: `Required document ${index + 1}`,
       isRequired: 1,
       sortOrder: index,
@@ -348,6 +374,76 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     expect(checklist.computed.verifiedRequiredCount).toBe(2);
     expect(checklist.computed.allRequiredVerified).toBe(true);
     expect(checklist.computed.payoutReady).toBe(true);
+  });
+
+  it('requires bond approval milestone before payout readiness becomes true', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+      payoutMilestone: 'bond_approval',
+      templateDocumentCodes: ['id_document'],
+    });
+    const caller = buildCaller(seed.managerUserId);
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+      status: 'verified',
+    });
+
+    const preApprovalChecklist = await caller.distribution.manager.getDealChecklist({
+      dealId: seed.dealId,
+    });
+    expect(preApprovalChecklist.computed.allRequiredVerified).toBe(true);
+    expect(preApprovalChecklist.computed.payoutReady).toBe(false);
+    expect(preApprovalChecklist.computed.blockers).toContain(
+      'Payout milestone requires the deal to reach bond approval.',
+    );
+
+    await setDealStage(seed.dealId, 'bond_approved');
+
+    const approvedChecklist = await caller.distribution.manager.getDealChecklist({
+      dealId: seed.dealId,
+    });
+    expect(approvedChecklist.computed.payoutReady).toBe(true);
+  });
+
+  it('requires verified transfer documents for transfer_registration milestone', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+      payoutMilestone: 'transfer_registration',
+      templateDocumentCodes: ['id_document', 'transfer_documents'],
+    });
+    const caller = buildCaller(seed.managerUserId);
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+      status: 'verified',
+    });
+
+    const incompleteChecklist = await caller.distribution.manager.getDealChecklist({
+      dealId: seed.dealId,
+    });
+    expect(incompleteChecklist.computed.payoutReady).toBe(false);
+    expect(incompleteChecklist.computed.blockers).toContain(
+      '1 required document still need verification.',
+    );
+    expect(incompleteChecklist.computed.blockers).toContain(
+      'Payout milestone requires verified transfer documents.',
+    );
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[1],
+      status: 'verified',
+    });
+
+    const completeChecklist = await caller.distribution.manager.getDealChecklist({
+      dealId: seed.dealId,
+    });
+    expect(completeChecklist.computed.payoutReady).toBe(true);
   });
 
   it('blocks manager transition to commission_pending until payout readiness is satisfied', async () => {
