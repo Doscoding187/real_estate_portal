@@ -12,6 +12,7 @@ import {
   unitTypes,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { validatePartnerSubmissionEligibility } from './distributionPartnerEligibilityService';
 
 const CALC_VERSION = 'v1' as const;
 const DEFAULT_INTEREST_RATE_ANNUAL = 11.75;
@@ -669,7 +670,11 @@ export async function getAffordabilityAssessment(input: {
   };
 }
 
-async function buildFreshMatchSnapshot(db: DbExecutor, assessment: SerializedAssessmentRecord) {
+async function buildFreshMatchSnapshot(
+  db: DbExecutor,
+  assessment: SerializedAssessmentRecord,
+  actor: ActorContext,
+) {
   const purchasePrice = Math.max(0, Number(assessment.outputs.purchasePrice || 0));
   const locationFilter = normalizeLocationFilter(assessment.locationFilter);
   const locationConditions = buildLocationSqlConditions(locationFilter);
@@ -717,10 +722,37 @@ async function buildFreshMatchSnapshot(db: DbExecutor, assessment: SerializedAss
     locationFilter?.bounds || null,
   ) as typeof rows;
 
+  const eligibilityByDevelopmentId = new Map<number, boolean>();
+  const developmentIds = new Set<number>();
+  for (const row of filteredRows) {
+    const developmentId = Number(row.developmentId);
+    if (Number.isFinite(developmentId) && developmentId > 0) {
+      developmentIds.add(developmentId);
+    }
+  }
+  await Promise.all(
+    Array.from(developmentIds).map(async developmentId => {
+      try {
+        await validatePartnerSubmissionEligibility({
+          developmentId,
+          actorUserId: actor.actorUserId,
+          actorRole: actor.actorRole,
+          db,
+        });
+        eligibilityByDevelopmentId.set(developmentId, true);
+      } catch {
+        eligibilityByDevelopmentId.set(developmentId, false);
+      }
+    }),
+  );
+
   const brandIds = new Set<number>();
   const grouped = new Map<number, MatchItem>();
   for (const row of filteredRows) {
     const developmentId = Number(row.developmentId);
+    if (!eligibilityByDevelopmentId.get(developmentId)) {
+      continue;
+    }
     const developerBrandProfileId = Number(row.developerBrandProfileId || 0);
     const marketingBrandProfileId = Number(row.marketingBrandProfileId || 0);
     if (developerBrandProfileId > 0) brandIds.add(developerBrandProfileId);
@@ -869,7 +901,10 @@ export async function getAffordabilityMatches(input: {
     };
   }
 
-  const created = await buildFreshMatchSnapshot(db, assessment);
+  const created = await buildFreshMatchSnapshot(db, assessment, {
+    actorUserId: input.actorUserId,
+    actorRole: input.actorRole,
+  });
   return {
     assessmentId: assessment.id,
     matchSnapshotId: created.matchSnapshotId,
