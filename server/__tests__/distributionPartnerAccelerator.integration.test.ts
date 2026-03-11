@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { inArray } from 'drizzle-orm';
+import { inArray, sql } from 'drizzle-orm';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
 import {
   affordabilityAssessments,
   affordabilityMatchSnapshots,
+  developmentManagerAssignments,
   developments,
   distributionPrograms,
   qualificationPackExports,
@@ -44,13 +45,13 @@ function createCaller(userId: number, role: 'agent' | 'agency_admin' | 'super_ad
   } as any);
 }
 
-async function insertUser() {
+async function insertUser(role: 'agent' | 'agency_admin' | 'super_admin' = 'agent') {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const [insertResult] = await db.insert(users).values({
     email: `distribution-accelerator-${suffix}@example.com`,
-    role: 'agent',
+    role,
     firstName: 'Accelerator',
     lastName: 'Tester',
     name: 'Accelerator Tester',
@@ -94,6 +95,18 @@ async function insertProgram(developmentId: number) {
   const programId = Number((insertResult as any).insertId || 0);
   createdState.programIds.push(programId);
   return programId;
+}
+
+async function insertPrimaryManagerAssignment(developmentId: number, managerUserId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(developmentManagerAssignments).values({
+    developmentId,
+    managerUserId,
+    isPrimary: 1,
+    isActive: 1,
+    assignedAt: sql`CURRENT_TIMESTAMP`,
+  } as any);
 }
 
 async function insertUnitType(input: {
@@ -144,6 +157,12 @@ describeWithDb('distribution.partner accelerator integration', () => {
 
     const developmentIds = uniqueNumberIds(createdState.developmentIds);
     if (developmentIds.length) {
+      await db
+        .delete(developmentManagerAssignments)
+        .where(inArray(developmentManagerAssignments.developmentId, developmentIds));
+    }
+
+    if (developmentIds.length) {
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
@@ -162,6 +181,7 @@ describeWithDb('distribution.partner accelerator integration', () => {
 
   it('matching respects price ceiling and location filter', async () => {
     const actorUserId = await insertUser();
+    const managerUserId = await insertUser('super_admin');
     const caller = createCaller(actorUserId, 'agent');
 
     const matchingDevelopmentId = await insertDevelopment({
@@ -171,6 +191,7 @@ describeWithDb('distribution.partner accelerator integration', () => {
       suburb: 'Sandton',
     });
     await insertProgram(matchingDevelopmentId);
+    await insertPrimaryManagerAssignment(matchingDevelopmentId, managerUserId);
 
     const otherProvinceDevelopmentId = await insertDevelopment({
       name: `Accelerator Other Province ${Date.now()}`,
@@ -226,5 +247,62 @@ describeWithDb('distribution.partner accelerator integration', () => {
         match.unitOptions.some(unit => Number(unit.priceFrom) >= 2000000),
       ),
     ).toBe(false);
+  });
+
+  it('matching excludes developments that are not submission-ready', async () => {
+    const actorUserId = await insertUser();
+    const managerUserId = await insertUser('super_admin');
+    const caller = createCaller(actorUserId, 'agent');
+
+    const readyDevelopmentId = await insertDevelopment({
+      name: `Accelerator Ready ${Date.now()}`,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      suburb: 'Sandton',
+    });
+    await insertProgram(readyDevelopmentId);
+    await insertPrimaryManagerAssignment(readyDevelopmentId, managerUserId);
+
+    const notReadyDevelopmentId = await insertDevelopment({
+      name: `Accelerator Not Ready ${Date.now()}`,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      suburb: 'Sandton',
+    });
+    await insertProgram(notReadyDevelopmentId);
+
+    await insertUnitType({
+      unitTypeId: `unit-${Date.now()}-ready`,
+      developmentId: readyDevelopmentId,
+      name: 'Ready Unit',
+      basePriceFrom: 900000,
+    });
+    await insertUnitType({
+      unitTypeId: `unit-${Date.now()}-not-ready`,
+      developmentId: notReadyDevelopmentId,
+      name: 'Not Ready Unit',
+      basePriceFrom: 850000,
+    });
+
+    const createResult = await caller.distribution.partner.createAffordabilityAssessment({
+      grossIncomeMonthly: 50000,
+      deductionsMonthly: 0,
+      depositAmount: 100000,
+      locationFilter: {
+        province: 'Gauteng',
+        city: 'Johannesburg',
+      },
+    });
+    createdState.assessmentIds.push(String(createResult.assessmentId));
+
+    const matchResult = await caller.distribution.partner.getAffordabilityMatches({
+      assessmentId: String(createResult.assessmentId),
+    });
+    createdState.snapshotIds.push(String(matchResult.matchSnapshotId));
+
+    expect(matchResult.matches.map(match => Number(match.developmentId))).toContain(readyDevelopmentId);
+    expect(matchResult.matches.map(match => Number(match.developmentId))).not.toContain(
+      notReadyDevelopmentId,
+    );
   });
 });
