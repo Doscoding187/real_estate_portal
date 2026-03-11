@@ -89,6 +89,27 @@ async function insertManagerIdentity(userId: number) {
   createdState.identityIds.push(identityId);
 }
 
+async function insertManagerAssignment(input: {
+  developmentId: number;
+  managerUserId: number;
+  isPrimary?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const [assignmentInsert] = await db.insert(distributionManagerAssignments).values({
+    developmentId: input.developmentId,
+    managerUserId: input.managerUserId,
+    isPrimary: input.isPrimary ? 1 : 0,
+    isActive: 1,
+    assignedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    workloadCapacity: 0,
+    timezone: null,
+  });
+  const assignmentId = Number((assignmentInsert as any).insertId || 0);
+  createdState.assignmentIds.push(assignmentId);
+  return assignmentId;
+}
+
 async function seedChecklistScenario(options: SeedOptions = {}) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -136,17 +157,11 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   createdState.programIds.push(programId);
 
   if (includePrimaryAssignment) {
-    const [assignmentInsert] = await db.insert(distributionManagerAssignments).values({
+    await insertManagerAssignment({
       developmentId,
       managerUserId,
-      isPrimary: 1,
-      isActive: 1,
-      assignedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      workloadCapacity: 0,
-      timezone: null,
+      isPrimary: true,
     });
-    const assignmentId = Number((assignmentInsert as any).insertId || 0);
-    createdState.assignmentIds.push(assignmentId);
   }
 
   const templateIds: number[] = [];
@@ -169,6 +184,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
     programId,
     developmentId,
     agentId: agentUserId,
+    managerUserId,
     buyerName: 'Buyer Seed',
   });
   const dealId = Number((dealInsert as any).insertId || 0);
@@ -279,6 +295,45 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     await expect(
       caller.distribution.manager.getDealChecklist({
         dealId: seed.dealId,
+      }),
+    ).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('blocks checklist and deal mutations for a secondary manager on another manager deal', async () => {
+    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    await insertManagerAssignment({
+      developmentId: seed.developmentId,
+      managerUserId: seed.outsiderManagerUserId,
+      isPrimary: false,
+    });
+
+    const outsiderCaller = buildCaller(seed.outsiderManagerUserId);
+    await setDealStage(seed.dealId, 'viewing_completed');
+
+    await expect(
+      outsiderCaller.distribution.manager.getDealChecklist({
+        dealId: seed.dealId,
+      }),
+    ).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+
+    await expect(
+      outsiderCaller.distribution.manager.updateDealDocumentStatus({
+        dealId: seed.dealId,
+        templateId: seed.templateIds[0],
+        status: 'verified',
+      }),
+    ).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+
+    await expect(
+      outsiderCaller.distribution.manager.advanceDealStage({
+        dealId: seed.dealId,
+        toStage: 'application_submitted',
       }),
     ).rejects.toMatchObject({
       code: 'FORBIDDEN',
