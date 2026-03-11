@@ -54,6 +54,7 @@ import {
 } from './services/distributionProgramService';
 import { getProgramReadinessByDevelopmentId } from './services/distributionProgramReadinessService';
 import {
+  assertDealPayoutReady,
   getDealChecklist,
   upsertDealDocumentStatus,
 } from './services/distributionDealDocumentsService';
@@ -3857,6 +3858,12 @@ const adminDistributionRouter = router({
         deal.commissionTriggerStage as 'contract_signed' | 'bond_approved',
       );
 
+      if (!input.force && (toStage === 'commission_pending' || toStage === 'commission_paid')) {
+        await assertDealPayoutReady(Number(deal.id), ctx.user.id, {
+          skipAssignmentCheck: true,
+        });
+      }
+
       const updatePayload: Record<string, unknown> = {
         currentStage: toStage,
         commissionStatus,
@@ -5294,6 +5301,12 @@ const managerDistributionRouter = router({
         toStage,
         deal.commissionTriggerStage as 'contract_signed' | 'bond_approved',
       );
+
+      if (toStage === 'commission_pending') {
+        await assertDealPayoutReady(Number(deal.id), ctx.user!.id, {
+          skipAssignmentCheck: ctx.user!.role === 'super_admin',
+        });
+      }
 
       const updatePayload: Record<string, unknown> = {
         currentStage: toStage,

@@ -411,3 +411,18 @@ export async function upsertDealDocumentStatus(
 
   return await getDealChecklist(input.dealId, actorUserId, options);
 }
+
+export async function assertDealPayoutReady(
+  dealId: number,
+  actorUserId: number,
+  options?: ChecklistOptions,
+) {
+  const checklist = await getDealChecklist(dealId, actorUserId, options);
+  if (!checklist.computed.payoutReady) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `Deal is not payout-ready: ${checklist.computed.blockers.join(', ') || 'unknown blockers'}.`,
+    });
+  }
+  return checklist;
+}
