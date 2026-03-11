@@ -301,7 +301,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     });
   });
 
-  it('blocks checklist and stage actions for a secondary manager on another manager deal', async () => {
+  it('blocks checklist and deal mutations for a secondary manager on another manager deal', async () => {
     const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
     await insertManagerAssignment({
       developmentId: seed.developmentId,
@@ -309,15 +309,8 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       isPrimary: false,
     });
 
-    const ownerCaller = buildCaller(seed.managerUserId);
     const outsiderCaller = buildCaller(seed.outsiderManagerUserId);
-
-    await ownerCaller.distribution.manager.scheduleViewing({
-      dealId: seed.dealId,
-      scheduledStartAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      scheduledEndAt: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
-      locationName: 'Sales office',
-    });
+    await setDealStage(seed.dealId, 'viewing_completed');
 
     await expect(
       outsiderCaller.distribution.manager.getDealChecklist({
@@ -328,9 +321,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     });
 
     await expect(
-      outsiderCaller.distribution.manager.validateViewing({
+      outsiderCaller.distribution.manager.updateDealDocumentStatus({
         dealId: seed.dealId,
-        outcome: 'completed_proceeding',
+        templateId: seed.templateIds[0],
+        status: 'verified',
       }),
     ).rejects.toMatchObject({
       code: 'FORBIDDEN',
