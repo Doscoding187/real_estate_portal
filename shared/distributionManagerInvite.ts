@@ -85,12 +85,20 @@ export function normalizePublicAppOrigin(
 
 export function buildDistributionManagerInviteUrl(
   appUrl: string | null | undefined,
-  params: { registrationId: number; email: string },
+  params: { token?: string | null; registrationId?: number; email?: string },
 ) {
   const baseOrigin = normalizePublicAppOrigin(appUrl);
   const url = new URL(DISTRIBUTION_MANAGER_ONBOARDING_PATH, `${baseOrigin}/`);
-  url.searchParams.set('registrationId', String(params.registrationId));
-  url.searchParams.set('email', params.email.trim().toLowerCase());
+  const token = params.token?.trim();
+  if (token) {
+    url.searchParams.set('token', token);
+    return url.toString();
+  }
+
+  if (params.registrationId && params.email) {
+    url.searchParams.set('registrationId', String(params.registrationId));
+    url.searchParams.set('email', params.email.trim().toLowerCase());
+  }
   return url.toString();
 }
 
@@ -102,10 +110,18 @@ export function parseDistributionManagerInviteParams(
 
   let registrationId: number | null = null;
   let email = '';
+  let token = '';
   let recovered = false;
 
   for (const candidate of candidates) {
     const params = new URLSearchParams(candidate);
+
+    for (const rawToken of params.getAll('token')) {
+      const normalizedToken = rawToken.trim();
+      if (!normalizedToken) continue;
+      if (token && token !== normalizedToken) recovered = true;
+      token = normalizedToken;
+    }
 
     for (const rawId of params.getAll('registrationId')) {
       const parsedId = Number(rawId);
@@ -123,9 +139,10 @@ export function parseDistributionManagerInviteParams(
   }
 
   return {
+    token,
     registrationId,
     email,
-    isComplete: Boolean(registrationId && email),
+    isComplete: Boolean(token || (registrationId && email)),
     recovered,
   };
 }

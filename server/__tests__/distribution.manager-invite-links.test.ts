@@ -18,12 +18,11 @@ describe('distribution manager invite link helpers', () => {
       buildDistributionManagerInviteUrl(
         'https://real-estate-portal-xi.vercel.app/distribution/manager/onboarding?registrationId=1&email=stale%40example.com',
         {
-          registrationId: 42,
-          email: 'Manager@example.com',
+          token: 'signed-token',
         },
       ),
     ).toBe(
-      'https://real-estate-portal-xi.vercel.app/distribution/manager/onboarding?registrationId=42&email=manager%40example.com',
+      'https://real-estate-portal-xi.vercel.app/distribution/manager/onboarding?token=signed-token',
     );
   });
 });
