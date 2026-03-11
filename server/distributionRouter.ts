@@ -4599,6 +4599,7 @@ const managerDistributionRouter = router({
       }
 
       if (ctx.user!.role !== 'super_admin') {
+        conditions.push(eq(distributionViewings.managerUserId, ctx.user!.id));
         if (typeof input.programId === 'number' || typeof input.developmentId === 'number') {
           await assertManagerScope(db, ctx.user!.id, {
             programId: input.programId,
@@ -4857,6 +4858,7 @@ const managerDistributionRouter = router({
       }
 
       if (ctx.user!.role !== 'super_admin') {
+        conditions.push(eq(distributionDeals.managerUserId, ctx.user!.id));
         if (typeof input.programId === 'number' || typeof input.developmentId === 'number') {
           await assertManagerScope(db, ctx.user!.id, {
             programId: input.programId,
@@ -5066,11 +5068,12 @@ const managerDistributionRouter = router({
       conditions.push(eq(distributionDeals.currentStage, input.stage));
     }
 
-    if (ctx.user!.role !== 'super_admin') {
-      if (typeof input.developmentId === 'number') {
-        await assertManagerScope(db, ctx.user!.id, {
-          developmentId: input.developmentId,
-        });
+      if (ctx.user!.role !== 'super_admin') {
+        conditions.push(eq(distributionDeals.managerUserId, ctx.user!.id));
+        if (typeof input.developmentId === 'number') {
+          await assertManagerScope(db, ctx.user!.id, {
+            developmentId: input.developmentId,
+          });
       } else {
         const scopedProgramIds = await getActiveManagerProgramIdsForUser(db, ctx.user!.id);
         if (!scopedProgramIds.length) {
