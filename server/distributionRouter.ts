@@ -1118,6 +1118,19 @@ async function assertManagerScope(
   }
 }
 
+function assertManagerOwnsDeal(
+  actorUserId: number,
+  dealManagerUserId: number | null | undefined,
+  message = 'This deal is assigned to a different manager.',
+) {
+  if (typeof dealManagerUserId !== 'number' || Number(dealManagerUserId) !== Number(actorUserId)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message,
+    });
+  }
+}
+
 async function listProgramsForAdmin() {
   return await runDistributionDbOperation('distribution.admin.listPrograms', async () => {
     await assertDistributionSchemaReady('distribution.admin.listPrograms');
@@ -4958,6 +4971,7 @@ const managerDistributionRouter = router({
           programId: deal.programId,
           developmentId: deal.developmentId,
         });
+        assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
       }
 
       const nextStage: (typeof DISTRIBUTION_DEAL_STAGE_VALUES)[number] =
@@ -5129,6 +5143,7 @@ const managerDistributionRouter = router({
           programId: Number(scopedDeal.programId),
           developmentId: Number(scopedDeal.developmentId),
         });
+        assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(scopedDeal.managerUserId));
       }
 
       const [deal] = await db
@@ -5212,6 +5227,7 @@ const managerDistributionRouter = router({
           programId: deal.programId,
           developmentId: deal.developmentId,
         });
+        assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
       }
 
       const fromStage = deal.currentStage as DistributionDealStage;

@@ -91,7 +91,12 @@ function sqlDateNow() {
 
 async function assertAssignedManagerForDevelopment(
   db: any,
-  input: { developmentId: number; actorUserId: number; skipAssignmentCheck?: boolean },
+  input: {
+    developmentId: number;
+    actorUserId: number;
+    dealManagerUserId?: number | null;
+    skipAssignmentCheck?: boolean;
+  },
 ) {
   if (input.skipAssignmentCheck) return;
   const [assignment] = await db
@@ -112,6 +117,13 @@ async function assertAssignedManagerForDevelopment(
       message: 'You are not assigned as an active manager for this development.',
     });
   }
+
+  if (typeof input.dealManagerUserId !== 'number' || input.dealManagerUserId !== input.actorUserId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'This deal is assigned to a different manager.',
+    });
+  }
 }
 
 async function getDealScope(db: any, dealId: number) {
@@ -123,6 +135,7 @@ async function getDealScope(db: any, dealId: number) {
       developmentId: distributionDeals.developmentId,
       developmentName: developments.name,
       currentStage: distributionDeals.currentStage,
+      managerUserId: distributionDeals.managerUserId,
     })
     .from(distributionDeals)
     .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
@@ -143,6 +156,7 @@ async function getDealScope(db: any, dealId: number) {
     developmentId: Number(deal.developmentId),
     developmentName: String(deal.developmentName || `Development #${deal.developmentId}`),
     currentStage: deal.currentStage ? String(deal.currentStage) : null,
+    managerUserId: deal.managerUserId ? Number(deal.managerUserId) : null,
   };
 }
 
@@ -158,6 +172,7 @@ export async function getDealChecklist(
   await assertAssignedManagerForDevelopment(db, {
     developmentId: dealScope.developmentId,
     actorUserId,
+    dealManagerUserId: dealScope.managerUserId,
     skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
@@ -336,6 +351,7 @@ export async function upsertDealDocumentStatus(
   await assertAssignedManagerForDevelopment(db, {
     developmentId: dealScope.developmentId,
     actorUserId,
+    dealManagerUserId: dealScope.managerUserId,
     skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
