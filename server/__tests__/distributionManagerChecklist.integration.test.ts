@@ -157,6 +157,25 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   };
 }
 
+async function setDealStage(
+  dealId: number,
+  stage: 'viewing_scheduled' | 'viewing_completed' | 'application_submitted' | 'contract_signed' | 'bond_approved' | 'commission_pending' | 'commission_paid' | 'cancelled',
+  commissionTriggerStage: 'contract_signed' | 'bond_approved' = 'bond_approved',
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(distributionDeals)
+    .set({
+      currentStage: stage,
+      commissionTriggerStage,
+      attributionLockedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      attributionLockedBy: null,
+    } as any)
+    .where(eq(distributionDeals.id, dealId));
+}
+
 function buildCaller(userId: number, role: 'visitor' | 'super_admin' = 'visitor') {
   return appRouter.createCaller({
     req: { headers: {} },
@@ -329,5 +348,64 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     expect(checklist.computed.verifiedRequiredCount).toBe(2);
     expect(checklist.computed.allRequiredVerified).toBe(true);
     expect(checklist.computed.payoutReady).toBe(true);
+  });
+
+  it('blocks manager transition to commission_pending until payout readiness is satisfied', async () => {
+    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
+    const caller = buildCaller(seed.managerUserId);
+    await setDealStage(seed.dealId, 'bond_approved');
+
+    await expect(
+      caller.distribution.manager.advanceDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_pending',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+
+    for (const templateId of seed.templateIds) {
+      await caller.distribution.manager.updateDealDocumentStatus({
+        dealId: seed.dealId,
+        templateId,
+        status: 'verified',
+      });
+    }
+
+    await expect(
+      caller.distribution.manager.advanceDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_pending',
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      stage: 'commission_pending',
+    });
+  });
+
+  it('blocks admin transition to commission_paid unless forced when payout readiness is missing', async () => {
+    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const adminCaller = buildCaller(seed.managerUserId, 'super_admin');
+    await setDealStage(seed.dealId, 'commission_pending');
+
+    await expect(
+      adminCaller.distribution.admin.transitionDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_paid',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+
+    await expect(
+      adminCaller.distribution.admin.transitionDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_paid',
+        force: true,
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      stage: 'commission_paid',
+    });
   });
 });

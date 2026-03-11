@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ensureCommissionEntryForDeal } from '../services/distributionCommissionService';
+import { warnSchemaCapabilityOnce } from '../services/runtimeSchemaCapabilities';
+
+vi.mock('../services/runtimeSchemaCapabilities', () => ({
+  warnSchemaCapabilityOnce: vi.fn(),
+}));
 
 describe('distributionCommissionService', () => {
   it('uses stored deal pricing for percentage commissions when available', async () => {
@@ -81,5 +86,43 @@ describe('distributionCommissionService', () => {
         currency: 'ZAR',
       }),
     );
+  });
+
+  it('skips commission entry generation when commission schema is unavailable', async () => {
+    const missingTableError = Object.assign(new Error('missing table'), {
+      code: 'ER_NO_SUCH_TABLE',
+      errno: 1146,
+    });
+
+    const result = await ensureCommissionEntryForDeal({
+      deal: {
+        id: 10,
+        programId: 20,
+        developmentId: 30,
+        agentId: 40,
+        commissionBaseAmount: 1_500_000,
+        commissionTriggerStage: 'bond_approved',
+      },
+      transitionToStage: 'commission_pending',
+      actorUserId: 99,
+      source: 'test',
+      deps: {
+        findExistingEntry: async () => {
+          throw missingTableError;
+        },
+        getProgramDefaults: async () => ({
+          commissionModel: 'flat_percentage',
+          defaultCommissionPercent: 2.5,
+          defaultCommissionAmount: null,
+          currencyCode: 'ZAR',
+        }),
+        insertEntry: async () => undefined,
+        setDealCommissionPending: async () => undefined,
+        insertCommissionCreatedEvent: async () => undefined,
+      },
+    });
+
+    expect(result).toEqual({ created: false, reason: 'schema_unavailable' });
+    expect(warnSchemaCapabilityOnce).toHaveBeenCalled();
   });
 });
