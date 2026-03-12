@@ -58,6 +58,7 @@ import {
   getDealChecklist,
   upsertDealDocumentStatus,
 } from './services/distributionDealDocumentsService';
+import { assertDealIsMutable } from './services/distributionDealMutationGuards';
 import {
   getPartnerProgramTermsByDevelopmentId,
   listPartnerProgramTerms,
@@ -4721,12 +4722,7 @@ const managerDistributionRouter = router({
       if (!deal) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
       }
-      if (deal.currentStage === 'cancelled' || deal.currentStage === 'commission_paid') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Cannot schedule viewing for closed deals.',
-        });
-      }
+      assertDealIsMutable(deal.currentStage, 'schedule viewing');
 
       let managerUserId = Number(input.managerUserId || deal.managerUserId || ctx.user!.id);
       if (ctx.user!.role !== 'super_admin') {
@@ -4992,6 +4988,7 @@ const managerDistributionRouter = router({
       if (!deal) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
       }
+      assertDealIsMutable(deal.currentStage, 'validate viewing');
 
       if (ctx.user!.role !== 'super_admin') {
         await assertManagerScope(db, ctx.user!.id, {
@@ -6068,6 +6065,15 @@ const referrerDistributionRouter = router({
           message: 'Only scheduled viewings can be rescheduled.',
         });
       }
+
+      const deal = await getDealById(db, Number(viewing.dealId));
+      if (!deal) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Distribution deal not found for this viewing.',
+        });
+      }
+      assertDealIsMutable(deal.currentStage, 'reschedule viewing');
 
       const currentRescheduleCount = Number(viewing.rescheduleCount || 0);
       if (currentRescheduleCount >= VIEWING_RESCHEDULE_LIMIT) {
