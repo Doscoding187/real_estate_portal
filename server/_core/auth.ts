@@ -12,8 +12,6 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
-import { getDb } from '../db';
-import { sql } from 'drizzle-orm';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
@@ -457,60 +455,12 @@ class AuthService {
     // Verify the email
     await db.verifyUserEmail(user.id);
 
-    // If user is an agent, create agent profile from pending data
+    // Agent profiles are created directly during registration.
+    // Verification should not depend on the legacy pending_agent_profiles table.
     if (user.role === 'agent') {
       const existingProfile = await db.getAgentByUserId(user.id);
-      if (existingProfile) {
-        return;
-      }
-
-      const database = await getDb();
-      if (database) {
-        try {
-          // Get pending agent profile data
-          const [pendingProfile] = await database.execute(sql`
-            SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
-          `);
-
-          if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
-            const profileData = pendingProfile.rows[0] as any;
-
-            await db.createAgentProfile({
-              userId: user.id,
-              displayName: profileData.displayName,
-              phone: profileData.phone,
-              bio: profileData.bio,
-              licenseNumber: profileData.licenseNumber,
-              specializations: profileData.specializations
-                ? profileData.specializations.split(',')
-                : undefined,
-            });
-
-            // Delete pending profile data
-            await database.execute(sql`
-              DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
-            `);
-          }
-        } catch (error) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : typeof error === 'string'
-                ? error
-                : String(error);
-          if (
-            !message.includes('pending_agent_profiles') ||
-            (!message.toLowerCase().includes("doesn't exist") &&
-              !message.toLowerCase().includes('does not exist') &&
-              !message.toLowerCase().includes('unknown table'))
-          ) {
-            throw error;
-          }
-
-          console.warn(
-            '[Auth] pending_agent_profiles missing during verification; profile must already exist.',
-          );
-        }
+      if (!existingProfile) {
+        throw new Error('Agent profile is missing for this account. Please contact support.');
       }
     }
   }
