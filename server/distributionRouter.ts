@@ -2193,71 +2193,85 @@ const adminDistributionRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return await runDistributionDbOperation('distribution.admin.listPrograms', async () => {
-        await assertDistributionSchemaReady('distribution.admin.listPrograms');
-        assertDistributionEnabled();
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
+      return await runDistributionDbOperation(
+        'distribution.admin.ensureProgramForDevelopment',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.listPrograms');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
 
-        const [development] = await db
-          .select({ id: developments.id })
-          .from(developments)
-          .where(eq(developments.id, input.developmentId))
-          .limit(1);
+          try {
+            const [development] = await db
+              .select({ id: developments.id })
+              .from(developments)
+              .where(eq(developments.id, input.developmentId))
+              .limit(1);
 
-        if (!development) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
-        }
+            if (!development) {
+              throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
+            }
 
-        const accessEvaluation = await evaluateDevelopmentDistributionAccess({
-          db,
-          developmentId: input.developmentId,
-          actor: { role: 'admin', userId: ctx.user.id },
-          channel: 'admin_catalog',
-        });
-        const blockerSummary = summarizeDistributionBlockers(accessEvaluation);
+            const accessEvaluation = await evaluateDevelopmentDistributionAccess({
+              db,
+              developmentId: input.developmentId,
+              actor: { role: 'admin', userId: ctx.user.id },
+              channel: 'admin_catalog',
+            });
+            const blockerSummary = summarizeDistributionBlockers(accessEvaluation);
 
-        const ensured = await ensureDistributionProgramForDevelopment(
-          {
-            developmentId: input.developmentId,
-            actorUserId: ctx.user.id,
-          },
-          {
-            findExistingProgramByDevelopmentId: async developmentId => {
-              const [row] = await db
-                .select({ id: distributionPrograms.id })
-                .from(distributionPrograms)
-                .where(eq(distributionPrograms.developmentId, developmentId))
-                .limit(1);
-              return row ? { id: Number(row.id) } : null;
-            },
-            createProgram: async payload => {
-              if (blockerSummary.accessBlockers.length > 0) {
-                throw new TRPCError({
-                  code: 'BAD_REQUEST',
-                  message: `Program creation blocked by access requirements: ${blockerSummary.accessBlockers.join(', ')}.`,
-                });
-              }
-              const [insertResult] = await db.insert(distributionPrograms).values(payload);
-              return { id: Number((insertResult as any).insertId || 0) };
-            },
-          },
-        );
+            const ensured = await ensureDistributionProgramForDevelopment(
+              {
+                developmentId: input.developmentId,
+                actorUserId: ctx.user.id,
+              },
+              {
+                findExistingProgramByDevelopmentId: async developmentId => {
+                  const [row] = await db
+                    .select({ id: distributionPrograms.id })
+                    .from(distributionPrograms)
+                    .where(eq(distributionPrograms.developmentId, developmentId))
+                    .limit(1);
+                  return row ? { id: Number(row.id) } : null;
+                },
+                createProgram: async payload => {
+                  if (blockerSummary.accessBlockers.length > 0) {
+                    throw new TRPCError({
+                      code: 'BAD_REQUEST',
+                      message: `Program creation blocked by access requirements: ${blockerSummary.accessBlockers.join(', ')}.`,
+                    });
+                  }
+                  const [insertResult] = await db.insert(distributionPrograms).values(payload);
+                  return { id: Number((insertResult as any).insertId || 0) };
+                },
+              },
+            );
 
-        return {
-          success: true,
-          mode: ensured.created ? ('created' as const) : ('existing' as const),
-          programId: ensured.programId,
-          accessBlockers: blockerSummary.accessBlockers,
-          accessState: {
-            inventoryState: accessEvaluation.inventoryState,
-            partnershipStatus: accessEvaluation.brandPartnershipStatus,
-            accessStatus: accessEvaluation.developmentAccessStatus,
-            submissionAllowed: accessEvaluation.submissionAllowed,
-            legacyFallbackUsed: accessEvaluation.legacyFallbackUsed,
-          },
-        };
-      });
+            return {
+              success: true,
+              mode: ensured.created ? ('created' as const) : ('existing' as const),
+              programId: ensured.programId,
+              accessBlockers: blockerSummary.accessBlockers,
+              accessState: {
+                inventoryState: accessEvaluation.inventoryState,
+                partnershipStatus: accessEvaluation.brandPartnershipStatus,
+                accessStatus: accessEvaluation.developmentAccessStatus,
+                submissionAllowed: accessEvaluation.submissionAllowed,
+                legacyFallbackUsed: accessEvaluation.legacyFallbackUsed,
+              },
+            };
+          } catch (error) {
+            console.error('[Distribution] ensureProgramForDevelopment failed', {
+              requestId: ctx.requestId,
+              userId: ctx.user.id,
+              developmentId: input.developmentId,
+              message: (error as any)?.message || String(error),
+              code: (error as any)?.code || (error as any)?.cause?.code || null,
+            });
+            throw error;
+          }
+        },
+      );
     }),
 
   setProgramReferralEnabled: superAdminProcedure

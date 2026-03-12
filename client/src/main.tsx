@@ -126,6 +126,13 @@ const TRPC_URL = new URL(
 
 console.log('[tRPC] URL =', TRPC_URL);
 
+function createClientRequestId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 const links = [
   // Debug link to log tRPC paths
   trpcDebugLink(),
@@ -157,11 +164,34 @@ const links = [
       return headers;
     },
     async fetch(input, init) {
-      // Execute fetch with credentials
-      const res = await globalThis.fetch(input, {
-        ...(init ?? {}),
-        credentials: 'include',
-      });
+      const requestId = createClientRequestId();
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      const headers = new Headers(init?.headers ?? undefined);
+      headers.set('x-request-id', requestId);
+
+      let res: Response;
+      try {
+        res = await globalThis.fetch(input, {
+          ...(init ?? {}),
+          headers,
+          credentials: 'include',
+        });
+      } catch (error) {
+        const networkError = new Error(
+          [
+            'Network request failed before the API returned a response.',
+            `Request ID: ${requestId}`,
+            `URL: ${url}`,
+            '',
+            'Most likely causes:',
+            '- API gateway / upstream failure',
+            '- Backend process crash or restart',
+            '- Temporary network interruption',
+          ].join('\n'),
+        );
+        (networkError as Error & { cause?: unknown }).cause = error;
+        throw networkError;
+      }
 
       // Defensive: Validate response is JSON before tRPC tries to parse it
       // This prevents misleading "Unexpected end of JSON input" errors when:
@@ -181,12 +211,11 @@ const links = [
           // Ignore - body might already be consumed
         }
 
-        const url = typeof input === 'string' ? input : (input as Request).url;
-
         // Throw clear error instead of letting tRPC crash on JSON parse
         throw new Error(
           [
             `Backend returned non-JSON response (status ${res.status}).`,
+            `Request ID: ${requestId}`,
             `URL: ${url}`,
             `Content-Type: ${contentType || '(missing)'}`,
             snippet ? `Body: ${snippet}` : 'Body: (empty)',
