@@ -81,13 +81,25 @@ async function insertUser(emailPrefix: string, role: 'visitor' | 'super_admin' =
 }
 
 async function insertManagerIdentity(userId: number) {
+  await insertDistributionIdentity(userId, 'manager', `Manager ${userId}`);
+}
+
+async function insertReferrerIdentity(userId: number) {
+  await insertDistributionIdentity(userId, 'referrer', `Referrer ${userId}`);
+}
+
+async function insertDistributionIdentity(
+  userId: number,
+  identityType: 'manager' | 'referrer',
+  displayName: string,
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const [insertResult] = await db.insert(distributionIdentities).values({
     userId,
-    identityType: 'manager',
+    identityType,
     active: 1,
-    displayName: `Manager ${userId}`,
+    displayName,
   });
   const identityId = Number((insertResult as any).insertId || 0);
   createdState.identityIds.push(identityId);
@@ -135,6 +147,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   await insertManagerIdentity(outsiderManagerUserId);
 
   const agentUserId = await insertUser('distribution-agent');
+  await insertReferrerIdentity(agentUserId);
 
   const [developmentInsert] = await db.insert(developments).values({
     name: `Distribution Dev ${Date.now()}`,
