@@ -214,6 +214,27 @@ class AuthService {
   /**
    * Register a new user with email and password
    */
+  async resendVerificationEmail(email: string): Promise<{ sent: boolean }> {
+    const user = await db.getUserByEmail(email);
+    if (!user || user.emailVerified || !user.email) {
+      return { sent: false };
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    await db.updateUserEmailVerificationToken(user.id, verificationToken);
+
+    await sendVerificationEmail({
+      to: user.email,
+      verificationToken,
+      name: user.name || undefined,
+    });
+
+    return { sent: true };
+  }
+
+  /**
+   * Register a new user with email and password
+   */
   async register(
     email: string,
     password: string,
@@ -227,7 +248,7 @@ class AuthService {
       licenseNumber?: string;
       specializations?: string[];
     },
-  ): Promise<number> {
+  ): Promise<{ userId: number; verificationEmailSent: boolean }> {
     // Check if user already exists
     const existingUser = await db.getUserByEmail(email);
     if (existingUser) {
@@ -317,6 +338,7 @@ class AuthService {
     }
 
     // Send verification email
+    let verificationEmailSent = false;
     try {
       await sendVerificationEmail({
         to: user.email!,
@@ -324,12 +346,12 @@ class AuthService {
         name: user.name || undefined,
       });
       console.log('[Auth] Verification email sent successfully');
+      verificationEmailSent = true;
     } catch (emailError) {
       console.error('[Auth] Failed to send verification email:', emailError);
-      // Don't throw error - allow registration to complete even if email fails
     }
 
-    return userId;
+    return { userId, verificationEmailSent };
   }
 
   /**

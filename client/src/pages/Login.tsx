@@ -171,11 +171,13 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const [isLoading, setIsLoading] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registerDialogRole, setRegisterDialogRole] = useState<RegistrationRole | null>(null);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(search);
@@ -262,11 +264,40 @@ export default function Login() {
       window.location.href = redirectPath;
     } catch (error) {
       if (error instanceof ApiError) {
+        if (error.body?.code === 'EMAIL_UNVERIFIED' && data.email) {
+          setPendingVerificationEmail(data.email.trim().toLowerCase());
+        }
         toast.error(error.body?.error || `Login failed (${error.status})`);
       } else {
         toast.error(error instanceof Error ? error.message : 'Login failed');
       }
       setIsLoading(false);
+    }
+  };
+
+  const resendVerification = async () => {
+    if (!pendingVerificationEmail) return;
+
+    setIsResendingVerification(true);
+    try {
+      const result = await apiFetch('/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingVerificationEmail }),
+      });
+
+      toast.success(
+        result.message ||
+          'If this account exists and is unverified, a verification email has been sent.',
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.body?.error || `Resend failed (${error.status})`);
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Resend failed');
+      }
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -308,6 +339,9 @@ export default function Login() {
         body: JSON.stringify(payload),
       });
 
+      if (data.email) {
+        setPendingVerificationEmail(data.email.trim().toLowerCase());
+      }
       toast.success(
         result.message ||
           'Account created successfully! Please check your email to verify your account.',
@@ -484,6 +518,32 @@ export default function Login() {
                         Forgot password?
                       </Button>
                     </div>
+
+                    {pendingVerificationEmail && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                        <div className="font-medium">Email verification required</div>
+                        <p className="mt-1">
+                          {pendingVerificationEmail} is not verified yet. Check inbox and spam, or
+                          resend the verification email.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="mt-3 border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                          onClick={resendVerification}
+                          disabled={isResendingVerification}
+                        >
+                          {isResendingVerification ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Resending...
+                            </>
+                          ) : (
+                            'Resend Verification Email'
+                          )}
+                        </Button>
+                      </div>
+                    )}
 
                     <Button
                       type="submit"
