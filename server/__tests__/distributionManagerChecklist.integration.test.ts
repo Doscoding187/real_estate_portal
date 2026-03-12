@@ -554,6 +554,18 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         toStage: 'commission_paid',
         force: true,
       }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Forced admin deal-stage transitions require justification notes.',
+    });
+
+    await expect(
+      adminCaller.distribution.admin.transitionDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_paid',
+        force: true,
+        notes: 'Manual payout override approved by ops lead.',
+      }),
     ).resolves.toMatchObject({
       success: true,
       stage: 'commission_paid',
