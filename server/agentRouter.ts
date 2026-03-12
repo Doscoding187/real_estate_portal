@@ -1207,6 +1207,8 @@ export const agentRouter = router({
         conditions.push(eq(showings.status, input.status as any));
       }
 
+      const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+
       // Fetch showings with listing and visitor details
       const showingsList = inventoryBridgeCapabilities.showingsPropertyIdColumn
         ? await db
@@ -1372,12 +1374,13 @@ export const agentRouter = router({
           throw new Error('Lead not found or unauthorized');
         }
 
-        leadRecord = lead;
+        const persistedLead = lead;
+        leadRecord = persistedLead;
 
         if (
-          leadRecord.propertyId != null &&
+          persistedLead.propertyId != null &&
           resolvedInventory.propertyId != null &&
-          Number(leadRecord.propertyId) !== Number(resolvedInventory.propertyId)
+          Number(persistedLead.propertyId) !== Number(resolvedInventory.propertyId)
         ) {
           throw new Error('Selected listing does not match the lead inventory');
         }
@@ -1406,16 +1409,18 @@ export const agentRouter = router({
       const showingId = Number(result.insertId);
 
       if (leadRecord) {
+        const persistedLead = leadRecord;
+
         await db
           .update(leads)
           .set({
             status: 'viewing_scheduled',
             updatedAt: nowAsDbTimestamp(),
           })
-          .where(eq(leads.id, leadRecord.id));
+          .where(eq(leads.id, persistedLead.id));
 
         await db.insert(leadActivities).values({
-          leadId: leadRecord.id,
+          leadId: persistedLead.id,
           userId,
           type: 'status_change',
           description: `Showing booked for ${new Date(input.scheduledAt).toLocaleString()}`,
@@ -1425,7 +1430,7 @@ export const agentRouter = router({
           userId,
           eventType: 'agent_crm_action_logged',
           eventData: {
-            leadId: leadRecord.id,
+            leadId: persistedLead.id,
             activityType: 'viewing_scheduled',
             showingId,
           },
