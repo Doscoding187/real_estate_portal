@@ -704,8 +704,8 @@ export default function Login() {
                             Agent profile details
                           </div>
                           <p className="text-xs text-blue-700">
-                            These are the minimum public details we need before sending you into
-                            full agent setup.
+                            Display name and phone number are required for agent registration.
+                            License number is optional.
                           </p>
                         </div>
 
@@ -714,7 +714,7 @@ export default function Login() {
                           name="agentDisplayName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Display Name</FormLabel>
+                              <FormLabel>Display Name *</FormLabel>
                               <FormControl>
                                 <Input placeholder="John Smith Properties" {...field} />
                               </FormControl>
@@ -728,7 +728,7 @@ export default function Login() {
                           name="agentPhone"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Phone Number</FormLabel>
+                              <FormLabel>Phone Number *</FormLabel>
                               <FormControl>
                                 <Input type="tel" placeholder="+27 82 123 4567" {...field} />
                               </FormControl>
@@ -742,7 +742,7 @@ export default function Login() {
                           name="agentLicense"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>License Number</FormLabel>
+                              <FormLabel>License Number (Optional)</FormLabel>
                               <FormControl>
                                 <Input placeholder="FFC1234567" {...field} />
                               </FormControl>

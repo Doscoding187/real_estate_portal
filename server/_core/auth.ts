@@ -27,6 +27,17 @@ export type SessionPayload = {
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
 
+const isMissingTableError = (error: unknown): boolean => {
+  const message =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : String(error);
+  return (
+    message.includes('pending_agent_profiles') &&
+    (message.toLowerCase().includes("doesn't exist") ||
+      message.toLowerCase().includes('does not exist') ||
+      message.toLowerCase().includes('unknown table'))
+  );
+};
+
 const getRequestId = (req: Request): string => {
   const value = (req as any)?.requestId;
   return typeof value === 'string' && value.trim().length > 0 ? value : 'unknown';
@@ -210,7 +221,8 @@ class AuthService {
     role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
     agentProfile?: {
       displayName: string;
-      phone: string;
+      phone?: string;
+      phoneNumber?: string;
       bio?: string;
       licenseNumber?: string;
       specializations?: string[];
@@ -240,22 +252,61 @@ class AuthService {
       emailVerificationToken,
     });
 
-    // Store agent profile data for creation after email verification
-    if (role === 'agent' && agentProfile) {
+    const normalizedAgentProfile =
+      role === 'agent' && agentProfile
+        ? {
+            displayName: agentProfile.displayName.trim(),
+            phone: agentProfile.phone || agentProfile.phoneNumber,
+            bio: agentProfile.bio,
+            licenseNumber: agentProfile.licenseNumber,
+            specializations: agentProfile.specializations,
+          }
+        : undefined;
+
+    // Store agent profile data for creation after email verification.
+    // If the staging table is absent in the target environment, fall back to
+    // creating the profile directly in pending status so registration still succeeds.
+    if (role === 'agent' && normalizedAgentProfile) {
+      if (!normalizedAgentProfile.displayName || !normalizedAgentProfile.phone) {
+        throw new Error('Agent profile with display name and phone number is required');
+      }
+
       const database = await getDb();
       if (database) {
-        await database.execute(sql`
-          INSERT INTO pending_agent_profiles 
-          (userId, displayName, phone, bio, licenseNumber, specializations)
-          VALUES (
-            ${userId}, 
-            ${agentProfile.displayName}, 
-            ${agentProfile.phone}, 
-            ${agentProfile.bio || null}, 
-            ${agentProfile.licenseNumber || null}, 
-            ${agentProfile.specializations ? agentProfile.specializations.join(',') : null}
-          )
-        `);
+        try {
+          await database.execute(sql`
+            INSERT INTO pending_agent_profiles 
+            (userId, displayName, phone, bio, licenseNumber, specializations)
+            VALUES (
+              ${userId}, 
+              ${normalizedAgentProfile.displayName}, 
+              ${normalizedAgentProfile.phone}, 
+              ${normalizedAgentProfile.bio || null}, 
+              ${normalizedAgentProfile.licenseNumber || null}, 
+              ${
+                normalizedAgentProfile.specializations
+                  ? normalizedAgentProfile.specializations.join(',')
+                  : null
+              }
+            )
+          `);
+        } catch (error) {
+          if (!isMissingTableError(error)) {
+            throw error;
+          }
+
+          console.warn(
+            '[Auth] pending_agent_profiles missing; creating agent profile directly during registration.',
+          );
+          await db.createAgentProfile({
+            userId,
+            displayName: normalizedAgentProfile.displayName,
+            phone: normalizedAgentProfile.phone,
+            bio: normalizedAgentProfile.bio,
+            licenseNumber: normalizedAgentProfile.licenseNumber,
+            specializations: normalizedAgentProfile.specializations,
+          });
+        }
       }
     }
 
@@ -422,32 +473,46 @@ class AuthService {
 
     // If user is an agent, create agent profile from pending data
     if (user.role === 'agent') {
+      const existingProfile = await db.getAgentByUserId(user.id);
+      if (existingProfile) {
+        return;
+      }
+
       const database = await getDb();
       if (database) {
-        // Get pending agent profile data
-        const [pendingProfile] = await database.execute(sql`
-          SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
-        `);
-
-        if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
-          const profileData = pendingProfile.rows[0] as any;
-
-          // Create agent profile
-          await db.createAgentProfile({
-            userId: user.id,
-            displayName: profileData.displayName,
-            phone: profileData.phone,
-            bio: profileData.bio,
-            licenseNumber: profileData.licenseNumber,
-            specializations: profileData.specializations
-              ? profileData.specializations.split(',')
-              : undefined,
-          });
-
-          // Delete pending profile data
-          await database.execute(sql`
-            DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
+        try {
+          // Get pending agent profile data
+          const [pendingProfile] = await database.execute(sql`
+            SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
           `);
+
+          if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
+            const profileData = pendingProfile.rows[0] as any;
+
+            await db.createAgentProfile({
+              userId: user.id,
+              displayName: profileData.displayName,
+              phone: profileData.phone,
+              bio: profileData.bio,
+              licenseNumber: profileData.licenseNumber,
+              specializations: profileData.specializations
+                ? profileData.specializations.split(',')
+                : undefined,
+            });
+
+            // Delete pending profile data
+            await database.execute(sql`
+              DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
+            `);
+          }
+        } catch (error) {
+          if (!isMissingTableError(error)) {
+            throw error;
+          }
+
+          console.warn(
+            '[Auth] pending_agent_profiles missing during verification; assuming direct agent profile creation fallback.',
+          );
         }
       }
     }

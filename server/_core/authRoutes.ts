@@ -13,7 +13,9 @@ const getRequestId = (req: Request): string => {
 };
 
 const isDatabaseQueryError = (message: string): boolean =>
-  message.includes('Failed query:') || message.includes('ECONNREFUSED') || message.includes('connect');
+  message.includes('Failed query:') ||
+  message.includes('ECONNREFUSED') ||
+  message.includes('connect');
 
 /**
  * Register authentication routes
@@ -28,6 +30,18 @@ export function registerAuthRoutes(app: Express) {
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
       const { email, password, name, role, agentProfile } = req.body;
+      const normalizedAgentProfile =
+        role === 'agent' && agentProfile
+          ? {
+              ...agentProfile,
+              displayName:
+                typeof agentProfile.displayName === 'string'
+                  ? agentProfile.displayName.trim()
+                  : agentProfile.displayName,
+              phoneNumber: agentProfile.phoneNumber || agentProfile.phone,
+              phone: agentProfile.phone || agentProfile.phoneNumber,
+            }
+          : undefined;
 
       // Validate input
       if (!email || !password) {
@@ -50,7 +64,11 @@ export function registerAuthRoutes(app: Express) {
 
       // Validate agent profile if role is agent
       if (role === 'agent') {
-        if (!agentProfile || !agentProfile.displayName || !agentProfile.phoneNumber) {
+        if (
+          !normalizedAgentProfile ||
+          !normalizedAgentProfile.displayName ||
+          !normalizedAgentProfile.phoneNumber
+        ) {
           return res.status(400).json({
             error:
               'Agent profile with display name and phone number is required for agent registration',
@@ -68,7 +86,7 @@ export function registerAuthRoutes(app: Express) {
         password,
         name,
         requestedRole as any,
-        agentProfile,
+        normalizedAgentProfile,
       );
 
       // Return success message - user must verify email before logging in
