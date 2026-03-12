@@ -97,6 +97,8 @@ describe('distributionRouter transactional boundaries', () => {
     expect(adminTransition).toContain('.update(distributionDeals)');
     expect(adminTransition).toContain('ensureCommissionEntryForDeal');
     expect(adminTransition).toContain('.insert(distributionDealEvents)');
+    expect(adminTransition).toContain("source: 'admin.transitionDealStage'");
+    expect(adminTransition).toContain("eventType: input.force ? 'override' : 'stage_transition'");
   });
 
   it('keeps admin commission status updates atomic', () => {
@@ -108,6 +110,8 @@ describe('distributionRouter transactional boundaries', () => {
     expect(adminUpdate).toContain('.update(distributionCommissionEntries)');
     expect(adminUpdate).toContain('.update(distributionDeals)');
     expect(adminUpdate).toContain('.insert(distributionDealEvents)');
+    expect(adminUpdate).toContain("source: 'admin.updateCommissionEntryStatus'");
+    expect(adminUpdate).toContain("eventType: 'override'");
   });
 
   it('keeps referrer submitDeal writes inside a single transaction', () => {
