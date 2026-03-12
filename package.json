@@ -47,7 +47,9 @@
     "migration:serverless:staging": "cross-env NODE_ENV=staging tsx server/migrations/tidbServerlessMigration.ts",
     "migration:serverless:production": "cross-env NODE_ENV=production tsx server/migrations/tidbServerlessMigration.ts",
     "migration:sql": "cross-env NODE_ENV=production tsx server/migrations/runSqlMigrations.ts",
+    "migration:sql:test": "cross-env NODE_ENV=test tsx server/migrations/runSqlMigrations.ts",
     "db:migrate": "pnpm migration:sql && pnpm migration:serverless:production",
+    "db:migrate:test": "cross-env NODE_ENV=test drizzle-kit migrate --config drizzle.config.ts && pnpm migration:sql:test",
     "start:server": "tsx server/_core/start.ts",
     "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "start:prod": "pnpm db:migrate && cross-env NODE_ENV=production tsx server/_core/start.ts"
