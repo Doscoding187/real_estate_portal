@@ -169,4 +169,60 @@ describe('distribution admin schema guards', () => {
 
     expect(mockGetDb).not.toHaveBeenCalled();
   });
+
+  it('requires justification notes for forced admin stage overrides before running database queries', async () => {
+    const caller = createSuperAdminCaller();
+
+    await expect(
+      caller.admin.transitionDealStage({
+        dealId: 10,
+        toStage: 'commission_paid',
+        force: true,
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Forced admin deal-stage transitions require justification notes.',
+    });
+
+    await expect(
+      caller.admin.transitionDealStage({
+        dealId: 10,
+        toStage: 'commission_paid',
+        force: true,
+        notes: '   ',
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Forced admin deal-stage transitions require justification notes.',
+    });
+
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
+
+  it('requires justification notes for admin commission overrides before running database queries', async () => {
+    const caller = createSuperAdminCaller();
+
+    await expect(
+      caller.admin.updateCommissionEntryStatus({
+        entryId: 44,
+        entryStatus: 'approved',
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Admin commission status overrides require justification notes.',
+    });
+
+    await expect(
+      caller.admin.updateCommissionEntryStatus({
+        entryId: 44,
+        entryStatus: 'approved',
+        notes: '   ',
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Admin commission status overrides require justification notes.',
+    });
+
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
 });

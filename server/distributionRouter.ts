@@ -485,6 +485,20 @@ function extractFirstImageUrl(rawImages: unknown) {
   return null;
 }
 
+function requireAdminOverrideNotes(
+  rawNotes: string | null | undefined,
+  message: string,
+): string {
+  const normalizedNotes = rawNotes?.trim() || '';
+  if (!normalizedNotes) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message,
+    });
+  }
+  return normalizedNotes;
+}
+
 function formatUserDisplayName(row: {
   name?: string | null;
   firstName?: string | null;
@@ -3835,6 +3849,14 @@ const adminDistributionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
+      const normalizedNotes =
+        input.force || typeof input.notes !== 'undefined' ? input.notes?.trim() || null : null;
+      if (input.force) {
+        requireAdminOverrideNotes(
+          input.notes,
+          'Forced admin deal-stage transitions require justification notes.',
+        );
+      }
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -3972,7 +3994,7 @@ const adminDistributionRouter = router({
             previousCommissionStatus: deal.commissionStatus,
             nextCommissionStatus: commissionStatus,
           } as any,
-          notes: input.notes ?? null,
+          notes: normalizedNotes,
         });
       });
 
@@ -4087,6 +4109,10 @@ const adminDistributionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
+      const normalizedNotes = requireAdminOverrideNotes(
+        input.notes,
+        'Admin commission status overrides require justification notes.',
+      );
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -4122,9 +4148,7 @@ const adminDistributionRouter = router({
         entryStatus: nextStatus,
       };
 
-      if (typeof input.notes !== 'undefined') {
-        updatePayload.notes = input.notes;
-      }
+      updatePayload.notes = normalizedNotes;
 
       if (nextStatus === 'approved') {
         updatePayload.approvedAt = entry.approvedAt ?? sql`CURRENT_TIMESTAMP`;
@@ -4214,7 +4238,7 @@ const adminDistributionRouter = router({
             previousDealCommissionStatus: deal.commissionStatus,
             nextDealCommissionStatus,
           } as any,
-          notes: input.notes ?? null,
+          notes: normalizedNotes,
         });
       });
 
