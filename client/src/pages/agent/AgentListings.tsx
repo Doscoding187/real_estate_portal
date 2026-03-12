@@ -8,6 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Menu,
   Search,
   Plus,
@@ -16,6 +23,7 @@ import {
   Edit,
   Eye,
   Trash2,
+  Inbox,
   MapPin,
   Bed,
   Bath,
@@ -42,6 +50,9 @@ export default function AgentListings() {
   const { isAuthenticated, user, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('active');
+  const [selectedProperty, setSelectedProperty] = useState<{ id: number; title: string } | null>(
+    null,
+  );
 
   // Map tabs to status for API
   const getStatusForTab = (tab: string) => {
@@ -90,6 +101,17 @@ export default function AgentListings() {
   );
 
   const utils = trpc.useContext();
+
+  const { data: listingLeadsData, isLoading: isLoadingLeads } = trpc.listing.getLeads.useQuery(
+    {
+      propertyId: selectedProperty?.id,
+      limit: 20,
+      offset: 0,
+    },
+    {
+      enabled: !!selectedProperty?.id,
+    },
+  );
 
   // Mutations for properties (Active, Sold, Archived tabs)
   const archivePropertyMutation = trpc.agent.archiveProperty.useMutation({
@@ -218,6 +240,10 @@ export default function AgentListings() {
       listing.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.city?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const handleOpenEnquiries = (propertyId: number, title: string) => {
+    setSelectedProperty({ id: propertyId, title });
+  };
 
   return (
     <div className="flex min-h-screen bg-[#F4F7FA]">
@@ -358,6 +384,11 @@ export default function AgentListings() {
                       onEdit={id => setLocation(`/listings/create?id=${id}&edit=true`)}
                       onDelete={id => handleDelete(id)}
                       onView={id => setLocation(`/property/${id}`)}
+                      onViewEnquiries={
+                        isDraftOrPending
+                          ? undefined
+                          : id => handleOpenEnquiries(id, listing.title || 'Listing enquiries')
+                      }
                     />
                   ))}
                 </div>
@@ -366,6 +397,82 @@ export default function AgentListings() {
           </Tabs>
         </main>
       </div>
+
+      <Dialog open={!!selectedProperty} onOpenChange={open => !open && setSelectedProperty(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{selectedProperty?.title || 'Listing enquiries'}</DialogTitle>
+            <DialogDescription>
+              Recent enquiries tied to this published property. These records are the same canonical
+              leads used in the CRM pipeline.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingLeads ? (
+            <div className="space-y-3 py-4">
+              {[1, 2, 3].map(item => (
+                <Skeleton key={item} className="h-20 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : !listingLeadsData?.leads?.length ? (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
+                <Inbox className="h-5 w-5 text-slate-400" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">No enquiries yet</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                This property has not received any tracked enquiries yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm text-slate-500">
+                <span>{listingLeadsData.total} enquiries</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setLocation(
+                      `/agent/leads${selectedProperty ? `?propertyId=${selectedProperty.id}` : ''}`,
+                    );
+                    setSelectedProperty(null);
+                  }}
+                >
+                  Open CRM
+                </Button>
+              </div>
+
+              {listingLeadsData.leads.map((lead: any) => (
+                <div
+                  key={lead.id}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                      <div className="font-semibold text-slate-900">{lead.name}</div>
+                      <div className="text-sm text-slate-600">
+                        {[lead.email, lead.phone].filter(Boolean).join(' | ') ||
+                          'No contact details'}
+                      </div>
+                      {lead.message && (
+                        <p className="text-sm leading-relaxed text-slate-500">{lead.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1 text-sm sm:text-right">
+                      <div className="font-medium text-slate-900">{lead.status}</div>
+                      <div className="text-slate-500">{lead.source || lead.leadSource || 'web'}</div>
+                      <div className="text-slate-400">
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

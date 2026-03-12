@@ -165,6 +165,8 @@ export const showings = mysqlTable('showings', {
   listingId: int()
     .notNull()
     .references(() => listings.id, { onDelete: 'cascade' }),
+  propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
+  leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
   agentId: int()
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),

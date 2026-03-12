@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { agents, developments, leads, properties } from '../../drizzle/schema';
 import { brandLeadService } from './brandLeadService';
+import { recordAgentOsEventForAgentId } from './agentOsEventService';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -50,6 +51,39 @@ export interface PublicLeadCaptureResult {
   delivered?: boolean;
   brandLeadStatus?: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber' | 'claimed';
   message?: string;
+}
+
+function normalizeLeadSource(value?: string | null): string {
+  const normalized = (value || '').trim().toLowerCase();
+
+  if (!normalized) return 'web';
+
+  if (normalized === 'website' || normalized === 'site' || normalized === 'direct') {
+    return 'web';
+  }
+
+  if (normalized === 'property_listify' || normalized === 'property' || normalized === 'property-page') {
+    return 'property_detail';
+  }
+
+  if (
+    normalized === 'agent' ||
+    normalized === 'agent-page' ||
+    normalized === 'agent_detail' ||
+    normalized === 'agent-detail'
+  ) {
+    return 'agent_profile';
+  }
+
+  if (normalized === 'development' || normalized === 'development-page') {
+    return 'development_detail';
+  }
+
+  if (normalized === 'referrer') {
+    return 'referral';
+  }
+
+  return normalized;
 }
 
 function coerceLeadType(input?: string): LeadType {
@@ -144,8 +178,8 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
   }
 
   const resolved = await resolveLeadOwnership(input);
-  const source = input.source || input.leadSource || 'web';
-  const leadSource = input.leadSource || input.source || 'web';
+  const source = normalizeLeadSource(input.source || input.leadSource);
+  const leadSource = normalizeLeadSource(input.leadSource || input.source);
   const leadType = coerceLeadType(input.leadType);
 
   if (resolved.developerBrandProfileId) {
@@ -178,6 +212,26 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
       await db.update(leads).set(leadPatch).where(eq(leads.id, brandCapture.leadId));
     }
 
+    if (resolved.propertyId) {
+      await db
+        .update(properties)
+        .set({ enquiries: sql`${properties.enquiries} + 1` })
+        .where(eq(properties.id, resolved.propertyId));
+    }
+
+    await recordAgentOsEventForAgentId({
+      agentId: resolved.agentId,
+      eventType: 'agent_lead_received',
+      eventData: {
+        leadId: brandCapture.leadId,
+        propertyId: resolved.propertyId ?? null,
+        developmentId: resolved.developmentId ?? null,
+        leadSource,
+        leadType,
+        route: 'brand',
+      },
+    });
+
     return {
       success: true,
       leadId: brandCapture.leadId,
@@ -209,6 +263,26 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
     affordabilityData: input.affordabilityData ? (input.affordabilityData as any) : null,
     funnelStage: input.affordabilityData ? 'affordability' : 'interest',
     qualificationStatus: 'pending',
+  });
+
+  if (resolved.propertyId) {
+    await db
+      .update(properties)
+      .set({ enquiries: sql`${properties.enquiries} + 1` })
+      .where(eq(properties.id, resolved.propertyId));
+  }
+
+  await recordAgentOsEventForAgentId({
+    agentId: resolved.agentId,
+    eventType: 'agent_lead_received',
+    eventData: {
+      leadId: insertResult.insertId,
+      propertyId: resolved.propertyId ?? null,
+      developmentId: resolved.developmentId ?? null,
+      leadSource,
+      leadType,
+      route: 'direct',
+    },
   });
 
   return {
