@@ -7621,12 +7621,13 @@ export const distributionRouter = router({
           .set(updatePayload as any)
           .where(eq(users.id, userId));
       } else {
-        userId = await authService.register(
+        const registration = await authService.register(
           normalizedEmail,
           input.password,
           input.fullName.trim(),
           'visitor',
         );
+        userId = registration.userId;
         const { firstName, lastName } = splitFullName(input.fullName);
         await db
           .update(users)

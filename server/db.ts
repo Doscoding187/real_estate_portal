@@ -414,6 +414,24 @@ export async function verifyUserEmail(userId: number): Promise<void> {
     .where(eq(users.id, userId));
 }
 
+/**
+ * Rotate or set a user's email verification token.
+ */
+export async function updateUserEmailVerificationToken(
+  userId: number,
+  token: string,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(users)
+    .set({
+      emailVerificationToken: token,
+    })
+    .where(eq(users.id, userId));
+}
+
 // Property queries
 export async function createProperty(property: InsertProperty) {
   const db = await getDb();
