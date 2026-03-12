@@ -2,9 +2,13 @@ import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { connect } from '@tidbcloud/serverless';
+import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
+if (process.env.NODE_ENV === 'test') {
+  dotenv.config({ path: '.env.test', override: true });
+}
 if (process.env.NODE_ENV === 'production') {
   dotenv.config({ path: '.env.production', override: true });
 }
@@ -12,7 +16,35 @@ if (process.env.NODE_ENV === 'production') {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-type SqlConnection = ReturnType<typeof connect>;
+type SqlConnection = {
+  execute: (statement: string) => Promise<any>;
+  end?: () => Promise<void>;
+};
+
+function isMysqlUrl(url: string): boolean {
+  return /^mysql:\/\//i.test(url);
+}
+
+async function createSqlConnection(databaseUrl: string): Promise<SqlConnection> {
+  if (isMysqlUrl(databaseUrl)) {
+    const pool = mysql.createPool({
+      uri: databaseUrl,
+      waitForConnections: true,
+      connectionLimit: 4,
+      maxIdle: 4,
+      idleTimeout: 60000,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+    });
+
+    return {
+      execute: statement => pool.query(statement),
+      end: () => pool.end(),
+    };
+  }
+
+  return connect({ url: databaseUrl });
+}
 
 function parseSqlStatements(sql: string): string[] {
   const withoutBlockComments = sql.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -40,6 +72,9 @@ function getRowValue<T = unknown>(row: Record<string, unknown>, key: string): T 
 
 async function queryRows(connection: SqlConnection, statement: string): Promise<Array<Record<string, unknown>>> {
   const result: any = await connection.execute(statement);
+  if (Array.isArray(result?.[0])) {
+    return result[0] as Array<Record<string, unknown>>;
+  }
   if (Array.isArray(result)) {
     return result as Array<Record<string, unknown>>;
   }
@@ -81,6 +116,12 @@ function statementPreview(statement: string, maxLength = 180): string {
   return `${flattened.slice(0, maxLength)}...`;
 }
 
+function normalizeStatementForMysql(statement: string): string {
+  return statement
+    .replace(/\bCREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\b/gi, 'CREATE INDEX')
+    .replace(/\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b/gi, 'ADD COLUMN');
+}
+
 function shouldIgnoreStatementError(error: unknown): boolean {
   const message = String((error as any)?.message ?? '');
   const code = String((error as any)?.code ?? '');
@@ -115,7 +156,8 @@ async function shouldSkipStatementForMissingPrereq(
 ): Promise<string | null> {
   if (
     fileName !== '0045_create_distribution_referral_accelerator.sql' &&
-    fileName !== '0046_distribution_referral_assessment_locking.sql'
+    fileName !== '0046_distribution_referral_assessment_locking.sql' &&
+    fileName !== '0047_create_distribution_execution_tables.sql'
   ) {
     return null;
   }
@@ -125,6 +167,9 @@ async function shouldSkipStatementForMissingPrereq(
 
   if (lowerStatement.includes('distribution_deals')) {
     requiredTables.push('distribution_deals');
+  }
+  if (lowerStatement.includes('distribution_programs')) {
+    requiredTables.push('distribution_programs');
   }
   if (lowerStatement.includes('affordability_assessments')) {
     requiredTables.push('affordability_assessments');
@@ -151,7 +196,8 @@ async function runSqlMigrations() {
     throw new Error('DATABASE_URL is required to run SQL migrations');
   }
 
-  const connection = connect({ url: databaseUrl });
+  const mysqlDialect = isMysqlUrl(databaseUrl);
+  const connection = await createSqlConnection(databaseUrl);
   const tableExistsCache = new Map<string, boolean>();
 
   try {
@@ -183,10 +229,13 @@ async function runSqlMigrations() {
       let skippedCount = 0;
 
       for (const statement of statements) {
+        const executableStatement = mysqlDialect
+          ? normalizeStatementForMysql(statement)
+          : statement;
         const skipReason = await shouldSkipStatementForMissingPrereq(
           connection,
           file,
-          statement,
+          executableStatement,
           tableExistsCache,
         );
         if (skipReason) {
@@ -196,17 +245,17 @@ async function runSqlMigrations() {
         }
 
         try {
-          await connection.execute(statement);
+          await connection.execute(executableStatement);
           executedCount += 1;
         } catch (error: any) {
           if (shouldIgnoreStatementError(error)) {
             skippedCount += 1;
-            console.log(`     -> skipped statement (${statementPreview(statement)})`);
+            console.log(`     -> skipped statement (${statementPreview(executableStatement)})`);
             continue;
           }
 
           console.error(`   Failed: ${file}`);
-          console.error(`   Statement: ${statementPreview(statement, 260)}`);
+          console.error(`   Statement: ${statementPreview(executableStatement, 260)}`);
           throw error;
         }
       }
@@ -218,6 +267,8 @@ async function runSqlMigrations() {
   } catch (error) {
     console.error('SQL migration failed:', error);
     throw error;
+  } finally {
+    await connection.end?.();
   }
 }
 
