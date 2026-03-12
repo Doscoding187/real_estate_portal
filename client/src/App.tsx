@@ -33,6 +33,7 @@ const Favorites = lazy(() => import('./pages/Favorites'));
 const Agents = lazy(() => import('./pages/Agents'));
 const AgentDetail = lazy(() => import('./pages/AgentDetail'));
 const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
+const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const ProvincePage = lazy(() => import('./pages/ProvincePage'));
 const CityPage = lazy(() => import('./pages/CityPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -41,10 +42,11 @@ const Login = lazy(() => import('./pages/Login'));
 const AgencyDashboard = lazy(() => import('./pages/AgencyDashboard'));
 const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
 const AgentListings = lazy(() => import('./pages/agent/AgentListings'));
-const AgentLeadsEnhanced = lazy(() => import('./pages/agent/AgentLeadsEnhanced'));
+const AgentLeads = lazy(() => import('./pages/AgentLeads'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
+const AgentCalendar = lazy(() => import('./pages/AgentCalendar'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
@@ -91,6 +93,8 @@ const LocationMonetizationPage = lazy(() => import('./pages/admin/LocationMoneti
 const SubscriptionManagementPage = lazy(() => import('./pages/admin/SubscriptionManagementPage'));
 const PlanEditor = lazy(() => import('./pages/admin/PlanEditor'));
 const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
+const AgentOsReadinessPage = lazy(() => import('./pages/admin/AgentOsReadinessPage'));
+const AgentInventoryBoundaryPage = lazy(() => import('./pages/admin/AgentInventoryBoundaryPage'));
 const MarketingCampaignsPage = lazy(() => import('./pages/admin/MarketingCampaignsPage'));
 const CreateCampaignWizard = lazy(() => import('./pages/admin/CreateCampaignWizard'));
 const AgentApprovals = lazy(() => import('./pages/admin/AgentApprovals'));
@@ -278,7 +282,7 @@ function Router() {
           </Route>
           <Route path="/agent/leads">
             <RequireRole role="agent">
-              <AgentLeadsEnhanced />
+              <AgentLeads />
             </RequireRole>
           </Route>
           <Route path="/agent/marketing">
@@ -294,6 +298,11 @@ function Router() {
           <Route path="/agent/analytics">
             <RequireRole role="agent">
               <AgentAnalytics />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/calendar">
+            <RequireRole role="agent">
+              <AgentCalendar />
             </RequireRole>
           </Route>
           <Route path="/agent/productivity">
@@ -326,12 +335,8 @@ function Router() {
               <Redirect to="/referrer/dashboard" />
             </RequireRole>
           </Route>
-          <Route path="/agents/:slug">
-            <Redirect to="/agents" />
-          </Route>
-          <Route path="/a/:slug">
-            <Redirect to="/agents" />
-          </Route>
+          <Route path="/agents/:slug" component={AgentMicrosite} />
+          <Route path="/a/:slug" component={AgentMicrosite} />
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
 
@@ -563,6 +568,22 @@ function Router() {
             component={() => (
               <SuperAdminDashboard>
                 <AnalyticsPage />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
+            path="/admin/agent-os-readiness"
+            component={() => (
+              <SuperAdminDashboard>
+                <AgentOsReadinessPage />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
+            path="/admin/agent-inventory-boundary"
+            component={() => (
+              <SuperAdminDashboard>
+                <AgentInventoryBoundaryPage />
               </SuperAdminDashboard>
             )}
           />

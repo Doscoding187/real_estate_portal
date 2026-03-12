@@ -55,6 +55,7 @@ const SidebarNavigation: React.FC = () => {
     else if (location.startsWith('/admin/partners')) setActiveSection('revenue');
     else if (location.startsWith('/admin/distribution')) setActiveSection('revenue');
     else if (location.startsWith('/admin/analytics')) setActiveSection('insights');
+    else if (location.startsWith('/admin/agent-os-readiness')) setActiveSection('insights');
     else if (location.startsWith('/admin/users')) setActiveSection('system');
     else if (location.startsWith('/admin/settings')) setActiveSection('system');
   }, [location]);
@@ -108,6 +109,8 @@ const SidebarNavigation: React.FC = () => {
       icon: Activity,
       items: [
         { name: 'Platform Analytics', path: '/admin/analytics', icon: BarChart3 },
+        { name: 'Agent OS Readiness', path: '/admin/agent-os-readiness', icon: CheckCircle },
+        { name: 'Inventory Boundary', path: '/admin/agent-inventory-boundary', icon: Layers },
         { name: 'Financial Tracking', path: '/admin/revenue', icon: FileText }, // Reusing Revenue for now
       ],
     },

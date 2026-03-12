@@ -1,6 +1,20 @@
+import { useMemo } from 'react';
+import { useLocation } from 'wouter';
 import { LeadPipeline } from '@/components/agent/LeadPipeline';
 
 export default function AgentLeads() {
+  const [location] = useLocation();
+  const propertyId = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const value = searchParams.get('propertyId');
+    const parsed = value ? Number(value) : NaN;
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [location]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -9,7 +23,9 @@ export default function AgentLeads() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Leads & Clients</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Manage your lead pipeline and client relationships
+              {propertyId
+                ? `Managing enquiries for property #${propertyId}`
+                : 'Manage your lead pipeline and client relationships'}
             </p>
           </div>
         </div>
@@ -17,7 +33,7 @@ export default function AgentLeads() {
 
       {/* Main Content */}
       <main className="p-6">
-        <LeadPipeline />
+        <LeadPipeline propertyId={propertyId} />
       </main>
     </div>
   );

@@ -50,6 +50,13 @@
       "when": 1772849000000,
       "tag": "0006_30007_distribution_core_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1773312000000,
+      "tag": "0007_30008_add_agent_os_inventory_bridge",
+      "breakpoints": true
     }
   ]
 }

@@ -29,6 +29,7 @@
     "demo:gate": "pnpm build && pnpm vitest run server/__tests__/smoke.superadmin-publishing.test.ts",
     "test:integration": "vitest run tests/integration",
     "db:verify": "tsx scripts/db-contract-verify.ts",
+    "agent-os:inventory:preflight": "npx tsx scripts/preflight-agent-os-inventory-cutover.ts",
     "db:verify:ci": "tsx scripts/db-contract-verify.ts --format=json",
     "test:wizard:e2e": "npx tsx scripts/verify-wizard-e2e.ts",
     "test:visual": "playwright test",

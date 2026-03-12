@@ -1,15 +1,8 @@
-/**
- * Analytics Router (STUBBED)
- *
- * Disabled: References locationAnalyticsEvents which is not exported from schema.
- * This router will be re-enabled once the table is properly added via migration.
- */
-
 import { router, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
+import { recordAgentOsEvent } from './services/agentOsEventService';
 
 export const analyticsRouter = router({
-  // Track endpoint - stubbed to return success without DB operation
   track: publicProcedure
     .input(
       z.object({
@@ -18,11 +11,16 @@ export const analyticsRouter = router({
         sessionId: z.string().optional(),
       }),
     )
-    .mutation(async () => {
-      // STUB: Analytics tracking disabled - table not available
-      console.debug(
-        '[analyticsRouter] Track called but disabled (no locationAnalyticsEvents table)',
-      );
+    .mutation(async ({ ctx, input }) => {
+      await recordAgentOsEvent({
+        userId: ctx.user?.id ?? null,
+        eventType: input.event as any,
+        eventData: input.properties,
+        req: ctx.req,
+        requestId: ctx.requestId,
+        sessionId: input.sessionId,
+      });
+
       return { success: true };
     }),
 });

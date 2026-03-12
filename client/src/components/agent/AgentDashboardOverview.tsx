@@ -1,71 +1,44 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Building2,
-  Users,
-  DollarSign,
-  Eye,
-  BarChart3,
-  Calendar,
-  CheckCircle,
-  TrendingUp,
-  Play,
-  MessageSquare,
-  Clock,
-  ArrowRight,
-  AlertCircle,
-  Sparkles,
-  Target,
-  Video,
-  Home,
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useLocation } from 'wouter';
-import { cn } from '@/lib/utils';
+import {
+  ArrowRight,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Home,
+  ListTodo,
+  Users,
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  change?: string;
-  icon: React.ElementType;
-  changeType?: 'positive' | 'negative';
+function formatCurrency(cents: number) {
+  return `R ${((cents || 0) / 100).toLocaleString()}`;
 }
 
-function QuickStatCard({
+function StatCard({
   title,
   value,
   icon: Icon,
-  trend,
 }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
-  trend?: { value: string; positive: boolean };
 }) {
   return (
-    <Card className="shadow-soft hover:shadow-hover transition-all duration-300 border-gray-100">
+    <Card className="shadow-soft hover:shadow-hover transition-all duration-200">
       <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
-            {trend && (
-              <p
-                className={cn(
-                  'text-xs font-medium mt-2 flex items-center gap-1',
-                  trend.positive ? 'text-green-600' : 'text-red-600',
-                )}
-              >
-                <TrendingUp className={cn('h-3 w-3', !trend.positive && 'rotate-180')} />
-                {trend.value}
-              </p>
-            )}
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-gray-500">{title}</p>
+            <p className="text-3xl font-bold text-gray-900">{value}</p>
           </div>
-          <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+          <div className="rounded-xl bg-blue-50 p-3">
             <Icon className="h-6 w-6 text-blue-600" />
           </div>
         </div>
@@ -74,11 +47,41 @@ function QuickStatCard({
   );
 }
 
+const STAGE_LABELS: Record<string, string> = {
+  new: 'New',
+  contacted: 'Contacted',
+  viewing: 'Viewing',
+  offer: 'Offer',
+  closed: 'Closed',
+};
+
 export function AgentDashboardOverview() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user } = useAuth();
+  const utils = trpc.useUtils();
+  const trackDashboardView = trpc.analytics.track.useMutation();
+  const publishProfileMutation = trpc.agent.publishProfile.useMutation({
+    onSuccess: result => {
+      toast.success(
+        result.isPublic
+          ? 'Public profile is now live'
+          : 'Profile is ready. Public publishing is pending approval.',
+      );
+      void Promise.all([
+        utils.agent.getActivationMilestones.invalidate(),
+        utils.agent.getDashboardStats.invalidate(),
+      ]);
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to request public profile');
+    },
+  });
+  const hasTrackedView = useRef(false);
 
-  // Queries
+  const today = new Date();
+  const nextMonth = new Date();
+  nextMonth.setDate(today.getDate() + 30);
+
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
     undefined,
     {
@@ -86,168 +89,156 @@ export function AgentDashboardOverview() {
       retry: false,
     },
   );
+  const { data: pipeline, isLoading: pipelineLoading } = trpc.agent.getLeadsPipeline.useQuery(
+    {},
+    {
+      enabled: isAuthenticated && user?.role === 'agent',
+    },
+  );
+  const { data: showings, isLoading: showingsLoading } = trpc.agent.getMyShowings.useQuery(
+    {
+      startDate: today.toISOString().split('T')[0],
+      endDate: nextMonth.toISOString().split('T')[0],
+    },
+    {
+      enabled: isAuthenticated && user?.role === 'agent',
+    },
+  );
+  const { data: activation, isLoading: activationLoading } =
+    trpc.agent.getActivationMilestones.useQuery(undefined, {
+      enabled: isAuthenticated && user?.role === 'agent',
+    });
+  const { data: listings = [], isLoading: listingsLoading } = trpc.agent.getMyListings.useQuery(
+    {
+      limit: 5,
+    },
+    {
+      enabled: isAuthenticated && user?.role === 'agent',
+    },
+  );
 
-  // Mock data for today's snapshot (replace with real queries)
-  const todaysAppointments: any[] = [];
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== 'agent' || hasTrackedView.current) return;
+    hasTrackedView.current = true;
+    trackDashboardView.mutate({
+      event: 'agent_dashboard_viewed',
+      properties: {
+        sourceSurface: 'agent_dashboard_overview',
+      },
+    });
+  }, [isAuthenticated, trackDashboardView, user?.role]);
 
-  const newLeads: any[] = [];
+  const recentLeads = useMemo(() => {
+    if (!pipeline) return [] as any[];
+    return Object.values(pipeline)
+      .flat()
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      .slice(0, 5);
+  }, [pipeline]);
 
-  const tasksToday: any[] = [];
-
-  const exploreVideos: any[] = [];
-
-  const activeListingsPerformance: any[] = [];
-
-  const alerts: any[] = [];
+  const upcomingShowings = useMemo(() => {
+    if (!showings) return [] as any[];
+    return showings
+      .filter((showing: any) => {
+        const scheduledAt = new Date(showing.scheduledAt).getTime();
+        return showing.status === 'scheduled' && scheduledAt >= today.getTime();
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+      )
+      .slice(0, 5);
+  }, [showings, today]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Main Content */}
       <main className="p-6 space-y-6 max-w-[1800px] mx-auto">
-        {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white shadow-hover">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white shadow-hover">
+          <div className="flex items-center justify-between gap-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">
-                Welcome back, {user?.name?.split(' ')[0] || 'Agent'}! 👋
+              <h1 className="text-3xl font-bold">
+                Welcome back, {user?.name?.split(' ')[0] || 'Agent'}
               </h1>
-              <p className="text-blue-100">Here's what's happening with your business today.</p>
+              <p className="mt-2 text-blue-100">
+                Your dashboard now reflects live Agent OS workflow data only.
+              </p>
             </div>
-            <div className="hidden md:block">
-              <div className="text-right">
-                <p className="text-sm text-blue-100">Today's Date</p>
-                <p className="text-lg font-semibold">
-                  {new Date().toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
-              </div>
+            <div className="hidden md:block text-right">
+              <p className="text-sm text-blue-100">Today</p>
+              <p className="text-lg font-semibold">
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Quick Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <QuickStatCard
+          <StatCard
             title="Active Listings"
-            value={statsLoading ? '—' : (stats?.activeListings ?? 0)}
-            icon={Building2}
+            value={statsLoading ? '-' : (stats?.activeListings ?? 0)}
+            icon={Home}
           />
-          <QuickStatCard
+          <StatCard
             title="New Leads This Week"
-            value={statsLoading ? '—' : (stats?.newLeadsThisWeek ?? 0)}
+            value={statsLoading ? '-' : (stats?.newLeadsThisWeek ?? 0)}
             icon={Users}
           />
-          <QuickStatCard
+          <StatCard
             title="Showings Today"
-            value={statsLoading ? '—' : (stats?.showingsToday ?? todaysAppointments.length)}
+            value={statsLoading ? '-' : (stats?.showingsToday ?? 0)}
             icon={Calendar}
           />
-          <QuickStatCard
-            title="Commission Pending"
-            value={
-              statsLoading ? '—' : `R ${((stats?.commissionsPending ?? 0) / 100).toLocaleString()}`
-            }
+          <StatCard
+            title="Pending Commissions"
+            value={statsLoading ? '-' : formatCurrency(stats?.commissionsPending ?? 0)}
             icon={DollarSign}
           />
         </div>
 
-        {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Left Column - 2/3 width */}
           <div className="xl:col-span-2 space-y-6">
-            {/* Today's Appointments & Showings */}
-            <Card className="shadow-soft hover:shadow-hover transition-all duration-300">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <div className="p-2 bg-purple-50 rounded-xl">
-                      <Calendar className="h-5 w-5 text-purple-600" />
-                    </div>
-                    Today's Schedule
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600 hover:text-blue-700"
-                    onClick={() => setLocation('/agent/productivity')}
-                  >
-                    View Calendar <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
+            <Card className="shadow-soft">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  Recent Leads
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setLocation('/agent/leads')}>
+                  Work CRM <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
               </CardHeader>
               <CardContent>
-                {todaysAppointments.length === 0 ? (
-                  <p className="text-center text-gray-500 py-6">
-                    No appointments scheduled for today.
-                  </p>
+                {pipelineLoading ? (
+                  <p className="text-sm text-gray-500">Loading leads...</p>
+                ) : recentLeads.length === 0 ? (
+                  <p className="text-sm text-gray-500">No lead activity yet.</p>
                 ) : (
                   <div className="space-y-3">
-                    {todaysAppointments.map(apt => (
-                      <div
-                        key={apt.id}
-                        className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-                      >
-                        <div className="flex-shrink-0 w-20 text-center">
-                          <p className="text-sm font-semibold text-gray-900">{apt.time}</p>
-                        </div>
-                        <div className="h-10 w-1 bg-blue-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900">{apt.title}</p>
-                          <p className="text-sm text-gray-500">with {apt.client}</p>
-                        </div>
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
-                          {apt.type}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* New Leads */}
-            <Card className="shadow-soft hover:shadow-hover transition-all duration-300">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <div className="p-2 bg-green-50 rounded-xl">
-                      <Users className="h-5 w-5 text-green-600" />
-                    </div>
-                    New Leads
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600 hover:text-blue-700"
-                    onClick={() => setLocation('/agent/leads')}
-                  >
-                    View All <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {newLeads.length === 0 ? (
-                  <p className="text-center text-gray-500 py-6">No new leads yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {newLeads.map(lead => (
+                    {recentLeads.map((lead: any) => (
                       <div
                         key={lead.id}
-                        className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                        className="rounded-xl border border-gray-100 bg-white p-4"
                       >
-                        <div className="h-12 w-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {lead.name.charAt(0)}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-gray-900">{lead.name}</p>
+                            <p className="text-sm text-gray-500">
+                              {lead.property?.title || 'No property linked'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(lead.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <Badge variant="outline">{lead.source || 'web'}</Badge>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900">{lead.name}</p>
-                          <p className="text-sm text-gray-600">{lead.property}</p>
-                          <p className="text-xs text-gray-500 mt-1">Budget: {lead.budget}</p>
-                        </div>
-                        <p className="text-xs text-gray-400">{lead.time}</p>
                       </div>
                     ))}
                   </div>
@@ -255,49 +246,39 @@ export function AgentDashboardOverview() {
               </CardContent>
             </Card>
 
-            {/* Active Listings Performance */}
-            <Card className="shadow-soft hover:shadow-hover transition-all duration-300">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <div className="p-2 bg-orange-50 rounded-xl">
-                      <Home className="h-5 w-5 text-orange-600" />
-                    </div>
-                    Active Listings Performance
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600 hover:text-blue-700"
-                    onClick={() => setLocation('/agent/listings')}
-                  >
-                    View All <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
+            <Card className="shadow-soft">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Home className="h-5 w-5 text-blue-600" />
+                  Listing Snapshot
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setLocation('/agent/listings')}>
+                  Manage Listings <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
               </CardHeader>
               <CardContent>
-                {activeListingsPerformance.length === 0 ? (
-                  <p className="text-center text-gray-500 py-6">No active listings to show.</p>
+                {listingsLoading ? (
+                  <p className="text-sm text-gray-500">Loading listings...</p>
+                ) : listings.length === 0 ? (
+                  <p className="text-sm text-gray-500">No listings yet.</p>
                 ) : (
                   <div className="space-y-3">
-                    {activeListingsPerformance.map(listing => (
+                    {listings.map((listing: any) => (
                       <div
                         key={listing.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                        className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4"
                       >
-                        <div className="flex-1">
+                        <div className="space-y-1">
                           <p className="font-semibold text-gray-900">{listing.title}</p>
-                          <p className="text-lg font-bold text-blue-600 mt-1">{listing.price}</p>
+                          <p className="text-sm text-gray-500">
+                            {listing.city} {listing.price ? `| R${Number(listing.price).toLocaleString()}` : ''}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-6 text-sm">
-                          <div className="text-center">
-                            <p className="text-gray-500">Views</p>
-                            <p className="font-semibold text-gray-900">{listing.views}</p>
+                        <div className="text-right text-sm">
+                          <div className="font-semibold text-gray-900">
+                            {listing.enquiries || 0} enquiries
                           </div>
-                          <div className="text-center">
-                            <p className="text-gray-500">Enquiries</p>
-                            <p className="font-semibold text-green-600">{listing.enquiries}</p>
-                          </div>
+                          <div className="text-gray-500 capitalize">{listing.status}</div>
                         </div>
                       </div>
                     ))}
@@ -307,183 +288,105 @@ export function AgentDashboardOverview() {
             </Card>
           </div>
 
-          {/* Right Column - 1/3 width */}
           <div className="space-y-6">
-            {/* Tasks Due Today */}
-            <Card className="shadow-soft hover:shadow-hover transition-all duration-300">
-              <CardHeader className="pb-4">
+            <Card className="shadow-soft">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <div className="p-2 bg-yellow-50 rounded-xl">
-                    <CheckCircle className="h-5 w-5 text-yellow-600" />
-                  </div>
-                  Tasks Today
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  Upcoming Showings
                 </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setLocation('/agent/calendar')}>
+                  Calendar <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
               </CardHeader>
               <CardContent>
-                {tasksToday.length === 0 ? (
-                  <p className="text-center text-gray-500 py-6">No tasks due today.</p>
+                {showingsLoading ? (
+                  <p className="text-sm text-gray-500">Loading showings...</p>
+                ) : upcomingShowings.length === 0 ? (
+                  <p className="text-sm text-gray-500">No scheduled showings yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingShowings.map((showing: any) => (
+                      <div key={showing.id} className="rounded-xl border border-gray-100 p-4">
+                        <p className="font-semibold text-gray-900">
+                          {showing.property?.title || 'Property Showing'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(showing.scheduledAt).toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {showing.client?.name || 'Prospective buyer'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                  Activation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {activationLoading ? (
+                  <p className="text-sm text-gray-500">Loading activation status...</p>
                 ) : (
                   <>
-                    <div className="space-y-2">
-                      {tasksToday.map(task => (
-                        <div
-                          key={task.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div
-                            className={cn(
-                              'h-5 w-5 rounded border-2 flex items-center justify-center',
-                              task.completed ? 'bg-green-500 border-green-500' : 'border-gray-300',
-                            )}
-                          >
-                            {task.completed && <CheckCircle className="h-4 w-4 text-white" />}
-                          </div>
-                          <p
-                            className={cn(
-                              'text-sm flex-1',
-                              task.completed ? 'text-gray-400 line-through' : 'text-gray-900',
-                            )}
-                          >
-                            {task.task}
-                          </p>
-                          {task.priority === 'high' && !task.completed && (
-                            <Badge className="bg-red-100 text-red-700 text-xs">High</Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full mt-4 text-blue-600"
-                      onClick={() => setLocation('/agent/productivity')}
-                    >
-                      View All Tasks
-                    </Button>
+                    {[
+                      ['Profile completed', activation?.milestones.agent_profile_completed],
+                      ['Profile published', activation?.milestones.agent_profile_published],
+                      ['First listing live', activation?.milestones.agent_listing_live],
+                      ['First lead received', activation?.milestones.agent_lead_received],
+                      ['First showing completed', activation?.milestones.agent_showing_completed],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-gray-700">{label}</span>
+                        <span className={value ? 'text-green-700 font-medium' : 'text-gray-400'}>
+                          {value ? 'Done' : 'Pending'}
+                        </span>
+                      </div>
+                    ))}
+
+                    {!activation?.milestones.agent_profile_published ? (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        disabled={publishProfileMutation.isPending}
+                        onClick={() => publishProfileMutation.mutate()}
+                      >
+                        {publishProfileMutation.isPending
+                          ? 'Requesting public profile...'
+                          : 'Request Public Profile'}
+                      </Button>
+                    ) : null}
                   </>
                 )}
               </CardContent>
             </Card>
 
-            {/* Explore Video Performance */}
-            <Card className="shadow-soft hover:shadow-hover transition-all duration-300">
-              <CardHeader className="pb-4">
+            <Card className="shadow-soft">
+              <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <div className="p-2 bg-pink-50 rounded-xl">
-                    <Video className="h-5 w-5 text-pink-600" />
-                  </div>
-                  Explore Videos
+                  <ListTodo className="h-5 w-5 text-blue-600" />
+                  Next Actions
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {exploreVideos.length === 0 ? (
-                  <div className="text-center py-6">
-                    <p className="text-gray-500 mb-4">No videos uploaded yet.</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-blue-600"
-                      onClick={() => setLocation('/agent/marketing')}
-                    >
-                      Upload Video
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {exploreVideos.map(video => (
-                      <div
-                        key={video.id}
-                        className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
-                            <Play className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-sm text-gray-900">{video.title}</p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Eye className="h-3 w-3" /> {video.views}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Target className="h-3 w-3" /> {video.engagement}%
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full mt-4 text-blue-600"
-                      onClick={() => setLocation('/agent/marketing')}
-                    >
-                      Upload More Videos
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Alerts & Recommendations */}
-            <Card className="shadow-soft hover:shadow-hover transition-all duration-300 border-2 border-blue-100">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-50 rounded-xl">
-                    <Sparkles className="h-5 w-5 text-blue-600" />
-                  </div>
-                  Alerts & Tips
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {alerts.length === 0 ? (
-                  <p className="text-center text-gray-500 py-6">No new alerts.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {alerts.map(alert => (
-                      <div key={alert.id} className="p-4 bg-blue-50 rounded-xl">
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-900 font-medium">{alert.message}</p>
-                            <Button
-                              variant="link"
-                              className="p-0 h-auto text-blue-600 text-sm mt-2"
-                            >
-                              {alert.action} <ArrowRight className="h-3 w-3 ml-1" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Messages */}
-            <Card className="shadow-soft hover:shadow-hover transition-all duration-300">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <div className="p-2 bg-indigo-50 rounded-xl">
-                      <MessageSquare className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    Messages
-                  </CardTitle>
-                  <Badge className="bg-gray-200 text-gray-600">0</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 text-center py-4">No new messages</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-blue-600"
-                  onClick={() => setLocation('/agent/leads')}
-                >
-                  View Messages
+              <CardContent className="space-y-2">
+                <Button variant="outline" className="w-full justify-between" onClick={() => setLocation('/agent/leads')}>
+                  Work Pipeline
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" className="w-full justify-between" onClick={() => setLocation('/agent/calendar')}>
+                  Review Schedule
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" className="w-full justify-between" onClick={() => setLocation('/agent/analytics')}>
+                  Open Operating Snapshot
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </CardContent>
             </Card>

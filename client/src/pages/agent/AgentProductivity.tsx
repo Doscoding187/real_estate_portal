@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { trpc } from '@/lib/trpc';
 import {
   Menu,
   Calendar,
@@ -32,6 +33,20 @@ export default function AgentProductivity() {
   const { isAuthenticated, user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('tasks');
   const [showAddTask, setShowAddTask] = useState(false);
+
+  const today = new Date();
+  const nextMonth = new Date();
+  nextMonth.setDate(today.getDate() + 30);
+
+  const { data: showingsData, isLoading: isLoadingShowings } = trpc.agent.getMyShowings.useQuery(
+    {
+      startDate: today.toISOString().split('T')[0],
+      endDate: nextMonth.toISOString().split('T')[0],
+    },
+    {
+      enabled: isAuthenticated && user?.role === 'agent',
+    },
+  );
 
   // Mock tasks data
   const [tasks, setTasks] = useState([
@@ -104,36 +119,16 @@ export default function AgentProductivity() {
     },
   ];
 
-  // Mock upcoming showings
-  const upcomingShowings = [
-    {
-      id: 1,
-      property: 'Luxury Villa - Camps Bay',
-      date: '2024-12-03',
-      time: '10:00 AM',
-      client: 'John Smith',
-      address: '123 Ocean View Drive, Camps Bay',
-      status: 'confirmed',
-    },
-    {
-      id: 2,
-      property: 'Modern Apartment - Sandton',
-      date: '2024-12-03',
-      time: '2:00 PM',
-      client: 'Sarah Williams',
-      address: '45 Rivonia Road, Sandton',
-      status: 'confirmed',
-    },
-    {
-      id: 3,
-      property: 'Waterfront Penthouse',
-      date: '2024-12-04',
-      time: '11:30 AM',
-      client: 'Mike Davis',
-      address: '78 Waterfront Drive, Cape Town',
-      status: 'pending',
-    },
-  ];
+  const upcomingShowings =
+    showingsData
+      ?.filter((showing: any) => {
+        const scheduledAt = new Date(showing.scheduledAt).getTime();
+        return scheduledAt >= today.getTime() && showing.status === 'scheduled';
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+      ) || [];
 
   if (!loading && !isAuthenticated) {
     setLocation('/login');
@@ -181,6 +176,20 @@ export default function AgentProductivity() {
     }
   };
 
+  const getShowingStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-700';
+      case 'completed':
+        return 'bg-green-100 text-green-700';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700';
+      case 'no_show':
+        return 'bg-amber-100 text-amber-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
   const tasksCompleted = tasks.filter(t => t.completed).length;
   const tasksTotal = tasks.length;
   const completionRate = Math.round((tasksCompleted / tasksTotal) * 100);
@@ -258,8 +267,14 @@ export default function AgentProductivity() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Upcoming Showings</p>
-                    <p className="text-2xl font-bold text-gray-900">{upcomingShowings.length}</p>
-                    <p className="text-xs text-purple-600 font-medium mt-2">Next: Today 10:00 AM</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {isLoadingShowings ? '-' : upcomingShowings.length}
+                    </p>
+                    <p className="text-xs text-purple-600 font-medium mt-2">
+                      {upcomingShowings[0]
+                        ? `Next: ${new Date(upcomingShowings[0].scheduledAt).toLocaleString()}`
+                        : 'No upcoming showings'}
+                    </p>
                   </div>
                   <div className="p-3 bg-purple-50 rounded-xl">
                     <MapPin className="h-6 w-6 text-purple-600" />
@@ -429,50 +444,64 @@ export default function AgentProductivity() {
                   <CardTitle>Viewing Schedule</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {upcomingShowings.map(showing => (
-                    <div
-                      key={showing.id}
-                      className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{showing.property}</h3>
-                          <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {showing.address}
-                          </p>
-                        </div>
-                        <Badge
-                          className={
-                            showing.status === 'confirmed'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }
-                        >
-                          {showing.status}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500">Date</p>
-                          <p className="font-semibold text-gray-900">
-                            {new Date(showing.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Time</p>
-                          <p className="font-semibold text-gray-900">{showing.time}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Client</p>
-                          <p className="font-semibold text-gray-900 flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {showing.client}
-                          </p>
-                        </div>
-                      </div>
+                  {isLoadingShowings ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500">
+                      Loading showings...
                     </div>
-                  ))}
+                  ) : upcomingShowings.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500">
+                      No upcoming showings scheduled.
+                    </div>
+                  ) : (
+                    upcomingShowings.map((showing: any) => (
+                      <div
+                        key={showing.id}
+                        className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">
+                              {showing.property?.title || 'Property Showing'}
+                            </h3>
+                            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                              <MapPin className="h-3 w-3" />
+                              {showing.property
+                                ? `${showing.property.address}, ${showing.property.city}`
+                                : 'Address unavailable'}
+                            </p>
+                          </div>
+                          <Badge className={getShowingStatusColor(showing.status)}>
+                            {showing.status}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-500">Date</p>
+                            <p className="font-semibold text-gray-900">
+                              {new Date(showing.scheduledAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Time</p>
+                            <p className="font-semibold text-gray-900">
+                              {new Date(showing.scheduledAt).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Client</p>
+                            <p className="font-semibold text-gray-900 flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {showing.client?.name || 'Prospective buyer'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
                 </CardContent>
               </Card>
             </TabsContent>

@@ -28,10 +28,12 @@ function parseSqlStatements(sql: string): string[] {
     })
     .join('\n');
 
+  const executablePrefix = /^(alter|create|drop|update|insert|delete|replace|truncate|rename|set)\b/i;
+
   return withoutLineComments
     .split(';')
     .map(s => s.trim())
-    .filter(Boolean);
+    .filter(statement => Boolean(statement) && executablePrefix.test(statement));
 }
 
 function getRowValue<T = unknown>(row: Record<string, unknown>, key: string): T | undefined {

@@ -29,7 +29,7 @@ const navigation = [
   { name: 'Marketing Hub', href: '/agent/marketing', icon: Megaphone },
   { name: 'Earnings', href: '/agent/earnings', icon: DollarSign },
   { name: 'Analytics', href: '/agent/analytics', icon: BarChart3 },
-  { name: 'Productivity', href: '/agent/productivity', icon: Calendar },
+  { name: 'Calendar & Showings', href: '/agent/calendar', icon: Calendar },
   { name: 'Training & Support', href: '/agent/training', icon: GraduationCap },
   { name: 'Settings', href: '/agent/settings', icon: Settings },
 ];

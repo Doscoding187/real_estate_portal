@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 import {
   Upload,
   User,
@@ -42,16 +43,38 @@ export function AgentSetupWizard() {
   });
 
   const createProfileMutation = trpc.agent.createProfile.useMutation({
-    onSuccess: () => {
-      setLocation('/agent/dashboard');
-    },
     onError: error => {
-      alert('Failed to create profile: ' + error.message);
+      toast.error(`Failed to create profile: ${error.message}`);
+    },
+  });
+  const publishProfileMutation = trpc.agent.publishProfile.useMutation({
+    onError: error => {
+      toast.error(`Profile created, but publish request failed: ${error.message}`);
     },
   });
 
-  const handleSubmit = () => {
-    createProfileMutation.mutate(formData);
+  const handleSubmit = async () => {
+    try {
+      await createProfileMutation.mutateAsync({
+        displayName: formData.displayName,
+        phone: formData.phoneNumber,
+        bio: formData.bio || undefined,
+        profilePhoto: formData.profilePhoto || undefined,
+        licenseNumber: formData.licenseNumber || undefined,
+        specializations: formData.specializations,
+      });
+
+      const publishResult = await publishProfileMutation.mutateAsync();
+      if (publishResult.isPublic) {
+        toast.success('Profile published successfully');
+      } else {
+        toast.success('Profile created. Public publishing is pending approval.');
+      }
+
+      setLocation('/agent/dashboard');
+    } catch {
+      // Errors are surfaced via mutation handlers.
+    }
   };
 
   const toggleSpecialization = (spec: string) => {
@@ -224,10 +247,12 @@ export function AgentSetupWizard() {
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={createProfileMutation.isLoading}
+                disabled={createProfileMutation.isLoading || publishProfileMutation.isLoading}
                 className="ml-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
-                {createProfileMutation.isLoading ? 'Creating...' : 'Complete Setup'}
+                {createProfileMutation.isLoading || publishProfileMutation.isLoading
+                  ? 'Creating...'
+                  : 'Complete Setup'}
               </Button>
             )}
           </div>
