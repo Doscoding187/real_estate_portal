@@ -12,8 +12,6 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
-import { getDb } from '../db';
-import { sql } from 'drizzle-orm';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
@@ -26,17 +24,6 @@ export type SessionPayload = {
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
-
-const isMissingTableError = (error: unknown): boolean => {
-  const message =
-    error instanceof Error ? error.message : typeof error === 'string' ? error : String(error);
-  return (
-    message.includes('pending_agent_profiles') &&
-    (message.toLowerCase().includes("doesn't exist") ||
-      message.toLowerCase().includes('does not exist') ||
-      message.toLowerCase().includes('unknown table'))
-  );
-};
 
 const getRequestId = (req: Request): string => {
   const value = (req as any)?.requestId;
@@ -284,50 +271,25 @@ class AuthService {
           }
         : undefined;
 
-    // Store agent profile data for creation after email verification.
-    // If the staging table is absent in the target environment, fall back to
-    // creating the profile directly in pending status so registration still succeeds.
+    // Create the pending agent profile immediately so registration does not
+    // depend on the optional pending_agent_profiles staging table.
     if (role === 'agent' && normalizedAgentProfile) {
       if (!normalizedAgentProfile.displayName || !normalizedAgentProfile.phone) {
         throw new Error('Agent profile with display name and phone number is required');
       }
 
-      const database = await getDb();
-      if (database) {
-        try {
-          await database.execute(sql`
-            INSERT INTO pending_agent_profiles 
-            (userId, displayName, phone, bio, licenseNumber, specializations)
-            VALUES (
-              ${userId}, 
-              ${normalizedAgentProfile.displayName}, 
-              ${normalizedAgentProfile.phone}, 
-              ${normalizedAgentProfile.bio || null}, 
-              ${normalizedAgentProfile.licenseNumber || null}, 
-              ${
-                normalizedAgentProfile.specializations
-                  ? normalizedAgentProfile.specializations.join(',')
-                  : null
-              }
-            )
-          `);
-        } catch (error) {
-          if (!isMissingTableError(error)) {
-            throw error;
-          }
-
-          console.warn(
-            '[Auth] pending_agent_profiles missing; creating agent profile directly during registration.',
-          );
-          await db.createAgentProfile({
-            userId,
-            displayName: normalizedAgentProfile.displayName,
-            phone: normalizedAgentProfile.phone,
-            bio: normalizedAgentProfile.bio,
-            licenseNumber: normalizedAgentProfile.licenseNumber,
-            specializations: normalizedAgentProfile.specializations,
-          });
-        }
+      try {
+        await db.createAgentProfile({
+          userId,
+          displayName: normalizedAgentProfile.displayName,
+          phone: normalizedAgentProfile.phone,
+          bio: normalizedAgentProfile.bio,
+          licenseNumber: normalizedAgentProfile.licenseNumber,
+          specializations: normalizedAgentProfile.specializations,
+        });
+      } catch (error) {
+        await db.deleteUserById(userId);
+        throw error;
       }
     }
 
@@ -528,12 +490,23 @@ class AuthService {
             `);
           }
         } catch (error) {
-          if (!isMissingTableError(error)) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+                ? error
+                : String(error);
+          if (
+            !message.includes('pending_agent_profiles') ||
+            (!message.toLowerCase().includes("doesn't exist") &&
+              !message.toLowerCase().includes('does not exist') &&
+              !message.toLowerCase().includes('unknown table'))
+          ) {
             throw error;
           }
 
           console.warn(
-            '[Auth] pending_agent_profiles missing during verification; assuming direct agent profile creation fallback.',
+            '[Auth] pending_agent_profiles missing during verification; profile must already exist.',
           );
         }
       }

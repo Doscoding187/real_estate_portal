@@ -162,7 +162,9 @@ async function getPlatformSettingsColumnMode(db: any): Promise<PlatformSettingsC
   }
 
   try {
-    await db.execute(sql.raw('SELECT `setting_key`, `setting_value` FROM platform_settings LIMIT 1'));
+    await db.execute(
+      sql.raw('SELECT `setting_key`, `setting_value` FROM platform_settings LIMIT 1'),
+    );
     cachedPlatformSettingsColumnMode = 'snake';
     return cachedPlatformSettingsColumnMode;
   } catch (error: any) {
@@ -172,7 +174,9 @@ async function getPlatformSettingsColumnMode(db: any): Promise<PlatformSettingsC
     }
   }
 
-  throw new Error('Unsupported platform_settings schema. Expected key/value or setting_key/setting_value.');
+  throw new Error(
+    'Unsupported platform_settings schema. Expected key/value or setting_key/setting_value.',
+  );
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -257,16 +261,27 @@ export async function getUserById(id: number): Promise<User | undefined> {
   }
 
   try {
-    const result = await db.select(AUTH_SESSION_USER_COLUMNS).from(users).where(eq(users.id, id)).limit(1);
+    const result = await db
+      .select(AUTH_SESSION_USER_COLUMNS)
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
     return result.length > 0 ? (result[0] as User) : undefined;
   } catch (error) {
     // Fallback to minimal auth-safe shape if session columns drift in legacy environments.
-    console.warn('[Database] getUserById scoped select failed, falling back to minimal auth columns', {
-      userId: id,
-      message: (error as any)?.message || String(error),
-      code: (error as any)?.code || null,
-    });
-    const fallback = await db.select(AUTH_LOGIN_USER_COLUMNS).from(users).where(eq(users.id, id)).limit(1);
+    console.warn(
+      '[Database] getUserById scoped select failed, falling back to minimal auth columns',
+      {
+        userId: id,
+        message: (error as any)?.message || String(error),
+        code: (error as any)?.code || null,
+      },
+    );
+    const fallback = await db
+      .select(AUTH_LOGIN_USER_COLUMNS)
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
     return fallback.length > 0 ? (fallback[0] as User) : undefined;
   }
 }
@@ -314,6 +329,16 @@ export async function createUser(
   });
 
   return Number(result[0].insertId);
+}
+
+/**
+ * Delete a user by ID. Used to clean up partial registration failures.
+ */
+export async function deleteUserById(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(users).where(eq(users.id, userId));
 }
 
 /**
@@ -1771,7 +1796,8 @@ export async function getPlatformSetting(key: string) {
   const keyColumn = mode === 'snake' ? 'setting_key' : 'key';
   const valueColumn = mode === 'snake' ? 'setting_value' : 'value';
 
-  const result: any = await db.execute(sql.raw(`
+  const result: any = await db.execute(
+    sql.raw(`
     SELECT
       id,
       \`${keyColumn}\` AS settingKey,
@@ -1785,7 +1811,8 @@ export async function getPlatformSetting(key: string) {
     FROM platform_settings
     WHERE \`${keyColumn}\` = ${db.$client.escape(key)}
     LIMIT 1
-  `));
+  `),
+  );
 
   const rows = Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : [];
   return rows.length > 0 ? rows[0] : null;
@@ -1803,7 +1830,8 @@ export async function setPlatformSetting(key: string, value: any, updatedBy?: nu
   const categoryColumn = 'category';
   const isPublicColumn = 'isPublic';
 
-  await db.execute(sql.raw(`
+  await db.execute(
+    sql.raw(`
     INSERT INTO platform_settings (
       \`${keyColumn}\`,
       \`${valueColumn}\`,
@@ -1823,7 +1851,8 @@ export async function setPlatformSetting(key: string, value: any, updatedBy?: nu
       \`${valueColumn}\` = VALUES(\`${valueColumn}\`),
       updatedBy = VALUES(updatedBy),
       updatedAt = CURRENT_TIMESTAMP
-  `));
+  `),
+  );
 }
 
 export async function getAllPlatformSettings() {
@@ -1834,7 +1863,8 @@ export async function getAllPlatformSettings() {
   const keyColumn = mode === 'snake' ? 'setting_key' : 'key';
   const valueColumn = mode === 'snake' ? 'setting_value' : 'value';
 
-  const result: any = await db.execute(sql.raw(`
+  const result: any = await db.execute(
+    sql.raw(`
     SELECT
       id,
       \`${keyColumn}\` AS settingKey,
@@ -1847,7 +1877,8 @@ export async function getAllPlatformSettings() {
       updatedAt
     FROM platform_settings
     ORDER BY category, \`${keyColumn}\`
-  `));
+  `),
+  );
 
   return Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : [];
 }
