@@ -10,6 +10,8 @@ import {
   distributionIdentities,
   distributionManagerAssignments,
   distributionPrograms,
+  distributionViewings,
+  distributionViewingValidations,
   users,
 } from '../../drizzle/schema';
 
@@ -53,6 +55,8 @@ const createdState = {
   identityIds: [] as number[],
   developmentIds: [] as number[],
   userIds: [] as number[],
+  viewingIds: [] as number[],
+  validationIds: [] as number[],
 };
 
 function uniqueIds(ids: number[]) {
@@ -193,10 +197,44 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   return {
     managerUserId,
     outsiderManagerUserId,
+    agentUserId,
+    programId,
     dealId,
     developmentId,
     templateIds,
   };
+}
+
+async function insertViewing(input: {
+  dealId: number;
+  programId: number;
+  developmentId: number;
+  agentId: number;
+  managerUserId: number;
+  status?: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  rescheduleCount?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const startAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+  const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+  const [insertResult] = await db.insert(distributionViewings).values({
+    dealId: input.dealId,
+    programId: input.programId,
+    developmentId: input.developmentId,
+    agentId: input.agentId,
+    managerUserId: input.managerUserId,
+    scheduledStartAt: startAt.toISOString().slice(0, 19).replace('T', ' '),
+    scheduledEndAt: endAt.toISOString().slice(0, 19).replace('T', ' '),
+    timezone: 'Africa/Johannesburg',
+    locationName: 'Sales office',
+    status: input.status ?? 'scheduled',
+    rescheduleCount: input.rescheduleCount ?? 0,
+    scheduledByUserId: input.managerUserId,
+  } as any);
+  const viewingId = Number((insertResult as any).insertId || 0);
+  createdState.viewingIds.push(viewingId);
+  return viewingId;
 }
 
 async function setDealStage(
@@ -237,6 +275,18 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     const dealDocumentIds = uniqueIds(createdState.dealDocumentIds);
     if (dealDocumentIds.length) {
       await db.delete(distributionDealDocuments).where(inArray(distributionDealDocuments.id, dealDocumentIds));
+    }
+
+    const validationIds = uniqueIds(createdState.validationIds);
+    if (validationIds.length) {
+      await db
+        .delete(distributionViewingValidations)
+        .where(inArray(distributionViewingValidations.id, validationIds));
+    }
+
+    const viewingIds = uniqueIds(createdState.viewingIds);
+    if (viewingIds.length) {
+      await db.delete(distributionViewings).where(inArray(distributionViewings.id, viewingIds));
     }
 
     const dealIds = uniqueIds(createdState.dealIds);
@@ -286,6 +336,8 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     createdState.identityIds = [];
     createdState.developmentIds = [];
     createdState.userIds = [];
+    createdState.viewingIds = [];
+    createdState.validationIds = [];
   });
 
   it('blocks checklist access for a manager not assigned to the development', async () => {
@@ -569,6 +621,57 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     ).resolves.toMatchObject({
       success: true,
       stage: 'commission_paid',
+    });
+  });
+
+  it('blocks document updates on cancelled deals', async () => {
+    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const caller = buildCaller(seed.managerUserId);
+    await setDealStage(seed.dealId, 'cancelled');
+
+    await expect(
+      caller.distribution.manager.updateDealDocumentStatus({
+        dealId: seed.dealId,
+        templateId: seed.templateIds[0],
+        status: 'verified',
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Cannot update checklist documents for closed deals.',
+    });
+  });
+
+  it('blocks viewing validation and reschedule actions on commission-paid deals', async () => {
+    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const managerCaller = buildCaller(seed.managerUserId);
+    const agentCaller = buildCaller(seed.agentUserId);
+    const viewingId = await insertViewing({
+      dealId: seed.dealId,
+      programId: seed.programId,
+      developmentId: seed.developmentId,
+      agentId: seed.agentUserId,
+      managerUserId: seed.managerUserId,
+    });
+    await setDealStage(seed.dealId, 'commission_paid');
+
+    await expect(
+      managerCaller.distribution.manager.validateViewing({
+        dealId: seed.dealId,
+        outcome: 'completed_proceeding',
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Cannot validate viewing for closed deals.',
+    });
+
+    await expect(
+      agentCaller.distribution.referrer.rescheduleViewing({
+        viewingId,
+        scheduledStartAt: new Date(Date.now() + 96 * 60 * 60 * 1000).toISOString(),
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Cannot reschedule viewing for closed deals.',
     });
   });
 });

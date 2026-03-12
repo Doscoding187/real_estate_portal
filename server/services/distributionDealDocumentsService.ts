@@ -11,6 +11,7 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
+import { assertDealIsMutable } from './distributionDealMutationGuards';
 
 export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
 
@@ -348,6 +349,7 @@ export async function upsertDealDocumentStatus(
   if (!db) throw new Error('Database not available');
 
   const dealScope = await getDealScope(db, input.dealId);
+  assertDealIsMutable(dealScope.currentStage, 'update checklist documents');
   await assertAssignedManagerForDevelopment(db, {
     developmentId: dealScope.developmentId,
     actorUserId,
