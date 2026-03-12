@@ -3967,6 +3967,7 @@ const adminDistributionRouter = router({
           eventType: input.force ? 'override' : 'stage_transition',
           actorUserId: ctx.user.id,
           metadata: {
+            source: 'admin.transitionDealStage',
             force: input.force,
             previousCommissionStatus: deal.commissionStatus,
             nextCommissionStatus: commissionStatus,
