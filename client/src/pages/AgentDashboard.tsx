@@ -13,12 +13,11 @@ export default function AgentDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
 
-  // Check if agent profile exists
   const agentProfileQuery = trpc.agent.getDashboardStats.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === 'agent',
     retry: false,
   });
-  const { data: agentProfile, isLoading: isLoadingProfile, error } = agentProfileQuery;
+  const { isLoading: isLoadingProfile, error } = agentProfileQuery;
 
   useEffect(() => {
     if (!error) return;
@@ -27,19 +26,17 @@ export default function AgentDashboard() {
     }
   }, [error, setLocation]);
 
-  // Show loading spinner while auth is being checked
   if (loading || isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f7f8f3_0%,#eef2ec_100%)]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-emerald-600"></div>
+          <p className="text-slate-500">Loading Agent OS workspace...</p>
         </div>
       </div>
     );
   }
 
-  // Redirect if not authenticated or not agent
   if (!isAuthenticated) {
     setLocation('/login');
     return null;
@@ -51,23 +48,25 @@ export default function AgentDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F4F7FA]">
+    <div className="flex min-h-screen bg-[linear-gradient(180deg,#f7f8f3_0%,#eef2ec_100%)] text-slate-950">
       <AgentSidebar />
 
-      {/* Mobile Menu */}
       <Sheet>
-        <SheetTrigger asChild className="lg:hidden fixed top-4 left-4 z-50">
-          <Button variant="ghost" size="icon">
-            <Menu className="h-6 w-6" />
+        <SheetTrigger asChild className="fixed left-4 top-4 z-50 lg:hidden">
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-2xl border-slate-200 bg-white/95 shadow-sm backdrop-blur"
+          >
+            <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <AgentSidebar />
+        <SheetContent side="left" className="w-[92vw] max-w-[308px] border-r-0 p-0">
+          <AgentSidebar mobile />
         </SheetContent>
       </Sheet>
 
-      {/* Main Content */}
-      <div className="flex-1 lg:pl-64">
+      <div className="min-w-0 flex-1 lg:pl-[288px]">
         <AgentTopNav />
         <AgentDashboardOverview />
       </div>

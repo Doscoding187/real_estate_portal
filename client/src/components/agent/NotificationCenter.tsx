@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,6 @@ import {
   Phone,
   Calendar,
   AlertTriangle,
-  CheckCircle,
   Check,
   MoreHorizontal,
   Filter,
@@ -132,38 +131,45 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-96 max-h-96">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">Notifications</h3>
+      <DropdownMenuContent
+        align="end"
+        className="w-[calc(100vw-2rem)] max-w-[24rem] rounded-[24px] border-slate-200 bg-white/98 p-0 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] sm:w-[24rem]"
+      >
+        <div className="border-b border-slate-100 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-slate-950">Notifications</h3>
+              <p className="text-xs text-slate-500">
+                {unreadCount?.count || 0} unread items in your live queue
+              </p>
+            </div>
             {(unreadCount?.count || 0) > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleMarkAllAsRead}
                 disabled={markAllAsReadMutation.isPending}
+                className="rounded-xl text-slate-600"
               >
                 <Check className="h-4 w-4 mr-1" />
-                Mark all read
+                <span className="hidden sm:inline">Mark all read</span>
               </Button>
             )}
           </div>
 
-          {/* Search and Filter */}
           <div className="flex gap-2 mb-3">
             <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
                 placeholder="Search notifications..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1 text-sm border rounded"
+                className="h-10 rounded-xl border-slate-200 bg-slate-50/80 pl-9 text-sm"
               />
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="rounded-xl border-slate-200">
                   <Filter className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -186,11 +192,11 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
           </div>
         </div>
 
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-[min(28rem,60vh)] overflow-y-auto px-2 py-2">
           {isLoading ? (
-            <div className="p-4 text-center text-muted-foreground">Loading notifications...</div>
+            <div className="p-6 text-center text-sm text-slate-500">Loading notifications...</div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">No notifications found</div>
+            <div className="p-6 text-center text-sm text-slate-500">No notifications found</div>
           ) : (
             <div className="space-y-1">
               {filteredNotifications.map(notification => (
@@ -198,15 +204,19 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                   key={notification.id}
                   notification={notification}
                   onMarkAsRead={handleMarkAsRead}
-                  isMarkingAsRead={markAsReadMutation.isPending}
                 />
               ))}
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t text-center">
-          <Button variant="ghost" size="sm" onClick={() => setShowAll(!showAll)}>
+        <div className="border-t border-slate-100 p-4 text-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full rounded-xl text-slate-600"
+            onClick={() => setShowAll(!showAll)}
+          >
             {showAll ? 'Show Less' : 'View All'}
           </Button>
         </div>
@@ -218,10 +228,9 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
 interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: (id: number) => void;
-  isMarkingAsRead: boolean;
 }
 
-function NotificationItem({ notification, onMarkAsRead, isMarkingAsRead }: NotificationItemProps) {
+function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
   const IconComponent = NOTIFICATION_ICONS[notification.type];
   const colorClass = NOTIFICATION_COLORS[notification.type];
 
@@ -233,30 +242,34 @@ function NotificationItem({ notification, onMarkAsRead, isMarkingAsRead }: Notif
 
   return (
     <div
-      className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-        notification.isRead === 0 ? 'bg-blue-50' : ''
+      className={`cursor-pointer rounded-[18px] border px-3 py-3 transition-colors hover:bg-slate-50 ${
+        notification.isRead === 0
+          ? 'border-emerald-200 bg-emerald-50/70'
+          : 'border-transparent bg-transparent'
       }`}
       onClick={handleClick}
     >
       <div className="flex items-start gap-3">
-        <div className={`mt-0.5 ${colorClass}`}>
+        <div
+          className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl bg-white ${colorClass}`}
+        >
           <IconComponent className="h-4 w-4" />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <h4
-              className={`text-sm font-medium ${notification.isRead === 0 ? 'font-semibold' : ''}`}
+              className={`pr-2 text-sm font-medium text-slate-950 ${notification.isRead === 0 ? 'font-semibold' : ''}`}
             >
               {notification.title}
             </h4>
             <div className="flex items-center gap-1 ml-2">
               {notification.isRead === 0 && (
-                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500"></div>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 rounded-lg p-0">
                     <MoreHorizontal className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -272,9 +285,9 @@ function NotificationItem({ notification, onMarkAsRead, isMarkingAsRead }: Notif
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notification.content}</p>
+          <p className="mt-1 line-clamp-2 text-xs text-slate-500">{notification.content}</p>
 
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="mt-2 text-xs text-slate-400">
             {new Date(notification.createdAt).toLocaleString()}
           </p>
         </div>
