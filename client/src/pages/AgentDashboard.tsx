@@ -28,9 +28,9 @@ export default function AgentDashboard() {
 
   if (loading || isLoadingProfile) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f7f8f3_0%,#eef2ec_100%)]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-emerald-600"></div>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
           <p className="text-slate-500">Loading Agent OS workspace...</p>
         </div>
       </div>
@@ -48,27 +48,32 @@ export default function AgentDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[linear-gradient(180deg,#f7f8f3_0%,#eef2ec_100%)] text-slate-950">
-      <AgentSidebar />
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen w-full max-w-[calc(var(--content-rail-width)+17rem+3rem)] lg:gap-5 lg:px-4 lg:py-4 xl:gap-6 2xl:px-6">
+        <AgentSidebar />
 
-      <Sheet>
-        <SheetTrigger asChild className="fixed left-4 top-4 z-50 lg:hidden">
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-2xl border-slate-200 bg-white/95 shadow-sm backdrop-blur"
+        <Sheet>
+          <SheetTrigger asChild className="fixed left-4 top-4 z-50 lg:hidden">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-2xl border-border bg-background/95 shadow-sm backdrop-blur"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            className="w-[92vw] max-w-[308px] border-r border-sidebar-border p-0"
           >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[92vw] max-w-[308px] border-r-0 p-0">
-          <AgentSidebar mobile />
-        </SheetContent>
-      </Sheet>
+            <AgentSidebar mobile />
+          </SheetContent>
+        </Sheet>
 
-      <div className="min-w-0 flex-1 lg:pl-[288px]">
-        <AgentTopNav />
-        <AgentDashboardOverview />
+        <div className="min-w-0 flex-1 overflow-hidden lg:rounded-[28px] lg:border lg:border-border/70 lg:bg-card/40 lg:shadow-[0_24px_80px_-56px_rgba(15,23,42,0.22)]">
+          <AgentTopNav />
+          <AgentDashboardOverview />
+        </div>
       </div>
     </div>
   );

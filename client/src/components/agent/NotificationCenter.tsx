@@ -41,10 +41,10 @@ const NOTIFICATION_ICONS = {
 };
 
 const NOTIFICATION_COLORS = {
-  lead_assigned: 'text-blue-600',
-  offer_received: 'text-green-600',
-  showing_scheduled: 'text-purple-600',
-  system_alert: 'text-orange-600',
+  lead_assigned: 'text-primary',
+  offer_received: 'text-primary',
+  showing_scheduled: 'text-primary',
+  system_alert: 'text-primary',
 };
 
 interface NotificationCenterProps {
@@ -149,7 +149,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                 size="sm"
                 onClick={handleMarkAllAsRead}
                 disabled={markAllAsReadMutation.isPending}
-                className="rounded-xl text-slate-600"
+                className="rounded-xl text-muted-foreground"
               >
                 <Check className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Mark all read</span>
@@ -214,7 +214,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full rounded-xl text-slate-600"
+            className="w-full rounded-xl text-muted-foreground"
             onClick={() => setShowAll(!showAll)}
           >
             {showAll ? 'Show Less' : 'View All'}
@@ -244,14 +244,14 @@ function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps)
     <div
       className={`cursor-pointer rounded-[18px] border px-3 py-3 transition-colors hover:bg-slate-50 ${
         notification.isRead === 0
-          ? 'border-emerald-200 bg-emerald-50/70'
+          ? 'border-primary/15 bg-primary/5'
           : 'border-transparent bg-transparent'
       }`}
       onClick={handleClick}
     >
       <div className="flex items-start gap-3">
         <div
-          className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl bg-white ${colorClass}`}
+          className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl bg-secondary ${colorClass}`}
         >
           <IconComponent className="h-4 w-4" />
         </div>
@@ -265,7 +265,7 @@ function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps)
             </h4>
             <div className="flex items-center gap-1 ml-2">
               {notification.isRead === 0 && (
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-primary"></div>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
