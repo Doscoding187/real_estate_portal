@@ -24,6 +24,7 @@ import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { requireUser } from './_core/requireUser';
 import { slugify } from './_core/utils/slug';
 import { recordAgentOsEvent } from './services/agentOsEventService';
+import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import {
   getAgentInventorySchedulingOptions,
   getInventoryBridgeSchemaCapabilities,
@@ -62,6 +63,41 @@ function extractTrailingId(slug: string) {
   return match ? Number(match[1]) : null;
 }
 
+function parseTextList(value?: string | null) {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function stringifyTextList(values?: string[]) {
+  if (!values || values.length === 0) return null;
+  return values
+    .map(item => item.trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+function parseSocialLinks(value?: string | null) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function splitDisplayName(displayName: string) {
+  const trimmed = displayName.trim();
+  const [firstName, ...rest] = trimmed.split(/\s+/);
+  return {
+    firstName: firstName || trimmed,
+    lastName: rest.join(' '),
+  };
+}
+
 /**
  * Agent Router - Dashboard and CRM functionality for agents
  */
@@ -81,24 +117,22 @@ export const agentRouter = router({
     }));
   }),
 
-  getById: publicProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
+  getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+    const db = await getDb();
 
-      const [record] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.id, input.id), eq(agents.status, 'approved')))
-        .limit(1);
+    const [record] = await db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, input.id), eq(agents.status, 'approved')))
+      .limit(1);
 
-      if (!record) return null;
+    if (!record) return null;
 
-      return {
-        ...record,
-        slug: buildAgentPublicSlug(record),
-      };
-    }),
+    return {
+      ...record,
+      slug: buildAgentPublicSlug(record),
+    };
+  }),
 
   getPublicProfileBySlug: publicProcedure
     .input(z.object({ slug: z.string().min(3) }))
@@ -291,7 +325,10 @@ export const agentRouter = router({
       })
       .from(analyticsEvents)
       .where(
-        and(eq(analyticsEvents.userId, userId), inArray(analyticsEvents.eventType, milestoneEvents)),
+        and(
+          eq(analyticsEvents.userId, userId),
+          inArray(analyticsEvents.eventType, milestoneEvents),
+        ),
       )
       .orderBy(desc(analyticsEvents.createdAt));
 
@@ -662,7 +699,9 @@ export const agentRouter = router({
       .where(eq(agents.userId, userId))
       .limit(1);
 
-    const allowLegacySetting = await getPlatformSetting('agent_os_allow_legacy_scheduling_inventory');
+    const allowLegacySetting = await getPlatformSetting(
+      'agent_os_allow_legacy_scheduling_inventory',
+    );
     let allowLegacyFallback = true;
     if (allowLegacySetting != null) {
       try {
@@ -810,6 +849,152 @@ export const agentRouter = router({
       });
 
       return { success: true, agentId };
+    }),
+
+  getMyProfileOnboarding: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    const userId = requireUser(ctx).id;
+
+    const [agentRecord] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
+
+    if (!agentRecord) {
+      throw new Error('Agent profile not found');
+    }
+
+    const entitlements = await getAgentEntitlementsForUserId(userId);
+
+    return {
+      agent: {
+        ...agentRecord,
+        specializations: parseTextList(agentRecord.specialization),
+        propertyTypes: parseTextList(agentRecord.propertyTypes),
+        areasServed: parseTextList(agentRecord.areasServed),
+        languages: parseTextList(agentRecord.languages),
+        socialLinks: parseSocialLinks(agentRecord.socialLinks),
+      },
+      entitlements,
+    };
+  }),
+
+  updateMyProfileOnboarding: agentProcedure
+    .input(
+      z.object({
+        displayName: z.string().min(2).max(100),
+        phone: z.string().min(7).max(20),
+        whatsapp: z.string().max(50).optional(),
+        profileImage: z.string().optional(),
+        areasServed: z.array(z.string()).optional(),
+        focus: z.enum(['sales', 'rentals', 'both']).optional(),
+        specializations: z.array(z.string()).optional(),
+        propertyTypes: z.array(z.string()).optional(),
+        bio: z.string().max(1000).optional(),
+        licenseNumber: z.string().max(100).optional(),
+        yearsExperience: z.number().min(0).max(80).optional(),
+        languages: z.array(z.string()).optional(),
+        socialLinks: z
+          .object({
+            website: z.string().optional(),
+            facebook: z.string().optional(),
+            instagram: z.string().optional(),
+            linkedin: z.string().optional(),
+            twitter: z.string().optional(),
+          })
+          .optional(),
+        slug: z.string().max(200).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      const userId = requireUser(ctx).id;
+
+      const [agentRecord] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.userId, userId))
+        .limit(1);
+
+      if (!agentRecord) {
+        throw new Error('Agent profile not found');
+      }
+
+      const { firstName, lastName } = splitDisplayName(input.displayName);
+      const socialLinks = Object.fromEntries(
+        Object.entries(input.socialLinks || {}).filter(([, value]) => Boolean(value?.trim())),
+      );
+
+      await db
+        .update(agents)
+        .set({
+          firstName,
+          lastName,
+          displayName: input.displayName.trim(),
+          phone: input.phone.trim(),
+          whatsapp: input.whatsapp?.trim() || null,
+          profileImage: input.profileImage?.trim() || null,
+          areasServed: stringifyTextList(input.areasServed),
+          focus: input.focus || null,
+          specialization: stringifyTextList(input.specializations),
+          propertyTypes: stringifyTextList(input.propertyTypes),
+          bio: input.bio?.trim() || null,
+          licenseNumber: input.licenseNumber?.trim() || null,
+          yearsExperience: input.yearsExperience ?? null,
+          languages: stringifyTextList(input.languages),
+          socialLinks: Object.keys(socialLinks).length ? JSON.stringify(socialLinks) : null,
+          slug: input.slug?.trim() || null,
+          updatedAt: nowAsDbTimestamp(),
+        })
+        .where(eq(agents.id, agentRecord.id));
+
+      const entitlements = await getAgentEntitlementsForUserId(userId);
+      const [updatedAgent] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, agentRecord.id))
+        .limit(1);
+
+      if (!updatedAgent || !entitlements) {
+        throw new Error('Failed to refresh agent profile');
+      }
+
+      if (entitlements.profileCompletionScore >= 70) {
+        const [existingCompletionEvent] = await db
+          .select({ id: analyticsEvents.id })
+          .from(analyticsEvents)
+          .where(
+            and(
+              eq(analyticsEvents.userId, userId),
+              eq(analyticsEvents.eventType, 'agent_profile_completed'),
+            ),
+          )
+          .limit(1);
+
+        if (!existingCompletionEvent) {
+          await recordAgentOsEvent({
+            userId,
+            eventType: 'agent_profile_completed',
+            eventData: {
+              agentId: updatedAgent.id,
+              profileCompletionScore: entitlements.profileCompletionScore,
+              profileCompletionFlags: entitlements.profileCompletionFlags,
+            },
+            req: ctx.req,
+            requestId: ctx.requestId,
+          });
+        }
+      }
+
+      return {
+        success: true,
+        agent: {
+          ...updatedAgent,
+          specializations: parseTextList(updatedAgent.specialization),
+          propertyTypes: parseTextList(updatedAgent.propertyTypes),
+          areasServed: parseTextList(updatedAgent.areasServed),
+          languages: parseTextList(updatedAgent.languages),
+          socialLinks: parseSocialLinks(updatedAgent.socialLinks),
+        },
+        entitlements,
+      };
     }),
 
   publishProfile: agentProcedure
@@ -1268,10 +1453,11 @@ export const agentRouter = router({
           ? {
               id:
                 propertyRecord?.id ??
-                (resolvedInventoryMap.get(listing.id)?.propertyId ?? listing.id),
+                resolvedInventoryMap.get(listing.id)?.propertyId ??
+                listing.id,
               listingId: listing.id,
               propertyId:
-                propertyRecord?.id ?? (resolvedInventoryMap.get(listing.id)?.propertyId ?? null),
+                propertyRecord?.id ?? resolvedInventoryMap.get(listing.id)?.propertyId ?? null,
               inventoryModel:
                 propertyRecord != null
                   ? 'property'
@@ -1350,7 +1536,9 @@ export const agentRouter = router({
         status: listingRecord.status,
       });
 
-      const allowLegacySetting = await getPlatformSetting('agent_os_allow_legacy_scheduling_inventory');
+      const allowLegacySetting = await getPlatformSetting(
+        'agent_os_allow_legacy_scheduling_inventory',
+      );
       let allowLegacyFallback = true;
       if (allowLegacySetting != null) {
         try {
