@@ -78,6 +78,16 @@ export default function DevelopmentQualificationPage() {
     { enabled: !!slug },
   );
 
+  useEffect(() => {
+    if (!dev) return;
+    trackFunnelStep({
+      funnel: 'development_qualification',
+      step: 'qualification_page',
+      action: 'view',
+      path: dev.slug || slug,
+    });
+  }, [dev, slug]);
+
   const createLead = trpc.developer.createLead.useMutation({
     onSuccess: () => {
       trackFunnelStep({
@@ -247,16 +257,6 @@ export default function DevelopmentQualificationPage() {
     ? `${formatPriceCompact(developmentPricing.minPrice)} - ${formatPriceCompact(developmentPricing.maxPrice)}`
     : formatPriceCompact(developmentPricing.minPrice);
   const progressValue = step === 1 ? 33 : step === 2 ? 66 : 100;
-
-  useEffect(() => {
-    if (!dev) return;
-    trackFunnelStep({
-      funnel: 'development_qualification',
-      step: 'qualification_page',
-      action: 'view',
-      path: dev.slug || slug,
-    });
-  }, [dev, slug]);
 
   return (
     <>
