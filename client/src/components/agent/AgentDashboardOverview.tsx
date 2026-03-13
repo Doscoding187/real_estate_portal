@@ -90,6 +90,10 @@ type NotificationItem = {
   createdAt: string;
 };
 
+function ensureArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 const stageMeta: Array<{
   key: PipelineStage;
   label: string;
@@ -203,7 +207,7 @@ export function AgentDashboardOverview() {
     },
   );
 
-  const { data: showings, isLoading: showingsLoading } = trpc.agent.getMyShowings.useQuery(
+  const { data: showingsData, isLoading: showingsLoading } = trpc.agent.getMyShowings.useQuery(
     {
       startDate: today.toISOString().split('T')[0],
       endDate: nextMonth.toISOString().split('T')[0],
@@ -220,7 +224,7 @@ export function AgentDashboardOverview() {
       retry: false,
     });
 
-  const { data: listings = [], isLoading: listingsLoading } = trpc.agent.getMyListings.useQuery(
+  const { data: listingsData, isLoading: listingsLoading } = trpc.agent.getMyListings.useQuery(
     { limit: 6 },
     {
       enabled: isAuthenticated && user?.role === 'agent',
@@ -228,7 +232,7 @@ export function AgentDashboardOverview() {
     },
   );
 
-  const { data: notifications = [], isLoading: notificationsLoading } =
+  const { data: notificationsData, isLoading: notificationsLoading } =
     trpc.agent.getNotifications.useQuery(
       { limit: 6, unreadOnly: false },
       {
@@ -242,7 +246,7 @@ export function AgentDashboardOverview() {
     retry: false,
   });
 
-  const { data: commissions = [], isLoading: commissionsLoading } =
+  const { data: commissionsData, isLoading: commissionsLoading } =
     trpc.agent.getMyCommissions.useQuery(
       { status: 'all' },
       {
@@ -294,15 +298,30 @@ export function AgentDashboardOverview() {
 
   const pipeline = useMemo(
     () =>
-      (pipelineData || {
-        new: [],
-        contacted: [],
-        viewing: [],
-        offer: [],
-        closed: [],
+      ({
+        new: ensureArray<LeadItem>((pipelineData as Partial<PipelineData> | undefined)?.new),
+        contacted: ensureArray<LeadItem>(
+          (pipelineData as Partial<PipelineData> | undefined)?.contacted,
+        ),
+        viewing: ensureArray<LeadItem>(
+          (pipelineData as Partial<PipelineData> | undefined)?.viewing,
+        ),
+        offer: ensureArray<LeadItem>((pipelineData as Partial<PipelineData> | undefined)?.offer),
+        closed: ensureArray<LeadItem>((pipelineData as Partial<PipelineData> | undefined)?.closed),
       }) as PipelineData,
     [pipelineData],
   );
+
+  const listings = useMemo(() => ensureArray<ListingItem>(listingsData), [listingsData]);
+  const notifications = useMemo(
+    () => ensureArray<NotificationItem>(notificationsData),
+    [notificationsData],
+  );
+  const commissions = useMemo(
+    () => ensureArray<CommissionItem>(commissionsData),
+    [commissionsData],
+  );
+  const showings = useMemo(() => ensureArray<ShowingItem>(showingsData), [showingsData]);
 
   const recentLeads = useMemo(
     () =>
@@ -315,7 +334,7 @@ export function AgentDashboardOverview() {
 
   const majorDeals = useMemo(
     () =>
-      ([...commissions] as CommissionItem[])
+      [...commissions]
         .sort((a, b) => {
           if (b.amount !== a.amount) return b.amount - a.amount;
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -326,7 +345,7 @@ export function AgentDashboardOverview() {
 
   const upcomingShowings = useMemo(
     () =>
-      ([...showings] as ShowingItem[])
+      [...showings]
         .filter(showing => {
           const scheduledAt = showing.scheduledAt ? new Date(showing.scheduledAt).getTime() : 0;
           return showing.status === 'scheduled' && scheduledAt >= today.getTime();
@@ -339,10 +358,7 @@ export function AgentDashboardOverview() {
   );
 
   const unreadCount = unreadNotifications?.count || 0;
-  const latestNotifications = useMemo(
-    () => ([...notifications] as NotificationItem[]).slice(0, 4),
-    [notifications],
-  );
+  const latestNotifications = useMemo(() => notifications.slice(0, 4), [notifications]);
 
   const activationItems = [
     ['Profile completed', activation?.milestones.agent_profile_completed],
