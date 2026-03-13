@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MapPin, School, Heart, Bus, ShoppingBag, Ticket, Footprints, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
@@ -62,13 +62,33 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
       longitude: longitude || 0,
       radius: 5000,
       types: activeTabConfig?.types || [],
-      limit: 5,
+      limit: 12,
     },
     {
       enabled: !!activeTabConfig && hasValidCoordinates,
       staleTime: 1000 * 60 * 60,
     },
   );
+
+  const rankedPOIs = useMemo(() => {
+    if (!connectedPOIs?.length) return [];
+
+    return [...connectedPOIs]
+      .sort((a: any, b: any) => {
+        const ratingA = Number(a.rating || 0);
+        const ratingB = Number(b.rating || 0);
+        if (ratingA !== ratingB) return ratingB - ratingA;
+
+        const reviewsA = Number(a.userRatingsTotal || a.user_ratings_total || 0);
+        const reviewsB = Number(b.userRatingsTotal || b.user_ratings_total || 0);
+        if (reviewsA !== reviewsB) return reviewsB - reviewsA;
+
+        const distanceA = Number(a.distanceValue || Number.MAX_SAFE_INTEGER);
+        const distanceB = Number(b.distanceValue || Number.MAX_SAFE_INTEGER);
+        return distanceA - distanceB;
+      })
+      .slice(0, 5);
+  }, [connectedPOIs]);
 
   const handleOpenMap = () => {
     if (!hasValidCoordinates) return;
@@ -150,7 +170,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-xs font-medium transition-colors ${
                   isActive
                     ? 'border-orange-500 bg-orange-50 text-orange-700'
                     : 'border-orange-200 bg-white text-slate-600 hover:border-orange-300 hover:bg-orange-50/50'
@@ -176,28 +196,31 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
           </div>
-        ) : connectedPOIs && connectedPOIs.length > 0 ? (
+        ) : rankedPOIs.length > 0 ? (
           <div className="space-y-0">
-            {connectedPOIs.map((poi: any, index: number) => (
+            {rankedPOIs.map((poi: any, index: number) => (
               <div
                 key={poi.id || index}
                 className={`flex items-center justify-between py-4 ${
-                  index !== connectedPOIs.length - 1 ? 'border-b border-slate-100' : ''
+                  index !== rankedPOIs.length - 1 ? 'border-b border-slate-100' : ''
                 }`}
               >
-                <div className="flex flex-col">
-                  <span className="font-medium text-slate-700">{poi.name}</span>
-                  <span className="text-xs capitalize text-slate-400">
+                <div className="min-w-0 flex flex-col">
+                  <span className="truncate text-sm font-medium text-slate-700">{poi.name}</span>
+                  <span className="text-[11px] capitalize text-slate-400">
                     {(poi.type ? poi.type.replace(/_/g, ' ') : activeTabLabel).trim()}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium capitalize text-slate-600">
+                <div className="ml-3 flex shrink-0 items-center gap-2">
+                  {Number(poi.rating || 0) > 0 ? (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                      {Number(poi.rating).toFixed(1)} star
+                    </span>
+                  ) : null}
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium capitalize text-slate-600">
                     {(poi.distance || 'Distance unavailable').trim()}
-                    {' - '}
-                    {(poi.type ? poi.type.replace(/_/g, ' ') : activeTabLabel).trim()}
                   </span>
-                  <Footprints className="h-4 w-4 text-slate-400" />
+                  <Footprints className="h-3.5 w-3.5 text-slate-400" />
                 </div>
               </div>
             ))}
