@@ -2181,6 +2181,151 @@ const adminDistributionRouter = router({
       );
     }),
 
+  onboardDevelopmentToPartnerNetwork: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.ensureProgramForDevelopment',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.upsertBrandPartnership');
+          await assertDistributionSchemaReady('distribution.admin.upsertDevelopmentAccess');
+          await assertDistributionSchemaReady('distribution.admin.listPrograms');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          try {
+            const result = await db.transaction(async tx => {
+              const [development] = await tx
+                .select({
+                  id: developments.id,
+                  name: developments.name,
+                  developerBrandProfileId: developments.developerBrandProfileId,
+                  marketingBrandProfileId: developments.marketingBrandProfileId,
+                })
+                .from(developments)
+                .where(eq(developments.id, input.developmentId))
+                .limit(1);
+
+              if (!development) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
+              }
+
+              const brandProfileId =
+                Number(development.developerBrandProfileId || 0) ||
+                Number(development.marketingBrandProfileId || 0) ||
+                null;
+
+              if (!brandProfileId) {
+                throw new TRPCError({
+                  code: 'BAD_REQUEST',
+                  message:
+                    'Development must be linked to a brand profile before it can be added to partner developments.',
+                });
+              }
+
+              const partnershipResult = await upsertBrandPartnershipWithAudit({
+                db: tx as any,
+                actorUserId: ctx.user.id,
+                brandProfileId,
+                status: 'active',
+                reasonCode: 'admin_onboarding',
+                notes: 'Activated via partner development onboarding.',
+              });
+
+              const accessResult = await upsertDevelopmentAccessWithAudit({
+                db: tx as any,
+                actorUserId: ctx.user.id,
+                developmentId: input.developmentId,
+                status: 'included',
+                submissionAllowed: true,
+                excludedByMandate: false,
+                excludedByExclusivity: false,
+                reasonCode: 'admin_onboarding',
+                notes: 'Included via partner development onboarding.',
+              });
+
+              const accessEvaluation = await evaluateDevelopmentDistributionAccess({
+                db: tx as any,
+                developmentId: input.developmentId,
+                actor: { role: 'admin', userId: ctx.user.id },
+                channel: 'admin_catalog',
+              });
+              const blockerSummary = summarizeDistributionBlockers(accessEvaluation);
+
+              const ensured = await ensureDistributionProgramForDevelopment(
+                {
+                  developmentId: input.developmentId,
+                  actorUserId: ctx.user.id,
+                },
+                {
+                  findExistingProgramByDevelopmentId: async developmentId => {
+                    const [row] = await tx
+                      .select({ id: distributionPrograms.id })
+                      .from(distributionPrograms)
+                      .where(eq(distributionPrograms.developmentId, developmentId))
+                      .limit(1);
+                    return row ? { id: Number(row.id) } : null;
+                  },
+                  createProgram: async payload => {
+                    if (blockerSummary.accessBlockers.length > 0) {
+                      throw new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: `Program creation blocked by access requirements: ${blockerSummary.accessBlockers.join(', ')}.`,
+                      });
+                    }
+                    const [insertResult] = await tx.insert(distributionPrograms).values(payload);
+                    return { id: Number((insertResult as any).insertId || 0) };
+                  },
+                },
+              );
+
+              return {
+                success: true as const,
+                developmentId: input.developmentId,
+                developmentName: String(development.name || 'Development'),
+                brandProfileId,
+                partnership: {
+                  changed: partnershipResult.changed,
+                  status: partnershipResult.partnership.status,
+                },
+                access: {
+                  changed: accessResult.changed,
+                  status: accessResult.access.status,
+                  submissionAllowed: Number(accessResult.access.submissionAllowed || 0) === 1,
+                },
+                mode: ensured.created ? ('created' as const) : ('existing' as const),
+                programId: ensured.programId,
+                accessBlockers: blockerSummary.accessBlockers,
+                accessState: {
+                  inventoryState: accessEvaluation.inventoryState,
+                  partnershipStatus: accessEvaluation.brandPartnershipStatus,
+                  accessStatus: accessEvaluation.developmentAccessStatus,
+                  submissionAllowed: accessEvaluation.submissionAllowed,
+                  legacyFallbackUsed: accessEvaluation.legacyFallbackUsed,
+                },
+              };
+            });
+
+            return result;
+          } catch (error) {
+            console.error('[Distribution] onboardDevelopmentToPartnerNetwork failed', {
+              requestId: ctx.requestId,
+              userId: ctx.user.id,
+              developmentId: input.developmentId,
+              message: (error as any)?.message || String(error),
+              code: (error as any)?.code || (error as any)?.cause?.code || null,
+            });
+            throw error;
+          }
+        },
+      );
+    }),
+
   upsertProgram: superAdminProcedure.input(upsertProgramInput).mutation(async ({ ctx, input }) => {
     assertDistributionEnabled();
     return await upsertProgram(ctx as any, input);
