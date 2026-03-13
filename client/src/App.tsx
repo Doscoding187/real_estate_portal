@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -19,6 +19,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
+import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
 import { RequireRole } from '@/components/RequireRole';
 import {
   LegacyCityRedirect,
@@ -33,7 +34,6 @@ const Favorites = lazy(() => import('./pages/Favorites'));
 const Agents = lazy(() => import('./pages/Agents'));
 const AgentDetail = lazy(() => import('./pages/AgentDetail'));
 const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
-const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const ProvincePage = lazy(() => import('./pages/ProvincePage'));
 const CityPage = lazy(() => import('./pages/CityPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -42,31 +42,39 @@ const Login = lazy(() => import('./pages/Login'));
 const AgencyDashboard = lazy(() => import('./pages/AgencyDashboard'));
 const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
 const AgentListings = lazy(() => import('./pages/agent/AgentListings'));
-const AgentLeads = lazy(() => import('./pages/AgentLeads'));
+const AgentLeadsEnhanced = lazy(() => import('./pages/agent/AgentLeadsEnhanced'));
+const AgentReferrals = lazy(() => import('./pages/agent/AgentReferrals'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
-const AgentCalendar = lazy(() => import('./pages/AgentCalendar'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
+const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
+const AgencyList = lazy(() => import('./pages/admin/AgencyList'));
+const CreateAgency = lazy(() => import('./pages/admin/CreateAgency'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
 const ListingOversight = lazy(() => import('./pages/admin/ListingOversight'));
+const SubscriptionManagement = lazy(() => import('./pages/admin/SubscriptionManagement'));
+const PlatformSettings = lazy(() => import('./pages/admin/PlatformSettings'));
 const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
 const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
-const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
+const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
+const ExploreSandbox = lazy(() => import('./pages/ExploreSandbox'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
-const ExploreDiscovery = lazy(() => import('./pages/ExploreDiscovery'));
-const ExploreMap = lazy(() => import('./pages/ExploreMap'));
+const ExplorePublicVideoPage = lazy(() => import('./pages/ExplorePublicVideoPage'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
 const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ReferralUpload = lazy(() => import('./pages/ReferralUpload'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
 const ServicesLocalizedCategoryPage = lazy(
@@ -74,8 +82,12 @@ const ServicesLocalizedCategoryPage = lazy(
 );
 const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
 const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
-const ServiceProviderProfilePage = lazy(() => import('./pages/services/ServiceProviderProfilePage'));
-const ServiceProviderReviewsPage = lazy(() => import('./pages/services/ServiceProviderReviewsPage'));
+const ServiceProviderProfilePage = lazy(
+  () => import('./pages/services/ServiceProviderProfilePage'),
+);
+const ServiceProviderReviewsPage = lazy(
+  () => import('./pages/services/ServiceProviderReviewsPage'),
+);
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
@@ -93,8 +105,6 @@ const LocationMonetizationPage = lazy(() => import('./pages/admin/LocationMoneti
 const SubscriptionManagementPage = lazy(() => import('./pages/admin/SubscriptionManagementPage'));
 const PlanEditor = lazy(() => import('./pages/admin/PlanEditor'));
 const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
-const AgentOsReadinessPage = lazy(() => import('./pages/admin/AgentOsReadinessPage'));
-const AgentInventoryBoundaryPage = lazy(() => import('./pages/admin/AgentInventoryBoundaryPage'));
 const MarketingCampaignsPage = lazy(() => import('./pages/admin/MarketingCampaignsPage'));
 const CreateCampaignWizard = lazy(() => import('./pages/admin/CreateCampaignWizard'));
 const AgentApprovals = lazy(() => import('./pages/admin/AgentApprovals'));
@@ -121,13 +131,26 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
+const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
+// DeveloperSetupWizard (unused in routes?) - keeping imported if it was used, but checking usage...
+// It was imported but not used in the Route list in the original file! I will comment it out or lazy load it if I see it.
+// Ah, checking original file... L98 imported it. L230 uses CreateDevelopment.
+// I don't see DeveloperSetupWizard used in the Switch. I'll omit it or lazy load it just in case.
+// Better to follow the pattern and lazy load relevant page-like components.
+const DeveloperSetupWizard = lazy(
+  () => import('./components/developer/DeveloperSetupWizardEnhanced'),
+);
+const DevelopmentsList = lazy(() => import('./components/developer/DevelopmentsList'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
 const ExploreComponentDemo = lazy(() => import('./pages/ExploreComponentDemo'));
 const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 
 // Import Developer Dashboard Pages
+const DeveloperCampaignsPage = lazy(() => import('./pages/DeveloperCampaignsPage'));
+const DeveloperPerformancePage = lazy(() => import('./pages/DeveloperPerformancePage'));
 const SubscriptionPlans = lazy(() => import('./pages/SubscriptionPlans'));
+const DeveloperPlans = lazy(() => import('./pages/DeveloperPlans'));
 // Import Developer Layout directly for specific tab routing
 const DeveloperRoutes = lazy(() => import('./pages/DeveloperRoutes'));
 // Import MyDrafts removed to prevent circular dependency with DeveloperLayout's lazy load
@@ -146,30 +169,6 @@ const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
-const ManagerDevelopmentOpsPage = lazy(
-  () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
-);
-const ManagerDevelopmentDealsPage = lazy(
-  () => import('./pages/distribution/ManagerDevelopmentDealsPage'),
-);
-const ManagerDealChecklistPage = lazy(
-  () => import('./pages/distribution/ManagerDealChecklistPage'),
-);
-const PartnerSubmitReferralPage = lazy(
-  () => import('./pages/distribution/PartnerSubmitReferralPage'),
-);
-const PartnerMyReferralsPage = lazy(
-  () => import('./pages/distribution/PartnerMyReferralsPage'),
-);
-const PartnerReferralDetailPage = lazy(
-  () => import('./pages/distribution/PartnerReferralDetailPage'),
-);
-const PartnerReferralAcceleratorPage = lazy(
-  () => import('./pages/distribution/PartnerReferralAcceleratorPage'),
-);
-const PartnerDevelopmentsPage = lazy(
-  () => import('./pages/distribution/PartnerDevelopmentsPage'),
-);
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
@@ -179,6 +178,8 @@ const DistributionNetworkPublicPage = lazy(
 const DistributionReferralApplyPage = lazy(
   () => import('./pages/distribution/DistributionReferralApplyPage'),
 );
+const isExploreSandboxEnabled =
+  import.meta.env.DEV || (import.meta.env as any).VITE_ENABLE_EXPLORE_SANDBOX === 'true';
 
 // Import SearchResults page for SEO-friendly URLs
 const SearchResults = lazy(() => import('./pages/SearchResults'));
@@ -282,7 +283,12 @@ function Router() {
           </Route>
           <Route path="/agent/leads">
             <RequireRole role="agent">
-              <AgentLeads />
+              <AgentLeadsEnhanced />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/referrals">
+            <RequireRole role="agent">
+              <AgentReferrals />
             </RequireRole>
           </Route>
           <Route path="/agent/marketing">
@@ -298,11 +304,6 @@ function Router() {
           <Route path="/agent/analytics">
             <RequireRole role="agent">
               <AgentAnalytics />
-            </RequireRole>
-          </Route>
-          <Route path="/agent/calendar">
-            <RequireRole role="agent">
-              <AgentCalendar />
             </RequireRole>
           </Route>
           <Route path="/agent/productivity">
@@ -328,11 +329,6 @@ function Router() {
           <Route path="/onboarding/agent-profile">
             <RequireRole role="agent">
               <AgentSetup />
-            </RequireRole>
-          </Route>
-          <Route path="/agent/referrals">
-            <RequireRole role="agent">
-              <Redirect to="/referrer/dashboard" />
             </RequireRole>
           </Route>
           <Route path="/agents/:slug" component={AgentMicrosite} />
@@ -364,6 +360,7 @@ function Router() {
               return null;
             }}
           />
+          <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
           <Route path="/development/:slug" component={DevelopmentDetail} />
 
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
@@ -374,7 +371,7 @@ function Router() {
 
           {/* Explore routes */}
           <Route path="/explore/home" component={ExploreHome} />
-          <Route path="/explore/shorts" component={ExploreShorts} />
+          {isExploreSandboxEnabled && <Route path="/explore/sandbox" component={ExploreSandbox} />}
           <Route path="/explore/upload" component={ExploreUpload} />
           <Route path="/explore/create">
             <Redirect to="/explore/upload" />
@@ -388,15 +385,10 @@ function Router() {
           <Route path="/explore/component-demo" component={ExploreComponentDemo} />
           <Route path="/map-preview-demo" component={MapPreviewDemo} />
 
-          {/* New Explore Pages */}
-          <Route path="/explore/discovery" component={ExploreDiscovery} />
-          <Route path="/explore/map" component={ExploreMap} />
-
-          {/* Legacy Feed */}
+          {/* Unified Explore Feed + Public Video Page */}
           <Route path="/explore/feed" component={ExploreFeed} />
-          <Route path="/explore/@:handle/:slug">
-            <Redirect to="/explore/feed" />
-          </Route>
+          <Route path="/explore/shorts" component={ExploreShorts} />
+          <Route path="/explore/@:handle/:slug" component={ExplorePublicVideoPage} />
 
           {/* Explore Entry Rule (MUST be after the specific routes) */}
           <Route path="/explore">
@@ -412,9 +404,14 @@ function Router() {
           <Route path="/services/results/:leadId" component={ServicesResultsPage} />
           <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
           <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
-          <Route path="/services/:category/:city/:province" component={ServicesLocalizedCategoryPage} />
+          <Route
+            path="/services/:category/:city/:province"
+            component={ServicesLocalizedCategoryPage}
+          />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
+
+          {/* Provider routes */}
           <Route path="/pro/dashboard" component={ProDashboardPage} />
           <Route path="/pro/profile" component={ProProfilePage} />
           <Route path="/pro/explore" component={ProExplorePage} />
@@ -426,9 +423,7 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
-          <Route path="/referral-upload/:token">
-            <Redirect to="/distribution-network/apply" />
-          </Route>
+          <Route path="/referral-upload/:token" component={ReferralUpload} />
           <Route path="/get-started/referral">
             <Redirect to="/distribution-network/apply" />
           </Route>
@@ -571,22 +566,6 @@ function Router() {
               </SuperAdminDashboard>
             )}
           />
-          <Route
-            path="/admin/agent-os-readiness"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgentOsReadinessPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agent-inventory-boundary"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgentInventoryBoundaryPage />
-              </SuperAdminDashboard>
-            )}
-          />
 
           {/* Campaign Insights Route */}
           <Route
@@ -674,8 +653,24 @@ function Router() {
               </SuperAdminDashboard>
             )}
           />
+          <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
+          <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
+          <Route path="/referral/apply">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
+          <Route path="/admin/distribution-network">
+            <Redirect to="/admin/distribution" />
+          </Route>
 
           {/* Developer Publisher Route */}
+          <Route
+            path="/admin/publisher/create-development"
+            component={() => (
+              <SuperAdminDashboard>
+                <CreateDevelopment />
+              </SuperAdminDashboard>
+            )}
+          />
           <Route
             path="/admin/publisher"
             component={() => (
@@ -689,40 +684,8 @@ function Router() {
           <Route path="/dashboard" component={Dashboard} />
 
           <Route path="/agency/dashboard" component={AgencyDashboard} />
-          <Route path="/distribution/manager">
-            <Redirect to="/distribution/manager/developments" />
-          </Route>
-          <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
-          <Route
-            path="/distribution/manager/developments"
-            component={ManagerDevelopmentOpsPage}
-          />
-          <Route
-            path="/distribution/manager/developments/:developmentId"
-            component={ManagerDevelopmentDealsPage}
-          />
-          <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
+          <Route path="/distribution/manager" component={DistributionManagerDashboard} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
-          <Route
-            path="/distribution/partner/developments"
-            component={PartnerDevelopmentsPage}
-          />
-          <Route
-            path="/distribution/partner/accelerator"
-            component={PartnerReferralAcceleratorPage}
-          />
-          <Route path="/partner/referrals/accelerator" component={PartnerReferralAcceleratorPage} />
-          <Route path="/distribution/partner/submit" component={PartnerSubmitReferralPage} />
-          <Route path="/distribution/partner/referrals" component={PartnerMyReferralsPage} />
-          <Route
-            path="/distribution/partner/referrals/:dealId"
-            component={PartnerReferralDetailPage}
-          />
-          <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
-          <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
-          <Route path="/referral/apply">
-            <Redirect to="/distribution-network/apply" />
-          </Route>
           <Route path="/agency/subscription" component={AgencySubscriptionPage} />
           <Route path="/agency/onboarding" component={AgencyOnboarding} />
           <Route path="/admin/subscription-management" component={SubscriptionManagementPage} />

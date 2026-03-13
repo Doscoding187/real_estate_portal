@@ -1,11 +1,11 @@
-import { useParams } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 import { useEffect, useRef, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { MediaLightbox } from '@/components/MediaLightbox';
-import { DevelopmentHeader } from '@/components/DevelopmentHeader';
 import { DevelopmentGallery } from '@/components/DevelopmentGallery';
 import { DeveloperOverview } from '@/components/development/DeveloperOverview';
+import { DevelopmentLeadDialog } from '@/components/development/DevelopmentLeadDialog';
 import { StatCard } from '@/components/development/StatCard';
 import { SectionNav } from '@/components/development/SectionNav';
 import { DevelopmentOverviewCard } from '@/components/DevelopmentOverviewCard';
@@ -24,18 +24,14 @@ import {
 } from '@/components/ui/carousel';
 import {
   Building2,
-  MapPin,
   Home,
   Bed,
   Bath,
-  Square,
-  Calendar,
   Check,
   Phone,
   Mail,
   Download,
   Maximize,
-  ExternalLink,
   Award,
   Globe,
   Briefcase,
@@ -59,7 +55,6 @@ import {
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
-import { Input } from '@/components/ui/input';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { Footer } from '@/components/Footer';
@@ -80,6 +75,13 @@ import {
 } from '@/lib/media-logic';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { formatPriceCompact } from '@/lib/formatPrice';
+import {
+  calculateAffordablePrice,
+  calculateMonthlyRepayment,
+  formatSARandShort,
+  SA_PRIME_RATE,
+} from '@/lib/bond-calculator';
+import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 
 type AmenityTabKey = AmenityCategory | 'other';
 
@@ -159,6 +161,12 @@ const formatBathValue = (value: unknown): string | null => {
   return Number.isInteger(parsed) ? `${parsed}` : `${parsed}`;
 };
 
+const formatExactRand = (value: unknown): string | null => {
+  const parsed = parseNumber(value);
+  if (parsed === null || parsed <= 0) return null;
+  return `R ${Math.round(parsed).toLocaleString('en-ZA')}`;
+};
+
 const formatParkingLabel = (parking?: string | number, parkingBays?: number): string | null => {
   const parkingValue = parking ?? undefined;
   const baysValue = parseNumber(parkingBays);
@@ -179,11 +187,78 @@ const formatParkingLabel = (parking?: string | number, parkingBays?: number): st
   return baysValue && baysValue > 0 ? `${baysValue} Bay${baysValue === 1 ? '' : 's'}` : null;
 };
 
-type UnitTypeCarouselProps = {
-  units: any[];
+const DEFAULT_DEPOSIT_PERCENTAGE = 10;
+const DEFAULT_BOND_TERM_YEARS = 20;
+const QUICK_QUALIFICATION_PAYMENT_RATIO = 3;
+
+const resolveDocumentUrl = (item: unknown): string | null => {
+  if (typeof item === 'string') {
+    const trimmed = item.trim();
+    return trimmed ? resolveMediaUrl(trimmed) : null;
+  }
+
+  if (!item || typeof item !== 'object') return null;
+
+  const doc = item as { url?: string; href?: string; src?: string; key?: string };
+  const candidate = doc.url ?? doc.href ?? doc.src ?? doc.key ?? null;
+  return typeof candidate === 'string' && candidate.trim() ? resolveMediaUrl(candidate) : null;
 };
 
-function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
+const resolveUnitFloorPlanUrl = (unit: any): string | null => {
+  const floorPlans = Array.isArray(unit?.baseMedia?.floorPlans) ? unit.baseMedia.floorPlans : [];
+  for (const item of floorPlans) {
+    const url = resolveDocumentUrl(item);
+    if (url) return url;
+  }
+  return null;
+};
+
+const getUnitAvailabilityState = (unit: any) => {
+  const availableUnits = Math.max(0, Number(unit?.availableUnits || 0));
+  const totalUnits = Math.max(0, Number(unit?.totalUnits || 0));
+
+  if (totalUnits > 0 && availableUnits <= 0) {
+    return {
+      label: 'Sold out',
+      className: 'border-rose-200 bg-rose-50 text-rose-700',
+      primaryLabel: 'Join Waitlist',
+    };
+  }
+
+  if (availableUnits > 0 && availableUnits <= 5) {
+    return {
+      label: `Only ${availableUnits} left`,
+      className: 'border-amber-200 bg-amber-50 text-amber-700',
+      primaryLabel: 'Request Callback',
+    };
+  }
+
+  if (availableUnits > 5) {
+    return {
+      label: `${availableUnits} available`,
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      primaryLabel: 'Request Callback',
+    };
+  }
+
+  return null;
+};
+
+type UnitTypeCarouselProps = {
+  units: any[];
+  brochureAvailable: boolean;
+  onRequestCallback: (unit: any) => void;
+  onRequestBrochure: (unit: any) => void;
+  onOpenFloorPlan: (unit: any) => void;
+};
+
+function UnitTypeCarousel({
+  units,
+  brochureAvailable,
+  onRequestCallback,
+  onRequestBrochure,
+  onOpenFloorPlan,
+}: UnitTypeCarouselProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [snapCount, setSnapCount] = useState(0);
@@ -220,17 +295,44 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
       >
         <CarouselContent className="-ml-4">
           {units.map(unit => {
+            const unitPriceFrom = parseNumber(unit.basePriceFrom) ?? 0;
+            const unitPriceTo = parseNumber(unit.basePriceTo);
             const showHouseSize = isPresentSize(unit.floorSize);
             const showLandSize = isPresentSize(unit.landSize);
             const houseSizeLabel = formatSizeValue(unit.floorSize);
             const landSizeLabel = formatSizeValue(unit.landSize);
             const parkingLabel = formatParkingLabel(unit.parkingType, unit.parkingBays);
+            const floorPlanUrl = resolveUnitFloorPlanUrl(unit);
+            const availability = getUnitAvailabilityState(unit);
+            const exactPriceFrom = formatExactRand(unitPriceFrom) || 'Price on request';
+            const exactPriceTo =
+              unitPriceTo !== null && unitPriceTo > unitPriceFrom
+                ? formatExactRand(unitPriceTo)
+                : null;
+            const estimatedDeposit =
+              unitPriceFrom > 0
+                ? Math.round(unitPriceFrom * (DEFAULT_DEPOSIT_PERCENTAGE / 100))
+                : null;
+            const estimatedRepayment =
+              unitPriceFrom > 0
+                ? Math.round(
+                    calculateMonthlyRepayment(
+                      Math.max(unitPriceFrom - (estimatedDeposit || 0), 0),
+                      SA_PRIME_RATE,
+                      DEFAULT_BOND_TERM_YEARS,
+                    ),
+                  )
+                : null;
+            const secondaryActionLabel = floorPlanUrl
+              ? 'View Floor Plan'
+              : brochureAvailable
+                ? 'Get Brochure'
+                : 'Request Info';
 
             return (
               <CarouselItem key={unit.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/3">
-                <Card className="overflow-hidden hover:shadow-md transition-all duration-300 border-slate-200 h-full flex flex-col">
-                  {/* Image with fixed aspect ratio */}
-                  <div className="relative w-full aspect-[4/3] bg-slate-200 overflow-hidden group">
+                <Card className="flex h-full flex-col overflow-hidden border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                  <div className="group relative w-full overflow-hidden bg-slate-200 aspect-[4/3]">
                     <img
                       src={unit.normalizedImage}
                       alt={unit.normalizedType}
@@ -242,27 +344,67 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
                       }}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/70">
+                        {unit.normalizedType}
+                      </p>
+                      <p className="mt-1 text-lg font-bold text-white">{exactPriceFrom}</p>
+                      {estimatedRepayment ? (
+                        <p className="text-xs text-white/80">
+                          Est. from {formatExactRand(estimatedRepayment)} / month
+                        </p>
+                      ) : null}
+                    </div>
+                    {availability ? (
+                      <div className="absolute left-3 top-3">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${availability.className}`}
+                        >
+                          {availability.label}
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
 
-                  <CardContent className="p-3 space-y-3 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-base">
-                          {formatPriceCompact(unit.basePriceFrom)}
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-1">{unit.name}</p>
-                        {unit.basePriceTo &&
-                          Number(unit.basePriceTo) > 0 &&
-                          unit.basePriceTo > unit.basePriceFrom && (
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              - {formatPriceCompact(unit.basePriceTo)}
-                            </p>
-                          )}
+                  <CardContent className="flex flex-1 flex-col space-y-4 p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-base font-bold text-slate-900">{unit.name}</h4>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {exactPriceTo ? `${exactPriceFrom} - ${exactPriceTo}` : exactPriceFrom}
+                          </p>
+                        </div>
+                        {unit.normalizedOwnership ? (
+                          <Badge variant="outline" className="border-slate-200 text-slate-600">
+                            {unit.normalizedOwnership}
+                          </Badge>
+                        ) : null}
                       </div>
+                      {estimatedDeposit ? (
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                            Ownership Snapshot
+                          </p>
+                          <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+                            <span className="text-slate-600">Deposit from</span>
+                            <span className="font-semibold text-slate-900">
+                              {formatExactRand(estimatedDeposit)}
+                            </span>
+                          </div>
+                          {estimatedRepayment ? (
+                            <div className="mt-1 flex items-center justify-between gap-3 text-sm">
+                              <span className="text-slate-600">Repayment from</span>
+                              <span className="font-semibold text-slate-900">
+                                {formatExactRand(estimatedRepayment)} / month
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
 
-                    <div className="flex items-center justify-between gap-1 py-2 border-t border-b border-slate-100 mt-auto min-h-[52px]">
-                      {/* 1. House Size */}
+                    <div className="mt-auto flex min-h-[52px] items-center justify-between gap-1 border-y border-slate-100 py-2">
                       <div className="flex flex-col items-center justify-center text-center px-1">
                         <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400 mb-1" />
                         <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
@@ -272,7 +414,6 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
 
                       <div className="h-6 w-px bg-slate-100 shrink-0" />
 
-                      {/* 2. Bedrooms */}
                       <div className="flex flex-col items-center justify-center text-center px-1">
                         <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
                         {(() => {
@@ -290,7 +431,6 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
 
                       <div className="h-6 w-px bg-slate-100 shrink-0" />
 
-                      {/* 3. Bathrooms */}
                       <div className="flex flex-col items-center justify-center text-center px-1">
                         <Bath className="h-3.5 w-3.5 text-slate-400 mb-1" />
                         <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
@@ -298,7 +438,6 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
                         </span>
                       </div>
 
-                      {/* 4. Erf/Yard size (Preferred) or Parking fallback */}
                       {showLandSize && landSizeLabel ? (
                         <>
                           <div className="h-6 w-px bg-slate-100 shrink-0" />
@@ -324,12 +463,31 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
                       )}
                     </div>
 
-                    <div className="pt-1">
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <Button
+                        className="h-10 bg-orange-500 text-xs font-semibold text-white hover:bg-orange-600"
+                        onClick={() => onRequestCallback(unit)}
+                      >
+                        {availability?.primaryLabel || 'Request Callback'}
+                      </Button>
                       <Button
                         variant="outline"
-                        className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 h-9 text-xs font-bold rounded-md shadow-none uppercase tracking-wide"
+                        className="h-10 border-blue-200 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                        onClick={() => {
+                          if (floorPlanUrl) {
+                            onOpenFloorPlan(unit);
+                            return;
+                          }
+
+                          if (brochureAvailable) {
+                            onRequestBrochure(unit);
+                            return;
+                          }
+
+                          onRequestCallback(unit);
+                        }}
                       >
-                        Request callback
+                        {secondaryActionLabel}
                       </Button>
                     </div>
                   </CardContent>
@@ -368,10 +526,17 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
 
 export default function DevelopmentDetail() {
   const { slug } = useParams();
+  const [, setLocation] = useLocation();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxTitle, setLightboxTitle] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [quickIncome, setQuickIncome] = useState('');
+  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
+  const [leadDialogMode, setLeadDialogMode] = useState<'brochure' | 'contact' | 'qualification'>(
+    'qualification',
+  );
+  const [leadDialogLocation, setLeadDialogLocation] = useState('unknown');
   const [activeAmenityTab, setActiveAmenityTab] = useState<AmenityTabKey | ''>('');
   const amenityTabsRef = useRef<HTMLDivElement | null>(null);
   const [canScrollAmenityLeft, setCanScrollAmenityLeft] = useState(false);
@@ -426,6 +591,71 @@ export default function DevelopmentDetail() {
     setLightboxOpen(true);
   };
 
+  const openLeadDialog = (mode: 'brochure' | 'contact' | 'qualification', ctaLocation: string) => {
+    setLeadDialogMode(mode);
+    setLeadDialogLocation(ctaLocation);
+    setLeadDialogOpen(true);
+    trackCTAClick({
+      ctaLabel:
+        mode === 'brochure'
+          ? 'Download Brochure'
+          : mode === 'contact'
+            ? 'Contact Sales Team'
+            : 'Start Qualification',
+      ctaLocation,
+      ctaHref: typeof window !== 'undefined' ? window.location.href : '',
+    });
+  };
+
+  const navigateToQualification = (ctaLocation: string) => {
+    const income = parsedQuickIncome > 0 ? `?income=${parsedQuickIncome}` : '';
+    trackCTAClick({
+      ctaLabel: 'Check If You Qualify',
+      ctaLocation,
+      ctaHref:
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/development/${slug}/qualification${income}`
+          : `/development/${slug}/qualification${income}`,
+    });
+    trackFunnelStep({
+      funnel: 'development_detail',
+      step: 'qualification_entry',
+      action: 'start',
+      path: ctaLocation,
+    });
+    setLocation(`/development/${slug}/qualification${income}`);
+  };
+
+  const openDocumentUrl = (url: string) => {
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!newWindow) {
+      window.location.href = url;
+    }
+  };
+
+  const handleUnitCallback = (unit: any) => {
+    openLeadDialog('contact', `unit_card_${unit.id}_callback`);
+  };
+
+  const handleUnitBrochure = (unit: any) => {
+    openLeadDialog('brochure', `unit_card_${unit.id}_brochure`);
+  };
+
+  const handleUnitFloorPlan = (unit: any) => {
+    const floorPlanUrl = resolveUnitFloorPlanUrl(unit);
+    if (!floorPlanUrl) {
+      handleUnitBrochure(unit);
+      return;
+    }
+
+    trackCTAClick({
+      ctaLabel: 'View Floor Plan',
+      ctaLocation: `unit_card_${unit.id}_floor_plan`,
+      ctaHref: floorPlanUrl,
+    });
+    openDocumentUrl(floorPlanUrl);
+  };
+
   // Fetch real development by slug or ID
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
     { slugOrId: slug || '' },
@@ -440,7 +670,7 @@ export default function DevelopmentDetail() {
   // Fetch other developments from same developer
   const { data: allDevelopments } = trpc.developer.listPublicDevelopments.useQuery(
     { limit: 50 },
-    { enabled: !!dev?.developer?.id },
+    { enabled: !!dev?.id },
   );
 
   const amenityList = normalizeAmenities(dev?.amenities);
@@ -678,15 +908,6 @@ export default function DevelopmentDetail() {
   const outdoorTile = getDevelopmentOutdoorsTileImage(mediaData);
   const viewGalleryTile = getDevelopmentViewGalleryTileImage(mediaData);
 
-  // Jump Indices (Calculated once from the single truth gallery)
-  const galleryIndices = {
-    general: 0, // Always starts at 0
-    amenities: getGalleryStartIndex(galleryImages, 'amenities'),
-    outdoors: getGalleryStartIndex(galleryImages, 'outdoors'),
-    videos: 0, // Videos open separately in this UI pattern usually, or handled via specific index if mixed (but we don't mix)
-    floorPlans: 0, // Placeholder, we treat floorplans separate typically
-  };
-
   // Missing declaration restoration
   const floorPlans: any[] = normalizedFloorPlans;
   const amenities = amenityList;
@@ -784,6 +1005,24 @@ export default function DevelopmentDetail() {
     });
   })();
 
+  const findUnifiedMediaIndex = (urls: string[]) => {
+    if (urls.length === 0) return 0;
+    const index = unifiedMedia.findIndex(item => urls.includes(item.url));
+    return index === -1 ? 0 : index;
+  };
+
+  const galleryIndices = {
+    general: 0,
+    amenities: getGalleryStartIndex(galleryImages, 'amenities'),
+    outdoors: getGalleryStartIndex(galleryImages, 'outdoors'),
+    videos: findUnifiedMediaIndex(
+      normalizedVideos.map((video: any) => video?.url).filter((url): url is string => !!url),
+    ),
+    floorPlans: findUnifiedMediaIndex(
+      floorPlans.map((plan: any) => plan?.url).filter((url): url is string => !!url),
+    ),
+  };
+
   const development = {
     // ... existing fields ...
     id: dev.id,
@@ -852,6 +1091,116 @@ export default function DevelopmentDetail() {
     unifiedMedia: unifiedMedia,
   };
 
+  const brochureUrl = (() => {
+    const brochureItems = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
+    for (const item of brochureItems) {
+      const url = resolveDocumentUrl(item);
+      if (url) return url;
+    }
+    return null;
+  })();
+
+  const unitPriceValues = (development.units || [])
+    .flatMap((unit: any) => [Number(unit.basePriceFrom || 0), Number(unit.basePriceTo || 0)])
+    .filter((value: number) => Number.isFinite(value) && value > 0);
+
+  const derivedPriceFrom =
+    (unitPriceValues.length > 0 ? Math.min(...unitPriceValues) : 0) ||
+    Number(dev.priceFrom || 0) ||
+    development.startingPrice;
+  const derivedPriceTo =
+    (unitPriceValues.length > 0 ? Math.max(...unitPriceValues) : 0) ||
+    Number(dev.priceTo || 0) ||
+    undefined;
+
+  const priceToDisplay =
+    derivedPriceTo && derivedPriceTo > derivedPriceFrom ? derivedPriceTo : undefined;
+  const estimatedDepositFrom = Math.round(derivedPriceFrom * (DEFAULT_DEPOSIT_PERCENTAGE / 100));
+  const estimatedLoanAmount = Math.max(derivedPriceFrom - estimatedDepositFrom, 0);
+  const estimatedRepaymentFrom = calculateMonthlyRepayment(
+    estimatedLoanAmount,
+    SA_PRIME_RATE,
+    DEFAULT_BOND_TERM_YEARS,
+  );
+  const minimumIncomeRequired = Math.round(
+    estimatedRepaymentFrom * QUICK_QUALIFICATION_PAYMENT_RATIO,
+  );
+
+  const normalizedStatus = dev.status ? formatLabel(dev.status) : 'Now Selling';
+  const normalizedCompletionDate = development.completionDate || 'Completion TBC';
+
+  const parsedQuickIncome = Number(quickIncome.replace(/[^\d.]/g, ''));
+  const hasQuickIncome = Number.isFinite(parsedQuickIncome) && parsedQuickIncome > 0;
+  const quickQualification = (() => {
+    if (!hasQuickIncome) return null;
+
+    const maxMonthlyRepayment = parsedQuickIncome / QUICK_QUALIFICATION_PAYMENT_RATIO;
+    const maxAffordable = Math.round(
+      calculateAffordablePrice(
+        maxMonthlyRepayment,
+        DEFAULT_DEPOSIT_PERCENTAGE,
+        SA_PRIME_RATE,
+        DEFAULT_BOND_TERM_YEARS,
+      ),
+    );
+    const comfortFloor = Math.max(Math.round(maxAffordable * 0.85), 0);
+    const qualifies = maxAffordable >= derivedPriceFrom;
+    const nearQualify = !qualifies && maxAffordable >= derivedPriceFrom * 0.9;
+
+    if (qualifies) {
+      return {
+        tone: 'success' as const,
+        buyingPower: maxAffordable,
+        comfortFloor,
+        headline: `You likely qualify for homes in ${development.name}`,
+        body: `Estimated buying power up to ${formatSARandShort(maxAffordable)}. Homes here start from ${formatSARandShort(derivedPriceFrom)}.`,
+      };
+    }
+
+    if (nearQualify) {
+      return {
+        tone: 'warning' as const,
+        buyingPower: maxAffordable,
+        comfortFloor,
+        headline: 'You may qualify with a stronger deposit',
+        body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. A larger deposit or joint application could improve fit.`,
+      };
+    }
+
+    return {
+      tone: 'muted' as const,
+      buyingPower: maxAffordable,
+      comfortFloor,
+      headline: 'This development may be above your current range',
+      body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. Start full qualification to explore next-best options.`,
+    };
+  })();
+
+  const relatedPublicDevelopments = ((allDevelopments || []) as any[]).filter((entry: any) => {
+    if (!entry || Number(entry.id) === Number(dev.id)) return false;
+
+    const entryBrandId = Number(entry.developerBrandProfileId || entry.brandProfileId || 0);
+    if (
+      (dev as any).developerBrandProfileId &&
+      entryBrandId === Number((dev as any).developerBrandProfileId)
+    ) {
+      return true;
+    }
+
+    if (dev.developer?.id && Number(entry.developerId || 0) === Number(dev.developer.id)) {
+      return true;
+    }
+
+    if (entry.builderName && entry.builderName === development.developer) {
+      return true;
+    }
+
+    return false;
+  });
+
+  const developerProjectCount =
+    relatedPublicDevelopments.length > 0 ? relatedPublicDevelopments.length + 1 : null;
+
   return (
     <>
       <MetaControl
@@ -862,7 +1211,7 @@ export default function DevelopmentDetail() {
         }
       />
 
-      <div className="min-h-screen bg-slate-50 pb-20">
+      <div className="min-h-screen bg-slate-50 pb-32 md:pb-20">
         <ListingNavbar />
 
         <div className="pt-24 pb-4 container max-w-7xl mx-auto px-4">
@@ -913,12 +1262,7 @@ export default function DevelopmentDetail() {
                       value={formatLabel(dev.developmentType)}
                       color="blue"
                     />
-                    <StatCard
-                      icon={Check}
-                      label="Status"
-                      value={formatLabel(dev.status)}
-                      color="green"
-                    />
+                    <StatCard icon={Check} label="Status" value={normalizedStatus} color="green" />
                     <StatCard
                       icon={Home}
                       label="Ownership"
@@ -936,17 +1280,165 @@ export default function DevelopmentDetail() {
 
                 {/* Overview Card */}
                 <DevelopmentOverviewCard
-                  priceFrom={development.startingPrice}
-                  completionDate={development.completionDate || '—'}
-                  progressPercentage={sales?.soldPct ?? 0}
-                  constructionStatus={formatLabel(dev.status)}
+                  priceFrom={derivedPriceFrom}
+                  priceTo={priceToDisplay}
+                  monthlyRepayment={estimatedRepaymentFrom}
+                  estimatedDeposit={estimatedDepositFrom}
+                  minimumIncome={minimumIncomeRequired}
+                  completionDate={normalizedCompletionDate}
+                  constructionStatus={normalizedStatus}
                   salesMetrics={sales}
                 />
               </div>
 
-              {/* Right Column - Developer Info Card */}
-              <div className="w-full lg:w-[360px] h-full self-stretch">
-                <Card className="shadow-sm border-slate-200 h-full">
+              {/* Right Column - Conversion Action Panel */}
+              <div className="w-full lg:w-[360px] h-full self-stretch space-y-4">
+                <Card className="shadow-sm border-slate-200 overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="bg-slate-950 px-5 py-5 text-white">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-200">
+                        Interested in {development.name}?
+                      </p>
+                      <h3 className="mt-2 text-xl font-bold">
+                        Check fit, get the brochure, or talk to sales.
+                      </h3>
+                      <p className="mt-2 text-sm text-slate-300">
+                        This panel keeps the user on the page while moving them closer to enquiry.
+                      </p>
+                    </div>
+
+                    <div className="space-y-5 p-5">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                              Quick Qualification Check
+                            </p>
+                            <p className="mt-1 text-sm text-slate-600">
+                              Enter your monthly household income
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className="border-orange-200 bg-orange-50 text-orange-700"
+                          >
+                            60 sec
+                          </Badge>
+                        </div>
+
+                        <div className="mt-4">
+                          <label htmlFor="quick-income" className="sr-only">
+                            Monthly household income
+                          </label>
+                          <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
+                              R
+                            </span>
+                            <input
+                              id="quick-income"
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="45 000"
+                              value={quickIncome}
+                              onChange={e => setQuickIncome(e.target.value)}
+                              className="h-12 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                            />
+                          </div>
+                        </div>
+
+                        {quickQualification ? (
+                          <div
+                            className={`mt-4 rounded-xl border p-4 ${
+                              quickQualification.tone === 'success'
+                                ? 'border-emerald-200 bg-emerald-50'
+                                : quickQualification.tone === 'warning'
+                                  ? 'border-amber-200 bg-amber-50'
+                                  : 'border-slate-200 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`mt-0.5 rounded-full p-1.5 ${
+                                  quickQualification.tone === 'success'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : quickQualification.tone === 'warning'
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {quickQualification.headline}
+                                </p>
+                                <p className="text-sm text-slate-600">{quickQualification.body}</p>
+                                <p className="text-xs font-medium text-slate-500">
+                                  Estimated affordability range{' '}
+                                  {formatSARandShort(quickQualification.comfortFloor)} -{' '}
+                                  {formatSARandShort(quickQualification.buyingPower)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-white p-4">
+                            <p className="text-sm font-medium text-slate-700">
+                              Check whether homes from {formatSARandShort(derivedPriceFrom)} fit
+                              your income.
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Estimated with a 10% deposit and a 20-year bond term.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <Button
+                          className="w-full bg-orange-500 hover:bg-orange-600 text-white h-11 text-sm font-semibold shadow-sm"
+                          onClick={() => navigateToQualification('hero_action_panel')}
+                        >
+                          <ArrowUpRight className="mr-2 h-4 w-4" />
+                          Check If You Qualify
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full h-11 border-blue-200 text-blue-700 hover:bg-blue-50 text-sm font-medium"
+                          onClick={() => openLeadDialog('brochure', 'hero_action_panel')}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          {brochureUrl ? 'Download Brochure' : 'Request Brochure'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full h-11 border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-medium"
+                          onClick={() => openLeadDialog('contact', 'hero_action_panel')}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Contact Sales Team
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-2 text-xs text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          Free pre-qualification available
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          No obligation to enquire
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          {dev.unitTypes?.length || 0} unit types available
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border-slate-200">
                   <CardContent className="p-3 h-full flex flex-col">
                     <div className="flex items-start gap-3 mb-2">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
@@ -964,14 +1456,14 @@ export default function DevelopmentDetail() {
                         <p className="font-bold text-sm text-slate-900 truncate">
                           {development.developer}
                         </p>
-                    {development.isVerified && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
-                        <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">
-                          Verified Developer
-                        </span>
-                      </div>
-                    )}
+                        {development.isVerified && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                            <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">
+                              Verified Developer
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -994,9 +1486,7 @@ export default function DevelopmentDetail() {
                     <Separator className="bg-slate-100 my-2" />
 
                     {(() => {
-                      const otherProjects = (allDevelopments || [])
-                        .filter((d: any) => d.developerId === dev.developer?.id && d.id !== dev.id)
-                        .slice(0, 3);
+                      const otherProjects = relatedPublicDevelopments.slice(0, 3);
 
                       if (otherProjects.length === 0) return null;
 
@@ -1122,7 +1612,10 @@ export default function DevelopmentDetail() {
                       const key = u.bedroomKey;
                       if (!bedroomGroups.has(key)) {
                         bedroomGroups.set(key, {
-                          label: key === 'other' ? 'Other / Studio / Unknown' : `${u.bedroomLabel} Bedroom`,
+                          label:
+                            key === 'other'
+                              ? 'Other / Studio / Unknown'
+                              : `${u.bedroomLabel} Bedroom`,
                           units: [],
                         });
                       }
@@ -1185,6 +1678,10 @@ export default function DevelopmentDetail() {
                           >
                             <UnitTypeCarousel
                               units={bedroomGroups.get(key)?.units || []}
+                              brochureAvailable={!!brochureUrl}
+                              onRequestCallback={handleUnitCallback}
+                              onRequestBrochure={handleUnitBrochure}
+                              onOpenFloorPlan={handleUnitFloorPlan}
                             />
                           </TabsContent>
                         ))}
@@ -1409,6 +1906,12 @@ export default function DevelopmentDetail() {
                   <DeveloperOverview
                     developerName={development.developer}
                     developerLogo={development.developerLogo}
+                    developerDescription={development.developerDescription}
+                    developerWebsite={development.developerWebsite}
+                    developerSlug={development.developerSlug}
+                    headOfficeLocation={(publisher as any)?.headOfficeLocation || null}
+                    projectCount={developerProjectCount}
+                    foundedYear={(publisher as any)?.foundedYear || null}
                     isVerified={development.isVerified}
                   />
                 </section>
@@ -1459,20 +1962,25 @@ export default function DevelopmentDetail() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 space-y-2.5">
-                      <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white h-10 text-sm font-semibold shadow-sm">
+                      <Button
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white h-10 text-sm font-semibold shadow-sm"
+                        onClick={() => openLeadDialog('brochure', 'sidebar_interest_card')}
+                      >
                         <Download className="mr-2 h-4 w-4" />
-                        Download Brochure
+                        {brochureUrl ? 'Download Brochure' : 'Request Brochure'}
                       </Button>
                       <Button
                         variant="outline"
                         className="w-full h-10 border-blue-200 text-blue-600 hover:bg-blue-50 text-sm font-medium"
+                        onClick={() => navigateToQualification('sidebar_interest_card')}
                       >
                         <Phone className="mr-2 h-4 w-4" />
-                        Schedule a Viewing
+                        Start Full Qualification
                       </Button>
                       <Button
                         variant="ghost"
                         className="w-full h-9 text-slate-600 hover:text-slate-900 text-xs"
+                        onClick={() => openLeadDialog('contact', 'sidebar_interest_card')}
                       >
                         <Mail className="mr-2 h-3.5 w-3.5" />
                         Contact Sales Team
@@ -1486,8 +1994,70 @@ export default function DevelopmentDetail() {
         </div>
       </div>
 
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Price From
+            </p>
+            <p className="truncate text-base font-bold text-slate-900">
+              {priceToDisplay
+                ? `${formatPriceCompact(derivedPriceFrom)} - ${formatPriceCompact(priceToDisplay)}`
+                : formatPriceCompact(derivedPriceFrom)}
+            </p>
+          </div>
+          <div className="grid flex-1 grid-cols-3 gap-2">
+            <Button
+              size="sm"
+              className="h-10 bg-orange-500 px-2 text-xs font-semibold text-white hover:bg-orange-600"
+              onClick={() => navigateToQualification('mobile_sticky')}
+            >
+              Qualify
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10 px-2 text-xs font-semibold"
+              onClick={() => openLeadDialog('brochure', 'mobile_sticky')}
+            >
+              Brochure
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10 px-2 text-xs font-semibold"
+              onClick={() => openLeadDialog('contact', 'mobile_sticky')}
+            >
+              Contact
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Footer - Outside main container */}
       <Footer />
+
+      <DevelopmentLeadDialog
+        open={leadDialogOpen}
+        onOpenChange={setLeadDialogOpen}
+        mode={leadDialogMode}
+        ctaLocation={leadDialogLocation}
+        development={{
+          id: development.id,
+          name: development.name,
+          developerBrandProfileId: (dev as any).developerBrandProfileId ?? publisher?.id ?? null,
+          brochureUrl,
+        }}
+        affordabilityData={
+          quickQualification
+            ? {
+                monthlyIncome: hasQuickIncome ? parsedQuickIncome : undefined,
+                maxAffordable: quickQualification.buyingPower,
+                calculatedAt: new Date().toISOString(),
+              }
+            : null
+        }
+      />
 
       {/* Lightbox - Portal */}
       <MediaLightbox
