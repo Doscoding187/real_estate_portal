@@ -72,6 +72,7 @@ type ReadinessCounts = {
   enabled: number;
   readyToEnable: number;
   blocked: number;
+  loading: number;
 };
 
 const payoutMilestones = [
@@ -129,7 +130,10 @@ function getPrimaryReadinessMessage(readiness?: ProgramReadiness | null) {
 function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramReadiness | null | undefined>) {
   return Object.values(readinessByDevelopmentId).reduce<ReadinessCounts>(
     (counts, readiness) => {
-      if (!readiness) return counts;
+      if (!readiness) {
+        counts.loading += 1;
+        return counts;
+      }
       if (readiness.state.isReferralEnabled) {
         counts.enabled += 1;
       } else if (readiness.canEnableReferral) {
@@ -139,7 +143,7 @@ function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramRead
       }
       return counts;
     },
-    { enabled: 0, readyToEnable: 0, blocked: 0 },
+    { enabled: 0, readyToEnable: 0, blocked: 0, loading: 0 },
   );
 }
 
@@ -181,12 +185,15 @@ function DevelopmentProgramConfigPanel({
   managerOptions,
   onSaved,
   focusSection,
+  otherDevelopments,
 }: {
   development: DevelopmentRow;
   managerOptions: ManagerOption[];
   onSaved: () => Promise<void> | void;
   focusSection?: string | null;
+  otherDevelopments: DevelopmentRow[];
 }) {
+  const utils = trpc.useUtils();
   const readinessQuery = trpc.distribution.admin.getProgramReadiness.useQuery({
     developmentId: development.developmentId,
   });
@@ -213,6 +220,7 @@ function DevelopmentProgramConfigPanel({
   const [isActive, setIsActive] = useState(true);
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
 
   useEffect(() => {
     const readiness = readinessQuery.data;
@@ -271,12 +279,15 @@ function DevelopmentProgramConfigPanel({
   }, [focusSection]);
 
   const isSaving =
-    upsertProgramMutation.isPending || assignManagerMutation.isPending || setDocsMutation.isPending;
+    upsertProgramMutation.isPending ||
+    assignManagerMutation.isPending ||
+    setDocsMutation.isPending ||
+    isApplyingTemplate;
 
-  async function handleSave() {
-    const programResult = await upsertProgramMutation.mutateAsync({
-      developmentId: development.developmentId,
-      isReferralEnabled: Boolean(readinessQuery.data?.state.isReferralEnabled),
+  function buildProgramInput(targetDevelopmentId: number, isReferralEnabled: boolean) {
+    return {
+      developmentId: targetDevelopmentId,
+      isReferralEnabled,
       isActive,
       commissionModel,
       defaultCommissionPercent:
@@ -292,7 +303,31 @@ function DevelopmentProgramConfigPanel({
       payoutMilestoneNotes:
         payoutMilestone === 'custom' ? payoutMilestoneNotes.trim() || null : null,
       currencyCode: currencyCode.trim().toUpperCase(),
-    });
+    };
+  }
+
+  function buildDocumentsInput(targetDevelopmentId: number, preserveIds: boolean) {
+    return {
+      developmentId: targetDevelopmentId,
+      documents: documents.map((document, index) => ({
+        id: preserveIds ? document.id : undefined,
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel.trim() || 'Custom Document',
+        isRequired: document.isRequired,
+        sortOrder: index,
+        isActive: document.isActive,
+      })),
+    };
+  }
+
+  async function saveConfigurationForDevelopment(
+    targetDevelopmentId: number,
+    targetReferralEnabled: boolean,
+    preserveDocumentIds: boolean,
+  ) {
+    const programResult = await upsertProgramMutation.mutateAsync(
+      buildProgramInput(targetDevelopmentId, targetReferralEnabled),
+    );
 
     if (primaryManagerUserId) {
       await assignManagerMutation.mutateAsync({
@@ -305,20 +340,49 @@ function DevelopmentProgramConfigPanel({
       });
     }
 
-    await setDocsMutation.mutateAsync({
-      developmentId: development.developmentId,
-      documents: documents.map((document, index) => ({
-        id: document.id,
-        documentCode: document.documentCode,
-        documentLabel: document.documentLabel.trim() || 'Custom Document',
-        isRequired: document.isRequired,
-        sortOrder: index,
-        isActive: document.isActive,
-      })),
-    });
+    await setDocsMutation.mutateAsync(buildDocumentsInput(targetDevelopmentId, preserveDocumentIds));
+
+    await Promise.all([
+      utils.distribution.admin.getProgramReadiness.invalidate({
+        developmentId: targetDevelopmentId,
+      }),
+      utils.distribution.admin.getDevelopmentRequiredDocuments.invalidate({
+        developmentId: targetDevelopmentId,
+      }),
+    ]);
+  }
+
+  async function handleSave() {
+    await saveConfigurationForDevelopment(
+      development.developmentId,
+      Boolean(readinessQuery.data?.state.isReferralEnabled),
+      true,
+    );
 
     await Promise.all([readinessQuery.refetch(), docsQuery.refetch(), Promise.resolve(onSaved())]);
     toast.success('Program configuration saved');
+  }
+
+  async function handleApplyTemplateToOtherDevelopments() {
+    if (!otherDevelopments.length) return;
+
+    setIsApplyingTemplate(true);
+    try {
+      for (const row of otherDevelopments) {
+        await saveConfigurationForDevelopment(row.developmentId, false, false);
+      }
+
+      await Promise.resolve(onSaved());
+      toast.success(
+        `Applied onboarding defaults to ${otherDevelopments.length} development${
+          otherDevelopments.length === 1 ? '' : 's'
+        }. Referrals remain disabled on targets.`,
+      );
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to apply onboarding defaults');
+    } finally {
+      setIsApplyingTemplate(false);
+    }
   }
 
   return (
@@ -623,6 +687,15 @@ function DevelopmentProgramConfigPanel({
       </Card>
 
       <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-white p-3">
+        {otherDevelopments.length ? (
+          <Button variant="outline" onClick={handleApplyTemplateToOtherDevelopments} disabled={isSaving}>
+            {isApplyingTemplate
+              ? 'Applying Defaults...'
+              : `Apply to Other ${otherDevelopments.length} Development${
+                  otherDevelopments.length === 1 ? '' : 's'
+                }`}
+          </Button>
+        ) : null}
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save Configuration'}
         </Button>
@@ -651,6 +724,7 @@ function DevelopmentOnboardingRow({
   });
   const setReferralEnabledMutation = trpc.distribution.admin.setProgramReferralEnabled.useMutation();
   const [inlineBlockers, setInlineBlockers] = useState<Array<{ code: string; message: string }>>([]);
+  const isReadinessLoading = readinessQuery.isLoading && !readinessQuery.data;
 
   const isReferralEnabled = Boolean(readinessQuery.data?.state.isReferralEnabled);
   const blockers = inlineBlockers.length
@@ -736,12 +810,14 @@ function DevelopmentOnboardingRow({
         <p className="font-medium">
           {isReferralEnabled
             ? 'Referral status'
+            : isReadinessLoading
+              ? 'Loading readiness'
             : readinessQuery.data?.canEnableReferral
               ? 'Ready for activation'
               : 'Next action'}
         </p>
         <p className="mt-1">{primaryMessage}</p>
-        {!isReferralEnabled && blockers.length ? (
+        {!isReadinessLoading && !isReferralEnabled && blockers.length ? (
           <div className="mt-2 space-y-1">
             {(isSelected ? blockers : blockers.slice(0, 1)).map(blocker => (
               <div
@@ -769,6 +845,11 @@ function DevelopmentOnboardingRow({
               </p>
             ) : null}
           </div>
+        ) : null}
+        {isReadinessLoading ? (
+          <p className="mt-2 text-[11px] text-slate-600">
+            Checking program, manager, payout, currency, and document readiness...
+          </p>
         ) : null}
       </div>
 
@@ -924,10 +1005,14 @@ export function PartnerDevelopmentOnboardingDrawer({
                         Blocked
                       </p>
                       <p className="mt-1 text-2xl font-semibold text-amber-900">
-                        {readinessCounts.blocked}
+                        {readinessCounts.loading ? '...' : readinessCounts.blocked}
                       </p>
                       <p className="text-[11px] text-amber-700">
-                        Needs onboarding setup before submissions can open
+                        {readinessCounts.loading
+                          ? `${readinessCounts.loading} development${
+                              readinessCounts.loading === 1 ? '' : 's'
+                            } still loading readiness`
+                          : 'Needs onboarding setup before submissions can open'}
                       </p>
                     </div>
                   </div>
@@ -953,13 +1038,32 @@ export function PartnerDevelopmentOnboardingDrawer({
 
               <div>
                 {selectedDevelopment ? (
-                  <DevelopmentProgramConfigPanel
-                    key={selectedDevelopment.developmentId}
-                    development={selectedDevelopment}
-                    managerOptions={managerOptions}
-                    onSaved={onRefreshCatalog}
-                    focusSection={focusSection}
-                  />
+                  <div className="space-y-3">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          Configuring: {selectedDevelopment.developmentName}
+                        </CardTitle>
+                        <CardDescription>
+                          {selectedDevelopment.city || 'Unknown city'},{' '}
+                          {selectedDevelopment.province || 'Unknown province'}.
+                          {` `}
+                          Save this development directly, or apply its onboarding defaults to the
+                          other developments in this brand.
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                    <DevelopmentProgramConfigPanel
+                      key={selectedDevelopment.developmentId}
+                      development={selectedDevelopment}
+                      otherDevelopments={developments.filter(
+                        row => row.developmentId !== selectedDevelopment.developmentId,
+                      )}
+                      managerOptions={managerOptions}
+                      onSaved={onRefreshCatalog}
+                      focusSection={focusSection}
+                    />
+                  </div>
                 ) : (
                   <Card>
                     <CardContent className="py-8 text-center text-sm text-slate-500">
