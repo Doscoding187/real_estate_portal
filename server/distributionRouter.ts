@@ -85,6 +85,10 @@ import {
   createDistributionManagerInviteToken,
   verifyDistributionManagerInviteToken,
 } from './services/distributionManagerInviteTokenService';
+import {
+  isMissingRequiredDocumentsSchemaError,
+  listDevelopmentRequiredDocumentsOrEmpty,
+} from './services/distributionRequiredDocumentsService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -2628,19 +2632,7 @@ const adminDistributionRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      const rows = await db
-        .select({
-          id: developmentRequiredDocuments.id,
-          developmentId: developmentRequiredDocuments.developmentId,
-          documentCode: developmentRequiredDocuments.documentCode,
-          documentLabel: developmentRequiredDocuments.documentLabel,
-          isRequired: developmentRequiredDocuments.isRequired,
-          sortOrder: developmentRequiredDocuments.sortOrder,
-          isActive: developmentRequiredDocuments.isActive,
-        })
-        .from(developmentRequiredDocuments)
-        .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
-        .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
+      const rows = await listDevelopmentRequiredDocumentsOrEmpty(db, input.developmentId);
 
       return rows.map(row => ({
         id: Number(row.id),
@@ -2725,84 +2717,104 @@ const adminDistributionRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      const result = await db.transaction(async tx => {
-        const existing = await tx
-          .select({
-            id: developmentRequiredDocuments.id,
-          })
-          .from(developmentRequiredDocuments)
-          .where(eq(developmentRequiredDocuments.developmentId, input.developmentId));
+      let result: Array<{
+        id: number;
+        developmentId: number;
+        documentCode: string;
+        documentLabel: string;
+        isRequired: boolean;
+        sortOrder: number;
+        isActive: boolean;
+      }>;
+      try {
+        result = await db.transaction(async tx => {
+          const existing = await tx
+            .select({
+              id: developmentRequiredDocuments.id,
+            })
+            .from(developmentRequiredDocuments)
+            .where(eq(developmentRequiredDocuments.developmentId, input.developmentId));
 
-        const existingIdSet = new Set<number>(existing.map(row => Number(row.id)));
-        const retainedIds = new Set<number>();
+          const existingIdSet = new Set<number>(existing.map(row => Number(row.id)));
+          const retainedIds = new Set<number>();
 
-        for (const document of normalizedDocuments) {
-          if (document.id && existingIdSet.has(document.id)) {
-            retainedIds.add(document.id);
-            await tx
-              .update(developmentRequiredDocuments)
-              .set({
-                documentCode: document.documentCode,
-                documentLabel: document.documentLabel,
-                isRequired: document.isRequired ? 1 : 0,
-                sortOrder: document.sortOrder,
-                isActive: document.isActive ? 1 : 0,
-              })
-              .where(
-                and(
-                  eq(developmentRequiredDocuments.id, document.id),
-                  eq(developmentRequiredDocuments.developmentId, input.developmentId),
-                ),
-              );
-            continue;
+          for (const document of normalizedDocuments) {
+            if (document.id && existingIdSet.has(document.id)) {
+              retainedIds.add(document.id);
+              await tx
+                .update(developmentRequiredDocuments)
+                .set({
+                  documentCode: document.documentCode,
+                  documentLabel: document.documentLabel,
+                  isRequired: document.isRequired ? 1 : 0,
+                  sortOrder: document.sortOrder,
+                  isActive: document.isActive ? 1 : 0,
+                })
+                .where(
+                  and(
+                    eq(developmentRequiredDocuments.id, document.id),
+                    eq(developmentRequiredDocuments.developmentId, input.developmentId),
+                  ),
+                );
+              continue;
+            }
+
+            const [insertResult] = await tx.insert(developmentRequiredDocuments).values({
+              developmentId: input.developmentId,
+              documentCode: document.documentCode,
+              documentLabel: document.documentLabel,
+              isRequired: document.isRequired ? 1 : 0,
+              sortOrder: document.sortOrder,
+              isActive: document.isActive ? 1 : 0,
+            });
+            const insertedId = Number((insertResult as any).insertId || 0);
+            if (insertedId > 0) retainedIds.add(insertedId);
           }
 
-          const [insertResult] = await tx.insert(developmentRequiredDocuments).values({
-            developmentId: input.developmentId,
-            documentCode: document.documentCode,
-            documentLabel: document.documentLabel,
-            isRequired: document.isRequired ? 1 : 0,
-            sortOrder: document.sortOrder,
-            isActive: document.isActive ? 1 : 0,
+          const idsToDeactivate = existing
+            .map(row => Number(row.id))
+            .filter(id => !retainedIds.has(id));
+          if (idsToDeactivate.length) {
+            await tx
+              .update(developmentRequiredDocuments)
+              .set({ isActive: 0 })
+              .where(inArray(developmentRequiredDocuments.id, idsToDeactivate));
+          }
+
+          const rows = await tx
+            .select({
+              id: developmentRequiredDocuments.id,
+              developmentId: developmentRequiredDocuments.developmentId,
+              documentCode: developmentRequiredDocuments.documentCode,
+              documentLabel: developmentRequiredDocuments.documentLabel,
+              isRequired: developmentRequiredDocuments.isRequired,
+              sortOrder: developmentRequiredDocuments.sortOrder,
+              isActive: developmentRequiredDocuments.isActive,
+            })
+            .from(developmentRequiredDocuments)
+            .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
+            .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
+
+          return rows.map(row => ({
+            id: Number(row.id),
+            developmentId: Number(row.developmentId),
+            documentCode: String(row.documentCode),
+            documentLabel: String(row.documentLabel || ''),
+            isRequired: boolFromTinyInt(row.isRequired),
+            sortOrder: Number(row.sortOrder || 0),
+            isActive: boolFromTinyInt(row.isActive),
+          }));
+        });
+      } catch (error) {
+        if (isMissingRequiredDocumentsSchemaError(error)) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'Required document schema is not ready yet. Run the latest distribution migrations, then retry onboarding configuration.',
           });
-          const insertedId = Number((insertResult as any).insertId || 0);
-          if (insertedId > 0) retainedIds.add(insertedId);
         }
-
-        const idsToDeactivate = existing
-          .map(row => Number(row.id))
-          .filter(id => !retainedIds.has(id));
-        if (idsToDeactivate.length) {
-          await tx
-            .update(developmentRequiredDocuments)
-            .set({ isActive: 0 })
-            .where(inArray(developmentRequiredDocuments.id, idsToDeactivate));
-        }
-
-        const rows = await tx
-          .select({
-            id: developmentRequiredDocuments.id,
-            developmentId: developmentRequiredDocuments.developmentId,
-            documentCode: developmentRequiredDocuments.documentCode,
-            documentLabel: developmentRequiredDocuments.documentLabel,
-            isRequired: developmentRequiredDocuments.isRequired,
-            sortOrder: developmentRequiredDocuments.sortOrder,
-            isActive: developmentRequiredDocuments.isActive,
-          })
-          .from(developmentRequiredDocuments)
-          .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
-          .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
-
-        return rows.map(row => ({
-          id: Number(row.id),
-          developmentId: Number(row.developmentId),
-          documentCode: String(row.documentCode),
-          documentLabel: String(row.documentLabel || ''),
-          isRequired: boolFromTinyInt(row.isRequired),
-          sortOrder: Number(row.sortOrder || 0),
-          isActive: boolFromTinyInt(row.isActive),
-        }));
-      });
+        throw error;
+      }
 
       return {
         success: true,

@@ -1,10 +1,10 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
-  developmentRequiredDocuments,
   distributionManagerAssignments,
   distributionPrograms,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { getDevelopmentRequiredDocumentSummary } from './distributionRequiredDocumentsService';
 
 export type ProgramReadinessBlockerCode =
   | 'PROGRAM_MISSING'
@@ -84,15 +84,7 @@ export async function getProgramReadinessByDevelopmentId(
     )
     .limit(1);
 
-  const [docsRow] = await db
-    .select({
-      requiredDocsCount:
-        sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 THEN 1 ELSE 0 END), 0)`,
-      requiredRequiredDocsCount:
-        sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 AND ${developmentRequiredDocuments.isRequired} = 1 THEN 1 ELSE 0 END), 0)`,
-    })
-    .from(developmentRequiredDocuments)
-    .where(eq(developmentRequiredDocuments.developmentId, developmentId));
+  const docsSummary = await getDevelopmentRequiredDocumentSummary(db, developmentId);
 
   const state: ProgramReadiness['state'] = {
     programExists: Boolean(program),
@@ -109,8 +101,8 @@ export async function getProgramReadinessByDevelopmentId(
     currencyCode: program?.currencyCode ? String(program.currencyCode) : null,
     tierAccessPolicy: program?.tierAccessPolicy ? String(program.tierAccessPolicy) : null,
     hasActivePrimaryManager: Boolean(managerRow?.id),
-    requiredDocsCount: Number(docsRow?.requiredDocsCount || 0),
-    requiredRequiredDocsCount: Number(docsRow?.requiredRequiredDocsCount || 0),
+    requiredDocsCount: docsSummary.requiredDocsCount,
+    requiredRequiredDocsCount: docsSummary.requiredRequiredDocsCount,
   };
 
   const blockers: ProgramReadiness['blockers'] = [];

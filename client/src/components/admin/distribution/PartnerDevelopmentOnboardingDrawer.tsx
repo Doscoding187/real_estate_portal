@@ -204,6 +204,8 @@ function DevelopmentProgramConfigPanel({
   const upsertProgramMutation = trpc.distribution.admin.upsertProgram.useMutation();
   const assignManagerMutation = trpc.distribution.admin.assignManagerToDevelopment.useMutation();
   const setDocsMutation = trpc.distribution.admin.setDevelopmentRequiredDocuments.useMutation();
+  const onboardDevelopmentMutation =
+    trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
 
   const [commissionModel, setCommissionModel] = useState<'flat_percentage' | 'flat_amount'>(
     development.program?.commissionModel === 'fixed_amount' ? 'flat_amount' : 'flat_percentage',
@@ -279,6 +281,7 @@ function DevelopmentProgramConfigPanel({
   }, [focusSection]);
 
   const isSaving =
+    onboardDevelopmentMutation.isPending ||
     upsertProgramMutation.isPending ||
     assignManagerMutation.isPending ||
     setDocsMutation.isPending ||
@@ -325,6 +328,10 @@ function DevelopmentProgramConfigPanel({
     targetReferralEnabled: boolean,
     preserveDocumentIds: boolean,
   ) {
+    await onboardDevelopmentMutation.mutateAsync({
+      developmentId: targetDevelopmentId,
+    });
+
     const programResult = await upsertProgramMutation.mutateAsync(
       buildProgramInput(targetDevelopmentId, targetReferralEnabled),
     );

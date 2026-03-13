@@ -12,6 +12,7 @@ const {
   mockUpsertProgramUseMutation,
   mockAssignManagerUseMutation,
   mockSetDevelopmentRequiredDocumentsUseMutation,
+  mockOnboardDevelopmentToPartnerNetworkUseMutation,
   mockUseUtils,
 } = vi.hoisted(() => ({
   mockGetProgramReadinessUseQuery: vi.fn(),
@@ -20,6 +21,7 @@ const {
   mockUpsertProgramUseMutation: vi.fn(),
   mockAssignManagerUseMutation: vi.fn(),
   mockSetDevelopmentRequiredDocumentsUseMutation: vi.fn(),
+  mockOnboardDevelopmentToPartnerNetworkUseMutation: vi.fn(),
   mockUseUtils: vi.fn(),
 }));
 
@@ -39,6 +41,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         upsertProgram: {
           useMutation: () => mockUpsertProgramUseMutation(),
+        },
+        onboardDevelopmentToPartnerNetwork: {
+          useMutation: () => mockOnboardDevelopmentToPartnerNetworkUseMutation(),
         },
         assignManagerToDevelopment: {
           useMutation: () => mockAssignManagerUseMutation(),
@@ -107,6 +112,10 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     });
     mockUpsertProgramUseMutation.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ success: true, programId: 91 }),
+      isPending: false,
+    });
+    mockOnboardDevelopmentToPartnerNetworkUseMutation.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ success: true, mode: 'existing', programId: 91 }),
       isPending: false,
     });
     mockAssignManagerUseMutation.mockReturnValue({
@@ -247,6 +256,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
   it('save config triggers readiness refetch', async () => {
     const readinessRefetch = vi.fn().mockResolvedValue(undefined);
     const docsRefetch = vi.fn().mockResolvedValue(undefined);
+    const onboardMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
     const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
 
     mockGetProgramReadinessUseQuery.mockReturnValue({
@@ -261,6 +271,10 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     });
     mockUpsertProgramUseMutation.mockReturnValue({
       mutateAsync: upsertMutateAsync,
+      isPending: false,
+    });
+    mockOnboardDevelopmentToPartnerNetworkUseMutation.mockReturnValue({
+      mutateAsync: onboardMutateAsync,
       isPending: false,
     });
 
@@ -289,14 +303,26 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
 
     fireEvent.click(screen.getByText('Save Configuration'));
 
+    await waitFor(() =>
+      expect(onboardMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1001,
+        }),
+      ),
+    );
     await waitFor(() => expect(upsertMutateAsync).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(readinessRefetch).toHaveBeenCalled());
   });
 
   it('applies selected onboarding defaults to other developments without enabling referrals', async () => {
+    const onboardMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
     const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
     const setDocsMutateAsync = vi.fn().mockResolvedValue({ success: true });
 
+    mockOnboardDevelopmentToPartnerNetworkUseMutation.mockReturnValue({
+      mutateAsync: onboardMutateAsync,
+      isPending: false,
+    });
     mockUpsertProgramUseMutation.mockReturnValue({
       mutateAsync: upsertMutateAsync,
       isPending: false,
@@ -338,6 +364,13 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
 
     fireEvent.click(screen.getByText('Apply to Other 1 Development'));
 
+    await waitFor(() =>
+      expect(onboardMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1002,
+        }),
+      ),
+    );
     await waitFor(() =>
       expect(upsertMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({
