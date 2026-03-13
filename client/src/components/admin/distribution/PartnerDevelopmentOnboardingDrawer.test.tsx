@@ -158,9 +158,74 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(screen.getByText('Referral enable blocked')).toBeInTheDocument();
+    expect(screen.getByText('Next action')).toBeInTheDocument();
     expect(
       screen.getAllByText('Assign an active primary manager to this development.').length,
     ).toBeGreaterThan(0);
+  });
+
+  it('shows readiness counts for the selected brand onboarding set', () => {
+    const readyFixture = {
+      ...readinessFixture,
+      canEnableReferral: true,
+      blockers: [],
+      state: {
+        ...readinessFixture.state,
+        hasActivePrimaryManager: true,
+      },
+    };
+    const readyResult = {
+      data: readyFixture,
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    };
+    const blockedResult = {
+      data: readinessFixture,
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockGetProgramReadinessUseQuery.mockImplementation((input: any) => {
+      if (input?.developmentId === 1001) {
+        return readyResult;
+      }
+
+      return blockedResult;
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+          {
+            developmentId: 1002,
+            developmentName: 'Green Oaks',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Referral live / ready')).toBeInTheDocument();
+    expect(screen.getByText('Needs onboarding setup before submissions can open')).toBeInTheDocument();
+    expect(screen.getByText('0 enabled, 1 ready to enable')).toBeInTheDocument();
   });
 
   it('save config triggers readiness refetch', async () => {
