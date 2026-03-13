@@ -74,8 +74,12 @@ const ServicesLocalizedCategoryPage = lazy(
 );
 const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
 const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
-const ServiceProviderProfilePage = lazy(() => import('./pages/services/ServiceProviderProfilePage'));
-const ServiceProviderReviewsPage = lazy(() => import('./pages/services/ServiceProviderReviewsPage'));
+const ServiceProviderProfilePage = lazy(
+  () => import('./pages/services/ServiceProviderProfilePage'),
+);
+const ServiceProviderReviewsPage = lazy(
+  () => import('./pages/services/ServiceProviderReviewsPage'),
+);
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
@@ -121,6 +125,7 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
+const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
 const ExploreComponentDemo = lazy(() => import('./pages/ExploreComponentDemo'));
@@ -158,18 +163,14 @@ const ManagerDealChecklistPage = lazy(
 const PartnerSubmitReferralPage = lazy(
   () => import('./pages/distribution/PartnerSubmitReferralPage'),
 );
-const PartnerMyReferralsPage = lazy(
-  () => import('./pages/distribution/PartnerMyReferralsPage'),
-);
+const PartnerMyReferralsPage = lazy(() => import('./pages/distribution/PartnerMyReferralsPage'));
 const PartnerReferralDetailPage = lazy(
   () => import('./pages/distribution/PartnerReferralDetailPage'),
 );
 const PartnerReferralAcceleratorPage = lazy(
   () => import('./pages/distribution/PartnerReferralAcceleratorPage'),
 );
-const PartnerDevelopmentsPage = lazy(
-  () => import('./pages/distribution/PartnerDevelopmentsPage'),
-);
+const PartnerDevelopmentsPage = lazy(() => import('./pages/distribution/PartnerDevelopmentsPage'));
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
@@ -364,6 +365,7 @@ function Router() {
               return null;
             }}
           />
+          <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
           <Route path="/development/:slug" component={DevelopmentDetail} />
 
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
@@ -412,7 +414,10 @@ function Router() {
           <Route path="/services/results/:leadId" component={ServicesResultsPage} />
           <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
           <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
-          <Route path="/services/:category/:city/:province" component={ServicesLocalizedCategoryPage} />
+          <Route
+            path="/services/:category/:city/:province"
+            component={ServicesLocalizedCategoryPage}
+          />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
           <Route path="/pro/dashboard" component={ProDashboardPage} />
@@ -693,20 +698,14 @@ function Router() {
             <Redirect to="/distribution/manager/developments" />
           </Route>
           <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
-          <Route
-            path="/distribution/manager/developments"
-            component={ManagerDevelopmentOpsPage}
-          />
+          <Route path="/distribution/manager/developments" component={ManagerDevelopmentOpsPage} />
           <Route
             path="/distribution/manager/developments/:developmentId"
             component={ManagerDevelopmentDealsPage}
           />
           <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
-          <Route
-            path="/distribution/partner/developments"
-            component={PartnerDevelopmentsPage}
-          />
+          <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
           <Route
             path="/distribution/partner/accelerator"
             component={PartnerReferralAcceleratorPage}

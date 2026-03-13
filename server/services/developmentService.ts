@@ -165,7 +165,7 @@ function sanitizeDecimal(value: unknown): number | null {
 function sanitizeDate(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString();
+    return value.toISOString().slice(0, 19).replace('T', ' ');
   }
   if (typeof value === 'string') {
     const s = value.trim();
@@ -463,6 +463,8 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
           logoUrl: developerBrandProfiles.logoUrl,
           websiteUrl: developerBrandProfiles.websiteUrl,
           about: developerBrandProfiles.about,
+          foundedYear: developerBrandProfiles.foundedYear,
+          headOfficeLocation: developerBrandProfiles.headOfficeLocation,
         })
         .from(developerBrandProfiles)
         .where(eq(developerBrandProfiles.id, dev.developerBrandProfileId))
@@ -477,6 +479,8 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
           logoUrl: bp.logoUrl ?? null,
           websiteUrl: bp.websiteUrl ?? null,
           description: bp.about ?? null,
+          foundedYear: bp.foundedYear ?? null,
+          headOfficeLocation: bp.headOfficeLocation ?? null,
         };
         dev.publisher = dev.brandProfile; // alias for older UI code
       }
@@ -618,7 +622,10 @@ export async function listPublicDevelopments(options: {
 
   const { limit = 20, province, city, suburb, developmentType, transactionType } = options;
 
-  const conditions: any[] = [eq(developments.isPublished, 1), eq(developments.approvalStatus, 'approved')];
+  const conditions: any[] = [
+    eq(developments.isPublished, 1),
+    eq(developments.approvalStatus, 'approved'),
+  ];
   if (province) conditions.push(eq(developments.province, province));
   if (city) conditions.push(eq(developments.city, city));
   if (suburb) conditions.push(eq(developments.suburb, suburb));
@@ -700,8 +707,7 @@ export async function listPublicDevelopments(options: {
     if (!unitsByDevelopment.has(devId)) unitsByDevelopment.set(devId, []);
     const kind = mapUnitKind(unit.structuralType, unit.developmentType);
     const label =
-      unit.name ||
-      (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
+      unit.name || (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
     unitsByDevelopment.get(devId)!.push({
       label,
       priceFrom: unit.basePriceFrom != null ? Number(unit.basePriceFrom) : null,
@@ -1506,6 +1512,8 @@ export async function updateDevelopment(
     updatePayload.reservePriceFrom = auctionRange.reservePriceFrom;
   }
 
+  updatePayload.updatedAt = mysqlDateTime();
+
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
   // ✅ Ownership check done in WHERE by developerProfileId
@@ -1929,7 +1937,7 @@ async function persistDevelopmentPhases(
       // INSERT (do NOT include id; DB auto-increments it)
       await db.insert(developmentPhases).values({
         ...phasePayload,
-        createdAt: new Date().toISOString(),
+        createdAt: mysqlDateTime(),
       });
     }
   }
@@ -2361,7 +2369,7 @@ async function approveDevelopment(id: number, adminId: number) {
     .set({
       approvalStatus: 'approved',
       isPublished: true as any,
-      approvedAt: new Date().toISOString(),
+      approvedAt: mysqlDateTime(),
       approvedBy: adminId,
     })
     .where(eq(developments.id, id));
@@ -2404,7 +2412,7 @@ async function unpublishDevelopment(id: number, adminId: number) {
     .set({
       isPublished: 0,
       publishedAt: null,
-      updatedAt: new Date().toISOString(),
+      updatedAt: mysqlDateTime(),
     })
     .where(eq(developments.id, id));
 
@@ -2508,7 +2516,7 @@ export async function publishDevelopmentStrict(
         developerId: devProfile.id,
         slug,
         isPublished: 1,
-        publishedAt: new Date().toISOString(),
+        publishedAt: mysqlDateTime(),
 
         // ✅ hard defaults to satisfy DB NOT NULL + no default
         views: 0,
