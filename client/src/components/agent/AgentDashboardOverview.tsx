@@ -844,7 +844,17 @@ export function AgentDashboardOverview() {
           </div>
 
           <div className="flex flex-wrap gap-2.5">
-            {!activation?.milestones.agent_profile_published ? (
+            {!activation?.milestones.agent_profile_completed ? (
+              <Button
+                className="h-10 rounded-xl bg-primary px-4 text-primary-foreground hover:bg-primary/90"
+                onClick={() => {
+                  setIsActivationOpen(false);
+                  setLocation('/agent/setup');
+                }}
+              >
+                Complete Profile Setup
+              </Button>
+            ) : !activation?.milestones.agent_profile_published ? (
               <Button
                 className="h-10 rounded-xl bg-primary px-4 text-primary-foreground hover:bg-primary/90"
                 disabled={publishProfileMutation.isPending}
