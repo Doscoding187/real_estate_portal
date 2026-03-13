@@ -72,6 +72,7 @@ type ReadinessCounts = {
   enabled: number;
   readyToEnable: number;
   blocked: number;
+  loading: number;
 };
 
 const payoutMilestones = [
@@ -129,7 +130,10 @@ function getPrimaryReadinessMessage(readiness?: ProgramReadiness | null) {
 function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramReadiness | null | undefined>) {
   return Object.values(readinessByDevelopmentId).reduce<ReadinessCounts>(
     (counts, readiness) => {
-      if (!readiness) return counts;
+      if (!readiness) {
+        counts.loading += 1;
+        return counts;
+      }
       if (readiness.state.isReferralEnabled) {
         counts.enabled += 1;
       } else if (readiness.canEnableReferral) {
@@ -139,7 +143,7 @@ function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramRead
       }
       return counts;
     },
-    { enabled: 0, readyToEnable: 0, blocked: 0 },
+    { enabled: 0, readyToEnable: 0, blocked: 0, loading: 0 },
   );
 }
 
@@ -720,6 +724,7 @@ function DevelopmentOnboardingRow({
   });
   const setReferralEnabledMutation = trpc.distribution.admin.setProgramReferralEnabled.useMutation();
   const [inlineBlockers, setInlineBlockers] = useState<Array<{ code: string; message: string }>>([]);
+  const isReadinessLoading = readinessQuery.isLoading && !readinessQuery.data;
 
   const isReferralEnabled = Boolean(readinessQuery.data?.state.isReferralEnabled);
   const blockers = inlineBlockers.length
@@ -805,12 +810,14 @@ function DevelopmentOnboardingRow({
         <p className="font-medium">
           {isReferralEnabled
             ? 'Referral status'
+            : isReadinessLoading
+              ? 'Loading readiness'
             : readinessQuery.data?.canEnableReferral
               ? 'Ready for activation'
               : 'Next action'}
         </p>
         <p className="mt-1">{primaryMessage}</p>
-        {!isReferralEnabled && blockers.length ? (
+        {!isReadinessLoading && !isReferralEnabled && blockers.length ? (
           <div className="mt-2 space-y-1">
             {(isSelected ? blockers : blockers.slice(0, 1)).map(blocker => (
               <div
@@ -838,6 +845,11 @@ function DevelopmentOnboardingRow({
               </p>
             ) : null}
           </div>
+        ) : null}
+        {isReadinessLoading ? (
+          <p className="mt-2 text-[11px] text-slate-600">
+            Checking program, manager, payout, currency, and document readiness...
+          </p>
         ) : null}
       </div>
 
@@ -993,10 +1005,14 @@ export function PartnerDevelopmentOnboardingDrawer({
                         Blocked
                       </p>
                       <p className="mt-1 text-2xl font-semibold text-amber-900">
-                        {readinessCounts.blocked}
+                        {readinessCounts.loading ? '...' : readinessCounts.blocked}
                       </p>
                       <p className="text-[11px] text-amber-700">
-                        Needs onboarding setup before submissions can open
+                        {readinessCounts.loading
+                          ? `${readinessCounts.loading} development${
+                              readinessCounts.loading === 1 ? '' : 's'
+                            } still loading readiness`
+                          : 'Needs onboarding setup before submissions can open'}
                       </p>
                     </div>
                   </div>
@@ -1022,16 +1038,32 @@ export function PartnerDevelopmentOnboardingDrawer({
 
               <div>
                 {selectedDevelopment ? (
-                  <DevelopmentProgramConfigPanel
-                    key={selectedDevelopment.developmentId}
-                    development={selectedDevelopment}
-                    otherDevelopments={developments.filter(
-                      row => row.developmentId !== selectedDevelopment.developmentId,
-                    )}
-                    managerOptions={managerOptions}
-                    onSaved={onRefreshCatalog}
-                    focusSection={focusSection}
-                  />
+                  <div className="space-y-3">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          Configuring: {selectedDevelopment.developmentName}
+                        </CardTitle>
+                        <CardDescription>
+                          {selectedDevelopment.city || 'Unknown city'},{' '}
+                          {selectedDevelopment.province || 'Unknown province'}.
+                          {` `}
+                          Save this development directly, or apply its onboarding defaults to the
+                          other developments in this brand.
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                    <DevelopmentProgramConfigPanel
+                      key={selectedDevelopment.developmentId}
+                      development={selectedDevelopment}
+                      otherDevelopments={developments.filter(
+                        row => row.developmentId !== selectedDevelopment.developmentId,
+                      )}
+                      managerOptions={managerOptions}
+                      onSaved={onRefreshCatalog}
+                      focusSection={focusSection}
+                    />
+                  </div>
                 ) : (
                   <Card>
                     <CardContent className="py-8 text-center text-sm text-slate-500">

@@ -241,6 +241,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByText('Referral live / ready')).toBeInTheDocument();
     expect(screen.getByText('Needs onboarding setup before submissions can open')).toBeInTheDocument();
     expect(screen.getByText('0 enabled, 1 ready to enable')).toBeInTheDocument();
+    expect(screen.getByText('Configuring: Sky City')).toBeInTheDocument();
   });
 
   it('save config triggers readiness refetch', async () => {
@@ -352,5 +353,51 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         }),
       ),
     );
+  });
+
+  it('shows explicit loading copy while readiness is still resolving', () => {
+    mockGetProgramReadinessUseQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+          {
+            developmentId: 1002,
+            developmentName: 'Green Oaks',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText('Loading readiness')).not.toHaveLength(0);
+    expect(
+      screen.getByText('2 developments still loading readiness'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Checking program, manager, payout, currency, and document readiness...'),
+    ).not.toHaveLength(0);
   });
 });
