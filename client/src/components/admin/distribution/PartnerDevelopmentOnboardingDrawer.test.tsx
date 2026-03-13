@@ -12,6 +12,7 @@ const {
   mockUpsertProgramUseMutation,
   mockAssignManagerUseMutation,
   mockSetDevelopmentRequiredDocumentsUseMutation,
+  mockUseUtils,
 } = vi.hoisted(() => ({
   mockGetProgramReadinessUseQuery: vi.fn(),
   mockSetProgramReferralEnabledUseMutation: vi.fn(),
@@ -19,10 +20,12 @@ const {
   mockUpsertProgramUseMutation: vi.fn(),
   mockAssignManagerUseMutation: vi.fn(),
   mockSetDevelopmentRequiredDocumentsUseMutation: vi.fn(),
+  mockUseUtils: vi.fn(),
 }));
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => mockUseUtils(),
     distribution: {
       admin: {
         getProgramReadiness: {
@@ -75,6 +78,18 @@ const readinessFixture = {
 describe('PartnerDevelopmentOnboardingDrawer UI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseUtils.mockReturnValue({
+      distribution: {
+        admin: {
+          getProgramReadiness: {
+            invalidate: vi.fn().mockResolvedValue(undefined),
+          },
+          getDevelopmentRequiredDocuments: {
+            invalidate: vi.fn().mockResolvedValue(undefined),
+          },
+        },
+      },
+    });
 
     mockGetProgramReadinessUseQuery.mockReturnValue({
       data: readinessFixture,
@@ -275,5 +290,67 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
 
     await waitFor(() => expect(upsertMutateAsync).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(readinessRefetch).toHaveBeenCalled());
+  });
+
+  it('applies selected onboarding defaults to other developments without enabling referrals', async () => {
+    const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
+    const setDocsMutateAsync = vi.fn().mockResolvedValue({ success: true });
+
+    mockUpsertProgramUseMutation.mockReturnValue({
+      mutateAsync: upsertMutateAsync,
+      isPending: false,
+    });
+    mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: setDocsMutateAsync,
+      isPending: false,
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+          {
+            developmentId: 1002,
+            developmentName: 'Green Oaks',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Apply to Other 1 Development'));
+
+    await waitFor(() =>
+      expect(upsertMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1002,
+          isReferralEnabled: false,
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(setDocsMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1002,
+        }),
+      ),
+    );
   });
 });

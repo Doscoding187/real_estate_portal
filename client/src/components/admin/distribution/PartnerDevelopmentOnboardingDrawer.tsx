@@ -181,12 +181,15 @@ function DevelopmentProgramConfigPanel({
   managerOptions,
   onSaved,
   focusSection,
+  otherDevelopments,
 }: {
   development: DevelopmentRow;
   managerOptions: ManagerOption[];
   onSaved: () => Promise<void> | void;
   focusSection?: string | null;
+  otherDevelopments: DevelopmentRow[];
 }) {
+  const utils = trpc.useUtils();
   const readinessQuery = trpc.distribution.admin.getProgramReadiness.useQuery({
     developmentId: development.developmentId,
   });
@@ -213,6 +216,7 @@ function DevelopmentProgramConfigPanel({
   const [isActive, setIsActive] = useState(true);
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
 
   useEffect(() => {
     const readiness = readinessQuery.data;
@@ -271,12 +275,15 @@ function DevelopmentProgramConfigPanel({
   }, [focusSection]);
 
   const isSaving =
-    upsertProgramMutation.isPending || assignManagerMutation.isPending || setDocsMutation.isPending;
+    upsertProgramMutation.isPending ||
+    assignManagerMutation.isPending ||
+    setDocsMutation.isPending ||
+    isApplyingTemplate;
 
-  async function handleSave() {
-    const programResult = await upsertProgramMutation.mutateAsync({
-      developmentId: development.developmentId,
-      isReferralEnabled: Boolean(readinessQuery.data?.state.isReferralEnabled),
+  function buildProgramInput(targetDevelopmentId: number, isReferralEnabled: boolean) {
+    return {
+      developmentId: targetDevelopmentId,
+      isReferralEnabled,
       isActive,
       commissionModel,
       defaultCommissionPercent:
@@ -292,7 +299,31 @@ function DevelopmentProgramConfigPanel({
       payoutMilestoneNotes:
         payoutMilestone === 'custom' ? payoutMilestoneNotes.trim() || null : null,
       currencyCode: currencyCode.trim().toUpperCase(),
-    });
+    };
+  }
+
+  function buildDocumentsInput(targetDevelopmentId: number, preserveIds: boolean) {
+    return {
+      developmentId: targetDevelopmentId,
+      documents: documents.map((document, index) => ({
+        id: preserveIds ? document.id : undefined,
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel.trim() || 'Custom Document',
+        isRequired: document.isRequired,
+        sortOrder: index,
+        isActive: document.isActive,
+      })),
+    };
+  }
+
+  async function saveConfigurationForDevelopment(
+    targetDevelopmentId: number,
+    targetReferralEnabled: boolean,
+    preserveDocumentIds: boolean,
+  ) {
+    const programResult = await upsertProgramMutation.mutateAsync(
+      buildProgramInput(targetDevelopmentId, targetReferralEnabled),
+    );
 
     if (primaryManagerUserId) {
       await assignManagerMutation.mutateAsync({
@@ -305,20 +336,49 @@ function DevelopmentProgramConfigPanel({
       });
     }
 
-    await setDocsMutation.mutateAsync({
-      developmentId: development.developmentId,
-      documents: documents.map((document, index) => ({
-        id: document.id,
-        documentCode: document.documentCode,
-        documentLabel: document.documentLabel.trim() || 'Custom Document',
-        isRequired: document.isRequired,
-        sortOrder: index,
-        isActive: document.isActive,
-      })),
-    });
+    await setDocsMutation.mutateAsync(buildDocumentsInput(targetDevelopmentId, preserveDocumentIds));
+
+    await Promise.all([
+      utils.distribution.admin.getProgramReadiness.invalidate({
+        developmentId: targetDevelopmentId,
+      }),
+      utils.distribution.admin.getDevelopmentRequiredDocuments.invalidate({
+        developmentId: targetDevelopmentId,
+      }),
+    ]);
+  }
+
+  async function handleSave() {
+    await saveConfigurationForDevelopment(
+      development.developmentId,
+      Boolean(readinessQuery.data?.state.isReferralEnabled),
+      true,
+    );
 
     await Promise.all([readinessQuery.refetch(), docsQuery.refetch(), Promise.resolve(onSaved())]);
     toast.success('Program configuration saved');
+  }
+
+  async function handleApplyTemplateToOtherDevelopments() {
+    if (!otherDevelopments.length) return;
+
+    setIsApplyingTemplate(true);
+    try {
+      for (const row of otherDevelopments) {
+        await saveConfigurationForDevelopment(row.developmentId, false, false);
+      }
+
+      await Promise.resolve(onSaved());
+      toast.success(
+        `Applied onboarding defaults to ${otherDevelopments.length} development${
+          otherDevelopments.length === 1 ? '' : 's'
+        }. Referrals remain disabled on targets.`,
+      );
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to apply onboarding defaults');
+    } finally {
+      setIsApplyingTemplate(false);
+    }
   }
 
   return (
@@ -623,6 +683,15 @@ function DevelopmentProgramConfigPanel({
       </Card>
 
       <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-white p-3">
+        {otherDevelopments.length ? (
+          <Button variant="outline" onClick={handleApplyTemplateToOtherDevelopments} disabled={isSaving}>
+            {isApplyingTemplate
+              ? 'Applying Defaults...'
+              : `Apply to Other ${otherDevelopments.length} Development${
+                  otherDevelopments.length === 1 ? '' : 's'
+                }`}
+          </Button>
+        ) : null}
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save Configuration'}
         </Button>
@@ -956,6 +1025,9 @@ export function PartnerDevelopmentOnboardingDrawer({
                   <DevelopmentProgramConfigPanel
                     key={selectedDevelopment.developmentId}
                     development={selectedDevelopment}
+                    otherDevelopments={developments.filter(
+                      row => row.developmentId !== selectedDevelopment.developmentId,
+                    )}
                     managerOptions={managerOptions}
                     onSaved={onRefreshCatalog}
                     focusSection={focusSection}
