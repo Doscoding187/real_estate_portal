@@ -433,8 +433,12 @@ function DevelopmentProgramConfigPanel({
 
       <Card id="section-docs">
         <CardHeader>
-          <CardTitle className="text-base">Required Documents</CardTitle>
-          <CardDescription>Development-scoped document templates.</CardDescription>
+          <CardTitle className="text-base">Program Required Documents</CardTitle>
+          <CardDescription>
+            Configure the document pack for this partner development. Standard documents can stay
+            fixed and you can add multiple custom items like price structure, house plan, or
+            budget requirements.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {documents.map((document, index) => (
@@ -553,7 +557,7 @@ function DevelopmentProgramConfigPanel({
             }
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Document
+            Add Custom Document
           </Button>
         </CardContent>
       </Card>

@@ -512,6 +512,89 @@ function formatUserDisplayName(row: {
   return row.email || null;
 }
 
+type DevelopmentRequiredDocumentCode =
+  | 'id_document'
+  | 'proof_of_address'
+  | 'proof_of_income'
+  | 'bank_statement'
+  | 'pre_approval'
+  | 'signed_offer_to_purchase'
+  | 'sale_agreement'
+  | 'attorney_instruction_letter'
+  | 'transfer_documents'
+  | 'custom';
+
+type RequiredDocumentTemplateSeed = {
+  documentCode: DevelopmentRequiredDocumentCode;
+  documentLabel: string;
+  isRequired: boolean;
+};
+
+function normalizeRequiredDocumentLabel(value: string) {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function getDefaultOnboardingRequiredDocuments(
+  brandProfileName?: string | null,
+): RequiredDocumentTemplateSeed[] {
+  const templates: RequiredDocumentTemplateSeed[] = [
+    { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
+    { documentCode: 'proof_of_address', documentLabel: 'Proof of Address', isRequired: true },
+    {
+      documentCode: 'proof_of_income',
+      documentLabel: 'Payslips / Proof of Income',
+      isRequired: true,
+    },
+    { documentCode: 'bank_statement', documentLabel: 'Bank Statements', isRequired: true },
+  ];
+
+  const normalizedBrandName = String(brandProfileName || '').trim().toLowerCase();
+  if (normalizedBrandName.includes('cosmopolitan')) {
+    templates.push(
+      { documentCode: 'custom', documentLabel: 'Price Structure', isRequired: true },
+      { documentCode: 'custom', documentLabel: 'House Plan', isRequired: true },
+      { documentCode: 'custom', documentLabel: 'NCA Form', isRequired: true },
+      { documentCode: 'custom', documentLabel: 'POPIA Form (EUF)', isRequired: true },
+    );
+  }
+
+  return templates;
+}
+
+async function seedDevelopmentRequiredDocumentsIfEmpty(input: {
+  db: any;
+  developmentId: number;
+  brandProfileName?: string | null;
+}) {
+  const [existingRow] = await input.db
+    .select({ id: developmentRequiredDocuments.id })
+    .from(developmentRequiredDocuments)
+    .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
+    .limit(1);
+
+  if (existingRow?.id) {
+    return { seeded: false as const, count: 0 };
+  }
+
+  const templates = getDefaultOnboardingRequiredDocuments(input.brandProfileName);
+  if (!templates.length) {
+    return { seeded: false as const, count: 0 };
+  }
+
+  await input.db.insert(developmentRequiredDocuments).values(
+    templates.map((document, index) => ({
+      developmentId: input.developmentId,
+      documentCode: document.documentCode,
+      documentLabel: document.documentLabel,
+      isRequired: document.isRequired ? 1 : 0,
+      sortOrder: index,
+      isActive: 1,
+    })),
+  );
+
+  return { seeded: true as const, count: templates.length };
+}
+
 async function getProgramById(db: any, programId: number) {
   const [program] = await db
     .select({
@@ -2228,6 +2311,15 @@ const adminDistributionRouter = router({
                 });
               }
 
+              const [brandProfile] = await tx
+                .select({
+                  id: developerBrandProfiles.id,
+                  brandName: developerBrandProfiles.brandName,
+                })
+                .from(developerBrandProfiles)
+                .where(eq(developerBrandProfiles.id, brandProfileId))
+                .limit(1);
+
               const partnershipResult = await upsertBrandPartnershipWithAudit({
                 db: tx as any,
                 actorUserId: ctx.user.id,
@@ -2284,6 +2376,12 @@ const adminDistributionRouter = router({
                 },
               );
 
+              const seededDocs = await seedDevelopmentRequiredDocumentsIfEmpty({
+                db: tx as any,
+                developmentId: input.developmentId,
+                brandProfileName: brandProfile?.brandName || null,
+              });
+
               return {
                 success: true as const,
                 developmentId: input.developmentId,
@@ -2300,6 +2398,7 @@ const adminDistributionRouter = router({
                 },
                 mode: ensured.created ? ('created' as const) : ('existing' as const),
                 programId: ensured.programId,
+                seededDocs,
                 accessBlockers: blockerSummary.accessBlockers,
                 accessState: {
                   inventoryState: accessEvaluation.inventoryState,
@@ -2583,6 +2682,46 @@ const adminDistributionRouter = router({
     )
     .mutation(async ({ input }) => {
       assertDistributionEnabled();
+
+      const normalizedDocuments = input.documents.map((document, index) => ({
+        id: document.id,
+        documentCode: document.documentCode,
+        documentLabel: normalizeRequiredDocumentLabel(document.documentLabel),
+        isRequired: document.isRequired,
+        sortOrder: typeof document.sortOrder === 'number' ? document.sortOrder : index,
+        isActive: document.isActive,
+      }));
+
+      const duplicateStandardCode = normalizedDocuments.find((document, index) => {
+        if (document.documentCode === 'custom') return false;
+        return (
+          normalizedDocuments.findIndex(candidate => candidate.documentCode === document.documentCode) !==
+          index
+        );
+      });
+      if (duplicateStandardCode) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Only one ${duplicateStandardCode.documentCode} template can be configured per development.`,
+        });
+      }
+
+      const customLabelCounts = new Map<string, number>();
+      for (const document of normalizedDocuments) {
+        if (document.documentCode !== 'custom') continue;
+        const key = document.documentLabel.toLowerCase();
+        customLabelCounts.set(key, (customLabelCounts.get(key) || 0) + 1);
+      }
+      const duplicateCustomLabel = Array.from(customLabelCounts.entries()).find(
+        ([, count]) => count > 1,
+      )?.[0];
+      if (duplicateCustomLabel) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Custom document labels must be unique per development. Duplicate label: ${duplicateCustomLabel}.`,
+        });
+      }
+
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -2597,7 +2736,7 @@ const adminDistributionRouter = router({
         const existingIdSet = new Set<number>(existing.map(row => Number(row.id)));
         const retainedIds = new Set<number>();
 
-        for (const document of input.documents) {
+        for (const document of normalizedDocuments) {
           if (document.id && existingIdSet.has(document.id)) {
             retainedIds.add(document.id);
             await tx
