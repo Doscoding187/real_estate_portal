@@ -166,6 +166,14 @@ describe('distribution admin schema guards', () => {
       code: 'PRECONDITION_FAILED',
       message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
     });
+    await expect(
+      caller.admin.onboardDevelopmentToPartnerNetwork({
+        developmentId: 99,
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
+    });
 
     expect(mockGetDb).not.toHaveBeenCalled();
   });
