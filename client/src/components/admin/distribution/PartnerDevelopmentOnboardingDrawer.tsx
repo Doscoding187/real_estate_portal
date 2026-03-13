@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ArrowDown, ArrowUp, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
@@ -68,6 +68,12 @@ type ProgramReadiness = {
   };
 };
 
+type ReadinessCounts = {
+  enabled: number;
+  readyToEnable: number;
+  blocked: number;
+};
+
 const payoutMilestones = [
   'attorney_instruction',
   'attorney_signing',
@@ -103,6 +109,38 @@ const blockerSectionMap: Record<string, string> = {
 
 function statusBadge(value: boolean, trueLabel: string, falseLabel: string) {
   return <Badge variant={value ? 'default' : 'secondary'}>{value ? trueLabel : falseLabel}</Badge>;
+}
+
+function getBlockerSectionId(blockerCode: string) {
+  return blockerSectionMap[blockerCode] || 'section-program';
+}
+
+function getPrimaryReadinessMessage(readiness?: ProgramReadiness | null) {
+  if (!readiness) return 'Loading readiness status...';
+  if (readiness.state.isReferralEnabled) {
+    return 'Referrals are live for this development.';
+  }
+  if (readiness.canEnableReferral) {
+    return 'Ready to enable referrals.';
+  }
+  return readiness.blockers[0]?.message || 'Complete onboarding configuration before enabling referrals.';
+}
+
+function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramReadiness | null | undefined>) {
+  return Object.values(readinessByDevelopmentId).reduce<ReadinessCounts>(
+    (counts, readiness) => {
+      if (!readiness) return counts;
+      if (readiness.state.isReferralEnabled) {
+        counts.enabled += 1;
+      } else if (readiness.canEnableReferral) {
+        counts.readyToEnable += 1;
+      } else {
+        counts.blocked += 1;
+      }
+      return counts;
+    },
+    { enabled: 0, readyToEnable: 0, blocked: 0 },
+  );
 }
 
 export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadiness | null }) {
@@ -294,15 +332,37 @@ function DevelopmentProgramConfigPanel({
           <ReadinessStatusChips readiness={readinessQuery.data as any} />
           {readinessQuery.data?.canEnableReferral === false ? (
             <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-              <p className="mb-1 font-medium">Fix these blockers:</p>
-              <ul className="list-disc space-y-1 pl-4">
+              <p className="mb-1 font-medium">Fix these blockers before enabling referrals:</p>
+              <div className="space-y-1">
                 {readinessQuery.data.blockers.map((blocker: any) => (
-                  <li key={blocker.code}>{blocker.message}</li>
+                  <div
+                    key={blocker.code}
+                    className="flex items-start justify-between gap-2 rounded border border-amber-200 bg-white/70 p-2"
+                  >
+                    <p>{blocker.message}</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => {
+                        const element = document.getElementById(getBlockerSectionId(blocker.code));
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }}
+                    >
+                      Open
+                    </Button>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           ) : (
-            <p className="text-xs text-emerald-700">Ready to enable referrals.</p>
+            <p className="text-xs text-emerald-700">
+              {readinessQuery.data?.state.isReferralEnabled
+                ? 'Referrals are enabled for this development.'
+                : 'Ready to enable referrals.'}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -577,12 +637,14 @@ function DevelopmentOnboardingRow({
   onConfigure,
   onSaved,
   onFixNow,
+  onReadinessLoaded,
 }: {
   development: DevelopmentRow;
   isSelected: boolean;
   onConfigure: () => void;
   onSaved: () => Promise<void> | void;
   onFixNow: (blockerCode: string) => void;
+  onReadinessLoaded: (developmentId: number, readiness: ProgramReadiness | null) => void;
 }) {
   const readinessQuery = trpc.distribution.admin.getProgramReadiness.useQuery({
     developmentId: development.developmentId,
@@ -591,6 +653,17 @@ function DevelopmentOnboardingRow({
   const [inlineBlockers, setInlineBlockers] = useState<Array<{ code: string; message: string }>>([]);
 
   const isReferralEnabled = Boolean(readinessQuery.data?.state.isReferralEnabled);
+  const blockers = inlineBlockers.length
+    ? inlineBlockers
+    : ((readinessQuery.data?.blockers || []) as Array<{ code: string; message: string }>);
+  const primaryMessage = getPrimaryReadinessMessage(readinessQuery.data as ProgramReadiness | null);
+
+  useEffect(() => {
+    onReadinessLoaded(
+      development.developmentId,
+      (readinessQuery.data as ProgramReadiness | null | undefined) || null,
+    );
+  }, [development.developmentId, onReadinessLoaded, readinessQuery.data]);
 
   async function handleToggle(nextEnabled: boolean) {
     if (!nextEnabled) {
@@ -651,15 +724,30 @@ function DevelopmentOnboardingRow({
         <ReadinessStatusChips readiness={readinessQuery.data as any} />
       </div>
 
-      {inlineBlockers.length ? (
-        <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
-          <p className="mb-1 flex items-center gap-1 font-medium">
-            <AlertCircle className="h-3.5 w-3.5" />
-            Referral enable blocked
-          </p>
-          <ul className="space-y-1">
-            {inlineBlockers.map(blocker => (
-              <li key={`${development.developmentId}-${blocker.code}`} className="flex items-center justify-between gap-2">
+      <div
+        className={`mt-2 rounded border p-2 text-xs ${
+          isReferralEnabled
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : readinessQuery.data?.canEnableReferral
+              ? 'border-blue-200 bg-blue-50 text-blue-700'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+        }`}
+      >
+        <p className="font-medium">
+          {isReferralEnabled
+            ? 'Referral status'
+            : readinessQuery.data?.canEnableReferral
+              ? 'Ready for activation'
+              : 'Next action'}
+        </p>
+        <p className="mt-1">{primaryMessage}</p>
+        {!isReferralEnabled && blockers.length ? (
+          <div className="mt-2 space-y-1">
+            {(isSelected ? blockers : blockers.slice(0, 1)).map(blocker => (
+              <div
+                key={`${development.developmentId}-${blocker.code}`}
+                className="flex items-center justify-between gap-2"
+              >
                 <span>{blocker.message}</span>
                 <Button
                   size="sm"
@@ -672,9 +760,25 @@ function DevelopmentOnboardingRow({
                 >
                   Fix now
                 </Button>
-              </li>
+              </div>
             ))}
-          </ul>
+            {!isSelected && blockers.length > 1 ? (
+              <p className="text-[11px] text-slate-600">
+                {blockers.length - 1} more blocker{blockers.length - 1 === 1 ? '' : 's'} inside
+                configuration.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {inlineBlockers.length ? (
+        <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+          <p className="mb-1 flex items-center gap-1 font-medium">
+            <AlertCircle className="h-3.5 w-3.5" />
+            Referral enable blocked
+          </p>
+          <p>Fix the blockers above, save the configuration, then try enabling again.</p>
         </div>
       ) : null}
     </div>
@@ -706,6 +810,17 @@ export function PartnerDevelopmentOnboardingDrawer({
 }) {
   const [selectedDevelopmentId, setSelectedDevelopmentId] = useState<number | null>(null);
   const [focusSection, setFocusSection] = useState<string | null>(null);
+  const [readinessByDevelopmentId, setReadinessByDevelopmentId] = useState<
+    Record<number, ProgramReadiness | null>
+  >({});
+  const handleReadinessLoaded = useCallback(
+    (developmentId: number, readiness: ProgramReadiness | null) => {
+      setReadinessByDevelopmentId(current =>
+        current[developmentId] === readiness ? current : { ...current, [developmentId]: readiness },
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -724,6 +839,20 @@ export function PartnerDevelopmentOnboardingDrawer({
     () => developments.find(row => row.developmentId === selectedDevelopmentId) || null,
     [developments, selectedDevelopmentId],
   );
+  const readinessCounts = useMemo(
+    () => getReadinessCounts(readinessByDevelopmentId),
+    [readinessByDevelopmentId],
+  );
+
+  useEffect(() => {
+    const activeIds = new Set(developments.map(row => row.developmentId));
+    setReadinessByDevelopmentId(current => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([developmentId]) => activeIds.has(Number(developmentId))),
+      ) as Record<number, ProgramReadiness | null>;
+      return next;
+    });
+  }, [developments]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -770,6 +899,38 @@ export function PartnerDevelopmentOnboardingDrawer({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="rounded border bg-slate-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        In drawer
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">
+                        {developments.length}
+                      </p>
+                    </div>
+                    <div className="rounded border bg-emerald-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                        Referral live / ready
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold text-emerald-900">
+                        {readinessCounts.enabled + readinessCounts.readyToEnable}
+                      </p>
+                      <p className="text-[11px] text-emerald-700">
+                        {readinessCounts.enabled} enabled, {readinessCounts.readyToEnable} ready to enable
+                      </p>
+                    </div>
+                    <div className="rounded border bg-amber-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-amber-700">
+                        Blocked
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold text-amber-900">
+                        {readinessCounts.blocked}
+                      </p>
+                      <p className="text-[11px] text-amber-700">
+                        Needs onboarding setup before submissions can open
+                      </p>
+                    </div>
+                  </div>
                   {developments.map(row => (
                     <DevelopmentOnboardingRow
                       key={row.developmentId}
@@ -782,8 +943,9 @@ export function PartnerDevelopmentOnboardingDrawer({
                       onSaved={onRefreshCatalog}
                       onFixNow={blockerCode => {
                         setSelectedDevelopmentId(row.developmentId);
-                        setFocusSection(blockerSectionMap[blockerCode] || 'section-program');
+                        setFocusSection(getBlockerSectionId(blockerCode));
                       }}
+                      onReadinessLoaded={handleReadinessLoaded}
                     />
                   ))}
                 </CardContent>
