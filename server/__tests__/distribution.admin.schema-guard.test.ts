@@ -233,4 +233,67 @@ describe('distribution admin schema guards', () => {
 
     expect(mockGetDb).not.toHaveBeenCalled();
   });
+
+  it('rejects duplicate standard required document codes before touching the database', async () => {
+    const caller = createSuperAdminCaller();
+
+    await expect(
+      caller.admin.setDevelopmentRequiredDocuments({
+        developmentId: 77,
+        documents: [
+          {
+            documentCode: 'bank_statement',
+            documentLabel: 'Bank Statements',
+            isRequired: true,
+            sortOrder: 0,
+            isActive: true,
+          },
+          {
+            documentCode: 'bank_statement',
+            documentLabel: 'Updated Bank Statements',
+            isRequired: true,
+            sortOrder: 1,
+            isActive: true,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Only one bank_statement template can be configured per development.',
+    });
+
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate custom document labels before touching the database', async () => {
+    const caller = createSuperAdminCaller();
+
+    await expect(
+      caller.admin.setDevelopmentRequiredDocuments({
+        developmentId: 77,
+        documents: [
+          {
+            documentCode: 'custom',
+            documentLabel: 'Price Structure',
+            isRequired: true,
+            sortOrder: 0,
+            isActive: true,
+          },
+          {
+            documentCode: 'custom',
+            documentLabel: 'Price Structure',
+            isRequired: true,
+            sortOrder: 1,
+            isActive: true,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message:
+        'Custom document labels must be unique per development. Duplicate label: price structure.',
+    });
+
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
 });

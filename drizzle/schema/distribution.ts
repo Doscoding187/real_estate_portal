@@ -351,8 +351,8 @@ export const developmentRequiredDocuments = mysqlTable(
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
-    unique('ux_development_required_documents_code').on(table.developmentId, table.documentCode),
     index('idx_development_required_documents_development').on(table.developmentId),
+    index('idx_development_required_documents_code').on(table.developmentId, table.documentCode),
     index('idx_development_required_documents_required').on(table.isRequired),
     index('idx_development_required_documents_active').on(table.isActive),
     index('idx_development_required_documents_order').on(table.developmentId, table.sortOrder),
