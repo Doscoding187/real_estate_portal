@@ -42,21 +42,24 @@ const quickActions = [
     detail: 'Create new inventory',
     href: '/listings/create',
     icon: Plus,
-    tone: 'bg-[linear-gradient(135deg,#082f49_0%,#0f766e_100%)] text-white border-transparent',
+    tone: 'bg-primary text-primary-foreground border-transparent hover:opacity-95',
+    iconTone: 'bg-primary-foreground/12 text-primary-foreground',
   },
   {
     name: 'Upload Explore',
     detail: 'Publish content',
     href: '/explore/upload',
     icon: Upload,
-    tone: 'bg-white text-slate-800 border-slate-200',
+    tone: 'bg-card text-card-foreground border-border hover:bg-accent',
+    iconTone: 'bg-secondary text-primary',
   },
   {
     name: 'Share Profile',
     detail: 'Send public profile',
     href: 'share-profile',
     icon: Share2,
-    tone: 'bg-white text-slate-800 border-slate-200',
+    tone: 'bg-card text-card-foreground border-border hover:bg-accent',
+    iconTone: 'bg-secondary text-primary',
   },
 ];
 
@@ -95,8 +98,8 @@ export function AgentSidebar({ mobile = false }: AgentSidebarProps) {
     <div className={cn('space-y-2', mobile && 'space-y-1.5')}>
       <p
         className={cn(
-          'px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400',
-          mobile && 'px-2 text-[10px] tracking-[0.18em]',
+          'px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
+          mobile && 'tracking-[0.16em]',
         )}
       >
         {label}
@@ -113,20 +116,19 @@ export function AgentSidebar({ mobile = false }: AgentSidebarProps) {
               type="button"
               onClick={() => setLocation(item.href)}
               className={cn(
-                'group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all',
+                'group flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-medium transition-colors',
                 mobile && 'gap-2.5 rounded-[18px] px-3 py-2.5 text-[13px]',
                 isActive
-                  ? 'bg-white text-slate-950 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.65)]'
-                  : 'text-slate-300 hover:bg-white/8 hover:text-white',
+                  ? 'border-sidebar-border bg-background/90 text-sidebar-foreground shadow-sm'
+                  : 'border-transparent text-muted-foreground hover:border-sidebar-border/80 hover:bg-background/70 hover:text-sidebar-foreground',
               )}
             >
               <div
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-2xl border transition-colors',
-                  mobile && 'h-9 w-9 rounded-xl',
+                  'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors',
                   isActive
-                    ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
-                    : 'border-white/10 bg-white/5 text-slate-400 group-hover:border-white/20 group-hover:text-slate-200',
+                    ? 'border-sidebar-border bg-primary/10 text-primary'
+                    : 'border-sidebar-border/70 bg-card/80 text-muted-foreground group-hover:border-sidebar-border group-hover:bg-background/90 group-hover:text-sidebar-foreground',
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -144,76 +146,56 @@ export function AgentSidebar({ mobile = false }: AgentSidebarProps) {
   return (
     <aside
       className={cn(
-        'flex h-full flex-col overflow-hidden border-r border-white/10 bg-[linear-gradient(180deg,#0f172a_0%,#111827_38%,#082f49_100%)] text-white shadow-[0_30px_80px_-48px_rgba(15,23,42,0.9)]',
-        mobile ? 'w-full' : 'hidden lg:flex lg:fixed lg:inset-y-0 lg:w-[288px] lg:z-20',
+        'flex h-full flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground shadow-[0_20px_50px_-38px_rgba(15,23,42,0.18)]',
+        'bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-sidebar)_92%,white)_0%,color-mix(in_srgb,var(--color-accent)_4%,var(--color-sidebar))_100%)]',
+        mobile
+          ? 'w-full'
+          : 'hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[272px] lg:flex-shrink-0',
       )}
     >
       <div className="flex h-full flex-col">
-        <div className={cn('border-b border-white/10 px-6 py-6', mobile && 'px-5 py-4')}>
+        <div className={cn('border-b border-sidebar-border px-5 py-5', mobile && 'px-5 py-4')}>
           <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                'flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#10b981_0%,#38bdf8_100%)] text-slate-950 shadow-[0_16px_35px_-22px_rgba(56,189,248,0.85)]',
-                mobile && 'h-11 w-11 rounded-[18px]',
-              )}
-            >
-              <Sparkles className={cn('h-5 w-5', mobile && 'h-4.5 w-4.5')} />
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
+              <Sparkles className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className={cn('text-lg font-semibold tracking-tight', mobile && 'text-base')}>
+              <p className="text-base font-semibold tracking-tight text-sidebar-foreground">
                 Agent OS
               </p>
-              <p className={cn('text-sm text-slate-300', mobile && 'text-xs')}>{currentSection}</p>
+              <p className="text-xs text-muted-foreground">{currentSection}</p>
             </div>
           </div>
         </div>
 
-        <div className={cn('space-y-6 px-5 py-6', mobile && 'space-y-4 px-4 py-4')}>
-          <div
-            className={cn(
-              'rounded-[28px] border border-white/10 bg-white/5 p-4 backdrop-blur-sm',
-              mobile && 'rounded-[22px] p-3.5',
-            )}
-          >
+        <div className={cn('space-y-5 px-4 py-5', mobile && 'space-y-4 px-4 py-4')}>
+          <div className="rounded-[22px] border border-sidebar-border/80 bg-card/90 p-3.5 shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  'flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-sm font-semibold text-white',
-                  mobile && 'h-10 w-10 rounded-xl text-xs',
-                )}
-              >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-accent text-xs font-semibold text-sidebar-foreground">
                 {initials}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">{user?.name || 'Agent'}</p>
-                <p className="truncate text-xs text-slate-300">
+                <p className="truncate text-sm font-semibold text-card-foreground">
+                  {user?.name || 'Agent'}
+                </p>
+                <p className="truncate text-[11px] text-muted-foreground">
                   {user?.email || 'Agent workspace'}
                 </p>
               </div>
             </div>
-            <div
-              className={cn(
-                'mt-4 flex items-center justify-between rounded-2xl bg-white/5 px-3 py-2',
-                mobile && 'mt-3 rounded-xl px-2.5 py-2',
-              )}
-            >
-              <span className="text-xs font-medium text-slate-300">Role</span>
-              <Badge className="border-white/10 bg-white/10 text-white hover:bg-white/10">
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-border/70 bg-background/80 px-2.5 py-2">
+              <span className="text-[11px] font-medium text-muted-foreground">Role</span>
+              <Badge className="border-border bg-background text-foreground hover:bg-background">
                 Agent
               </Badge>
             </div>
           </div>
 
           <div className={cn('space-y-3', mobile && 'space-y-2')}>
-            <p
-              className={cn(
-                'px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400',
-                mobile && 'px-2 text-[10px] tracking-[0.18em]',
-              )}
-            >
+            <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Quick actions
             </p>
-            <div className={cn('space-y-2', mobile && 'grid grid-cols-1 gap-2 space-y-0')}>
+            <div className={cn('space-y-2', mobile && 'space-y-1.5')}>
               {quickActions.map(action => (
                 <button
                   key={action.name}
@@ -226,26 +208,22 @@ export function AgentSidebar({ mobile = false }: AgentSidebarProps) {
                     }
                   }}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm',
+                    'flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left shadow-sm transition-colors',
                     mobile && 'gap-2.5 rounded-[18px] px-3 py-2.5',
                     action.tone,
                   )}
                 >
                   <div
                     className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-2xl bg-black/10',
-                      mobile && 'h-9 w-9 rounded-xl',
+                      'flex h-9 w-9 items-center justify-center rounded-xl',
+                      action.iconTone,
                     )}
                   >
                     <action.icon className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className={cn('text-sm font-semibold', mobile && 'text-[13px]')}>
-                      {action.name}
-                    </p>
-                    <p className={cn('text-xs opacity-80', mobile && 'text-[11px]')}>
-                      {action.detail}
-                    </p>
+                    <p className="text-[13px] font-semibold">{action.name}</p>
+                    <p className="text-[11px] opacity-80">{action.detail}</p>
                   </div>
                 </button>
               ))}
@@ -253,12 +231,7 @@ export function AgentSidebar({ mobile = false }: AgentSidebarProps) {
           </div>
         </div>
 
-        <nav
-          className={cn(
-            'flex-1 space-y-6 overflow-y-auto px-5 pb-6',
-            mobile && 'space-y-4 px-4 pb-5',
-          )}
-        >
+        <nav className={cn('flex-1 space-y-5 overflow-y-auto px-4 pb-5', mobile && 'space-y-4')}>
           {renderNavGroup(primaryNavigation, 'Operate')}
           {renderNavGroup(secondaryNavigation, 'Extend')}
         </nav>

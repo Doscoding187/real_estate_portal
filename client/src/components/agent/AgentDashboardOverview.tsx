@@ -99,11 +99,11 @@ const stageMeta: Array<{
   label: string;
   tone: string;
 }> = [
-  { key: 'new', label: 'New', tone: 'bg-sky-50 text-sky-700 border-sky-200' },
-  { key: 'contacted', label: 'Contacted', tone: 'bg-violet-50 text-violet-700 border-violet-200' },
-  { key: 'viewing', label: 'Viewing', tone: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { key: 'offer', label: 'Offer', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
-  { key: 'closed', label: 'Closed', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { key: 'new', label: 'New', tone: 'border-primary/15 bg-primary/10 text-primary' },
+  { key: 'contacted', label: 'Contacted', tone: 'border-border bg-accent text-foreground' },
+  { key: 'viewing', label: 'Viewing', tone: 'border-border bg-secondary text-foreground' },
+  { key: 'offer', label: 'Offer', tone: 'border-primary/10 bg-primary/5 text-primary' },
+  { key: 'closed', label: 'Closed', tone: 'border-border bg-muted text-muted-foreground' },
 ];
 
 function formatCurrency(cents: number | null | undefined) {
@@ -151,21 +151,21 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <Card className="overflow-hidden rounded-[22px] border border-black/5 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] sm:rounded-[26px]">
-      <CardContent className="p-4 sm:p-5">
+    <Card className="overflow-hidden rounded-[18px] border border-border bg-card shadow-sm sm:rounded-[20px]">
+      <CardContent className="p-3.5 sm:p-4">
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {label}
             </p>
-            <p className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            <p className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]">
               {value}
             </p>
-            <p className="text-sm leading-5 text-slate-500">{detail}</p>
+            <p className="text-xs leading-5 text-muted-foreground sm:text-[13px]">{detail}</p>
           </div>
           <div
             className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm',
+              'flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm',
               accent,
             )}
           >
@@ -425,52 +425,54 @@ export function AgentDashboardOverview() {
   });
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.14),_transparent_26%),radial-gradient(circle_at_top_right,_rgba(29,78,216,0.08),_transparent_24%),linear-gradient(180deg,#f7f8f3_0%,#eef2ec_100%)]">
-      <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 xl:px-8">
-        <section className="grid gap-6 xl:grid-cols-[1.55fr_0.95fr]">
-          <div className="relative overflow-hidden rounded-[26px] border border-[#0f766e]/10 bg-[linear-gradient(135deg,#082f49_0%,#0f766e_38%,#10b981_100%)] p-5 text-white shadow-[0_40px_90px_-48px_rgba(8,47,73,0.68)] sm:rounded-[34px] sm:p-8">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.28),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.12),_transparent_30%)]" />
-            <div className="relative flex h-full flex-col justify-between gap-8">
-              <div className="space-y-4">
+    <div className="min-h-screen bg-transparent">
+      <main className="content-rail flex w-full flex-col gap-4 py-4 sm:gap-5 sm:py-5">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_360px] 2xl:grid-cols-[minmax(0,1.55fr)_380px]">
+          <div className="relative overflow-hidden rounded-[22px] border border-border bg-[linear-gradient(135deg,var(--color-card)_0%,color-mix(in_srgb,var(--color-accent)_58%,white)_100%)] p-4 shadow-sm sm:rounded-[24px] sm:p-5">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(0,92,168,0.10),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(0,92,168,0.06),transparent_32%)]" />
+            <div className="relative flex h-full flex-col justify-between gap-5">
+              <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="border-white/20 bg-white/10 text-white hover:bg-white/15">
+                  <Badge className="border-border bg-accent text-foreground hover:bg-accent">
                     Agent OS overview
                   </Badge>
-                  <Badge className="border-white/20 bg-white/10 text-white hover:bg-white/15">
+                  <Badge className="border-border bg-secondary text-muted-foreground hover:bg-secondary">
                     {readinessState}
                   </Badge>
                 </div>
-                <div className="space-y-3">
-                  <h1 className="max-w-3xl text-2xl font-semibold tracking-tight sm:text-5xl">
+                <div className="space-y-2.5">
+                  <h1 className="max-w-3xl text-[1.85rem] font-semibold tracking-tight text-foreground sm:text-[2.35rem]">
                     Welcome back, {user?.name?.split(' ')[0] || 'Agent'}.
                   </h1>
-                  <p className="max-w-2xl text-sm leading-6 text-emerald-50/95 sm:text-base">
+                  <p className="max-w-2xl text-[13px] leading-6 text-muted-foreground sm:text-sm">
                     This overview now reflects the live Agent OS operating model: active inventory,
                     major deal movement, upcoming appointments, and notifications that need action.
                   </p>
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-[22px] border border-white/15 bg-white/12 p-4 backdrop-blur-sm sm:rounded-[28px] sm:p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
+              <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-[18px] border border-border bg-background/80 p-3.5 sm:rounded-[20px] sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Primary focus
                   </p>
-                  <h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
+                  <h2 className="mt-2 text-lg font-semibold text-foreground sm:text-[1.3rem]">
                     {primaryFocus.title}
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-emerald-50/85">{primaryFocus.detail}</p>
-                  <div className="mt-5 flex flex-wrap gap-3">
+                  <p className="mt-1.5 text-[13px] leading-6 text-muted-foreground">
+                    {primaryFocus.detail}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2.5">
                     <Button
-                      className="rounded-2xl bg-white text-slate-950 hover:bg-slate-100"
+                      className="h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                       disabled={primaryFocus.pending}
                       onClick={primaryFocus.action}
                     >
                       {primaryFocus.pending ? 'Working...' : primaryFocus.cta}
                     </Button>
                     <Button
-                      variant="ghost"
-                      className="rounded-2xl border border-white/20 text-white hover:bg-white/10"
+                      variant="outline"
+                      className="h-10 rounded-xl border-border bg-background"
                       onClick={() => setLocation('/agent/leads')}
                     >
                       Open CRM <ArrowRight className="ml-2 h-4 w-4" />
@@ -478,19 +480,19 @@ export function AgentDashboardOverview() {
                   </div>
                 </div>
 
-                <div className="rounded-[22px] border border-white/15 bg-slate-950/18 p-4 backdrop-blur-sm sm:rounded-[28px] sm:p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
+                <div className="rounded-[18px] border border-border bg-card p-3.5 sm:rounded-[20px] sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Today
                   </p>
-                  <p className="mt-3 text-xl font-semibold text-white">{todayLabel}</p>
-                  <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
-                      <p className="text-emerald-50/80">Pipeline load</p>
-                      <p className="mt-1 text-2xl font-semibold text-white">{pipelineCount}</p>
+                  <p className="mt-2 text-base font-semibold text-foreground">{todayLabel}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2.5 text-sm">
+                    <div className="rounded-xl border border-border bg-secondary p-3">
+                      <p className="text-[11px] text-muted-foreground">Pipeline load</p>
+                      <p className="mt-1 text-xl font-semibold text-foreground">{pipelineCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
-                      <p className="text-emerald-50/80">Unread alerts</p>
-                      <p className="mt-1 text-2xl font-semibold text-white">{unreadCount}</p>
+                    <div className="rounded-xl border border-border bg-secondary p-3">
+                      <p className="text-[11px] text-muted-foreground">Unread alerts</p>
+                      <p className="mt-1 text-xl font-semibold text-foreground">{unreadCount}</p>
                     </div>
                   </div>
                 </div>
@@ -498,30 +500,32 @@ export function AgentDashboardOverview() {
             </div>
           </div>
 
-          <Card className="overflow-hidden rounded-[26px] border border-black/5 bg-white/88 shadow-[0_24px_70px_-45px_rgba(15,23,42,0.48)] backdrop-blur-sm sm:rounded-[34px]">
-            <CardHeader className="space-y-3 border-b border-slate-100 pb-4">
+          <Card className="overflow-hidden rounded-[22px] border border-border bg-card shadow-sm sm:rounded-[24px]">
+            <CardHeader className="space-y-2.5 border-b border-border pb-3.5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Activation runway
                   </p>
-                  <CardTitle className="mt-2 text-2xl font-semibold text-slate-950">
+                  <CardTitle className="mt-1.5 text-xl font-semibold text-foreground">
                     {activationCompleteCount} / {activationItems.length} milestones complete
                   </CardTitle>
                 </div>
-                <div className="rounded-2xl bg-slate-950 px-3 py-2 text-right text-white">
-                  <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Progress</p>
-                  <p className="text-lg font-semibold">{activationPercent}%</p>
+                <div className="rounded-xl border border-border bg-secondary px-3 py-2 text-right">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Progress
+                  </p>
+                  <p className="text-base font-semibold text-foreground">{activationPercent}%</p>
                 </div>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-2 overflow-hidden rounded-full bg-secondary">
                 <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#082f49_0%,#0f766e_52%,#22c55e_100%)] transition-all"
+                  className="h-full rounded-full bg-primary transition-all"
                   style={{ width: `${activationPercent}%` }}
                 />
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 p-4 sm:p-6">
+            <CardContent className="space-y-3 p-4 sm:p-4.5">
               {activationLoading ? (
                 <p className="text-sm text-slate-500">Loading activation status...</p>
               ) : (
@@ -541,7 +545,7 @@ export function AgentDashboardOverview() {
                     <span
                       className={cn(
                         'text-xs font-semibold uppercase tracking-[0.16em]',
-                        value ? 'text-emerald-700' : 'text-slate-400',
+                        value ? 'text-primary' : 'text-slate-400',
                       )}
                     >
                       {value ? 'Done' : 'Pending'}
@@ -572,7 +576,7 @@ export function AgentDashboardOverview() {
             value={statsLoading ? '-' : (stats?.activeListings ?? 0)}
             detail="Inventory currently live"
             icon={Home}
-            accent="border-emerald-100 bg-emerald-50 text-emerald-700"
+            accent="border-emerald-100 bg-emerald-50 text-primary"
           />
           <StatCard
             label="New leads"
@@ -604,15 +608,15 @@ export function AgentDashboardOverview() {
           />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.25fr_0.95fr]">
+        <section className="grid gap-4 xl:grid-cols-[1.25fr_0.95fr]">
           <div className="space-y-6">
             <Card className="rounded-[24px] border border-black/5 bg-white/92 shadow-[0_18px_55px_-40px_rgba(15,23,42,0.42)] sm:rounded-[30px]">
               <CardHeader className="flex flex-col gap-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Inventory overview
                   </p>
-                  <CardTitle className="mt-2 text-2xl font-semibold text-slate-950">
+                  <CardTitle className="mt-1.5 text-xl font-semibold text-foreground">
                     Active listings
                   </CardTitle>
                 </div>
@@ -624,11 +628,11 @@ export function AgentDashboardOverview() {
                   Manage listings <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent className="p-4 sm:p-6">
+              <CardContent className="p-4 sm:p-5">
                 {listingsLoading ? (
                   <p className="text-sm text-slate-500">Loading listings...</p>
                 ) : (listings as ListingItem[]).length === 0 ? (
-                  <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/60 p-8 text-sm text-slate-500">
+                  <div className="rounded-[20px] border border-dashed border-border bg-secondary/50 p-6 text-sm text-muted-foreground">
                     No listings yet. Add your first property to start driving active inventory,
                     enquiries and calendar activity.
                   </div>
@@ -637,7 +641,7 @@ export function AgentDashboardOverview() {
                     {(listings as ListingItem[]).slice(0, 4).map(listing => (
                       <div
                         key={listing.id}
-                        className="rounded-[22px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-[28px] sm:p-5"
+                        className="rounded-[18px] border border-border bg-card p-3.5 transition hover:border-border hover:shadow-sm sm:rounded-[20px] sm:p-4"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-2">
@@ -662,11 +666,11 @@ export function AgentDashboardOverview() {
                         </div>
 
                         <div className="mt-5 grid grid-cols-2 gap-3">
-                          <div className="rounded-2xl bg-emerald-50 px-4 py-3">
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                          <div className="rounded-xl bg-accent px-3.5 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                               Enquiries
                             </p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-950">
+                            <p className="mt-1 text-xl font-semibold text-foreground">
                               {listing.enquiries || 0}
                             </p>
                           </div>
@@ -674,7 +678,7 @@ export function AgentDashboardOverview() {
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
                               Views
                             </p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-950">
+                            <p className="mt-1 text-xl font-semibold text-foreground">
                               {listing.views || 0}
                             </p>
                           </div>
@@ -689,10 +693,10 @@ export function AgentDashboardOverview() {
             <Card className="rounded-[24px] border border-black/5 bg-white/92 shadow-[0_18px_55px_-40px_rgba(15,23,42,0.42)] sm:rounded-[30px]">
               <CardHeader className="flex flex-col gap-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     CRM pulse
                   </p>
-                  <CardTitle className="mt-2 text-2xl font-semibold text-slate-950">
+                  <CardTitle className="mt-1.5 text-xl font-semibold text-foreground">
                     Recent leads and pipeline
                   </CardTitle>
                 </div>
@@ -711,11 +715,11 @@ export function AgentDashboardOverview() {
                       key={stage.key}
                       type="button"
                       onClick={() => setLocation('/agent/leads')}
-                      className="rounded-[22px] border border-slate-100 bg-slate-50/80 p-4 text-left transition hover:border-slate-200 hover:bg-white hover:shadow-sm sm:rounded-3xl"
+                      className="rounded-[18px] border border-border bg-secondary/70 p-3.5 text-left transition hover:border-border hover:bg-card hover:shadow-sm sm:rounded-[20px]"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <Badge className={cn('border', stage.tone)}>{stage.label}</Badge>
-                        <span className="text-2xl font-semibold tracking-tight text-slate-950">
+                        <span className="text-xl font-semibold tracking-tight text-foreground">
                           {pipeline[stage.key].length}
                         </span>
                       </div>
@@ -726,7 +730,7 @@ export function AgentDashboardOverview() {
                 {pipelineLoading ? (
                   <p className="text-sm text-slate-500">Loading lead activity...</p>
                 ) : recentLeads.length === 0 ? (
-                  <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/60 p-8 text-sm text-slate-500">
+                  <div className="rounded-[20px] border border-dashed border-border bg-secondary/50 p-6 text-sm text-muted-foreground">
                     No lead activity yet. The moment enquiries start landing, this becomes the main
                     operating queue for the day.
                   </div>
@@ -735,7 +739,7 @@ export function AgentDashboardOverview() {
                     {recentLeads.map(lead => (
                       <div
                         key={lead.id}
-                        className="rounded-[22px] border border-slate-100 bg-slate-50/70 px-4 py-4 sm:rounded-[26px]"
+                        className="rounded-[18px] border border-border bg-secondary/70 px-3.5 py-3.5 sm:rounded-[20px]"
                       >
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                           <div className="space-y-1.5">
@@ -781,10 +785,10 @@ export function AgentDashboardOverview() {
             <Card className="rounded-[24px] border border-black/5 bg-white/92 shadow-[0_18px_55px_-40px_rgba(15,23,42,0.42)] sm:rounded-[30px]">
               <CardHeader className="flex flex-col gap-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Calendar view
                   </p>
-                  <CardTitle className="mt-2 text-2xl font-semibold text-slate-950">
+                  <CardTitle className="mt-1.5 text-xl font-semibold text-foreground">
                     Upcoming appointments
                   </CardTitle>
                 </div>
@@ -796,11 +800,11 @@ export function AgentDashboardOverview() {
                   Open calendar <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent className="space-y-4 p-4 sm:p-6">
+              <CardContent className="space-y-4 p-4 sm:p-5">
                 {showingsLoading ? (
                   <p className="text-sm text-slate-500">Loading appointments...</p>
                 ) : upcomingShowings.length === 0 ? (
-                  <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/60 p-8 text-sm text-slate-500">
+                  <div className="rounded-[20px] border border-dashed border-border bg-secondary/50 p-6 text-sm text-muted-foreground">
                     No scheduled showings yet. Book from CRM or from the calendar once a lead is
                     ready for a visit.
                   </div>
@@ -808,7 +812,7 @@ export function AgentDashboardOverview() {
                   upcomingShowings.map(showing => (
                     <div
                       key={showing.id}
-                      className="rounded-[22px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 sm:rounded-[26px]"
+                      className="rounded-[18px] border border-border bg-card p-3.5 sm:rounded-[20px]"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-2">
@@ -826,7 +830,7 @@ export function AgentDashboardOverview() {
                             {showing.client?.name || 'Prospective buyer'}
                           </p>
                         </div>
-                        <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
+                        <Badge className="border border-emerald-200 bg-emerald-50 text-primary">
                           Scheduled
                         </Badge>
                       </div>
@@ -839,10 +843,10 @@ export function AgentDashboardOverview() {
             <Card className="rounded-[24px] border border-black/5 bg-white/92 shadow-[0_18px_55px_-40px_rgba(15,23,42,0.42)] sm:rounded-[30px]">
               <CardHeader className="flex flex-col gap-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Deal flow
                   </p>
-                  <CardTitle className="mt-2 text-2xl font-semibold text-slate-950">
+                  <CardTitle className="mt-1.5 text-xl font-semibold text-foreground">
                     Recent major deals
                   </CardTitle>
                 </div>
@@ -850,13 +854,13 @@ export function AgentDashboardOverview() {
                   {statsLoading ? '-' : `${stats?.offersInProgress ?? 0} offers in progress`}
                 </Badge>
               </CardHeader>
-              <CardContent className="space-y-4 p-4 sm:p-6">
+              <CardContent className="space-y-4 p-4 sm:p-5">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl bg-emerald-50 px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                  <div className="rounded-xl bg-accent px-3.5 py-3.5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                       Pending value
                     </p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">
+                    <p className="mt-1.5 text-xl font-semibold text-foreground">
                       {formatCurrency(stats?.commissionsPending ?? 0)}
                     </p>
                   </div>
@@ -864,7 +868,7 @@ export function AgentDashboardOverview() {
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
                       Closed pipeline
                     </p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">
+                    <p className="mt-1.5 text-xl font-semibold text-foreground">
                       {pipeline.closed.length}
                     </p>
                   </div>
@@ -873,7 +877,7 @@ export function AgentDashboardOverview() {
                 {commissionsLoading ? (
                   <p className="text-sm text-slate-500">Loading recent deal movement...</p>
                 ) : majorDeals.length === 0 ? (
-                  <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/60 p-8 text-sm text-slate-500">
+                  <div className="rounded-[20px] border border-dashed border-border bg-secondary/50 p-6 text-sm text-muted-foreground">
                     No commission-backed deal records yet. This card will start surfacing meaningful
                     deals as transactions move forward.
                   </div>
@@ -882,7 +886,7 @@ export function AgentDashboardOverview() {
                     {majorDeals.map(deal => (
                       <div
                         key={deal.id}
-                        className="rounded-[22px] border border-slate-100 bg-slate-50/70 px-4 py-4 sm:rounded-[26px]"
+                        className="rounded-[18px] border border-border bg-secondary/70 px-3.5 py-3.5 sm:rounded-[20px]"
                       >
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="space-y-2">
@@ -910,7 +914,7 @@ export function AgentDashboardOverview() {
                               className={cn(
                                 'mt-2 border capitalize',
                                 deal.status === 'paid'
-                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                  ? 'border-emerald-200 bg-emerald-50 text-primary'
                                   : deal.status === 'approved'
                                     ? 'border-blue-200 bg-blue-50 text-blue-700'
                                     : deal.status === 'pending'
@@ -932,10 +936,10 @@ export function AgentDashboardOverview() {
             <Card className="rounded-[24px] border border-black/5 bg-white/92 shadow-[0_18px_55px_-40px_rgba(15,23,42,0.42)] sm:rounded-[30px]">
               <CardHeader className="flex flex-col gap-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Alerts and reminders
                   </p>
-                  <CardTitle className="mt-2 text-2xl font-semibold text-slate-950">
+                  <CardTitle className="mt-1.5 text-xl font-semibold text-foreground">
                     Notifications
                   </CardTitle>
                 </div>
@@ -955,11 +959,11 @@ export function AgentDashboardOverview() {
                   ) : null}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 p-4 sm:p-6">
+              <CardContent className="space-y-3 p-4 sm:p-5">
                 {notificationsLoading ? (
                   <p className="text-sm text-slate-500">Loading reminders...</p>
                 ) : latestNotifications.length === 0 ? (
-                  <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/60 p-8 text-sm text-slate-500">
+                  <div className="rounded-[20px] border border-dashed border-border bg-secondary/50 p-6 text-sm text-muted-foreground">
                     No notifications yet. System alerts, showing reminders and lead events will
                     appear here.
                   </div>
@@ -970,7 +974,7 @@ export function AgentDashboardOverview() {
                       className={cn(
                         'rounded-[22px] border px-4 py-4 sm:rounded-[26px]',
                         notification.isRead === 0
-                          ? 'border-emerald-200 bg-emerald-50/70'
+                          ? 'border-emerald-200 bg-accent'
                           : 'border-slate-100 bg-slate-50/70',
                       )}
                     >
@@ -979,7 +983,7 @@ export function AgentDashboardOverview() {
                           className={cn(
                             'mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl',
                             notification.isRead === 0
-                              ? 'bg-white text-emerald-700'
+                              ? 'bg-white text-primary'
                               : 'bg-white text-slate-600',
                           )}
                         >
@@ -999,7 +1003,7 @@ export function AgentDashboardOverview() {
                               {notification.title}
                             </p>
                             {notification.isRead === 0 ? (
-                              <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                              <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
                             ) : null}
                           </div>
                           <p className="text-sm leading-5 text-slate-600">{notification.content}</p>
@@ -1015,7 +1019,7 @@ export function AgentDashboardOverview() {
             </Card>
 
             <Card className="overflow-hidden rounded-[24px] border border-black/5 bg-[linear-gradient(145deg,#111827_0%,#082f49_55%,#0f766e_140%)] text-white shadow-[0_22px_70px_-42px_rgba(15,23,42,0.72)] sm:rounded-[30px]">
-              <CardContent className="space-y-4 p-4 sm:p-6">
+              <CardContent className="space-y-4 p-4 sm:p-5">
                 <div className="flex items-center gap-2 text-emerald-200">
                   <Sparkles className="h-4 w-4" />
                   <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">

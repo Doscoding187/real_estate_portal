@@ -43,21 +43,21 @@ export function AgentTopNav() {
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-black/5 bg-[rgba(247,248,243,0.88)] px-4 py-4 backdrop-blur-xl sm:px-6 xl:px-8">
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 lg:gap-4">
+    <header className="sticky top-0 z-30 border-b border-border/80 bg-background/95 backdrop-blur-xl">
+      <div className="content-rail flex w-full flex-col gap-3 py-3 sm:gap-3.5 sm:py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1 pl-14 lg:pl-0">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
               Agent OS
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+            <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+              <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-[1.35rem]">
                 {sectionLabel}
               </h1>
-              <span className="hidden rounded-full bg-white px-3 py-1 text-sm text-slate-500 shadow-sm sm:inline-flex">
+              <span className="hidden rounded-full border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground shadow-sm sm:inline-flex">
                 {new Date().toLocaleDateString('en-ZA', {
-                  weekday: 'long',
+                  weekday: 'short',
                   month: 'short',
                   day: 'numeric',
                 })}
@@ -65,9 +65,9 @@ export function AgentTopNav() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <Button
-              className="hidden rounded-2xl bg-[linear-gradient(135deg,#082f49_0%,#0f766e_100%)] px-4 text-white hover:opacity-95 md:inline-flex"
+              className="hidden h-10 rounded-xl bg-primary px-4 text-primary-foreground shadow-sm hover:bg-primary/90 md:inline-flex"
               onClick={() => setLocation('/listings/create')}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -77,37 +77,37 @@ export function AgentTopNav() {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-2xl border-slate-200 bg-white shadow-sm xl:hidden"
+              className="h-10 w-10 rounded-xl border-border bg-card shadow-sm xl:hidden"
               onClick={() => setLocation('/agent/leads')}
             >
               <Search className="h-4 w-4" />
             </Button>
 
-            <NotificationCenter className="rounded-2xl border border-slate-200 bg-white shadow-sm hover:bg-slate-50" />
+            <NotificationCenter className="h-10 w-10 rounded-xl border border-border bg-card shadow-sm hover:bg-accent" />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2.5 py-2 shadow-sm hover:bg-slate-50 sm:gap-3 sm:px-3"
+                  className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-2.5 shadow-sm hover:bg-accent sm:h-11 sm:gap-3 sm:px-3"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f766e_0%,#38bdf8_100%)] text-sm font-semibold text-white">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-primary-foreground sm:h-9 sm:w-9">
                     {initials}
                   </div>
                   <div className="hidden text-left md:block">
-                    <p className="text-sm font-semibold text-slate-950">{user?.name || 'Agent'}</p>
-                    <p className="text-xs text-slate-500">Real Estate Agent</p>
+                    <p className="text-sm font-semibold text-foreground">{user?.name || 'Agent'}</p>
+                    <p className="text-[11px] text-muted-foreground">Real Estate Agent</p>
                   </div>
-                  <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
+                  <ChevronDown className="hidden h-4 w-4 text-muted-foreground sm:block" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-60 rounded-2xl border-slate-200 bg-white shadow-xl"
+                className="w-60 rounded-2xl border-border bg-popover shadow-xl"
               >
                 <div className="px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-950">{user?.name}</p>
-                  <p className="text-xs text-slate-500">{user?.email}</p>
+                  <p className="text-sm font-semibold text-popover-foreground">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setLocation('/agent/settings')}>
@@ -133,10 +133,10 @@ export function AgentTopNav() {
 
         <div className="xl:hidden">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search listings, leads, appointments..."
-              className="h-11 rounded-2xl border-slate-200 bg-white/90 pl-11 pr-4 shadow-sm"
+              className="h-10 rounded-xl border-border bg-card pl-11 pr-4 shadow-sm"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -145,10 +145,10 @@ export function AgentTopNav() {
 
         <div className="hidden min-w-0 max-w-xl flex-1 xl:block">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search listings, leads, appointments..."
-              className="h-12 rounded-2xl border-slate-200 bg-white/90 pl-11 pr-4 shadow-sm"
+              className="h-11 rounded-xl border-border bg-card pl-11 pr-4 shadow-sm"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
