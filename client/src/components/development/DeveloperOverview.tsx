@@ -40,15 +40,15 @@ export function DeveloperOverview({
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-500 to-indigo-600">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
               {developerLogo ? (
                 <img
                   src={developerLogo}
                   alt={developerName}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               ) : (
-                <Building2 className="h-8 w-8 text-white" />
+                <Building2 className="h-8 w-8 text-slate-500" />
               )}
             </div>
 
@@ -83,7 +83,7 @@ export function DeveloperOverview({
             </div>
           </div>
 
-          <p className="mt-5 text-sm leading-relaxed text-slate-600">
+          <p className="mt-5 line-clamp-3 text-sm leading-relaxed text-slate-600">
             {developerDescription?.trim()
               ? developerDescription
               : 'Professional property developer focused on delivering quality developments.'}
@@ -109,14 +109,6 @@ export function DeveloperOverview({
                 ) : null}
               </div>
             )}
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">Why this matters</p>
-              <p className="mt-1 text-sm text-slate-600">
-                Buyers want proof of track record before they enquire. When profile data exists, it
-                should reinforce trust. When it does not, the section should stay clean.
-              </p>
-            </div>
           </div>
 
           {developerSlug ? (

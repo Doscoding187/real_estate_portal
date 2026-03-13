@@ -25,17 +25,14 @@ import {
 import {
   Building2,
   Home,
-  Bed,
-  Bath,
   Check,
-  Phone,
-  Mail,
   Download,
+  Mail,
   Maximize,
+  Loader2,
   Award,
   Globe,
   Briefcase,
-  Loader2,
   ArrowUpRight,
   Layers,
   Zap,
@@ -297,11 +294,6 @@ function UnitTypeCarousel({
           {units.map(unit => {
             const unitPriceFrom = parseNumber(unit.basePriceFrom) ?? 0;
             const unitPriceTo = parseNumber(unit.basePriceTo);
-            const showHouseSize = isPresentSize(unit.floorSize);
-            const showLandSize = isPresentSize(unit.landSize);
-            const houseSizeLabel = formatSizeValue(unit.floorSize);
-            const landSizeLabel = formatSizeValue(unit.landSize);
-            const parkingLabel = formatParkingLabel(unit.parkingType, unit.parkingBays);
             const floorPlanUrl = resolveUnitFloorPlanUrl(unit);
             const availability = getUnitAvailabilityState(unit);
             const exactPriceFrom = formatExactRand(unitPriceFrom) || 'Price on request';
@@ -330,7 +322,10 @@ function UnitTypeCarousel({
                 : 'Request Info';
 
             return (
-              <CarouselItem key={unit.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/3">
+              <CarouselItem
+                key={unit.id}
+                className="pl-4 md:basis-[78%] lg:basis-[58%] xl:basis-[46%]"
+              >
                 <Card className="flex h-full flex-col overflow-hidden border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
                   <div className="group relative w-full overflow-hidden bg-slate-200 aspect-[4/3]">
                     <img
@@ -344,58 +339,40 @@ function UnitTypeCarousel({
                       }}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/70">
-                        {unit.normalizedType}
-                      </p>
-                      <p className="mt-1 text-lg font-bold text-white">{exactPriceFrom}</p>
-                      {estimatedRepayment ? (
-                        <p className="text-xs text-white/80">
-                          Est. from {formatExactRand(estimatedRepayment)} / month
-                        </p>
-                      ) : null}
-                    </div>
-                    {availability ? (
+                    {unit.normalizedOwnership ? (
                       <div className="absolute left-3 top-3">
-                        <span
-                          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${availability.className}`}
-                        >
-                          {availability.label}
+                        <span className="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
+                          {unit.normalizedOwnership}
                         </span>
                       </div>
                     ) : null}
                   </div>
 
-                  <CardContent className="flex flex-1 flex-col space-y-4 p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h4 className="text-base font-bold text-slate-900">{unit.name}</h4>
-                          <p className="mt-1 text-sm text-slate-500">
-                            {exactPriceTo ? `${exactPriceFrom} - ${exactPriceTo}` : exactPriceFrom}
-                          </p>
-                        </div>
-                        {unit.normalizedOwnership ? (
-                          <Badge variant="outline" className="border-slate-200 text-slate-600">
-                            {unit.normalizedOwnership}
-                          </Badge>
-                        ) : null}
+                  <CardContent className="flex flex-1 flex-col space-y-3 p-3.5">
+                    <div className="space-y-1.5">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-[12px] font-bold leading-tight text-slate-900">
+                          {unit.name}
+                        </h4>
+                        <p className="mt-1 truncate text-[11px] font-semibold text-slate-900">
+                          {exactPriceTo ? `${exactPriceFrom} - ${exactPriceTo}` : exactPriceFrom}
+                        </p>
                       </div>
                       {estimatedDeposit ? (
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                             Ownership Snapshot
                           </p>
-                          <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                            <span className="text-slate-600">Deposit from</span>
-                            <span className="font-semibold text-slate-900">
+                          <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px]">
+                            <span className="truncate text-slate-600">Deposit from</span>
+                            <span className="truncate font-semibold text-slate-900">
                               {formatExactRand(estimatedDeposit)}
                             </span>
                           </div>
                           {estimatedRepayment ? (
-                            <div className="mt-1 flex items-center justify-between gap-3 text-sm">
-                              <span className="text-slate-600">Repayment from</span>
-                              <span className="font-semibold text-slate-900">
+                            <div className="mt-1 flex items-center justify-between gap-2 text-[10px]">
+                              <span className="truncate text-slate-600">Repayment from</span>
+                              <span className="truncate font-semibold text-slate-900">
                                 {formatExactRand(estimatedRepayment)} / month
                               </span>
                             </div>
@@ -404,75 +381,16 @@ function UnitTypeCarousel({
                       ) : null}
                     </div>
 
-                    <div className="mt-auto flex min-h-[52px] items-center justify-between gap-1 border-y border-slate-100 py-2">
-                      <div className="flex flex-col items-center justify-center text-center px-1">
-                        <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
-                          {showHouseSize && houseSizeLabel ? `${houseSizeLabel} m2` : '-'}
-                        </span>
-                      </div>
-
-                      <div className="h-6 w-px bg-slate-100 shrink-0" />
-
-                      <div className="flex flex-col items-center justify-center text-center px-1">
-                        <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                        {(() => {
-                          const bedText =
-                            unit.bedroomKey === 'other'
-                              ? 'Studio/Other'
-                              : `${unit.bedrooms ?? unit.bedroomLabel ?? '-'}`;
-                          return (
-                            <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
-                              {unit.bedroomKey === 'other' ? bedText : `${bedText} Bed`}
-                            </span>
-                          );
-                        })()}
-                      </div>
-
-                      <div className="h-6 w-px bg-slate-100 shrink-0" />
-
-                      <div className="flex flex-col items-center justify-center text-center px-1">
-                        <Bath className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
-                          {formatBathValue(unit.bathrooms) ?? '-'} Bath
-                        </span>
-                      </div>
-
-                      {showLandSize && landSizeLabel ? (
-                        <>
-                          <div className="h-6 w-px bg-slate-100 shrink-0" />
-                          <div className="flex flex-col items-center justify-center text-center px-1">
-                            <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                            <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
-                              {landSizeLabel} m2
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        parkingLabel && (
-                          <>
-                            <div className="h-6 w-px bg-slate-100 shrink-0" />
-                            <div className="flex flex-col items-center justify-center text-center px-1">
-                              <Car className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                              <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
-                                Parking {parkingLabel}
-                              </span>
-                            </div>
-                          </>
-                        )
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="mt-auto grid grid-cols-2 gap-2 pt-0.5">
                       <Button
-                        className="h-10 bg-orange-500 text-xs font-semibold text-white hover:bg-orange-600"
+                        className="h-9 px-2 text-[11px] font-semibold text-white bg-orange-500 hover:bg-orange-600"
                         onClick={() => onRequestCallback(unit)}
                       >
                         {availability?.primaryLabel || 'Request Callback'}
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-10 border-blue-200 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                        className="h-9 border-blue-200 px-2 text-[11px] font-semibold text-blue-700 hover:bg-blue-50"
                         onClick={() => {
                           if (floorPlanUrl) {
                             onOpenFloorPlan(unit);
@@ -521,6 +439,149 @@ function UnitTypeCarousel({
         </div>
       )}
     </div>
+  );
+}
+
+type QuickQualificationState = {
+  tone: 'success' | 'warning' | 'muted';
+  buyingPower: number;
+  comfortFloor: number;
+  headline: string;
+  body: string;
+};
+
+type DevelopmentActionPanelProps = {
+  developmentName: string;
+  inputId: string;
+  quickIncome: string;
+  onQuickIncomeChange: (value: string) => void;
+  quickQualification: QuickQualificationState | null;
+  brochureUrl: string | null;
+  unitTypeCount: number;
+  onStartQualification: () => void;
+  onDownloadBrochure: () => void;
+  onContactSales: () => void;
+};
+
+function DevelopmentActionPanel({
+  developmentName,
+  inputId,
+  quickIncome,
+  onQuickIncomeChange,
+  quickQualification,
+  brochureUrl,
+  unitTypeCount,
+  onStartQualification,
+  onDownloadBrochure,
+  onContactSales,
+}: DevelopmentActionPanelProps) {
+  return (
+    <Card className="overflow-hidden border-slate-200 shadow-sm">
+      <CardContent className="p-0">
+        <div className="bg-slate-950 px-5 py-5 text-white">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-200">
+            Interested in {developmentName}?
+          </p>
+          <h3 className="mt-2 text-lg font-bold">Check affordability and take the next step.</h3>
+        </div>
+
+        <div className="space-y-4 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Quick Qualification Check
+                </p>
+                <p className="mt-1 text-xs text-slate-600">Enter your monthly household income</p>
+              </div>
+              <Badge
+                variant="outline"
+                className="border-orange-200 bg-orange-50 text-[11px] text-orange-700"
+              >
+                60 sec
+              </Badge>
+            </div>
+
+            <div className="mt-3">
+              <label htmlFor={inputId} className="sr-only">
+                Monthly household income
+              </label>
+              <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
+                <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
+                  R
+                </span>
+                <input
+                  id={inputId}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="45 000"
+                  value={quickIncome}
+                  onChange={e => onQuickIncomeChange(e.target.value)}
+                  className="h-11 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            {quickQualification ? (
+              <div
+                className={`mt-3 rounded-xl border p-3 ${
+                  quickQualification.tone === 'success'
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : quickQualification.tone === 'warning'
+                      ? 'border-amber-200 bg-amber-50'
+                      : 'border-slate-200 bg-white'
+                }`}
+              >
+                <p className="text-xs font-semibold text-slate-900">
+                  {quickQualification.headline}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                  {quickQualification.body}
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <Button
+              className="h-10 bg-orange-500 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+              onClick={onStartQualification}
+            >
+              Start Full Qualification
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 border-blue-200 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+              onClick={onDownloadBrochure}
+            >
+              {brochureUrl ? 'Download Brochure' : 'Request Brochure'}
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-9 text-xs font-medium text-slate-600 hover:text-slate-900"
+              onClick={onContactSales}
+            >
+              Contact Sales Team
+            </Button>
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3 text-[11px] text-slate-600">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              Free pre-qualification available
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              No obligation to enquire
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              {unitTypeCount} unit types available
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1131,7 +1192,7 @@ export default function DevelopmentDetail() {
 
   const parsedQuickIncome = Number(quickIncome.replace(/[^\d.]/g, ''));
   const hasQuickIncome = Number.isFinite(parsedQuickIncome) && parsedQuickIncome > 0;
-  const quickQualification = (() => {
+  const quickQualification: QuickQualificationState | null = (() => {
     if (!hasQuickIncome) return null;
 
     const maxMonthlyRepayment = parsedQuickIncome / QUICK_QUALIFICATION_PAYMENT_RATIO;
@@ -1250,9 +1311,8 @@ export default function DevelopmentDetail() {
         {/* Quick Info Section - ABOVE SectionNav */}
         <div className="w-full bg-white border-b border-slate-200">
           <div className="container max-w-7xl mx-auto px-4 py-6">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-stretch">
-              {/* Left Column - Stats + Overview Card */}
-              <div className="flex flex-col gap-6 h-full">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-6">
                 {/* Quick Stats */}
                 <section id="overview" className="w-full">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1289,10 +1349,25 @@ export default function DevelopmentDetail() {
                   constructionStatus={normalizedStatus}
                   salesMetrics={sales}
                 />
+
+                <div className="lg:hidden">
+                  <DevelopmentActionPanel
+                    developmentName={development.name}
+                    inputId="hero-quick-income"
+                    quickIncome={quickIncome}
+                    onQuickIncomeChange={setQuickIncome}
+                    quickQualification={quickQualification}
+                    brochureUrl={brochureUrl}
+                    unitTypeCount={dev.unitTypes?.length || 0}
+                    onStartQualification={() => navigateToQualification('hero_action_panel')}
+                    onDownloadBrochure={() => openLeadDialog('brochure', 'hero_action_panel')}
+                    onContactSales={() => openLeadDialog('contact', 'hero_action_panel')}
+                  />
+                </div>
               </div>
 
               {/* Right Column - Conversion Action Panel */}
-              <div className="w-full lg:w-[360px] h-full self-stretch space-y-4">
+              <div className="hidden w-full lg:w-[360px] h-full self-stretch space-y-4">
                 <Card className="shadow-sm border-slate-200 overflow-hidden">
                   <CardContent className="p-0">
                     <div className="bg-slate-950 px-5 py-5 text-white">
@@ -1303,7 +1378,7 @@ export default function DevelopmentDetail() {
                         Check fit, get the brochure, or talk to sales.
                       </h3>
                       <p className="mt-2 text-sm text-slate-300">
-                        This panel keeps the user on the page while moving them closer to enquiry.
+                        Check affordability, request the brochure, or contact the sales team.
                       </p>
                     </div>
 
@@ -1843,10 +1918,7 @@ export default function DevelopmentDetail() {
                             </button>
                           )}
 
-                          <div
-                            ref={amenityTabsRef}
-                            className="overflow-x-auto scrollbar-hide pb-2 px-10"
-                          >
+                          <div ref={amenityTabsRef} className="overflow-x-auto scrollbar-hide pb-2">
                             <TabsList className="bg-transparent p-0 h-auto inline-flex w-max flex-nowrap gap-2">
                               {amenityTabs.map(tab => {
                                 const Icon = tab.icon || CheckCircle2;
@@ -1948,45 +2020,23 @@ export default function DevelopmentDetail() {
               </main>
 
               {/* Sidebar - CRITICAL: Proper sticky positioning */}
-              <aside className="w-full lg:w-[360px] space-y-4 self-stretch">
-                {/* Sticky wrapper with proper constraints */}
+              <aside className="hidden w-full space-y-4 self-stretch lg:block lg:w-[360px]">
                 <div
                   className="sticky self-start space-y-4"
                   style={{ top: showQuickNav ? 64 : 96 }}
                 >
-                  {/* Contact Form */}
-                  <Card className="shadow-sm border-slate-200">
-                    <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
-                      <CardTitle className="text-sm font-bold text-slate-800">
-                        Interested in This Development?
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 space-y-2.5">
-                      <Button
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white h-10 text-sm font-semibold shadow-sm"
-                        onClick={() => openLeadDialog('brochure', 'sidebar_interest_card')}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        {brochureUrl ? 'Download Brochure' : 'Request Brochure'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full h-10 border-blue-200 text-blue-600 hover:bg-blue-50 text-sm font-medium"
-                        onClick={() => navigateToQualification('sidebar_interest_card')}
-                      >
-                        <Phone className="mr-2 h-4 w-4" />
-                        Start Full Qualification
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full h-9 text-slate-600 hover:text-slate-900 text-xs"
-                        onClick={() => openLeadDialog('contact', 'sidebar_interest_card')}
-                      >
-                        <Mail className="mr-2 h-3.5 w-3.5" />
-                        Contact Sales Team
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  <DevelopmentActionPanel
+                    developmentName={development.name}
+                    inputId="sidebar-quick-income"
+                    quickIncome={quickIncome}
+                    onQuickIncomeChange={setQuickIncome}
+                    quickQualification={quickQualification}
+                    brochureUrl={brochureUrl}
+                    unitTypeCount={dev.unitTypes?.length || 0}
+                    onStartQualification={() => navigateToQualification('sidebar_interest_card')}
+                    onDownloadBrochure={() => openLeadDialog('brochure', 'sidebar_interest_card')}
+                    onContactSales={() => openLeadDialog('contact', 'sidebar_interest_card')}
+                  />
                 </div>
               </aside>
             </div>
