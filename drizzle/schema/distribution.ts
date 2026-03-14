@@ -221,6 +221,7 @@ export const distributionBrandPartnerships = mysqlTable(
     endedAt: timestamp('ended_at', { mode: 'string' }),
     reasonCode: varchar('reason_code', { length: 80 }),
     notes: text('notes'),
+    onboardingDefaultsJson: json('onboarding_defaults_json'),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),

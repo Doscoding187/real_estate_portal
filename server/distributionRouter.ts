@@ -89,6 +89,11 @@ import {
   isMissingRequiredDocumentsSchemaError,
   listDevelopmentRequiredDocumentsOrEmpty,
 } from './services/distributionRequiredDocumentsService';
+import {
+  brandOnboardingPresetSchema,
+  getBrandOnboardingPreset,
+  setBrandOnboardingPreset,
+} from './services/distributionBrandOnboardingPresetService';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -2214,6 +2219,58 @@ const adminDistributionRouter = router({
           };
         },
       );
+    }),
+
+  getBrandOnboardingPreset: superAdminProcedure
+    .input(
+      z.object({
+        brandProfileId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      return {
+        success: true as const,
+        brandProfileId: input.brandProfileId,
+        preset: await getBrandOnboardingPreset(db, input.brandProfileId),
+      };
+    }),
+
+  setBrandOnboardingPreset: superAdminProcedure
+    .input(
+      z.object({
+        brandProfileId: z.number().int().positive(),
+        preset: brandOnboardingPresetSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      try {
+        return {
+          success: true as const,
+          brandProfileId: input.brandProfileId,
+          preset: await setBrandOnboardingPreset({
+            db,
+            brandProfileId: input.brandProfileId,
+            actorUserId: ctx.user.id,
+            preset: input.preset,
+          }),
+        };
+      } catch (error) {
+        if ((error as Error)?.message?.includes('Brand onboarding preset schema is not ready')) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: (error as Error).message,
+          });
+        }
+        throw error;
+      }
     }),
 
   getDevelopmentAccess: superAdminProcedure

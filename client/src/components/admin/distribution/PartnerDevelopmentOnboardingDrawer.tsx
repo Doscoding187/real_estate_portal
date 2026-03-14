@@ -47,6 +47,7 @@ type RequiredDocumentDraft = {
   documentLabel: string;
   isRequired: boolean;
   isActive: boolean;
+  sortOrder: number;
 };
 
 type ProgramReadiness = {
@@ -66,6 +67,25 @@ type ProgramReadiness = {
     requiredDocsCount: number;
     requiredRequiredDocsCount: number;
   };
+};
+
+type BrandOnboardingPreset = {
+  commissionModel: 'flat_percentage' | 'flat_amount';
+  defaultCommissionPercent: number | null;
+  defaultCommissionAmount: number | null;
+  tierAccessPolicy: 'restricted' | 'open' | 'invite_only';
+  payoutMilestone:
+    | 'attorney_instruction'
+    | 'attorney_signing'
+    | 'bond_approval'
+    | 'transfer_registration'
+    | 'occupation'
+    | 'custom';
+  payoutMilestoneNotes: string | null;
+  currencyCode: string;
+  isActive: boolean;
+  primaryManagerUserId: number | null;
+  documents: RequiredDocumentDraft[];
 };
 
 type ReadinessCounts = {
@@ -182,12 +202,14 @@ export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadine
 
 function DevelopmentProgramConfigPanel({
   development,
+  brandProfileId,
   managerOptions,
   onSaved,
   focusSection,
   otherDevelopments,
 }: {
   development: DevelopmentRow;
+  brandProfileId: number | null;
   managerOptions: ManagerOption[];
   onSaved: () => Promise<void> | void;
   focusSection?: string | null;
@@ -200,12 +222,21 @@ function DevelopmentProgramConfigPanel({
   const docsQuery = trpc.distribution.admin.getDevelopmentRequiredDocuments.useQuery({
     developmentId: development.developmentId,
   });
+  const brandPresetQuery = trpc.distribution.admin.getBrandOnboardingPreset.useQuery(
+    {
+      brandProfileId: Number(brandProfileId || 0),
+    },
+    {
+      enabled: typeof brandProfileId === 'number' && brandProfileId > 0,
+    },
+  );
 
   const upsertProgramMutation = trpc.distribution.admin.upsertProgram.useMutation();
   const assignManagerMutation = trpc.distribution.admin.assignManagerToDevelopment.useMutation();
   const setDocsMutation = trpc.distribution.admin.setDevelopmentRequiredDocuments.useMutation();
   const onboardDevelopmentMutation =
     trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
+  const setBrandPresetMutation = trpc.distribution.admin.setBrandOnboardingPreset.useMutation();
 
   const [commissionModel, setCommissionModel] = useState<'flat_percentage' | 'flat_amount'>(
     development.program?.commissionModel === 'fixed_amount' ? 'flat_amount' : 'flat_percentage',
@@ -223,6 +254,30 @@ function DevelopmentProgramConfigPanel({
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
+
+  const applyPresetToForm = useCallback((preset: BrandOnboardingPreset) => {
+    setCommissionModel(preset.commissionModel);
+    setDefaultCommissionPercent(
+      preset.defaultCommissionPercent != null ? String(preset.defaultCommissionPercent) : '',
+    );
+    setDefaultCommissionAmount(
+      preset.defaultCommissionAmount != null ? String(preset.defaultCommissionAmount) : '',
+    );
+    setTierAccessPolicy(preset.tierAccessPolicy);
+    setPayoutMilestone(preset.payoutMilestone);
+    setPayoutMilestoneNotes(preset.payoutMilestoneNotes || '');
+    setCurrencyCode(String(preset.currencyCode || 'ZAR'));
+    setIsActive(Boolean(preset.isActive));
+    setPrimaryManagerUserId(
+      preset.primaryManagerUserId ? String(preset.primaryManagerUserId) : '',
+    );
+    setDocuments(
+      (preset.documents || []).map(document => ({
+        ...document,
+        id: undefined,
+      })),
+    );
+  }, []);
 
   useEffect(() => {
     const readiness = readinessQuery.data;
@@ -270,6 +325,7 @@ function DevelopmentProgramConfigPanel({
         documentLabel: String(document.documentLabel || ''),
         isRequired: Boolean(document.isRequired),
         isActive: Boolean(document.isActive),
+        sortOrder: Number(document.sortOrder || 0),
       }));
     setDocuments(list);
   }, [docsQuery.data, development.developmentId]);
@@ -285,6 +341,7 @@ function DevelopmentProgramConfigPanel({
     upsertProgramMutation.isPending ||
     assignManagerMutation.isPending ||
     setDocsMutation.isPending ||
+    setBrandPresetMutation.isPending ||
     isApplyingTemplate;
 
   function buildProgramInput(targetDevelopmentId: number, isReferralEnabled: boolean) {
@@ -319,6 +376,34 @@ function DevelopmentProgramConfigPanel({
         isRequired: document.isRequired,
         sortOrder: index,
         isActive: document.isActive,
+      })),
+    };
+  }
+
+  function buildBrandPresetInput(): BrandOnboardingPreset {
+    return {
+      commissionModel,
+      defaultCommissionPercent:
+        commissionModel === 'flat_percentage' && defaultCommissionPercent !== ''
+          ? Number(defaultCommissionPercent)
+          : null,
+      defaultCommissionAmount:
+        commissionModel === 'flat_amount' && defaultCommissionAmount !== ''
+          ? Number(defaultCommissionAmount)
+          : null,
+      tierAccessPolicy,
+      payoutMilestone,
+      payoutMilestoneNotes:
+        payoutMilestone === 'custom' ? payoutMilestoneNotes.trim() || null : null,
+      currencyCode: currencyCode.trim().toUpperCase(),
+      isActive,
+      primaryManagerUserId: primaryManagerUserId ? Number(primaryManagerUserId) : null,
+      documents: documents.map((document, index) => ({
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel.trim() || 'Custom Document',
+        isRequired: document.isRequired,
+        isActive: document.isActive,
+        sortOrder: index,
       })),
     };
   }
@@ -392,8 +477,78 @@ function DevelopmentProgramConfigPanel({
     }
   }
 
+  async function handleSaveBrandPreset() {
+    if (!brandProfileId) {
+      toast.error('Select a brand-linked development before saving a brand preset');
+      return;
+    }
+
+    await setBrandPresetMutation.mutateAsync({
+      brandProfileId,
+      preset: buildBrandPresetInput(),
+    });
+    await brandPresetQuery.refetch();
+    toast.success('Brand onboarding preset saved');
+  }
+
+  function handleLoadBrandPreset() {
+    const preset = brandPresetQuery.data?.preset as BrandOnboardingPreset | null | undefined;
+    if (!preset) {
+      toast.error('No saved brand preset found for this brand');
+      return;
+    }
+
+    applyPresetToForm(preset);
+    toast.success('Brand preset loaded into this development');
+  }
+
+  const brandPresetManagerLabel = managerOptions.find(
+    option => option.userId === Number(brandPresetQuery.data?.preset?.primaryManagerUserId || 0),
+  )?.label;
+
   return (
     <div className="space-y-3">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Brand Preset</CardTitle>
+          <CardDescription>
+            Save this configuration as the reusable onboarding default for the selected brand.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {brandPresetQuery.data?.preset ? (
+            <div className="rounded border border-blue-200 bg-blue-50/70 p-3 text-xs text-slate-700">
+              <p className="font-medium text-slate-900">Saved brand preset available</p>
+              <p className="mt-1">
+                {brandPresetQuery.data.preset.commissionModel},{' '}
+                {brandPresetQuery.data.preset.currencyCode},{' '}
+                {brandPresetQuery.data.preset.documents.length} document
+                {brandPresetQuery.data.preset.documents.length === 1 ? '' : 's'}
+                {brandPresetManagerLabel ? `, manager: ${brandPresetManagerLabel}` : ''}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+              No saved brand preset yet. Save the current development setup once, then reuse it
+              across this brand.
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={handleLoadBrandPreset}
+              disabled={!brandPresetQuery.data?.preset || isSaving}
+            >
+              Load Brand Preset
+            </Button>
+            <Button variant="outline" onClick={handleSaveBrandPreset} disabled={isSaving}>
+              {setBrandPresetMutation.isPending ? 'Saving Preset...' : 'Save Current as Brand Preset'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Readiness</CardTitle>
@@ -683,6 +838,7 @@ function DevelopmentProgramConfigPanel({
                   documentLabel: '',
                   isRequired: true,
                   isActive: true,
+                  sortOrder: current.length,
                 },
               ])
             }
@@ -698,7 +854,7 @@ function DevelopmentProgramConfigPanel({
           <Button variant="outline" onClick={handleApplyTemplateToOtherDevelopments} disabled={isSaving}>
             {isApplyingTemplate
               ? 'Applying Defaults...'
-              : `Apply to Other ${otherDevelopments.length} Development${
+              : `Apply Current Setup to Other ${otherDevelopments.length} Development${
                   otherDevelopments.length === 1 ? '' : 's'
                 }`}
           </Button>
@@ -1063,6 +1219,7 @@ export function PartnerDevelopmentOnboardingDrawer({
                     <DevelopmentProgramConfigPanel
                       key={selectedDevelopment.developmentId}
                       development={selectedDevelopment}
+                      brandProfileId={brandProfileId}
                       otherDevelopments={developments.filter(
                         row => row.developmentId !== selectedDevelopment.developmentId,
                       )}
