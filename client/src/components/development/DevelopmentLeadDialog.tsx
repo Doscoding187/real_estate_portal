@@ -15,7 +15,7 @@ import { trpc } from '@/lib/trpc';
 import { formatSARandShort } from '@/lib/bond-calculator';
 import { trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 
-type LeadDialogMode = 'brochure' | 'contact' | 'qualification';
+type LeadDialogMode = 'brochure' | 'contact' | 'qualification' | 'info';
 
 interface DevelopmentLeadDialogProps {
   open: boolean;
@@ -70,6 +70,14 @@ const MODE_COPY: Record<
     leadSource: 'development_detail_qualification',
     successMessage: 'Qualification request submitted.',
   },
+  info: {
+    title: 'Request Information',
+    description:
+      'Share your details to receive the latest pricing, specifications, and next steps for this unit.',
+    submitLabel: 'Request Information',
+    leadSource: 'development_detail_info',
+    successMessage: 'Information request submitted.',
+  },
 };
 
 export function DevelopmentLeadDialog({
@@ -119,6 +127,10 @@ export function DevelopmentLeadDialog({
         : '';
 
       return `I would like to start a full qualification review for ${development.name}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
+    }
+
+    if (mode === 'info') {
+      return `Please send me more information about ${development.name}, including pricing, specifications, and available options.`;
     }
 
     return `I am interested in ${development.name}. Please contact me with pricing, availability, and next steps.`;
