@@ -7,6 +7,9 @@ import { getBrandPartnershipByBrandProfileId } from './distributionAccessReposit
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 export const brandOnboardingPresetDocumentSchema = z.object({
+  category: z
+    .enum(['developer_document', 'client_required_document'])
+    .default('client_required_document'),
   documentCode: z.enum([
     'id_document',
     'proof_of_address',
@@ -68,6 +71,11 @@ function normalizePreset(input: BrandOnboardingPreset): BrandOnboardingPreset {
         ...document,
         documentLabel: document.documentLabel.trim(),
         sortOrder: typeof document.sortOrder === 'number' ? document.sortOrder : index,
+        category: (
+          document.category === 'developer_document'
+            ? 'developer_document'
+            : 'client_required_document'
+        ) as 'developer_document' | 'client_required_document',
       }))
       .sort((a, b) => a.sortOrder - b.sortOrder),
   };

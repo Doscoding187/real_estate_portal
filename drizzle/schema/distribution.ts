@@ -106,6 +106,10 @@ const DEVELOPMENT_REQUIRED_DOCUMENT_CODE_VALUES = [
   'transfer_documents',
   'custom',
 ] as const;
+export const DEVELOPMENT_REQUIRED_DOCUMENT_CATEGORY_VALUES = [
+  'developer_document',
+  'client_required_document',
+] as const;
 const DISTRIBUTION_DEAL_DOCUMENT_STATUS_VALUES = [
   'pending',
   'received',
@@ -345,6 +349,12 @@ export const developmentRequiredDocuments = mysqlTable(
       DEVELOPMENT_REQUIRED_DOCUMENT_CODE_VALUES as unknown as [string, ...string[]],
     ).notNull(),
     documentLabel: varchar('document_label', { length: 160 }).notNull(),
+    category: mysqlEnum(
+      'category',
+      DEVELOPMENT_REQUIRED_DOCUMENT_CATEGORY_VALUES as unknown as [string, ...string[]],
+    )
+      .default('client_required_document')
+      .notNull(),
     isRequired: tinyint('is_required').default(1).notNull(),
     sortOrder: int('sort_order').default(0).notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
@@ -354,6 +364,7 @@ export const developmentRequiredDocuments = mysqlTable(
   table => [
     index('idx_development_required_documents_development').on(table.developmentId),
     index('idx_development_required_documents_code').on(table.developmentId, table.documentCode),
+    index('idx_development_required_documents_category').on(table.developmentId, table.category),
     index('idx_development_required_documents_required').on(table.isRequired),
     index('idx_development_required_documents_active').on(table.isActive),
     index('idx_development_required_documents_order').on(table.developmentId, table.sortOrder),

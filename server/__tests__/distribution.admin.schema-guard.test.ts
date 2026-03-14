@@ -242,6 +242,7 @@ describe('distribution admin schema guards', () => {
         developmentId: 77,
         documents: [
           {
+            category: 'client_required_document',
             documentCode: 'bank_statement',
             documentLabel: 'Bank Statements',
             isRequired: true,
@@ -249,6 +250,7 @@ describe('distribution admin schema guards', () => {
             isActive: true,
           },
           {
+            category: 'client_required_document',
             documentCode: 'bank_statement',
             documentLabel: 'Updated Bank Statements',
             isRequired: true,
@@ -273,6 +275,7 @@ describe('distribution admin schema guards', () => {
         developmentId: 77,
         documents: [
           {
+            category: 'developer_document',
             documentCode: 'custom',
             documentLabel: 'Price Structure',
             isRequired: true,
@@ -280,6 +283,7 @@ describe('distribution admin schema guards', () => {
             isActive: true,
           },
           {
+            category: 'developer_document',
             documentCode: 'custom',
             documentLabel: 'Price Structure',
             isRequired: true,

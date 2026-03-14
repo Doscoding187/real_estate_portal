@@ -1,7 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
-  developmentRequiredDocuments,
   developments,
   distributionDealDocuments,
   distributionDeals,
@@ -12,6 +11,7 @@ import {
 import { getDb } from '../db';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 import { assertDealIsMutable } from './distributionDealMutationGuards';
+import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
 
 export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
 
@@ -37,6 +37,7 @@ export type DealChecklistPayload = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    category: 'developer_document' | 'client_required_document';
     isRequired: boolean;
     sortOrder: number;
     isActive: boolean;
@@ -190,23 +191,9 @@ export async function getDealChecklist(
     .where(eq(distributionPrograms.developmentId, dealScope.developmentId))
     .limit(1);
 
-  const templates = await db
-    .select({
-      id: developmentRequiredDocuments.id,
-      documentCode: developmentRequiredDocuments.documentCode,
-      documentLabel: developmentRequiredDocuments.documentLabel,
-      isRequired: developmentRequiredDocuments.isRequired,
-      sortOrder: developmentRequiredDocuments.sortOrder,
-      isActive: developmentRequiredDocuments.isActive,
-    })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        eq(developmentRequiredDocuments.developmentId, dealScope.developmentId),
-        eq(developmentRequiredDocuments.isActive, 1),
-      ),
-    )
-    .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
+  const templates = (await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)).filter(
+    template => template.isActive && template.category === 'client_required_document',
+  );
 
   const templateIds = templates.map(template => Number(template.id));
   const persistedDealDocs = templateIds.length
@@ -265,9 +252,10 @@ export async function getDealChecklist(
       templateId,
       documentCode: String(template.documentCode),
       documentLabel: String(template.documentLabel || ''),
-      isRequired: boolFromTinyInt(template.isRequired),
+      category: template.category,
+      isRequired: Boolean(template.isRequired),
       sortOrder: Number(template.sortOrder || 0),
-      isActive: boolFromTinyInt(template.isActive),
+      isActive: Boolean(template.isActive),
       status,
       receivedAt: persisted?.receivedAt || null,
       verifiedAt: persisted?.verifiedAt || null,
@@ -357,17 +345,14 @@ export async function upsertDealDocumentStatus(
     skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
-  const [template] = await db
-    .select({ id: developmentRequiredDocuments.id })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        eq(developmentRequiredDocuments.id, input.templateId),
-        eq(developmentRequiredDocuments.developmentId, dealScope.developmentId),
-        eq(developmentRequiredDocuments.isActive, 1),
-      ),
-    )
-    .limit(1);
+  const template = (
+    await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)
+  ).find(
+    candidate =>
+      candidate.id === input.templateId &&
+      candidate.isActive &&
+      candidate.category === 'client_required_document',
+  );
 
   if (!template) {
     throw new TRPCError({

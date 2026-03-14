@@ -33,6 +33,7 @@ type ManagerOption = {
 
 type RequiredDocumentDraft = {
   id?: number;
+  category: 'developer_document' | 'client_required_document';
   documentCode:
     | 'id_document'
     | 'proof_of_address'
@@ -104,17 +105,24 @@ const payoutMilestones = [
   'custom',
 ] as const;
 
-const documentCodeOptions: Array<{ value: RequiredDocumentDraft['documentCode']; label: string }> = [
+const clientDocumentCodeOptions: Array<{ value: RequiredDocumentDraft['documentCode']; label: string }> = [
   { value: 'id_document', label: 'ID Document' },
   { value: 'proof_of_address', label: 'Proof of Address' },
-  { value: 'proof_of_income', label: 'Proof of Income' },
+  { value: 'proof_of_income', label: 'Payslips / Proof of Income' },
   { value: 'bank_statement', label: 'Bank Statement' },
   { value: 'pre_approval', label: 'Pre-Approval' },
-  { value: 'signed_offer_to_purchase', label: 'Signed OTP' },
+  { value: 'custom', label: 'Custom Client Document' },
+];
+
+const developerDocumentCodeOptions: Array<{
+  value: RequiredDocumentDraft['documentCode'];
+  label: string;
+}> = [
+  { value: 'signed_offer_to_purchase', label: 'Offer to Purchase' },
   { value: 'sale_agreement', label: 'Sale Agreement' },
   { value: 'attorney_instruction_letter', label: 'Attorney Instruction Letter' },
   { value: 'transfer_documents', label: 'Transfer Documents' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'custom', label: 'Custom Developer Document' },
 ];
 
 const blockerSectionMap: Record<string, string> = {
@@ -125,7 +133,7 @@ const blockerSectionMap: Record<string, string> = {
   PAYOUT_MILESTONE_MISSING: 'section-payout',
   CURRENCY_MISSING: 'section-currency',
   MANAGER_MISSING: 'section-manager',
-  REQUIRED_DOCS_MISSING: 'section-docs',
+  REQUIRED_DOCS_MISSING: 'section-client-docs',
 };
 
 function statusBadge(value: boolean, trueLabel: string, falseLabel: string) {
@@ -321,6 +329,11 @@ function DevelopmentProgramConfigPanel({
       .sort((a: any, b: any) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
       .map((document: any) => ({
         id: Number(document.id),
+        category: (
+          document.category === 'developer_document'
+            ? 'developer_document'
+            : 'client_required_document'
+        ) as RequiredDocumentDraft['category'],
         documentCode: document.documentCode as RequiredDocumentDraft['documentCode'],
         documentLabel: String(document.documentLabel || ''),
         isRequired: Boolean(document.isRequired),
@@ -343,6 +356,150 @@ function DevelopmentProgramConfigPanel({
     setDocsMutation.isPending ||
     setBrandPresetMutation.isPending ||
     isApplyingTemplate;
+
+  function getDocumentCodeOptions(category: RequiredDocumentDraft['category']) {
+    return category === 'developer_document'
+      ? developerDocumentCodeOptions
+      : clientDocumentCodeOptions;
+  }
+
+  function updateDocumentAtIndex(index: number, updater: (document: RequiredDocumentDraft) => RequiredDocumentDraft) {
+    setDocuments(current => current.map((item, itemIndex) => (itemIndex === index ? updater(item) : item)));
+  }
+
+  function swapDocumentOrder(fromIndex: number, toIndex: number) {
+    setDocuments(current => {
+      if (toIndex < 0 || toIndex >= current.length) return current;
+      const next = [...current];
+      const temp = next[toIndex];
+      next[toIndex] = next[fromIndex];
+      next[fromIndex] = temp;
+      return next.map((item, itemIndex) => ({ ...item, sortOrder: itemIndex }));
+    });
+  }
+
+  function removeDocument(index: number) {
+    setDocuments(current =>
+      current
+        .filter((_, itemIndex) => itemIndex !== index)
+        .map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })),
+    );
+  }
+
+  function addDocument(category: RequiredDocumentDraft['category']) {
+    setDocuments(current => [
+      ...current,
+      {
+        category,
+        documentCode: 'custom',
+        documentLabel: '',
+        isRequired: true,
+        isActive: true,
+        sortOrder: current.length,
+      },
+    ]);
+  }
+
+  function renderDocumentSection(input: {
+    title: string;
+    description: string;
+    category: RequiredDocumentDraft['category'];
+    rows: Array<{ document: RequiredDocumentDraft; index: number }>;
+    addLabel: string;
+    sectionId: string;
+  }) {
+    return (
+      <Card id={input.sectionId}>
+        <CardHeader>
+          <CardTitle className="text-base">{input.title}</CardTitle>
+          <CardDescription>{input.description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {input.rows.map(({ document, index }, rowIndex) => (
+            <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
+              <div className="grid gap-2 md:grid-cols-[1fr_1.4fr_auto_auto_auto]">
+                <Select
+                  value={document.documentCode}
+                  onValueChange={value =>
+                    updateDocumentAtIndex(index, item => ({
+                      ...item,
+                      documentCode: value as RequiredDocumentDraft['documentCode'],
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getDocumentCodeOptions(input.category).map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  value={document.documentLabel}
+                  onChange={event =>
+                    updateDocumentAtIndex(index, item => ({
+                      ...item,
+                      documentLabel: event.target.value,
+                    }))
+                  }
+                  placeholder="Document title"
+                />
+
+                <div className="flex items-center gap-2 rounded border px-2 text-xs">
+                  <span>Required</span>
+                  <Switch
+                    checked={document.isRequired}
+                    onCheckedChange={checked =>
+                      updateDocumentAtIndex(index, item => ({ ...item, isRequired: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => swapDocumentOrder(index, input.rows[rowIndex - 1]?.index ?? index)}
+                    disabled={rowIndex === 0}
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => swapDocumentOrder(index, input.rows[rowIndex + 1]?.index ?? index)}
+                    disabled={rowIndex === input.rows.length - 1}
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                <Button size="icon" variant="destructive" onClick={() => removeDocument(index)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          {!input.rows.length ? (
+            <div className="rounded border border-dashed p-3 text-sm text-slate-500">
+              No {input.category === 'developer_document' ? 'developer' : 'client'} documents configured yet.
+            </div>
+          ) : null}
+
+          <Button variant="outline" onClick={() => addDocument(input.category)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {input.addLabel}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   function buildProgramInput(targetDevelopmentId: number, isReferralEnabled: boolean) {
     return {
@@ -371,6 +528,7 @@ function DevelopmentProgramConfigPanel({
       developmentId: targetDevelopmentId,
       documents: documents.map((document, index) => ({
         id: preserveIds ? document.id : undefined,
+        category: document.category,
         documentCode: document.documentCode,
         documentLabel: document.documentLabel.trim() || 'Custom Document',
         isRequired: document.isRequired,
@@ -399,6 +557,7 @@ function DevelopmentProgramConfigPanel({
       isActive,
       primaryManagerUserId: primaryManagerUserId ? Number(primaryManagerUserId) : null,
       documents: documents.map((document, index) => ({
+        category: document.category,
         documentCode: document.documentCode,
         documentLabel: document.documentLabel.trim() || 'Custom Document',
         isRequired: document.isRequired,
@@ -722,137 +881,29 @@ function DevelopmentProgramConfigPanel({
         </CardContent>
       </Card>
 
-      <Card id="section-docs">
-        <CardHeader>
-          <CardTitle className="text-base">Program Required Documents</CardTitle>
-          <CardDescription>
-            Configure the document pack for this partner development. Standard documents can stay
-            fixed and you can add multiple custom items like price structure, house plan, or
-            budget requirements.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {documents.map((document, index) => (
-            <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
-              <div className="grid gap-2 md:grid-cols-[1fr_1.4fr_auto_auto_auto]">
-                <Select
-                  value={document.documentCode}
-                  onValueChange={value =>
-                    setDocuments(current =>
-                      current.map((item, itemIndex) =>
-                        itemIndex === index
-                          ? { ...item, documentCode: value as RequiredDocumentDraft['documentCode'] }
-                          : item,
-                      ),
-                    )
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {documentCodeOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {renderDocumentSection({
+        title: 'Developer Documents',
+        description:
+          'Define the development-side documents agents need to share with clients, such as offer to purchase, NCA forms, house plans, or development terms.',
+        category: 'developer_document',
+        rows: documents
+          .map((document, index) => ({ document, index }))
+          .filter(item => item.document.category === 'developer_document'),
+        addLabel: 'Add Developer Document',
+        sectionId: 'section-developer-docs',
+      })}
 
-                <Input
-                  value={document.documentLabel}
-                  onChange={event =>
-                    setDocuments(current =>
-                      current.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, documentLabel: event.target.value } : item,
-                      ),
-                    )
-                  }
-                  placeholder="Document label"
-                />
-
-                <div className="flex items-center gap-2 rounded border px-2 text-xs">
-                  <span>Required</span>
-                  <Switch
-                    checked={document.isRequired}
-                    onCheckedChange={checked =>
-                      setDocuments(current =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, isRequired: checked } : item,
-                        ),
-                      )
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() =>
-                      setDocuments(current => {
-                        if (index === 0) return current;
-                        const next = [...current];
-                        const temp = next[index - 1];
-                        next[index - 1] = next[index];
-                        next[index] = temp;
-                        return next;
-                      })
-                    }
-                    disabled={index === 0}
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() =>
-                      setDocuments(current => {
-                        if (index === current.length - 1) return current;
-                        const next = [...current];
-                        const temp = next[index + 1];
-                        next[index + 1] = next[index];
-                        next[index] = temp;
-                        return next;
-                      })
-                    }
-                    disabled={index === documents.length - 1}
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => setDocuments(current => current.filter((_, itemIndex) => itemIndex !== index))}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          <Button
-            variant="outline"
-            onClick={() =>
-              setDocuments(current => [
-                ...current,
-                {
-                  documentCode: 'custom',
-                  documentLabel: '',
-                  isRequired: true,
-                  isActive: true,
-                  sortOrder: current.length,
-                },
-              ])
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Custom Document
-          </Button>
-        </CardContent>
-      </Card>
+      {renderDocumentSection({
+        title: 'Client Required Documents',
+        description:
+          'Define the documents the buyer must submit back into the referral flow, such as ID copy, payslips, bank statements, and proof of address.',
+        category: 'client_required_document',
+        rows: documents
+          .map((document, index) => ({ document, index }))
+          .filter(item => item.document.category === 'client_required_document'),
+        addLabel: 'Add Client Document',
+        sectionId: 'section-client-docs',
+      })}
 
       <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-white p-3">
         {otherDevelopments.length ? (
