@@ -168,6 +168,63 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByText('Docs: Configured')).toBeInTheDocument();
   });
 
+  it('separates developer and client document configuration sections', () => {
+    mockGetDevelopmentRequiredDocumentsUseQuery.mockReturnValue({
+      data: [
+        {
+          id: 1,
+          developmentId: 1001,
+          category: 'client_required_document',
+          documentCode: 'bank_statement',
+          documentLabel: 'Bank Statements',
+          isRequired: true,
+          sortOrder: 0,
+          isActive: true,
+        },
+        {
+          id: 2,
+          developmentId: 1001,
+          category: 'developer_document',
+          documentCode: 'custom',
+          documentLabel: 'House Plan',
+          isRequired: true,
+          sortOrder: 1,
+          isActive: true,
+        },
+      ],
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Developer Documents')).toBeInTheDocument();
+    expect(screen.getByText('Client Required Documents')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('House Plan')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Bank Statements')).toBeInTheDocument();
+  });
+
   it('shows blockers inline when enabling referral is rejected by server', async () => {
     const mutateAsync = vi.fn().mockRejectedValue({
       message: 'Program is not ready to enable referrals.',
@@ -589,6 +646,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       primaryManagerUserId: 22,
       documents: [
         {
+          category: 'developer_document',
           documentCode: 'custom',
           documentLabel: 'Price Structure',
           isRequired: true,
@@ -670,6 +728,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         expect.objectContaining({
           documents: [
             expect.objectContaining({
+              category: 'developer_document',
               documentLabel: 'Price Structure',
               documentCode: 'custom',
             }),

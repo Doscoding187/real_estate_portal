@@ -64,7 +64,16 @@ describe('distributionBrandOnboardingPresetService', () => {
           currencyCode: 'ZAR',
           isActive: true,
           primaryManagerUserId: null,
-          documents: [],
+          documents: [
+            {
+              category: 'client_required_document',
+              documentCode: 'bank_statement',
+              documentLabel: 'Bank Statements',
+              isRequired: true,
+              isActive: true,
+              sortOrder: 0,
+            },
+          ],
         },
       }),
     ).rejects.toThrow('Brand onboarding preset schema is not ready yet.');

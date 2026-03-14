@@ -1,11 +1,11 @@
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
   developerBrandProfiles,
-  developmentRequiredDocuments,
   developments,
   distributionPrograms,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
 
 type ListPartnerProgramTermsInput = {
   brandProfileId?: number;
@@ -229,36 +229,21 @@ export async function listPartnerProgramTerms(
     });
   }
 
-  const requiredDocRows = await db
-    .select({
-      templateId: developmentRequiredDocuments.id,
-      developmentId: developmentRequiredDocuments.developmentId,
-      documentCode: developmentRequiredDocuments.documentCode,
-      documentLabel: developmentRequiredDocuments.documentLabel,
-      isRequired: developmentRequiredDocuments.isRequired,
-      sortOrder: developmentRequiredDocuments.sortOrder,
-    })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        inArray(developmentRequiredDocuments.developmentId, developmentIds),
-        eq(developmentRequiredDocuments.isActive, 1),
-      ),
-    )
-    .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
-
   const docsByDevelopmentId = new Map<number, PartnerProgramTermsItem['requiredDocuments']>();
-  for (const row of requiredDocRows) {
-    const developmentId = Number(row.developmentId);
-    const current = docsByDevelopmentId.get(developmentId) || [];
-    current.push({
-      templateId: Number(row.templateId),
-      documentCode: String(row.documentCode),
-      documentLabel: String(row.documentLabel || ''),
-      isRequired: boolFromTinyInt(row.isRequired),
-      sortOrder: Number(row.sortOrder || 0),
-    });
-    docsByDevelopmentId.set(developmentId, current);
+  for (const developmentId of developmentIds) {
+    const templates = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
+    docsByDevelopmentId.set(
+      developmentId,
+      templates
+        .filter(template => template.isActive && template.category === 'client_required_document')
+        .map(template => ({
+          templateId: Number(template.id),
+          documentCode: String(template.documentCode),
+          documentLabel: String(template.documentLabel || ''),
+          isRequired: Boolean(template.isRequired),
+          sortOrder: Number(template.sortOrder || 0),
+        })),
+    );
   }
 
   const items: PartnerProgramTermsItem[] = rows.map(row => {

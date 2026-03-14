@@ -533,7 +533,10 @@ type DevelopmentRequiredDocumentCode =
   | 'transfer_documents'
   | 'custom';
 
+type DevelopmentDocumentCategory = 'developer_document' | 'client_required_document';
+
 type RequiredDocumentTemplateSeed = {
+  category: DevelopmentDocumentCategory;
   documentCode: DevelopmentRequiredDocumentCode;
   documentLabel: string;
   isRequired: boolean;
@@ -547,23 +550,59 @@ function getDefaultOnboardingRequiredDocuments(
   brandProfileName?: string | null,
 ): RequiredDocumentTemplateSeed[] {
   const templates: RequiredDocumentTemplateSeed[] = [
-    { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
-    { documentCode: 'proof_of_address', documentLabel: 'Proof of Address', isRequired: true },
     {
+      category: 'client_required_document',
+      documentCode: 'id_document',
+      documentLabel: 'ID Document',
+      isRequired: true,
+    },
+    {
+      category: 'client_required_document',
+      documentCode: 'proof_of_address',
+      documentLabel: 'Proof of Address',
+      isRequired: true,
+    },
+    {
+      category: 'client_required_document',
       documentCode: 'proof_of_income',
       documentLabel: 'Payslips / Proof of Income',
       isRequired: true,
     },
-    { documentCode: 'bank_statement', documentLabel: 'Bank Statements', isRequired: true },
+    {
+      category: 'client_required_document',
+      documentCode: 'bank_statement',
+      documentLabel: 'Bank Statements',
+      isRequired: true,
+    },
   ];
 
   const normalizedBrandName = String(brandProfileName || '').trim().toLowerCase();
   if (normalizedBrandName.includes('cosmopolitan')) {
     templates.push(
-      { documentCode: 'custom', documentLabel: 'Price Structure', isRequired: true },
-      { documentCode: 'custom', documentLabel: 'House Plan', isRequired: true },
-      { documentCode: 'custom', documentLabel: 'NCA Form', isRequired: true },
-      { documentCode: 'custom', documentLabel: 'POPIA Form (EUF)', isRequired: true },
+      {
+        category: 'developer_document',
+        documentCode: 'custom',
+        documentLabel: 'Price Structure',
+        isRequired: true,
+      },
+      {
+        category: 'developer_document',
+        documentCode: 'custom',
+        documentLabel: 'House Plan',
+        isRequired: true,
+      },
+      {
+        category: 'developer_document',
+        documentCode: 'custom',
+        documentLabel: 'NCA Form',
+        isRequired: true,
+      },
+      {
+        category: 'developer_document',
+        documentCode: 'custom',
+        documentLabel: 'POPIA Form (EUF)',
+        isRequired: true,
+      },
     );
   }
 
@@ -593,6 +632,7 @@ async function seedDevelopmentRequiredDocumentsIfEmpty(input: {
   await input.db.insert(developmentRequiredDocuments).values(
     templates.map((document, index) => ({
       developmentId: input.developmentId,
+      category: document.category,
       documentCode: document.documentCode,
       documentLabel: document.documentLabel,
       isRequired: document.isRequired ? 1 : 0,
@@ -2691,15 +2731,7 @@ const adminDistributionRouter = router({
 
       const rows = await listDevelopmentRequiredDocumentsOrEmpty(db, input.developmentId);
 
-      return rows.map(row => ({
-        id: Number(row.id),
-        developmentId: Number(row.developmentId),
-        documentCode: String(row.documentCode),
-        documentLabel: String(row.documentLabel || ''),
-        isRequired: boolFromTinyInt(row.isRequired),
-        sortOrder: Number(row.sortOrder || 0),
-        isActive: boolFromTinyInt(row.isActive),
-      }));
+      return rows;
     }),
 
   setDevelopmentRequiredDocuments: superAdminProcedure
@@ -2709,6 +2741,9 @@ const adminDistributionRouter = router({
         documents: z.array(
           z.object({
             id: z.number().int().positive().optional(),
+            category: z.enum(['developer_document', 'client_required_document']).default(
+              'client_required_document',
+            ),
             documentCode: z.enum([
               'id_document',
               'proof_of_address',
@@ -2734,6 +2769,7 @@ const adminDistributionRouter = router({
 
       const normalizedDocuments = input.documents.map((document, index) => ({
         id: document.id,
+        category: document.category,
         documentCode: document.documentCode,
         documentLabel: normalizeRequiredDocumentLabel(document.documentLabel),
         isRequired: document.isRequired,
@@ -2803,6 +2839,7 @@ const adminDistributionRouter = router({
                 .set({
                   documentCode: document.documentCode,
                   documentLabel: document.documentLabel,
+                  category: document.category,
                   isRequired: document.isRequired ? 1 : 0,
                   sortOrder: document.sortOrder,
                   isActive: document.isActive ? 1 : 0,
@@ -2820,6 +2857,7 @@ const adminDistributionRouter = router({
               developmentId: input.developmentId,
               documentCode: document.documentCode,
               documentLabel: document.documentLabel,
+              category: document.category,
               isRequired: document.isRequired ? 1 : 0,
               sortOrder: document.sortOrder,
               isActive: document.isActive ? 1 : 0,
@@ -2838,25 +2876,30 @@ const adminDistributionRouter = router({
               .where(inArray(developmentRequiredDocuments.id, idsToDeactivate));
           }
 
-          const rows = await tx
-            .select({
-              id: developmentRequiredDocuments.id,
-              developmentId: developmentRequiredDocuments.developmentId,
-              documentCode: developmentRequiredDocuments.documentCode,
-              documentLabel: developmentRequiredDocuments.documentLabel,
-              isRequired: developmentRequiredDocuments.isRequired,
-              sortOrder: developmentRequiredDocuments.sortOrder,
-              isActive: developmentRequiredDocuments.isActive,
-            })
-            .from(developmentRequiredDocuments)
-            .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
-            .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
+            const rows = await tx
+              .select({
+                id: developmentRequiredDocuments.id,
+                developmentId: developmentRequiredDocuments.developmentId,
+                documentCode: developmentRequiredDocuments.documentCode,
+                documentLabel: developmentRequiredDocuments.documentLabel,
+                category: developmentRequiredDocuments.category,
+                isRequired: developmentRequiredDocuments.isRequired,
+                sortOrder: developmentRequiredDocuments.sortOrder,
+                isActive: developmentRequiredDocuments.isActive,
+              })
+              .from(developmentRequiredDocuments)
+              .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
+              .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
 
           return rows.map(row => ({
             id: Number(row.id),
             developmentId: Number(row.developmentId),
             documentCode: String(row.documentCode),
             documentLabel: String(row.documentLabel || ''),
+            category:
+              String(row.category || 'client_required_document') === 'developer_document'
+                ? 'developer_document'
+                : 'client_required_document',
             isRequired: boolFromTinyInt(row.isRequired),
             sortOrder: Number(row.sortOrder || 0),
             isActive: boolFromTinyInt(row.isActive),

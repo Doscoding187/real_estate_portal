@@ -15,13 +15,18 @@ describe('distributionRequiredDocumentsService', () => {
   });
 
   it('returns zero readiness counts when the active-column schema is missing', async () => {
+    let callCount = 0;
     const db = {
       select() {
         return {
           from() {
             return {
               where() {
-                throw { code: 'ER_BAD_FIELD_ERROR' };
+                callCount += 1;
+                if (callCount === 1) {
+                  throw { code: 'ER_BAD_FIELD_ERROR' };
+                }
+                return [{ requiredDocsCount: 0, requiredRequiredDocsCount: 0 }];
               },
             };
           },
@@ -32,6 +37,27 @@ describe('distributionRequiredDocumentsService', () => {
     await expect(getDevelopmentRequiredDocumentSummary(db, 60001)).resolves.toEqual({
       requiredDocsCount: 0,
       requiredRequiredDocsCount: 0,
+    });
+  });
+
+  it('counts only client-required documents in readiness when categories exist', async () => {
+    const db = {
+      select() {
+        return {
+          from() {
+            return {
+              where() {
+                return [{ requiredDocsCount: 2, requiredRequiredDocsCount: 1 }];
+              },
+            };
+          },
+        };
+      },
+    };
+
+    await expect(getDevelopmentRequiredDocumentSummary(db, 60001)).resolves.toEqual({
+      requiredDocsCount: 2,
+      requiredRequiredDocsCount: 1,
     });
   });
 
@@ -55,5 +81,58 @@ describe('distributionRequiredDocumentsService', () => {
     };
 
     await expect(listDevelopmentRequiredDocumentsOrEmpty(db, 60001)).resolves.toEqual([]);
+  });
+
+  it('falls back to legacy rows as client-required documents when category is unavailable', async () => {
+    let callCount = 0;
+    const db = {
+      select() {
+        return {
+          from() {
+            return {
+              where() {
+                callCount += 1;
+                if (callCount === 1) {
+                  return {
+                    orderBy() {
+                      throw { code: 'ER_BAD_FIELD_ERROR' };
+                    },
+                  };
+                }
+
+                return {
+                  orderBy() {
+                    return [
+                      {
+                        id: 7,
+                        developmentId: 60001,
+                        documentCode: 'custom',
+                        documentLabel: 'Price Structure',
+                        isRequired: 1,
+                        sortOrder: 0,
+                        isActive: 1,
+                      },
+                    ];
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+
+    await expect(listDevelopmentRequiredDocumentsOrEmpty(db, 60001)).resolves.toEqual([
+      {
+        id: 7,
+        developmentId: 60001,
+        documentCode: 'custom',
+        documentLabel: 'Price Structure',
+        category: 'client_required_document',
+        isRequired: true,
+        sortOrder: 0,
+        isActive: true,
+      },
+    ]);
   });
 });
