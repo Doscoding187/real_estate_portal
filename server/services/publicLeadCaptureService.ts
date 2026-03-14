@@ -22,6 +22,11 @@ export interface PublicLeadCaptureInput {
   developerBrandProfileId?: number;
   agencyId?: number;
   agentId?: number;
+  unitId?: string;
+  unitName?: string;
+  unitPriceFrom?: number;
+  unitBedrooms?: number;
+  unitBathrooms?: number;
   name: string;
   email: string;
   phone?: string;
@@ -187,6 +192,11 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
       developerBrandProfileId: resolved.developerBrandProfileId,
       developmentId: resolved.developmentId,
       propertyId: resolved.propertyId,
+      unitId: input.unitId,
+      unitName: input.unitName,
+      unitPriceFrom: input.unitPriceFrom,
+      unitBedrooms: input.unitBedrooms,
+      unitBathrooms: input.unitBathrooms,
       name: input.name,
       email: input.email,
       phone: input.phone,
@@ -248,6 +258,11 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
     developerBrandProfileId: resolved.developerBrandProfileId || null,
     agencyId: resolved.agencyId || null,
     agentId: resolved.agentId || null,
+    unitId: input.unitId || null,
+    unitName: input.unitName || null,
+    unitPriceFrom: input.unitPriceFrom ?? null,
+    unitBedrooms: input.unitBedrooms ?? null,
+    unitBathrooms: input.unitBathrooms ?? null,
     name: input.name,
     email: input.email,
     phone: input.phone || null,
