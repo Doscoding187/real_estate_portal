@@ -51,7 +51,8 @@ describe('UnitFloorPlanDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Type A')).toBeInTheDocument();
     expect(screen.getByText('Cosmopolitan Projects')).toBeInTheDocument();
-    expect(screen.getByText('Unit Snapshot')).toBeInTheDocument();
+    expect(screen.getByText('Conversion Snapshot')).toBeInTheDocument();
+    expect(screen.getByText('Unit Details')).toBeInTheDocument();
     expect(screen.getAllByText(/Open-plan kitchen/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Private garden/i)).toBeInTheDocument();
     expect(screen.getByText(/prepaid electricity/i)).toBeInTheDocument();
