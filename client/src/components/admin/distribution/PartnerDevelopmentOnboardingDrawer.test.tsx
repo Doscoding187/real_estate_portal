@@ -13,6 +13,8 @@ const {
   mockAssignManagerUseMutation,
   mockSetDevelopmentRequiredDocumentsUseMutation,
   mockOnboardDevelopmentToPartnerNetworkUseMutation,
+  mockGetBrandOnboardingPresetUseQuery,
+  mockSetBrandOnboardingPresetUseMutation,
   mockUseUtils,
 } = vi.hoisted(() => ({
   mockGetProgramReadinessUseQuery: vi.fn(),
@@ -22,6 +24,8 @@ const {
   mockAssignManagerUseMutation: vi.fn(),
   mockSetDevelopmentRequiredDocumentsUseMutation: vi.fn(),
   mockOnboardDevelopmentToPartnerNetworkUseMutation: vi.fn(),
+  mockGetBrandOnboardingPresetUseQuery: vi.fn(),
+  mockSetBrandOnboardingPresetUseMutation: vi.fn(),
   mockUseUtils: vi.fn(),
 }));
 
@@ -39,6 +43,9 @@ vi.mock('@/lib/trpc', () => ({
         getDevelopmentRequiredDocuments: {
           useQuery: (input: unknown) => mockGetDevelopmentRequiredDocumentsUseQuery(input),
         },
+        getBrandOnboardingPreset: {
+          useQuery: (input: unknown) => mockGetBrandOnboardingPresetUseQuery(input),
+        },
         upsertProgram: {
           useMutation: () => mockUpsertProgramUseMutation(),
         },
@@ -50,6 +57,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         setDevelopmentRequiredDocuments: {
           useMutation: () => mockSetDevelopmentRequiredDocumentsUseMutation(),
+        },
+        setBrandOnboardingPreset: {
+          useMutation: () => mockSetBrandOnboardingPresetUseMutation(),
         },
       },
     },
@@ -92,6 +102,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
           getDevelopmentRequiredDocuments: {
             invalidate: vi.fn().mockResolvedValue(undefined),
           },
+          getBrandOnboardingPreset: {
+            invalidate: vi.fn().mockResolvedValue(undefined),
+          },
         },
       },
     });
@@ -123,6 +136,15 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       isPending: false,
     });
     mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ success: true }),
+      isPending: false,
+    });
+    mockGetBrandOnboardingPresetUseQuery.mockReturnValue({
+      data: { success: true, brandProfileId: 44, preset: null },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    mockSetBrandOnboardingPresetUseMutation.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ success: true }),
       isPending: false,
     });
@@ -362,7 +384,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Apply to Other 1 Development'));
+    fireEvent.click(screen.getByText('Apply Current Setup to Other 1 Development'));
 
     await waitFor(() =>
       expect(onboardMutateAsync).toHaveBeenCalledWith(
@@ -432,5 +454,154 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(
       screen.getAllByText('Checking program, manager, payout, currency, and document readiness...'),
     ).not.toHaveLength(0);
+  });
+
+  it('saves the current configuration as a brand preset', async () => {
+    const savePresetMutateAsync = vi.fn().mockResolvedValue({ success: true });
+
+    mockSetBrandOnboardingPresetUseMutation.mockReturnValue({
+      mutateAsync: savePresetMutateAsync,
+      isPending: false,
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Save Current as Brand Preset'));
+
+    await waitFor(() =>
+      expect(savePresetMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          brandProfileId: 44,
+          preset: expect.objectContaining({
+            commissionModel: 'flat_percentage',
+            currencyCode: 'ZAR',
+          }),
+        }),
+      ),
+    );
+  });
+
+  it('loads a saved brand preset into the current development form', async () => {
+    const preset = {
+      commissionModel: 'flat_amount',
+      defaultCommissionPercent: null,
+      defaultCommissionAmount: 12000,
+      tierAccessPolicy: 'open',
+      payoutMilestone: 'bond_approval',
+      payoutMilestoneNotes: null,
+      currencyCode: 'USD',
+      isActive: true,
+      primaryManagerUserId: 22,
+      documents: [
+        {
+          documentCode: 'custom',
+          documentLabel: 'Price Structure',
+          isRequired: true,
+          isActive: true,
+          sortOrder: 0,
+        },
+      ],
+    };
+    const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
+    const assignMutateAsync = vi.fn().mockResolvedValue({ success: true });
+    const docsMutateAsync = vi.fn().mockResolvedValue({ success: true });
+
+    mockGetBrandOnboardingPresetUseQuery.mockReturnValue({
+      data: { success: true, brandProfileId: 44, preset },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    mockUpsertProgramUseMutation.mockReturnValue({
+      mutateAsync: upsertMutateAsync,
+      isPending: false,
+    });
+    mockAssignManagerUseMutation.mockReturnValue({
+      mutateAsync: assignMutateAsync,
+      isPending: false,
+    });
+    mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: docsMutateAsync,
+      isPending: false,
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[{ userId: 22, label: 'Manager Jane' }]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Load Brand Preset'));
+    fireEvent.click(screen.getByText('Save Configuration'));
+
+    await waitFor(() =>
+      expect(upsertMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1001,
+          commissionModel: 'flat_amount',
+          defaultCommissionAmount: 12000,
+          defaultCommissionPercent: null,
+          tierAccessPolicy: 'open',
+          payoutMilestone: 'bond_approval',
+          currencyCode: 'USD',
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(assignMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          managerUserId: 22,
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(docsMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          documents: [
+            expect.objectContaining({
+              documentLabel: 'Price Structure',
+              documentCode: 'custom',
+            }),
+          ],
+        }),
+      ),
+    );
   });
 });
