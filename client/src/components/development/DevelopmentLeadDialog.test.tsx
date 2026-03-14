@@ -68,7 +68,7 @@ describe('DevelopmentLeadDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /request information/i }));
 
-    expect(screen.getByText('Unit: Type A')).toBeInTheDocument();
+    expect(screen.getAllByText('Unit: Type A').length).toBeGreaterThan(0);
     expect(mutateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         developmentId: 77,

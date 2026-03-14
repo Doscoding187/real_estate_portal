@@ -3,6 +3,7 @@ import {
   Bath,
   Bed,
   Car,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -185,9 +186,9 @@ export function UnitFloorPlanDialog({
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0">
+      <DialogContent className="max-w-6xl gap-0 overflow-hidden border-slate-200 bg-white p-0">
         <div className="max-h-[88vh] overflow-y-auto">
-          <DialogHeader className="border-b border-slate-200 px-6 py-5">
+          <DialogHeader className="border-b border-slate-200 bg-[linear-gradient(135deg,#f8fafc_0%,#fff7ed_52%,#ffffff_100%)] px-6 py-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="border-blue-200 text-blue-700">
                 {developmentName}
@@ -208,40 +209,124 @@ export function UnitFloorPlanDialog({
           </DialogHeader>
 
           <div className="space-y-8 px-6 py-6">
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Floor Plan
-                  </p>
-                  <p className="text-sm text-slate-600">Primary layout for {unit.name}</p>
+            <section className="grid gap-6 lg:grid-cols-[1.3fr_0.78fr]">
+              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50 shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Floor Plan
+                    </p>
+                    <p className="text-sm text-slate-600">Primary layout for {unit.name}</p>
+                  </div>
+                  {floorPlanUrl ? (
+                    <Button
+                      variant="outline"
+                      className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                      onClick={() => window.open(floorPlanUrl, '_blank', 'noopener,noreferrer')}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
+                  ) : null}
                 </div>
-                {floorPlanUrl ? (
-                  <Button
-                    variant="outline"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                    onClick={() => window.open(floorPlanUrl, '_blank', 'noopener,noreferrer')}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
-                  </Button>
-                ) : null}
+
+                <div className="aspect-[16/10] bg-white">
+                  {floorPlanUrl ? (
+                    renderFloorPlanPreview(floorPlanUrl, unit.name)
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-500">
+                      <ImageIcon className="h-8 w-8 text-slate-300" />
+                      <div>
+                        <p className="font-medium text-slate-700">Floor plan unavailable</p>
+                        <p className="text-sm text-slate-500">
+                          Request information to get the latest layout pack from sales.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="aspect-[16/9] bg-white">
-                {floorPlanUrl ? (
-                  renderFloorPlanPreview(floorPlanUrl, unit.name)
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-500">
-                    <ImageIcon className="h-8 w-8 text-slate-300" />
-                    <div>
-                      <p className="font-medium text-slate-700">Floor plan unavailable</p>
-                      <p className="text-sm text-slate-500">
-                        Request information to get the latest layout pack from sales.
-                      </p>
-                    </div>
+              <div className="rounded-[28px] border border-slate-900 bg-slate-950 p-6 text-white shadow-[0_24px_70px_-32px_rgba(15,23,42,0.85)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-200">
+                  Conversion Snapshot
+                </p>
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <h3 className="text-3xl font-bold">{exactPriceFrom}</h3>
+                  {exactPriceTo ? (
+                    <p className="pb-1 text-sm text-slate-300">up to {exactPriceTo}</p>
+                  ) : null}
+                </div>
+                <p className="mt-4 text-sm leading-6 text-slate-300">{description}</p>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Bedrooms
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-white">
+                      {unit?.bedroomKey === 'other'
+                        ? 'Studio / Other'
+                        : `${unit?.bedrooms ?? unit?.bedroomLabel ?? '-'}`}
+                    </p>
                   </div>
-                )}
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Bathrooms
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-white">
+                      {formatBathValue(unit?.bathrooms) ?? '-'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Unit Size
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-white">
+                      {houseSizeLabel ? `${houseSizeLabel} m2` : '-'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      {yardSizeLabel ? 'Yard Size' : 'Parking'}
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-white">
+                      {yardSizeLabel ? `${yardSizeLabel} m2` : parkingLabel || '-'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-200">
+                    What happens next
+                  </p>
+                  <ul className="mt-3 space-y-2 text-sm text-slate-200">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+                      Sales receives the exact unit context with your enquiry.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+                      You get the right pricing, specs, and next steps for this layout.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <Button
+                    className="w-full bg-orange-500 text-white hover:bg-orange-600"
+                    onClick={() => onRequestInformation(unit)}
+                  >
+                    Request Information
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                    onClick={() => onRequestCallback(unit)}
+                  >
+                    Request Callback
+                  </Button>
+                </div>
               </div>
             </section>
 
@@ -249,14 +334,8 @@ export function UnitFloorPlanDialog({
               <div className="space-y-5">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Unit Snapshot
+                    Unit Details
                   </p>
-                  <div className="mt-2 flex flex-wrap items-end gap-3">
-                    <h3 className="text-3xl font-bold text-slate-950">{exactPriceFrom}</h3>
-                    {exactPriceTo ? (
-                      <p className="pb-1 text-sm text-slate-500">up to {exactPriceTo}</p>
-                    ) : null}
-                  </div>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
                 </div>
 
@@ -336,38 +415,40 @@ export function UnitFloorPlanDialog({
                 ) : null}
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-200">
-                  Ready To Enquire
+              <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Why This Layout Converts
                 </p>
-                <h3 className="mt-2 text-2xl font-bold">Move this unit conversation forward</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  Use the buttons below to capture the lead and route the enquiry to the correct
-                  sales team with the right unit context.
+                <h3 className="mt-2 text-2xl font-bold text-slate-950">
+                  Buyers can evaluate the unit at a glance
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  This dialog now shows the exact floor plan, layout essentials, gallery, and lead
+                  capture path in one place. It is intentionally built as a compact conversion
+                  surface instead of a raw file preview.
                 </p>
 
                 <div className="mt-6 space-y-3">
-                  <Button
-                    className="w-full bg-orange-500 text-white hover:bg-orange-600"
-                    onClick={() => onRequestInformation(unit)}
-                  >
-                    Request Information
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
-                    onClick={() => onRequestCallback(unit)}
-                  >
-                    Request Callback
-                  </Button>
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                  <p className="font-semibold text-white">What happens next</p>
-                  <p className="mt-2">
-                    Your request is stored against this development so sales can respond with the
-                    right pricing, specs, and next steps.
-                  </p>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">Pricing and layout</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      The buyer sees the floor plan, core dimensions, and bedrooms or bathrooms
+                      before they enquire.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">Unit-specific lead capture</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Enquiries are stored with the exact unit context, not just the development.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">Media-backed trust</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Supporting gallery media helps the dialog read like a focused unit landing
+                      page instead of a generic modal.
+                    </p>
+                  </div>
                 </div>
               </div>
             </section>
