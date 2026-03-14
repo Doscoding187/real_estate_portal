@@ -992,6 +992,11 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         developerBrandProfileId: z.number().int().positive().optional(),
+        unitId: z.string().trim().max(36).optional(),
+        unitName: z.string().trim().max(255).optional(),
+        unitPriceFrom: z.number().nonnegative().optional(),
+        unitBedrooms: z.number().int().nonnegative().optional(),
+        unitBathrooms: z.number().nonnegative().optional(),
         name: z.string().min(1),
         email: z.string().email(),
         phone: z.string().optional(),
@@ -1017,6 +1022,11 @@ export const developerRouter = router({
       return await capturePublicLead({
         developmentId: input.developmentId,
         developerBrandProfileId: input.developerBrandProfileId,
+        unitId: input.unitId,
+        unitName: input.unitName,
+        unitPriceFrom: input.unitPriceFrom,
+        unitBedrooms: input.unitBedrooms,
+        unitBathrooms: input.unitBathrooms,
         name: input.name,
         email: input.email,
         phone: input.phone,

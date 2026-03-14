@@ -28,6 +28,13 @@ interface DevelopmentLeadDialogProps {
     developerBrandProfileId?: number | null;
     brochureUrl?: string | null;
   };
+  unitContext?: {
+    unitId?: string;
+    unitName?: string;
+    unitPriceFrom?: number;
+    unitBedrooms?: number;
+    unitBathrooms?: number;
+  } | null;
   affordabilityData?: {
     monthlyIncome?: number;
     availableDeposit?: number;
@@ -86,6 +93,7 @@ export function DevelopmentLeadDialog({
   mode,
   ctaLocation,
   development,
+  unitContext,
   affordabilityData,
 }: DevelopmentLeadDialogProps) {
   const [form, setForm] = useState({
@@ -130,16 +138,19 @@ export function DevelopmentLeadDialog({
     }
 
     if (mode === 'info') {
-      return `Please send me more information about ${development.name}, including pricing, specifications, and available options.`;
+      const unitLabel = unitContext?.unitName ? ` for ${unitContext.unitName}` : '';
+      return `Please send me more information about ${development.name}${unitLabel}, including pricing, specifications, and available options.`;
     }
 
-    return `I am interested in ${development.name}. Please contact me with pricing, availability, and next steps.`;
+    const callbackUnitLabel = unitContext?.unitName ? `, specifically ${unitContext.unitName},` : '';
+    return `I am interested in ${development.name}${callbackUnitLabel} please contact me with pricing, availability, and next steps.`;
   }, [
     affordabilityData?.availableDeposit,
     affordabilityData?.maxAffordable,
     affordabilityData?.monthlyIncome,
     development.name,
     mode,
+    unitContext?.unitName,
   ]);
 
   const createLead = trpc.developer.createLead.useMutation({
@@ -186,6 +197,11 @@ export function DevelopmentLeadDialog({
     createLead.mutate({
       developmentId: development.id,
       developerBrandProfileId: development.developerBrandProfileId ?? undefined,
+      unitId: unitContext?.unitId,
+      unitName: unitContext?.unitName,
+      unitPriceFrom: unitContext?.unitPriceFrom,
+      unitBedrooms: unitContext?.unitBedrooms,
+      unitBathrooms: unitContext?.unitBathrooms,
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
@@ -218,6 +234,11 @@ export function DevelopmentLeadDialog({
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-slate-900">{development.name}</p>
+                {unitContext?.unitName ? (
+                  <p className="text-xs font-medium text-blue-700">
+                    Unit: {unitContext.unitName}
+                  </p>
+                ) : null}
                 <p className="text-xs text-slate-500">
                   Your details are used to connect you with the correct sales and qualification
                   team.

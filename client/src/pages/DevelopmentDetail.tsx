@@ -617,6 +617,7 @@ export default function DevelopmentDetail() {
   );
   const [leadDialogLocation, setLeadDialogLocation] = useState('unknown');
   const [floorPlanDialogUnit, setFloorPlanDialogUnit] = useState<any | null>(null);
+  const [activeLeadUnit, setActiveLeadUnit] = useState<any | null>(null);
   const [activeAmenityTab, setActiveAmenityTab] = useState<AmenityTabKey | ''>('');
   const amenityTabsRef = useRef<HTMLDivElement | null>(null);
   const [canScrollAmenityLeft, setCanScrollAmenityLeft] = useState(false);
@@ -674,9 +675,11 @@ export default function DevelopmentDetail() {
   const openLeadDialog = (
     mode: 'brochure' | 'contact' | 'qualification' | 'info',
     ctaLocation: string,
+    unit: any | null = null,
   ) => {
     setLeadDialogMode(mode);
     setLeadDialogLocation(ctaLocation);
+    setActiveLeadUnit(unit);
     setLeadDialogOpen(true);
     trackCTAClick({
       ctaLabel:
@@ -715,11 +718,11 @@ export default function DevelopmentDetail() {
   };
 
   const handleUnitCallback = (unit: any) => {
-    openLeadDialog('contact', `unit_card_${unit.id}_callback`);
+    openLeadDialog('contact', `unit_card_${unit.id}_callback`, unit);
   };
 
   const handleUnitInformation = (unit: any) => {
-    openLeadDialog('info', `unit_card_${unit.id}_info`);
+    openLeadDialog('info', `unit_card_${unit.id}_info`, unit);
   };
 
   const handleUnitFloorPlan = (unit: any) => {
@@ -739,12 +742,12 @@ export default function DevelopmentDetail() {
 
   const handleFloorPlanInfoRequest = (unit: any) => {
     setFloorPlanDialogUnit(null);
-    openLeadDialog('info', `unit_floor_plan_dialog_${unit.id}_info`);
+    openLeadDialog('info', `unit_floor_plan_dialog_${unit.id}_info`, unit);
   };
 
   const handleFloorPlanCallbackRequest = (unit: any) => {
     setFloorPlanDialogUnit(null);
-    openLeadDialog('contact', `unit_floor_plan_dialog_${unit.id}_callback`);
+    openLeadDialog('contact', `unit_floor_plan_dialog_${unit.id}_callback`, unit);
   };
 
   // Fetch real development by slug or ID
@@ -2136,7 +2139,10 @@ export default function DevelopmentDetail() {
 
       <DevelopmentLeadDialog
         open={leadDialogOpen}
-        onOpenChange={setLeadDialogOpen}
+        onOpenChange={open => {
+          setLeadDialogOpen(open);
+          if (!open) setActiveLeadUnit(null);
+        }}
         mode={leadDialogMode}
         ctaLocation={leadDialogLocation}
         development={{
@@ -2145,6 +2151,29 @@ export default function DevelopmentDetail() {
           developerBrandProfileId: (dev as any).developerBrandProfileId ?? publisher?.id ?? null,
           brochureUrl,
         }}
+        unitContext={
+          activeLeadUnit
+            ? {
+                unitId: String(activeLeadUnit.id),
+                unitName: String(activeLeadUnit.name || '').trim() || undefined,
+                unitPriceFrom:
+                  Number.isFinite(Number(activeLeadUnit.basePriceFrom)) &&
+                  Number(activeLeadUnit.basePriceFrom) > 0
+                    ? Number(activeLeadUnit.basePriceFrom)
+                    : undefined,
+                unitBedrooms:
+                  Number.isFinite(Number(activeLeadUnit.bedrooms)) &&
+                  Number(activeLeadUnit.bedrooms) >= 0
+                    ? Number(activeLeadUnit.bedrooms)
+                    : undefined,
+                unitBathrooms:
+                  Number.isFinite(Number(activeLeadUnit.bathrooms)) &&
+                  Number(activeLeadUnit.bathrooms) >= 0
+                    ? Number(activeLeadUnit.bathrooms)
+                    : undefined,
+              }
+            : null
+        }
         affordabilityData={
           quickQualification
             ? {
