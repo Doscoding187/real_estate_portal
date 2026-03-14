@@ -6,6 +6,7 @@ import { MediaLightbox } from '@/components/MediaLightbox';
 import { DevelopmentGallery } from '@/components/DevelopmentGallery';
 import { DeveloperOverview } from '@/components/development/DeveloperOverview';
 import { DevelopmentLeadDialog } from '@/components/development/DevelopmentLeadDialog';
+import { UnitFloorPlanDialog } from '@/components/development/UnitFloorPlanDialog';
 import { StatCard } from '@/components/development/StatCard';
 import { SectionNav } from '@/components/development/SectionNav';
 import { DevelopmentOverviewCard } from '@/components/DevelopmentOverviewCard';
@@ -243,17 +244,15 @@ const getUnitAvailabilityState = (unit: any) => {
 
 type UnitTypeCarouselProps = {
   units: any[];
-  brochureAvailable: boolean;
   onRequestCallback: (unit: any) => void;
-  onRequestBrochure: (unit: any) => void;
+  onRequestInformation: (unit: any) => void;
   onOpenFloorPlan: (unit: any) => void;
 };
 
 function UnitTypeCarousel({
   units,
-  brochureAvailable,
   onRequestCallback,
-  onRequestBrochure,
+  onRequestInformation,
   onOpenFloorPlan,
 }: UnitTypeCarouselProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
@@ -315,11 +314,7 @@ function UnitTypeCarousel({
               estimatedRepayment !== null
                 ? Math.round(estimatedRepayment * QUICK_QUALIFICATION_PAYMENT_RATIO)
                 : null;
-            const secondaryActionLabel = floorPlanUrl
-              ? 'View Floor Plan'
-              : brochureAvailable
-                ? 'Get Brochure'
-                : 'Request Info';
+            const secondaryActionLabel = floorPlanUrl ? 'View Floor Plan' : 'Request Information';
 
             return (
               <CarouselItem
@@ -397,12 +392,7 @@ function UnitTypeCarousel({
                             return;
                           }
 
-                          if (brochureAvailable) {
-                            onRequestBrochure(unit);
-                            return;
-                          }
-
-                          onRequestCallback(unit);
+                          onRequestInformation(unit);
                         }}
                       >
                         {secondaryActionLabel}
@@ -620,10 +610,13 @@ export default function DevelopmentDetail() {
   const [quickIncome, setQuickIncome] = useState('');
   const [quickDeposit, setQuickDeposit] = useState('');
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
-  const [leadDialogMode, setLeadDialogMode] = useState<'brochure' | 'contact' | 'qualification'>(
+  const [leadDialogMode, setLeadDialogMode] = useState<
+    'brochure' | 'contact' | 'qualification' | 'info'
+  >(
     'qualification',
   );
   const [leadDialogLocation, setLeadDialogLocation] = useState('unknown');
+  const [floorPlanDialogUnit, setFloorPlanDialogUnit] = useState<any | null>(null);
   const [activeAmenityTab, setActiveAmenityTab] = useState<AmenityTabKey | ''>('');
   const amenityTabsRef = useRef<HTMLDivElement | null>(null);
   const [canScrollAmenityLeft, setCanScrollAmenityLeft] = useState(false);
@@ -678,7 +671,10 @@ export default function DevelopmentDetail() {
     setLightboxOpen(true);
   };
 
-  const openLeadDialog = (mode: 'brochure' | 'contact' | 'qualification', ctaLocation: string) => {
+  const openLeadDialog = (
+    mode: 'brochure' | 'contact' | 'qualification' | 'info',
+    ctaLocation: string,
+  ) => {
     setLeadDialogMode(mode);
     setLeadDialogLocation(ctaLocation);
     setLeadDialogOpen(true);
@@ -688,7 +684,9 @@ export default function DevelopmentDetail() {
           ? 'Download Brochure'
           : mode === 'contact'
             ? 'Contact Sales Team'
-            : 'Start Qualification',
+            : mode === 'qualification'
+              ? 'Start Qualification'
+              : 'Request Information',
       ctaLocation,
       ctaHref: typeof window !== 'undefined' ? window.location.href : '',
     });
@@ -716,34 +714,37 @@ export default function DevelopmentDetail() {
     setLocation(`/development/${slug}/qualification${query}`);
   };
 
-  const openDocumentUrl = (url: string) => {
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!newWindow) {
-      window.location.href = url;
-    }
-  };
-
   const handleUnitCallback = (unit: any) => {
     openLeadDialog('contact', `unit_card_${unit.id}_callback`);
   };
 
-  const handleUnitBrochure = (unit: any) => {
-    openLeadDialog('brochure', `unit_card_${unit.id}_brochure`);
+  const handleUnitInformation = (unit: any) => {
+    openLeadDialog('info', `unit_card_${unit.id}_info`);
   };
 
   const handleUnitFloorPlan = (unit: any) => {
     const floorPlanUrl = resolveUnitFloorPlanUrl(unit);
     if (!floorPlanUrl) {
-      handleUnitBrochure(unit);
+      handleUnitInformation(unit);
       return;
     }
 
     trackCTAClick({
       ctaLabel: 'View Floor Plan',
       ctaLocation: `unit_card_${unit.id}_floor_plan`,
-      ctaHref: floorPlanUrl,
+      ctaHref: typeof window !== 'undefined' ? window.location.href : `/development/${slug || ''}`,
     });
-    openDocumentUrl(floorPlanUrl);
+    setFloorPlanDialogUnit(unit);
+  };
+
+  const handleFloorPlanInfoRequest = (unit: any) => {
+    setFloorPlanDialogUnit(null);
+    openLeadDialog('info', `unit_floor_plan_dialog_${unit.id}_info`);
+  };
+
+  const handleFloorPlanCallbackRequest = (unit: any) => {
+    setFloorPlanDialogUnit(null);
+    openLeadDialog('contact', `unit_floor_plan_dialog_${unit.id}_callback`);
   };
 
   // Fetch real development by slug or ID
@@ -1787,9 +1788,8 @@ export default function DevelopmentDetail() {
                           >
                             <UnitTypeCarousel
                               units={bedroomGroups.get(key)?.units || []}
-                              brochureAvailable={!!brochureUrl}
                               onRequestCallback={handleUnitCallback}
-                              onRequestBrochure={handleUnitBrochure}
+                              onRequestInformation={handleUnitInformation}
                               onOpenFloorPlan={handleUnitFloorPlan}
                             />
                           </TabsContent>
@@ -2122,6 +2122,17 @@ export default function DevelopmentDetail() {
 
       {/* Footer - Outside main container */}
       <Footer />
+
+      <UnitFloorPlanDialog
+        open={Boolean(floorPlanDialogUnit)}
+        onOpenChange={open => {
+          if (!open) setFloorPlanDialogUnit(null);
+        }}
+        developmentName={development.name}
+        unit={floorPlanDialogUnit}
+        onRequestInformation={handleFloorPlanInfoRequest}
+        onRequestCallback={handleFloorPlanCallbackRequest}
+      />
 
       <DevelopmentLeadDialog
         open={leadDialogOpen}
