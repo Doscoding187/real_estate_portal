@@ -16,6 +16,9 @@ const {
   mockGetBrandOnboardingPresetUseQuery,
   mockSetBrandOnboardingPresetUseMutation,
   mockUseUtils,
+  mockInvalidateReadiness,
+  mockInvalidateDocs,
+  mockInvalidateBrandPreset,
 } = vi.hoisted(() => ({
   mockGetProgramReadinessUseQuery: vi.fn(),
   mockSetProgramReferralEnabledUseMutation: vi.fn(),
@@ -27,6 +30,9 @@ const {
   mockGetBrandOnboardingPresetUseQuery: vi.fn(),
   mockSetBrandOnboardingPresetUseMutation: vi.fn(),
   mockUseUtils: vi.fn(),
+  mockInvalidateReadiness: vi.fn(),
+  mockInvalidateDocs: vi.fn(),
+  mockInvalidateBrandPreset: vi.fn(),
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -97,13 +103,13 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       distribution: {
         admin: {
           getProgramReadiness: {
-            invalidate: vi.fn().mockResolvedValue(undefined),
+            invalidate: mockInvalidateReadiness.mockResolvedValue(undefined),
           },
           getDevelopmentRequiredDocuments: {
-            invalidate: vi.fn().mockResolvedValue(undefined),
+            invalidate: mockInvalidateDocs.mockResolvedValue(undefined),
           },
           getBrandOnboardingPreset: {
-            invalidate: vi.fn().mockResolvedValue(undefined),
+            invalidate: mockInvalidateBrandPreset.mockResolvedValue(undefined),
           },
         },
       },
@@ -280,6 +286,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     const docsRefetch = vi.fn().mockResolvedValue(undefined);
     const onboardMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
     const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
+    const onRefreshCatalog = vi.fn().mockResolvedValue(undefined);
 
     mockGetProgramReadinessUseQuery.mockReturnValue({
       data: readinessFixture,
@@ -319,7 +326,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         isError={false}
         onRetry={vi.fn()}
         managerOptions={[]}
-        onRefreshCatalog={vi.fn()}
+        onRefreshCatalog={onRefreshCatalog}
       />,
     );
 
@@ -334,12 +341,16 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     );
     await waitFor(() => expect(upsertMutateAsync).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(readinessRefetch).toHaveBeenCalled());
+    await waitFor(() => expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1001 }));
+    await waitFor(() => expect(mockInvalidateDocs).toHaveBeenCalledWith({ developmentId: 1001 }));
+    await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
   });
 
   it('applies selected onboarding defaults to other developments without enabling referrals', async () => {
     const onboardMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
     const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
     const setDocsMutateAsync = vi.fn().mockResolvedValue({ success: true });
+    const onRefreshCatalog = vi.fn().mockResolvedValue(undefined);
 
     mockOnboardDevelopmentToPartnerNetworkUseMutation.mockReturnValue({
       mutateAsync: onboardMutateAsync,
@@ -380,7 +391,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         isError={false}
         onRetry={vi.fn()}
         managerOptions={[]}
-        onRefreshCatalog={vi.fn()}
+        onRefreshCatalog={onRefreshCatalog}
       />,
     );
 
@@ -408,6 +419,69 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         }),
       ),
     );
+    await waitFor(() => expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1002 }));
+    await waitFor(() => expect(mockInvalidateDocs).toHaveBeenCalledWith({ developmentId: 1002 }));
+    await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
+  });
+
+  it('refreshes parent drawer state after a successful referral toggle', async () => {
+    const readinessRefetch = vi.fn().mockResolvedValue(undefined);
+    const mutateAsync = vi.fn().mockResolvedValue({ success: true });
+    const onRefreshCatalog = vi.fn().mockResolvedValue(undefined);
+
+    mockGetProgramReadinessUseQuery.mockReturnValue({
+      data: {
+        ...readinessFixture,
+        canEnableReferral: true,
+        blockers: [],
+        state: {
+          ...readinessFixture.state,
+          hasActivePrimaryManager: true,
+        },
+      },
+      isLoading: false,
+      refetch: readinessRefetch,
+    });
+    mockSetProgramReferralEnabledUseMutation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={onRefreshCatalog}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole('switch')[0]);
+
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        developmentId: 1001,
+        enabled: true,
+      }),
+    );
+    await waitFor(() => expect(readinessRefetch).toHaveBeenCalled());
+    await waitFor(() => expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1001 }));
+    await waitFor(() => expect(mockInvalidateDocs).toHaveBeenCalledWith({ developmentId: 1001 }));
+    await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
   });
 
   it('shows explicit loading copy while readiness is still resolving', () => {

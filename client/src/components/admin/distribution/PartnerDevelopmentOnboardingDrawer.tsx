@@ -204,14 +204,14 @@ function DevelopmentProgramConfigPanel({
   development,
   brandProfileId,
   managerOptions,
-  onSaved,
+  onMutationSuccess,
   focusSection,
   otherDevelopments,
 }: {
   development: DevelopmentRow;
   brandProfileId: number | null;
   managerOptions: ManagerOption[];
-  onSaved: () => Promise<void> | void;
+  onMutationSuccess: (developmentIds: number[]) => Promise<void> | void;
   focusSection?: string | null;
   otherDevelopments: DevelopmentRow[];
 }) {
@@ -451,7 +451,11 @@ function DevelopmentProgramConfigPanel({
       true,
     );
 
-    await Promise.all([readinessQuery.refetch(), docsQuery.refetch(), Promise.resolve(onSaved())]);
+    await Promise.all([
+      readinessQuery.refetch(),
+      docsQuery.refetch(),
+      Promise.resolve(onMutationSuccess([development.developmentId])),
+    ]);
     toast.success('Program configuration saved');
   }
 
@@ -460,11 +464,12 @@ function DevelopmentProgramConfigPanel({
 
     setIsApplyingTemplate(true);
     try {
+      const targetDevelopmentIds = otherDevelopments.map(row => row.developmentId);
       for (const row of otherDevelopments) {
         await saveConfigurationForDevelopment(row.developmentId, false, false);
       }
 
-      await Promise.resolve(onSaved());
+      await Promise.resolve(onMutationSuccess(targetDevelopmentIds));
       toast.success(
         `Applied onboarding defaults to ${otherDevelopments.length} development${
           otherDevelopments.length === 1 ? '' : 's'
@@ -871,14 +876,14 @@ function DevelopmentOnboardingRow({
   development,
   isSelected,
   onConfigure,
-  onSaved,
+  onMutationSuccess,
   onFixNow,
   onReadinessLoaded,
 }: {
   development: DevelopmentRow;
   isSelected: boolean;
   onConfigure: () => void;
-  onSaved: () => Promise<void> | void;
+  onMutationSuccess: (developmentIds: number[]) => Promise<void> | void;
   onFixNow: (blockerCode: string) => void;
   onReadinessLoaded: (developmentId: number, readiness: ProgramReadiness | null) => void;
 }) {
@@ -909,7 +914,10 @@ function DevelopmentOnboardingRow({
         developmentId: development.developmentId,
         enabled: false,
       });
-      await Promise.all([readinessQuery.refetch(), Promise.resolve(onSaved())]);
+      await Promise.all([
+        readinessQuery.refetch(),
+        Promise.resolve(onMutationSuccess([development.developmentId])),
+      ]);
       toast.success('Referrals disabled');
       return;
     }
@@ -920,7 +928,10 @@ function DevelopmentOnboardingRow({
         developmentId: development.developmentId,
         enabled: true,
       });
-      await Promise.all([readinessQuery.refetch(), Promise.resolve(onSaved())]);
+      await Promise.all([
+        readinessQuery.refetch(),
+        Promise.resolve(onMutationSuccess([development.developmentId])),
+      ]);
       toast.success('Referrals enabled');
     } catch (error: any) {
       const blockers = (error?.data?.blockers || []) as Array<{ code: string; message: string }>;
@@ -1052,6 +1063,7 @@ export function PartnerDevelopmentOnboardingDrawer({
   managerOptions: ManagerOption[];
   onRefreshCatalog: () => Promise<void> | void;
 }) {
+  const utils = trpc.useUtils();
   const [selectedDevelopmentId, setSelectedDevelopmentId] = useState<number | null>(null);
   const [focusSection, setFocusSection] = useState<string | null>(null);
   const [readinessByDevelopmentId, setReadinessByDevelopmentId] = useState<
@@ -1086,6 +1098,32 @@ export function PartnerDevelopmentOnboardingDrawer({
   const readinessCounts = useMemo(
     () => getReadinessCounts(readinessByDevelopmentId),
     [readinessByDevelopmentId],
+  );
+
+  const handleMutationSuccess = useCallback(
+    async (developmentIds: number[]) => {
+      if (developmentIds.length) {
+        setReadinessByDevelopmentId(current => {
+          const next = { ...current };
+          for (const developmentId of developmentIds) {
+            delete next[developmentId];
+          }
+          return next;
+        });
+
+        await Promise.all([
+          ...developmentIds.map(developmentId =>
+            utils.distribution.admin.getProgramReadiness.invalidate({ developmentId }),
+          ),
+          ...developmentIds.map(developmentId =>
+            utils.distribution.admin.getDevelopmentRequiredDocuments.invalidate({ developmentId }),
+          ),
+        ]);
+      }
+
+      await Promise.resolve(onRefreshCatalog());
+    },
+    [onRefreshCatalog, utils],
   );
 
   useEffect(() => {
@@ -1184,11 +1222,11 @@ export function PartnerDevelopmentOnboardingDrawer({
                       key={row.developmentId}
                       development={row}
                       isSelected={selectedDevelopmentId === row.developmentId}
-                      onConfigure={() => {
+                  onConfigure={() => {
                         setSelectedDevelopmentId(row.developmentId);
                         setFocusSection(null);
                       }}
-                      onSaved={onRefreshCatalog}
+                      onMutationSuccess={handleMutationSuccess}
                       onFixNow={blockerCode => {
                         setSelectedDevelopmentId(row.developmentId);
                         setFocusSection(getBlockerSectionId(blockerCode));
@@ -1224,7 +1262,7 @@ export function PartnerDevelopmentOnboardingDrawer({
                         row => row.developmentId !== selectedDevelopment.developmentId,
                       )}
                       managerOptions={managerOptions}
-                      onSaved={onRefreshCatalog}
+                      onMutationSuccess={handleMutationSuccess}
                       focusSection={focusSection}
                     />
                   </div>
