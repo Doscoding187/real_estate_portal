@@ -125,6 +125,7 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
+const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
 const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
@@ -365,6 +366,7 @@ function Router() {
               return null;
             }}
           />
+          <Route path="/development/:slug/unit/:unitId" component={DevelopmentUnitDetailPage} />
           <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
           <Route path="/development/:slug" component={DevelopmentDetail} />
 

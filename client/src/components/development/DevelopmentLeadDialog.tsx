@@ -22,6 +22,10 @@ interface DevelopmentLeadDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: LeadDialogMode;
   ctaLocation?: string;
+  unitContext?: {
+    id?: number | string | null;
+    name?: string | null;
+  } | null;
   development: {
     id: number;
     name: string;
@@ -85,6 +89,7 @@ export function DevelopmentLeadDialog({
   onOpenChange,
   mode,
   ctaLocation,
+  unitContext,
   development,
   affordabilityData,
 }: DevelopmentLeadDialogProps) {
@@ -111,8 +116,12 @@ export function DevelopmentLeadDialog({
   const copy = MODE_COPY[mode];
 
   const generatedMessage = useMemo(() => {
+    const subject = unitContext?.name?.trim()
+      ? `${unitContext.name} at ${development.name}`
+      : development.name;
+
     if (mode === 'brochure') {
-      return `Please send me the brochure and latest pricing for ${development.name}.`;
+      return `Please send me the brochure and latest pricing for ${subject}.`;
     }
 
     if (mode === 'qualification') {
@@ -126,20 +135,21 @@ export function DevelopmentLeadDialog({
         ? ` My estimated buying power is ${formatSARandShort(affordabilityData.maxAffordable)}.`
         : '';
 
-      return `I would like to start a full qualification review for ${development.name}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
+      return `I would like to start a full qualification review for ${subject}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
     }
 
     if (mode === 'info') {
-      return `Please send me more information about ${development.name}, including pricing, specifications, and available options.`;
+      return `Please send me more information about ${subject}, including pricing, specifications, and available options.`;
     }
 
-    return `I am interested in ${development.name}. Please contact me with pricing, availability, and next steps.`;
+    return `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
   }, [
     affordabilityData?.availableDeposit,
     affordabilityData?.maxAffordable,
     affordabilityData?.monthlyIncome,
     development.name,
     mode,
+    unitContext?.name,
   ]);
 
   const createLead = trpc.developer.createLead.useMutation({
