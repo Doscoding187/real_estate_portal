@@ -3,14 +3,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { formatSARandShort } from '@/lib/bond-calculator';
 import { formatPriceCompact } from '@/lib/formatPrice';
-import { Badge } from '@/components/ui/badge';
-import { Calculator, Calendar, TrendingUp, Wallet } from 'lucide-react';
+import { Calculator, Calendar, TrendingUp } from 'lucide-react';
 
 interface DevelopmentOverviewCardProps {
   priceFrom: number;
   priceTo?: number;
   monthlyRepayment: number;
-  estimatedDeposit: number;
   minimumIncome: number;
   constructionStatus?: string;
   completionDate?: string;
@@ -26,7 +24,6 @@ export function DevelopmentOverviewCard({
   priceFrom,
   priceTo,
   monthlyRepayment,
-  estimatedDeposit,
   minimumIncome,
   constructionStatus = 'Now Selling',
   completionDate,
@@ -44,28 +41,14 @@ export function DevelopmentOverviewCard({
       <CardContent className="p-6 lg:p-8">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-orange-50 text-orange-700 border border-orange-100 hover:bg-orange-50">
-                Ownership Snapshot
-              </Badge>
-              <Badge variant="outline" className="border-slate-200 text-slate-600">
-                {constructionStatus || 'Now Selling'}
-              </Badge>
-              {completionDate && completionDate !== 'TBC' && (
-                <Badge variant="outline" className="border-slate-200 text-slate-600">
-                  Completion {completionDate}
-                </Badge>
-              )}
-            </div>
-
             <div>
               <p className="text-slate-500 text-sm font-medium mb-1">Price From</p>
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight">
                 {priceRange}
               </h2>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
                   <Calculator className="h-4 w-4 text-blue-600" />
@@ -79,18 +62,8 @@ export function DevelopmentOverviewCard({
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
-                  <Wallet className="h-4 w-4 text-emerald-600" />
-                  Est. Deposit
-                </div>
-                <p className="mt-2 text-xl font-bold text-slate-900">
-                  {formatSARandShort(estimatedDeposit)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
                   <TrendingUp className="h-4 w-4 text-orange-600" />
-                  Min. Income
+                  Qualifying Income
                 </div>
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatSARandShort(minimumIncome)}
@@ -100,7 +73,7 @@ export function DevelopmentOverviewCard({
             </div>
 
             <p className="text-xs text-slate-500">
-              Estimated using a 10% deposit, 20-year bond term, and standard prime lending rate.
+              Estimated using a 20-year bond term and standard prime lending rate.
             </p>
           </div>
 

@@ -30,6 +30,7 @@ interface DevelopmentLeadDialogProps {
   };
   affordabilityData?: {
     monthlyIncome?: number;
+    availableDeposit?: number;
     maxAffordable?: number;
     calculatedAt?: string;
   } | null;
@@ -110,15 +111,24 @@ export function DevelopmentLeadDialog({
       const incomeLine = affordabilityData?.monthlyIncome
         ? ` My household income is ${formatSARandShort(affordabilityData.monthlyIncome)} per month.`
         : '';
+      const depositLine = affordabilityData?.availableDeposit
+        ? ` I have an available deposit of ${formatSARandShort(affordabilityData.availableDeposit)}.`
+        : '';
       const buyingPowerLine = affordabilityData?.maxAffordable
         ? ` My estimated buying power is ${formatSARandShort(affordabilityData.maxAffordable)}.`
         : '';
 
-      return `I would like to start a full qualification review for ${development.name}.${incomeLine}${buyingPowerLine}`.trim();
+      return `I would like to start a full qualification review for ${development.name}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
     }
 
     return `I am interested in ${development.name}. Please contact me with pricing, availability, and next steps.`;
-  }, [affordabilityData?.maxAffordable, affordabilityData?.monthlyIncome, development.name, mode]);
+  }, [
+    affordabilityData?.availableDeposit,
+    affordabilityData?.maxAffordable,
+    affordabilityData?.monthlyIncome,
+    development.name,
+    mode,
+  ]);
 
   const createLead = trpc.developer.createLead.useMutation({
     onSuccess: () => {
@@ -171,7 +181,10 @@ export function DevelopmentLeadDialog({
       leadSource: copy.leadSource,
       referrerUrl: typeof window !== 'undefined' ? window.location.href : undefined,
       affordabilityData:
-        affordabilityData && (affordabilityData.monthlyIncome || affordabilityData.maxAffordable)
+        affordabilityData &&
+        (affordabilityData.monthlyIncome ||
+          affordabilityData.availableDeposit ||
+          affordabilityData.maxAffordable)
           ? affordabilityData
           : undefined,
     });
