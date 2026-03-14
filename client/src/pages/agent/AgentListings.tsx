@@ -14,7 +14,8 @@ import { calculateListingReadiness } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
 type ListingTab = 'active' | 'pending' | 'draft' | 'sold' | 'archived';
-type ListingStatusFilter = 'available' | 'pending_review' | 'draft' | 'sold' | 'archived' | 'all';
+type PropertyStatusFilter = 'available' | 'published' | 'pending' | 'draft' | 'sold' | 'archived';
+type ListingStatusFilter = 'pending_review' | 'draft';
 
 export default function AgentListings() {
   const [, setLocation] = useLocation();
@@ -23,12 +24,12 @@ export default function AgentListings() {
   const [activeTab, setActiveTab] = useState<ListingTab>('active');
 
   // Map tabs to status for API
-  const getStatusForTab = (tab: ListingTab): ListingStatusFilter => {
+  const getPropertyStatusForTab = (tab: ListingTab): PropertyStatusFilter => {
     switch (tab) {
       case 'active':
-        return 'available';
+        return 'published';
       case 'pending':
-        return 'pending_review';
+        return 'pending';
       case 'draft':
         return 'draft';
       case 'sold':
@@ -36,8 +37,12 @@ export default function AgentListings() {
       case 'archived':
         return 'archived';
       default:
-        return 'all';
+        return 'published';
     }
+  };
+
+  const getListingStatusForTab = (tab: ListingTab): ListingStatusFilter => {
+    return tab === 'pending' ? 'pending_review' : 'draft';
   };
 
   const isDraftOrPending = activeTab === 'draft' || activeTab === 'pending';
@@ -45,7 +50,7 @@ export default function AgentListings() {
   // Fetch agent listings (for Active, Sold, Archived)
   const { data: agentListings, isLoading: isLoadingAgent } = trpc.agent.getMyListings.useQuery(
     {
-      status: getStatusForTab(activeTab),
+      status: getPropertyStatusForTab(activeTab),
       limit: 50,
     },
     {
@@ -60,7 +65,7 @@ export default function AgentListings() {
     refetch: refetchDrafts,
   } = trpc.listing.myListings.useQuery(
     {
-      status: getStatusForTab(activeTab),
+      status: getListingStatusForTab(activeTab),
       limit: 50,
     },
     {
@@ -211,7 +216,11 @@ export default function AgentListings() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={value => setActiveTab(value as ListingTab)}
+          className="w-full"
+        >
           <TabsList
             className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-3xl grid-cols-5')}
           >

@@ -697,9 +697,7 @@ export function AgentDashboardOverview() {
                 className="relative z-10 inline-flex h-auto w-fit items-center gap-2 rounded-full border border-white/18 bg-white/14 px-4 py-2 text-[12.5px] font-medium text-white shadow-none backdrop-blur-sm hover:bg-white/22"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                {onboarding?.recommendedNextStep === 'publish_profile'
-                  ? 'Review profile'
-                  : 'Finish setup'}
+                {onboarding?.entitlements?.canPublishListings ? 'Review profile' : 'Finish setup'}
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-semibold text-[var(--primary)]">
                   {setupItemsRemaining}
                 </span>

@@ -31,57 +31,11 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
-
-type ListingLimitEnforcement = {
-  demotedCount?: number;
-};
-
-type ChangePlanMutationResult = {
-  listing_limit_enforcement?: ListingLimitEnforcement | null;
-};
-
-type PlanEntitlements = {
-  maxActiveListings?: number;
-  max_active_listings?: number;
-  hasAiInsights?: boolean;
-  hasRevenueDashboard?: boolean;
-  has_revenue_dashboard?: boolean;
-};
-
-type TrialStatusSnapshot = {
-  status?: 'active' | 'expired' | 'none' | string;
-  trialEndsAt?: string | null;
-  daysRemaining?: number | null;
-};
-
-type CurrentPlanSnapshot = {
-  id: number;
-  displayName: string;
-  priceMonthly: number;
-};
-
-type SubscriptionUsage = {
-  activeListings?: number | null;
-};
+import type { SubscriptionPlan, UserSubscription } from '@shared/subscription-types';
 
 type SubscriptionSnapshotView = {
-  current_plan?: CurrentPlanSnapshot | null;
-  currentPlan?: CurrentPlanSnapshot | null;
-  trial_status?: TrialStatusSnapshot | null;
-  trialStatus?: TrialStatusSnapshot | null;
-  usage?: SubscriptionUsage | null;
-  entitlements?: PlanEntitlements | null;
-};
-
-type PlanCatalogPlan = {
-  id: number;
-  displayName: string;
-  priceMonthly: number;
-  description?: string | null;
-  entitlements?: {
-    max_active_listings?: number | string | null;
-    maxActiveListings?: number | string | null;
-  } | null;
+  subscription: UserSubscription;
+  plan: SubscriptionPlan | null;
 };
 
 export default function AgentSettings() {
@@ -109,32 +63,33 @@ export default function AgentSettings() {
     smsShowings: true,
   });
 
-  const subscriptionSnapshotQuery = trpc.subscription.getMyPlanSnapshot.useQuery(undefined, {
+  const subscriptionSnapshotQuery = trpc.subscription.getMySubscription.useQuery(undefined, {
     enabled: isAgent,
     refetchOnWindowFocus: false,
   });
-  const plansQuery = trpc.subscription.getPlanCatalog.useQuery(
-    { segment: 'agent' },
+  const plansQuery = trpc.subscription.getPlans.useQuery(
+    { category: 'agent' },
     {
       enabled: isAgent,
       refetchOnWindowFocus: false,
     },
   );
-  const changePlanMutation = trpc.subscription.changeMyPlan.useMutation({
-    onSuccess: data => {
-      const result = data as ChangePlanMutationResult;
-      const demotedCount = Number(result.listing_limit_enforcement?.demotedCount || 0);
-      if (demotedCount > 0) {
-        toast.success(
-          `Plan updated. ${demotedCount} active listing${demotedCount === 1 ? '' : 's'} moved to draft to match your new limit.`,
-        );
-      } else {
-        toast.success('Plan updated successfully');
-      }
+  const upgradePlanMutation = trpc.subscription.upgrade.useMutation({
+    onSuccess: () => {
+      toast.success('Plan upgraded successfully');
       void subscriptionSnapshotQuery.refetch();
     },
     onError: error => {
-      toast.error(error.message || 'Could not change plan');
+      toast.error(error.message || 'Could not upgrade plan');
+    },
+  });
+  const downgradePlanMutation = trpc.subscription.downgrade.useMutation({
+    onSuccess: () => {
+      toast.success('Plan downgrade scheduled');
+      void subscriptionSnapshotQuery.refetch();
+    },
+    onError: error => {
+      toast.error(error.message || 'Could not downgrade plan');
     },
   });
 
@@ -147,30 +102,24 @@ export default function AgentSettings() {
   };
 
   const snapshot = (subscriptionSnapshotQuery.data as SubscriptionSnapshotView | null) ?? null;
-  const currentPlan = snapshot?.current_plan || snapshot?.currentPlan || null;
-  const trialStatus = snapshot?.trial_status || snapshot?.trialStatus || null;
-  const planCatalog = (plansQuery.data as PlanCatalogPlan[] | undefined) ?? [];
-  const activeListingCount = Number(snapshot?.usage?.activeListings ?? 0);
-  const currentPlanMaxActiveListings = Number(
-    snapshot?.entitlements?.maxActiveListings ?? snapshot?.entitlements?.max_active_listings ?? -1,
+  const currentPlan = snapshot?.plan ?? null;
+  const currentSubscription = snapshot?.subscription ?? null;
+  const planCatalog = ((plansQuery.data as SubscriptionPlan[] | undefined) ?? []).filter(
+    plan => plan.category === 'agent',
   );
+  const activeListingCount = 0;
+  const currentPlanMaxActiveListings = Number(currentPlan?.limits?.listings ?? -1);
 
-  const resolvePlanMaxActiveListings = (plan: PlanCatalogPlan): number => {
-    const rawValue =
-      plan?.entitlements?.max_active_listings ?? plan?.entitlements?.maxActiveListings;
-    if (typeof rawValue === 'number') return rawValue;
-    if (typeof rawValue === 'string') {
-      const parsed = Number(rawValue);
-      return Number.isFinite(parsed) ? parsed : -1;
-    }
-    return -1;
+  const resolvePlanMaxActiveListings = (plan: SubscriptionPlan): number => {
+    const rawValue = plan?.limits?.listings;
+    return typeof rawValue === 'number' ? rawValue : -1;
   };
 
-  const handleChangePlan = (targetPlan: PlanCatalogPlan) => {
-    const targetPlanId = Number(targetPlan?.id);
-    if (!currentPlan || !targetPlanId || currentPlan.id === targetPlanId) return;
-    const targetPriceMonthly = Number(targetPlan?.priceMonthly || 0);
-    const currentPrice = Number(currentPlan.priceMonthly || 0);
+  const handleChangePlan = (targetPlan: SubscriptionPlan) => {
+    const targetPlanId = targetPlan?.plan_id;
+    if (!currentPlan || !targetPlanId || currentPlan.plan_id === targetPlanId) return;
+    const targetPriceMonthly = Number(targetPlan?.price_zar || 0);
+    const currentPrice = Number(currentPlan.price_zar || 0);
     const action = targetPriceMonthly >= currentPrice ? 'upgrade' : 'downgrade';
 
     if (action === 'downgrade') {
@@ -180,9 +129,9 @@ export default function AgentSettings() {
       if (Number.isFinite(targetMaxActiveListings) && targetMaxActiveListings >= 0) {
         const overLimitCount = Math.max(0, activeListingCount - targetMaxActiveListings);
         if (overLimitCount > 0) {
-          warningMessage = `You currently have ${activeListingCount} active listings. ${targetPlan.displayName} allows ${targetMaxActiveListings}. ${overLimitCount} listing${overLimitCount === 1 ? '' : 's'} will be moved to draft (not deleted). Continue?`;
+          warningMessage = `You currently have ${activeListingCount} active listings. ${targetPlan.display_name} allows ${targetMaxActiveListings}. ${overLimitCount} listing${overLimitCount === 1 ? '' : 's'} will be moved to draft (not deleted). Continue?`;
         } else {
-          warningMessage = `${targetPlan.displayName} allows ${targetMaxActiveListings} active listings. Continue downgrade?`;
+          warningMessage = `${targetPlan.display_name} allows ${targetMaxActiveListings} active listings. Continue downgrade?`;
         }
       }
 
@@ -191,15 +140,29 @@ export default function AgentSettings() {
       }
     }
 
-    changePlanMutation.mutate({ planId: targetPlanId, action });
+    if (action === 'upgrade') {
+      upgradePlanMutation.mutate({ new_plan_id: targetPlanId, immediate: true });
+      return;
+    }
+
+    downgradePlanMutation.mutate({ new_plan_id: targetPlanId, immediate: false });
   };
 
+  const trialEndsAt = currentSubscription?.trial_ends_at
+    ? new Date(currentSubscription.trial_ends_at)
+    : null;
+  const trialDaysRemaining =
+    currentSubscription?.status === 'trial_active' && trialEndsAt
+      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : null;
   const trialBadgeText =
-    trialStatus?.status === 'active'
-      ? `${trialStatus.daysRemaining ?? 0} day${trialStatus.daysRemaining === 1 ? '' : 's'} left`
-      : trialStatus?.status === 'expired'
+    currentSubscription?.status === 'trial_active'
+      ? `${trialDaysRemaining ?? 0} day${trialDaysRemaining === 1 ? '' : 's'} left`
+      : currentSubscription?.status === 'trial_expired'
         ? 'Trial expired'
-        : 'No trial';
+        : currentSubscription
+          ? 'Paid plan'
+          : 'No trial';
 
   return (
     <AgentAppShell>
@@ -565,10 +528,10 @@ export default function AgentSettings() {
                         <div className={cn(agentPageStyles.mutedPanel, 'p-4')}>
                           <div className="text-sm text-gray-500">Current Plan</div>
                           <div className="text-xl font-semibold text-gray-900 mt-1">
-                            {currentPlan.displayName}
+                            {currentPlan.display_name}
                           </div>
                           <div className="text-sm text-gray-500 mt-1">
-                            R{Number(currentPlan.priceMonthly || 0) / 100}/month
+                            R{Number(currentPlan.price_zar || 0) / 100}/month
                           </div>
                         </div>
                         <div className={cn(agentPageStyles.mutedPanel, 'p-4')}>
@@ -579,9 +542,9 @@ export default function AgentSettings() {
                               {trialBadgeText}
                             </span>
                           </div>
-                          {trialStatus?.trialEndsAt ? (
+                          {trialEndsAt ? (
                             <div className="text-sm text-gray-500 mt-1">
-                              Ends {new Date(trialStatus.trialEndsAt).toLocaleDateString()}
+                              Ends {trialEndsAt.toLocaleDateString()}
                             </div>
                           ) : null}
                         </div>
@@ -603,14 +566,13 @@ export default function AgentSettings() {
                             <div>
                               AI insights:{' '}
                               <span className="font-medium">
-                                {snapshot?.entitlements?.hasAiInsights ? 'Enabled' : 'Disabled'}
+                                {currentPlan?.permissions?.analytics_level ? 'Enabled' : 'Disabled'}
                               </span>
                             </div>
                             <div>
                               Revenue dashboard:{' '}
                               <span className="font-medium">
-                                {snapshot?.entitlements?.hasRevenueDashboard ||
-                                snapshot?.entitlements?.has_revenue_dashboard
+                                {currentPlan?.permissions?.analytics_level === 'advanced'
                                   ? 'Enabled'
                                   : 'Disabled'}
                               </span>
@@ -623,9 +585,9 @@ export default function AgentSettings() {
                         <h3 className="font-semibold text-gray-900 mb-3">Change Plan</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {planCatalog.map(plan => {
-                            const isCurrent = Number(plan.id) === Number(currentPlan.id);
-                            const targetPrice = Number(plan.priceMonthly || 0);
-                            const isUpgrade = targetPrice >= Number(currentPlan.priceMonthly || 0);
+                            const isCurrent = plan.plan_id === currentPlan.plan_id;
+                            const targetPrice = Number(plan.price_zar || 0);
+                            const isUpgrade = targetPrice >= Number(currentPlan.price_zar || 0);
                             return (
                               <div
                                 key={plan.id}
@@ -639,7 +601,7 @@ export default function AgentSettings() {
                                 <div className="flex items-start justify-between">
                                   <div>
                                     <div className="font-semibold text-gray-900">
-                                      {plan.displayName}
+                                      {plan.display_name}
                                     </div>
                                     <div className="text-sm text-gray-500 mt-1">
                                       R{targetPrice / 100}/month
@@ -668,10 +630,15 @@ export default function AgentSettings() {
                                 <Button
                                   className="mt-4 w-full"
                                   variant={isCurrent ? 'outline' : 'default'}
-                                  disabled={isCurrent || changePlanMutation.isPending}
+                                  disabled={
+                                    isCurrent ||
+                                    upgradePlanMutation.isPending ||
+                                    downgradePlanMutation.isPending
+                                  }
                                   onClick={() => handleChangePlan(plan)}
                                 >
-                                  {changePlanMutation.isPending ? (
+                                  {upgradePlanMutation.isPending ||
+                                  downgradePlanMutation.isPending ? (
                                     <>
                                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                       Updating...
