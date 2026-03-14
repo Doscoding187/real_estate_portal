@@ -184,7 +184,7 @@ const formatParkingLabel = (parking?: string | number, parkingBays?: number): st
   return baysValue && baysValue > 0 ? `${baysValue} Bay${baysValue === 1 ? '' : 's'}` : null;
 };
 
-const DEFAULT_DEPOSIT_PERCENTAGE = 10;
+const DEFAULT_DEPOSIT_PERCENTAGE = 0;
 const DEFAULT_BOND_TERM_YEARS = 20;
 const QUICK_QUALIFICATION_PAYMENT_RATIO = 3;
 
@@ -301,19 +301,19 @@ function UnitTypeCarousel({
               unitPriceTo !== null && unitPriceTo > unitPriceFrom
                 ? formatExactRand(unitPriceTo)
                 : null;
-            const estimatedDeposit =
-              unitPriceFrom > 0
-                ? Math.round(unitPriceFrom * (DEFAULT_DEPOSIT_PERCENTAGE / 100))
-                : null;
             const estimatedRepayment =
               unitPriceFrom > 0
                 ? Math.round(
                     calculateMonthlyRepayment(
-                      Math.max(unitPriceFrom - (estimatedDeposit || 0), 0),
+                      unitPriceFrom,
                       SA_PRIME_RATE,
                       DEFAULT_BOND_TERM_YEARS,
                     ),
                   )
+                : null;
+            const qualifyingIncome =
+              estimatedRepayment !== null
+                ? Math.round(estimatedRepayment * QUICK_QUALIFICATION_PAYMENT_RATIO)
                 : null;
             const secondaryActionLabel = floorPlanUrl
               ? 'View Floor Plan'
@@ -324,10 +324,10 @@ function UnitTypeCarousel({
             return (
               <CarouselItem
                 key={unit.id}
-                className="pl-4 md:basis-[78%] lg:basis-[58%] xl:basis-[46%]"
+                className="pl-4 md:basis-[74%] lg:basis-[54%] xl:basis-[43%]"
               >
                 <Card className="flex h-full flex-col overflow-hidden border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-                  <div className="group relative w-full overflow-hidden bg-slate-200 aspect-[4/3]">
+                  <div className="group relative w-full overflow-hidden bg-slate-200 aspect-[4/2.65]">
                     <img
                       src={unit.normalizedImage}
                       alt={unit.normalizedType}
@@ -351,29 +351,29 @@ function UnitTypeCarousel({
                   <CardContent className="flex flex-1 flex-col space-y-3 p-3.5">
                     <div className="space-y-1.5">
                       <div className="min-w-0">
-                        <h4 className="truncate text-[12px] font-bold leading-tight text-slate-900">
+                        <h4 className="truncate text-[11px] font-bold leading-tight text-slate-900">
                           {unit.name}
                         </h4>
-                        <p className="mt-1 truncate text-[11px] font-semibold text-slate-900">
+                        <p className="mt-1 truncate text-[13px] font-bold text-slate-900">
                           {exactPriceTo ? `${exactPriceFrom} - ${exactPriceTo}` : exactPriceFrom}
                         </p>
                       </div>
-                      {estimatedDeposit ? (
+                      {estimatedRepayment ? (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
                           <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                             Ownership Snapshot
                           </p>
                           <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px]">
-                            <span className="truncate text-slate-600">Deposit from</span>
+                            <span className="truncate text-slate-600">Repayment from</span>
                             <span className="truncate font-semibold text-slate-900">
-                              {formatExactRand(estimatedDeposit)}
+                              {formatExactRand(estimatedRepayment)} / month
                             </span>
                           </div>
-                          {estimatedRepayment ? (
+                          {qualifyingIncome ? (
                             <div className="mt-1 flex items-center justify-between gap-2 text-[10px]">
-                              <span className="truncate text-slate-600">Repayment from</span>
+                              <span className="truncate text-slate-600">Qualifying income</span>
                               <span className="truncate font-semibold text-slate-900">
-                                {formatExactRand(estimatedRepayment)} / month
+                                {formatExactRand(qualifyingIncome)} / month
                               </span>
                             </div>
                           ) : null}
@@ -455,6 +455,8 @@ type DevelopmentActionPanelProps = {
   inputId: string;
   quickIncome: string;
   onQuickIncomeChange: (value: string) => void;
+  quickDeposit: string;
+  onQuickDepositChange: (value: string) => void;
   quickQualification: QuickQualificationState | null;
   brochureUrl: string | null;
   unitTypeCount: number;
@@ -468,6 +470,8 @@ function DevelopmentActionPanel({
   inputId,
   quickIncome,
   onQuickIncomeChange,
+  quickDeposit,
+  onQuickDepositChange,
   quickQualification,
   brochureUrl,
   unitTypeCount,
@@ -520,6 +524,27 @@ function DevelopmentActionPanel({
                   className="h-11 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                 />
               </div>
+            </div>
+
+            <div className="mt-3">
+              <label htmlFor={`${inputId}-deposit`} className="sr-only">
+                Optional deposit
+              </label>
+              <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
+                <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
+                  R
+                </span>
+                <input
+                  id={`${inputId}-deposit`}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Optional deposit"
+                  value={quickDeposit}
+                  onChange={e => onQuickDepositChange(e.target.value)}
+                  className="h-10 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-xs font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">Optional deposit</p>
             </div>
 
             {quickQualification ? (
@@ -593,6 +618,7 @@ export default function DevelopmentDetail() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [quickIncome, setQuickIncome] = useState('');
+  const [quickDeposit, setQuickDeposit] = useState('');
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
   const [leadDialogMode, setLeadDialogMode] = useState<'brochure' | 'contact' | 'qualification'>(
     'qualification',
@@ -669,14 +695,17 @@ export default function DevelopmentDetail() {
   };
 
   const navigateToQualification = (ctaLocation: string) => {
-    const income = parsedQuickIncome > 0 ? `?income=${parsedQuickIncome}` : '';
+    const params = new URLSearchParams();
+    if (parsedQuickIncome > 0) params.set('income', `${parsedQuickIncome}`);
+    if (quickDepositAmount > 0) params.set('deposit', `${quickDepositAmount}`);
+    const query = params.toString() ? `?${params.toString()}` : '';
     trackCTAClick({
       ctaLabel: 'Check If You Qualify',
       ctaLocation,
       ctaHref:
         typeof window !== 'undefined'
-          ? `${window.location.origin}/development/${slug}/qualification${income}`
-          : `/development/${slug}/qualification${income}`,
+          ? `${window.location.origin}/development/${slug}/qualification${query}`
+          : `/development/${slug}/qualification${query}`,
     });
     trackFunnelStep({
       funnel: 'development_detail',
@@ -684,7 +713,7 @@ export default function DevelopmentDetail() {
       action: 'start',
       path: ctaLocation,
     });
-    setLocation(`/development/${slug}/qualification${income}`);
+    setLocation(`/development/${slug}/qualification${query}`);
   };
 
   const openDocumentUrl = (url: string) => {
@@ -1176,10 +1205,8 @@ export default function DevelopmentDetail() {
 
   const priceToDisplay =
     derivedPriceTo && derivedPriceTo > derivedPriceFrom ? derivedPriceTo : undefined;
-  const estimatedDepositFrom = Math.round(derivedPriceFrom * (DEFAULT_DEPOSIT_PERCENTAGE / 100));
-  const estimatedLoanAmount = Math.max(derivedPriceFrom - estimatedDepositFrom, 0);
   const estimatedRepaymentFrom = calculateMonthlyRepayment(
-    estimatedLoanAmount,
+    derivedPriceFrom,
     SA_PRIME_RATE,
     DEFAULT_BOND_TERM_YEARS,
   );
@@ -1191,12 +1218,15 @@ export default function DevelopmentDetail() {
   const normalizedCompletionDate = development.completionDate || 'Completion TBC';
 
   const parsedQuickIncome = Number(quickIncome.replace(/[^\d.]/g, ''));
+  const parsedQuickDeposit = Number(quickDeposit.replace(/[^\d.]/g, ''));
   const hasQuickIncome = Number.isFinite(parsedQuickIncome) && parsedQuickIncome > 0;
+  const quickDepositAmount =
+    Number.isFinite(parsedQuickDeposit) && parsedQuickDeposit > 0 ? parsedQuickDeposit : 0;
   const quickQualification: QuickQualificationState | null = (() => {
     if (!hasQuickIncome) return null;
 
     const maxMonthlyRepayment = parsedQuickIncome / QUICK_QUALIFICATION_PAYMENT_RATIO;
-    const maxAffordable = Math.round(
+    const baseAffordable = Math.round(
       calculateAffordablePrice(
         maxMonthlyRepayment,
         DEFAULT_DEPOSIT_PERCENTAGE,
@@ -1204,9 +1234,12 @@ export default function DevelopmentDetail() {
         DEFAULT_BOND_TERM_YEARS,
       ),
     );
+    const maxAffordable = Math.round(baseAffordable + quickDepositAmount);
     const comfortFloor = Math.max(Math.round(maxAffordable * 0.85), 0);
     const qualifies = maxAffordable >= derivedPriceFrom;
     const nearQualify = !qualifies && maxAffordable >= derivedPriceFrom * 0.9;
+    const depositNote =
+      quickDepositAmount > 0 ? ` Includes ${formatSARandShort(quickDepositAmount)} deposit.` : '';
 
     if (qualifies) {
       return {
@@ -1214,7 +1247,7 @@ export default function DevelopmentDetail() {
         buyingPower: maxAffordable,
         comfortFloor,
         headline: `You likely qualify for homes in ${development.name}`,
-        body: `Estimated buying power up to ${formatSARandShort(maxAffordable)}. Homes here start from ${formatSARandShort(derivedPriceFrom)}.`,
+        body: `Estimated buying power up to ${formatSARandShort(maxAffordable)}. Homes here start from ${formatSARandShort(derivedPriceFrom)}.${depositNote}`,
       };
     }
 
@@ -1223,8 +1256,8 @@ export default function DevelopmentDetail() {
         tone: 'warning' as const,
         buyingPower: maxAffordable,
         comfortFloor,
-        headline: 'You may qualify with a stronger deposit',
-        body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. A larger deposit or joint application could improve fit.`,
+        headline: 'You may be close to qualifying',
+        body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. A higher qualifying income or joint application could improve fit.${depositNote}`,
       };
     }
 
@@ -1233,7 +1266,7 @@ export default function DevelopmentDetail() {
       buyingPower: maxAffordable,
       comfortFloor,
       headline: 'This development may be above your current range',
-      body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. Start full qualification to explore next-best options.`,
+      body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. Start full qualification to explore next-best options.${depositNote}`,
     };
   })();
 
@@ -1343,7 +1376,6 @@ export default function DevelopmentDetail() {
                   priceFrom={derivedPriceFrom}
                   priceTo={priceToDisplay}
                   monthlyRepayment={estimatedRepaymentFrom}
-                  estimatedDeposit={estimatedDepositFrom}
                   minimumIncome={minimumIncomeRequired}
                   completionDate={normalizedCompletionDate}
                   constructionStatus={normalizedStatus}
@@ -1356,6 +1388,8 @@ export default function DevelopmentDetail() {
                     inputId="hero-quick-income"
                     quickIncome={quickIncome}
                     onQuickIncomeChange={setQuickIncome}
+                    quickDeposit={quickDeposit}
+                    onQuickDepositChange={setQuickDeposit}
                     quickQualification={quickQualification}
                     brochureUrl={brochureUrl}
                     unitTypeCount={dev.unitTypes?.length || 0}
@@ -2030,6 +2064,8 @@ export default function DevelopmentDetail() {
                     inputId="sidebar-quick-income"
                     quickIncome={quickIncome}
                     onQuickIncomeChange={setQuickIncome}
+                    quickDeposit={quickDeposit}
+                    onQuickDepositChange={setQuickDeposit}
                     quickQualification={quickQualification}
                     brochureUrl={brochureUrl}
                     unitTypeCount={dev.unitTypes?.length || 0}
@@ -2102,6 +2138,7 @@ export default function DevelopmentDetail() {
           quickQualification
             ? {
                 monthlyIncome: hasQuickIncome ? parsedQuickIncome : undefined,
+                availableDeposit: quickDepositAmount > 0 ? quickDepositAmount : undefined,
                 maxAffordable: quickQualification.buyingPower,
                 calculatedAt: new Date().toISOString(),
               }

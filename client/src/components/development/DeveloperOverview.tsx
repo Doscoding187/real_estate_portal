@@ -1,4 +1,4 @@
-import { Building2, ChevronRight, Globe, MapPin } from 'lucide-react';
+import { Building2, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -18,7 +18,6 @@ export function DeveloperOverview({
   developerName,
   developerLogo,
   developerDescription,
-  developerWebsite,
   developerSlug,
   headOfficeLocation,
   projectCount,
@@ -63,21 +62,13 @@ export function DeveloperOverview({
               </div>
 
               {headOfficeLocation && (
-                <div className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
-                  <MapPin className="h-4 w-4" />
-                  <span>{headOfficeLocation}</span>
-                </div>
-              )}
-
-              {developerWebsite && (
                 <a
-                  href={developerWebsite}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(headOfficeLocation)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
+                  className="mt-2 block line-clamp-2 text-sm text-slate-500 hover:text-slate-700 hover:underline"
                 >
-                  <Globe className="h-4 w-4" />
-                  Visit Website
+                  {headOfficeLocation}
                 </a>
               )}
             </div>

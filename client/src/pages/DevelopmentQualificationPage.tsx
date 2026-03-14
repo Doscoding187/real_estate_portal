@@ -58,6 +58,10 @@ export default function DevelopmentQualificationPage() {
     typeof window !== 'undefined'
       ? parseNumberInput(new URLSearchParams(window.location.search).get('income') || '')
       : 0;
+  const initialDeposit =
+    typeof window !== 'undefined'
+      ? parseNumberInput(new URLSearchParams(window.location.search).get('deposit') || '')
+      : 0;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitted, setSubmitted] = useState(false);
   const [financials, setFinancials] = useState({
@@ -65,7 +69,7 @@ export default function DevelopmentQualificationPage() {
     coApplicantIncome: '',
     monthlyExpenses: '',
     monthlyDebts: '',
-    availableDeposit: '',
+    availableDeposit: initialDeposit > 0 ? `${initialDeposit}` : '',
   });
   const [contact, setContact] = useState({
     name: '',
