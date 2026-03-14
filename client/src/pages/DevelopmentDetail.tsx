@@ -27,6 +27,8 @@ import {
   Building2,
   Home,
   Check,
+  Bed,
+  Bath,
   Download,
   Mail,
   Maximize,
@@ -242,6 +244,28 @@ const getUnitAvailabilityState = (unit: any) => {
   return null;
 };
 
+const getUnitCardHighlights = (unit: any): string[] => {
+  const standard = Array.isArray(unit?.amenities?.standard) ? unit.amenities.standard : [];
+  const additional = Array.isArray(unit?.amenities?.additional) ? unit.amenities.additional : [];
+  const features = Object.entries(unit?.specifications?.builtInFeatures || {})
+    .filter(([, enabled]) => Boolean(enabled))
+    .map(([feature]) =>
+      String(feature)
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/[_-]/g, ' ')
+        .trim()
+        .replace(/\b\w/g, letter => letter.toUpperCase()),
+    );
+
+  return Array.from(
+    new Set(
+      [...standard, ...additional, ...features]
+        .map(item => String(item || '').trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 3);
+};
+
 type UnitTypeCarouselProps = {
   units: any[];
   onRequestCallback: (unit: any) => void;
@@ -295,6 +319,10 @@ function UnitTypeCarousel({
             const unitPriceTo = parseNumber(unit.basePriceTo);
             const floorPlanUrl = resolveUnitFloorPlanUrl(unit);
             const availability = getUnitAvailabilityState(unit);
+            const highlights = getUnitCardHighlights(unit);
+            const floorSizeLabel = formatSizeValue(unit.floorSize ?? unit.unitSize);
+            const yardSizeLabel = formatSizeValue(unit.landSize ?? unit.yardSize);
+            const parkingLabel = formatParkingLabel(unit.parkingType, unit.parkingBays);
             const exactPriceFrom = formatExactRand(unitPriceFrom) || 'Price on request';
             const exactPriceTo =
               unitPriceTo !== null && unitPriceTo > unitPriceFrom
@@ -314,15 +342,14 @@ function UnitTypeCarousel({
               estimatedRepayment !== null
                 ? Math.round(estimatedRepayment * QUICK_QUALIFICATION_PAYMENT_RATIO)
                 : null;
-            const secondaryActionLabel = floorPlanUrl ? 'View Floor Plan' : 'Request Information';
 
             return (
               <CarouselItem
                 key={unit.id}
                 className="pl-4 md:basis-[74%] lg:basis-[54%] xl:basis-[43%]"
               >
-                <Card className="flex h-full flex-col overflow-hidden border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-                  <div className="group relative w-full overflow-hidden bg-slate-200 aspect-[4/2.65]">
+                <Card className="flex h-full flex-col overflow-hidden border-slate-200 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
+                  <div className="group relative aspect-[4/2.8] w-full overflow-hidden bg-slate-200">
                     <img
                       src={unit.normalizedImage}
                       alt={unit.normalizedType}
@@ -334,58 +361,179 @@ function UnitTypeCarousel({
                       }}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    {unit.normalizedOwnership ? (
-                      <div className="absolute left-3 top-3">
-                        <span className="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-                          {unit.normalizedOwnership}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent" />
+                    <div className="absolute left-3 right-3 top-3 flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        {unit.normalizedOwnership ? (
+                          <span className="rounded-full border border-white/25 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur">
+                            {unit.normalizedOwnership}
+                          </span>
+                        ) : null}
+                        {floorPlanUrl ? (
+                          <span className="rounded-full border border-blue-200/60 bg-blue-50/95 px-2.5 py-1 text-[11px] font-semibold text-blue-700 shadow-sm">
+                            Floor plan ready
+                          </span>
+                        ) : null}
+                      </div>
+                      {availability ? (
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm ${availability.className}`}
+                        >
+                          {availability.label}
                         </span>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <CardContent className="flex flex-1 flex-col space-y-3 p-3.5">
-                    <div className="space-y-1.5">
-                      <div className="min-w-0">
-                        <h4 className="truncate text-[11px] font-bold leading-tight text-slate-900">
-                          {unit.name}
-                        </h4>
-                        <p className="mt-1 truncate text-[13px] font-bold text-slate-900">
-                          {exactPriceTo ? `${exactPriceFrom} - ${exactPriceTo}` : exactPriceFrom}
-                        </p>
-                      </div>
-                      {estimatedRepayment ? (
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
-                          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                            Ownership Snapshot
-                          </p>
-                          <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px]">
-                            <span className="truncate text-slate-600">Repayment from</span>
-                            <span className="truncate font-semibold text-slate-900">
-                              {formatExactRand(estimatedRepayment)} / month
-                            </span>
-                          </div>
-                          {qualifyingIncome ? (
-                            <div className="mt-1 flex items-center justify-between gap-2 text-[10px]">
-                              <span className="truncate text-slate-600">Qualifying income</span>
-                              <span className="truncate font-semibold text-slate-900">
-                                {formatExactRand(qualifyingIncome)} / month
-                              </span>
-                            </div>
-                          ) : null}
-                        </div>
                       ) : null}
                     </div>
 
-                    <div className="mt-auto grid grid-cols-2 gap-2 pt-0.5">
+                    <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                      <div className="flex items-end justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold">{unit.name}</p>
+                          <p className="mt-1 text-xs text-slate-200">
+                            {exactPriceTo ? `${exactPriceFrom} - ${exactPriceTo}` : exactPriceFrom}
+                          </p>
+                        </div>
+                        {estimatedRepayment ? (
+                          <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+                              Repayment from
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-white">
+                              {formatExactRand(estimatedRepayment)}
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardContent className="flex flex-1 flex-col space-y-4 p-4">
+                    <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <Bed className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                            Beds
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-slate-900">
+                          {unit?.bedroomKey === 'other'
+                            ? 'Studio'
+                            : `${unit?.bedrooms ?? unit?.bedroomLabel ?? '-'}`}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <Bath className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                            Baths
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-slate-900">
+                          {formatBathValue(unit?.bathrooms) ?? '-'}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <HouseMeasureIcon className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                            Size
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-slate-900">
+                          {floorSizeLabel ? `${floorSizeLabel} m2` : '-'}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          {yardSizeLabel ? (
+                            <Maximize className="h-3.5 w-3.5" />
+                          ) : (
+                            <Car className="h-3.5 w-3.5" />
+                          )}
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                            {yardSizeLabel ? 'Yard' : 'Parking'}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-slate-900">
+                          {yardSizeLabel ? `${yardSizeLabel} m2` : parkingLabel || '-'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {qualifyingIncome ? (
+                      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-700">
+                              Ownership Snapshot
+                            </p>
+                            <p className="mt-1 text-sm text-slate-700">
+                              Qualifying income from{' '}
+                              <span className="font-semibold text-slate-950">
+                                {formatExactRand(qualifyingIncome)}
+                              </span>{' '}
+                              per month
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className="border-blue-200 bg-white text-blue-700"
+                          >
+                            From {formatExactRand(estimatedRepayment)} pm
+                          </Badge>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {highlights.length > 0 ? (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          Unit Highlights
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {highlights.map(highlight => (
+                            <Badge
+                              key={highlight}
+                              variant="secondary"
+                              className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                            >
+                              {highlight}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">
+                      {floorPlanUrl ? (
+                        <div className="flex items-start gap-2">
+                          <LayoutGrid className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                          <p>
+                            This unit has a floor-plan conversion view with layout, gallery, and
+                            unit-aware lead capture.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2">
+                          <Mail className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+                          <p>
+                            No floor plan is uploaded yet. The enquiry path still captures this
+                            exact unit and routes it to the correct sales team.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-auto grid grid-cols-2 gap-2 pt-1">
                       <Button
-                        className="h-9 px-2 text-[11px] font-semibold text-white bg-orange-500 hover:bg-orange-600"
+                        className="h-11 px-3 text-[12px] font-semibold text-white bg-orange-500 hover:bg-orange-600"
                         onClick={() => onRequestCallback(unit)}
                       >
                         {availability?.primaryLabel || 'Request Callback'}
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-9 border-blue-200 px-2 text-[11px] font-semibold text-blue-700 hover:bg-blue-50"
+                        className="h-11 border-blue-200 px-3 text-[12px] font-semibold text-blue-700 hover:bg-blue-50"
                         onClick={() => {
                           if (floorPlanUrl) {
                             onOpenFloorPlan(unit);
@@ -395,7 +543,7 @@ function UnitTypeCarousel({
                           onRequestInformation(unit);
                         }}
                       >
-                        {secondaryActionLabel}
+                        {floorPlanUrl ? 'View Floor Plan' : 'Request Information'}
                       </Button>
                     </div>
                   </CardContent>
