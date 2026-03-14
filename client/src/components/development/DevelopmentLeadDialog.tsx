@@ -24,19 +24,21 @@ interface DevelopmentLeadDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: LeadDialogMode;
   ctaLocation?: string;
-  development: {
-    id: number;
-    name: string;
-    developerBrandProfileId?: number | null;
-    brochureUrl?: string | null;
-  };
   unitContext?: {
+    id?: number | string | null;
+    name?: string | null;
     unitId?: string;
     unitName?: string;
     unitPriceFrom?: number;
     unitBedrooms?: number;
     unitBathrooms?: number;
   } | null;
+  development: {
+    id: number;
+    name: string;
+    developerBrandProfileId?: number | null;
+    brochureUrl?: string | null;
+  };
   affordabilityData?: {
     monthlyIncome?: number;
     availableDeposit?: number;
@@ -94,8 +96,8 @@ export function DevelopmentLeadDialog({
   onOpenChange,
   mode,
   ctaLocation,
-  development,
   unitContext,
+  development,
   affordabilityData,
 }: DevelopmentLeadDialogProps) {
   const [form, setForm] = useState({
@@ -119,10 +121,18 @@ export function DevelopmentLeadDialog({
   }, [open]);
 
   const copy = MODE_COPY[mode];
+  const resolvedUnitName = unitContext?.unitName || unitContext?.name || null;
+  const resolvedUnitId =
+    unitContext?.unitId ||
+    (unitContext?.id !== null && unitContext?.id !== undefined ? String(unitContext.id) : undefined);
 
   const generatedMessage = useMemo(() => {
+    const subject = resolvedUnitName?.trim()
+      ? `${resolvedUnitName} at ${development.name}`
+      : development.name;
+
     if (mode === 'brochure') {
-      return `Please send me the brochure and latest pricing for ${development.name}.`;
+      return `Please send me the brochure and latest pricing for ${subject}.`;
     }
 
     if (mode === 'qualification') {
@@ -136,23 +146,21 @@ export function DevelopmentLeadDialog({
         ? ` My estimated buying power is ${formatSARandShort(affordabilityData.maxAffordable)}.`
         : '';
 
-      return `I would like to start a full qualification review for ${development.name}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
+      return `I would like to start a full qualification review for ${subject}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
     }
 
     if (mode === 'info') {
-      const unitLabel = unitContext?.unitName ? ` for ${unitContext.unitName}` : '';
-      return `Please send me more information about ${development.name}${unitLabel}, including pricing, specifications, and available options.`;
+      return `Please send me more information about ${subject}, including pricing, specifications, and available options.`;
     }
 
-    const callbackUnitLabel = unitContext?.unitName ? `, specifically ${unitContext.unitName},` : '';
-    return `I am interested in ${development.name}${callbackUnitLabel} please contact me with pricing, availability, and next steps.`;
+    return `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
   }, [
     affordabilityData?.availableDeposit,
     affordabilityData?.maxAffordable,
     affordabilityData?.monthlyIncome,
     development.name,
     mode,
-    unitContext?.unitName,
+    resolvedUnitName,
   ]);
 
   const createLead = trpc.developer.createLead.useMutation({
@@ -199,8 +207,8 @@ export function DevelopmentLeadDialog({
     createLead.mutate({
       developmentId: development.id,
       developerBrandProfileId: development.developerBrandProfileId ?? undefined,
-      unitId: unitContext?.unitId,
-      unitName: unitContext?.unitName,
+      unitId: resolvedUnitId,
+      unitName: resolvedUnitName || undefined,
       unitPriceFrom: unitContext?.unitPriceFrom,
       unitBedrooms: unitContext?.unitBedrooms,
       unitBathrooms: unitContext?.unitBathrooms,

@@ -30,6 +30,18 @@ import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTrackin
 
 const DEFAULT_BOND_TERM_YEARS = 20;
 
+const toUnitRouteKey = (unit: any): string => {
+  const directId = unit?.id ?? unit?.unitTypeId ?? unit?.unitId;
+  if (directId !== null && directId !== undefined && `${directId}`.trim() !== '') {
+    return `${directId}`;
+  }
+  return String(unit?.name || unit?.type || unit?.structuralType || 'unit')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 const parseNumberInput = (value: string) => {
   const normalized = value.replace(/[^\d.]/g, '');
   const parsed = Number(normalized);
@@ -62,6 +74,8 @@ export default function DevelopmentQualificationPage() {
     typeof window !== 'undefined'
       ? parseNumberInput(new URLSearchParams(window.location.search).get('deposit') || '')
       : 0;
+  const initialUnitKey =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('unit') || '' : '';
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitted, setSubmitted] = useState(false);
   const [financials, setFinancials] = useState({
@@ -125,6 +139,16 @@ export default function DevelopmentQualificationPage() {
     };
   }, [dev?.priceFrom, dev?.priceTo, dev?.unitTypes]);
 
+  const selectedUnit = useMemo(() => {
+    if (!dev || !initialUnitKey) return null;
+    const unitTypes = Array.isArray(dev.unitTypes) ? dev.unitTypes : [];
+    return (
+      unitTypes.find((unit: any) => toUnitRouteKey(unit) === initialUnitKey) ||
+      unitTypes.find((unit: any) => `${unit.id}` === `${initialUnitKey}`) ||
+      null
+    );
+  }, [dev, initialUnitKey]);
+
   const monthlyIncome = parseNumberInput(financials.monthlyIncome);
   const coApplicantIncome = parseNumberInput(financials.coApplicantIncome);
   const monthlyExpenses = parseNumberInput(financials.monthlyExpenses);
@@ -143,7 +167,7 @@ export default function DevelopmentQualificationPage() {
   );
   const maxAffordable = Math.max(affordableLoan + availableDeposit, 0);
   const comfortFloor = Math.max(Math.round(maxAffordable * 0.82), 0);
-  const targetPrice = developmentPricing.minPrice;
+  const targetPrice = Math.max(Number(selectedUnit?.basePriceFrom || 0), 0) || developmentPricing.minPrice;
   const depositGap = Math.max(targetPrice - maxAffordable, 0);
   const estimatedTargetRepayment = calculateMonthlyRepayment(
     Math.max(targetPrice - availableDeposit, 0),
@@ -156,8 +180,8 @@ export default function DevelopmentQualificationPage() {
   const resultTone = qualifies ? 'success' : closeFit ? 'warning' : 'muted';
   const resultCopy = qualifies
     ? {
-        title: `You likely qualify for ${dev?.name || 'this development'}`,
-        body: `Estimated buying power is up to ${formatSARandShort(maxAffordable)}. Homes in this development start from ${formatSARandShort(targetPrice)}.`,
+        title: `You likely qualify for ${selectedUnit?.name || dev?.name || 'this development'}`,
+        body: `Estimated buying power is up to ${formatSARandShort(maxAffordable)}. ${selectedUnit?.name ? `${selectedUnit.name} starts from` : 'Homes in this development start from'} ${formatSARandShort(targetPrice)}.`,
       }
     : closeFit
       ? {
@@ -197,6 +221,7 @@ export default function DevelopmentQualificationPage() {
 
     const qualificationSummary = [
       `Development: ${dev.name}`,
+      selectedUnit?.name ? `Unit: ${selectedUnit.name}` : null,
       `Estimated affordability range: ${formatSARandShort(comfortFloor)} - ${formatSARandShort(maxAffordable)}`,
       `Monthly income: ${formatSARandShort(monthlyIncome)}`,
       coApplicantIncome > 0 ? `Co-applicant income: ${formatSARandShort(coApplicantIncome)}` : null,
@@ -265,8 +290,8 @@ export default function DevelopmentQualificationPage() {
   return (
     <>
       <MetaControl
-        title={`Qualify For ${dev.name}`}
-        description={`Check affordability and submit a qualification request for ${dev.name}.`}
+        title={`Qualify For ${selectedUnit?.name || dev.name}`}
+        description={`Check affordability and submit a qualification request for ${selectedUnit?.name || dev.name}.`}
       />
 
       <div className="min-h-screen bg-slate-50">
@@ -303,11 +328,11 @@ export default function DevelopmentQualificationPage() {
                       </Badge>
                     </div>
                     <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-                      Check whether {dev.name} fits your budget
+                      Check whether {selectedUnit?.name || dev.name} fits your budget
                     </h1>
                     <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
                       Complete a few affordability inputs, review your estimated range, then send a
-                      stronger lead to the sales team.
+                      stronger lead to the sales team for {selectedUnit?.name || dev.name}.
                     </p>
                   </div>
 

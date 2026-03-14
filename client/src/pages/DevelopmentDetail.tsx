@@ -6,7 +6,6 @@ import { MediaLightbox } from '@/components/MediaLightbox';
 import { DevelopmentGallery } from '@/components/DevelopmentGallery';
 import { DeveloperOverview } from '@/components/development/DeveloperOverview';
 import { DevelopmentLeadDialog } from '@/components/development/DevelopmentLeadDialog';
-import { UnitFloorPlanDialog } from '@/components/development/UnitFloorPlanDialog';
 import { StatCard } from '@/components/development/StatCard';
 import { SectionNav } from '@/components/development/SectionNav';
 import { DevelopmentOverviewCard } from '@/components/DevelopmentOverviewCard';
@@ -117,6 +116,19 @@ const inferOwnership = (structuralType: string, defaultType?: string) => {
   const t = (structuralType || '').toLowerCase();
   const isHouse = /house|duplex|simplex|townhouse|freestanding|cluster/.test(t);
   return isHouse ? 'Freehold' : 'Sectional Title';
+};
+
+const toUnitRouteKey = (unit: any): string => {
+  const directId = unit?.id ?? unit?.unitTypeId ?? unit?.unitId;
+  if (directId !== null && directId !== undefined && `${directId}`.trim() !== '') {
+    return `${directId}`;
+  }
+
+  const fallbackLabel = String(unit?.name || unit?.type || unit?.structuralType || 'unit').trim();
+  return fallbackLabel
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 };
 
 const parseNumber = (value: unknown): number | null => {
@@ -293,7 +305,6 @@ function UnitTypeCarousel({
           {units.map(unit => {
             const unitPriceFrom = parseNumber(unit.basePriceFrom) ?? 0;
             const unitPriceTo = parseNumber(unit.basePriceTo);
-            const floorPlanUrl = resolveUnitFloorPlanUrl(unit);
             const availability = getUnitAvailabilityState(unit);
             const exactPriceFrom = formatExactRand(unitPriceFrom) || 'Price on request';
             const exactPriceTo =
@@ -314,7 +325,7 @@ function UnitTypeCarousel({
               estimatedRepayment !== null
                 ? Math.round(estimatedRepayment * QUICK_QUALIFICATION_PAYMENT_RATIO)
                 : null;
-            const secondaryActionLabel = floorPlanUrl ? 'View Floor Plan' : 'Request Information';
+            const secondaryActionLabel = 'View Plan & Details';
 
             return (
               <CarouselItem
@@ -386,14 +397,7 @@ function UnitTypeCarousel({
                       <Button
                         variant="outline"
                         className="h-9 border-blue-200 px-2 text-[11px] font-semibold text-blue-700 hover:bg-blue-50"
-                        onClick={() => {
-                          if (floorPlanUrl) {
-                            onOpenFloorPlan(unit);
-                            return;
-                          }
-
-                          onRequestInformation(unit);
-                        }}
+                        onClick={() => onOpenFloorPlan(unit)}
                       >
                         {secondaryActionLabel}
                       </Button>
@@ -616,7 +620,6 @@ export default function DevelopmentDetail() {
     'qualification',
   );
   const [leadDialogLocation, setLeadDialogLocation] = useState('unknown');
-  const [floorPlanDialogUnit, setFloorPlanDialogUnit] = useState<any | null>(null);
   const [activeLeadUnit, setActiveLeadUnit] = useState<any | null>(null);
   const [activeAmenityTab, setActiveAmenityTab] = useState<AmenityTabKey | ''>('');
   const amenityTabsRef = useRef<HTMLDivElement | null>(null);
@@ -726,28 +729,15 @@ export default function DevelopmentDetail() {
   };
 
   const handleUnitFloorPlan = (unit: any) => {
-    const floorPlanUrl = resolveUnitFloorPlanUrl(unit);
-    if (!floorPlanUrl) {
-      handleUnitInformation(unit);
-      return;
-    }
-
     trackCTAClick({
-      ctaLabel: 'View Floor Plan',
+      ctaLabel: 'View Plan & Details',
       ctaLocation: `unit_card_${unit.id}_floor_plan`,
-      ctaHref: typeof window !== 'undefined' ? window.location.href : `/development/${slug || ''}`,
+      ctaHref:
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`
+          : `/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`,
     });
-    setFloorPlanDialogUnit(unit);
-  };
-
-  const handleFloorPlanInfoRequest = (unit: any) => {
-    setFloorPlanDialogUnit(null);
-    openLeadDialog('info', `unit_floor_plan_dialog_${unit.id}_info`, unit);
-  };
-
-  const handleFloorPlanCallbackRequest = (unit: any) => {
-    setFloorPlanDialogUnit(null);
-    openLeadDialog('contact', `unit_floor_plan_dialog_${unit.id}_callback`, unit);
+    setLocation(`/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`);
   };
 
   // Fetch real development by slug or ID
@@ -1686,7 +1676,7 @@ export default function DevelopmentDetail() {
                 <Separator className="bg-slate-200" />
 
                 {/* Floor Plans Section - CRITICAL: Carousel overflow contained */}
-                <section id="units" className="w-full">
+                <section id="available-units" className="w-full">
                   <div className="mb-6">
                     <h3 className="text-2xl font-bold text-slate-900">Available Units</h3>
                   </div>
@@ -2125,17 +2115,6 @@ export default function DevelopmentDetail() {
 
       {/* Footer - Outside main container */}
       <Footer />
-
-      <UnitFloorPlanDialog
-        open={Boolean(floorPlanDialogUnit)}
-        onOpenChange={open => {
-          if (!open) setFloorPlanDialogUnit(null);
-        }}
-        developmentName={development.name}
-        unit={floorPlanDialogUnit}
-        onRequestInformation={handleFloorPlanInfoRequest}
-        onRequestCallback={handleFloorPlanCallbackRequest}
-      />
 
       <DevelopmentLeadDialog
         open={leadDialogOpen}
