@@ -127,3 +127,13 @@ rg-meta-output*.txt
 vitest.*.timestamp-*.mjs
 trpc-*.txt
 mcps/
+
+# Local dev artifacts (should never be committed)
+test-results/
+tmp_job_*.txt
+tsc.*.txt
+.worktrees/
+.ghtmp_local/
+.localappdata/
+.ghconfig/
+
