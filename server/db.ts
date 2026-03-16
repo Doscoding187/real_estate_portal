@@ -3269,6 +3269,16 @@ export async function listPendingDevelopers() {
 }
 
 /**
+ * Admin: List all developers (all statuses)
+ */
+export async function listAllDevelopers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(developers).orderBy(desc(developers.createdAt));
+}
+
+/**
  * Admin: Approve developer
  */
 export async function approveDeveloper(id: number, approvedBy: number) {
