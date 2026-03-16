@@ -1,9 +1,10 @@
 import { Resend } from 'resend';
+import { ENV } from './env';
 
 let resendClient: Resend | null = null;
 
 export function getResend() {
-  const key = process.env.RESEND_API_KEY;
+  const key = ENV.resendApiKey || process.env.RESEND_API_KEY;
 
   if (!key) {
     // In dev, allow server to run without email
@@ -28,7 +29,9 @@ export async function sendVerificationEmail({
   verificationToken,
   name,
 }: SendVerificationEmailParams) {
-  const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+  const appUrl = process.env.APP_URL || ENV.appUrl || process.env.VITE_APP_URL || 'http://localhost:3000';
+  const apiBaseUrl = process.env.VITE_API_URL || process.env.API_URL || appUrl;
+  const verificationUrl = `${apiBaseUrl}/api/auth/verify-email?token=${verificationToken}`;
 
   const resend = getResend();
   if (!resend) {
@@ -39,8 +42,13 @@ export async function sendVerificationEmail({
   }
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Property Listify <onboarding@resend.dev>',
+    const primaryFrom =
+      process.env.EMAIL_FROM ||
+      ENV.resendFromEmail ||
+      process.env.RESEND_FROM_EMAIL ||
+      'Property Listify <onboarding@resend.dev>';
+    const fallbackFrom = 'Property Listify <onboarding@resend.dev>';
+    const payload = {
       to: [to],
       subject: 'Verify your email - Property Listify',
       html: `
@@ -94,7 +102,25 @@ export async function sendVerificationEmail({
           </body>
         </html>
       `,
+    };
+
+    let { data, error } = await resend.emails.send({
+      from: primaryFrom,
+      ...payload,
     });
+
+    if (error && primaryFrom !== fallbackFrom && !primaryFrom.includes('resend.dev')) {
+      console.warn(
+        '[Email] Primary sender failed; retrying with onboarding@resend.dev:',
+        error.message,
+      );
+      const retryResult = await resend.emails.send({
+        from: fallbackFrom,
+        ...payload,
+      });
+      data = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       console.error('[Email] Failed to send verification email:', error);
@@ -120,7 +146,8 @@ export async function sendPasswordResetEmail({
   resetToken,
   name,
 }: SendPasswordResetEmailParams) {
-  const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+  const appUrl = process.env.APP_URL || ENV.appUrl || process.env.VITE_APP_URL || 'http://localhost:3000';
+  const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
   const resend = getResend();
   if (!resend) {
@@ -130,8 +157,13 @@ export async function sendPasswordResetEmail({
   }
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Property Listify <onboarding@resend.dev>',
+    const primaryFrom =
+      process.env.EMAIL_FROM ||
+      ENV.resendFromEmail ||
+      process.env.RESEND_FROM_EMAIL ||
+      'Property Listify <onboarding@resend.dev>';
+    const fallbackFrom = 'Property Listify <onboarding@resend.dev>';
+    const payload = {
       to: [to],
       subject: 'Reset your password - Property Listify',
       html: `
@@ -186,7 +218,25 @@ export async function sendPasswordResetEmail({
           </body>
         </html>
       `,
+    };
+
+    let { data, error } = await resend.emails.send({
+      from: primaryFrom,
+      ...payload,
     });
+
+    if (error && primaryFrom !== fallbackFrom && !primaryFrom.includes('resend.dev')) {
+      console.warn(
+        '[Email] Primary sender failed; retrying with onboarding@resend.dev:',
+        error.message,
+      );
+      const retryResult = await resend.emails.send({
+        from: fallbackFrom,
+        ...payload,
+      });
+      data = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       console.error('[Email] Failed to send password reset email:', error);

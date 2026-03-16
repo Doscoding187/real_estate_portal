@@ -98,7 +98,7 @@ export const referrals = mysqlTable(
     submittedAt: timestamp('submitted_at', { mode: 'string' }),
     createdByUserId: int('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     updatedByUserId: int('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -149,7 +149,7 @@ export const referralAssessments = mysqlTable(
     documentCount: int('document_count').default(0).notNull(),
     matchedDevelopmentCount: int('matched_development_count').default(0).notNull(),
     createdByUserId: int('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     unique('ux_referral_assessments_referral_version').on(table.referralId, table.version),
@@ -185,7 +185,7 @@ export const referralMatches = mysqlTable(
     matchReasons: json('match_reasons'),
     qualifyingUnitTypes: json('qualifying_unit_types'),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_referral_matches_referral').on(table.referralId),
@@ -235,7 +235,7 @@ export const referralDocuments = mysqlTable(
     }),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     uploadedAt: timestamp('uploaded_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -264,7 +264,7 @@ export const affordabilityConfig = mysqlTable(
     description: text('description'),
     isActive: tinyint('is_active').default(1).notNull(),
     updatedByUserId: int('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [

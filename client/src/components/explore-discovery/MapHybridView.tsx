@@ -4,7 +4,7 @@ import { Loader2, MapPin, Layers, Grid3x3, SplitSquareHorizontal, X } from 'luci
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMapHybridView, PropertyMapItem } from '@/hooks/useMapHybridView';
 import { useMapFeedSync } from '@/hooks/useMapFeedSync';
-import { PropertyCard } from './cards/PropertyCard';
+import { MapVideoFeedPanel } from './MapVideoFeedPanel';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { IconButton } from '@/components/ui/soft/IconButton';
 
@@ -103,11 +103,6 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
     }));
     fitBoundsToProperties(propertyLocations);
   }, [properties, fitBoundsToProperties]);
-
-  const handleSave = useCallback((propertyId: number) => {
-    console.log('Save property:', propertyId);
-    // TODO: Implement save functionality
-  }, []);
 
   if (!isLoaded) {
     return (
@@ -394,66 +389,18 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
 
         {/* Property feed with modern design */}
         {(viewMode === 'feed' || viewMode === 'split') && (
-          <div
-            ref={feedScrollRef}
-            className={`bg-gray-50 overflow-y-auto ${viewMode === 'split' ? 'w-1/2' : 'w-full'}`}
-          >
-            <div className="p-4 space-y-4">
-              {properties.length === 0 && !isLoading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center justify-center py-16 text-center"
-                >
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
-                    <MapPin className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No properties found</h3>
-                  <p className="text-sm text-gray-600 max-w-md">
-                    Try adjusting the map view or changing your filters to see more properties.
-                  </p>
-                </motion.div>
-              )}
-
-              {properties.map((property, index) => {
-                const isSelected = selectedPropertyId === property.id;
-                const isHovered = hoveredPropertyId === property.id;
-
-                return (
-                  <motion.div
-                    key={property.id}
-                    ref={el => registerPropertyRef(property.id, el)}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`transition-all ${
-                      isSelected || isHovered ? 'ring-2 ring-indigo-500 rounded-2xl' : ''
-                    }`}
-                    onMouseEnter={() => handlePropertyHover(property.id)}
-                    onMouseLeave={() => handlePropertyHover(null)}
-                  >
-                    <PropertyCard
-                      property={property}
-                      onClick={() => onCardClick(property)}
-                      onSave={() => handleSave(property.id)}
-                    />
-                  </motion.div>
-                );
-              })}
-
-              {isLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center justify-center py-8"
-                >
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
-                    <span className="text-sm font-medium text-gray-600">Loading properties...</span>
-                  </div>
-                </motion.div>
-              )}
-            </div>
+          <div className={`${viewMode === 'split' ? 'w-1/2' : 'w-full'}`}>
+            <MapVideoFeedPanel
+              properties={properties}
+              isLoading={isLoading}
+              selectedPropertyId={selectedPropertyId}
+              hoveredPropertyId={hoveredPropertyId}
+              feedScrollRef={feedScrollRef}
+              registerPropertyRef={registerPropertyRef}
+              onPropertyHover={handlePropertyHover}
+              onPropertyCardSelect={onCardClick}
+              onPropertyClick={onPropertyClick}
+            />
           </div>
         )}
       </div>

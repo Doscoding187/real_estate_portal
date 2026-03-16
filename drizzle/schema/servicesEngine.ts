@@ -108,7 +108,7 @@ export const serviceProviderProfiles = mysqlTable(
     averageRating: decimal('average_rating', { precision: 3, scale: 2 }).default('0.00').notNull(),
     reviewCount: int('review_count').default(0).notNull(),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -133,7 +133,7 @@ export const serviceProviderLocations = mysqlTable(
     longitude: decimal('longitude', { precision: 11, scale: 8 }),
     radiusKm: int('radius_km').default(25).notNull(),
     isPrimary: tinyint('is_primary').default(0).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_service_provider_locations_provider').on(table.providerId),
@@ -159,7 +159,7 @@ export const serviceProviderServices = mysqlTable(
     maxPrice: int('max_price'),
     currency: varchar('currency', { length: 8 }).default('ZAR').notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -191,7 +191,7 @@ export const serviceProviderSubscriptions = mysqlTable(
     startsAt: timestamp('starts_at', { mode: 'string' }),
     endsAt: timestamp('ends_at', { mode: 'string' }),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -230,7 +230,7 @@ export const serviceExploreVideos = mysqlTable(
       onDelete: 'set null',
     }),
     moderationNotes: text('moderation_notes'),
-    submittedAt: timestamp('submitted_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }).defaultNow().notNull(),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     publishedAt: timestamp('published_at', { mode: 'string' }),
   },
@@ -287,7 +287,7 @@ export const serviceLeads = mysqlTable(
       'billing_tier_snapshot',
       SERVICE_PROVIDER_SUBSCRIPTION_TIER_VALUES as unknown as [string, ...string[]],
     ),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -312,7 +312,7 @@ export const serviceLeadEvents = mysqlTable(
     ).notNull(),
     actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
     payload: json('payload'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_service_lead_events_lead').on(table.leadId),
@@ -336,7 +336,7 @@ export const serviceProviderReviews = mysqlTable(
     content: text('content'),
     isVerified: tinyint('is_verified').default(0).notNull(),
     isPublished: tinyint('is_published').default(1).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_service_provider_reviews_provider').on(table.providerId),

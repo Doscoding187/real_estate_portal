@@ -16,6 +16,46 @@ import { queryClient } from './lib/queryClient';
 import './index.css';
 import './styles/reduced-motion.css';
 
+const STALE_CHUNK_RELOAD_KEY = 'plsa:stale-chunk-reload-at';
+const STALE_CHUNK_RELOAD_WINDOW_MS = 15000;
+
+function shouldHandleStaleChunkError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : typeof (error as any)?.message === 'string'
+          ? (error as any).message
+          : '';
+
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('failed to fetch dynamically imported module') ||
+    normalized.includes('importing a module script failed') ||
+    normalized.includes('unable to preload css')
+  );
+}
+
+function reloadOnceForStaleChunk(reason: unknown) {
+  if (typeof window === 'undefined') return false;
+  if (!shouldHandleStaleChunkError(reason)) return false;
+
+  const lastReloadAt = Number(sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) || '0');
+  const now = Date.now();
+
+  if (Number.isFinite(lastReloadAt) && now - lastReloadAt < STALE_CHUNK_RELOAD_WINDOW_MS) {
+    sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY);
+    console.error('[ChunkRecovery] Reload already attempted recently; leaving error visible.', reason);
+    return false;
+  }
+
+  sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, String(now));
+  console.warn('[ChunkRecovery] Reloading once after stale lazy-chunk failure.');
+  window.location.reload();
+  return true;
+}
+
 // Run critical environment checks before React boots
 validateEnvironmentConfig();
 
@@ -23,7 +63,8 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === 'undefined') return;
 
-  const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
+  const isUnauthorized =
+    error.data?.code === 'UNAUTHORIZED' || error.message === UNAUTHED_ERR_MSG;
 
   if (!isUnauthorized) return;
 
@@ -34,7 +75,9 @@ queryClient.getQueryCache().subscribe(event => {
   if (event.type === 'updated' && event.action.type === 'error') {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error('[API Query Error]', error);
+    console.error('[API Query Error]', (error as Error)?.message, {
+      code: (error as any)?.data?.code,
+    });
   }
 });
 
@@ -54,9 +97,26 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-// Build marker to confirm which code is running in production
-console.log('[BUILD_MARKER] main.tsx 2026-01-31 B (Reverted AuthProvider)');
-console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
+if (import.meta.env.DEV) {
+  const marker = import.meta.env.VITE_BUILD_MARKER || 'UNSET';
+  console.log(`[BUILD] ${marker}`);
+  console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', event => {
+    const preloadEvent = event as Event & { payload?: unknown };
+    if (reloadOnceForStaleChunk(preloadEvent.payload)) {
+      preloadEvent.preventDefault();
+    }
+  });
+
+  window.addEventListener('unhandledrejection', event => {
+    if (reloadOnceForStaleChunk(event.reason)) {
+      event.preventDefault();
+    }
+  });
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 const TRPC_URL = new URL(

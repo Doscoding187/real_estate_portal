@@ -36,6 +36,7 @@ import {
   type ReferralReadinessStatus,
 } from './services/referralQualificationService';
 import { getAffordabilityConfigSnapshot } from './services/affordabilityConfigService';
+import { assertDevelopmentSubmissionEligible } from './services/distributionAccessPolicy';
 
 type ReferralStatus = (typeof referrals.status.enumValues)[number];
 const QUAL_MODE_VALUES = ['quick_qual', 'verified_qual'] as const;
@@ -1274,8 +1275,6 @@ export const distributionQualificationRouter = router({
             eq(distributionAgentAccess.agentId, Number(ctx.user!.id)),
             eq(distributionAgentAccess.developmentId, input.developmentId),
             eq(distributionAgentAccess.accessStatus, 'active'),
-            eq(distributionPrograms.isActive, 1),
-            eq(distributionPrograms.isReferralEnabled, 1),
           ),
         )
         .limit(1);
@@ -1286,6 +1285,13 @@ export const distributionQualificationRouter = router({
           message: 'You do not have active access to submit this referral to the selected development.',
         });
       }
+
+      await assertDevelopmentSubmissionEligible({
+        db,
+        developmentId: Number(input.developmentId),
+        actor: { role: 'agent', userId: Number(ctx.user!.id) },
+        channel: 'submission',
+      });
 
       const [latestAssessment] = await db
         .select({

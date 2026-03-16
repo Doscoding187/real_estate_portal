@@ -25,14 +25,12 @@ import { toast } from 'sonner';
 interface ShareProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  agentId: number;
   agentName: string;
+  profileUrl: string;
 }
 
-export function ShareProfileModal({ isOpen, onClose, agentId, agentName }: ShareProfileModalProps) {
+export function ShareProfileModal({ isOpen, onClose, agentName, profileUrl }: ShareProfileModalProps) {
   const [copied, setCopied] = useState(false);
-
-  const profileUrl = `${window.location.origin}/agent/profile/${agentId}`;
   const shareText = `Check out ${agentName}'s real estate profile!`;
 
   const handleCopyLink = async () => {

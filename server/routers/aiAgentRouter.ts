@@ -1,10 +1,25 @@
 import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from '../_core/trpc';
+import { TRPCError } from '@trpc/server';
 import * as agentService from '../services/agentService';
 import { requireUser } from '../_core/requireUser';
+import { getAgentEntitlementsForUserId } from '../services/agentEntitlementService';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
+}
+
+async function assertAiInsightsAccess(ctx: { user: { id: number; role: string } | null }) {
+  const user = requireUser(ctx);
+  if (user.role === 'super_admin') return;
+
+  const entitlements = await getAgentEntitlementsForUserId(user.id);
+  if (!entitlements?.featureFlags?.hasAiInsights) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'AI insights are available on Elite and Enterprise plans.',
+    });
+  }
 }
 
 export const aiAgentRouter = router({
@@ -28,6 +43,7 @@ export const aiAgentRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertAiInsightsAccess(ctx);
       const id = await agentService.storeConversation({
         ...input,
         userId: getUserId(ctx),
@@ -69,6 +85,7 @@ export const aiAgentRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertAiInsightsAccess(ctx);
       const id = await agentService.createTask({
         ...input,
         userId: getUserId(ctx),
@@ -140,6 +157,7 @@ export const aiAgentRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertAiInsightsAccess(ctx);
       const id = await agentService.addKnowledge({
         ...input,
         createdBy: getUserId(ctx),

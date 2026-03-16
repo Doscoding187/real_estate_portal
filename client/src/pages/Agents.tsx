@@ -7,6 +7,20 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+function parseSpecializations(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map(item => String(item));
+  } catch {
+    // fall through
+  }
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
 export default function Agents() {
   const { data: agents, isLoading } = trpc.agent.list.useQuery();
 
@@ -43,7 +57,7 @@ export default function Agents() {
           ) : agents && agents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {agents.map(agent => (
-                <Link key={agent.id} href={`/agent/${agent.id}`}>
+                <Link key={agent.id} href={`/agents/${agent.slug}`}>
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                     <CardContent className="p-6">
                       {/* Agent Image */}
@@ -82,7 +96,7 @@ export default function Agents() {
                       {/* Specialization */}
                       {agent.specialization && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {JSON.parse(agent.specialization)
+                          {parseSpecializations(agent.specialization)
                             .slice(0, 3)
                             .map((spec: string, idx: number) => (
                               <Badge key={idx} variant="secondary" className="text-xs">

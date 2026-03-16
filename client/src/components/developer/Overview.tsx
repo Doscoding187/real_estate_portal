@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +60,12 @@ export default function Overview() {
   const [range, setRange] = useState<Range>('30d');
   const [developmentFilter, setDevelopmentFilter] = useState<string>('all');
   const [isReferralAccessOpen, setIsReferralAccessOpen] = useState(false);
+  const [isSalesPackOpen, setIsSalesPackOpen] = useState(false);
+  const [isChecklistOpen, setIsChecklistOpen] = useState(false);
+  const [salesDocCategory, setSalesDocCategory] = useState<'brochures' | 'floorPlans' | 'videos'>('brochures');
+  const [salesDocUrl, setSalesDocUrl] = useState('');
+  const [salesDocName, setSalesDocName] = useState('');
+  const [newChecklistLabel, setNewChecklistLabel] = useState('');
 
   const isSuperAdmin = user?.role === 'super_admin';
 
@@ -77,6 +85,56 @@ export default function Overview() {
 
   const selectedDevelopmentId =
     developmentFilter === 'all' ? undefined : Number(developmentFilter);
+
+  const setupSnapshotQuery = trpc.distribution.developer.getSetupSnapshot.useQuery(
+    { developmentId: selectedDevelopmentId as number },
+    { enabled: !!selectedDevelopmentId, refetchOnWindowFocus: false, retry: false },
+  );
+
+  const salesPackQuery = trpc.distribution.developer.getDevelopmentDocuments.useQuery(
+    { developmentId: selectedDevelopmentId as number },
+    { enabled: !!selectedDevelopmentId, refetchOnWindowFocus: false, retry: false },
+  );
+
+  const checklistQuery = trpc.distribution.developer.listSubmissionChecklist.useQuery(
+    { developmentId: selectedDevelopmentId as number },
+    { enabled: !!selectedDevelopmentId && isChecklistOpen, refetchOnWindowFocus: false, retry: false },
+  );
+
+  const setSalesPackMutation = trpc.distribution.developer.setDevelopmentDocuments.useMutation({
+    onSuccess: () => {
+      toast.success('Sales pack updated');
+      setSalesDocUrl('');
+      setSalesDocName('');
+      salesPackQuery.refetch();
+      setupSnapshotQuery.refetch();
+    },
+    onError: err => toast.error(err.message || 'Unable to update sales pack'),
+  });
+
+  const requestAdminHelpMutation = trpc.distribution.developer.requestAdminHelp.useMutation({
+    onSuccess: () => toast.success('Request sent to admin'),
+    onError: err => toast.error(err.message || 'Unable to request admin help'),
+  });
+
+  const upsertChecklistMutation = trpc.distribution.developer.upsertSubmissionChecklistItem.useMutation({
+    onSuccess: () => {
+      toast.success('Submission requirements updated');
+      setNewChecklistLabel('');
+      checklistQuery.refetch();
+      setupSnapshotQuery.refetch();
+    },
+    onError: err => toast.error(err.message || 'Unable to update submission requirements'),
+  });
+
+  const deleteChecklistMutation = trpc.distribution.developer.deleteSubmissionChecklistItem.useMutation({
+    onSuccess: () => {
+      toast.success('Removed');
+      checklistQuery.refetch();
+      setupSnapshotQuery.refetch();
+    },
+    onError: err => toast.error(err.message || 'Unable to remove item'),
+  });
 
   const distributionSettingsQuery = trpc.developer.getDistributionSettings.useQuery(
     {
@@ -199,6 +257,76 @@ export default function Overview() {
   const bySource: Record<string, number> = kpis.bySource || {};
   const attention: any = funnelAttentionQuery.data || { items: [], breachCount: 0, warningCount: 0 };
   const distributionSettings: any = distributionSettingsQuery.data || null;
+  const setupSnapshot: any = setupSnapshotQuery.data?.setup || null;
+  const canGoLive = setupSnapshot?.readyToGoLive === true;
+  const isLive = setupSnapshot?.setupState === 'submit_ready_live';
+  const setupBadgeVariant = isLive ? 'default' : canGoLive ? 'secondary' : 'outline';
+  const missingAdminKeys = useMemo(() => {
+    const items = (setupSnapshot?.items || []) as any[];
+    return items
+      .filter(item => item && item.done === false && item.actor === 'admin')
+      .map(item => String(item.key || ''))
+      .filter(Boolean);
+  }, [setupSnapshot]);
+
+  const nextSetupKey = useMemo(() => {
+    const missing = Array.isArray(setupSnapshot?.missing) ? (setupSnapshot.missing as string[]) : [];
+    if (!isLive && canGoLive) return 'make_live' as const;
+    if (missing.includes('sales_pack')) return 'sales_pack' as const;
+    if (missing.includes('submission_checklist')) return 'submission_checklist' as const;
+    if (missingAdminKeys.length > 0) return 'admin_help' as const;
+    return null;
+  }, [setupSnapshot, missingAdminKeys.length, isLive, canGoLive]);
+
+  const nextSetupLabel =
+    nextSetupKey === 'make_live'
+      ? 'Make Live'
+      : nextSetupKey === 'sales_pack'
+        ? 'Upload Sales Pack'
+        : nextSetupKey === 'submission_checklist'
+          ? 'Submission Requirements'
+          : nextSetupKey === 'admin_help'
+            ? 'Request Admin Help'
+            : null;
+
+  const runNextSetupAction = () => {
+    if (!selectedDevelopmentId || !nextSetupKey) return;
+    if (nextSetupKey === 'sales_pack') return void setIsSalesPackOpen(true);
+    if (nextSetupKey === 'submission_checklist') return void setIsChecklistOpen(true);
+    if (nextSetupKey === 'admin_help') {
+      if (missingAdminKeys.length === 0) return;
+      requestAdminHelpMutation.mutate({
+        developmentId: selectedDevelopmentId,
+        missingKeys: missingAdminKeys,
+        message: `Please help with: ${missingAdminKeys.join(', ')}`,
+      });
+      return;
+    }
+    if (nextSetupKey === 'make_live') {
+      if (setDistributionEnabledMutation.isPending || isLive || !canGoLive) return;
+      setDistributionEnabledMutation.mutate({ developmentId: selectedDevelopmentId, enabled: true });
+    }
+  };
+
+  const appendSalesPackDoc = () => {
+    if (!selectedDevelopmentId) return;
+    const url = salesDocUrl.trim();
+    if (!url) {
+      toast.error('Add a document URL.');
+      return;
+    }
+    const current = (salesPackQuery.data || {}) as any;
+    const nextList = [...(current[salesDocCategory] || [])].map((item: any) => ({
+      url: String(item?.url || item || '').trim(),
+      name: item?.name ? String(item.name) : null,
+    }));
+    nextList.push({ url, name: salesDocName.trim() || null });
+
+    setSalesPackMutation.mutate({
+      developmentId: selectedDevelopmentId,
+      [salesDocCategory]: nextList,
+    } as any);
+  };
   const distributionSummary = useMemo(() => {
     if (!selectedDevelopmentId) return null;
     const rows = (distributionDashboardQuery.data as any)?.developments || [];
@@ -403,41 +531,151 @@ export default function Overview() {
       </Card>
 
       {selectedDevelopmentId && (
-        <Card className="card">
-          <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Referral Distribution</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="card">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Distribution Setup</p>
+                  <p className="text-xs text-muted-foreground">
+                    Finish setup before making this development live to referrers.
+                  </p>
+                </div>
+                <Badge variant={setupBadgeVariant as any}>{setupSnapshot?.setupLabel || 'Setup'}</Badge>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Progress</span>
+                  <span>{setupSnapshot?.progressPercent ?? 0}%</span>
+                </div>
+                <Progress value={setupSnapshot?.progressPercent ?? 0} />
+              </div>
+
+              <div className="space-y-1 text-sm">
+                {(setupSnapshot?.items || []).map((item: any) => (
+                  <div key={item.key} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className={item.done ? 'text-foreground' : 'text-slate-700'}>{item.label}</span>
+                      {!item.done && item.actor === 'admin' ? (
+                        <span className="ml-2 text-xs text-muted-foreground">(Admin)</span>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={item.done ? 'default' : 'outline'}>{item.done ? 'Done' : 'Missing'}</Badge>
+                      {!item.done && String(item.key) === 'sales_pack' ? (
+                        <Button size="sm" variant="outline" onClick={() => setIsSalesPackOpen(true)}>
+                          Upload
+                        </Button>
+                      ) : null}
+                      {!item.done && String(item.key) === 'submission_checklist' ? (
+                        <Button size="sm" variant="outline" onClick={() => setIsChecklistOpen(true)}>
+                          Edit
+                        </Button>
+                      ) : null}
+                      {!item.done && item.actor === 'admin' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={requestAdminHelpMutation.isPending}
+                          onClick={() =>
+                            requestAdminHelpMutation.mutate({
+                              developmentId: selectedDevelopmentId,
+                              missingKeys: [String(item.key)],
+                              message: `Please help with: ${String(item.label || item.key)}`,
+                            })
+                          }
+                        >
+                          Request
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {nextSetupLabel ? (
+                <div className="rounded-md border bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Next step:</span>{' '}
+                      <span className="font-medium">{nextSetupLabel}</span>
+                    </div>
+                    <Button
+                      disabled={
+                        !selectedDevelopmentId ||
+                        (nextSetupKey === 'admin_help' && requestAdminHelpMutation.isPending) ||
+                        (nextSetupKey === 'make_live' &&
+                          (setDistributionEnabledMutation.isPending || isLive || !canGoLive))
+                      }
+                      onClick={runNextSetupAction}
+                    >
+                      {nextSetupLabel}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setIsSalesPackOpen(true)}>
+                  Upload Sales Pack
+                </Button>
+                <Button variant="outline" onClick={() => setIsChecklistOpen(true)}>
+                  Submission Requirements
+                </Button>
+                {missingAdminKeys.length > 0 ? (
+                  <Button
+                    variant="outline"
+                    disabled={requestAdminHelpMutation.isPending}
+                    onClick={() =>
+                      requestAdminHelpMutation.mutate({
+                        developmentId: selectedDevelopmentId,
+                        missingKeys: missingAdminKeys,
+                        message: `Please help with: ${missingAdminKeys.join(', ')}`,
+                      })
+                    }
+                  >
+                    Request Admin Help
+                  </Button>
+                ) : null}
+                <Button variant="outline" onClick={() => setupSnapshotQuery.refetch()} disabled={setupSnapshotQuery.isLoading}>
+                  Refresh
+                </Button>
+              </div>
+
               <p className="text-xs text-muted-foreground">
-                Distribution is opt-in per development. Keep it private by default and enable only
-                when ready.
+                Minimum to go live: 1 brochure, floor plan, or video plus 1 submission requirement.
               </p>
-              <Badge variant={distributionSettings?.distributionEnabled ? 'default' : 'outline'}>
-                {distributionSettings?.distributionEnabled ? 'Enabled' : 'Disabled'}
-              </Badge>
-              <p className="text-xs text-muted-foreground">
-                Only eligible referral partners can see this development.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Referral partners can only claim leads from referral-origin channels.
-              </p>
-            </div>
-            <Button
-              variant={distributionSettings?.distributionEnabled ? 'outline' : 'default'}
-              disabled={setDistributionEnabledMutation.isPending}
-              onClick={() =>
-                setDistributionEnabledMutation.mutate({
-                  developmentId: selectedDevelopmentId,
-                  enabled: !distributionSettings?.distributionEnabled,
-                })
-              }
-            >
-              {distributionSettings?.distributionEnabled ? 'Disable Distribution' : 'Enable Distribution'}
-            </Button>
-            <Button variant="outline" onClick={() => setIsReferralAccessOpen(true)}>
-              Manage Referral Access
-            </Button>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="card">
+            <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Referral Distribution</p>
+                <p className="text-xs text-muted-foreground">
+                  Referrers only see developments that are fully configured and live.
+                </p>
+                <Badge variant={setupBadgeVariant as any}>{setupSnapshot?.setupLabel || 'Setup'}</Badge>
+              </div>
+              <Button
+                variant={isLive ? 'outline' : 'default'}
+                disabled={setDistributionEnabledMutation.isPending || (!isLive && !canGoLive)}
+                onClick={() =>
+                  setDistributionEnabledMutation.mutate({
+                    developmentId: selectedDevelopmentId,
+                    enabled: !isLive,
+                  })
+                }
+              >
+                {isLive ? 'Take Offline' : canGoLive ? 'Make Live' : 'Setup Needed'}
+              </Button>
+              <Button variant="outline" onClick={() => setIsReferralAccessOpen(true)}>
+                Manage Referral Access
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       <Dialog open={isReferralAccessOpen} onOpenChange={setIsReferralAccessOpen}>
@@ -521,6 +759,183 @@ export default function Overview() {
               Close
             </Button>
             <Button disabled>Request Changes (Coming Soon)</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isSalesPackOpen}
+        onOpenChange={open => {
+          setIsSalesPackOpen(open);
+          if (!open) {
+            setSalesDocUrl('');
+            setSalesDocName('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Upload Sales Pack</DialogTitle>
+            <DialogDescription>
+              Add at least one brochure, floor plan, or video so referrers can understand the development.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Category</p>
+              <select
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
+                value={salesDocCategory}
+                onChange={e => setSalesDocCategory(e.target.value as any)}
+              >
+                <option value="brochures">Brochure</option>
+                <option value="floorPlans">Floor plan</option>
+                <option value="videos">Video</option>
+              </select>
+            </div>
+
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Document</p>
+              <Input
+                value={salesDocName}
+                onChange={e => setSalesDocName(e.target.value)}
+                placeholder="Optional name"
+              />
+              <Input
+                value={salesDocUrl}
+                onChange={e => setSalesDocUrl(e.target.value)}
+                placeholder="https://..."
+              />
+              <Button
+                disabled={!salesDocUrl.trim() || setSalesPackMutation.isPending}
+                onClick={appendSalesPackDoc}
+              >
+                Upload
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {(
+                [
+                  { key: 'brochures', label: 'Brochures' },
+                  { key: 'floorPlans', label: 'Floor Plans' },
+                  { key: 'videos', label: 'Videos' },
+                ] as const
+              ).map(group => {
+                const rows = ((salesPackQuery.data as any)?.[group.key] || []) as Array<{
+                  name?: string | null;
+                  url: string;
+                }>;
+                return (
+                  <div key={group.key} className="rounded border p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-medium">{group.label}</p>
+                      <Badge variant="outline">{rows.length}</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {rows.map((row, index) => (
+                        <div key={`${group.key}-${index}`} className="rounded border bg-slate-50 p-2">
+                          <p className="truncate text-xs font-medium text-slate-800">
+                            {row.name || row.url}
+                          </p>
+                          <p className="truncate text-[11px] text-slate-500">{row.url}</p>
+                          <div className="mt-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(row.url, '_blank', 'noopener,noreferrer')}
+                            >
+                              Open
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      {!rows.length ? <p className="text-xs text-slate-500">No documents yet.</p> : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSalesPackOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isChecklistOpen}
+        onOpenChange={open => {
+          setIsChecklistOpen(open);
+          if (!open) setNewChecklistLabel('');
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Submission Requirements</DialogTitle>
+            <DialogDescription>
+              Define what the referrer must upload when submitting a client. Minimum to go live: at least 1 required item.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newChecklistLabel}
+                onChange={e => setNewChecklistLabel(e.target.value)}
+                placeholder="Add required document (e.g. ID Document)"
+              />
+              <Button
+                disabled={!newChecklistLabel.trim() || upsertChecklistMutation.isPending || !selectedDevelopmentId}
+                onClick={() =>
+                  upsertChecklistMutation.mutate({
+                    developmentId: selectedDevelopmentId as number,
+                    documentLabel: newChecklistLabel.trim(),
+                    isRequired: true,
+                    displayOrder: 0,
+                  } as any)
+                }
+              >
+                Add
+              </Button>
+            </div>
+
+            {checklistQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : (checklistQuery.data?.items || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No required documents yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {(checklistQuery.data?.items || []).map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between rounded border px-2 py-1 text-sm">
+                    <span className="truncate">{item.documentLabel}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={deleteChecklistMutation.isPending}
+                      onClick={() =>
+                        deleteChecklistMutation.mutate({
+                          developmentId: selectedDevelopmentId as number,
+                          id: Number(item.id),
+                        })
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsChecklistOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

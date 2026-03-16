@@ -4,12 +4,20 @@ import { db } from '../db';
 import {
   developments,
   distributionAgentAccess,
+  distributionDevelopmentAccess,
   distributionIdentities,
+  distributionProgramRequiredDocuments,
+  distributionProgramWorkflows,
   distributionPrograms,
   leadActivities,
   leads,
   users,
 } from '../../drizzle/schema';
+import {
+  evaluateDevelopmentDistributionAccess,
+  summarizeDistributionBlockers,
+} from './distributionAccessPolicy';
+import { computeDistributionSetupSnapshot } from './distributionSetupSnapshot';
 import {
   DEFAULT_LEAD_SLA_POLICY,
   LEAD_ALLOWED_TRANSITIONS,
@@ -20,6 +28,41 @@ import {
 } from '../../shared/developerFunnel';
 
 type LeadRow = typeof leads.$inferSelect;
+
+function safeJsonArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return [];
+  const raw = value.trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function countDevelopmentCommercialDocs(input: {
+  brochures?: unknown;
+  floorPlans?: unknown;
+  videos?: unknown;
+}) {
+  const buckets = [safeJsonArray(input.brochures), safeJsonArray(input.floorPlans), safeJsonArray(input.videos)];
+  let count = 0;
+  for (const bucket of buckets) {
+    for (const entry of bucket) {
+      if (typeof entry === 'string') {
+        if (entry.trim()) count += 1;
+        continue;
+      }
+      if (entry && typeof entry === 'object') {
+        const url = String((entry as any).url || '').trim();
+        if (url) count += 1;
+      }
+    }
+  }
+  return count;
+}
 
 type FunnelListParams = {
   developerId: number;
@@ -808,9 +851,17 @@ export async function getDeveloperDistributionSettings(params: {
     .where(eq(distributionPrograms.developmentId, params.developmentId))
     .limit(1);
 
+  const evaluation = await evaluateDevelopmentDistributionAccess({
+    db: db as any,
+    developmentId: params.developmentId,
+    actor: { role: 'developer' },
+    channel: 'developer_settings',
+  });
+  const blockerSummary = summarizeDistributionBlockers(evaluation);
+
   const isActive = Number(program?.isActive || 0) === 1;
   const isReferralEnabled = Number(program?.isReferralEnabled || 0) === 1;
-  const distributionEnabled = isActive && isReferralEnabled;
+  const distributionEnabled = evaluation.submitReady;
   const accessModel =
     !program
       ? ('unknown' as const)
@@ -872,6 +923,15 @@ export async function getDeveloperDistributionSettings(params: {
     distributionEnabled,
     isActive,
     isReferralEnabled,
+    partnershipStatus: evaluation.brandPartnershipStatus,
+    accessStatus: evaluation.developmentAccessStatus,
+    inventoryState: evaluation.inventoryState,
+    submitReady: evaluation.submitReady,
+    submissionAllowed: evaluation.submissionAllowed,
+    legacyFallbackUsed: evaluation.legacyFallbackUsed,
+    accessBlockers: blockerSummary.accessBlockers,
+    readinessBlockers: blockerSummary.readinessBlockers,
+    programBlockers: blockerSummary.programBlockers,
     accessModel,
     tierAccessPolicy: program?.tierAccessPolicy || null,
     commissionModel: program?.commissionModel || null,
@@ -898,6 +958,9 @@ export async function setDeveloperDistributionEnabled(params: {
   const [development] = await db
     .select({
       id: developments.id,
+      brochures: developments.brochures,
+      floorPlans: developments.floorPlans,
+      videos: developments.videos,
     })
     .from(developments)
     .where(and(eq(developments.id, params.developmentId), eq(developments.developerId, params.developerId)))
@@ -913,30 +976,106 @@ export async function setDeveloperDistributionEnabled(params: {
   const [program] = await db
     .select({
       id: distributionPrograms.id,
+      isActive: distributionPrograms.isActive,
     })
     .from(distributionPrograms)
     .where(eq(distributionPrograms.developmentId, params.developmentId))
     .limit(1);
 
-  if (!program && params.enabled) {
-    await db.insert(distributionPrograms).values({
-      developmentId: params.developmentId,
-      isActive: 1,
-      isReferralEnabled: 1,
-      commissionModel: 'flat_percentage',
-      tierAccessPolicy: 'restricted',
-      createdBy: params.userId,
-      updatedBy: params.userId,
-    });
-  } else if (program) {
+  const evaluation = await evaluateDevelopmentDistributionAccess({
+    db: db as any,
+    developmentId: params.developmentId,
+    actor: { role: 'developer', userId: params.userId },
+    channel: 'developer_settings',
+  });
+  const blockerSummary = summarizeDistributionBlockers(evaluation);
+
+  const salesPackCount = countDevelopmentCommercialDocs({
+    brochures: development.brochures,
+    floorPlans: development.floorPlans,
+    videos: development.videos,
+  });
+
+  let submissionChecklistRequiredCount = 0;
+  if (program?.id) {
+    const [workflow] = await db
+      .select({ id: distributionProgramWorkflows.id })
+      .from(distributionProgramWorkflows)
+      .where(eq(distributionProgramWorkflows.programId, Number(program.id)))
+      .limit(1);
+
+    if (workflow?.id) {
+      const [requiredCount] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(distributionProgramRequiredDocuments)
+        .where(
+          and(
+            eq(distributionProgramRequiredDocuments.workflowId, Number(workflow.id)),
+            eq(distributionProgramRequiredDocuments.isRequired, 1),
+          ),
+        )
+        .limit(1);
+      submissionChecklistRequiredCount = Number(requiredCount?.count || 0);
+    }
+  }
+
+  const setup = computeDistributionSetupSnapshot({
+    evaluation,
+    salesPackDocumentCount: salesPackCount,
+    submissionChecklistRequiredCount,
+  });
+
+  if (params.enabled) {
+    if (!program?.id) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Distribution enable blocked: development is not in the distribution program yet.',
+      });
+    }
+
+    // Access rows must exist and be canonical before a developer can make it live.
+    // Ignore `submission_not_allowed` here because enabling distribution is what flips that flag.
+    const accessBlockers = blockerSummary.accessBlockers.filter(value => value !== 'submission_not_allowed');
+    if (accessBlockers.length > 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Distribution enable blocked by access requirements: ${accessBlockers.join(', ')}.`,
+      });
+    }
+
+    if (!setup.readyToGoLive && !evaluation.submitReady) {
+      const missing = setup.missing
+        .map(key => setup.items.find(item => item.key === key)?.label || key)
+        .filter(Boolean);
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Distribution enable blocked. Missing: ${missing.join(', ')}.`,
+      });
+    }
+
+    // Enabling distribution means: allow submissions + enable visibility gate.
+    await db
+      .update(distributionDevelopmentAccess)
+      .set({ submissionAllowed: 1, updatedBy: params.userId })
+      .where(eq(distributionDevelopmentAccess.developmentId, params.developmentId));
+
     await db
       .update(distributionPrograms)
-      .set({
-        isActive: 1,
-        isReferralEnabled: params.enabled ? 1 : 0,
-        updatedBy: params.userId,
-      })
+      .set({ isActive: 1, isReferralEnabled: 1, updatedBy: params.userId })
       .where(eq(distributionPrograms.id, Number(program.id)));
+  } else {
+    // Disabling distribution is always allowed, even if setup is incomplete.
+    await db
+      .update(distributionDevelopmentAccess)
+      .set({ submissionAllowed: 0, updatedBy: params.userId })
+      .where(eq(distributionDevelopmentAccess.developmentId, params.developmentId));
+
+    if (program?.id) {
+      await db
+        .update(distributionPrograms)
+        .set({ isReferralEnabled: 0, updatedBy: params.userId })
+        .where(eq(distributionPrograms.id, Number(program.id)));
+    }
   }
 
   return await getDeveloperDistributionSettings({

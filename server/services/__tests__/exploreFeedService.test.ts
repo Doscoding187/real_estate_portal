@@ -45,12 +45,12 @@ describe('Explore Feed Service', () => {
 
           const result = await exploreFeedService.getRecommendedFeed({ limit, offset });
 
-          expect(result).toHaveProperty('shorts');
+          expect(result).toHaveProperty('items');
           expect(result).toHaveProperty('feedType', 'recommended');
           expect(result).toHaveProperty('hasMore');
           expect(result).toHaveProperty('offset');
-          expect(Array.isArray(result.shorts)).toBe(true);
-          expect(result.shorts.length).toBeLessThanOrEqual(limit);
+          expect(Array.isArray(result.items)).toBe(true);
+          expect(result.items.length).toBeLessThanOrEqual(limit);
         },
       ),
       { numRuns: 25 },
@@ -71,12 +71,12 @@ describe('Explore Feed Service', () => {
             offset: 0,
           });
 
-          expect(result).toHaveProperty('shorts');
+          expect(result).toHaveProperty('items');
           expect(result).toHaveProperty('feedType', 'area');
           expect(result).toHaveProperty('metadata');
           expect(result.metadata).toHaveProperty('location', location);
-          expect(Array.isArray(result.shorts)).toBe(true);
-          expect(result.shorts.length).toBeLessThanOrEqual(limit);
+          expect(Array.isArray(result.items)).toBe(true);
+          expect(result.items.length).toBeLessThanOrEqual(limit);
         },
       ),
       { numRuns: 25 },
@@ -88,11 +88,11 @@ describe('Explore Feed Service', () => {
       fc.asyncProperty(
         fc.record({
           category: fc.constantFrom(
-            'luxury_homes',
-            'student_rentals',
-            'new_developments',
-            'move_in_ready',
-            'pet_friendly',
+            'property',
+            'renovation',
+            'finance',
+            'investment',
+            'services',
           ),
           limit: fc.integer({ min: 1, max: 20 }),
         }),
@@ -103,12 +103,12 @@ describe('Explore Feed Service', () => {
             offset: 0,
           });
 
-          expect(result).toHaveProperty('shorts');
+          expect(result).toHaveProperty('items');
           expect(result).toHaveProperty('feedType', 'category');
           expect(result).toHaveProperty('metadata');
           expect(result.metadata).toHaveProperty('category', category);
-          expect(Array.isArray(result.shorts)).toBe(true);
-          expect(result.shorts.length).toBeLessThanOrEqual(limit);
+          expect(Array.isArray(result.items)).toBe(true);
+          expect(result.items.length).toBeLessThanOrEqual(limit);
         },
       ),
       { numRuns: 25 },
@@ -140,13 +140,13 @@ describe('Explore Feed Service', () => {
             offset: 0,
           });
 
-          expect(result).toHaveProperty('shorts');
+          expect(result).toHaveProperty('items');
           expect(result).toHaveProperty('feedType', 'agent');
           expect(result).toHaveProperty('metadata');
           expect(result.metadata).toHaveProperty('agentId', agentId);
-          expect(Array.isArray(result.shorts)).toBe(true);
+          expect(Array.isArray(result.items)).toBe(true);
 
-          result.shorts.forEach((item: any) => {
+          result.items.forEach((item: any) => {
             expect(item.creatorId).toBe(agentId);
             expect(item.creatorType).toBe('agent');
           });
@@ -181,13 +181,13 @@ describe('Explore Feed Service', () => {
             offset: 0,
           });
 
-          expect(result).toHaveProperty('shorts');
+          expect(result).toHaveProperty('items');
           expect(result).toHaveProperty('feedType', 'developer');
           expect(result).toHaveProperty('metadata');
           expect(result.metadata).toHaveProperty('developerId', developerId);
-          expect(Array.isArray(result.shorts)).toBe(true);
+          expect(Array.isArray(result.items)).toBe(true);
 
-          result.shorts.forEach((item: any) => {
+          result.items.forEach((item: any) => {
             expect(item.creatorId).toBe(developerId);
             expect(item.creatorType).toBe('developer');
           });
@@ -219,7 +219,7 @@ describe('Explore Feed Service', () => {
         async ({ limit, offset }) => {
           const result = await exploreFeedService.getRecommendedFeed({ limit, offset });
 
-          expect(result.shorts.length).toBeLessThanOrEqual(limit);
+          expect(result.items.length).toBeLessThanOrEqual(limit);
           expect(result.offset).toBeGreaterThanOrEqual(offset);
           expect(result.offset).toBeLessThanOrEqual(offset + limit);
         },
@@ -254,8 +254,8 @@ describe('Explore Feed Service', () => {
       offset: 0,
     });
 
-    const normalIndex = result.shorts.findIndex((s: any) => s.title === 'TEST: Non Featured');
-    const featuredIndex = result.shorts.findIndex((s: any) => s.title === 'TEST: Featured');
+    const normalIndex = result.items.findIndex((s: any) => s.title === 'TEST: Non Featured');
+    const featuredIndex = result.items.findIndex((s: any) => s.title === 'TEST: Featured');
 
     if (normalIndex !== -1 && featuredIndex !== -1) {
       expect(featuredIndex).toBeLessThan(normalIndex);
@@ -288,7 +288,7 @@ describe('Explore Feed Service', () => {
       offset: 0,
     });
 
-    const hasInactive = result.shorts.some((s: any) => s.title === 'TEST: Inactive');
+    const hasInactive = result.items.some((s: any) => s.title === 'TEST: Inactive');
 
     expect(hasInactive).toBe(false);
   });

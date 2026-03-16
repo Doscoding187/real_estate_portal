@@ -90,6 +90,17 @@ function toMysqlDateTime(value: Date | string = new Date()): string {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+type ListingStatus = NonNullable<(typeof listings.$inferSelect)['status']>;
+
+const ACTIVE_LISTING_STATUSES: ListingStatus[] = ['pending_review', 'approved', 'published'];
+
+type ActiveListingLimitEnforcement = {
+  totalActiveBefore: number;
+  keptActive: number;
+  demotedCount: number;
+  demotedListingIds: number[];
+};
+
 // Export a synchronous db object that throws if not initialized
 // This is for backwards compatibility with existing code
 export const db = new Proxy({} as any, {
@@ -317,6 +328,39 @@ export async function verifyUserEmail(userId: number): Promise<void> {
       emailVerificationToken: null,
     })
     .where(eq(users.id, userId));
+}
+
+/**
+ * Rotate email verification token (used for resend verification flow)
+ */
+export async function updateUserEmailVerificationToken(userId: number, token: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(users)
+    .set({
+      emailVerificationToken: token,
+    })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Auto-approve agent profile after successful email verification.
+ */
+export async function autoApproveAgentByUserId(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(agents)
+    .set({
+      status: 'approved' as any,
+      approvedBy: null,
+      approvedAt: toMysqlDateTime(),
+      updatedAt: toMysqlDateTime(),
+    })
+    .where(eq(agents.userId, userId));
 }
 
 // Property queries
@@ -2080,6 +2124,91 @@ export async function getUserListings(
   return listingsWithImages;
 }
 
+export async function countActiveListingsByOwner(ownerId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [result] = await db
+    .select({ count: count() })
+    .from(listings)
+    .where(
+      and(
+        eq(listings.ownerId, ownerId),
+        inArray(listings.status, ACTIVE_LISTING_STATUSES),
+      ),
+    );
+
+  return Number(result?.count || 0);
+}
+
+export async function getActiveListingIdsByOwner(ownerId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const rows = await db
+    .select({
+      id: listings.id,
+    })
+    .from(listings)
+    .where(
+      and(
+        eq(listings.ownerId, ownerId),
+        inArray(listings.status, ACTIVE_LISTING_STATUSES),
+      ),
+    )
+    .orderBy(
+      sql`CASE
+        WHEN ${listings.status} = 'published' THEN 1
+        WHEN ${listings.status} = 'approved' THEN 2
+        ELSE 3
+      END`,
+      desc(listings.updatedAt),
+      desc(listings.id),
+    );
+
+  return rows.map(row => Number(row.id)).filter(id => Number.isFinite(id));
+}
+
+export async function enforceActiveListingLimitByOwner(
+  ownerId: number,
+  maxActiveListings: number,
+): Promise<ActiveListingLimitEnforcement> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const normalizedLimit = Math.max(0, Math.floor(maxActiveListings));
+  const orderedActiveListingIds = await getActiveListingIdsByOwner(ownerId);
+  const totalActiveBefore = orderedActiveListingIds.length;
+
+  if (totalActiveBefore <= normalizedLimit) {
+    return {
+      totalActiveBefore,
+      keptActive: totalActiveBefore,
+      demotedCount: 0,
+      demotedListingIds: [],
+    };
+  }
+
+  const demotedListingIds = orderedActiveListingIds.slice(normalizedLimit);
+
+  if (demotedListingIds.length > 0) {
+    await db
+      .update(listings)
+      .set({
+        status: 'draft' as any,
+        updatedAt: toMysqlDateTime(),
+      })
+      .where(and(eq(listings.ownerId, ownerId), inArray(listings.id, demotedListingIds)));
+  }
+
+  return {
+    totalActiveBefore,
+    keptActive: normalizedLimit,
+    demotedCount: demotedListingIds.length,
+    demotedListingIds,
+  };
+}
+
 /**
  * Update listing
  */
@@ -2512,16 +2641,30 @@ export async function createAgentProfile(data: {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const [owner] = await db
+    .select({
+      email: users.email,
+    })
+    .from(users)
+    .where(eq(users.id, data.userId))
+    .limit(1);
+
+  const displayName = data.displayName.trim();
+  const [firstNameRaw, ...lastNameParts] = displayName.split(/\s+/).filter(Boolean);
+  const firstName = firstNameRaw || displayName;
+  const lastName = lastNameParts.join(' ') || '-';
+
   const result = await db.insert(agents).values({
     userId: data.userId,
-    displayName: data.displayName,
+    displayName,
     phone: data.phone,
+    email: owner?.email || null,
     bio: data.bio || null,
     profileImage: data.profilePhoto || null,
     licenseNumber: data.licenseNumber || null,
     specialization: data.specializations ? data.specializations.join(',') : null,
-    firstName: data.displayName.split(' ')[0] || data.displayName,
-    lastName: data.displayName.split(' ').slice(1).join(' ') || '',
+    firstName,
+    lastName,
     isVerified: 0,
     isFeatured: 0,
     status: 'pending' as any, // Pending until ID/FFC verification complete

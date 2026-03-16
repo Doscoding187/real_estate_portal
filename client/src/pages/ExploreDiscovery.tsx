@@ -28,7 +28,12 @@ export default function ExploreDiscovery() {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-30 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center justify-between px-4 py-4">
-          <h1 className="text-white text-2xl font-bold">Explore</h1>
+          <div>
+            <h1 className="text-white text-2xl font-bold">Discovery Feed</h1>
+            <p className="text-xs text-white/70">
+              Unified stream: homes, agents, walkthroughs, finance, and services
+            </p>
+          </div>
 
           <div className="flex items-center gap-2">
             {/* Category chips toggle */}
@@ -83,7 +88,7 @@ export default function ExploreDiscovery() {
       {/* Hint overlay (optional) */}
       <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none">
         <div className="px-6 py-3 bg-black/70 backdrop-blur-sm rounded-full text-white text-sm text-center">
-          <p>Swipe up for next • Double tap to save</p>
+          <p>Swipe up for next - Double tap to save</p>
         </div>
       </div>
 
@@ -96,3 +101,5 @@ export default function ExploreDiscovery() {
     </div>
   );
 }
+
+

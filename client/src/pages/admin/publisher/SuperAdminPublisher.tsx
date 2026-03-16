@@ -218,7 +218,9 @@ const PublisherContent: React.FC = () => {
 
 export const SuperAdminPublisher: React.FC = () => {
   // Fetch global stats for quick stats bar
-  const { data: allBrands } = trpc.superAdminPublisher.listBrandProfiles.useQuery({});
+  const { data: allBrands } = trpc.superAdminPublisher.listBrandProfiles.useQuery({
+    emulatorOnly: true,
+  });
   const { data: globalMetrics } = trpc.superAdminPublisher.getGlobalMetrics.useQuery(undefined, {
     enabled: true,
   });

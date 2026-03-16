@@ -37,6 +37,7 @@ export function MonetizedBanner({
       enabled: !campaign, // Don't fetch overlay ad if we have a campaign
     },
   );
+  const recordRuleEvent = trpc.monetization.recordRuleEvent.useMutation();
 
   const impressionLogged = useRef(false);
 
@@ -61,6 +62,20 @@ export function MonetizedBanner({
         locationId,
         locationType,
       });
+      if (ad.monetizationRuleId) {
+        recordRuleEvent.mutate({
+          ruleId: ad.monetizationRuleId,
+          eventType: 'click',
+          contextType: 'hero',
+          contextId: ad.targetId || ad.id,
+          locationType,
+          locationId,
+          serveRequestId: ad.serveRequestId,
+          metadata: {
+            surface: 'monetized_banner',
+          },
+        });
+      }
       const metadata = ad.metadata as any;
       if (metadata?.ctaUrl) {
         window.open(metadata.ctaUrl, '_blank');

@@ -9,6 +9,12 @@
 
 import { useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
+import { getFeedItems, type FeedItem as CanonicalFeedItem } from '@/lib/exploreFeed';
+import { type ExploreIntent, readStoredExploreIntent } from '@/lib/exploreIntent';
+import type { FeedItem as SharedVideoFeedItem } from '@/features/explore/components/video-feed/types';
+import { getExploreMockFeedItems } from '@/data/exploreMockFeed';
+import { isExploreMockMode } from '@/lib/exploreMockMode';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 export interface TrendingVideo {
   id: number;
@@ -20,14 +26,25 @@ export interface TrendingVideo {
   saves?: number;
   creatorName: string;
   creatorAvatar?: string;
+  verificationStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
+  trustBand?: 'low' | 'standard' | 'high';
   categoryId?: number;
   propertyId?: number;
+  actorId?: number;
+  contentType?: 'short' | 'walkthrough' | 'showcase';
+  orientation?: string;
   createdAt?: string;
+  feedItem: SharedVideoFeedItem;
 }
 
 interface UseTrendingVideosOptions {
   categoryId?: number;
   limit?: number;
+  intent?: ExploreIntent | null;
+  intentFocus?: string;
+  intentSubFocus?: string;
+  mode?: 'auto' | 'global' | 'recommended';
+  disableMock?: boolean;
 }
 
 interface UseTrendingVideosReturn {
@@ -36,168 +53,185 @@ interface UseTrendingVideosReturn {
   error: Error | null;
   refetch: () => Promise<unknown>;
   isEmpty: boolean;
+  debugMeta?: {
+    mode: 'global' | 'recommended';
+    requestedIntentFocus: string | null;
+    requestedIntentSubFocus: string | null;
+    resolvedLegacyIntent: string | null;
+    appliedIntentMultiplier: number | null;
+    requestedCreatorActorId: number | null;
+  };
+  sectionPurity?: {
+    requestedFocus: string;
+    requestedSubFocus: string | null;
+    requestedCount: number;
+    returnedCount: number;
+    matchedCount: number;
+    matchPct: number;
+    shortfallReason?: string;
+  };
 }
 
-// Placeholder trending videos for development/fallback
-const placeholderTrendingVideos: TrendingVideo[] = [
-  {
-    id: 1,
-    title: 'Luxury Penthouse Tour in Sandton',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=711&fit=crop',
-    duration: 45,
-    views: 12500,
-    saves: 340,
-    creatorName: 'Luxury Estates SA',
-    creatorAvatar:
-      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-  },
-  {
-    id: 2,
-    title: 'Modern Family Home in Bryanston',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=711&fit=crop',
-    duration: 38,
-    views: 8900,
-    saves: 210,
-    creatorName: 'Home Finders',
-    creatorAvatar:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-  },
-  {
-    id: 3,
-    title: 'Secure Estate Living in Fourways',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=711&fit=crop',
-    duration: 52,
-    views: 15200,
-    saves: 420,
-    creatorName: 'Estate Living SA',
-    creatorAvatar:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-  },
-  {
-    id: 4,
-    title: 'Waterfront Apartment in V&A',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&h=711&fit=crop',
-    duration: 41,
-    views: 9800,
-    saves: 280,
-    creatorName: 'Cape Properties',
-    creatorAvatar:
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-  },
-  {
-    id: 5,
-    title: 'New Development Launch: The Apex',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=400&h=711&fit=crop',
-    duration: 58,
-    views: 22000,
-    saves: 650,
-    creatorName: 'Apex Developers',
-    creatorAvatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop',
-  },
-  {
-    id: 6,
-    title: 'Student Accommodation Tour',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=400&h=711&fit=crop',
-    duration: 35,
-    views: 6500,
-    saves: 180,
-    creatorName: 'Student Living SA',
-    creatorAvatar:
-      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
-  },
-  {
-    id: 7,
-    title: 'Golf Estate Dream Home',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=400&h=711&fit=crop',
-    duration: 48,
-    views: 11200,
-    saves: 390,
-    creatorName: 'Golf Estates',
-    creatorAvatar:
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop',
-  },
-  {
-    id: 8,
-    title: 'Pet-Friendly Garden Cottage',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=400&h=711&fit=crop',
-    duration: 32,
-    views: 7800,
-    saves: 220,
-    creatorName: 'Pet Homes SA',
-    creatorAvatar:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop',
-  },
-];
+function mapToSharedVideoFeedItem(item: CanonicalFeedItem): SharedVideoFeedItem {
+  return {
+    id: String(item.id),
+    kind: 'video',
+    videoUrl: item.mediaUrl,
+    posterUrl: item.thumbnailUrl || item.mediaUrl,
+    caption: item.title || item.category || 'Explore Video',
+    creatorName: item.actor.displayName || 'Creator',
+    creatorHandle: (item.actor.displayName || 'creator').toLowerCase().replace(/\s+/g, '-'),
+    category: String(item.category || '').toLowerCase(),
+    actorTrust: {
+      actorType: item.actor.actorType,
+      verificationStatus: item.actor.verificationStatus,
+      trustBand: item.actorInsights?.trustBand || 'standard',
+      momentumLabel: item.actorInsights?.momentumLabel || 'stable',
+      lowReports: Boolean(item.actorInsights?.lowReports),
+    },
+  };
+}
 
 export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTrendingVideosReturn {
   const { categoryId, limit = 12 } = options;
+  const intent = options.intent === undefined ? readStoredExploreIntent() : options.intent;
+  const intentFocus = String(options.intentFocus ?? '')
+    .trim()
+    .toLowerCase();
+  const intentSubFocus = String(options.intentSubFocus ?? '')
+    .trim()
+    .toLowerCase();
+  const mode = options.mode ?? 'auto';
+  const useMockData = !options.disableMock && isExploreMockMode();
+  const { isAuthenticated } = useAuth();
+  const shouldUseGlobalTrending =
+    mode === 'global' ||
+    (mode === 'auto' && !intentFocus && (!isAuthenticated || !intent));
 
-  // Fetch trending videos from API
-  const feedQuery = trpc.explore.getFeed.useQuery({
-    feedType: 'recommended',
-    limit: limit,
-    offset: 0,
-  });
+  const globalTrendingQuery = trpc.explore.getTrendingGlobal.useQuery(
+    {
+      limit,
+      offset: 0,
+    },
+    {
+      enabled: !useMockData && shouldUseGlobalTrending,
+    },
+  );
+
+  const personalizedTrendingQuery = trpc.explore.getFeed.useQuery(
+    {
+      feedType: 'recommended',
+      limit,
+      offset: 0,
+      intent: intent ?? undefined,
+      intentFocus: intentFocus || undefined,
+      intentSubFocus: intentSubFocus || undefined,
+    },
+    {
+      enabled: !useMockData && !shouldUseGlobalTrending,
+    },
+  );
+
+  const resolvedItems = useMemo(() => {
+    const categoryKey = categoryId
+      ? (['property', 'renovation', 'finance', 'investment', 'services'][categoryId - 1] ?? undefined)
+      : undefined;
+    const byCategory = (items: CanonicalFeedItem[]) =>
+      categoryKey ? items.filter(item => item.category === categoryKey) : items;
+
+    const sourceItems = useMockData
+      ? getExploreMockFeedItems()
+      : getFeedItems(shouldUseGlobalTrending ? globalTrendingQuery.data : personalizedTrendingQuery.data);
+    const filteredItems = byCategory(sourceItems).filter(item => Boolean(item.mediaUrl));
+
+    return {
+      items: filteredItems,
+      usingMock: useMockData,
+    };
+  }, [
+    categoryId,
+    globalTrendingQuery.data,
+    personalizedTrendingQuery.data,
+    shouldUseGlobalTrending,
+    useMockData,
+  ]);
 
   // Process and filter videos
-  const videos = useMemo(() => {
-    const feedData = feedQuery.data;
-
-    // Check if we have valid data
-    if (Array.isArray(feedData) && feedData.length > 0) {
-      // Filter to only video content
-      let videoItems = feedData.filter((item: any) => item.contentType === 'video');
-
-      // Apply category filter if provided
-      if (categoryId) {
-        videoItems = videoItems.filter((item: any) => item.categoryId === categoryId);
-      }
-
-      // Map to TrendingVideo format
-      return videoItems.slice(0, limit).map((item: any) => ({
+  const videos = useMemo(
+    () =>
+      resolvedItems.items.slice(0, limit).map(item => ({
         id: item.id,
         title: item.title || 'Property Video',
-        thumbnailUrl: item.thumbnailUrl || item.imageUrl || '',
-        videoUrl: item.videoUrl,
-        duration: item.duration || 30,
-        views: item.views || 0,
-        saves: item.saves || 0,
-        creatorName: item.creatorName || 'Agent',
-        creatorAvatar: item.creatorAvatar,
-        categoryId: item.categoryId,
-        propertyId: item.propertyId,
-        createdAt: item.createdAt,
-      }));
-    }
-
-    // Fall back to placeholder data
-    let placeholders = [...placeholderTrendingVideos];
-
-    // Simulate category filtering on placeholders
-    if (categoryId) {
-      // For demo, just return fewer items to simulate filtering
-      placeholders = placeholders.slice(0, Math.max(3, Math.floor(placeholders.length / 2)));
-    }
-
-    return placeholders.slice(0, limit);
-  }, [feedQuery.data, categoryId, limit]);
+        thumbnailUrl: item.thumbnailUrl || item.mediaUrl || '',
+        videoUrl: item.mediaUrl,
+        duration: item.durationSec || 30,
+        views: item.stats.views || 0,
+        saves: item.stats.saves || 0,
+        creatorName: item.actor.displayName || 'Agent',
+        creatorAvatar: undefined,
+        verificationStatus: item.actor.verificationStatus,
+        trustBand: item.actorInsights?.trustBand || 'standard',
+        propertyId: item.linkedListingId,
+        actorId: item.actor.id ?? undefined,
+        contentType: item.contentType,
+        orientation: item.orientation,
+        createdAt: undefined,
+        feedItem: mapToSharedVideoFeedItem(item),
+      })),
+    [limit, resolvedItems.items],
+  );
 
   // Determine if empty (no videos after filtering)
-  const isEmpty = !feedQuery.isLoading && videos.length === 0;
+  const activeQuery = shouldUseGlobalTrending ? globalTrendingQuery : personalizedTrendingQuery;
+  const isLoading = resolvedItems.usingMock ? false : activeQuery.isLoading;
+  const error = resolvedItems.usingMock || !activeQuery.error ? null : new Error(activeQuery.error.message);
+  const isEmpty = !isLoading && videos.length === 0;
+  const sectionPurityRaw = (activeQuery.data as any)?.metadata?.sectionPurity;
+  const metadata = (activeQuery.data as any)?.metadata;
+  const debugMeta = {
+    mode: (shouldUseGlobalTrending ? 'global' : String(metadata?.mode || 'recommended')) as
+      | 'global'
+      | 'recommended',
+    requestedIntentFocus: metadata?.requestedIntentFocus
+      ? String(metadata.requestedIntentFocus)
+      : intentFocus || null,
+    requestedIntentSubFocus: metadata?.requestedIntentSubFocus
+      ? String(metadata.requestedIntentSubFocus)
+      : intentSubFocus || null,
+    resolvedLegacyIntent: metadata?.resolvedLegacyIntent ? String(metadata.resolvedLegacyIntent) : null,
+    appliedIntentMultiplier:
+      typeof metadata?.appliedIntentMultiplier === 'number'
+        ? Number(metadata.appliedIntentMultiplier)
+        : null,
+    requestedCreatorActorId:
+      typeof metadata?.requestedCreatorActorId === 'number'
+        ? Number(metadata.requestedCreatorActorId)
+        : null,
+  };
+  const sectionPurity =
+    sectionPurityRaw && typeof sectionPurityRaw === 'object'
+      ? {
+          requestedFocus: String(sectionPurityRaw.requestedFocus || ''),
+          requestedSubFocus: sectionPurityRaw.requestedSubFocus
+            ? String(sectionPurityRaw.requestedSubFocus)
+            : null,
+          requestedCount: Number(sectionPurityRaw.requestedCount || 0),
+          returnedCount: Number(sectionPurityRaw.returnedCount || 0),
+          matchedCount: Number(sectionPurityRaw.matchedCount || 0),
+          matchPct: Number(sectionPurityRaw.matchPct || 0),
+          shortfallReason: sectionPurityRaw.shortfallReason
+            ? String(sectionPurityRaw.shortfallReason)
+            : undefined,
+        }
+      : undefined;
 
   return {
     videos,
-    isLoading: feedQuery.isLoading,
-    error: feedQuery.error ? new Error(feedQuery.error.message) : null,
-    refetch: feedQuery.refetch,
+    isLoading,
+    error,
+    refetch: activeQuery.refetch,
     isEmpty,
+    debugMeta,
+    sectionPurity,
   };
 }

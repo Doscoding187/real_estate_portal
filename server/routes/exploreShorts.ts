@@ -61,13 +61,19 @@ const rateLimit = (maxRequests: number, windowMs: number) => {
  */
 router.get('/', optionalAuth, rateLimit(100, 60000), async (req: Request, res: Response) => {
   try {
-    const { limit = 20, offset = 0 } = req.query;
+    const { limit = 20, offset = 0, locationType, locationId } = req.query;
     const userId = req.user?.id;
 
     const result = await exploreFeedService.getRecommendedFeed({
       userId,
       limit: Number(limit),
       offset: Number(offset),
+      locationType:
+        locationType === 'province' || locationType === 'city' || locationType === 'suburb'
+          ? locationType
+          : undefined,
+      locationId: locationId ? Number(locationId) : undefined,
+      requestId: (req as any).requestId,
     });
 
     res.json(result);
@@ -92,13 +98,19 @@ router.get(
   rateLimit(100, 60000),
   async (req: Request, res: Response) => {
     try {
-      const { limit = 20, offset = 0 } = req.query;
+      const { limit = 20, offset = 0, locationType, locationId } = req.query;
       const userId = req.user?.id;
 
       const result = await exploreFeedService.getRecommendedFeed({
         userId,
         limit: Number(limit),
         offset: Number(offset),
+        locationType:
+          locationType === 'province' || locationType === 'city' || locationType === 'suburb'
+            ? locationType
+            : undefined,
+        locationId: locationId ? Number(locationId) : undefined,
+        requestId: (req as any).requestId,
       });
 
       res.json(result);
@@ -124,7 +136,7 @@ router.get(
  */
 router.get('/by-area', optionalAuth, rateLimit(100, 60000), async (req: Request, res: Response) => {
   try {
-    const { location, limit = 20, offset = 0 } = req.query;
+    const { location, limit = 20, offset = 0, locationType, locationId } = req.query;
 
     if (!location) {
       return res.status(400).json({ error: 'Location parameter required' });
@@ -134,6 +146,12 @@ router.get('/by-area', optionalAuth, rateLimit(100, 60000), async (req: Request,
       location: String(location),
       limit: Number(limit),
       offset: Number(offset),
+      locationType:
+        locationType === 'province' || locationType === 'city' || locationType === 'suburb'
+          ? locationType
+          : undefined,
+      locationId: locationId ? Number(locationId) : undefined,
+      requestId: (req as any).requestId,
     });
 
     res.json(result);

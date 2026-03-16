@@ -21,7 +21,7 @@ export function useFollowCreator({
 }: UseFollowCreatorOptions) {
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
 
-  const toggleFollowMutation = trpc.exploreApi.toggleCreatorFollow.useMutation({
+  const toggleFollowMutation = trpc.explore.toggleCreatorFollow.useMutation({
     onSuccess: data => {
       setIsFollowing(data.data.following);
 

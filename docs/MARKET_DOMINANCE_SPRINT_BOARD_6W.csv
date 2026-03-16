@@ -1,0 +1,13 @@
+Ticket ID,Title,Owner,Sprint,Status,Acceptance Gate,Dependencies
+S1-1,"Demand baseline table and ingestion (opportunities_by_surface_by_region_by_day)",Backend Lead,"Sprint 1 (Weeks 1-2)",NOW,"Unused inventory percent visible per region",None
+S1-2,"Fill-rate and revenue-per-opportunity metrics",Data Lead,"Sprint 1 (Weeks 1-2)",NOW,"Theoretical max revenue quantifiable by region",S1-1
+S1-3,"Observability dashboard v1 (surface/region revenue, fill, cap)",Admin UI Lead,"Sprint 1 (Weeks 1-2)",NOW,"Top 3 revenue leakage zones identifiable in <5 min","S1-1; S1-2"
+S1-4,"Demand-aware simulation integration",Backend Lead,"Sprint 1 (Weeks 1-2)",BLOCKED,"Simulation outputs include demand baseline deltas","S1-1; S1-2"
+S2-1,"CPM floor configuration per region",Backend Lead,"Sprint 2 (Weeks 3-4)",NEXT,"Floor raised in one controlled region with no system instability","Sprint 1 checkpoint"
+S2-2,"CPC multipliers and surge toggle",Backend Lead,"Sprint 2 (Weeks 3-4)",NEXT,"Pre/post fill-rate and revenue deltas captured",S2-1
+S2-3,"Performance quality scoring v1",Ranking Lead,"Sprint 2 (Weeks 3-4)",NEXT,"High-quality rules receive measurable uplift","Sprint 1 checkpoint"
+S2-4,"Rank blending integration (organic + paid + quality)",Ranking Lead,"Sprint 2 (Weeks 3-4)",NEXT,"No demand collapse after controlled price test","S2-3; S2-1"
+S3-1,"Premium slot limits per region",Backend Lead,"Sprint 3 (Weeks 5-6)",LATER,"At least one region reaches scarcity threshold","Sprint 2 checkpoint"
+S3-2,"Scarcity state messaging (placement full)",Product Lead,"Sprint 3 (Weeks 5-6)",LATER,"Scarcity state appears only when configured threshold is met",S3-1
+S3-3,"Budget exhaustion forecast",Backend Lead,"Sprint 3 (Weeks 5-6)",LATER,"Forecast error tracked and stable over 7 days","Sprint 2 checkpoint"
+S3-4,"Cap-increase suggestion engine",Backend + Product,"Sprint 3 (Weeks 5-6)",LATER,"At least one advertiser increases cap after recommendation",S3-3

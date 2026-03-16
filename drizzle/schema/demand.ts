@@ -53,7 +53,7 @@ export const demandCampaigns = mysqlTable(
     minPrice: int('min_price'),
     criteria: json('criteria'),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -76,7 +76,7 @@ export const demandLeads = mysqlTable(
     message: text('message'),
     criteria: json('criteria'),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -114,7 +114,7 @@ export const demandLeadMatches = mysqlTable(
       .default('1.0000')
       .notNull(),
     scoringInputs: json('scoring_inputs'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_demand_lead_matches_demand_lead').on(table.demandLeadId),
@@ -147,7 +147,7 @@ export const demandLeadAssignments = mysqlTable(
       .default('assigned')
       .notNull(),
     reason: text('reason'),
-    assignedAt: timestamp('assigned_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    assignedAt: timestamp('assigned_at', { mode: 'string' }).defaultNow().notNull(),
     deliveredAt: timestamp('delivered_at', { mode: 'string' }),
     respondedAt: timestamp('responded_at', { mode: 'string' }),
   },
@@ -173,7 +173,7 @@ export const demandUnmatchedLeads = mysqlTable(
     criteria: json('criteria'),
     payload: json('payload'),
     status: mysqlEnum('status', ['open', 'resolved']).default('open').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     resolvedAt: timestamp('resolved_at', { mode: 'string' }),
   },
   table => [

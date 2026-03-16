@@ -7,6 +7,9 @@ import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { distributionIdentities } from '../../drizzle/schema';
 
+const RESEND_VERIFICATION_COOLDOWN_MS = 60_000;
+const resendVerificationLastSentAt = new Map<string, number>();
+
 /**
  * Register authentication routes
  * This replaces the Manus OAuth routes
@@ -40,33 +43,32 @@ export function registerAuthRoutes(app: Express) {
         });
       }
 
-      // Validate agent profile if role is agent
-      if (role === 'agent') {
-        if (!agentProfile || !agentProfile.displayName || !agentProfile.phoneNumber) {
-          return res.status(400).json({
-            error:
-              'Agent profile with display name and phone number is required for agent registration',
-          });
-        }
-      }
-
       // Register user (sends verification email)
       // Allow specific roles if requested, otherwise default to 'visitor'
       const allowedRoles = ['agent', 'agency_admin', 'property_developer', 'visitor'];
       const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
+
+      const normalizedAgentProfile =
+        role === 'agent' && agentProfile
+          ? {
+              ...agentProfile,
+              phoneNumber: agentProfile.phoneNumber || agentProfile.phone,
+              phone: agentProfile.phone || agentProfile.phoneNumber,
+            }
+          : undefined;
 
       const userId = await authService.register(
         email,
         password,
         name,
         requestedRole as any,
-        agentProfile,
+        normalizedAgentProfile,
       );
 
       // Return success message - user must verify email before logging in
       const message =
         role === 'agent'
-          ? 'Registration successful! Please check your email to verify your account. Your agent profile will be created after email verification.'
+          ? 'Registration successful! Please check your email to verify your account and complete your profile setup.'
           : 'Registration successful. Please check your email to verify your account.';
 
       res.status(201).json({
@@ -105,28 +107,39 @@ export function registerAuthRoutes(app: Express) {
 
       console.log('🔍 Validating credentials for:', email);
       // Login user
-      const { user, sessionToken } = await authService.login(email, password, rememberMe);
+      const { user, sessionToken, entitlements } = await authService.login(
+        email,
+        password,
+        rememberMe,
+      );
       console.log('✅ Auth service returned user:', user.email);
 
       let hasReferrerIdentity = false;
+      let hasManagerIdentity = false;
       try {
         const db = await getDb();
         if (db) {
-          const [identity] = await db
-            .select({ id: distributionIdentities.id })
+          const identityRows = await db
+            .select({
+              id: distributionIdentities.id,
+              identityType: distributionIdentities.identityType,
+            })
             .from(distributionIdentities)
             .where(
               and(
                 eq(distributionIdentities.userId, user.id),
-                eq(distributionIdentities.identityType, 'referrer'),
                 eq(distributionIdentities.active, 1),
               ),
-            )
-            .limit(1);
-          hasReferrerIdentity = Boolean(identity?.id);
+            );
+          hasReferrerIdentity = identityRows.some(
+            row => Boolean(row.id) && row.identityType === 'referrer',
+          );
+          hasManagerIdentity = identityRows.some(
+            row => Boolean(row.id) && row.identityType === 'manager',
+          );
         }
       } catch (identityError) {
-        console.warn('[Auth] Referrer identity lookup failed (non-fatal):', identityError);
+        console.warn('[Auth] Distribution identity lookup failed (non-fatal):', identityError);
       }
 
       // Feature 4: "Remember Me" Functionality
@@ -143,15 +156,29 @@ export function registerAuthRoutes(app: Express) {
       });
       console.log('✅ Cookie set successfully');
 
+      const currentPlan = entitlements?.currentPlan || null;
+      const trialStatus = entitlements?.trialStatusDetail || {
+        status: entitlements?.trialStatus || 'none',
+        trialEndsAt: entitlements?.trialEndsAt || null,
+        daysRemaining: null,
+      };
+
       // Return success with user info
       res.json({
         success: true,
+        current_plan: currentPlan,
+        trial_status: trialStatus,
+        entitlements: entitlements?.featureFlags || entitlements || null,
         user: {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           hasReferrerIdentity,
+          hasManagerIdentity,
+          entitlements,
+          currentPlan,
+          trialStatus,
         },
       });
     } catch (error: any) {
@@ -169,14 +196,6 @@ export function registerAuthRoutes(app: Express) {
       }
 
       if (errorMessage.includes('OAuth login')) {
-        return res.status(403).json({ error: errorMessage });
-      }
-
-      if (
-        errorMessage.includes('pending review') ||
-        errorMessage.includes('rejected') ||
-        errorMessage.includes('suspended')
-      ) {
         return res.status(403).json({ error: errorMessage });
       }
 
@@ -292,7 +311,33 @@ export function registerAuthRoutes(app: Express) {
           );
       }
 
-      await authService.verifyEmail(token);
+      const verifiedUser = await authService.verifyEmail(token);
+
+      if (verifiedUser.role === 'agent') {
+        // Auto-create a session so agents can complete onboarding immediately
+        // after clicking the email verification link.
+        if (verifiedUser.email) {
+          const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+          const sessionToken = await authService.createSessionToken(
+            verifiedUser.id,
+            verifiedUser.email,
+            verifiedUser.name || verifiedUser.email,
+            { expiresInMs: maxAge },
+          );
+          const cookieOptions = getSessionCookieOptions(req);
+          res.cookie(COOKIE_NAME, sessionToken, {
+            ...cookieOptions,
+            maxAge,
+          });
+        } else {
+          console.warn(
+            '[Auth] Verified agent missing email. Skipping auto-login and redirecting to onboarding.',
+          );
+        }
+
+        res.redirect(`${ENV.appUrl}/onboarding/agent-profile?verified=true`);
+        return;
+      }
 
       // Redirect to the login page with a success message
       res.redirect(`${ENV.appUrl}/login?verified=true`);
@@ -303,6 +348,49 @@ export function registerAuthRoutes(app: Express) {
         .send(
           `<h1>Email Verification Failed</h1><p>${error.message || 'The verification link is invalid or has expired.'}</p>`,
         );
+    }
+  });
+
+  /**
+   * Resend email verification link.
+   * POST /api/auth/resend-verification
+   * Body: { email: string }
+   */
+  app.post('/api/auth/resend-verification', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body ?? {};
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'A valid email is required' });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const key = `${ip}:${normalizedEmail}`;
+      const now = Date.now();
+      const lastSentAt = resendVerificationLastSentAt.get(key) || 0;
+      const elapsed = now - lastSentAt;
+
+      if (elapsed < RESEND_VERIFICATION_COOLDOWN_MS) {
+        const retryAfterSeconds = Math.ceil((RESEND_VERIFICATION_COOLDOWN_MS - elapsed) / 1000);
+        res.setHeader('Retry-After', String(retryAfterSeconds));
+        return res.status(429).json({
+          error: `Please wait ${retryAfterSeconds}s before requesting another verification email.`,
+        });
+      }
+
+      await authService.resendVerificationEmail(normalizedEmail);
+      resendVerificationLastSentAt.set(key, now);
+
+      return res.json({
+        success: true,
+        message: 'If this account exists and is unverified, a verification email has been sent.',
+      });
+    } catch (error: any) {
+      console.error('[Auth] Resend verification failed', error);
+      return res.json({
+        success: true,
+        message: 'If this account exists and is unverified, a verification email has been sent.',
+      });
     }
   });
 }

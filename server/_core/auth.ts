@@ -17,6 +17,8 @@ import { sql } from 'drizzle-orm';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
+import { getAgentEntitlementsForUserId } from '../services/agentEntitlementService';
+import { initializeAgentStarterTrial } from '../services/planAccessService';
 
 export type SessionPayload = {
   userId: number;
@@ -28,6 +30,10 @@ const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
 
 class AuthService {
+  private toDbTimestamp(value: Date): string {
+    return value.toISOString().slice(0, 19).replace('T', ' ');
+  }
+
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
     if (!secret) {
@@ -178,7 +184,8 @@ class AuthService {
     role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
     agentProfile?: {
       displayName: string;
-      phone: string;
+      phone?: string;
+      phoneNumber?: string;
       bio?: string;
       licenseNumber?: string;
       specializations?: string[];
@@ -192,6 +199,11 @@ class AuthService {
 
     // Hash password
     const passwordHash = await this.hashPassword(password);
+    const isAgent = role === 'agent';
+    const now = new Date();
+    const trialDaysRaw = Number(process.env.AGENT_TRIAL_DAYS || '30');
+    const trialDays = Number.isFinite(trialDaysRaw) && trialDaysRaw > 0 ? trialDaysRaw : 30;
+    const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
 
     // Generate email verification token
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
@@ -204,26 +216,37 @@ class AuthService {
       emailVerified: 0,
       loginMethod: 'email',
       role: role, // Use requested role
+      plan: isAgent ? 'trial' : 'paid',
+      trialStatus: isAgent ? 'active' : 'active',
+      trialStartedAt: isAgent ? this.toDbTimestamp(now) : null,
+      trialEndsAt: isAgent ? this.toDbTimestamp(trialEndsAt) : null,
       isSubaccount: 0,
       emailVerificationToken,
     });
 
-    // Store agent profile data for creation after email verification
+    // Create the agent profile as pending so registration does not depend on
+    // a separate pending table schema being present.
     if (role === 'agent' && agentProfile) {
-      const database = await getDb();
-      if (database) {
-        await database.execute(sql`
-          INSERT INTO pending_agent_profiles 
-          (userId, displayName, phone, bio, licenseNumber, specializations)
-          VALUES (
-            ${userId}, 
-            ${agentProfile.displayName}, 
-            ${agentProfile.phone}, 
-            ${agentProfile.bio || null}, 
-            ${agentProfile.licenseNumber || null}, 
-            ${agentProfile.specializations ? agentProfile.specializations.join(',') : null}
-          )
-        `);
+      const normalizedPhone = agentProfile.phone || agentProfile.phoneNumber;
+      if (!agentProfile.displayName || !normalizedPhone) {
+        throw new Error('Agent profile with display name and phone number is required');
+      }
+
+      await db.createAgentProfile({
+        userId,
+        displayName: agentProfile.displayName,
+        phone: normalizedPhone,
+        bio: agentProfile.bio,
+        licenseNumber: agentProfile.licenseNumber,
+        specializations: agentProfile.specializations,
+      });
+    }
+
+    if (role === 'agent') {
+      try {
+        await initializeAgentStarterTrial(userId);
+      } catch (subscriptionError) {
+        console.error('[Auth] Failed to initialize starter trial subscription:', subscriptionError);
       }
     }
 
@@ -256,7 +279,11 @@ class AuthService {
     email: string,
     password: string,
     rememberMe?: boolean,
-  ): Promise<{ user: User; sessionToken: string }> {
+  ): Promise<{
+    user: User;
+    sessionToken: string;
+    entitlements: Awaited<ReturnType<typeof getAgentEntitlementsForUserId>> | null;
+  }> {
     // Get user by email
     const user = await db.getUserByEmail(email);
     if (!user) {
@@ -279,25 +306,6 @@ class AuthService {
       throw ForbiddenError('Please verify your email address before logging in.');
     }
 
-    // Check agent status if user is an agent
-    if (user.role === 'agent') {
-      const agentProfile = await db.getAgentByUserId(user.id);
-      if (agentProfile) {
-        if (agentProfile.status === 'pending') {
-          throw new Error(
-            'Your agent application is pending review. You will be notified once approved.',
-          );
-        }
-        if (agentProfile.status === 'rejected') {
-          const reason = agentProfile.rejectionReason || 'No reason provided';
-          throw new Error(`Your agent application was rejected. Reason: ${reason}`);
-        }
-        if (agentProfile.status === 'suspended') {
-          throw new Error('Your agent account has been suspended. Please contact support.');
-        }
-      }
-    }
-
     // Update last signed in timestamp
     await db.updateUserLastSignIn(user.id);
 
@@ -313,7 +321,18 @@ class AuthService {
       { expiresInMs },
     );
 
-    return { user, sessionToken };
+    let entitlements: Awaited<ReturnType<typeof getAgentEntitlementsForUserId>> | null = null;
+    try {
+      entitlements = await getAgentEntitlementsForUserId(user.id);
+    } catch (error) {
+      console.warn('[Auth] Entitlement projection failed during login; continuing without it.', {
+        userId: user.id,
+        code: (error as any)?.code,
+        message: (error as any)?.message,
+      });
+    }
+
+    return { user, sessionToken, entitlements };
   }
 
   /**
@@ -373,7 +392,7 @@ class AuthService {
   /**
    * Verify email address using a token
    */
-  async verifyEmail(token: string): Promise<void> {
+  async verifyEmail(token: string): Promise<User> {
     const user = await db.getUserByEmailVerificationToken(token);
 
     if (!user) {
@@ -383,37 +402,73 @@ class AuthService {
     // Verify the email
     await db.verifyUserEmail(user.id);
 
-    // If user is an agent, create agent profile from pending data
+    // Backward compatibility: if an agent profile was staged in a pending table
+    // by an older flow, hydrate it now if no profile exists yet.
     if (user.role === 'agent') {
-      const database = await getDb();
-      if (database) {
-        // Get pending agent profile data
-        const [pendingProfile] = await database.execute(sql`
-          SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
-        `);
+      const existingProfile = await db.getAgentByUserId(user.id);
+      if (!existingProfile) {
+        const database = await getDb();
+        if (database) {
+          try {
+            const [pendingProfile] = await database.execute(sql`
+              SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
+            `);
 
-        if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
-          const profileData = pendingProfile.rows[0] as any;
+            if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
+              const profileData = pendingProfile.rows[0] as any;
+              const pendingPhone = profileData.phone || profileData.phoneNumber;
 
-          // Create agent profile
-          await db.createAgentProfile({
-            userId: user.id,
-            displayName: profileData.displayName,
-            phone: profileData.phone,
-            bio: profileData.bio,
-            licenseNumber: profileData.licenseNumber,
-            specializations: profileData.specializations
-              ? profileData.specializations.split(',')
-              : undefined,
-          });
+              if (profileData.displayName && pendingPhone) {
+                await db.createAgentProfile({
+                  userId: user.id,
+                  displayName: profileData.displayName,
+                  phone: pendingPhone,
+                  bio: profileData.bio,
+                  licenseNumber: profileData.licenseNumber,
+                  specializations: profileData.specializations
+                    ? profileData.specializations.split(',')
+                    : undefined,
+                });
 
-          // Delete pending profile data
-          await database.execute(sql`
-            DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
-          `);
+                await database.execute(sql`
+                  DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
+                `);
+              }
+            }
+          } catch (pendingProfileError) {
+            console.warn(
+              '[Auth] Pending agent profile reconciliation failed (non-fatal):',
+              pendingProfileError,
+            );
+          }
         }
       }
+
+      await db.autoApproveAgentByUserId(user.id);
     }
+
+    const verifiedUser = await db.getUserById(user.id);
+    return verifiedUser || user;
+  }
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await db.getUserByEmail(normalizedEmail);
+
+    // Generic success to avoid account enumeration
+    if (!user || user.emailVerified === 1) return;
+
+    let verificationToken = user.emailVerificationToken;
+    if (!verificationToken) {
+      verificationToken = crypto.randomBytes(32).toString('hex');
+      await db.updateUserEmailVerificationToken(user.id, verificationToken);
+    }
+
+    await sendVerificationEmail({
+      to: user.email!,
+      verificationToken,
+      name: user.name || undefined,
+    });
   }
 }
 

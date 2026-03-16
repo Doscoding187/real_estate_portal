@@ -414,6 +414,7 @@ async function convertToSubscriber(brandProfileId: number, developerAccountId: n
     .update(developments)
     .set({
       devOwnerType: 'developer',
+      developerId: developerAccountId,
     })
     .where(eq(developments.developerBrandProfileId, brandProfileId));
 

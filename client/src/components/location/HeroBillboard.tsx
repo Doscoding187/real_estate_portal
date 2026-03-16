@@ -35,6 +35,7 @@ export function HeroBillboard({
       refetchOnWindowFocus: false,
     },
   );
+  const recordRuleEvent = trpc.monetization.recordRuleEvent.useMutation();
 
   const impressionLogged = useRef(false);
 
@@ -56,6 +57,20 @@ export function HeroBillboard({
         locationId,
         locationType,
       });
+      if (ad.monetizationRuleId) {
+        recordRuleEvent.mutate({
+          ruleId: ad.monetizationRuleId,
+          eventType: 'click',
+          contextType: 'hero',
+          contextId: ad.targetId || ad.id,
+          locationType,
+          locationId,
+          serveRequestId: ad.serveRequestId,
+          metadata: {
+            surface: 'hero_billboard',
+          },
+        });
+      }
 
       // Navigate to ad destination
       const metadata = ad.metadata as any;

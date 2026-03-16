@@ -1,6 +1,6 @@
 import { PropertyShort } from '@/../../shared/types';
 import { Heart, Share2, MoreVertical, MapPin, Bed, Bath, Car } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PropertyOverlay } from './PropertyOverlay';
 
 interface PropertyCardProps {
@@ -13,6 +13,9 @@ interface PropertyCardProps {
   onContactAgent?: () => void;
   onBookViewing?: () => void;
   onWhatsApp?: () => void;
+  onVideoStart?: (meta: { durationSec: number }) => void;
+  onVideoProgress?: (meta: { currentSec: number; durationSec: number }) => void;
+  onVideoComplete?: (meta: { durationSec: number }) => void;
 }
 
 export function PropertyCard({
@@ -25,9 +28,13 @@ export function PropertyCard({
   onContactAgent,
   onBookViewing,
   onWhatsApp,
+  onVideoStart,
+  onVideoProgress,
+  onVideoComplete,
 }: PropertyCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isOverlayExpanded, setIsOverlayExpanded] = useState(false);
+  const startedRef = useRef(false);
 
   const handleSave = () => {
     setIsSaved(!isSaved);
@@ -52,6 +59,26 @@ export function PropertyCard({
 
   // Get current media based on index
   const currentMedia = property.media?.[currentMediaIndex] || property.media?.[0];
+  const verificationStatus = property.agent?.verificationStatus || 'unverified';
+  const verificationLabel =
+    verificationStatus === 'verified'
+      ? 'Verified'
+      : verificationStatus === 'pending'
+        ? 'Pending'
+        : verificationStatus === 'rejected'
+          ? 'Rejected'
+          : 'Unverified';
+  const trustBand = property.agent?.trustBand || 'standard';
+  const trustBandClass =
+    trustBand === 'high'
+      ? 'bg-emerald-500/25 text-emerald-100 border-emerald-400/40'
+      : trustBand === 'low'
+        ? 'bg-amber-500/25 text-amber-100 border-amber-400/40'
+        : 'bg-blue-500/25 text-blue-100 border-blue-400/40';
+
+  useEffect(() => {
+    startedRef.current = false;
+  }, [property.id, currentMediaIndex, currentMedia?.id, isActive]);
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
@@ -68,6 +95,26 @@ export function PropertyCard({
               muted
               playsInline
               autoPlay={isActive}
+              onPlay={event => {
+                if (!isActive || startedRef.current) return;
+                startedRef.current = true;
+                onVideoStart?.({
+                  durationSec: Math.max(1, Math.round(Number(event.currentTarget.duration || 0))),
+                });
+              }}
+              onTimeUpdate={event => {
+                if (!isActive) return;
+                const currentSec = Number(event.currentTarget.currentTime || 0);
+                const durationSec = Number(event.currentTarget.duration || 0);
+                if (!durationSec) return;
+                onVideoProgress?.({ currentSec, durationSec });
+              }}
+              onEnded={event => {
+                if (!isActive) return;
+                onVideoComplete?.({
+                  durationSec: Math.max(1, Math.round(Number(event.currentTarget.duration || 0))),
+                });
+              }}
             />
           ) : (
             <img
@@ -187,7 +234,18 @@ export function PropertyCard({
             )}
             <div className="flex-1">
               <div className="text-white text-sm font-medium">{property.agent.name}</div>
-              <div className="text-white/60 text-xs">Property Agent</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-white/60 text-xs">Property Agent</span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full border ${trustBandClass}`}
+                  aria-label={`Trust band ${trustBand}`}
+                >
+                  {trustBand.toUpperCase()}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full border bg-white/10 text-white/90 border-white/20">
+                  {verificationLabel}
+                </span>
+              </div>
             </div>
           </div>
         )}

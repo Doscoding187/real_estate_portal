@@ -498,18 +498,74 @@ export interface BulkCreateUnitsInput {
 export type InteractionType =
   | 'impression'
   | 'view'
+  | 'viewProgress'
+  | 'viewComplete'
   | 'skip'
   | 'save'
   | 'share'
+  | 'like'
+  | 'profileClick'
+  | 'listingOpen'
+  | 'contactClick'
+  | 'notInterested'
+  | 'report'
   | 'contact'
   | 'whatsapp'
   | 'book_viewing';
 
 export type FeedType = 'recommended' | 'area' | 'category' | 'agent' | 'developer' | 'agency';
+export type ExploreIntent = 'buy' | 'sell' | 'improve' | 'invest' | 'learn';
 
 export type CreatorType = 'user' | 'agent' | 'developer' | 'agency';
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+export type ExploreContentType = 'short' | 'walkthrough' | 'showcase';
+export type ExploreCategory = 'property' | 'renovation' | 'finance' | 'investment' | 'services';
+
+export interface FeedItem {
+  id: number;
+  contentType: ExploreContentType;
+  category: ExploreCategory;
+  contentDomain?: 'market' | 'finance' | 'improve' | 'invest' | 'community';
+  contentKind?: 'listing' | 'development' | 'advice' | 'service' | 'insight' | 'story';
+  creatorType?:
+    | 'agent'
+    | 'agency'
+    | 'developer'
+    | 'bond_originator'
+    | 'financial_institution'
+    | 'contractor'
+    | 'architect'
+    | 'investor'
+    | 'other';
+  title: string;
+  mediaUrl: string;
+  mediaType?: 'video' | 'image';
+  thumbnailUrl: string | null;
+  durationSec: number;
+  orientation: 'vertical' | 'horizontal' | 'square';
+  actor: {
+    id: number | null;
+    displayName: string;
+    actorType: 'agent' | 'developer' | 'contractor' | 'finance_partner' | 'user';
+    verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
+  };
+  stats: {
+    views: number;
+    saves: number;
+    shares: number;
+  };
+  location?: {
+    city?: string;
+    suburb?: string;
+    province?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  referenceId?: number;
+  linkedListingId?: number;
+}
 
 export interface ExploreShort {
   id: number;
@@ -663,6 +719,14 @@ export interface PropertyShort extends ExploreShort {
     logo?: string;
     phone?: string;
     whatsapp?: string;
+    actorType?: 'agent' | 'developer' | 'contractor' | 'finance_partner' | 'user';
+    verificationStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
+    trustBand?: 'low' | 'standard' | 'high';
+    momentumLabel?: 'rising' | 'stable' | 'cooling';
+    lowReports?: boolean;
+    trustScore?: number;
+    momentumScore?: number;
+    abuseScore?: number;
   };
 }
 

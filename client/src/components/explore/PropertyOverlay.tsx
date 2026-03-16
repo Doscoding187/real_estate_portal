@@ -1,6 +1,5 @@
 import { PropertyShort } from '@/../../shared/types';
-import { ChevronUp, MessageCircle, Calendar, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
+import { MessageCircle, Calendar, MessageSquare } from 'lucide-react';
 
 interface PropertyOverlayProps {
   property: PropertyShort;
@@ -19,6 +18,19 @@ export function PropertyOverlay({
   onBookViewing,
   onWhatsApp,
 }: PropertyOverlayProps) {
+  const verificationStatus = property.agent?.verificationStatus || 'unverified';
+  const verificationLabel =
+    verificationStatus === 'verified'
+      ? 'Verified'
+      : verificationStatus === 'pending'
+        ? 'Pending'
+        : verificationStatus === 'rejected'
+          ? 'Rejected'
+          : 'Unverified';
+  const trustBand = property.agent?.trustBand || 'standard';
+  const momentumLabel = property.agent?.momentumLabel || 'stable';
+  const lowReports = Boolean(property.agent?.lowReports);
+
   return (
     <>
       {/* Backdrop for expanded state */}
@@ -198,10 +210,41 @@ export function PropertyOverlay({
                       <div className="text-lg font-semibold text-gray-900">
                         {property.agent.name}
                       </div>
-                      <div className="text-sm text-gray-600">Property Agent</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-gray-600">Property Agent</span>
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                          {verificationLabel}
+                        </span>
+                      </div>
                       {property.agent.phone && (
                         <div className="text-sm text-gray-500 mt-1">{property.agent.phone}</div>
                       )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {property.agent && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    Trust Signals
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-[11px] text-gray-500">Trust Band</div>
+                      <div className="text-sm font-semibold text-gray-900 capitalize">{trustBand}</div>
+                    </div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-[11px] text-gray-500">Momentum</div>
+                      <div className="text-sm font-semibold text-gray-900 capitalize">
+                        {momentumLabel}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-[11px] text-gray-500">Report Health</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {lowReports ? 'Low reports' : 'Needs review'}
+                      </div>
                     </div>
                   </div>
                 </div>

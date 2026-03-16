@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
+import { canUploadToExploreRole } from '@/lib/exploreUploadAccess';
 import {
   Dialog,
   DialogContent,
@@ -34,9 +35,178 @@ interface UploadedMedia {
   file: File;
 }
 
+type UploadContentType = 'short' | 'walkthrough' | 'showcase';
+type UploadOrientation = 'vertical' | 'horizontal' | 'square';
+type UploadCategory = 'property' | 'renovation' | 'finance' | 'investment' | 'services';
+type UploadLane = 'general' | 'investment' | 'home_improvements' | 'walkthroughs';
+
+const UPLOAD_LANE_CONFIG: Record<
+  UploadLane,
+  {
+    label: string;
+    description: string;
+    category: UploadCategory;
+    contentTypeOverride?: UploadContentType;
+  }
+> = {
+  general: {
+    label: 'General Property',
+    description: 'Standard property content and updates',
+    category: 'property',
+  },
+  investment: {
+    label: 'Investment & Finance',
+    description: 'Investor-focused and finance context content',
+    category: 'investment',
+  },
+  home_improvements: {
+    label: 'Home Improvements',
+    description: 'Renovation, upgrades, and before/after',
+    category: 'renovation',
+  },
+  walkthroughs: {
+    label: 'Walkthroughs',
+    description: 'Video tours and guided property walkthroughs',
+    category: 'property',
+    contentTypeOverride: 'walkthrough',
+  },
+};
+
+interface UploadDerivedMeta {
+  contentType: UploadContentType;
+  durationSec: number;
+  width: number;
+  height: number;
+  orientation: UploadOrientation;
+}
+
+function deriveOrientation(width: number, height: number): UploadOrientation {
+  if (height > width) return 'vertical';
+  if (width > height) return 'horizontal';
+  return 'square';
+}
+
+function pickContentType(meta: {
+  mediaType: 'image' | 'video';
+  durationSec: number;
+  width: number;
+  height: number;
+  orientation: UploadOrientation;
+}): UploadContentType {
+  if (meta.mediaType === 'image') {
+    return 'showcase';
+  }
+
+  const ratio = meta.width / Math.max(1, meta.height);
+  const verticalNineSixteen = meta.orientation === 'vertical' && Math.abs(ratio - 9 / 16) <= 0.08;
+
+  if (meta.durationSec <= 90 && verticalNineSixteen) {
+    return 'short';
+  }
+
+  if (meta.durationSec <= 180) {
+    return 'showcase';
+  }
+
+  return 'walkthrough';
+}
+
+async function readImageMeta(file: File): Promise<{ width: number; height: number }> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const image = new Image();
+
+      image.onload = () => {
+        resolve({
+          width: Number(image.naturalWidth || image.width || 0),
+          height: Number(image.naturalHeight || image.height || 0),
+        });
+      };
+      image.onerror = () => reject(new Error('Failed to read image metadata'));
+      image.src = objectUrl;
+    });
+
+    if (!dims.width || !dims.height) {
+      throw new Error('Image dimensions are required');
+    }
+
+    return dims;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function readVideoMeta(
+  file: File,
+): Promise<{ width: number; height: number; durationSec: number }> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const meta = await new Promise<{ width: number; height: number; durationSec: number }>(
+      (resolve, reject) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          resolve({
+            width: Number(video.videoWidth || 0),
+            height: Number(video.videoHeight || 0),
+            durationSec: Math.max(1, Math.round(Number(video.duration || 0))),
+          });
+        };
+        video.onerror = () => reject(new Error('Failed to read video metadata'));
+        video.src = objectUrl;
+      },
+    );
+
+    if (!meta.width || !meta.height) {
+      throw new Error('Video dimensions are required');
+    }
+
+    return meta;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function deriveUploadMeta(primaryMedia: UploadedMedia): Promise<UploadDerivedMeta> {
+  if (primaryMedia.type === 'image') {
+    const imageMeta = await readImageMeta(primaryMedia.file);
+    const orientation = deriveOrientation(imageMeta.width, imageMeta.height);
+
+    return {
+      contentType: 'showcase',
+      durationSec: 8,
+      width: imageMeta.width,
+      height: imageMeta.height,
+      orientation,
+    };
+  }
+
+  const videoMeta = await readVideoMeta(primaryMedia.file);
+  const orientation = deriveOrientation(videoMeta.width, videoMeta.height);
+  const contentType = pickContentType({
+    mediaType: 'video',
+    durationSec: videoMeta.durationSec,
+    width: videoMeta.width,
+    height: videoMeta.height,
+    orientation,
+  });
+
+  return {
+    contentType,
+    durationSec: videoMeta.durationSec,
+    width: videoMeta.width,
+    height: videoMeta.height,
+    orientation,
+  };
+}
+
 export default function ExploreUpload() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
+  const canUploadToExplore = canUploadToExploreRole(user?.role);
   const { toast } = useToast();
 
   const [title, setTitle] = useState('');
@@ -48,6 +218,7 @@ export default function ExploreUpload() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [returnPath, setReturnPath] = useState('/agent/dashboard');
   const [attributeToAgency, setAttributeToAgency] = useState(true);
+  const [uploadLane, setUploadLane] = useState<UploadLane>('general');
 
   // Upload mutations - using presigned URL for S3 upload
   const getPresignedUrl = trpc.video.getPresignedUrl.useMutation();
@@ -57,14 +228,55 @@ export default function ExploreUpload() {
   // Requirements 10.3: Show agency attribution status
   const isAgent = user?.role === 'agent';
 
-  // Redirect if not authenticated
   if (!isAuthenticated) {
-    setLocation('/login');
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-12">
+        <div className="container max-w-2xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Log in to upload to Explore</CardTitle>
+              <CardDescription>
+                Explore viewing is open to everyone, but uploads require a verified platform account.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-3">
+              <Button onClick={() => setLocation('/login')}>Log in</Button>
+              <Button variant="outline" onClick={() => setLocation('/explore/feed')}>
+                Back to Explore
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!canUploadToExplore) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-12">
+        <div className="container max-w-2xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Uploads are limited to verified roles</CardTitle>
+              <CardDescription>
+                Your current account can watch Explore, but only verified agents, agencies, developers, partners, and admins can upload.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-3">
+              <Button onClick={() => setLocation('/dashboard')}>Go to Dashboard</Button>
+              <Button variant="outline" onClick={() => setLocation('/explore/feed')}>
+                Back to Explore
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   // Determine return path based on user role
   const getReturnPath = () => {
+    if (user?.role === 'super_admin') return '/admin/overview';
     if (user?.role === 'agent') return '/agent/dashboard';
     if (user?.role === 'property_developer') return '/developer/dashboard';
     if (user?.role === 'agency_admin') return '/agency/dashboard';
@@ -145,6 +357,23 @@ export default function ExploreUpload() {
     setIsUploading(true);
 
     try {
+      const primaryMedia = mediaFiles.find(media => media.type === 'video') || mediaFiles[0];
+      if (!primaryMedia) {
+        throw new Error('No media selected');
+      }
+      if (uploadLane === 'walkthroughs' && primaryMedia.type !== 'video') {
+        throw new Error('Walkthrough uploads require a video file');
+      }
+
+      const derivedMeta = await deriveUploadMeta(primaryMedia);
+      const laneConfig = UPLOAD_LANE_CONFIG[uploadLane];
+      const resolvedCategory = laneConfig.category;
+      const resolvedContentType = laneConfig.contentTypeOverride ?? derivedMeta.contentType;
+
+      if (derivedMeta.durationSec > 600) {
+        throw new Error('Videos longer than 10 minutes are not supported');
+      }
+
       // Step 1: Upload all media files to S3
       const uploadedUrls: string[] = [];
 
@@ -192,10 +421,16 @@ export default function ExploreUpload() {
       }
 
       // Step 2: Save to database with S3 URLs
-      const result = await uploadMutation.mutateAsync({
+      await uploadMutation.mutateAsync({
         title: title.trim(),
         caption: caption.trim() || undefined,
         mediaUrls: uploadedUrls, // Now using S3 URLs instead of data URLs
+        contentType: resolvedContentType,
+        category: resolvedCategory,
+        durationSec: derivedMeta.durationSec,
+        width: derivedMeta.width,
+        height: derivedMeta.height,
+        orientation: derivedMeta.orientation,
         highlights:
           highlights.filter(h => h.trim()).length > 0
             ? highlights.filter(h => h.trim())
@@ -234,7 +469,7 @@ export default function ExploreUpload() {
         {/* Header */}
         <div className="mb-8">
           <Button variant="ghost" onClick={() => setLocation('/explore')} className="mb-4">
-            ← Back to Explore
+            {'<- Back to Explore'}
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Upload to Explore
@@ -348,6 +583,26 @@ export default function ExploreUpload() {
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     {caption.length}/500 characters
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="upload-lane">Explore Lane *</Label>
+                  <select
+                    id="upload-lane"
+                    value={uploadLane}
+                    onChange={e => setUploadLane(e.target.value as UploadLane)}
+                    className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    required
+                  >
+                    {Object.entries(UPLOAD_LANE_CONFIG).map(([key, lane]) => (
+                      <option key={key} value={key}>
+                        {lane.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {UPLOAD_LANE_CONFIG[uploadLane].description}
                   </p>
                 </div>
               </CardContent>
@@ -506,7 +761,7 @@ export default function ExploreUpload() {
             <Button
               onClick={() => {
                 setShowSuccessModal(false);
-                window.open('/explore', '_blank');
+                window.open('/explore/feed', '_blank');
               }}
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
             >

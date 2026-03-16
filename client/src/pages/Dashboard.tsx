@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
+import { PageShell, PageHeader } from '@/components/ui/page-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,7 +68,7 @@ export default function Dashboard() {
     return null;
   }
 
-  if (referrerStatusQuery.data?.hasIdentity) {
+  if (referrerStatusQuery.data?.hasAccess) {
     setLocation('/referrer/dashboard');
     return null;
   }
@@ -103,15 +104,15 @@ export default function Dashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+        return 'bg-success/10 text-success border-success/20';
       case 'sold':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+        return 'bg-primary/10 text-primary border-primary/20';
       case 'rented':
-        return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
+        return 'bg-secondary/20 text-secondary-foreground border-secondary/30';
       case 'pending':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+        return 'bg-warning/10 text-warning border-warning/20';
       default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -122,70 +123,66 @@ export default function Dashboard() {
       .join(' ');
   };
 
+  const totalProperties = propertyItems.length;
+  const availableProperties = propertyItems.filter((p: any) => p.status === 'available').length;
+  const soldRentedProperties = propertyItems.filter(
+    (p: any) => p.status === 'sold' || p.status === 'rented',
+  ).length;
+  const totalViews = propertyItems.reduce((sum: number, p: any) => sum + (p.views || 0), 0);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="container mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold">
-                {isAdmin ? 'All Properties (Admin)' : 'My Properties'}
-              </h1>
-              {isAdmin && (
-                <Badge variant="destructive" className="text-xs">
-                  ADMIN
-                </Badge>
-              )}
-            </div>
-            <p className="text-muted-foreground">
-              {isAdmin
-                ? 'Manage all property listings on the platform'
-                : 'Manage your property listings'}
-            </p>
-          </div>
-          <Button onClick={() => setLocation('/listings/create')} size="lg">
-            <Plus className="h-5 w-5 mr-2" />
-            List New Property
-          </Button>
-        </div>
+      <PageShell density="compact">
+        <PageHeader
+          title={isAdmin ? 'All Properties (Admin)' : 'My Properties'}
+          description={
+            isAdmin
+              ? 'Manage all property listings on the platform'
+              : 'Manage your property listings'
+          }
+          action={
+            <Button onClick={() => setLocation('/listings/create')}>
+              <Plus className="h-5 w-5 mr-2" />
+              List New Property
+            </Button>
+          }
+        />
+        {isAdmin && (
+          <Badge variant="destructive" className="text-xs w-fit">
+            ADMIN
+          </Badge>
+        )}
 
-        {/* Stats Cards */}
         {!isLoading && propertyItems.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription>Total Properties</CardDescription>
-                <CardTitle className="text-3xl">{propertyItems.length}</CardTitle>
+                <CardTitle className="text-3xl font-bold tabular-nums">{totalProperties}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription>Available</CardDescription>
-                <CardTitle className="text-3xl">
-                  {propertyItems.filter((p: any) => p.status === 'available').length}
+                <CardTitle className="text-3xl font-bold tabular-nums">
+                  {availableProperties}
                 </CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription>Sold/Rented</CardDescription>
-                <CardTitle className="text-3xl">
-                  {
-                    propertyItems.filter((p: any) => p.status === 'sold' || p.status === 'rented')
-                      .length
-                  }
+                <CardTitle className="text-3xl font-bold tabular-nums">
+                  {soldRentedProperties}
                 </CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription>Total Views</CardDescription>
-                <CardTitle className="text-3xl">
-                  {propertyItems.reduce((sum: number, p: any) => sum + (p.views || 0), 0)}
-                </CardTitle>
+                <CardTitle className="text-3xl font-bold tabular-nums">{totalViews}</CardTitle>
               </CardHeader>
             </Card>
           </div>
@@ -287,6 +284,7 @@ export default function Dashboard() {
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
+                        size="sm"
                         className="flex-1"
                         onClick={() => setLocation(`/property/${property.id}`)}
                       >
@@ -295,7 +293,7 @@ export default function Dashboard() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon">
+                          <Button variant="outline" size="icon-sm">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -339,32 +337,32 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={deletePropertyId !== null}
-        onOpenChange={open => !open && setDeletePropertyId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your property listing and
-              remove all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deletePropertyId && handleDelete(deletePropertyId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deletePropertyMutation.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog
+          open={deletePropertyId !== null}
+          onOpenChange={open => !open && setDeletePropertyId(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your property listing and
+                remove all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deletePropertyId && handleDelete(deletePropertyId)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletePropertyMutation.isPending ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </PageShell>
     </div>
   );
 }

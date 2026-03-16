@@ -31,8 +31,37 @@ import { Loader2, Plus, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LocationMonetizationPage() {
+  const today = new Date().toISOString().slice(0, 10);
+  const defaultFrom = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedRuleId, setSelectedRuleId] = useState('all');
+  const [fromDate, setFromDate] = useState(defaultFrom);
+  const [toDate, setToDate] = useState(today);
   const { data: rules, isLoading, refetch } = trpc.monetization.getAllRules.useQuery();
+  const {
+    data: simulation,
+    isLoading: isSimulationLoading,
+    refetch: refetchSimulation,
+  } = trpc.monetization.getDeliverySimulation.useQuery({
+    ruleId: selectedRuleId === 'all' ? undefined : Number(selectedRuleId),
+    from: fromDate,
+    to: toDate,
+  });
+  const {
+    data: demandBaseline,
+    isLoading: isDemandBaselineLoading,
+    refetch: refetchDemandBaseline,
+  } = trpc.monetization.getSurfaceDemandBaseline.useQuery({
+    from: fromDate,
+    to: toDate,
+  });
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      maximumFractionDigits: 2,
+    }).format(Number(value || 0));
 
   return (
     <div className="container py-8 space-y-8">
@@ -117,6 +146,222 @@ export default function LocationMonetizationPage() {
           ) : (
             <div className="text-center py-12 text-slate-500">
               No targeting rules found. Create one to get started.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Expected vs Actual Delivery</CardTitle>
+          <p className="text-sm text-slate-500">
+            Diagnostic model for cap utilization, pacing pressure, and monetization efficiency.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rule Scope</label>
+              <Select value={selectedRuleId} onValueChange={setSelectedRuleId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Rules</SelectItem>
+                  {(rules || []).map(rule => (
+                    <SelectItem key={rule.id} value={String(rule.id)}>
+                      #{rule.id} {rule.targetType.replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">From</label>
+              <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To</label>
+              <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Run Model</label>
+              <Button variant="outline" className="w-full" onClick={() => refetchSimulation()}>
+                Refresh Simulation
+              </Button>
+            </div>
+          </div>
+
+          {simulation?.totals && (
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Expected</div>
+                <div className="text-lg font-semibold">{simulation.totals.expectedImpressions}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Actual</div>
+                <div className="text-lg font-semibold">{simulation.totals.actualImpressions}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Delivery Gap</div>
+                <div className="text-lg font-semibold">{simulation.totals.deliveryGap}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">CTR</div>
+                <div className="text-lg font-semibold">{simulation.totals.ctr}%</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Qualified Lead Rate</div>
+                <div className="text-lg font-semibold">{simulation.totals.qualifiedLeadRate}%</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Revenue</div>
+                <div className="text-lg font-semibold">{formatCurrency(simulation.totals.revenue)}</div>
+              </div>
+            </div>
+          )}
+
+          {isSimulationLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            </div>
+          ) : simulation?.rules?.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rule</TableHead>
+                  <TableHead>Expected</TableHead>
+                  <TableHead>Actual</TableHead>
+                  <TableHead>Gap</TableHead>
+                  <TableHead>Cap Utilization</TableHead>
+                  <TableHead>Pacing Block %</TableHead>
+                  <TableHead>CTR</TableHead>
+                  <TableHead>Leads</TableHead>
+                  <TableHead>Revenue</TableHead>
+                  <TableHead>eCPM</TableHead>
+                  <TableHead>eCPL</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {simulation.rules.map(row => (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      <div className="font-medium">#{row.id}</div>
+                      <div className="text-xs text-slate-500 capitalize">
+                        {row.targetType.replace('_', ' ')} - {row.locationType} #{row.locationId}
+                      </div>
+                    </TableCell>
+                    <TableCell>{row.expectedImpressions}</TableCell>
+                    <TableCell>{row.actualImpressions}</TableCell>
+                    <TableCell>{row.deliveryGap}</TableCell>
+                    <TableCell>{row.capUtilization === null ? 'N/A' : `${row.capUtilization}%`}</TableCell>
+                    <TableCell>{row.pacingBlockRate}%</TableCell>
+                    <TableCell>{row.ctr}%</TableCell>
+                    <TableCell>{row.leads}</TableCell>
+                    <TableCell>{formatCurrency(row.revenue)}</TableCell>
+                    <TableCell>{formatCurrency(row.effectiveCpm)}</TableCell>
+                    <TableCell>{row.effectiveCpl === null ? 'N/A' : formatCurrency(row.effectiveCpl)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-slate-500">
+              No delivery diagnostics available for the selected date range.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Demand Baseline by Surface</CardTitle>
+          <p className="text-sm text-slate-500">
+            Demand-aware baseline to distinguish true inventory ceiling from configuration loss.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => refetchDemandBaseline()}>
+              Refresh Baseline
+            </Button>
+          </div>
+
+          {demandBaseline?.totals && (
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Demand Ceiling</div>
+                <div className="text-lg font-semibold">{demandBaseline.totals.demandCeilingSlots}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Config-Unlocked Ceiling</div>
+                <div className="text-lg font-semibold">
+                  {demandBaseline.totals.configUnlockedCeilingSlots}
+                </div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Served</div>
+                <div className="text-lg font-semibold">{demandBaseline.totals.servedSlots}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Config Loss</div>
+                <div className="text-lg font-semibold">{demandBaseline.totals.configLossRate}%</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Delivery Rate</div>
+                <div className="text-lg font-semibold">{demandBaseline.totals.deliveryRate}%</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-slate-500">Inventory Fill</div>
+                <div className="text-lg font-semibold">{demandBaseline.totals.inventoryFillRate}%</div>
+              </div>
+            </div>
+          )}
+
+          {isDemandBaselineLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            </div>
+          ) : demandBaseline?.rows?.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Surface</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Demand Ceiling</TableHead>
+                  <TableHead>Config-Unlocked Ceiling</TableHead>
+                  <TableHead>Served</TableHead>
+                  <TableHead>Config Loss %</TableHead>
+                  <TableHead>Delivery %</TableHead>
+                  <TableHead>Inventory Fill %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {demandBaseline.rows.slice(0, 80).map(row => (
+                  <TableRow
+                    key={`${row.metricDate}-${row.surfaceType}-${row.targetType}-${row.locationType}-${row.locationId}`}
+                  >
+                    <TableCell>{row.metricDate}</TableCell>
+                    <TableCell className="capitalize">
+                      {row.surfaceType} / {row.targetType.replace('_', ' ')}
+                    </TableCell>
+                    <TableCell className="capitalize">
+                      {row.locationType} #{row.locationId}
+                    </TableCell>
+                    <TableCell>{row.demandCeilingSlots}</TableCell>
+                    <TableCell>{row.configUnlockedCeilingSlots}</TableCell>
+                    <TableCell>{row.servedSlots}</TableCell>
+                    <TableCell>{row.configLossRate}%</TableCell>
+                    <TableCell>{row.deliveryRate}%</TableCell>
+                    <TableCell>{row.inventoryFillRate}%</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-slate-500">
+              No demand baseline data available for the selected date range.
             </div>
           )}
         </CardContent>

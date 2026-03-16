@@ -21,7 +21,7 @@ export function useFollowNeighbourhood({
 }: UseFollowNeighbourhoodOptions) {
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
 
-  const toggleFollowMutation = trpc.exploreApi.toggleNeighbourhoodFollow.useMutation({
+  const toggleFollowMutation = trpc.explore.toggleNeighbourhoodFollow.useMutation({
     onSuccess: data => {
       setIsFollowing(data.data.following);
 

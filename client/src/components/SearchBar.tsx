@@ -38,7 +38,10 @@ export function SearchBar({ onSearch, compact = false }: SearchBarProps) {
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
           className="flex-1"
         />
-        <Button onClick={handleSearch} className="bg-accent hover:bg-accent/90">
+        <Button
+          onClick={handleSearch}
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+        >
           <Search className="h-4 w-4 mr-2" />
           Search
         </Button>
@@ -147,7 +150,11 @@ export function SearchBar({ onSearch, compact = false }: SearchBarProps) {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSearch} size="lg" className="bg-accent hover:bg-accent/90 px-8">
+        <Button
+          onClick={handleSearch}
+          size="lg"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
+        >
           <Search className="h-5 w-5 mr-2" />
           Search Properties
         </Button>

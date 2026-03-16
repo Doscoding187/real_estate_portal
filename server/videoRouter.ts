@@ -2,6 +2,8 @@ import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { TRPCError } from '@trpc/server';
+import { canRoleUploadToExplore } from './lib/exploreUploadAccess';
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION || 'eu-north-1',
@@ -22,12 +24,21 @@ export const videoRouter = router({
         fileType: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (!canRoleUploadToExplore(ctx.user?.role)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'Explore uploads are limited to verified agents, agencies, developers, partners, and admins.',
+        });
+      }
+
       if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
         throw new Error('Video upload is not configured. Please contact support.');
       }
 
-      const bucketName = process.env.AWS_S3_BUCKET || 'listify-properties-sa';
+      const bucketName =
+        process.env.AWS_S3_BUCKET || process.env.S3_BUCKET_NAME || 'listify-properties-sa';
       const region = process.env.AWS_REGION || 'eu-north-1';
       const timestamp = Date.now();
       const sanitizedFileName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, '_');

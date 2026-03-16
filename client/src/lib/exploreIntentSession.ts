@@ -79,3 +79,7 @@ export function readExploreIntent(maxAgeMs = MAX_AGE_MS): ExploreIntentSessionVa
   }
 }
 
+export function clearExploreIntent(): void {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.removeItem(SESSION_KEY);
+}

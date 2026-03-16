@@ -5,14 +5,16 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
+import { type ExploreIntent, readStoredExploreIntent } from '@/lib/exploreIntent';
 
 type ExploreShort = Record<string, unknown> & { id?: number | string };
 type AgencyFeedMetadata = Record<string, unknown>;
 
 export interface AgencyFeedResult {
-  shorts: ExploreShort[];
+  items: ExploreShort[];
   feedType: 'agency';
   hasMore: boolean;
+  cursor?: string;
   offset: number;
   metadata: AgencyFeedMetadata;
 }
@@ -21,22 +23,26 @@ interface UseAgencyFeedOptions {
   agencyId: number;
   includeAgentContent?: boolean;
   limit?: number;
+  intent?: ExploreIntent | null;
 }
 
 export function useAgencyFeed(options: UseAgencyFeedOptions) {
   const { agencyId, includeAgentContent = true, limit = 20 } = options;
+  const intent = options.intent ?? readStoredExploreIntent();
 
   const [feed, setFeed] = useState<AgencyFeedResult | null>(null);
   const [page, setPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Fetch agency feed using tRPC
-  const feedQuery = trpc.exploreApi.getAgencyFeed.useQuery({
+  // Fetch agency feed using canonical explore.getFeed contract
+  const feedQuery = trpc.explore.getFeed.useQuery({
+    feedType: 'agency',
     agencyId,
     includeAgentContent,
     limit,
     offset: (page - 1) * limit,
+    intent: intent ?? undefined,
   });
 
   const isLoading = feedQuery.isLoading && page === 1;
@@ -45,8 +51,8 @@ export function useAgencyFeed(options: UseAgencyFeedOptions) {
 
   // Process feed data
   useEffect(() => {
-    if (feedQuery.data?.success && feedQuery.data.data) {
-      const newFeed = feedQuery.data.data as AgencyFeedResult;
+    if (feedQuery.data) {
+      const newFeed = feedQuery.data as unknown as AgencyFeedResult;
 
       if (page === 1) {
         // First page - replace feed
@@ -57,7 +63,7 @@ export function useAgencyFeed(options: UseAgencyFeedOptions) {
           if (!prev) return newFeed;
           return {
             ...newFeed,
-            shorts: [...prev.shorts, ...newFeed.shorts],
+            items: [...prev.items, ...newFeed.items],
             offset: newFeed.offset,
           };
         });
@@ -115,7 +121,7 @@ export function useAgencyFeed(options: UseAgencyFeedOptions) {
 
   return {
     feed,
-    shorts: feed?.shorts || [],
+    items: feed?.items || [],
     metadata: feed?.metadata,
     isLoading,
     isLoadingMore,

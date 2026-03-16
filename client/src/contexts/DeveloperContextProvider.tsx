@@ -29,8 +29,12 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
   const { setOperatingAs, clearContext } = usePublisherContext();
 
   // Fetch real brand profile data when brand ID is selected
-  const { data: brandProfile, isLoading } = trpc.superAdminPublisher.getBrandProfileById.useQuery(
-    { id: selectedBrandId! },
+  const {
+    data: brandProfile,
+    isLoading,
+    error: brandProfileError,
+  } = trpc.superAdminPublisher.getBrandProfileById.useQuery(
+    { id: selectedBrandId!, emulatorOnly: true },
     {
       enabled: !!selectedBrandId,
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -55,6 +59,16 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
   }, []);
 
   // Update selected brand and sync with global publisher context
+  useEffect(() => {
+    if (!hasHydrated) return;
+    if (!selectedBrandId) return;
+    if (!brandProfileError) return;
+
+    setSelectedBrandId(null);
+    setSelectedBrand(null);
+    clearContext();
+  }, [hasHydrated, selectedBrandId, brandProfileError, clearContext]);
+
   useEffect(() => {
     if (selectedBrandId && brandProfile) {
       const brand: BrandProfile = {

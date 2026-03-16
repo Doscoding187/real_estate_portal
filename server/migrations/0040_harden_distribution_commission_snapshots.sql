@@ -1,5 +1,7 @@
 ALTER TABLE `distribution_deals`
-  ADD COLUMN `snapshot_version` INT NULL AFTER `platform_commission_amount`,
+  ADD COLUMN `snapshot_version` INT NULL AFTER `platform_commission_amount`;
+
+ALTER TABLE `distribution_deals`
   ADD COLUMN `snapshot_source` ENUM('submission_gate', 'backfill', 'override') NULL AFTER `snapshot_version`;
 
 -- Ensure referrer commission track is always populated from legacy defaults when missing.

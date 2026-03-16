@@ -20,6 +20,7 @@ export function FeaturedDevelopers({
     locationType,
     locationId,
   });
+  const recordRuleEvent = trpc.monetization.recordRuleEvent.useMutation();
 
   if (isLoading) return null; // or skeleton
   if (!developers || developers.length === 0) return null;
@@ -40,7 +41,25 @@ export function FeaturedDevelopers({
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {developers.map(dev => (
-            <Link key={dev.id} href={`/developer/${dev.slug}`}>
+            <Link
+              key={dev.id}
+              href={`/developer/${dev.slug}`}
+              onClick={() => {
+                if (!dev.monetizationRuleId) return;
+                recordRuleEvent.mutate({
+                  ruleId: dev.monetizationRuleId,
+                  eventType: 'click',
+                  contextType: 'developer',
+                  contextId: dev.id,
+                  locationType,
+                  locationId,
+                  serveRequestId: dev.serveRequestId,
+                  metadata: {
+                    surface: 'featured_developers',
+                  },
+                });
+              }}
+            >
               <Card className="hover:shadow-lg transition-all cursor-pointer group h-full border-transparent hover:border-primary/20">
                 <CardContent className="p-6 flex flex-col items-start text-left h-full justify-start">
                   <div className="w-24 h-24 mb-4 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-100 group-hover:border-primary/20 transition-colors">

@@ -16,6 +16,7 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
     locationType,
     locationId,
   });
+  const recordRuleEvent = trpc.monetization.recordRuleEvent.useMutation();
 
   if (isLoading) return null;
   if (!agents || agents.length === 0) return null;
@@ -43,7 +44,25 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {agents.map(agent => (
-            <Link key={agent.id} href={`/agent/${agent.id}`}>
+            <Link
+              key={agent.id}
+              href={`/agent/${agent.id}`}
+              onClick={() => {
+                if (!agent.monetizationRuleId) return;
+                recordRuleEvent.mutate({
+                  ruleId: agent.monetizationRuleId,
+                  eventType: 'click',
+                  contextType: 'agent',
+                  contextId: agent.id,
+                  locationType,
+                  locationId,
+                  serveRequestId: agent.serveRequestId,
+                  metadata: {
+                    surface: 'recommended_agents',
+                  },
+                });
+              }}
+            >
               <Card className="hover:shadow-lg transition-all cursor-pointer group border-slate-200">
                 <CardContent className="p-0">
                   <div className="relative h-48 bg-slate-100 overflow-hidden rounded-t-xl">

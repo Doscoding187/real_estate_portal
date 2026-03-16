@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import { Loader2, Upload, Sparkles, MapPin, Grid3x3, SlidersHorizontal } from 'lucide-react';
@@ -6,25 +6,77 @@ import VideoCard from '@/components/explore/VideoCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
-import { EnhancedSearchBar } from '@/components/explore/EnhancedSearchBar';
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
-import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
-import { pageVariants, buttonVariants, getVariants } from '@/lib/animations/exploreAnimations';
+import { pageVariants, getVariants } from '@/lib/animations/exploreAnimations';
 import { getFeedItems } from '@/lib/exploreFeed';
 import { useExploreIntent } from '@/hooks/useExploreIntent';
 import { ExploreIntentPrompt } from '@/components/explore/ExploreIntentPrompt';
-import { mapFocusToLegacyIntent, readExploreIntent } from '@/lib/exploreIntentSession';
+import { exploreExperienceTokens } from '@/lib/animations/exploreExperienceTokens';
+import { canUploadToExploreRole } from '@/lib/exploreUploadAccess';
+import {
+  clearExploreIntent,
+  mapFocusToLegacyIntent,
+  readExploreIntent,
+  type ExploreFocus,
+} from '@/lib/exploreIntentSession';
+
+const EXPLORE_FOCUS_VALUES: ExploreFocus[] = [
+  'buy',
+  'sell',
+  'renovate',
+  'services',
+  'finance',
+  'invest',
+  'neighbourhood',
+];
+
+function isExploreFocus(value: string): value is ExploreFocus {
+  return EXPLORE_FOCUS_VALUES.includes(value as ExploreFocus);
+}
+
+const INTERACTIVE_TRANSITION_STYLE = {
+  transitionDuration: `${exploreExperienceTokens.durationsMs.hover}ms`,
+  transitionTimingFunction: exploreExperienceTokens.easingCss.interactive,
+} as const;
 
 export default function ExploreFeed() {
-  const [, setLocation] = useLocation();
+  const [locationPath, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const canUploadToExplore = canUploadToExploreRole(user?.role);
+  const [settledIndex, setSettledIndex] = useState(0);
+  const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const snapSettleTimerRef = useRef<number | null>(null);
+  const userPausedRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { intent, shouldShowPrompt, setIntent, dismissPrompt } = useExploreIntent();
   const sessionIntent = useMemo(() => readExploreIntent(), []);
-  const effectiveIntent = intent ?? (sessionIntent ? mapFocusToLegacyIntent(sessionIntent.focus) : undefined);
+  const locationSearch = typeof window === 'undefined' ? '' : window.location.search;
+  const queryIntent = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    const focus = params.get('focus');
+    const subFocus = params.get('subFocus');
+    const creatorActorId = params.get('creatorActorId');
+    return {
+      focus: focus || null,
+      subFocus: subFocus || null,
+      creatorActorId: creatorActorId ? Number(creatorActorId) : null,
+    };
+  }, [locationPath, locationSearch]);
+  const effectiveFocus = queryIntent?.focus ?? sessionIntent?.focus ?? null;
+  const effectiveSubFocus = queryIntent?.subFocus ?? sessionIntent?.subFocus ?? null;
+  const effectiveCreatorActorId =
+    queryIntent?.creatorActorId && Number.isFinite(queryIntent.creatorActorId)
+      ? queryIntent.creatorActorId
+      : null;
+  const effectiveIntent =
+    intent ??
+    (effectiveFocus && isExploreFocus(effectiveFocus)
+      ? mapFocusToLegacyIntent(effectiveFocus)
+      : undefined) ??
+    undefined;
   const showIntentBadge =
     import.meta.env.DEV &&
     typeof window !== 'undefined' &&
@@ -53,72 +105,123 @@ export default function ExploreFeed() {
   if (effectiveIntent) {
     feedQueryInput.intent = effectiveIntent;
   }
-  if (sessionIntent?.focus) {
-    feedQueryInput.intentFocus = sessionIntent.focus;
+  if (effectiveFocus) {
+    feedQueryInput.intentFocus = effectiveFocus;
   }
-  if (sessionIntent?.subFocus) {
-    feedQueryInput.intentSubFocus = sessionIntent.subFocus;
+  if (effectiveSubFocus) {
+    feedQueryInput.intentSubFocus = effectiveSubFocus;
+  }
+  if (effectiveCreatorActorId && effectiveCreatorActorId > 0) {
+    feedQueryInput.creatorActorId = effectiveCreatorActorId;
   }
 
   const { data: feedData, isLoading } = trpc.explore.getFeed.useQuery(feedQueryInput);
-
-  // Debug logging for feed verification
-  useEffect(() => {
-    if (feedData) {
-      console.log('FEED DATA:', feedData);
-    }
-  }, [feedData]);
+  const feedMetadata = useMemo(
+    () => ((feedData as any)?.metadata ? ((feedData as any).metadata as Record<string, unknown>) : null),
+    [feedData],
+  );
 
   // Mutation for recording interactions
   const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
 
   const videos = getFeedItems(feedData);
+  const normalizedSearch = searchQuery.trim().toLowerCase();
 
   // Filter videos based on search query
-  const filteredVideos = searchQuery
+  const filteredVideos = normalizedSearch
     ? videos.filter(
         video =>
-          video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          video.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          String(video.title ?? '')
+            .toLowerCase()
+            .includes(normalizedSearch) ||
+          String(video.category ?? '')
+            .toLowerCase()
+            .includes(normalizedSearch) ||
           `${video.location?.suburb || ''} ${video.location?.city || ''} ${video.location?.province || ''}`
             .toLowerCase()
-            .includes(searchQuery.toLowerCase()),
+            .includes(normalizedSearch),
       )
     : videos;
+  const hasActiveFilterContext = Boolean(
+    searchQuery || effectiveFocus || effectiveSubFocus || effectiveCreatorActorId,
+  );
+
+  const scheduleSnapSettle = useCallback((index: number) => {
+    if (typeof window === 'undefined') {
+      setSettledIndex(index);
+      return;
+    }
+    if (snapSettleTimerRef.current !== null) {
+      window.clearTimeout(snapSettleTimerRef.current);
+    }
+    snapSettleTimerRef.current = window.setTimeout(() => {
+      setSettledIndex(index);
+      snapSettleTimerRef.current = null;
+    }, exploreExperienceTokens.durationsMs.tap);
+  }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight } = e.currentTarget;
     const index = Math.round(scrollTop / clientHeight);
-    setCurrentIndex(index);
+    scheduleSnapSettle(index);
   };
 
   // Auto-play current video
   useEffect(() => {
-    const videos = document.querySelectorAll('video');
+    const container = feedScrollRef.current;
+    if (!container) return;
+
+    const videos = Array.from(container.querySelectorAll('video'));
     videos.forEach((video, index) => {
-      if (index === currentIndex) {
-        video.play().catch(() => {}); // Ignore autoplay errors
-      } else {
+      if (index !== settledIndex) {
         video.pause();
+        return;
+      }
+
+      if (userPausedRef.current) {
+        video.pause();
+        return;
+      }
+
+      if (video.paused) {
+        video.play().catch(() => {});
       }
     });
-  }, [currentIndex]);
+  }, [settledIndex, feedType, filteredVideos.length]);
+
+  useEffect(() => {
+    userPausedRef.current = false;
+  }, [settledIndex]);
+
+  useEffect(() => {
+    setSettledIndex(0);
+    userPausedRef.current = false;
+    const scrollContainer = feedScrollRef.current;
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+    }
+  }, [feedType, filteredVideos.length]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && snapSettleTimerRef.current !== null) {
+        window.clearTimeout(snapSettleTimerRef.current);
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return (
       <motion.div
-        className="flex items-center justify-center h-screen"
-        style={{ backgroundColor: designTokens.colors.bg.dark }}
+        className="flex h-[100dvh] items-center justify-center"
+        style={{ backgroundColor: '#f8fafc' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <div className="flex flex-col items-center gap-4">
-          <Loader2
-            className="animate-spin h-8 w-8"
-            style={{ color: designTokens.colors.text.inverse }}
-          />
-          <p style={{ color: designTokens.colors.text.inverse }} className="text-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-700" />
+          <p className="text-sm text-slate-700">
             Loading amazing properties...
           </p>
         </div>
@@ -129,18 +232,32 @@ export default function ExploreFeed() {
   if (!isLoading && filteredVideos.length === 0) {
     return (
       <motion.div
-        className="flex items-center justify-center h-screen text-center px-6"
-        style={{ backgroundColor: designTokens.colors.bg.dark }}
+        className="flex h-[100dvh] items-center justify-center px-6 text-center"
+        style={{ backgroundColor: '#f8fafc' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
         <div>
-          <h2 className="text-2xl font-semibold mb-3" style={{ color: designTokens.colors.text.inverse }}>
+          <h2 className="mb-3 text-2xl font-semibold text-slate-900">
             No explore items yet
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.8)' }}>
+          <p className="text-slate-600">
             Upload content or adjust filters to see results.
           </p>
+          {hasActiveFilterContext && (
+            <button
+              type="button"
+              className="mt-4 rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900"
+              onClick={() => {
+                setSearchQuery('');
+                setFeedType('recommended');
+                clearExploreIntent();
+                setLocation('/explore/feed');
+              }}
+            >
+              Show all videos
+            </button>
+          )}
         </div>
       </motion.div>
     );
@@ -148,9 +265,9 @@ export default function ExploreFeed() {
 
   return (
     <motion.div
-      className="h-screen relative overflow-hidden"
+      className="relative h-[100dvh] overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #312e81 100%)',
+        background: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 45%, #f8fafc 100%)',
       }}
       initial="initial"
       animate="animate"
@@ -165,218 +282,138 @@ export default function ExploreFeed() {
         onDismiss={dismissPrompt}
       />
 
-      {showIntentBadge && sessionIntent?.focus && (
-        <div className="pointer-events-none absolute left-4 top-4 z-[70] rounded-full border border-white/30 bg-black/50 px-3 py-1 text-xs font-medium text-white">
-          Focus: {sessionIntent.focus}
-          {sessionIntent.subFocus ? ` / ${sessionIntent.subFocus}` : ''}
+      {showIntentBadge && effectiveFocus && (
+        <div className="pointer-events-none absolute left-4 top-16 z-[70] rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
+          Focus: {effectiveFocus}
+          {effectiveSubFocus ? ` / ${effectiveSubFocus}` : ''}
+          {effectiveCreatorActorId ? ` / creator:${effectiveCreatorActorId}` : ''}
+          {typeof feedMetadata?.appliedIntentMultiplier === 'number'
+            ? ` x${Number(feedMetadata.appliedIntentMultiplier).toFixed(2)}`
+            : ''}
         </div>
       )}
 
       {/* Background blur effect */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-200/70 via-indigo-100/35 to-transparent"></div>
 
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex h-full">
-        {/* Left Sidebar - Modern Design */}
-        <motion.aside
-          className="w-80 backdrop-blur-xl border-r overflow-y-auto"
-          style={{
-            backgroundColor: designTokens.colors.glass.bgDark,
-            borderColor: designTokens.colors.glass.borderDark,
-          }}
-          initial={{ x: -320, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          <div className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2
-                className="text-xl font-bold"
-                style={{
-                  color: designTokens.colors.text.inverse,
-                  fontWeight: designTokens.typography.fontWeight.bold,
-                }}
-              >
-                Filters
-              </h2>
-              {filterActions.getFilterCount() > 0 && (
-                <motion.button
-                  onClick={filterActions.clearFilters}
-                  className="text-sm px-3 py-1 rounded-full"
-                  style={{
-                    backgroundColor: designTokens.colors.glass.bg,
-                    color: designTokens.colors.accent.primary,
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Clear All
-                </motion.button>
-              )}
-            </div>
-
-            {/* Enhanced Search */}
-            <div className="mb-6">
-              <EnhancedSearchBar
-                onSearch={query => setSearchQuery(query)}
-                placeholder="Search properties..."
-              />
-            </div>
-
-            {/* Feed Type Tabs - Modern vertical design */}
-            <div className="mb-6">
-              <label
-                className="text-sm font-medium mb-3 block"
-                style={{
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  fontWeight: designTokens.typography.fontWeight.medium,
-                }}
-              >
-                Feed Type
-              </label>
-              <Tabs value={feedType} onValueChange={value => setFeedType(value as any)}>
-                <TabsList
-                  className="backdrop-blur-xl border rounded-xl shadow-lg w-full flex-col h-auto space-y-2 p-2"
-                  style={{
-                    backgroundColor: designTokens.colors.glass.bgDark,
-                    borderColor: designTokens.colors.glass.borderDark,
-                  }}
-                >
-                  <TabsTrigger
-                    value="recommended"
-                    className="w-full text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
-                    style={{
-                      background:
-                        feedType === 'recommended'
-                          ? designTokens.colors.accent.gradient
-                          : 'transparent',
-                    }}
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    For You
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="area"
-                    className="w-full text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
-                    style={{
-                      background:
-                        feedType === 'area' ? designTokens.colors.accent.gradient : 'transparent',
-                    }}
-                  >
-                    <MapPin className="h-4 w-4" />
-                    By Area
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="category"
-                    className="w-full text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
-                    style={{
-                      background:
-                        feedType === 'category'
-                          ? designTokens.colors.accent.gradient
-                          : 'transparent',
-                    }}
-                  >
-                    <Grid3x3 className="h-4 w-4" />
-                    By Type
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {/* Advanced Filters Button */}
-            <motion.button
-              onClick={toggleFilters}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg mb-6"
+      <motion.header
+        className="absolute inset-x-0 top-0 z-50 border-b backdrop-blur-xl"
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.88)',
+          borderColor: 'rgba(148, 163, 184, 0.28)',
+        }}
+        initial={{ y: -24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={exploreExperienceTokens.transitions.route}
+      >
+        <div className="mx-auto flex w-full max-w-[680px] items-center gap-2 px-3 py-3">
+          <Tabs value={feedType} onValueChange={value => setFeedType(value as any)} className="min-w-0 flex-1">
+            <TabsList
+              className="w-full rounded-full border p-1"
               style={{
-                backgroundColor: showFilters
-                  ? designTokens.colors.accent.primary
-                  : designTokens.colors.glass.bgDark,
-                color: designTokens.colors.text.inverse,
-                border: `1px solid ${designTokens.colors.glass.borderDark}`,
+                backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                borderColor: 'rgba(148, 163, 184, 0.3)',
               }}
-              variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
             >
-              <SlidersHorizontal className="w-5 h-5" />
-              <span className="font-medium">{showFilters ? 'Hide' : 'Show'} Advanced Filters</span>
-              {filterActions.getFilterCount() > 0 && (
-                <span
-                  className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold"
-                  style={{
-                    backgroundColor: designTokens.colors.accent.light,
-                    color: designTokens.colors.text.inverse,
-                  }}
-                >
-                  {filterActions.getFilterCount()}
-                </span>
-              )}
-            </motion.button>
-
-            {/* Quick Stats - Modern card design */}
-            <ModernCard variant="glass" className="p-4">
-              <p className="text-xs mb-1" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                Total Properties
-              </p>
-              <p
-                className="text-2xl font-bold"
-                style={{
-                  color: designTokens.colors.text.inverse,
-                  fontWeight: designTokens.typography.fontWeight.bold,
-                }}
+              <TabsTrigger
+                value="recommended"
+                className="rounded-full px-2 text-slate-600 transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white sm:px-3"
+                style={INTERACTIVE_TRANSITION_STYLE}
               >
-                {filteredVideos.length}
-              </p>
-            </ModernCard>
-          </div>
-        </motion.aside>
+                <Sparkles className="h-4 w-4" />
+                <span className="ml-1.5 hidden sm:inline">For You</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="area"
+                className="rounded-full px-2 text-slate-600 transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white sm:px-3"
+                style={INTERACTIVE_TRANSITION_STYLE}
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="ml-1.5 hidden sm:inline">Area</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="category"
+                className="rounded-full px-2 text-slate-600 transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white sm:px-3"
+                style={INTERACTIVE_TRANSITION_STYLE}
+              >
+                <Grid3x3 className="h-4 w-4" />
+                <span className="ml-1.5 hidden sm:inline">Type</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {/* Main Content Area (Desktop) */}
-        <div className="flex-1 relative">
-          {/* Upload button - Desktop with modern design */}
-          {isAuthenticated && (
+          <motion.button
+            onClick={toggleFilters}
+            className="relative flex h-9 w-9 items-center justify-center rounded-full border text-slate-700 sm:w-auto sm:gap-2 sm:px-3"
+            style={{
+              backgroundColor: showFilters ? designTokens.colors.accent.primary : 'rgba(255, 255, 255, 0.92)',
+              borderColor: 'rgba(148, 163, 184, 0.3)',
+              color: showFilters ? '#ffffff' : '#334155',
+            }}
+            whileHover={exploreExperienceTokens.interactions.ctaHover}
+            whileTap={exploreExperienceTokens.interactions.tap}
+            transition={exploreExperienceTokens.transitions.hover}
+            aria-label="Toggle filters"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span className="hidden text-xs font-medium sm:inline">Filters</span>
+            {filterActions.getFilterCount() > 0 && (
+              <span
+                className="absolute -right-1 -top-1 rounded-full px-1.5 text-[10px] font-semibold text-white"
+                style={{ backgroundColor: designTokens.colors.status.error }}
+              >
+                {filterActions.getFilterCount()}
+              </span>
+            )}
+          </motion.button>
+
+          {isAuthenticated && canUploadToExplore && (
             <motion.button
               onClick={() => setLocation('/explore/upload')}
-              className="absolute top-6 right-6 z-50 flex items-center gap-2 px-5 py-2.5 rounded-full text-white border"
+              className="inline-flex h-9 items-center justify-center rounded-full border px-3 text-sm font-medium text-white"
               style={{
-                background: designTokens.colors.accent.gradient,
-                boxShadow: designTokens.shadows.accent,
-                borderColor: designTokens.colors.glass.border,
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                borderColor: 'rgba(37, 99, 235, 0.55)',
+                boxShadow: '0 10px 22px rgba(37, 99, 235, 0.24)',
               }}
-              variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
+              whileHover={exploreExperienceTokens.interactions.ctaHover}
+              whileTap={exploreExperienceTokens.interactions.tap}
+              transition={exploreExperienceTokens.transitions.hover}
               aria-label="Upload content"
             >
-              <Upload className="w-5 h-5" />
-              <span
-                className="font-semibold"
-                style={{ fontWeight: designTokens.typography.fontWeight.semibold }}
-              >
-                Upload Property
-              </span>
+              <Upload className="h-4 w-4" />
+              <span className="ml-1.5 hidden sm:inline">Upload</span>
             </motion.button>
           )}
+        </div>
+      </motion.header>
 
-          {/* Video Feed with smooth transitions */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={feedType}
-              className="h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-              style={{
-                scrollSnapType: 'y mandatory',
-                overscrollBehavior: 'contain',
-                WebkitOverflowScrolling: 'touch',
-              }}
-              onScroll={handleScroll}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              {filteredVideos?.map((item, idx: number) => (
-                <div key={item.id} className="snap-start snap-always h-screen w-full">
+      <div className="relative z-10 mx-auto h-full w-full max-w-[680px] overflow-hidden lg:rounded-[1.8rem] lg:border lg:border-slate-200 lg:shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            ref={feedScrollRef}
+            key={feedType}
+            className="h-[100dvh] w-full snap-y snap-mandatory overflow-y-auto scrollbar-hide"
+            style={{
+              scrollSnapType: 'y mandatory',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
+            }}
+            onScroll={handleScroll}
+            initial={{ opacity: 0.96 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0.96 }}
+            transition={exploreExperienceTokens.transitions.route}
+          >
+            {filteredVideos?.map((item, idx: number) => {
+              const kind: 'listing' | 'clip' =
+                item.contentDomain === 'market' &&
+                (item.contentKind === 'listing' || item.contentKind === 'development')
+                  ? 'listing'
+                  : 'clip';
+
+              return (
+                <div key={item.id} className="h-[100dvh] w-full snap-start snap-always">
                   <VideoCard
                     video={{
                       id: String(item.id),
@@ -388,18 +425,40 @@ export default function ExploreFeed() {
                       likes: item.stats.saves || 0,
                       userId: item.actor.id || 0,
                       createdAt: new Date(),
-                      type: 'listing',
-                      propertyTitle: item.title,
-                      propertyLocation: [item.location?.suburb, item.location?.city]
-                        .filter(Boolean)
-                        .join(', '),
-                      caption: item.category,
+                      type: kind,
+                      kind,
+                      contentDomain: item.contentDomain,
+                      contentKind: item.contentKind,
+                      creatorType: item.creatorType,
+                      mediaType: item.mediaType,
+                      caption: item.title,
+                      category: item.category,
                       highlights: [item.category],
                       agentName: item.actor.displayName,
                       verificationStatus: item.actor.verificationStatus,
                       trustBand: item.actorInsights?.trustBand || 'standard',
+                      duration: item.durationSec || 0,
+                      ...(kind === 'listing'
+                        ? {
+                            propertyTitle: item.title,
+                            propertyLocation: [item.location?.suburb, item.location?.city]
+                              .filter(Boolean)
+                              .join(', '),
+                          }
+                        : {}),
                     }}
-                    isActive={idx === currentIndex}
+                    isActive={idx === settledIndex}
+                    autoplayManagedByParent
+                    onUserPause={() => {
+                      if (idx === settledIndex) {
+                        userPausedRef.current = true;
+                      }
+                    }}
+                    onUserPlay={() => {
+                      if (idx === settledIndex) {
+                        userPausedRef.current = false;
+                      }
+                    }}
                     onView={() => {
                       recordInteractionMutation.mutate({
                         contentId: item.id,
@@ -409,182 +468,8 @@ export default function ExploreFeed() {
                     }}
                   />
                 </div>
-              ))}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Mobile Layout - Improved header */}
-      <div className="lg:hidden h-full relative">
-        {/* Mobile Header - Modern design */}
-        <motion.header
-          className="absolute top-0 left-0 right-0 z-50 pb-6"
-          style={{
-            background:
-              'linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%)',
-          }}
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          <div className="p-4 flex justify-between items-center gap-3">
-            {/* Feed Type Tabs - Compact mobile design */}
-            <Tabs
-              value={feedType}
-              onValueChange={value => setFeedType(value as any)}
-              className="flex-1"
-            >
-              <TabsList
-                className="backdrop-blur-xl border rounded-full shadow-lg w-full"
-                style={{
-                  backgroundColor: designTokens.colors.glass.bgDark,
-                  borderColor: designTokens.colors.glass.borderDark,
-                }}
-              >
-                <TabsTrigger
-                  value="recommended"
-                  className="text-white rounded-full transition-all duration-300 flex items-center gap-1.5 text-xs sm:text-sm"
-                  style={{
-                    background:
-                      feedType === 'recommended'
-                        ? designTokens.colors.accent.gradient
-                        : 'transparent',
-                  }}
-                >
-                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">For You</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="area"
-                  className="text-white rounded-full transition-all duration-300 flex items-center gap-1.5 text-xs sm:text-sm"
-                  style={{
-                    background:
-                      feedType === 'area' ? designTokens.colors.accent.gradient : 'transparent',
-                  }}
-                >
-                  <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">Area</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="category"
-                  className="text-white rounded-full transition-all duration-300 flex items-center gap-1.5 text-xs sm:text-sm"
-                  style={{
-                    background:
-                      feedType === 'category' ? designTokens.colors.accent.gradient : 'transparent',
-                  }}
-                >
-                  <Grid3x3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">Type</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Action buttons group */}
-            <div className="flex items-center gap-2">
-              {/* Filters button */}
-              <motion.button
-                onClick={toggleFilters}
-                className="flex items-center justify-center p-2 rounded-full border"
-                style={{
-                  backgroundColor: showFilters
-                    ? designTokens.colors.accent.primary
-                    : designTokens.colors.glass.bgDark,
-                  borderColor: designTokens.colors.glass.borderDark,
-                }}
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                aria-label="Toggle filters"
-              >
-                <SlidersHorizontal className="w-4 h-4 text-white" />
-                {filterActions.getFilterCount() > 0 && (
-                  <span
-                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center"
-                    style={{
-                      backgroundColor: designTokens.colors.status.error,
-                      color: designTokens.colors.text.inverse,
-                    }}
-                  >
-                    {filterActions.getFilterCount()}
-                  </span>
-                )}
-              </motion.button>
-
-              {/* Mobile Upload button */}
-              {isAuthenticated && (
-                <motion.button
-                  onClick={() => setLocation('/explore/upload')}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full text-white border"
-                  style={{
-                    background: designTokens.colors.accent.gradient,
-                    boxShadow: designTokens.shadows.accent,
-                    borderColor: designTokens.colors.glass.border,
-                  }}
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                  aria-label="Upload content"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span className="hidden sm:inline text-sm font-medium">Upload</span>
-                </motion.button>
-              )}
-            </div>
-          </div>
-        </motion.header>
-
-        {/* Mobile Video Feed with smooth transitions */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={feedType}
-            className="h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-            style={{
-              scrollSnapType: 'y mandatory',
-              overscrollBehavior: 'contain',
-              WebkitOverflowScrolling: 'touch',
-            }}
-            onScroll={handleScroll}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
-            {filteredVideos?.map((item, idx: number) => (
-              <div key={item.id} className="snap-start snap-always h-screen w-full">
-                <VideoCard
-                  video={{
-                    id: String(item.id),
-                    title: item.title,
-                    description: '',
-                    videoUrl: item.mediaUrl,
-                    thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
-                    views: item.stats.views || 0,
-                    likes: item.stats.saves || 0,
-                    userId: item.actor.id || 0,
-                    createdAt: new Date(),
-                    type: 'listing',
-                    propertyTitle: item.title,
-                    propertyLocation: [item.location?.suburb, item.location?.city]
-                      .filter(Boolean)
-                      .join(', '),
-                    caption: item.category,
-                    highlights: [item.category],
-                    agentName: item.actor.displayName,
-                    verificationStatus: item.actor.verificationStatus,
-                    trustBand: item.actorInsights?.trustBand || 'standard',
-                  }}
-                  isActive={idx === currentIndex}
-                  onView={() => {
-                    recordInteractionMutation.mutate({
-                      contentId: item.id,
-                      interactionType: 'view',
-                      feedType: feedType,
-                    });
-                  }}
-                />
-              </div>
-            ))}
+              );
+            })}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -601,3 +486,4 @@ export default function ExploreFeed() {
     </motion.div>
   );
 }
+

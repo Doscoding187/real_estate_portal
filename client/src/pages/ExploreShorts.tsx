@@ -14,20 +14,94 @@
  * Requirements: 2.1, 2.5, 9.4
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShortsContainer } from '@/components/explore/ShortsContainer';
+import { ExploreIntentPrompt } from '@/components/explore/ExploreIntentPrompt';
+import { ExploreSoftGateOverlay } from '@/components/explore/ExploreSoftGateOverlay';
 import { FeedType } from '@/../../shared/types';
 import { ArrowLeft, Upload } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { designTokens } from '@/lib/design-tokens';
 import { buttonVariants } from '@/lib/animations/exploreAnimations';
+import { useExploreIntent } from '@/hooks/useExploreIntent';
+import { canUploadToExploreRole } from '@/lib/exploreUploadAccess';
+import { TrpcFeedProvider } from '@/features/explore/components/video-feed/TrpcFeedProvider';
+import { MockFeedProvider } from '@/features/explore/components/video-feed/MockFeedProvider';
+import { shouldUseMockFeedProvider } from '@/lib/exploreMockMode';
+
+interface ExploreGateState {
+  seenContentIds: string[];
+  lastIndex: number;
+  lastContentId?: string;
+  ts: number;
+}
+
+const SOFT_GATE_SESSION_KEY = 'explore:soft_gate:v1';
+const WATCH_LIMIT = 4;
+
+function readGateState(): ExploreGateState {
+  if (typeof window === 'undefined') {
+    return { seenContentIds: [], lastIndex: 0, ts: Date.now() };
+  }
+  try {
+    const raw = window.sessionStorage.getItem(SOFT_GATE_SESSION_KEY);
+    if (!raw) return { seenContentIds: [], lastIndex: 0, ts: Date.now() };
+    const parsed = JSON.parse(raw) as Partial<ExploreGateState>;
+    return {
+      seenContentIds: Array.isArray(parsed.seenContentIds)
+        ? parsed.seenContentIds.map(String).slice(0, 128)
+        : [],
+      lastIndex: Number.isFinite(parsed.lastIndex) ? Number(parsed.lastIndex) : 0,
+      lastContentId: typeof parsed.lastContentId === 'string' ? parsed.lastContentId : undefined,
+      ts: Number.isFinite(parsed.ts) ? Number(parsed.ts) : Date.now(),
+    };
+  } catch {
+    return { seenContentIds: [], lastIndex: 0, ts: Date.now() };
+  }
+}
+
+function writeGateState(state: ExploreGateState) {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(SOFT_GATE_SESSION_KEY, JSON.stringify(state));
+}
 
 export default function ExploreShorts() {
   const [, setLocation] = useLocation();
   const [feedType] = useState<FeedType>('recommended');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const canUploadToExplore = canUploadToExploreRole(user?.role);
+  const { intent, shouldShowPrompt, setIntent, dismissPrompt } = useExploreIntent();
+  const useMockProvider = shouldUseMockFeedProvider();
+  const [showSoftGate, setShowSoftGate] = useState(false);
+  const [gateState, setGateState] = useState<ExploreGateState>(() => readGateState());
+  const initialIndex = useMemo(() => Math.max(0, gateState.lastIndex || 0), [gateState.lastIndex]);
+
+  const handleGuestWatch = (contentId: string, index: number) => {
+    if (isAuthenticated) return;
+    setGateState(previous => {
+      const seen = previous.seenContentIds.includes(contentId)
+        ? previous.seenContentIds
+        : [...previous.seenContentIds, contentId];
+      const next: ExploreGateState = {
+        seenContentIds: seen,
+        lastIndex: Math.max(0, index),
+        lastContentId: contentId,
+        ts: Date.now(),
+      };
+      writeGateState(next);
+      if (next.seenContentIds.length >= WATCH_LIMIT) {
+        setShowSoftGate(true);
+      }
+      return next;
+    });
+  };
+
+  const triggerSoftGate = () => {
+    if (!isAuthenticated) {
+      setShowSoftGate(true);
+    }
+  };
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black">
@@ -44,7 +118,7 @@ export default function ExploreShorts() {
         <div className="flex items-center justify-between p-4 pointer-events-auto">
           {/* Back button - Modern Glass Design */}
           <motion.button
-            onClick={() => setLocation('/')}
+            onClick={() => setLocation('/explore/home')}
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
@@ -60,7 +134,7 @@ export default function ExploreShorts() {
           </motion.button>
 
           {/* Upload button - Modern Glass Design with Gradient */}
-          {isAuthenticated && (
+          {isAuthenticated && canUploadToExplore && (
             <motion.button
               onClick={() => setLocation('/explore/upload')}
               variants={buttonVariants}
@@ -82,8 +156,40 @@ export default function ExploreShorts() {
         </div>
       </motion.div>
 
-      {/* Shorts container with enhanced video components */}
-      <ShortsContainer feedType={feedType} />
+      {useMockProvider ? (
+        <MockFeedProvider
+          feedType={feedType}
+          intent={intent}
+          isAuthenticated={isAuthenticated}
+          initialIndex={initialIndex}
+          onGuestWatch={handleGuestWatch}
+          onGateTrigger={triggerSoftGate}
+        />
+      ) : (
+        <TrpcFeedProvider
+          feedType={feedType}
+          intent={intent}
+          isAuthenticated={isAuthenticated}
+          initialIndex={initialIndex}
+          onGuestWatch={handleGuestWatch}
+          onGateTrigger={triggerSoftGate}
+        />
+      )}
+
+      <ExploreIntentPrompt
+        open={shouldShowPrompt}
+        onSelect={nextIntent => {
+          void setIntent(nextIntent);
+        }}
+        onDismiss={dismissPrompt}
+      />
+
+      <ExploreSoftGateOverlay
+        open={showSoftGate}
+        onClose={() => setShowSoftGate(false)}
+        onLogin={() => setLocation('/login')}
+        onSignup={() => setLocation('/get-started')}
+      />
 
       {/* Swipe hint for first-time users - Fades out after 3 seconds */}
       <AnimatePresence>

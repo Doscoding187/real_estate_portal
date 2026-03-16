@@ -139,6 +139,63 @@ class RedisCache {
   }
 
   /**
+   * Acquire a distributed lock.
+   * Returns true when the lock is acquired, false if another worker holds it.
+   */
+  async acquireLock(key: string, ttlSeconds: number, value: string): Promise<boolean> {
+    try {
+      if ((await this.ensureConnected()) && this.client) {
+        const result = await this.client.set(key, value, { NX: true, EX: ttlSeconds });
+        return result === 'OK';
+      }
+
+      // Fallback lock (single-process only)
+      const existing = this.fallbackCache.get(key);
+      if (existing && Date.now() <= existing.expiresAt) {
+        return false;
+      }
+      this.setFallback(key, JSON.stringify({ value }), ttlSeconds);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Redis] Acquire lock error:', message);
+      return false;
+    }
+  }
+
+  /**
+   * Release a distributed lock if owned by the provided value.
+   */
+  async releaseLock(key: string, value: string): Promise<boolean> {
+    try {
+      if ((await this.ensureConnected()) && this.client) {
+        const releaseScript = `
+          if redis.call("GET", KEYS[1]) == ARGV[1] then
+            return redis.call("DEL", KEYS[1])
+          end
+          return 0
+        `;
+        const deleted = await this.client.eval(releaseScript, {
+          keys: [key],
+          arguments: [value],
+        });
+        return Number(deleted) === 1;
+      }
+
+      const existing = this.getFallback<{ value?: string }>(key);
+      if (existing?.value === value) {
+        this.fallbackCache.delete(key);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Redis] Release lock error:', message);
+      return false;
+    }
+  }
+
+  /**
    * Delete value from cache
    */
   async del(key: string): Promise<void> {

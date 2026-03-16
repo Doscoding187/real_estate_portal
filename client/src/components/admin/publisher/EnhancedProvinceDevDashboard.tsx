@@ -335,7 +335,9 @@ const EnhancedBrandCard: React.FC<{ brand: EnhancedBrandProfile }> = ({ brand })
 
 export const ProvinceDevDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('provinces');
-  const { data: brands, isLoading } = trpc.superAdminPublisher.listBrandProfiles.useQuery({});
+  const { data: brands, isLoading } = trpc.superAdminPublisher.listBrandProfiles.useQuery({
+    emulatorOnly: true,
+  });
 
   // Enhanced brands with mock metrics for demo
   const enhancedBrands = React.useMemo(() => {

@@ -30,6 +30,15 @@ export const leads = mysqlTable('leads', {
   developmentId: int('developmentId').references(() => developments.id, { onDelete: 'set null' }),
   agencyId: int('agencyId').references(() => agencies.id, { onDelete: 'set null' }),
   agentId: int('agentId').references(() => agents.id, { onDelete: 'set null' }),
+  ownerType: mysqlEnum('owner_type', ['agent', 'agency']).default('agent').notNull(),
+  ownerId: int('owner_id'),
+  assignedAgentId: int('assigned_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+  visibilityScope: mysqlEnum('visibility_scope', ['private', 'team', 'agency'])
+    .default('private')
+    .notNull(),
+  governanceMode: mysqlEnum('governance_mode', ['solo', 'affiliated', 'managed', 'enterprise_managed'])
+    .default('solo')
+    .notNull(),
   name: varchar({ length: 200 }).notNull(),
   email: varchar({ length: 320 }).notNull(),
   phone: varchar({ length: 50 }),
@@ -50,7 +59,7 @@ export const leads = mysqlTable('leads', {
     .default('new')
     .notNull(),
   source: varchar({ length: 100 }),
-  createdAt: timestamp('createdAt', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   nextFollowUp: timestamp('nextFollowUp', { mode: 'string' }),
   lastContactedAt: timestamp('lastContactedAt', { mode: 'string' }),
@@ -81,10 +90,7 @@ export const leads = mysqlTable('leads', {
   assignedAt: timestamp('assigned_at', { mode: 'string' }),
   convertedAt: timestamp('converted_at', { mode: 'string' }),
   lostReason: text('lost_reason'),
-  developerBrandProfileId: int('developer_brand_profile_id').references(
-    () => developerBrandProfiles.id,
-    { onDelete: 'set null' },
-  ),
+  developerBrandProfileId: int('developer_brand_profile_id'),
   brandLeadStatus: mysqlEnum('brand_lead_status', [
     'captured',
     'delivered_unsubscribed',
@@ -97,7 +103,14 @@ export const leads = mysqlTable('leads', {
     'manual',
     'none',
   ]).default('email'),
-});
+},
+table => [
+  foreignKey({
+    columns: [table.developerBrandProfileId],
+    foreignColumns: [developerBrandProfiles.id],
+    name: 'fk_leads_dev_brand',
+  }).onDelete('set null'),
+]);
 
 export const leadActivities = mysqlTable('lead_activities', {
   id: int().autoincrement().primaryKey(),
@@ -105,9 +118,15 @@ export const leadActivities = mysqlTable('lead_activities', {
     .notNull()
     .references(() => leads.id, { onDelete: 'cascade' }),
   userId: int().references(() => users.id, { onDelete: 'set null' }),
+  ownerType: mysqlEnum('owner_type', ['agent', 'agency']).default('agent').notNull(),
+  ownerId: int('owner_id'),
+  assignedAgentId: int('assigned_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+  visibilityScope: mysqlEnum('visibility_scope', ['private', 'team', 'agency'])
+    .default('private')
+    .notNull(),
   type: mysqlEnum(['note', 'call', 'email', 'meeting', 'status_change']).notNull(),
   description: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const prospects = mysqlTable('prospects', {
@@ -118,7 +137,7 @@ export const prospects = mysqlTable('prospects', {
   status: mysqlEnum(['active', 'inactive', 'banned']).default('active').notNull(),
   preferences: json(),
   lastActiveAt: timestamp({ mode: 'string' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -130,7 +149,7 @@ export const prospectFavorites = mysqlTable('prospect_favorites', {
   listingId: int().references(() => listings.id, { onDelete: 'cascade' }),
   developmentId: int().references(() => developments.id, { onDelete: 'cascade' }),
   notes: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const recentlyViewed = mysqlTable('recently_viewed', {
@@ -139,7 +158,7 @@ export const recentlyViewed = mysqlTable('recently_viewed', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   listingId: int().references(() => listings.id, { onDelete: 'cascade' }),
-  viewedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  viewedAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const offers = mysqlTable('offers', {
@@ -150,13 +169,19 @@ export const offers = mysqlTable('offers', {
   buyerId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  ownerType: mysqlEnum('owner_type', ['agent', 'agency']).default('agent').notNull(),
+  ownerId: int('owner_id'),
+  assignedAgentId: int('assigned_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+  visibilityScope: mysqlEnum('visibility_scope', ['private', 'team', 'agency'])
+    .default('private')
+    .notNull(),
   amount: int().notNull(),
   status: mysqlEnum(['pending', 'accepted', 'rejected', 'countered', 'withdrawn'])
     .default('pending')
     .notNull(),
   expiryDate: timestamp({ mode: 'string' }),
   conditions: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -176,7 +201,7 @@ export const showings = mysqlTable('showings', {
     .default('scheduled')
     .notNull(),
   feedback: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -196,7 +221,7 @@ export const scheduledViewings = mysqlTable(
       .notNull(),
     notes: text(),
     agentNotes: text('agent_notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -216,7 +241,7 @@ export const favorites = mysqlTable(
     propertyId: int('property_id')
       .notNull()
       .references(() => properties.id),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_favorites_user').on(table.userId),
@@ -242,7 +267,7 @@ export const savedSearches = mysqlTable(
       .default('daily')
       .notNull(),
     lastNotifiedAt: timestamp('last_notified_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [

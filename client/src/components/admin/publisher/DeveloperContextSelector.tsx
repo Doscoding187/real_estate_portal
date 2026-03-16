@@ -28,7 +28,7 @@ export const DeveloperContextSelector: React.FC = () => {
 
   const { data: profiles, isLoading: isLoadingProfiles } =
     trpc.superAdminPublisher.listBrandProfiles.useQuery(
-      { search: searchTerm, limit: 20 },
+      { search: searchTerm, limit: 20, emulatorOnly: true },
       { staleTime: 30_000, refetchOnWindowFocus: false },
     );
 

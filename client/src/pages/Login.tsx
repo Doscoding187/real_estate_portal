@@ -57,34 +57,11 @@ const registerSchema = z
       ),
     confirmPassword: z.string(),
     role: z.enum(['visitor', 'agent', 'agency_admin', 'property_developer']).default('visitor'),
-    // Agent profile fields (conditional)
-    agentDisplayName: z.string().optional(),
-    agentPhone: z.string().optional(),
-    agentBio: z.string().optional(),
-    agentLicense: z.string().optional(),
-    agentSpecializations: z.array(z.string()).optional(),
   })
   .refine(data => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
-  })
-  .refine(
-    data => {
-      if (data.role === 'agent') {
-        return (
-          data.agentDisplayName &&
-          data.agentDisplayName.length >= 2 &&
-          data.agentPhone &&
-          data.agentPhone.length >= 10
-        );
-      }
-      return true;
-    },
-    {
-      message: 'Display name and phone number are required for agent registration',
-      path: ['agentDisplayName'],
-    },
-  );
+  });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -92,11 +69,22 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function Login() {
   const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(useSearch());
+  const nextParam = searchParams.get('next');
+  const safeNextPath =
+    typeof nextParam === 'string' && nextParam.startsWith('/') && !nextParam.startsWith('//')
+      ? nextParam
+      : null;
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('register');
+  const [activeTab, setActiveTab] = useState('login');
+  const [showResendVerification, setShowResendVerification] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    // Always default to login tab on entry for returning users.
+    setActiveTab('login');
+  }, []);
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
@@ -121,15 +109,8 @@ export default function Login() {
       password: '',
       confirmPassword: '',
       role: 'visitor',
-      agentDisplayName: '',
-      agentPhone: '',
-      agentBio: '',
-      agentLicense: '',
-      agentSpecializations: [],
     },
   });
-
-  const selectedRole = registerForm.watch('role');
 
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -140,6 +121,7 @@ export default function Login() {
         body: JSON.stringify(data),
       });
 
+      setShowResendVerification(false);
       toast.success('Welcome back!');
 
       // Role-based redirect
@@ -147,13 +129,16 @@ export default function Login() {
       console.log('[Login] API result:', result);
       console.log('[Login] User role:', role);
 
-      let redirectPath = '/user/dashboard';
+      let redirectPath = safeNextPath || '/user/dashboard';
 
-      if (role === 'super_admin') redirectPath = '/admin/overview';
-      else if (role === 'property_developer') redirectPath = '/developer/dashboard';
-      else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
-      else if (result.user?.hasReferrerIdentity) redirectPath = '/referrer/dashboard';
-      else if (role === 'agent') redirectPath = '/agent/dashboard';
+      if (!safeNextPath) {
+        if (role === 'super_admin') redirectPath = '/admin/overview';
+        else if (role === 'property_developer') redirectPath = '/developer/dashboard';
+        else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
+        else if (result.user?.hasManagerIdentity) redirectPath = '/distribution/manager';
+        else if (result.user?.hasReferrerIdentity) redirectPath = '/referrer/dashboard';
+        else if (role === 'agent') redirectPath = '/agent/dashboard';
+      }
 
       console.log('[Login] Redirecting to:', redirectPath);
 
@@ -164,7 +149,12 @@ export default function Login() {
     } catch (error) {
       console.error('[Login] Error:', error);
       if (error instanceof ApiError) {
-        toast.error(error.body?.error || `Login failed (${error.status})`);
+        const message = error.body?.error || `Login failed (${error.status})`;
+        const isUnverified =
+          typeof message === 'string' &&
+          message.toLowerCase().includes('verify your email');
+        setShowResendVerification(isUnverified);
+        toast.error(message);
       } else {
         toast.error(error instanceof Error ? error.message : 'Login failed');
       }
@@ -172,26 +162,40 @@ export default function Login() {
     }
   };
 
+  const onResendVerification = async () => {
+    const email = loginForm.getValues('email');
+    if (!email) {
+      toast.error('Enter your email address first.');
+      return;
+    }
+
+    try {
+      const result = await apiFetch('/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      toast.success(
+        result?.message || 'If your account is unverified, a new verification email has been sent.',
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.body?.error || `Could not resend (${error.status})`);
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Could not resend verification email');
+      }
+    }
+  };
+
   const onRegister = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      const payload: any = {
+      const payload = {
         name: data.name,
         email: data.email,
         password: data.password,
         role: data.role,
       };
-
-      // Add agent profile if role is agent
-      if (data.role === 'agent') {
-        payload.agentProfile = {
-          displayName: data.agentDisplayName!,
-          phoneNumber: data.agentPhone!,
-          bio: data.agentBio,
-          licenseNumber: data.agentLicense,
-          specializations: data.agentSpecializations,
-        };
-      }
 
       const result = await apiFetch('/auth/register', {
         method: 'POST',
@@ -404,6 +408,20 @@ export default function Login() {
                         </>
                       )}
                     </Button>
+
+                    {showResendVerification && (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        <p className="mb-2">Your account needs email verification before login.</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={onResendVerification}
+                        >
+                          Resend verification email
+                        </Button>
+                      </div>
+                    )}
                   </form>
                 </Form>
               </TabsContent>
@@ -593,96 +611,14 @@ export default function Login() {
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
+                          <FormDescription>
+                            If you choose Agent, you will complete your profile details after email
+                            verification.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
-                    {/* Agent Profile Fields - Show only when role is 'agent' */}
-                    {selectedRole === 'agent' && (
-                      <div className="space-y-4 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
-                        <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                          Agent Profile Information
-                        </div>
-
-                        <FormField
-                          control={registerForm.control}
-                          name="agentDisplayName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Display Name *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="John Smith"
-                                  className="bg-white dark:bg-slate-800"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={registerForm.control}
-                          name="agentPhone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="tel"
-                                  placeholder="+27 12 345 6789"
-                                  className="bg-white dark:bg-slate-800"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={registerForm.control}
-                          name="agentLicense"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>License Number (Optional)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="FFC1234567"
-                                  className="bg-white dark:bg-slate-800"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={registerForm.control}
-                          name="agentBio"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Bio (Optional)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Brief description of your experience..."
-                                  className="bg-white dark:bg-slate-800"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="text-xs text-blue-700 dark:text-blue-300">
-                          Your agent profile will be reviewed by our team before activation.
-                        </div>
-                      </div>
-                    )}
 
                     <Button
                       type="submit"

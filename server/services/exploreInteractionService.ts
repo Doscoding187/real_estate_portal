@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { exploreContent, exploreEngagements } from '../../drizzle/schema';
+import { exploreContent, exploreEngagements, interactionEvents, outcomeEvents } from '../../drizzle/schema';
 import { eq, sql, and, count, desc } from 'drizzle-orm';
 import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 
@@ -32,7 +32,234 @@ export interface BatchInteractionOptions {
   interactions: RecordInteractionOptions[];
 }
 
+export type OutcomeType = 'contactClick' | 'leadSubmitted' | 'viewingRequest' | 'quoteRequest';
+
+export interface RecordOutcomeOptions {
+  contentId: number;
+  outcomeType: OutcomeType;
+  sessionId: string;
+  userId?: number;
+  metadata?: Record<string, any>;
+}
+
 export class ExploreInteractionService {
+  private readonly maxEventsPerMinute = (() => {
+    const raw = Number(process.env.EXPLORE_INTERACTION_MAX_EVENTS_PER_MINUTE ?? 120);
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 120;
+  })();
+
+  private readonly dedupeWindowMs = (() => {
+    const raw = Number(process.env.EXPLORE_INTERACTION_DEDUPE_MS ?? 1200);
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 1200;
+  })();
+
+  private readonly rateWindowMs = 60_000;
+  private readonly rateLimiter = new Map<string, { count: number; windowStart: number; lastSeen: number }>();
+  private readonly dedupeLimiter = new Map<string, number>();
+
+  private pruneThrottleState(now: number) {
+    for (const [key, value] of this.rateLimiter.entries()) {
+      if (now - value.lastSeen > this.rateWindowMs * 2) {
+        this.rateLimiter.delete(key);
+      }
+    }
+
+    for (const [key, lastSeen] of this.dedupeLimiter.entries()) {
+      if (now - lastSeen > this.dedupeWindowMs * 4) {
+        this.dedupeLimiter.delete(key);
+      }
+    }
+  }
+
+  private shouldThrottle(options: RecordInteractionOptions): boolean {
+    const now = Date.now();
+    this.pruneThrottleState(now);
+
+    const normalizedSession = String(options.sessionId || '').slice(0, 128);
+    const sessionKey = normalizedSession || `anon:${options.userId ?? 'guest'}:${options.deviceType}`;
+    const rateKey = `${sessionKey}:${options.deviceType}`;
+    const current = this.rateLimiter.get(rateKey);
+
+    if (!current || now - current.windowStart > this.rateWindowMs) {
+      this.rateLimiter.set(rateKey, {
+        count: 1,
+        windowStart: now,
+        lastSeen: now,
+      });
+    } else {
+      current.count += 1;
+      current.lastSeen = now;
+      this.rateLimiter.set(rateKey, current);
+      if (current.count > this.maxEventsPerMinute) {
+        return true;
+      }
+    }
+
+    const durationBucket =
+      typeof options.duration === 'number' && Number.isFinite(options.duration)
+        ? Math.max(0, Math.floor(options.duration / 3))
+        : 0;
+    const dedupeKey = `${sessionKey}:${options.contentId}:${options.interactionType}:${durationBucket}`;
+    const lastSeenAt = this.dedupeLimiter.get(dedupeKey);
+    if (typeof lastSeenAt === 'number' && now - lastSeenAt < this.dedupeWindowMs) {
+      return true;
+    }
+    this.dedupeLimiter.set(dedupeKey, now);
+    return false;
+  }
+
+  private shouldThrottleOutcome(options: RecordOutcomeOptions): boolean {
+    const now = Date.now();
+    this.pruneThrottleState(now);
+
+    const normalizedSession = String(options.sessionId || '').slice(0, 128);
+    const sessionKey = normalizedSession || `anon:${options.userId ?? 'guest'}`;
+    const rateKey = `outcome:${sessionKey}`;
+    const current = this.rateLimiter.get(rateKey);
+    const maxOutcomeEventsPerMinute = Math.max(20, Math.floor(this.maxEventsPerMinute / 2));
+
+    if (!current || now - current.windowStart > this.rateWindowMs) {
+      this.rateLimiter.set(rateKey, {
+        count: 1,
+        windowStart: now,
+        lastSeen: now,
+      });
+    } else {
+      current.count += 1;
+      current.lastSeen = now;
+      this.rateLimiter.set(rateKey, current);
+      if (current.count > maxOutcomeEventsPerMinute) {
+        return true;
+      }
+    }
+
+    const dedupeKey = `outcome:${sessionKey}:${options.contentId}:${options.outcomeType}`;
+    const lastSeenAt = this.dedupeLimiter.get(dedupeKey);
+    if (typeof lastSeenAt === 'number' && now - lastSeenAt < this.dedupeWindowMs * 2) {
+      return true;
+    }
+
+    this.dedupeLimiter.set(dedupeKey, now);
+    return false;
+  }
+
+  private mapInteractionToIntegrityEvent(interactionType: string):
+    | 'impression'
+    | 'viewProgress'
+    | 'viewComplete'
+    | 'like'
+    | 'save'
+    | 'share'
+    | 'profileClick'
+    | 'listingOpen'
+    | 'contactClick'
+    | 'notInterested'
+    | 'report' {
+    switch (interactionType) {
+      case 'impression':
+        return 'impression';
+      case 'view':
+      case 'viewProgress':
+        return 'viewProgress';
+      case 'viewComplete':
+      case 'complete':
+        return 'viewComplete';
+      case 'like':
+        return 'like';
+      case 'save':
+        return 'save';
+      case 'share':
+        return 'share';
+      case 'profileClick':
+        return 'profileClick';
+      case 'listingOpen':
+        return 'listingOpen';
+      case 'contactClick':
+      case 'contact':
+      case 'whatsapp':
+      case 'book_viewing':
+      case 'click_cta':
+        return 'contactClick';
+      case 'notInterested':
+      case 'skip':
+        return 'notInterested';
+      case 'report':
+        return 'report';
+      default:
+        return 'impression';
+    }
+  }
+
+  private mapInteractionToLegacyEvent(interactionType: string): string {
+    switch (interactionType) {
+      case 'viewProgress':
+        return 'impression';
+      case 'viewComplete':
+        return 'complete';
+      case 'profileClick':
+      case 'listingOpen':
+      case 'contactClick':
+        return 'click_cta';
+      case 'notInterested':
+        return 'skip';
+      case 'report':
+        return 'comment';
+      default:
+        return interactionType;
+    }
+  }
+
+  private async insertInteractionEvent(params: {
+    contentId: number;
+    viewerUserId?: number;
+    sessionId: string;
+    interactionType: InteractionType;
+    duration?: number;
+  }) {
+    try {
+      const { contentId, viewerUserId, sessionId, interactionType, duration } = params;
+      const integrityEventType = this.mapInteractionToIntegrityEvent(interactionType);
+      const content = await db
+        .select({ actorId: exploreContent.actorId })
+        .from(exploreContent)
+        .where(eq(exploreContent.id, contentId))
+        .limit(1);
+
+      await db.insert(interactionEvents).values({
+        contentId,
+        actorId: content[0]?.actorId ?? null,
+        viewerUserId: viewerUserId ?? null,
+        eventType: integrityEventType,
+        watchMs: typeof duration === 'number' ? Math.max(0, Math.round(duration * 1000)) : null,
+        sessionId: sessionId || '',
+      });
+    } catch (error) {
+      console.warn('[ExploreInteraction] interaction_events insert skipped:', (error as any)?.message);
+    }
+  }
+
+  private async insertOutcomeEvent(params: RecordOutcomeOptions) {
+    try {
+      const { contentId, userId, sessionId, outcomeType, metadata } = params;
+      const content = await db
+        .select({ actorId: exploreContent.actorId })
+        .from(exploreContent)
+        .where(eq(exploreContent.id, contentId))
+        .limit(1);
+
+      await db.insert(outcomeEvents).values({
+        contentId,
+        actorId: content[0]?.actorId ?? null,
+        viewerUserId: userId ?? null,
+        outcomeType,
+        sessionId: sessionId || '',
+        metadata: metadata ?? null,
+      });
+    } catch (error) {
+      console.warn('[ExploreInteraction] outcome_events insert skipped:', (error as any)?.message);
+    }
+  }
+
   /**
    * Record a single interaction (best-effort)
    */
@@ -51,22 +278,41 @@ export class ExploreInteractionService {
       metadata,
     } = options;
 
+    if (!Number.isFinite(contentId) || contentId <= 0) {
+      return;
+    }
+
+    if (this.shouldThrottle(options)) {
+      return;
+    }
+
     try {
+      const legacyInteractionType = this.mapInteractionToLegacyEvent(interactionType);
+
       // 1) Write raw interaction (analytics layer)
       console.log('[ENG_INSERT_ATTEMPT]', {
         contentId,
         interactionType,
+        legacyInteractionType,
         userId: userId ?? null,
         sessionId,
         feedType,
         deviceType,
       });
 
+      await this.insertInteractionEvent({
+        contentId,
+        viewerUserId: userId,
+        sessionId,
+        interactionType,
+        duration,
+      });
+
       await db.insert(exploreEngagements).values({
         contentId,
         userId: userId ?? null,
         sessionId: sessionId ?? '',
-        interactionType,
+        interactionType: legacyInteractionType as any,
         metadata: {
           duration,
           feedType,
@@ -81,7 +327,7 @@ export class ExploreInteractionService {
       console.log('[ENG_INSERT_OK]', { contentId, interactionType });
 
       // 2) Update aggregated metrics (async, non-blocking)
-      this.updateContentMetrics(contentId, interactionType as any, duration).catch(err => {
+      this.updateContentMetrics(contentId, legacyInteractionType as any, duration).catch(err => {
         console.error('Error updating content metrics:', err);
       });
     } catch (error: any) {
@@ -103,9 +349,15 @@ export class ExploreInteractionService {
   async recordBatchInteractions(options: BatchInteractionOptions): Promise<void> {
     const { interactions } = options;
     if (!interactions.length) return;
+    const acceptedInteractions = interactions.filter(interaction => {
+      if (!Number.isFinite(interaction.contentId) || interaction.contentId <= 0) return false;
+      return !this.shouldThrottle(interaction);
+    });
+    if (!acceptedInteractions.length) return;
 
     try {
-      const values = interactions.map(i => ({
+      const values = acceptedInteractions.map(i => ({
+        legacyInteractionType: this.mapInteractionToLegacyEvent(i.interactionType),
         contentId: i.contentId,
         userId: i.userId ?? null,
         sessionId: i.sessionId ?? '',
@@ -121,20 +373,51 @@ export class ExploreInteractionService {
         },
       }));
 
-      await db.insert(exploreEngagements).values(values);
+      await Promise.allSettled(
+        acceptedInteractions.map(i =>
+          this.insertInteractionEvent({
+            contentId: i.contentId,
+            viewerUserId: i.userId,
+            sessionId: i.sessionId ?? '',
+            interactionType: i.interactionType,
+            duration: i.duration,
+          }),
+        ),
+      );
+
+      await db.insert(exploreEngagements).values(
+        values.map(value => ({
+          contentId: value.contentId,
+          userId: value.userId,
+          sessionId: value.sessionId,
+          interactionType: value.legacyInteractionType as any,
+          metadata: value.metadata,
+        })),
+      );
 
       // Aggregate per content item
-      const contentIds = Array.from(new Set(interactions.map(i => i.contentId)));
+      const contentIds = Array.from(new Set(acceptedInteractions.map(i => i.contentId)));
 
       for (const contentId of contentIds) {
-        const last = interactions.filter(i => i.contentId === contentId).pop();
-        this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(
-          console.error,
-        );
+        const last = acceptedInteractions.filter(i => i.contentId === contentId).pop();
+        const legacyType = this.mapInteractionToLegacyEvent((last?.interactionType as any) ?? 'view');
+        this.updateContentMetrics(contentId, legacyType as any).catch(console.error);
       }
     } catch (error) {
       console.error('Error recording batch interactions:', error);
     }
+  }
+
+  async recordOutcome(options: RecordOutcomeOptions): Promise<void> {
+    const { contentId } = options;
+    if (!Number.isFinite(contentId) || contentId <= 0) {
+      return;
+    }
+    if (this.shouldThrottleOutcome(options)) {
+      return;
+    }
+
+    await this.insertOutcomeEvent(options);
   }
 
   /**

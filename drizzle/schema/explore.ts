@@ -11,6 +11,8 @@ import {
   index,
   uniqueIndex,
 } from 'drizzle-orm/mysql-core';
+import { users } from './core';
+import { economicActors } from './economicActors';
 
 /**
  * Explore schema (PHASE 1)
@@ -26,6 +28,7 @@ export const exploreContent = mysqlTable('explore_content', {
 
   contentType: varchar('content_type', { length: 50 }).notNull(),
   referenceId: int('reference_id').notNull(),
+  actorId: int('actor_id').references(() => economicActors.id, { onDelete: 'set null' }),
 
   creatorId: int('creator_id'), // nullable
   creatorType: mysqlEnum('creator_type', ['user', 'agent', 'developer', 'agency'])
@@ -44,6 +47,13 @@ export const exploreContent = mysqlTable('explore_content', {
   metadata: json('metadata'),
   tags: json('tags'),
   lifestyleCategories: json('lifestyle_categories'),
+  category: mysqlEnum('category', ['property', 'renovation', 'finance', 'investment', 'services'])
+    .default('property')
+    .notNull(),
+  durationSec: int('duration_sec'),
+  width: int('width'),
+  height: int('height'),
+  orientation: mysqlEnum('orientation', ['vertical', 'horizontal', 'square']).default('vertical'),
 
   locationLat: decimal('location_lat', { precision: 10, scale: 8 }),
   locationLng: decimal('location_lng', { precision: 11, scale: 8 }),
@@ -179,6 +189,23 @@ export const exploreFeedSessions = mysqlTable(
   }),
 );
 
+export const exploreUserIntents = mysqlTable(
+  'explore_user_intents',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    userId: int('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    intent: mysqlEnum('intent', ['buy', 'sell', 'improve', 'invest', 'learn']).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  t => ({
+    userIntentUq: uniqueIndex('uq_explore_user_intents_user_id').on(t.userId),
+    intentIdx: index('idx_explore_user_intents_intent').on(t.intent),
+  }),
+);
+
 export const exploreShorts = mysqlTable(
   'explore_shorts',
   {
@@ -188,5 +215,69 @@ export const exploreShorts = mysqlTable(
   },
   t => ({
     idxContent: index('idx_es_content').on(t.exploreContentId),
+  }),
+);
+
+export const interactionEvents = mysqlTable(
+  'interaction_events',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    contentId: int('content_id')
+      .notNull()
+      .references(() => exploreContent.id, { onDelete: 'cascade' }),
+    actorId: int('actor_id').references(() => economicActors.id, { onDelete: 'set null' }),
+    viewerUserId: int('viewer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    eventType: mysqlEnum('event_type', [
+      'impression',
+      'viewProgress',
+      'viewComplete',
+      'like',
+      'save',
+      'share',
+      'profileClick',
+      'listingOpen',
+      'contactClick',
+      'notInterested',
+      'report',
+    ]).notNull(),
+    watchMs: int('watch_ms'),
+    sessionId: varchar('session_id', { length: 128 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  t => ({
+    contentIdx: index('idx_interaction_events_content_id').on(t.contentId),
+    actorIdx: index('idx_interaction_events_actor_id').on(t.actorId),
+    eventTypeIdx: index('idx_interaction_events_event_type').on(t.eventType),
+    sessionIdx: index('idx_interaction_events_session_id').on(t.sessionId),
+    createdIdx: index('idx_interaction_events_created_at').on(t.createdAt),
+  }),
+);
+
+export const outcomeEvents = mysqlTable(
+  'outcome_events',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    contentId: int('content_id')
+      .notNull()
+      .references(() => exploreContent.id, { onDelete: 'cascade' }),
+    actorId: int('actor_id').references(() => economicActors.id, { onDelete: 'set null' }),
+    viewerUserId: int('viewer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    outcomeType: mysqlEnum('outcome_type', [
+      'contactClick',
+      'leadSubmitted',
+      'viewingRequest',
+      'quoteRequest',
+    ]).notNull(),
+    sessionId: varchar('session_id', { length: 128 }).notNull(),
+    metadata: json('metadata'),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  t => ({
+    contentIdx: index('idx_outcome_events_content_id').on(t.contentId),
+    actorIdx: index('idx_outcome_events_actor_id').on(t.actorId),
+    outcomeTypeIdx: index('idx_outcome_events_outcome_type').on(t.outcomeType),
+    viewerIdx: index('idx_outcome_events_viewer_user_id').on(t.viewerUserId),
+    sessionIdx: index('idx_outcome_events_session_id').on(t.sessionId),
+    createdIdx: index('idx_outcome_events_created_at').on(t.createdAt),
   }),
 );

@@ -1,3 +1,15 @@
+import { normalizePublicAppOrigin } from '../../shared/distributionManagerInvite';
+
+const rawPublicAppUrl =
+  process.env.APP_URL ?? process.env.VITE_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? '';
+const normalizedPublicAppUrl = normalizePublicAppOrigin(rawPublicAppUrl || 'http://localhost:5173');
+
+if (rawPublicAppUrl && rawPublicAppUrl.trim() !== normalizedPublicAppUrl) {
+  console.warn(
+    `[ENV] Public app URL contained a path, query, or hash and was normalized to origin: ${normalizedPublicAppUrl}`,
+  );
+}
+
 // Debug logging to verify environment variables are loaded
 console.log('----------------------------------------');
 console.log('[ENV] Configuration Loaded:');
@@ -14,7 +26,7 @@ console.log('----------------------------------------');
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? '',
   cookieSecret: process.env.JWT_SECRET ?? '',
-  appUrl: process.env.VITE_APP_URL ?? 'http://localhost:5173',
+  appUrl: normalizedPublicAppUrl,
   databaseUrl: process.env.DATABASE_URL ?? '',
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? '',
   ownerId: process.env.OWNER_OPEN_ID ?? '',
@@ -42,4 +54,11 @@ export const ENV = {
   resendFromEmail: process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev',
   distributionNetworkEnabled:
     String(process.env.FEATURE_DISTRIBUTION_NETWORK ?? '').toLowerCase() === 'true',
+  schemaCapabilitiesStrict: String(process.env.SCHEMA_CAPABILITIES_STRICT ?? '').toLowerCase() === 'true',
+  schemaCapabilitiesStrictTargets: String(
+    process.env.SCHEMA_CAPABILITIES_STRICT_TARGETS ?? 'demand_engine,economic_actors,showings',
+  )
+    .split(',')
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean),
 };

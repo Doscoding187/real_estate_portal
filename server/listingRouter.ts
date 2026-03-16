@@ -18,6 +18,7 @@ import {
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
 import { requireUser } from './_core/requireUser';
+import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -669,6 +670,26 @@ export const listingRouter = router({
             code: 'FORBIDDEN',
             message: 'Not authorized to submit this listing',
           });
+        }
+
+        const entitlements = await getAgentEntitlementsForUserId(requireUser(ctx).id);
+        if (entitlements && !entitlements.canPublishListings) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'Publishing is locked. Verify your email, complete your agent profile (70%+), and ensure your trial is active.',
+          });
+        }
+
+        const maxActiveListings = Number(entitlements?.featureFlags?.maxActiveListings ?? 0);
+        if (Number.isFinite(maxActiveListings) && maxActiveListings >= 0) {
+          const activeListings = await db.countActiveListingsByOwner(requireUser(ctx).id);
+          if (activeListings >= maxActiveListings) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `You are at your active listing limit (${activeListings}/${maxActiveListings}). Upgrade your plan to publish more listings.`,
+            });
+          }
         }
 
         // Check readiness before allowing submission

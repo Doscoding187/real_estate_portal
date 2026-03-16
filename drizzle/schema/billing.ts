@@ -42,7 +42,7 @@ export const plans = mysqlTable('plans', {
   isActive: int().default(1).notNull(),
   isPopular: int().notNull(),
   sortOrder: int().notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -55,7 +55,7 @@ export const planEntitlements = mysqlTable(
       .references(() => plans.id, { onDelete: 'cascade' }),
     featureKey: varchar('feature_key', { length: 120 }).notNull(),
     valueJson: json('value_json').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [
@@ -77,7 +77,7 @@ export const subscriptions = mysqlTable(
     metadata: json(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [
@@ -101,7 +101,7 @@ export const coupons = mysqlTable('coupons', {
   validUntil: timestamp({ mode: 'string' }),
   isActive: int().default(1).notNull(),
   appliesToPlans: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -131,7 +131,7 @@ export const subscriptionPlans = mysqlTable(
     downgradeToPlanId: varchar('downgrade_to_plan_id', { length: 100 }),
     stripePriceId: varchar('stripe_price_id', { length: 255 }),
     paystackPlanCode: varchar('paystack_plan_code', { length: 255 }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [
@@ -165,7 +165,7 @@ export const subscriptionEvents = mysqlTable(
     ]).notNull(),
     eventData: json('event_data'),
     metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
   },
   table => [index('idx_user').on(table.userId), index('idx_event_type').on(table.eventType)],
 );
@@ -196,7 +196,7 @@ export const billingTransactions = mysqlTable(
     gatewayInvoiceId: varchar('gateway_invoice_id', { length: 255 }),
     description: text(),
     metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [index('idx_user').on(table.userId), index('idx_status').on(table.status)],
@@ -213,7 +213,7 @@ export const boostCredits = mysqlTable(
     usedCredits: int('used_credits').default(0),
     resetAt: timestamp('reset_at', { mode: 'string' }),
     expiresAt: timestamp('expires_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [index('idx_user').on(table.userId), index('unique_user_credits').on(table.userId)],
@@ -248,7 +248,7 @@ export const invoices = mysqlTable('invoices', {
   paidAt: timestamp({ mode: 'string' }),
   dueDate: timestamp({ mode: 'string' }),
   metadata: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -268,7 +268,7 @@ export const paymentMethods = mysqlTable('payment_methods', {
   isDefault: int().notNull(),
   isActive: int().default(1).notNull(),
   metadata: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -311,7 +311,7 @@ export const userSubscriptions = mysqlTable(
     downgradeScheduled: tinyint('downgrade_scheduled').default(0),
     downgradeToPlanId: varchar('downgrade_to_plan_id', { length: 100 }),
     downgradeEffectiveDate: timestamp('downgrade_effective_date', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [
@@ -339,7 +339,7 @@ export const subscriptionUsage = mysqlTable(
     storageMb: int('storage_mb').default(0),
     crmContacts: int('crm_contacts').default(0),
     emailsSent: int('emails_sent').default(0),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [index('idx_user_period').on(table.userId, table.periodStart, table.periodEnd)],

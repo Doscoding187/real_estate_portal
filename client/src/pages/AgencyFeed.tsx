@@ -29,7 +29,7 @@ export default function AgencyFeed() {
   const agencyId = params.agencyId ? parseInt(params.agencyId, 10) : null;
 
   // Fetch agency feed
-  const { feed, shorts, metadata, isLoading, isLoadingMore, error, hasMore, setupObserver } =
+  const { feed, items, metadata, isLoading, isLoadingMore, error, hasMore, setupObserver } =
     useAgencyFeed({
       agencyId: agencyId || 0,
       includeAgentContent: true,
@@ -89,7 +89,7 @@ export default function AgencyFeed() {
   }
 
   // Empty state
-  if (!metadata || shorts.length === 0) {
+  if (!metadata || items.length === 0) {
     return (
       <motion.div
         className="min-h-screen"
@@ -128,7 +128,7 @@ export default function AgencyFeed() {
         <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence mode="popLayout">
-              {shorts.map((short, index) => (
+              {items.map((short, index) => (
                 <motion.div
                   key={short.id}
                   variants={staggerItemVariants}
@@ -192,7 +192,7 @@ export default function AgencyFeed() {
         )}
 
         {/* End of Feed */}
-        {!hasMore && shorts.length > 0 && (
+        {!hasMore && items.length > 0 && (
           <motion.div
             className="text-center py-12"
             initial={{ opacity: 0 }}

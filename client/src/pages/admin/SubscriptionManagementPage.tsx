@@ -52,6 +52,14 @@ export default function SubscriptionManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [isOverrideOpen, setIsOverrideOpen] = useState(false);
+  const [overrideForm, setOverrideForm] = useState({
+    ownerType: 'agent',
+    ownerId: '',
+    planId: '',
+    status: 'active',
+    reason: '',
+  });
 
   // Queries
   const {
@@ -89,6 +97,10 @@ export default function SubscriptionManagementPage() {
     },
   );
 
+  const { data: overridePlans } = trpc.subscription.getPlanCatalog.useQuery(undefined, {
+    enabled: isOverrideOpen,
+  });
+
   // Mutations
   const verifyPaymentMutation = trpc.subscription.verifyPayment.useMutation({
     onSuccess: () => {
@@ -100,10 +112,45 @@ export default function SubscriptionManagementPage() {
     },
   });
 
+  const adminOverrideMutation = trpc.subscription.adminOverrideSubscription.useMutation({
+    onSuccess: () => {
+      toast.success('Subscription override applied');
+      setIsOverrideOpen(false);
+      setOverrideForm({
+        ownerType: 'agent',
+        ownerId: '',
+        planId: '',
+        status: 'active',
+        reason: '',
+      });
+      refetchSubs();
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to apply override');
+    },
+  });
+
   const handleVerifyPayment = (proofId: number, status: 'verified' | 'rejected') => {
     verifyPaymentMutation.mutate({
       paymentProofId: proofId,
       status,
+    });
+  };
+
+  const handleSubmitOverride = () => {
+    const ownerId = Number(overrideForm.ownerId);
+    const planId = Number(overrideForm.planId);
+    if (!ownerId || !planId || !overrideForm.reason.trim()) {
+      toast.error('Owner ID, plan, and reason are required');
+      return;
+    }
+
+    adminOverrideMutation.mutate({
+      ownerType: overrideForm.ownerType as any,
+      ownerId,
+      planId,
+      status: overrideForm.status as any,
+      reason: overrideForm.reason.trim(),
     });
   };
 
@@ -158,6 +205,132 @@ export default function SubscriptionManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Dialog open={isOverrideOpen} onOpenChange={setIsOverrideOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="bg-white">
+                Manual Override
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Manual Subscription Override</DialogTitle>
+                <DialogDescription>
+                  Apply a plan/status change manually for an agent or agency.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 py-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Owner Type</label>
+                  <Select
+                    value={overrideForm.ownerType}
+                    onValueChange={value =>
+                      setOverrideForm(prev => ({
+                        ...prev,
+                        ownerType: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="agent">Agent</SelectItem>
+                      <SelectItem value="agency">Agency</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Owner ID</label>
+                  <Input
+                    value={overrideForm.ownerId}
+                    onChange={e =>
+                      setOverrideForm(prev => ({
+                        ...prev,
+                        ownerId: e.target.value,
+                      }))
+                    }
+                    placeholder="Numeric owner ID"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Plan</label>
+                  <Select
+                    value={overrideForm.planId}
+                    onValueChange={value =>
+                      setOverrideForm(prev => ({
+                        ...prev,
+                        planId: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(overridePlans || []).map(plan => (
+                        <SelectItem key={plan.id} value={String(plan.id)}>
+                          {plan.displayName} ({plan.segment})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Status</label>
+                  <Select
+                    value={overrideForm.status}
+                    onValueChange={value =>
+                      setOverrideForm(prev => ({
+                        ...prev,
+                        status: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="trial">Trial</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Reason</label>
+                  <Input
+                    value={overrideForm.reason}
+                    onChange={e =>
+                      setOverrideForm(prev => ({
+                        ...prev,
+                        reason: e.target.value,
+                      }))
+                    }
+                    placeholder="Why this override is being applied"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsOverrideOpen(false)}
+                  disabled={adminOverrideMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmitOverride} disabled={adminOverrideMutation.isPending}>
+                  {adminOverrideMutation.isPending ? 'Applying...' : 'Apply Override'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20">
             <Plus className="w-4 h-4 mr-2" />
             Create Plan

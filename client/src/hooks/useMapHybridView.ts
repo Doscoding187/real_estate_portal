@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
+import { getFeedItems, type FeedItem as CanonicalFeedItem } from '@/lib/exploreFeed';
+import { type ExploreIntent, readStoredExploreIntent } from '@/lib/exploreIntent';
 
 export interface PropertyMapItem {
   id: number;
@@ -15,6 +17,9 @@ export interface PropertyMapItem {
   size?: number;
   location: string;
   isSponsored?: boolean;
+  linkedListingId?: number;
+  actorId?: number;
+  feedItem: CanonicalFeedItem;
 }
 
 export interface MapViewport {
@@ -27,9 +32,11 @@ interface UseMapHybridViewOptions {
   categoryId?: number;
   filters?: Record<string, any>;
   initialViewport?: MapViewport;
+  intent?: ExploreIntent | null;
 }
 
 export function useMapHybridView(options: UseMapHybridViewOptions = {}) {
+  const intent = options.intent ?? readStoredExploreIntent();
   const [viewport, setViewport] = useState<MapViewport>(
     options.initialViewport || {
       center: { lat: -26.2041, lng: 28.0473 }, // Johannesburg
@@ -49,32 +56,37 @@ export function useMapHybridView(options: UseMapHybridViewOptions = {}) {
       feedType: 'recommended',
       limit: 100,
       offset: 0,
+      intent: intent ?? undefined,
     },
     {
       enabled: !!viewport.bounds,
     },
   );
 
-  const feedItems = propertiesQuery.data?.shorts ?? [];
+  const feedItems = getFeedItems(propertiesQuery.data);
   const propertiesData = feedItems
-    ? feedItems
-        .filter((item: any) => item.property?.location)
-        .map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          price: item.property?.price || 0,
-          priceMax: item.property?.priceMax,
-          latitude: item.property?.location?.latitude || 0,
-          longitude: item.property?.location?.longitude || 0,
-          imageUrl: item.media?.[0]?.thumbnailUrl || item.media?.[0]?.url || '',
-          propertyType: item.property?.type || 'Property',
-          beds: item.property?.specs?.bedrooms,
-          baths: item.property?.specs?.bathrooms,
-          size: item.property?.specs?.size,
-          location: `${item.property?.location?.suburb || ''}, ${item.property?.location?.city || ''}`,
-          isSponsored: item.isFeatured,
-        }))
-    : [];
+    .filter(item => Number.isFinite(item.location?.latitude) && Number.isFinite(item.location?.longitude))
+    .map(item => {
+      const metadata = (item as any).metadata || {};
+      return {
+        id: item.id,
+        title: item.title,
+        price: Number(metadata.price || 0),
+        priceMax: undefined,
+        latitude: Number(item.location?.latitude || 0),
+        longitude: Number(item.location?.longitude || 0),
+        imageUrl: item.thumbnailUrl || item.mediaUrl || '',
+        propertyType: item.category || 'Property',
+        beds: Number(metadata.bedrooms || 0) || undefined,
+        baths: Number(metadata.bathrooms || 0) || undefined,
+        size: Number(metadata.size || metadata.areaSqm || 0) || undefined,
+        location: `${item.location?.suburb || ''}, ${item.location?.city || ''}`.trim(),
+        isSponsored: (item as any).isSponsored,
+        linkedListingId: item.linkedListingId,
+        actorId: item.actor.id ?? undefined,
+        feedItem: item,
+      };
+    });
 
   const isLoading = propertiesQuery.isLoading;
   const refetch = propertiesQuery.refetch;

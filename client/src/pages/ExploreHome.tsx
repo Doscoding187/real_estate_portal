@@ -1,328 +1,563 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Play,
-  Grid3x3,
-  SlidersHorizontal,
-  Home,
-  Wrench,
-  Hammer,
-  Wallet,
-  TrendingUp,
-  Building2,
-} from 'lucide-react';
-import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
-import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
-import { PersonalizedContentBlock } from '@/components/explore-discovery/PersonalizedContentBlock';
+import { motion } from 'framer-motion';
+import { ChevronRight, Grid3x3, Play, Search } from 'lucide-react';
+import { CategoryChipRow, type CategoryChip } from '@/components/explore-discovery/CategoryChipRow';
 import { TrendingVideosSection } from '@/components/explore-discovery/TrendingVideosSection';
-import { WelcomeOverlay } from '@/components/explore-discovery/WelcomeOverlay';
-import { OnboardingTooltip } from '@/components/explore-discovery/OnboardingTooltip';
-import { useExploreCommonState } from '@/hooks/useExploreCommonState';
-import { usePersonalizedContent } from '@/hooks/usePersonalizedContent';
+import { useTrendingVideos, type TrendingVideo } from '@/hooks/useTrendingVideos';
 import { useExploreIntent } from '@/hooks/useExploreIntent';
-import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
-import { useWelcomeOverlay } from '@/hooks/useWelcomeOverlay';
-import { useTopicNavigationTooltip, usePartnerContentTooltip } from '@/hooks/useOnboardingTooltip';
-import { DiscoveryItem } from '@/hooks/useDiscoveryFeed';
-import { type ExploreIntent, writeStoredExploreIntent } from '@/lib/exploreIntent';
+import { trpc } from '@/lib/trpc';
+import { type ExploreFocus, mapFocusToLegacyIntent, setExploreIntent } from '@/lib/exploreIntentSession';
+import { writeStoredExploreIntent } from '@/lib/exploreIntent';
 import { designTokens } from '@/lib/design-tokens';
-import {
-  pageVariants,
-  staggerContainerVariants,
-  staggerItemVariants,
-  buttonVariants,
-  getVariants,
-} from '@/lib/animations/exploreAnimations';
+import { getVariants, pageVariants } from '@/lib/animations/exploreAnimations';
+import { exploreExperienceTokens, exploreVisualTokens } from '@/lib/animations/exploreExperienceTokens';
 
-type ExploreFocus = 'buy' | 'sell' | 'renovate' | 'services' | 'finance' | 'invest' | 'neighbourhood';
-type LegacyExploreIntent = ExploreIntent;
+type CardVariant = 'hero' | 'standard' | 'wide';
 
-const EXPLORE_INTENT_SESSION_KEY = 'exploreIntent';
-
-const SECTION_ID_ALIASES: Record<string, string> = {
-  'for-you': 'for_you',
-  for_you: 'for_you',
-  'home-services': 'home_services',
-  home_services: 'home_services',
-  'featured-tours': 'featured_tours',
-  featured_tours: 'featured_tours',
-  'new-listings': 'new_listings',
-  new_listings: 'new_listings',
-  'top-contractors-builders': 'top_contractors_builders',
-  top_contractors_builders: 'top_contractors_builders',
-  'finance-education': 'finance_education',
-  finance_education: 'finance_education',
-  'explore-neighbourhoods': 'neighbourhoods',
-  neighbourhoods: 'neighbourhoods',
-  'market-insights': 'market_insights',
-  market_insights: 'market_insights',
-};
-
-const SECTION_ORDER = [
-  'for_you',
-  'home_services',
-  'featured_tours',
-  'new_listings',
-  'top_contractors_builders',
-  'finance_education',
-  'neighbourhoods',
-  'market_insights',
-] as const;
-
-const SECTION_ORDER_INDEX = SECTION_ORDER.reduce<Record<string, number>>((acc, id, index) => {
-  acc[id] = index;
-  return acc;
-}, {});
-
-function normalizeSectionId(section: { id: string; canonicalId?: string }) {
-  const rawId = (section.canonicalId || section.id || '').trim().toLowerCase();
-  return SECTION_ID_ALIASES[rawId] ?? rawId;
-}
-
-function mapFocusToLegacyIntent(focus: ExploreFocus): LegacyExploreIntent {
-  switch (focus) {
-    case 'buy':
-      return 'buy';
-    case 'sell':
-      return 'sell';
-    case 'invest':
-      return 'invest';
-    case 'renovate':
-    case 'services':
-      return 'improve';
-    case 'finance':
-    case 'neighbourhood':
-      return 'learn';
-    default:
-      return 'buy';
-  }
-}
-
-function mapSectionToFocus(sectionId: string): ExploreFocus {
-  switch (sectionId) {
-    case 'home_services':
-      return 'services';
-    case 'featured_tours':
-    case 'new_listings':
-    case 'for_you':
-      return 'buy';
-    case 'top_contractors_builders':
-      return 'renovate';
-    case 'finance_education':
-      return 'finance';
-    case 'neighbourhoods':
-      return 'neighbourhood';
-    case 'market_insights':
-      return 'invest';
-    default:
-      return 'buy';
-  }
-}
-
-interface FocusTile {
+interface RailSection {
   id: string;
   title: string;
   subtitle: string;
+  ctaLabel: string;
   focus: ExploreFocus;
   subFocus: string;
-  icon: typeof Home;
+  variant: CardVariant;
+  videos: TrendingVideo[];
+  isLoading: boolean;
+  debugMeta?: {
+    mode: 'global' | 'recommended';
+    requestedIntentFocus: string | null;
+    requestedIntentSubFocus: string | null;
+    resolvedLegacyIntent: string | null;
+    appliedIntentMultiplier: number | null;
+    requestedCreatorActorId: number | null;
+  };
+  sectionPurity?: {
+    matchPct: number;
+    returnedCount: number;
+    requestedCount: number;
+    shortfallReason?: string;
+  };
 }
 
-const FOCUS_TILES: FocusTile[] = [
+interface CreatorCard {
+  creatorActorId: number;
+  creatorId: number | null;
+  handle: string;
+  name: string;
+  topFocusTags: string[];
+  focus: ExploreFocus;
+  subFocus: string;
+  coverUrl: string;
+}
+
+const INTENT_CHIPS: CategoryChip[] = [
+  { id: 'walkthroughs', label: 'Walkthroughs', focus: 'buy', subFocus: 'walkthroughs' },
   {
-    id: 'buying',
-    title: 'Buying a Home',
-    subtitle: 'Discover listings matched to your budget and lifestyle',
-    focus: 'buy',
-    subFocus: 'buying',
-    icon: Home,
-  },
-  {
-    id: 'selling',
-    title: 'Selling a Home',
-    subtitle: 'Market-ready ideas, pricing signals, and seller tips',
-    focus: 'sell',
-    subFocus: 'selling',
-    icon: TrendingUp,
-  },
-  {
-    id: 'renovating',
-    title: 'Renovating',
-    subtitle: 'Design upgrades and trusted build partners',
-    focus: 'renovate',
-    subFocus: 'renovating',
-    icon: Hammer,
-  },
-  {
-    id: 'services',
-    title: 'Home Services',
-    subtitle: 'Browse specialists for every room and repair',
-    focus: 'services',
-    subFocus: 'services',
-    icon: Wrench,
-  },
-  {
-    id: 'finance',
-    title: 'Finance & Bonds',
-    subtitle: 'Learn deposits, transfer costs, and affordability',
+    id: 'investment_finance',
+    label: 'Investment & Finance',
     focus: 'finance',
-    subFocus: 'finance',
-    icon: Wallet,
+    subFocus: 'investment_finance',
   },
-  {
-    id: 'investing',
-    title: 'Investment',
-    subtitle: 'Track areas, yields, and long-term opportunities',
-    focus: 'invest',
-    subFocus: 'investment',
-    icon: Building2,
-  },
+  { id: 'renovations', label: 'Renovations', focus: 'renovate', subFocus: 'renovation_home_improvement' },
+  { id: 'interior_design', label: 'Interior Design', focus: 'services', subFocus: 'interior_design' },
+  { id: 'architecture', label: 'Architecture', focus: 'services', subFocus: 'architecture' },
+  { id: 'construction', label: 'Construction', focus: 'renovate', subFocus: 'construction' },
+  { id: 'neighbourhoods', label: 'Neighborhoods', focus: 'neighbourhood', subFocus: 'neighborhoods' },
+  { id: 'developments', label: 'Developments', focus: 'invest', subFocus: 'developments' },
 ];
 
+function categoryOf(video: TrendingVideo): string {
+  return String(video.feedItem.category || '').toLowerCase();
+}
+
+function mapVideoToFocus(video: TrendingVideo): ExploreFocus {
+  const category = categoryOf(video);
+  if (category === 'finance') return 'finance';
+  if (category === 'investment') return 'invest';
+  if (category === 'renovation') return 'renovate';
+  if (category === 'services') return 'services';
+  return 'buy';
+}
+
+function mapTagToFocus(tag: string): ExploreFocus {
+  const normalized = String(tag || '').toLowerCase();
+  if (normalized === 'sell') return 'sell';
+  if (normalized === 'renovate' || normalized === 'renovation') return 'renovate';
+  if (normalized === 'services') return 'services';
+  if (normalized === 'finance') return 'finance';
+  if (normalized === 'invest' || normalized === 'investment') return 'invest';
+  if (normalized === 'neighbourhood' || normalized === 'neighborhoods') return 'neighbourhood';
+  return 'buy';
+}
+
+function variantWidthClass(variant: CardVariant): string {
+  switch (variant) {
+    case 'hero':
+      return 'w-[15rem] md:w-[16rem]';
+    case 'standard':
+      return 'w-[13.5rem] md:w-[14.5rem]';
+    case 'wide':
+      return 'w-[20rem] md:w-[28rem]';
+    default:
+      return 'w-[14rem]';
+  }
+}
+
+function variantAspectClass(variant: CardVariant): string {
+  switch (variant) {
+    case 'hero':
+      return 'aspect-[9/16]';
+    case 'standard':
+      return 'aspect-[3/4]';
+    case 'wide':
+      return 'aspect-[16/9]';
+    default:
+      return 'aspect-[3/4]';
+  }
+}
+
+function SectionHeader({
+  title,
+  subtitle,
+  ctaLabel,
+  onCta,
+  onCtaPrefetch,
+}: {
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  onCta: () => void;
+  onCtaPrefetch?: () => void;
+}) {
+  return (
+    <div className="mb-5 flex items-end justify-between gap-4">
+      <div>
+        <h2
+          className={exploreVisualTokens.sectionTitleClass}
+          style={{ color: designTokens.colors.text.primary }}
+        >
+          {title}
+        </h2>
+        <p className={exploreVisualTokens.sectionSubtitleClass} style={{ color: designTokens.colors.text.secondary }}>
+          {subtitle}
+        </p>
+      </div>
+      <motion.button
+        type="button"
+        onClick={onCta}
+        onMouseEnter={onCtaPrefetch}
+        onFocus={onCtaPrefetch}
+        className="inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium"
+        style={{
+          color: designTokens.colors.accent.primary,
+          backgroundColor: `${designTokens.colors.accent.primary}10`,
+        }}
+        whileHover={exploreExperienceTokens.interactions.ctaHover}
+        whileTap={exploreExperienceTokens.interactions.tap}
+        transition={exploreExperienceTokens.transitions.hover}
+      >
+        <span>{ctaLabel}</span>
+        <ChevronRight className="h-4 w-4" />
+      </motion.button>
+    </div>
+  );
+}
+
+function MediaRailCard({
+  video,
+  variant,
+  onClick,
+  onPrefetch,
+}: {
+  video: TrendingVideo;
+  variant: CardVariant;
+  onClick: () => void;
+  onPrefetch?: () => void;
+}) {
+  const [isMediaReady, setIsMediaReady] = useState(false);
+  const mediaPoster = video.thumbnailUrl || video.videoUrl || '';
+  const hasVideo = Boolean(video.videoUrl);
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={onPrefetch}
+      onFocus={onPrefetch}
+      className={`${variantWidthClass(variant)} shrink-0 overflow-hidden rounded-3xl border text-left`}
+      style={{
+        borderColor: designTokens.colors.bg.tertiary,
+        backgroundColor: designTokens.colors.bg.primary,
+        boxShadow: designTokens.shadows.md,
+      }}
+      whileHover={exploreExperienceTokens.interactions.cardHover}
+      whileTap={exploreExperienceTokens.interactions.tap}
+      transition={exploreExperienceTokens.transitions.hover}
+    >
+      <div className={`relative ${variantAspectClass(variant)} overflow-hidden bg-black`}>
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(110deg, rgba(148,163,184,0.12) 8%, rgba(148,163,184,0.22) 18%, rgba(148,163,184,0.12) 33%)',
+            backgroundSize: '220% 100%',
+            opacity: isMediaReady ? 0 : 1,
+          }}
+          animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+          transition={exploreExperienceTokens.transitions.shimmerLoop}
+          aria-hidden="true"
+        />
+        {hasVideo ? (
+          <video
+            src={video.videoUrl}
+            poster={mediaPoster}
+            muted
+            loop
+            autoPlay
+            playsInline
+            preload="metadata"
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity ${
+              isMediaReady ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{
+              transitionDuration: `${exploreExperienceTokens.durationsMs.mediaFade}ms`,
+              transitionTimingFunction: exploreExperienceTokens.easingCss.interactive,
+            }}
+            onLoadedData={() => setIsMediaReady(true)}
+            onCanPlay={() => setIsMediaReady(true)}
+            onError={() => setIsMediaReady(true)}
+          />
+        ) : (
+          <img
+            src={mediaPoster}
+            alt={video.title}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity ${
+              isMediaReady ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{
+              transitionDuration: `${exploreExperienceTokens.durationsMs.mediaFade}ms`,
+              transitionTimingFunction: exploreExperienceTokens.easingCss.interactive,
+            }}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setIsMediaReady(true)}
+            onError={() => setIsMediaReady(true)}
+          />
+        )}
+        <div className={exploreVisualTokens.mediaOverlayClass} />
+        {video.feedItem.category && (
+          <span className={exploreVisualTokens.mediaTagPillClass}>
+            {video.feedItem.category}
+          </span>
+        )}
+        <div className="absolute inset-x-3 bottom-3">
+          <p className="line-clamp-2 text-sm font-semibold text-white">{video.title}</p>
+          <p className="mt-1 text-xs text-white/85">{video.creatorName}</p>
+        </div>
+      </div>
+    </motion.button>
+  );
+}
+
+function RailSkeleton({ variant }: { variant: CardVariant }) {
+  return (
+    <div className="overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex min-w-max gap-5">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className={`${variantWidthClass(variant)} shrink-0 overflow-hidden rounded-3xl border`}
+            style={{
+              borderColor: designTokens.colors.bg.tertiary,
+              backgroundColor: designTokens.colors.bg.primary,
+              boxShadow: designTokens.shadows.md,
+            }}
+          >
+            <div
+              className={`relative ${variantAspectClass(variant)} overflow-hidden`}
+              style={{ backgroundColor: designTokens.colors.bg.tertiary }}
+            >
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(110deg, rgba(148,163,184,0.1) 8%, rgba(148,163,184,0.22) 18%, rgba(148,163,184,0.1) 33%)',
+                  backgroundSize: '220% 100%',
+                }}
+                animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                transition={exploreExperienceTokens.transitions.shimmerLoop}
+                aria-hidden="true"
+              />
+              <div className="absolute left-3 top-3 h-5 w-20 rounded-full bg-white/20" />
+              <div className="absolute inset-x-3 bottom-4 space-y-2">
+                <div className="h-3 w-3/4 rounded bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 rounded-full bg-white/20" />
+                  <div className="h-2.5 w-24 rounded bg-white/20" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatRailDebugLine(section: RailSection): string {
+  const focusBase = section.debugMeta?.requestedIntentFocus || section.subFocus || 'none';
+  const focusDetail = section.debugMeta?.requestedIntentSubFocus
+    ? `/${section.debugMeta.requestedIntentSubFocus}`
+    : '';
+  const legacy = section.debugMeta?.resolvedLegacyIntent || 'none';
+  const multiplier =
+    typeof section.debugMeta?.appliedIntentMultiplier === 'number'
+      ? section.debugMeta.appliedIntentMultiplier.toFixed(2)
+      : 'n/a';
+  const purity = section.sectionPurity
+    ? `${section.sectionPurity.matchPct.toFixed(0)}% (${section.sectionPurity.returnedCount}/${section.sectionPurity.requestedCount})`
+    : 'n/a';
+  const creatorSeed = section.debugMeta?.requestedCreatorActorId
+    ? ` | seed=${section.debugMeta.requestedCreatorActorId}`
+    : '';
+
+  return `focus=${focusBase}${focusDetail} | legacy=${legacy} | mult=${multiplier} | purity=${purity}${creatorSeed}`;
+}
+
 export default function ExploreHome() {
-  const { intent, setIntent } = useExploreIntent();
-  const {
-    selectedCategoryId,
-    setSelectedCategoryId,
-    showFilters,
-    setShowFilters,
-  } = useExploreCommonState({ initialViewMode: 'home' });
+  const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
+  const { setIntent } = useExploreIntent();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedChipId, setSelectedChipId] = useState<string | undefined>();
+  const prefetchedFeedKeysRef = useRef<Set<string>>(new Set());
 
-  // Onboarding hooks
-  const welcomeOverlay = useWelcomeOverlay();
-  const topicTooltip = useTopicNavigationTooltip();
-  const partnerTooltip = usePartnerContentTooltip();
-
-  // Refs for tooltip positioning
-  const topicsRef = useRef<HTMLDivElement>(null);
-  const partnerContentRef = useRef<HTMLDivElement>(null);
-
-  // Get filter count from Zustand store
-  const getFilterCount = useExploreFiltersStore(state => state.getFilterCount);
-
-  // User location state
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
-
-  // Get personalized content sections
-  const { sections, isLoading: sectionsLoading } = usePersonalizedContent({
-    categoryId: selectedCategoryId ?? undefined,
-    location: userLocation,
-    intent,
+  const walkthroughRailQuery = useTrendingVideos({
+    limit: 10,
+    mode: 'recommended',
+    intentFocus: 'walkthroughs',
+    disableMock: true,
+  });
+  const financeRailQuery = useTrendingVideos({
+    limit: 10,
+    mode: 'recommended',
+    intentFocus: 'investment_finance',
+    disableMock: true,
+  });
+  const renovationRailQuery = useTrendingVideos({
+    limit: 10,
+    mode: 'recommended',
+    intentFocus: 'renovation_home_improvement',
+    disableMock: true,
+  });
+  const neighbourhoodRailQuery = useTrendingVideos({
+    limit: 8,
+    mode: 'recommended',
+    intentFocus: 'neighborhoods',
+    disableMock: true,
+  });
+  const creatorSpotlightQuery = trpc.explore.getCreatorSpotlight.useQuery({
+    limit: 6,
+    windowDays: 14,
   });
 
-  // Get user location for "Popular Near You"
-  useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        error => {
-          console.log('Location access denied:', error);
-        },
-      );
-    }
-  }, []);
+  const prefetchFeedSeed = (
+    focus: ExploreFocus,
+    subFocus?: string,
+    options?: { creatorActorId?: number },
+  ) => {
+    const creatorActorId =
+      options?.creatorActorId && options.creatorActorId > 0 ? options.creatorActorId : undefined;
+    const normalizedSubFocus = String(subFocus || '').trim() || undefined;
+    const dedupeKey = `${focus}|${normalizedSubFocus || ''}|${creatorActorId || ''}`;
+    if (prefetchedFeedKeysRef.current.has(dedupeKey)) return;
+    prefetchedFeedKeysRef.current.add(dedupeKey);
 
-  // Navigation
-  const [location, setLocation] = useLocation();
+    const input = {
+      feedType: 'recommended' as const,
+      limit: 20,
+      offset: 0,
+      intent: mapFocusToLegacyIntent(focus),
+      intentFocus: focus,
+      ...(normalizedSubFocus ? { intentSubFocus: normalizedSubFocus } : {}),
+      ...(creatorActorId ? { creatorActorId } : {}),
+    };
 
-  const navigateToFeed = (focus: ExploreFocus, subFocus?: string) => {
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(
-        EXPLORE_INTENT_SESSION_KEY,
-        JSON.stringify({
-          focus,
-          subFocus,
-          ts: Date.now(),
-        }),
-      );
-    }
+    void utils.explore.getFeed.prefetch(input).catch(() => {
+      prefetchedFeedKeysRef.current.delete(dedupeKey);
+    });
+  };
+
+  const navigateToFeed = (
+    focus: ExploreFocus,
+    subFocus?: string,
+    query?: string,
+    options?: { creatorActorId?: number },
+  ) => {
+    prefetchFeedSeed(focus, subFocus, options);
+    setExploreIntent({ focus, subFocus });
     const legacyIntent = mapFocusToLegacyIntent(focus);
     writeStoredExploreIntent(legacyIntent);
     void setIntent(legacyIntent);
-    setLocation('/explore/feed');
+
+    const params = new URLSearchParams();
+    params.set('focus', focus);
+    if (subFocus) params.set('subFocus', subFocus);
+    const q = String(query ?? '').trim();
+    if (q.length) params.set('q', q);
+    if (options?.creatorActorId && options.creatorActorId > 0) {
+      params.set('creatorActorId', String(options.creatorActorId));
+    }
+
+    setLocation(`/explore/feed?${params.toString()}`);
   };
 
-  const handleItemClick = (item: DiscoveryItem) => {
-    // Track partner content encounters for tooltip
-    if (item.partnerId) {
-      partnerTooltip.onPartnerContentEncounter();
-    }
+  const selectedChip = useMemo(
+    () => INTENT_CHIPS.find(chip => chip.id === selectedChipId),
+    [selectedChipId],
+  );
 
-    const data = item.data as Record<string, unknown> | undefined;
-    const listingId =
-      Number(data?.linkedListingId || data?.listingId || data?.propertyId || 0) || undefined;
+  const rails = useMemo<RailSection[]>(
+    () => [
+      {
+        id: 'property_walkthroughs',
+        title: 'Property Walkthroughs',
+        subtitle: 'Video-first tours and on-site reveals. No listing grids.',
+        ctaLabel: 'Open feed',
+        focus: 'buy',
+        subFocus: 'walkthroughs',
+        variant: 'standard',
+        videos: walkthroughRailQuery.videos,
+        isLoading: walkthroughRailQuery.isLoading,
+        debugMeta: walkthroughRailQuery.debugMeta,
+        sectionPurity: walkthroughRailQuery.sectionPurity
+          ? {
+              matchPct: walkthroughRailQuery.sectionPurity.matchPct,
+              returnedCount: walkthroughRailQuery.sectionPurity.returnedCount,
+              requestedCount: walkthroughRailQuery.sectionPurity.requestedCount,
+              shortfallReason: walkthroughRailQuery.sectionPurity.shortfallReason,
+            }
+          : undefined,
+      },
+      {
+        id: 'investment_finance',
+        title: 'Investment & Finance',
+        subtitle: 'Bond explainers, yield context, and market perspective clips.',
+        ctaLabel: 'View insights',
+        focus: 'finance',
+        subFocus: 'investment_finance',
+        variant: 'standard',
+        videos: financeRailQuery.videos,
+        isLoading: financeRailQuery.isLoading,
+        debugMeta: financeRailQuery.debugMeta,
+        sectionPurity: financeRailQuery.sectionPurity
+          ? {
+              matchPct: financeRailQuery.sectionPurity.matchPct,
+              returnedCount: financeRailQuery.sectionPurity.returnedCount,
+              requestedCount: financeRailQuery.sectionPurity.requestedCount,
+              shortfallReason: financeRailQuery.sectionPurity.shortfallReason,
+            }
+          : undefined,
+      },
+      {
+        id: 'renovation_home_improvement',
+        title: 'Renovation & Home Improvement',
+        subtitle: 'Before/after projects, upgrades, and practical build progress updates.',
+        ctaLabel: 'See projects',
+        focus: 'renovate',
+        subFocus: 'renovation_home_improvement',
+        variant: 'standard',
+        videos: renovationRailQuery.videos,
+        isLoading: renovationRailQuery.isLoading,
+        debugMeta: renovationRailQuery.debugMeta,
+        sectionPurity: renovationRailQuery.sectionPurity
+          ? {
+              matchPct: renovationRailQuery.sectionPurity.matchPct,
+              returnedCount: renovationRailQuery.sectionPurity.returnedCount,
+              requestedCount: renovationRailQuery.sectionPurity.requestedCount,
+              shortfallReason: renovationRailQuery.sectionPurity.shortfallReason,
+            }
+          : undefined,
+      },
+      {
+        id: 'neighbourhood_stories',
+        title: 'Neighborhood Stories',
+        subtitle: 'Location storytelling through creator-led short-form videos.',
+        ctaLabel: 'Explore videos',
+        focus: 'neighbourhood',
+        subFocus: 'neighborhoods',
+        variant: 'wide',
+        videos: neighbourhoodRailQuery.videos,
+        isLoading: neighbourhoodRailQuery.isLoading,
+        debugMeta: neighbourhoodRailQuery.debugMeta,
+        sectionPurity: neighbourhoodRailQuery.sectionPurity
+          ? {
+              matchPct: neighbourhoodRailQuery.sectionPurity.matchPct,
+              returnedCount: neighbourhoodRailQuery.sectionPurity.returnedCount,
+              requestedCount: neighbourhoodRailQuery.sectionPurity.requestedCount,
+              shortfallReason: neighbourhoodRailQuery.sectionPurity.shortfallReason,
+            }
+          : undefined,
+      },
+    ],
+    [
+      financeRailQuery.isLoading,
+      financeRailQuery.debugMeta,
+      financeRailQuery.sectionPurity,
+      financeRailQuery.videos,
+      neighbourhoodRailQuery.isLoading,
+      neighbourhoodRailQuery.debugMeta,
+      neighbourhoodRailQuery.sectionPurity,
+      neighbourhoodRailQuery.videos,
+      renovationRailQuery.isLoading,
+      renovationRailQuery.debugMeta,
+      renovationRailQuery.sectionPurity,
+      renovationRailQuery.videos,
+      walkthroughRailQuery.isLoading,
+      walkthroughRailQuery.debugMeta,
+      walkthroughRailQuery.sectionPurity,
+      walkthroughRailQuery.videos,
+    ],
+  );
 
-    if (item.type === 'property') {
-      if (listingId) {
-        setLocation(`/property/${listingId}`);
-        return;
-      }
-      navigateToFeed('buy');
-      return;
-    }
+  const creatorSpotlight = useMemo<CreatorCard[]>(() => {
+    const payload = creatorSpotlightQuery.data;
+    const rawItems = Array.isArray((payload as any)?.items)
+      ? ((payload as any).items as Array<Record<string, unknown>>)
+      : [];
 
-    if (item.type === 'video') {
-      navigateToFeed('buy');
-      return;
-    }
+    return rawItems.map(item => {
+      const topFocusTags = Array.isArray(item.topFocusTags)
+        ? item.topFocusTags
+            .map(tag => String(tag || '').trim().toLowerCase())
+            .filter(Boolean)
+            .slice(0, 3)
+        : [];
+      const primaryTag = topFocusTags[0] || 'property';
+      const focus = mapTagToFocus(String(item.seedFocus || primaryTag));
 
-    if (item.type === 'neighbourhood') {
-      const name =
-        typeof item.data?.name === 'string' ? String(item.data.name).toLowerCase() : undefined;
-      navigateToFeed('neighbourhood', name);
-      return;
-    }
+      return {
+        creatorActorId: Number(item.creatorActorId || 0),
+        creatorId: Number(item.creatorId || 0) || null,
+        handle: String(item.handle || ''),
+        name: String(item.displayName || 'Creator'),
+        topFocusTags,
+        focus,
+        subFocus: String(item.seedSubFocus || primaryTag),
+        coverUrl: String(item.avatarUrl || ''),
+      };
+    });
+  }, [creatorSpotlightQuery.data]);
 
-    if (item.type === 'insight') {
-      navigateToFeed('finance');
-      return;
-    }
-
-    navigateToFeed('buy');
+  const onSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    const focus = selectedChip?.focus ?? 'buy';
+    const subFocus = selectedChip?.subFocus ?? (query ? query.toLowerCase().replace(/\s+/g, '-') : undefined);
+    navigateToFeed(focus, subFocus, query);
   };
-
-  const handleSeeAll = (sectionId: string) => {
-    navigateToFeed(mapSectionToFocus(sectionId));
-  };
-
-  // Handle "See All" for trending videos - switch to videos view
-  const handleTrendingVideosSeeAll = () => {
-    topicTooltip.incrementScrollCount();
-    navigateToFeed('buy');
-  };
-
-  const handleWelcomeTopicSelect = (topicSlug: string) => {
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(
-        EXPLORE_INTENT_SESSION_KEY,
-        JSON.stringify({ focus: 'buy', subFocus: topicSlug, ts: Date.now() }),
-      );
-    }
-    writeStoredExploreIntent('buy');
-    welcomeOverlay.onTopicSelect(topicSlug);
-  };
-
-  const orderedSections = useMemo(() => {
-    return sections
-      .map((section, index) => ({
-        section,
-        index,
-        normalizedId: normalizeSectionId(section),
-      }))
-      .sort((a, b) => {
-        const ai = SECTION_ORDER_INDEX[a.normalizedId] ?? Number.MAX_SAFE_INTEGER;
-        const bi = SECTION_ORDER_INDEX[b.normalizedId] ?? Number.MAX_SAFE_INTEGER;
-        if (ai !== bi) return ai - bi;
-        return a.index - b.index;
-      })
-      .map(item => item.section);
-  }, [sections]);
 
   return (
     <motion.div
@@ -333,377 +568,266 @@ export default function ExploreHome() {
       exit="exit"
       variants={getVariants(pageVariants)}
     >
-      {/* Header - Modern sticky design */}
       <motion.header
-        className="sticky top-0 z-40 backdrop-blur-md"
+        className="sticky top-0 z-40 border-b backdrop-blur-md"
         style={{
           backgroundColor: designTokens.colors.glass.bg,
-          borderBottom: `1px solid ${designTokens.colors.bg.tertiary}`,
-          boxShadow: designTokens.shadows.sm,
+          borderColor: designTokens.colors.bg.tertiary,
         }}
-        initial={{ y: -20, opacity: 0 }}
+        initial={{ y: -16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        role="banner"
-        aria-label="Explore navigation"
+        transition={exploreExperienceTokens.transitions.route}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Title and View Mode Toggle */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <motion.h1
-                className="text-3xl font-bold"
-                style={{
-                  color: designTokens.colors.text.primary,
-                  fontWeight: designTokens.typography.fontWeight.bold,
-                }}
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-              >
-                Explore
-              </motion.h1>
-            </div>
-
-            {/* View mode toggle - Modern pill design */}
-            <motion.div
-              className="flex items-center gap-1 p-1 rounded-full"
-              style={{
-                backgroundColor: designTokens.colors.bg.tertiary,
-              }}
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
-              role="tablist"
-              aria-label="Explore view selection"
-            >
-              <motion.button
-                onClick={() => setLocation('/explore/home')}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
-                style={{
-                  backgroundColor:
-                    location === '/explore/home' ? designTokens.colors.bg.primary : 'transparent',
-                  color:
-                    location === '/explore/home'
-                      ? designTokens.colors.text.primary
-                      : designTokens.colors.text.secondary,
-                  boxShadow: location === '/explore/home' ? designTokens.shadows.sm : 'none',
-                  fontWeight: designTokens.typography.fontWeight.medium,
-                }}
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                role="tab"
-                aria-selected={location === '/explore/home'}
-                aria-label="Home"
-              >
-                <Grid3x3 className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Home</span>
-              </motion.button>
-              <motion.button
-                onClick={() => setLocation('/explore/feed')}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
-                style={{
-                  backgroundColor:
-                    location === '/explore/feed' ? designTokens.colors.bg.primary : 'transparent',
-                  color:
-                    location === '/explore/feed'
-                      ? designTokens.colors.text.primary
-                      : designTokens.colors.text.secondary,
-                  boxShadow: location === '/explore/feed' ? designTokens.shadows.sm : 'none',
-                  fontWeight: designTokens.typography.fontWeight.medium,
-                }}
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                role="tab"
-                aria-selected={location === '/explore/feed'}
-                aria-label="Feed"
-              >
-                <Play className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Feed</span>
-              </motion.button>
-            </motion.div>
-          </div>
-
-          {/* Category filter */}
-          <motion.div
-            ref={topicsRef}
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.3 }}
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold" style={{ color: designTokens.colors.text.primary }}>
+            Explore
+          </h1>
+          <div
+            className="flex items-center gap-1 rounded-full p-1"
+            style={{ backgroundColor: designTokens.colors.bg.tertiary }}
+            role="tablist"
+            aria-label="Explore view selection"
           >
-            <LifestyleCategorySelector
-              selectedCategoryId={selectedCategoryId ?? undefined}
-              onCategoryChange={id => {
-                setSelectedCategoryId(id ?? null);
-                // Increment scroll count when category changes
-                topicTooltip.incrementScrollCount();
+            <motion.button
+              type="button"
+              onClick={() => setLocation('/explore/home')}
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
+              style={{
+                backgroundColor: designTokens.colors.bg.primary,
+                color: designTokens.colors.text.primary,
+                boxShadow: designTokens.shadows.sm,
               }}
-              variant="light"
-              className="pb-2"
-            />
-          </motion.div>
+              whileHover={exploreExperienceTokens.interactions.ctaHover}
+              whileTap={exploreExperienceTokens.interactions.tap}
+              transition={exploreExperienceTokens.transitions.hover}
+              role="tab"
+              aria-selected={true}
+            >
+              <Grid3x3 className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Home</span>
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => setLocation('/explore/feed')}
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
+              style={{
+                backgroundColor: 'transparent',
+                color: designTokens.colors.text.secondary,
+              }}
+              whileHover={exploreExperienceTokens.interactions.ctaHover}
+              whileTap={exploreExperienceTokens.interactions.tap}
+              transition={exploreExperienceTokens.transitions.hover}
+              role="tab"
+              aria-selected={false}
+            >
+              <Play className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Feed</span>
+            </motion.button>
+          </div>
         </div>
       </motion.header>
 
-      {/* Content - Smooth transitions between view modes */}
-      {/* Content */}
-      <main
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-        id="explore-content"
-        role="main"
-        aria-label="Explore content"
-      >
-        <motion.div
-          key="home-view"
-          className="py-6 space-y-8"
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          variants={getVariants(pageVariants)}
-        >
-          {/* Trending Videos Section - First content after header */}
-          <TrendingVideosSection
-            categoryId={selectedCategoryId ?? undefined}
-            intent={intent}
-            onSeeAll={handleTrendingVideosSeeAll}
-          />
-
-          {/* Section-based home focus selection (not tabs/chips) */}
-          <motion.section
-            className="px-4 sm:px-0"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            role="region"
-            aria-label="Choose your focus"
-          >
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold" style={{ color: designTokens.colors.text.primary }}>
-                Choose Your Focus
-              </h2>
-              <p className="text-sm mt-1" style={{ color: designTokens.colors.text.secondary }}>
-                Select what matters now and we will tune your feed instantly.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {FOCUS_TILES.map(tile => {
-                const Icon = tile.icon;
-                return (
-                  <motion.button
-                    key={tile.id}
-                    type="button"
-                    onClick={() => navigateToFeed(tile.focus, tile.subFocus)}
-                    className="text-left rounded-2xl p-4 border transition-all"
-                    style={{
-                      borderColor: designTokens.colors.bg.tertiary,
-                      backgroundColor: designTokens.colors.bg.primary,
-                      boxShadow: designTokens.shadows.sm,
-                    }}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.99 }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center"
-                        style={{
-                          backgroundColor: `${designTokens.colors.accent.primary}15`,
-                          color: designTokens.colors.accent.primary,
-                        }}
-                      >
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold" style={{ color: designTokens.colors.text.primary }}>
-                          {tile.title}
-                        </h3>
-                        <p className="text-sm mt-1" style={{ color: designTokens.colors.text.secondary }}>
-                          {tile.subtitle}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.section>
-
-          {/* Personalized Content Sections with stagger animation */}
-          {sectionsLoading ? (
-            <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
-              <motion.div variants={staggerItemVariants}>
-                <PersonalizedContentBlock
-                  title="Loading..."
-                  items={[]}
-                  onItemClick={handleItemClick}
-                  isLoading={true}
-                />
-              </motion.div>
-              <motion.div variants={staggerItemVariants}>
-                <PersonalizedContentBlock
-                  title="Loading..."
-                  items={[]}
-                  onItemClick={handleItemClick}
-                  isLoading={true}
-                />
-              </motion.div>
-            </motion.div>
-          ) : (
-            <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
-              {orderedSections.map(section => (
-                <motion.div
-                  key={section.id}
-                  ref={normalizeSectionId(section) === 'top_contractors_builders' ? partnerContentRef : undefined}
-                  variants={staggerItemVariants}
-                  style={{ marginBottom: designTokens.spacing.xl }}
-                >
-                  <PersonalizedContentBlock
-                    title={section.title}
-                    subtitle={section.subtitle}
-                    items={section.items}
-                    videoAspect={section.videoAspect}
-                    onItemClick={handleItemClick}
-                    onSeeAll={() => handleSeeAll(normalizeSectionId(section))}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-
-          {/* Empty state - Modern design */}
-          {!sectionsLoading && orderedSections.length === 0 && (
-            <motion.div
-              className="text-center py-16 px-4"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Grid3x3
-                  className="w-20 h-20 mx-auto mb-6"
-                  style={{ color: designTokens.colors.text.tertiary }}
-                />
-              </motion.div>
-              <motion.h3
-                className="text-2xl font-semibold mb-3"
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="space-y-20 lg:space-y-24">
+          <section className="space-y-5" aria-label="Explore controls">
+            <form onSubmit={onSearchSubmit} className="relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
+                style={{ color: designTokens.colors.text.tertiary }}
+                aria-hidden="true"
+              />
+              <input
+                value={searchQuery}
+                onChange={event => setSearchQuery(event.target.value)}
+                placeholder="Search property videos, creators, topics..."
+                className="h-12 w-full rounded-full border bg-transparent pl-12 pr-20 text-sm outline-none"
                 style={{
+                  borderColor: designTokens.colors.bg.tertiary,
+                  backgroundColor: designTokens.colors.bg.primary,
                   color: designTokens.colors.text.primary,
-                  fontWeight: designTokens.typography.fontWeight.semibold,
                 }}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                Start Exploring
-              </motion.h3>
-              <motion.p
-                className="text-lg mb-8 max-w-md mx-auto"
-                style={{ color: designTokens.colors.text.secondary }}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                Discover properties tailored to your preferences
-              </motion.p>
+                aria-label="Search explore videos"
+              />
               <motion.button
-                onClick={() => navigateToFeed('buy')}
-                className="px-8 py-3 rounded-xl text-white font-medium"
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-xs font-semibold"
                 style={{
-                  background: designTokens.colors.accent.gradient,
-                  boxShadow: designTokens.shadows.accent,
-                  fontWeight: designTokens.typography.fontWeight.medium,
+                  backgroundColor: `${designTokens.colors.accent.primary}14`,
+                  color: designTokens.colors.accent.primary,
                 }}
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
+                whileTap={exploreExperienceTokens.interactions.tap}
+                transition={exploreExperienceTokens.transitions.tap}
               >
                 Open Feed
               </motion.button>
-            </motion.div>
-          )}
-        </motion.div>
-      </main>
+            </form>
 
-      {/* Filter button (floating) - Modern design with accent gradient */}
-      <motion.button
-        className="fixed bottom-6 right-6 w-16 h-16 text-white rounded-full flex items-center justify-center z-30"
-        style={{
-          background: designTokens.colors.accent.gradient,
-          boxShadow: designTokens.shadows.accentHover,
-        }}
-        onClick={() => setShowFilters(true)}
-        aria-label="Open filters"
-        variants={buttonVariants}
-        whileHover="hover"
-        whileTap="tap"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 20 }}
-      >
-        <SlidersHorizontal className="w-6 h-6" />
-        <AnimatePresence>
-          {getFilterCount() > 0 && (
-            <motion.span
-              className="absolute -top-1 -right-1 w-7 h-7 text-white text-xs font-bold rounded-full flex items-center justify-center"
-              style={{
-                backgroundColor: designTokens.colors.status.error,
-                boxShadow: designTokens.shadows.md,
-                fontWeight: designTokens.typography.fontWeight.bold,
+            <CategoryChipRow
+              chips={INTENT_CHIPS}
+              selectedChipId={selectedChipId}
+              onChipPrefetch={chip => prefetchFeedSeed(chip.focus, chip.subFocus)}
+              onChipClick={chip => {
+                setSelectedChipId(chip.id);
+                navigateToFeed(chip.focus, chip.subFocus);
               }}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-            >
-              {getFilterCount()}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
+            />
+          </section>
 
-      {/* Responsive Filter Panel - Integrates with Zustand store */}
-      <ResponsiveFilterPanel
-        isOpen={showFilters}
-        onClose={() => setShowFilters(false)}
-        onApply={() => {
-          setShowFilters(false);
-          // Filters are automatically applied via Zustand store
-        }}
-      />
+          <TrendingVideosSection
+            searchQuery=""
+            disableMock={true}
+            onSeeAll={() => navigateToFeed('buy', 'trending_now')}
+            onVideoClick={video => {
+              const focus = mapVideoToFocus(video);
+              const subFocus = String(video.feedItem.category || 'trending').toLowerCase();
+              navigateToFeed(focus, subFocus);
+            }}
+          />
 
-      {/* Welcome Overlay - First-time user onboarding */}
-      <WelcomeOverlay
-        isOpen={welcomeOverlay.isOpen}
-        suggestedTopics={welcomeOverlay.suggestedTopics}
-        onTopicSelect={handleWelcomeTopicSelect}
-        onDismiss={welcomeOverlay.onDismiss}
-      />
+          {rails.map(section => (
+            <section key={section.id} aria-label={section.title}>
+              <SectionHeader
+                title={section.title}
+                subtitle={section.subtitle}
+                ctaLabel={section.ctaLabel}
+                onCta={() => navigateToFeed(section.focus, section.subFocus)}
+                onCtaPrefetch={() => prefetchFeedSeed(section.focus, section.subFocus)}
+              />
+              {import.meta.env.DEV && (
+                <p className="mb-3 text-xs" style={{ color: designTokens.colors.text.tertiary }}>
+                  <span className="font-mono">{formatRailDebugLine(section)}</span>
+                  {section.sectionPurity?.shortfallReason
+                    ? ` - ${section.sectionPurity.shortfallReason.replace(/_/g, ' ')}`
+                    : ''}
+                </p>
+              )}
 
-      {/* Topic Navigation Tooltip - After 5 items scrolled */}
-      <OnboardingTooltip
-        tooltipId="topic_navigation"
-        isVisible={topicTooltip.isVisible}
-        onDismiss={topicTooltip.dismissTooltip}
-        position="bottom"
-        targetRef={topicsRef}
-      />
+              {section.isLoading ? (
+                <RailSkeleton variant={section.variant} />
+              ) : section.videos.length === 0 ? (
+                <div
+                  className="rounded-3xl border p-6"
+                  style={{
+                    borderColor: designTokens.colors.bg.tertiary,
+                    backgroundColor: designTokens.colors.bg.primary,
+                  }}
+                >
+                  <p style={{ color: designTokens.colors.text.secondary }}>
+                    No videos available in this section yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto pb-1 scrollbar-hide">
+                  <div className="flex min-w-max gap-5">
+                    {section.videos.map(video => (
+                      <MediaRailCard
+                        key={`${section.id}-${video.id}`}
+                        video={video}
+                        variant={section.variant}
+                        onClick={() => navigateToFeed(section.focus, section.subFocus)}
+                        onPrefetch={() => prefetchFeedSeed(section.focus, section.subFocus)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          ))}
 
-      {/* Partner Content Tooltip - On first partner content encounter */}
-      <OnboardingTooltip
-        tooltipId="partner_content"
-        isVisible={partnerTooltip.isVisible}
-        onDismiss={partnerTooltip.dismissTooltip}
-        position="top"
-        targetRef={partnerContentRef}
-      />
+          <section aria-label="Creator Spotlight">
+            <SectionHeader
+              title="Creator Spotlight"
+              subtitle="Top voices in property media across agents, designers, builders, and analysts."
+              ctaLabel="View creators"
+              onCta={() => navigateToFeed('buy', 'creators')}
+            />
+
+            {creatorSpotlightQuery.isLoading ? (
+              <RailSkeleton variant="standard" />
+            ) : creatorSpotlight.length === 0 ? (
+              <div
+                className="rounded-3xl border p-6"
+                style={{
+                  borderColor: designTokens.colors.bg.tertiary,
+                  backgroundColor: designTokens.colors.bg.primary,
+                }}
+              >
+                <p style={{ color: designTokens.colors.text.secondary }}>
+                  Creator spotlight is warming up. Check back after more interactions.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto pb-1 scrollbar-hide">
+                <div className="flex min-w-max gap-5">
+                  {creatorSpotlight.map(creator => (
+                    <motion.button
+                      key={`${creator.creatorActorId}-${creator.handle}`}
+                      type="button"
+                      onMouseEnter={() =>
+                        prefetchFeedSeed(creator.focus, creator.subFocus, {
+                          creatorActorId: creator.creatorActorId,
+                        })
+                      }
+                      onFocus={() =>
+                        prefetchFeedSeed(creator.focus, creator.subFocus, {
+                          creatorActorId: creator.creatorActorId,
+                        })
+                      }
+                      onClick={() =>
+                        navigateToFeed(creator.focus, creator.subFocus, undefined, {
+                          creatorActorId: creator.creatorActorId,
+                        })
+                      }
+                      className="w-[15rem] shrink-0 rounded-3xl border p-4 text-left"
+                      style={{
+                        borderColor: designTokens.colors.bg.tertiary,
+                        backgroundColor: designTokens.colors.bg.primary,
+                        boxShadow: designTokens.shadows.sm,
+                      }}
+                      whileHover={exploreExperienceTokens.interactions.cardHover}
+                      whileTap={exploreExperienceTokens.interactions.tap}
+                      transition={exploreExperienceTokens.transitions.hover}
+                    >
+                      <div className="mb-3 flex items-center gap-3">
+                        <img
+                          src={creator.coverUrl}
+                          alt={creator.name}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="font-semibold" style={{ color: designTokens.colors.text.primary }}>
+                            {creator.name}
+                          </p>
+                          {creator.topFocusTags.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {creator.topFocusTags.slice(0, 2).map(tag => (
+                                <span
+                                  key={`${creator.creatorActorId}-${tag}`}
+                                  className="rounded-full border px-1.5 py-0.5 text-[10px] uppercase"
+                                  style={{
+                                    borderColor: designTokens.colors.bg.tertiary,
+                                    color: designTokens.colors.text.secondary,
+                                  }}
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs" style={{ color: designTokens.colors.text.secondary }}>
+                        View videos
+                      </p>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
     </motion.div>
   );
 }
+

@@ -102,7 +102,7 @@ const PublisherDevelopments: React.FC = () => {
 
     // Persist the same structure that main.tsx expects:
     // Now navigate WITHOUT relying on query params
-    setLocation(`/developer/create-development`);
+    setLocation(`/admin/publisher/create-development`);
 
     toast.info(`Creating development for ${selectedBrand?.brandName}`);
   };
@@ -202,7 +202,7 @@ const PublisherDevelopments: React.FC = () => {
                   }}
                   onEdit={id =>
                     setLocation(
-                      `/developer/create-development?id=${id}&brandProfileId=${selectedBrandId}`,
+                      `/admin/publisher/create-development?id=${id}&brandProfileId=${selectedBrandId}`,
                     )
                   }
                   onDelete={id => handleDeleteDevelopment(id, dev.name)}

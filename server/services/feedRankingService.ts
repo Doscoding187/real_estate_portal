@@ -20,6 +20,7 @@ import {
   contentQualityScores,
 } from '../../drizzle/schema';
 import { eq, and, inArray, sql } from 'drizzle-orm';
+import { getGeoDominanceBoostMap, recordLocationRuleEvent } from './locationMonetizationService';
 
 // ============================================================================
 // Types and Interfaces
@@ -47,8 +48,21 @@ export interface RankedContent {
   contentId: string;
   rankingScore: number;
   isBoosted: boolean;
+  boostMultiplier?: number;
   boostCampaignId?: string;
+  isSponsored?: boolean;
+  sponsoredLabel?: 'Sponsored';
+  geoDominanceRuleId?: number;
+  geoBoostMultiplier?: number;
+  boostSource?: 'campaign' | 'geo_dominance';
   [key: string]: any;
+}
+
+export interface GeoRankingContext {
+  locationType: 'province' | 'city' | 'suburb';
+  locationId: number;
+  requestId?: string;
+  userId?: number | null;
 }
 
 export interface BoostCampaign {
@@ -239,6 +253,7 @@ export class FeedRankingService {
     userId: string,
     userLocation?: { lat: number; lng: number },
     topicId?: string,
+    geoContext?: GeoRankingContext,
   ): Promise<RankedContent[]> {
     if (items.length === 0) {
       return [];
@@ -259,7 +274,7 @@ export class FeedRankingService {
     const userInterestScores = await this.getUserInterestScores(userId, items);
 
     // Calculate ranking score for each item
-    const rankedItems: RankedContent[] = items.map(item => {
+    let rankedItems: RankedContent[] = items.map(item => {
       const contentId = item.id.toString();
       const partnerId = item.partnerId;
 
@@ -287,12 +302,17 @@ export class FeedRankingService {
         contentId,
         rankingScore,
         isBoosted: !!boostCampaign,
+        boostMultiplier: factors.boostMultiplier,
         boostCampaignId: boostCampaign?.id,
       };
     });
 
     // Sort by ranking score (descending)
     rankedItems.sort((a, b) => b.rankingScore - a.rankingScore);
+
+    if (geoContext?.locationId && geoContext?.locationType) {
+      rankedItems = await this.applyGeoDominanceBoosts(rankedItems, geoContext);
+    }
 
     return rankedItems;
   }
@@ -325,7 +345,7 @@ export class FeedRankingService {
             ...item,
             isBoosted: false,
             boostCampaignId: undefined,
-            rankingScore: item.rankingScore / item.boostMultiplier, // Remove boost effect
+            rankingScore: item.rankingScore / (item.boostMultiplier ?? 1), // Remove boost effect
           });
           organicCount++;
         }
@@ -337,6 +357,147 @@ export class FeedRankingService {
     }
 
     return result;
+  }
+
+  /**
+   * Apply paid geographic dominance boosts with strict relevance guardrails.
+   * Guardrails:
+   * - Ranking uplift capped at +35%
+   * - Sponsored share capped at 20% of feed
+   * - No consecutive sponsored cards
+   */
+  async applyGeoDominanceBoosts(
+    items: RankedContent[],
+    geoContext: GeoRankingContext,
+  ): Promise<RankedContent[]> {
+    if (!items.length) return items;
+
+    const targetIds = Array.from(
+      new Set(
+        items
+          .map(item => {
+            const id = Number(item.referenceId ?? item.listingId ?? item.id);
+            return Number.isFinite(id) && id > 0 ? id : null;
+          })
+          .filter((id): id is number => id !== null),
+      ),
+    );
+
+    if (!targetIds.length) return items;
+
+    const boostByTarget = await getGeoDominanceBoostMap({
+      locationType: geoContext.locationType,
+      locationId: geoContext.locationId,
+      targetIds,
+      limit: Math.min(50, targetIds.length),
+    });
+
+    if (!Object.keys(boostByTarget).length) return items;
+
+    const boosted = items.map(item => {
+      const targetId = Number(item.referenceId ?? item.listingId ?? item.id);
+      if (!Number.isFinite(targetId) || targetId <= 0) return item;
+      const boostRule = boostByTarget[targetId];
+      if (!boostRule) return item;
+
+      const ranking = Math.max(0, Math.min(100, Number(boostRule.ranking || 0)));
+      const uplift = Math.min(0.35, 0.05 + ranking / 333); // max +35%
+      const geoBoostMultiplier = 1 + uplift;
+      const rankingScore = Number((item.rankingScore * geoBoostMultiplier).toFixed(6));
+
+      return {
+        ...item,
+        rankingScore,
+        isSponsored: true,
+        sponsoredLabel: 'Sponsored' as const,
+        geoDominanceRuleId: boostRule.ruleId,
+        geoBoostMultiplier,
+        boostSource: 'geo_dominance' as const,
+      };
+    });
+
+    boosted.sort((a, b) => b.rankingScore - a.rankingScore);
+    const guardrailed = this.enforceSponsoredGuardrails(boosted);
+
+    const sponsoredForServe = guardrailed
+      .filter(item => item.isSponsored && item.geoDominanceRuleId)
+      .slice(0, 40);
+
+    await Promise.allSettled(
+      sponsoredForServe.map(item =>
+        recordLocationRuleEvent({
+          ruleId: Number(item.geoDominanceRuleId),
+          eventType: 'served',
+          contextType: 'feed',
+          contextId: Number(item.id) || null,
+          locationType: geoContext.locationType,
+          locationId: geoContext.locationId,
+          userId: geoContext.userId ?? null,
+          requestId: geoContext.requestId || null,
+          metadata: {
+            boostSource: 'geo_dominance',
+            rankingScore: item.rankingScore,
+            geoBoostMultiplier: item.geoBoostMultiplier,
+          },
+        }),
+      ),
+    );
+
+    return guardrailed;
+  }
+
+  /**
+   * Helper for services that already produced an ordered feed but need paid
+   * dominance adjustment plus sponsored labeling and reporting.
+   */
+  async applyGeographicDominanceToItems(items: any[], geoContext?: GeoRankingContext): Promise<any[]> {
+    if (!geoContext || !items.length) return items;
+
+    const ranked: RankedContent[] = items.map((item, index) => ({
+      ...item,
+      id: Number(item.id),
+      contentId: String(item.id),
+      rankingScore: Math.max(0.0001, items.length - index),
+      isBoosted: false,
+      boostMultiplier: 1,
+    }));
+
+    const boosted = await this.applyGeoDominanceBoosts(ranked, geoContext);
+    return boosted.map(item => item as any);
+  }
+
+  private enforceSponsoredGuardrails(items: RankedContent[]): RankedContent[] {
+    if (!items.length) return items;
+
+    const maxSponsored = Math.max(1, Math.floor(items.length * 0.2));
+    let sponsoredUsed = 0;
+    let previousWasSponsored = false;
+
+    return items.map(item => {
+      if (!item.isSponsored) {
+        previousWasSponsored = false;
+        return item;
+      }
+
+      const canShowSponsored = sponsoredUsed < maxSponsored && !previousWasSponsored;
+      if (canShowSponsored) {
+        sponsoredUsed += 1;
+        previousWasSponsored = true;
+        return item;
+      }
+
+      previousWasSponsored = false;
+      const removeMultiplier =
+        item.geoBoostMultiplier && item.geoBoostMultiplier > 0 ? item.geoBoostMultiplier : 1;
+      return {
+        ...item,
+        isSponsored: false,
+        sponsoredLabel: undefined,
+        geoDominanceRuleId: undefined,
+        boostSource: undefined,
+        rankingScore: Number((item.rankingScore / removeMultiplier).toFixed(6)),
+      };
+    });
   }
 
   /**

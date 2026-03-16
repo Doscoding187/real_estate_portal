@@ -1,25 +1,19 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  CreditCard,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   ArrowLeft,
-  Calendar,
-  Download,
-  PieChart as PieChartIcon,
-  BarChart as BarChartIcon,
-  FileText,
-  Target,
-  Users,
   Activity,
+  Database,
+  RefreshCw,
+  TrendingUp,
+  Users,
+  BarChart3,
+  Clock,
 } from 'lucide-react';
-import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
 import { GlassCard } from '@/components/ui/glass-card';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -28,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -36,652 +31,635 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
-} from 'recharts';
-import { trpc } from '@/lib/trpc';
-import { useLocation } from 'wouter';
 
-interface StatCardProps {
-  icon: React.ReactNode;
-  value: string | number;
-  label: string;
-  trend?: 'up' | 'down';
-  color?: string;
-  change?: string;
+const ROLE_LABELS: Record<string, string> = {
+  agent: 'Agents',
+  agency: 'Agencies',
+  developer: 'Developers',
+  private_seller: 'Private Sellers',
+};
+
+function getYesterdayDateKey() {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
 }
 
-const StatCard: React.FC<StatCardProps> = ({
-  icon,
-  value,
-  label,
-  trend,
-  color = 'bg-muted',
-  change,
-}) => {
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Number(amount || 0));
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('en-ZA').format(Number(value || 0));
+}
+
+function formatPercent(value: number) {
+  return `${Number(value || 0).toFixed(1)}%`;
+}
+
+function formatSignedPercent(value: number) {
+  const num = Number(value || 0);
+  const sign = num > 0 ? '+' : '';
+  return `${sign}${num.toFixed(1)}%`;
+}
+
+function deltaToneClasses(direction: string) {
+  if (direction === 'up') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (direction === 'down') return 'border-rose-200 bg-rose-50 text-rose-700';
+  return 'border-slate-200 bg-slate-100 text-slate-700';
+}
+
+const DeltaChip: React.FC<{ label: string; metric: any }> = ({ label, metric }) => {
+  const direction = String(metric?.direction || 'flat');
+  const glyph = direction === 'up' ? '^' : direction === 'down' ? 'v' : '-';
+  const deltaPct = Number(metric?.deltaPct || 0);
   return (
-    <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all py-6">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className={`p-2 rounded-full ${color}`}>{icon}</div>
-        {trend && (
-          <div className="flex items-center">
-            {trend === 'up' ? (
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-rose-500" />
-            )}
-          </div>
-        )}
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${deltaToneClasses(direction)}`}
+    >
+      <span>{label}</span>
+      <span>{glyph}</span>
+      <span>{formatSignedPercent(deltaPct)}</span>
+    </span>
+  );
+};
+
+const TrendBars: React.FC<{ values: number[]; colorClass: string }> = ({ values, colorClass }) => {
+  const max = Math.max(1, ...values.map(v => Number(v || 0)));
+  return (
+    <div className="flex h-10 items-end gap-1">
+      {values.map((value, idx) => {
+        const height = Math.max(6, Math.round((Number(value || 0) / max) * 36));
+        return <div key={idx} className={`w-2 rounded-sm ${colorClass}`} style={{ height }} />;
+      })}
+    </div>
+  );
+};
+
+interface KpiCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+}
+
+const KpiCard: React.FC<KpiCardProps> = ({ icon, label, value, sub }) => {
+  return (
+    <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+          {icon}
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-slate-800">{value}</div>
         <p className="text-xs text-slate-500">{label}</p>
-        {change && <p className="text-xs text-slate-500 mt-1">{change}</p>}
+        <p className="text-2xl font-semibold text-slate-900 mt-1">{value}</p>
+        {sub ? <p className="text-xs text-slate-500 mt-1">{sub}</p> : null}
       </CardContent>
     </GlassCard>
   );
 };
 
-const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'];
-
 const RevenueCenterPage: React.FC = () => {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [dateRange, setDateRange] = useState('90'); // days
-  const [commissionPage, setCommissionPage] = useState(1);
-  const [commissionStatus, setCommissionStatus] = useState<string>('all');
-  const [forecastPeriod, setForecastPeriod] = useState<'30_days' | '90_days' | 'quarter' | 'year'>(
-    '30_days',
-  );
+  const [dateRange, setDateRange] = useState('30');
+  const [reconDate, setReconDate] = useState(getYesterdayDateKey());
 
-  // Calculate date range
-  const getDateRange = () => {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(dateRange));
-    return {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    };
-  };
+  const days = Math.max(1, Number(dateRange) || 30);
+  const queryInput = useMemo(() => ({ days }), [days]);
+  const utils = trpc.useUtils();
 
-  // Queries
-  const { data: revenueData, isLoading: revenueLoading } =
-    trpc.admin.getRevenueAnalytics.useQuery(getDateRange());
-
-  const { data: periodData, isLoading: periodLoading } = trpc.admin.getRevenueByPeriod.useQuery({
-    period: 'monthly',
-    months: 6,
+  const {
+    data,
+    isLoading,
+    isFetching,
+    refetch,
+    error,
+  } = trpc.admin.getRevenueAnalytics.useQuery(queryInput, {
+    refetchInterval: 60_000,
   });
 
-  const { data: commissionData, isLoading: commissionsLoading } =
-    trpc.admin.getCommissionBreakdown.useQuery({
-      page: commissionPage,
-      limit: 10,
-      status: commissionStatus === 'all' ? undefined : (commissionStatus as any),
-    });
-
-  const { data: categoryData, isLoading: categoryLoading } =
-    trpc.admin.getRevenueByCategory.useQuery(getDateRange(), {
-      enabled: activeTab === 'analytics',
-    });
-
-  const { data: ltvData, isLoading: ltvLoading } = trpc.admin.getLTVAnalytics.useQuery(undefined, {
-    enabled: activeTab === 'analytics',
-  });
-
-  const { data: forecastData, isLoading: forecastLoading } = trpc.admin.getRevenueForecast.useQuery(
-    { period: forecastPeriod },
-    { enabled: activeTab === 'forecasts' },
+  const {
+    data: reconciliation,
+    isFetching: reconFetching,
+    refetch: refetchReconciliation,
+  } = trpc.admin.getKpiReconciliation.useQuery(
+    { date: reconDate },
+    { enabled: Boolean(reconDate) },
   );
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const runRollup = trpc.admin.runKpiRollup.useMutation({
+    onSuccess: async () => {
+      await utils.admin.getRevenueAnalytics.invalidate(queryInput);
+      await refetch();
+    },
+  });
+
+  const handleRunYesterday = () => {
+    runRollup.mutate({});
   };
 
-  // Format number
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('en-ZA').format(num);
+  const handleRecomputeRange = () => {
+    if (!data?.from || !data?.to) return;
+    runRollup.mutate({ from: data.from, to: data.to });
   };
 
-  // Get status badge variant
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-700">Paid</Badge>;
-      case 'approved':
-        return <Badge className="bg-blue-100 text-blue-700">Approved</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-700">Pending</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-100 text-red-700">Cancelled</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
+  const freshnessBadge = data?.freshness?.isStale ? (
+    <Badge variant="destructive">Stale</Badge>
+  ) : (
+    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Fresh</Badge>
+  );
+  const rollupStatusBadge =
+    data?.freshness?.rollupStatus === 'healthy' ? (
+      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Rollup Healthy</Badge>
+    ) : data?.freshness?.rollupStatus === 'backfill_running' ? (
+      <Badge className="bg-amber-100 text-amber-700 border-amber-200">Backfill Running</Badge>
+    ) : (
+      <Badge variant="secondary">Rollup Degraded</Badge>
+    );
 
-  // Prepare Pie Chart Data
-  const pieChartData = categoryData
-    ? [
-        ...categoryData.subscriptions.map(s => ({ name: `Sub: ${s.category}`, value: s.revenue })),
-        { name: 'Advertising', value: categoryData.advertising.revenue },
-      ].filter(item => item.value > 0)
-    : [];
+  const rangeLabel = data?.from && data?.to ? `${data.from} to ${data.to}` : `Last ${days} days`;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-transparent">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Revenue Center</h1>
-            <p className="text-slate-500">Track revenue, commissions, and financial performance</p>
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/overview')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">Revenue Center</h1>
+              <p className="text-slate-500">Deterministic role-level KPI telemetry and funnel diagnostics</p>
+            </div>
           </div>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px] bg-white/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">Last 30 Days</SelectItem>
-              <SelectItem value="60">Last 60 Days</SelectItem>
-              <SelectItem value="90">Last 90 Days</SelectItem>
-              <SelectItem value="180">Last 6 Months</SelectItem>
-              <SelectItem value="365">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-2 md:items-end">
+            <div className="flex items-center gap-2">
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-[170px] bg-white/60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">Last 30 Days</SelectItem>
+                  <SelectItem value="60">Last 60 Days</SelectItem>
+                  <SelectItem value="90">Last 90 Days</SelectItem>
+                  <SelectItem value="180">Last 180 Days</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                className="bg-white/70"
+                onClick={handleRunYesterday}
+                disabled={runRollup.isPending}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${runRollup.isPending ? 'animate-spin' : ''}`} />
+                Run Yesterday
+              </Button>
+              <Button
+                className="bg-slate-900 hover:bg-slate-800"
+                onClick={handleRecomputeRange}
+                disabled={runRollup.isPending || !data?.from || !data?.to}
+              >
+                <Database className="h-4 w-4 mr-2" />
+                Recompute Range
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              {freshnessBadge}
+              {rollupStatusBadge}
+              <span>Range: {rangeLabel}</span>
+              <span>Role rollup: {data?.freshness?.latestRoleMetricDate || 'N/A'}</span>
+              <span>Lag: {data?.freshness?.lagDays ?? 'N/A'}d</span>
+            </div>
+          </div>
         </div>
 
-        <Tabs
-          defaultValue="overview"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="bg-white/50 backdrop-blur-sm border border-white/40 p-1 rounded-xl mb-6">
-            <TabsTrigger
-              value="overview"
-              className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              <Activity className="w-4 h-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="analytics"
-              className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              <BarChartIcon className="w-4 h-4 mr-2" />
-              Analytics & LTV
-            </TabsTrigger>
-            <TabsTrigger
-              value="forecasts"
-              className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              <Target className="w-4 h-4 mr-2" />
-              Forecasts
-            </TabsTrigger>
-            <TabsTrigger
-              value="reports"
-              className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Reports
-            </TabsTrigger>
-          </TabsList>
+        {error ? (
+          <GlassCard className="border-red-200 bg-red-50/80 py-6">
+            <CardContent>
+              <p className="text-sm text-red-700">Failed to load KPI data: {error.message}</p>
+            </CardContent>
+          </GlassCard>
+        ) : null}
 
-          {/* OVERVIEW TAB */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                icon={<DollarSign className="h-6 w-6 text-blue-600" />}
-                value={revenueLoading ? '...' : formatCurrency(revenueData?.totalRevenue || 0)}
-                label="Total Revenue"
-                change={`Last ${dateRange} days`}
-                color="bg-blue-100"
-                trend="up"
-              />
-              <StatCard
-                icon={<CheckCircle className="h-6 w-6 text-green-600" />}
-                value={revenueLoading ? '...' : formatCurrency(revenueData?.commissionRevenue || 0)}
-                label="Commission Revenue"
-                change={`${revenueData?.totalCommissions || 0} commissions`}
-                color="bg-green-100"
-                trend="up"
-              />
-              <StatCard
-                icon={<CreditCard className="h-6 w-6 text-purple-600" />}
-                value={
-                  revenueLoading ? '...' : formatCurrency(revenueData?.subscriptionRevenue || 0)
-                }
-                label="Subscription Revenue"
-                change={`${revenueData?.activeSubscriptions || 0} active subscriptions`}
-                color="bg-purple-100"
-                trend="up"
-              />
-              <StatCard
-                icon={<Clock className="h-6 w-6 text-amber-600" />}
-                value={revenueLoading ? '...' : formatCurrency(revenueData?.pendingRevenue || 0)}
-                label="Pending Revenue"
-                change={`${revenueData?.totalInvoices || 0} invoices`}
-                color="bg-amber-100"
-              />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          <KpiCard
+            icon={<TrendingUp className="h-5 w-5" />}
+            label="Role MRR"
+            value={formatCurrency(data?.totals?.mrr || 0)}
+            sub={`Generated ${data?.sourceGeneratedAt ? new Date(data.sourceGeneratedAt).toLocaleString() : 'N/A'}`}
+          />
+          <KpiCard
+            icon={<Activity className="h-5 w-5" />}
+            label="Weighted NRR"
+            value={formatPercent(data?.totals?.nrr || 0)}
+            sub={`Existing MRR ${formatCurrency(data?.totals?.nrrEndExistingMrr || 0)} / Start MRR ${formatCurrency(data?.totals?.nrrStartMrr || 0)}`}
+          />
+          <KpiCard
+            icon={<Users className="h-5 w-5" />}
+            label="Retention"
+            value={formatPercent(data?.totals?.retentionRate || 0)}
+            sub="Role-weighted active account retention"
+          />
+          <KpiCard
+            icon={<BarChart3 className="h-5 w-5" />}
+            label="Add-on Adoption"
+            value={formatPercent(data?.totals?.addOnAdoptionRate || 0)}
+            sub={`${formatCurrency(data?.totals?.addOnRevenue || 0)} add-ons`}
+          />
+          <KpiCard
+            icon={<Clock className="h-5 w-5" />}
+            label="Funnel Drop-off"
+            value={formatPercent(data?.totals?.funnelDropOffRate || 0)}
+            sub="Role selected to strategy booked"
+          />
+        </div>
+
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">Revenue Snapshot (Executive)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-4">
+                <p className="text-xs text-slate-500">Total MRR</p>
+                <p className="text-xl font-semibold text-slate-900 mt-1">
+                  {formatCurrency(data?.revenueSnapshot?.totalMrr || 0)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <DeltaChip label="WoW" metric={data?.comparisons?.wow?.metrics?.mrr} />
+                  <DeltaChip label="MoM" metric={data?.comparisons?.mom?.metrics?.mrr} />
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-4">
+                <p className="text-xs text-slate-500">New MRR (Last 30 Days)</p>
+                <p className="text-xl font-semibold text-slate-900 mt-1">
+                  {formatCurrency(data?.revenueSnapshot?.newMrrLast30 || 0)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <DeltaChip label="WoW" metric={data?.comparisons?.wow?.metrics?.newMrrLast30} />
+                  <DeltaChip label="MoM" metric={data?.comparisons?.mom?.metrics?.newMrrLast30} />
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-4">
+                <p className="text-xs text-slate-500">Weighted ARPU</p>
+                <p className="text-xl font-semibold text-slate-900 mt-1">
+                  {formatCurrency(data?.revenueSnapshot?.weightedArpu || 0)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <DeltaChip label="WoW" metric={data?.comparisons?.wow?.metrics?.weightedArpu} />
+                  <DeltaChip label="MoM" metric={data?.comparisons?.mom?.metrics?.weightedArpu} />
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-4">
+                <p className="text-xs text-slate-500">Strategy vs Self-Serve Delta</p>
+                <p className="text-xl font-semibold text-slate-900 mt-1">
+                  {formatSignedPercent(data?.revenueSnapshot?.conversionDeltaPct || 0)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <DeltaChip label="WoW" metric={data?.comparisons?.wow?.metrics?.conversionDeltaPct} />
+                  <DeltaChip label="MoM" metric={data?.comparisons?.mom?.metrics?.conversionDeltaPct} />
+                </div>
+              </div>
             </div>
+          </CardContent>
+        </GlassCard>
 
-            {/* Revenue Chart */}
-            <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
-              <CardHeader>
-                <CardTitle className="text-slate-800">Revenue Trends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {periodLoading ? (
-                  <div className="h-[300px] flex items-center justify-center text-slate-500">
-                    Loading chart data...
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={periodData || []}>
-                      <defs>
-                        <linearGradient id="totalRevenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
-                      <XAxis dataKey="period" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-                      <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                          border: 'none',
-                          borderRadius: '12px',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="totalRevenue"
-                        stroke="#3b82f6"
-                        strokeWidth={3}
-                        dot={{ fill: '#3b82f6', r: 4 }}
-                        activeDot={{ r: 6 }}
-                        fill="url(#totalRevenue)"
-                        name="Total Revenue"
-                        isAnimationActive={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="commissionRevenue"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        dot={{ fill: '#10b981', r: 3 }}
-                        name="Commissions"
-                        isAnimationActive={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="subscriptionRevenue"
-                        stroke="#8b5cf6"
-                        strokeWidth={2}
-                        dot={{ fill: '#8b5cf6', r: 3 }}
-                        name="Subscriptions"
-                        isAnimationActive={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </GlassCard>
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">
+              7-Day Trend Strip ({data?.funnelTrends?.from || 'N/A'} to {data?.funnelTrends?.to || 'N/A'})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+              {(data?.funnelTrends?.roles || []).map((roleTrend: any) => {
+                const tierSeries = (roleTrend.points || []).map((point: any) => point.tierCtrPct || 0);
+                const setupSeries = (roleTrend.points || []).map((point: any) => point.setupStartRatePct || 0);
+                const paidSeries = (roleTrend.points || []).map(
+                  (point: any) => point.paidConversionRatePct || 0,
+                );
+                const latest = roleTrend.latest || {};
+                const delta = roleTrend.trendDelta || {};
 
-            {/* Commission Breakdown */}
-            <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-slate-800">Commission Breakdown</CardTitle>
-                <Select value={commissionStatus} onValueChange={setCommissionStatus}>
-                  <SelectTrigger className="w-[150px] bg-white/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardHeader>
-              <CardContent>
-                {commissionsLoading ? (
-                  <div className="py-12 text-center text-slate-500">Loading commissions...</div>
-                ) : !commissionData?.commissions?.length ? (
-                  <div className="py-12 text-center text-slate-500">No commissions found.</div>
-                ) : (
-                  <>
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent border-slate-200">
-                          <TableHead className="text-slate-500">Agent</TableHead>
-                          <TableHead className="text-slate-500">Property</TableHead>
-                          <TableHead className="text-slate-500">Type</TableHead>
-                          <TableHead className="text-slate-500">Amount</TableHead>
-                          <TableHead className="text-slate-500">Status</TableHead>
-                          <TableHead className="text-slate-500">Date</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {commissionData.commissions.map((commission: any) => (
-                          <TableRow
-                            key={commission.id}
-                            className="hover:bg-white/40 border-slate-100 transition-colors"
-                          >
-                            <TableCell className="font-medium text-slate-700">
-                              {commission.agent?.displayName ||
-                                `${commission.agent?.firstName} ${commission.agent?.lastName}` ||
-                                'N/A'}
-                            </TableCell>
-                            <TableCell className="text-slate-600">
-                              {commission.property?.title || 'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="capitalize">
-                                {commission.transactionType}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-semibold text-slate-800">
-                              {formatCurrency(commission.amount)}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(commission.status)}</TableCell>
-                            <TableCell className="text-slate-600">
-                              {new Date(commission.createdAt).toLocaleDateString()}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-
-                    {/* Pagination */}
-                    {commissionData.pagination.totalPages > 1 && (
-                      <div className="flex items-center justify-between mt-4">
-                        <p className="text-sm text-slate-500">
-                          Showing {(commissionPage - 1) * 10 + 1} to{' '}
-                          {Math.min(commissionPage * 10, commissionData.pagination.total)} of{' '}
-                          {commissionData.pagination.total} commissions
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCommissionPage(p => Math.max(1, p - 1))}
-                            disabled={commissionPage === 1}
-                            className="bg-white/50"
-                          >
-                            Previous
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setCommissionPage(p =>
-                                Math.min(commissionData.pagination.totalPages, p + 1),
-                              )
-                            }
-                            disabled={commissionPage === commissionData.pagination.totalPages}
-                            className="bg-white/50"
-                          >
-                            Next
-                          </Button>
+                return (
+                  <div key={roleTrend.role} className="rounded-lg border border-slate-200 bg-white/70 p-4 space-y-3">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {ROLE_LABELS[roleTrend.role] || roleTrend.role}
+                    </p>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Tier CTR</span>
+                          <span className="font-medium text-slate-800">
+                            {formatPercent(latest.tierCtrPct || 0)} ({formatSignedPercent(delta.tierCtrPct || 0)})
+                          </span>
                         </div>
+                        <TrendBars values={tierSeries} colorClass="bg-blue-500/80" />
                       </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </GlassCard>
-          </TabsContent>
-
-          {/* ANALYTICS TAB */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* LTV Metrics */}
-              <GlassCard className="col-span-1 md:col-span-3 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                  Customer Lifetime Value (LTV)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                    <p className="text-sm text-blue-600 font-medium">ARPU (Monthly)</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {ltvLoading ? '...' : formatCurrency(ltvData?.arpu || 0)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">Avg. Revenue Per User</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-rose-50 border border-rose-100">
-                    <p className="text-sm text-rose-600 font-medium">Churn Rate</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {ltvLoading ? '...' : `${(ltvData?.churnRate || 0).toFixed(1)}%`}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">Monthly cancellations</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                    <p className="text-sm text-emerald-600 font-medium">Estimated LTV</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {ltvLoading ? '...' : formatCurrency(ltvData?.ltv || 0)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">Lifetime Value</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-sm text-slate-600 font-medium">Active Subscribers</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {ltvLoading ? '...' : ltvData?.activeSubscribers || 0}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">Total paying agencies</p>
-                  </div>
-                </div>
-              </GlassCard>
-
-              {/* Revenue Distribution */}
-              <GlassCard className="col-span-1 md:col-span-2 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Revenue Distribution</h3>
-                <div className="h-[300px] w-full">
-                  {categoryLoading ? (
-                    <div className="h-full flex items-center justify-center text-slate-500">
-                      Loading...
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieChartData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                          isAnimationActive={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {pieChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </GlassCard>
-
-              {/* Top Performing Plans */}
-              <GlassCard className="col-span-1 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Revenue Sources</h3>
-                <div className="space-y-4">
-                  {categoryData?.subscriptions.map((sub: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                        />
-                        <span className="text-sm font-medium text-slate-700 capitalize">
-                          {sub.category} Subs
-                        </span>
+                      <div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Setup Start Rate</span>
+                          <span className="font-medium text-slate-800">
+                            {formatPercent(latest.setupStartRatePct || 0)} (
+                            {formatSignedPercent(delta.setupStartRatePct || 0)})
+                          </span>
+                        </div>
+                        <TrendBars values={setupSeries} colorClass="bg-emerald-500/80" />
                       </div>
-                      <span className="text-sm font-bold text-slate-900">
-                        {formatCurrency(sub.revenue)}
-                      </span>
+                      <div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Paid Conversion Rate</span>
+                          <span className="font-medium text-slate-800">
+                            {formatPercent(latest.paidConversionRatePct || 0)} (
+                            {formatSignedPercent(delta.paidConversionRatePct || 0)})
+                          </span>
+                        </div>
+                        <TrendBars values={paidSeries} colorClass="bg-violet-500/80" />
+                      </div>
                     </div>
-                  ))}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-slate-400" />
-                      <span className="text-sm font-medium text-slate-700">Advertising</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900">
-                      {formatCurrency(categoryData?.advertising.revenue || 0)}
-                    </span>
                   </div>
-                </div>
-              </GlassCard>
+                );
+              })}
             </div>
-          </TabsContent>
+          </CardContent>
+        </GlassCard>
 
-          {/* FORECASTS TAB */}
-          <TabsContent value="forecasts" className="space-y-6">
-            <GlassCard className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    Revenue Forecast (AI Powered)
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    Projected revenue based on historical trends and recurring subscriptions.
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">Strategic Insights (Auto)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+              {(data?.strategicInsights || []).map((insight: any, idx: number) => (
+                <div key={`${insight.title}-${idx}`} className="rounded-lg border border-blue-100 bg-blue-50/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
+                    {insight.title}
                   </p>
+                  <p className="mt-2 text-sm text-slate-700">{insight.detail}</p>
                 </div>
-                <Select value={forecastPeriod} onValueChange={(v: any) => setForecastPeriod(v)}>
-                  <SelectTrigger className="w-[150px] bg-white/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30_days">Next 30 Days</SelectItem>
-                    <SelectItem value="90_days">Next 90 Days</SelectItem>
-                    <SelectItem value="quarter">Next Quarter</SelectItem>
-                    <SelectItem value="year">Next Year</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-                <div className="col-span-1 space-y-6">
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200">
-                    <p className="text-indigo-100 font-medium mb-1">Projected Revenue</p>
-                    <h2 className="text-4xl font-bold mb-2">
-                      {forecastLoading ? '...' : formatCurrency(forecastData?.predictedAmount || 0)}
-                    </h2>
-                    <div className="flex items-center gap-2 text-sm text-indigo-100 bg-white/10 w-fit px-2 py-1 rounded-lg">
-                      <Target className="w-4 h-4" />
-                      <span>
-                        {((forecastData?.confidenceScore || 0) * 100).toFixed(0)}% Confidence
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center p-3 bg-white/50 rounded-lg border border-slate-100">
-                      <span className="text-sm text-slate-600">Methodology</span>
-                      <Badge variant="outline" className="capitalize">
-                        {forecastData?.methodology?.replace('_', ' ') || 'Linear'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-white/50 rounded-lg border border-slate-100">
-                      <span className="text-sm text-slate-600">Last Updated</span>
-                      <span className="text-sm font-medium text-slate-900">
-                        {forecastData?.createdAt
-                          ? new Date(forecastData.createdAt).toLocaleDateString()
-                          : 'Just now'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-2 h-[300px]">
-                  {/* Placeholder for forecast chart visualization */}
-                  <div className="h-full w-full bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-slate-400">
-                    <BarChartIcon className="w-12 h-12 mb-2 opacity-20" />
-                    <p>Forecast visualization requires more historical data points.</p>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-          </TabsContent>
-
-          {/* REPORTS TAB */}
-          <TabsContent value="reports" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <GlassCard className="p-6 hover:shadow-lg transition-all cursor-pointer group">
-                <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <h3 className="font-semibold text-slate-900 mb-2">Monthly Revenue Report</h3>
-                <p className="text-sm text-slate-500 mb-4">
-                  Detailed breakdown of all revenue sources, commissions, and subscriptions for the
-                  current month.
-                </p>
-                <Button variant="outline" className="w-full">
-                  Download PDF
-                </Button>
-              </GlassCard>
-
-              <GlassCard className="p-6 hover:shadow-lg transition-all cursor-pointer group">
-                <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6" />
-                </div>
-                <h3 className="font-semibold text-slate-900 mb-2">Subscriber Churn Analysis</h3>
-                <p className="text-sm text-slate-500 mb-4">
-                  Report on cancelled subscriptions, churn reasons, and retention metrics.
-                </p>
-                <Button variant="outline" className="w-full">
-                  Download CSV
-                </Button>
-              </GlassCard>
-
-              <GlassCard className="p-6 hover:shadow-lg transition-all cursor-pointer group">
-                <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Activity className="w-6 h-6" />
-                </div>
-                <h3 className="font-semibold text-slate-900 mb-2">Agent Performance Report</h3>
-                <p className="text-sm text-slate-500 mb-4">
-                  Commission earnings, transaction volume, and top performing agents.
-                </p>
-                <Button variant="outline" className="w-full">
-                  Download CSV
-                </Button>
-              </GlassCard>
+              ))}
             </div>
-          </TabsContent>
-        </Tabs>
+            {!(data?.strategicInsights || []).length ? (
+              <p className="text-sm text-slate-500">No strategic insights available for selected range.</p>
+            ) : null}
+          </CardContent>
+        </GlassCard>
+
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">NRR Composition (New Logos Excluded)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-4">
+                <p className="text-xs text-slate-500">Start MRR (Cohort Base)</p>
+                <p className="text-xl font-semibold text-slate-900 mt-1">
+                  {formatCurrency(data?.totals?.nrrStartMrr || 0)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-4">
+                <p className="text-xs text-slate-500">End Existing MRR (Same Cohort)</p>
+                <p className="text-xl font-semibold text-slate-900 mt-1">
+                  {formatCurrency(data?.totals?.nrrEndExistingMrr || 0)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-4">
+                <p className="text-xs text-slate-500">New Logo MRR (Excluded from NRR)</p>
+                <p className="text-xl font-semibold text-slate-900 mt-1">
+                  {formatCurrency(data?.totals?.newLogoMrr || 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </GlassCard>
+
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">Role KPI + Funnel Validation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Role</TableHead>
+                  <TableHead className="text-right">Active</TableHead>
+                  <TableHead className="text-right">MRR</TableHead>
+                  <TableHead className="text-right">ARPU</TableHead>
+                  <TableHead className="text-right">NRR</TableHead>
+                  <TableHead className="text-right">Retention</TableHead>
+                  <TableHead className="text-right">Add-on %</TableHead>
+                  <TableHead className="text-right">Role Selected</TableHead>
+                  <TableHead className="text-right">Strategy Booked</TableHead>
+                  <TableHead className="text-right">Drop-off</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(data?.roles || []).map((row: any) => (
+                  <TableRow key={row.role} className="hover:bg-white/40">
+                    <TableCell className="font-medium text-slate-900">
+                      {ROLE_LABELS[row.role] || row.role}
+                    </TableCell>
+                    <TableCell className="text-right">{formatNumber(row.activeAccounts)}</TableCell>
+                    <TableCell className="text-right font-semibold">{formatCurrency(row.mrr)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.arpu)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.nrr)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.retentionRate)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.addOnAdoptionRate)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.funnel?.roleSelected || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.funnel?.strategyBooked || 0)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.funnel?.dropOffRate || 0)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {!data?.roles?.length ? (
+              <div className="text-center py-8 text-sm text-slate-500">
+                No rollup records found in selected range.
+              </div>
+            ) : null}
+
+            {runRollup.isSuccess ? (
+              <div className="mt-4 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                KPI rollup completed at {new Date().toLocaleTimeString()}.
+              </div>
+            ) : null}
+
+            {runRollup.error ? (
+              <div className="mt-4 text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                Rollup failed: {runRollup.error.message}
+              </div>
+            ) : null}
+          </CardContent>
+        </GlassCard>
+
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">Funnel KPI Sheet (Role Measurement)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-3">
+                <p className="text-xs text-slate-500">Path Split</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">
+                  Self-Serve {formatPercent(data?.funnelSheet?.totals?.pathSplitSelfServePct || 0)} | Strategy{' '}
+                  {formatPercent(data?.funnelSheet?.totals?.pathSplitStrategyPct || 0)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-3">
+                <p className="text-xs text-slate-500">Tier Click Rate</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">
+                  {formatPercent(data?.funnelSheet?.totals?.tierClickRatePct || 0)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-3">
+                <p className="text-xs text-slate-500">Setup Start Rate</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">
+                  {formatPercent(data?.funnelSheet?.totals?.setupStartRatePct || 0)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white/70 p-3">
+                <p className="text-xs text-slate-500">Self-Serve vs Strategy Delta</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">
+                  {formatSignedPercent(data?.funnelSheet?.totals?.conversionDeltaPct || 0)}
+                </p>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Role</TableHead>
+                  <TableHead className="text-right">Role Selected</TableHead>
+                  <TableHead className="text-right">Path Chosen</TableHead>
+                  <TableHead className="text-right">Self-Serve %</TableHead>
+                  <TableHead className="text-right">Strategy %</TableHead>
+                  <TableHead className="text-right">Pricing Viewed</TableHead>
+                  <TableHead className="text-right">Tier Clicked</TableHead>
+                  <TableHead className="text-right">Tier CTR</TableHead>
+                  <TableHead className="text-right">Setup Started</TableHead>
+                  <TableHead className="text-right">Strategy Booked</TableHead>
+                  <TableHead className="text-right">Paid Conversion</TableHead>
+                  <TableHead className="text-right">Conv Delta</TableHead>
+                  <TableHead className="text-right">ARPU</TableHead>
+                  <TableHead className="text-right">Top Tier</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(data?.funnelSheet?.roles || []).map((row: any) => (
+                  <TableRow key={row.role} className="hover:bg-white/40">
+                    <TableCell className="font-medium text-slate-900">
+                      {ROLE_LABELS[row.role] || row.role}
+                    </TableCell>
+                    <TableCell className="text-right">{formatNumber(row.roleSelected || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.pathChosen || 0)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.pathSplitSelfServePct || 0)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.pathSplitStrategyPct || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.pricingViewed || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.tierClicked || 0)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.tierClickRatePct || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.setupStarted || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.strategyBooked || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.paidConversion || 0)}</TableCell>
+                    <TableCell className="text-right">{formatSignedPercent(row.conversionDeltaPct || 0)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.arpu || 0)}</TableCell>
+                    <TableCell className="text-right">
+                      {row.topTier ? (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 uppercase">
+                          {row.topTier}
+                        </Badge>
+                      ) : (
+                        <span className="text-slate-400">N/A</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {!(data?.funnelSheet?.roles || []).length ? (
+              <div className="text-center py-6 text-sm text-slate-500">
+                No funnel-sheet records available in selected range.
+              </div>
+            ) : null}
+          </CardContent>
+        </GlassCard>
+
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-slate-800">Raw vs Rollup Reconciliation</CardTitle>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={reconDate}
+                onChange={e => setReconDate(e.target.value)}
+                className="h-9 rounded-md border border-slate-300 bg-white/80 px-3 text-sm"
+              />
+              <Button
+                variant="outline"
+                className="bg-white/70"
+                onClick={() => refetchReconciliation()}
+                disabled={reconFetching}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${reconFetching ? 'animate-spin' : ''}`} />
+                Validate
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Role</TableHead>
+                  <TableHead className="text-right">MRR Delta</TableHead>
+                  <TableHead className="text-right">NRR Delta</TableHead>
+                  <TableHead className="text-right">Role Selected Delta</TableHead>
+                  <TableHead className="text-right">Strategy Booked Delta</TableHead>
+                  <TableHead className="text-right">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(reconciliation?.roles || []).map((row: any) => (
+                  <TableRow key={row.role} className="hover:bg-white/40">
+                    <TableCell className="font-medium text-slate-900">
+                      {ROLE_LABELS[row.role] || row.role}
+                    </TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.variance?.mrr || 0)}</TableCell>
+                    <TableCell className="text-right">{formatPercent(row.variance?.nrr || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.variance?.roleSelected || 0)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(row.variance?.strategyBooked || 0)}</TableCell>
+                    <TableCell className="text-right">
+                      {row.isMatch ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Match</Badge>
+                      ) : (
+                        <Badge variant="destructive">Mismatch</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <p className="text-xs text-slate-500">
+              Reconciliation date: {reconciliation?.date || reconDate}. Deltas are rollup minus raw recomputation.
+            </p>
+          </CardContent>
+        </GlassCard>
+
+        {isFetching ? <p className="text-xs text-slate-400">Refreshing KPI data...</p> : null}
       </div>
     </div>
   );

@@ -7,11 +7,73 @@ import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure, superAdminProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import * as subscriptionService from './services/subscriptionService';
-import { getDb } from './db';
+import { countActiveListingsByOwner, enforceActiveListingLimitByOwner, getDb } from './db';
 import { requireUser } from './_core/requireUser';
+import { managerialAuditLogs } from '../drizzle/schema';
+import {
+  getEntitlementNumber,
+  getEntitlementsForPlanId,
+  getPlanAccessProjectionForUserId,
+  getPlanById,
+  getPlanCatalog as getPlanCatalogV2,
+  setSubscriptionPlanForOwner,
+} from './services/planAccessService';
+import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import { AuditActions, logAudit } from './_core/auditLog';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
+}
+
+type ListingLimitEnforcementSummary = {
+  maxAllowed: number;
+  totalActiveBefore: number;
+  keptActive: number;
+  demotedCount: number;
+  demotedListingIds: number[];
+};
+
+async function logListingDemotionManagerialAudit(params: {
+  actorUserId: number;
+  ownerType: 'agent' | 'agency';
+  ownerId: number;
+  fromPlanId: number | null;
+  toPlanId: number;
+  source: 'self_serve_billing' | 'admin_override';
+  reason?: string;
+  enforcement: ListingLimitEnforcementSummary | null;
+}) {
+  if (params.ownerType !== 'agent') return;
+  if (!params.enforcement || params.enforcement.demotedCount <= 0) return;
+
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    await db.insert(managerialAuditLogs).values({
+      actorUserId: params.actorUserId,
+      action: 'subscription_downgrade_listing_demotion',
+      targetType: 'agent',
+      targetId: params.ownerId,
+      beforeData: {
+        planId: params.fromPlanId,
+        activeListings: params.enforcement.totalActiveBefore,
+      },
+      afterData: {
+        planId: params.toPlanId,
+        activeListings: params.enforcement.keptActive,
+      },
+      metadata: {
+        source: params.source,
+        reason: params.reason || null,
+        maxAllowed: params.enforcement.maxAllowed,
+        demotedCount: params.enforcement.demotedCount,
+        demotedListingIds: params.enforcement.demotedListingIds,
+      },
+    });
+  } catch (error) {
+    console.error('[Subscription] Failed to write managerial audit demotion event:', error);
+  }
 }
 
 // =====================================================
@@ -49,6 +111,26 @@ const checkLimitSchema = z.object({
   current_count: z.number(),
 });
 
+const planCatalogSchema = z
+  .object({
+    segment: z.enum(['agent', 'agency', 'enterprise', 'developer']).optional(),
+  })
+  .optional();
+
+const changeMyPlanSchema = z.object({
+  planId: z.number(),
+  action: z.enum(['upgrade', 'downgrade']).optional(),
+});
+
+const adminOverrideSchema = z.object({
+  ownerType: z.enum(['agent', 'agency']),
+  ownerId: z.number().int().positive(),
+  planId: z.number().int().positive(),
+  status: z.enum(['trial', 'active', 'expired', 'cancelled']).default('active'),
+  trialDays: z.number().int().min(0).max(365).optional(),
+  reason: z.string().min(3).max(500),
+});
+
 // =====================================================
 // SUBSCRIPTION ROUTER
 // =====================================================
@@ -84,6 +166,258 @@ export const subscriptionRouter = router({
     }
     return plan;
   }),
+
+  getPlanCatalog: publicProcedure.input(planCatalogSchema).query(async ({ input }) => {
+    return await getPlanCatalogV2(input?.segment);
+  }),
+
+  getMyPlanSnapshot: protectedProcedure.input(z.void()).query(async ({ ctx }) => {
+    const user = requireUser(ctx);
+    const projection = await getPlanAccessProjectionForUserId(user.id);
+    if (!projection) return null;
+    const entitlements = await getAgentEntitlementsForUserId(user.id);
+    const usage =
+      projection.ownerType === 'agent'
+        ? {
+            activeListings: await countActiveListingsByOwner(projection.ownerId),
+          }
+        : null;
+
+    return {
+      ...projection,
+      current_plan: projection.currentPlan,
+      trial_status: {
+        status: projection.trialStatus,
+        trialEndsAt: projection.trialEndsAt,
+        daysRemaining: projection.trialDaysRemaining,
+      },
+      usage,
+      entitlements: entitlements?.featureFlags || projection.entitlements,
+    };
+  }),
+
+  changeMyPlan: protectedProcedure.input(changeMyPlanSchema).mutation(async ({ ctx, input }) => {
+    const user = requireUser(ctx);
+    const current = await getPlanAccessProjectionForUserId(user.id);
+    if (!current || !current.currentPlan || !current.subscription) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'No subscription context found for this account.',
+      });
+    }
+
+    const targetPlan = await getPlanById(input.planId);
+    if (!targetPlan) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Target plan not found.' });
+    }
+
+    const inferredAction =
+      targetPlan.priceMonthly >= current.currentPlan.priceMonthly ? 'upgrade' : 'downgrade';
+    const action = input.action || inferredAction;
+    let listingLimitEnforcement: ListingLimitEnforcementSummary | null = null;
+
+    if (action === 'downgrade' && current.ownerType === 'agent') {
+      const targetEntitlements = await getEntitlementsForPlanId(targetPlan.id);
+      const maxActiveListings = getEntitlementNumber(targetEntitlements, 'max_active_listings', -1);
+      if (Number.isFinite(maxActiveListings) && maxActiveListings >= 0) {
+        const enforcement = await enforceActiveListingLimitByOwner(current.ownerId, maxActiveListings);
+        listingLimitEnforcement = {
+          maxAllowed: maxActiveListings,
+          ...enforcement,
+        };
+      }
+    }
+
+    const keepTrialWindow =
+      current.subscription.status === 'trial' &&
+      current.trialStatus === 'active' &&
+      current.subscription.trialEndsAt;
+    const nextStatus = keepTrialWindow ? 'trial' : 'active';
+
+    await setSubscriptionPlanForOwner({
+      ownerType: current.ownerType,
+      ownerId: current.ownerId,
+      planId: targetPlan.id,
+      status: nextStatus,
+      trialEndsAt: keepTrialWindow ? current.subscription.trialEndsAt : null,
+      billingCycleAnchor: keepTrialWindow
+        ? current.subscription.trialEndsAt
+        : new Date().toISOString().slice(0, 19).replace('T', ' '),
+      metadata: {
+        source: 'self_serve_billing',
+        action,
+        previous_plan: current.currentPlan.name,
+        next_plan: targetPlan.name,
+        listing_limit_enforcement:
+          listingLimitEnforcement && listingLimitEnforcement.demotedCount > 0
+            ? {
+                max_allowed: listingLimitEnforcement.maxAllowed,
+                total_active_before: listingLimitEnforcement.totalActiveBefore,
+                demoted_count: listingLimitEnforcement.demotedCount,
+                demoted_listing_ids: listingLimitEnforcement.demotedListingIds,
+              }
+            : null,
+      },
+      actorUserId: user.id,
+    });
+
+    await logListingDemotionManagerialAudit({
+      actorUserId: user.id,
+      ownerType: current.ownerType,
+      ownerId: current.ownerId,
+      fromPlanId: current.currentPlan.id,
+      toPlanId: targetPlan.id,
+      source: 'self_serve_billing',
+      enforcement: listingLimitEnforcement,
+    });
+
+    await logAudit({
+      userId: user.id,
+      action: AuditActions.UPDATE_SUBSCRIPTION,
+      targetType: 'subscription',
+      targetId: current.subscription.id,
+      metadata: {
+        ownerType: current.ownerType,
+        ownerId: current.ownerId,
+        action,
+        fromPlanId: current.currentPlan.id,
+        toPlanId: targetPlan.id,
+        listingLimitEnforcement,
+      },
+      req: ctx.req,
+    });
+
+    const updatedProjection =
+      current.ownerType === 'agent'
+        ? await getPlanAccessProjectionForUserId(current.ownerId)
+        : await getPlanAccessProjectionForUserId(user.id);
+
+    return {
+      success: true,
+      action,
+      subscription: updatedProjection?.subscription || null,
+      current_plan: updatedProjection?.currentPlan || null,
+      listing_limit_enforcement: listingLimitEnforcement,
+      trial_status: updatedProjection
+        ? {
+            status: updatedProjection.trialStatus,
+            trialEndsAt: updatedProjection.trialEndsAt,
+            daysRemaining: updatedProjection.trialDaysRemaining,
+          }
+        : null,
+    };
+  }),
+
+  adminOverrideSubscription: superAdminProcedure
+    .input(adminOverrideSchema)
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const targetPlan = await getPlanById(input.planId);
+      if (!targetPlan) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Target plan not found.' });
+      }
+      const currentProjection =
+        input.ownerType === 'agent' ? await getPlanAccessProjectionForUserId(input.ownerId) : null;
+      let listingLimitEnforcement: ListingLimitEnforcementSummary | null = null;
+
+      if (input.ownerType === 'agent') {
+        const targetEntitlements = await getEntitlementsForPlanId(targetPlan.id);
+        const maxActiveListings = getEntitlementNumber(targetEntitlements, 'max_active_listings', -1);
+        if (Number.isFinite(maxActiveListings) && maxActiveListings >= 0) {
+          const enforcement = await enforceActiveListingLimitByOwner(input.ownerId, maxActiveListings);
+          listingLimitEnforcement = {
+            maxAllowed: maxActiveListings,
+            ...enforcement,
+          };
+        }
+      }
+
+      const trialEndsAt =
+        input.status === 'trial'
+          ? new Date(Date.now() + (input.trialDays ?? targetPlan.trialDays ?? 30) * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .slice(0, 19)
+              .replace('T', ' ')
+          : null;
+
+      const updatedSubscription = await setSubscriptionPlanForOwner({
+        ownerType: input.ownerType,
+        ownerId: input.ownerId,
+        planId: input.planId,
+        status: input.status,
+        trialEndsAt,
+        billingCycleAnchor:
+          input.status === 'trial'
+            ? trialEndsAt
+            : new Date().toISOString().slice(0, 19).replace('T', ' '),
+        metadata: {
+          source: 'admin_override',
+          reason: input.reason,
+          actorUserId: user.id,
+          listing_limit_enforcement:
+            listingLimitEnforcement && listingLimitEnforcement.demotedCount > 0
+              ? {
+                  max_allowed: listingLimitEnforcement.maxAllowed,
+                  total_active_before: listingLimitEnforcement.totalActiveBefore,
+                  demoted_count: listingLimitEnforcement.demotedCount,
+                  demoted_listing_ids: listingLimitEnforcement.demotedListingIds,
+                }
+              : null,
+        },
+        actorUserId: user.id,
+      });
+
+      await logListingDemotionManagerialAudit({
+        actorUserId: user.id,
+        ownerType: input.ownerType,
+        ownerId: input.ownerId,
+        fromPlanId: currentProjection?.currentPlan?.id || null,
+        toPlanId: input.planId,
+        source: 'admin_override',
+        reason: input.reason,
+        enforcement: listingLimitEnforcement,
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: AuditActions.UPDATE_SUBSCRIPTION,
+        targetType: 'subscription',
+        targetId: updatedSubscription?.id,
+        metadata: {
+          ownerType: input.ownerType,
+          ownerId: input.ownerId,
+          planId: input.planId,
+          status: input.status,
+          trialEndsAt,
+          reason: input.reason,
+          override: true,
+          listingLimitEnforcement,
+        },
+        req: ctx.req,
+      });
+
+      const projection =
+        input.ownerType === 'agent'
+          ? await getPlanAccessProjectionForUserId(input.ownerId)
+          : null;
+      const entitlementSummary =
+        input.ownerType === 'agent' ? await getAgentEntitlementsForUserId(input.ownerId) : null;
+
+      return {
+        success: true,
+        subscription: updatedSubscription,
+        current_plan: targetPlan,
+        listing_limit_enforcement: listingLimitEnforcement,
+        trial_status: projection
+          ? {
+              status: projection.trialStatus,
+              trialEndsAt: projection.trialEndsAt,
+              daysRemaining: projection.trialDaysRemaining,
+            }
+          : null,
+        entitlements: entitlementSummary?.featureFlags || null,
+      };
+    }),
 
   // Compatibility stubs for client expectations
   getAvailablePlans: protectedProcedure.input(z.void()).query(async () => {

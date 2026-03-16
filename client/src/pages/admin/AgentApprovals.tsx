@@ -97,13 +97,16 @@ export default function AgentApprovals() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Agent Approvals</h1>
-        <p className="text-slate-600 mt-1">Review and manage agent registration applications</p>
+        <h1 className="text-3xl font-bold text-slate-900">Agent Moderation</h1>
+        <p className="text-slate-600 mt-1">
+          Agent email verification now auto-approves access. Use this screen for abuse handling and
+          escalations.
+        </p>
       </div>
 
       <Tabs value={selectedStatus} onValueChange={v => setSelectedStatus(v as AgentStatus)}>
         <TabsList className="grid w-full max-w-md grid-cols-4">
-          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="pending">Needs Review</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
           <TabsTrigger value="suspended">Suspended</TabsTrigger>

@@ -133,7 +133,7 @@ export const ProvinceDevDashboard: React.FC = () => {
 
   // Fetch all brand profiles
   const { data: brandProfiles, isLoading } = trpc.superAdminPublisher.listBrandProfiles.useQuery(
-    {},
+    { emulatorOnly: true },
   );
 
   // Group brand profiles by operating provinces

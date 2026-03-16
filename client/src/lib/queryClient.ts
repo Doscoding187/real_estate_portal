@@ -111,13 +111,14 @@ export function prefetchVideoFeed(filters: ExploreFeedFilters) {
   return queryClient.prefetchQuery({
     queryKey: ['explore', 'videos', { ...filters, offset: nextOffset }],
     queryFn: async () => {
-      const endpoint = '/api/explore/getVideoFeed';
+      const endpoint = '/api/explore/getFeed';
       const url = getApiUrl(endpoint);
 
       const response = await fetch(
         url +
           '?' +
           new URLSearchParams({
+            feedType: 'recommended',
             ...Object.fromEntries(
               Object.entries({ ...filters, offset: nextOffset }).filter(([_, v]) => v != null),
             ),

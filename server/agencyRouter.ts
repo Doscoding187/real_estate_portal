@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import {
   router,
   superAdminProcedure,
@@ -22,6 +23,8 @@ import {
 } from './db';
 import { logAudit } from './_core/auditLog';
 import { requireUser } from './_core/requireUser';
+import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import { getPlanByName, setSubscriptionPlanForOwner } from './services/planAccessService';
 
 /**
  * Agency Router - Manages real estate agencies
@@ -58,6 +61,17 @@ const agencyFiltersSchema = z.object({
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
 });
+
+async function assertAgencyTeamDashboardEntitlement(userId: number, role?: string | null) {
+  if (role === 'super_admin') return;
+  const entitlements = await getAgentEntitlementsForUserId(userId);
+  if (!entitlements?.featureFlags?.hasTeamDashboard) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Agency team dashboard requires an Agency Growth plan or higher.',
+    });
+  }
+}
 
 export const agencyRouter = router({
   /**
@@ -154,6 +168,18 @@ export const agencyRouter = router({
         isEnabled: 1,
       });
 
+      await setSubscriptionPlanForOwner({
+        ownerType: 'agency',
+        ownerId: agencyId,
+        planId: input.planId,
+        status: 'trial',
+        metadata: {
+          source: 'agency_onboarding',
+          free_first_month: true,
+        },
+        actorUserId: user.id,
+      });
+
       // 6. Update user to be agency_admin of this agency
       await db
         .update(users)
@@ -209,9 +235,9 @@ export const agencyRouter = router({
       throw new Error('An agency with this slug already exists');
     }
 
-    // Create agency
-    const [result] = await db.insert(agencies).values({
-      name: input.name,
+      // Create agency
+      const [result] = await db.insert(agencies).values({
+        name: input.name,
       slug: input.slug,
       description: input.description || null,
       logo: input.logo || null,
@@ -223,17 +249,33 @@ export const agencyRouter = router({
       province: input.province || null,
       subscriptionPlan: 'free',
       subscriptionStatus: 'trial',
-      isVerified: 0,
-    });
+        isVerified: 0,
+      });
 
-    // Audit log
-    await logAudit({
-      userId: user.id,
-      action: 'agency.create',
-      targetType: 'agency',
-      targetId: Number(result.insertId),
-      req: ctx.req,
-    });
+      const newAgencyId = Number(result.insertId);
+      const defaultAgencyPlan = await getPlanByName('agency_growth');
+      if (defaultAgencyPlan) {
+        await setSubscriptionPlanForOwner({
+          ownerType: 'agency',
+          ownerId: newAgencyId,
+          planId: defaultAgencyPlan.id,
+          status: 'trial',
+          metadata: {
+            source: 'agency_superadmin_create',
+            free_first_month: true,
+          },
+          actorUserId: user.id,
+        });
+      }
+
+      // Audit log
+      await logAudit({
+        userId: user.id,
+        action: 'agency.create',
+        targetType: 'agency',
+        targetId: newAgencyId,
+        req: ctx.req,
+      });
 
     // Fetch and return the created agency
     const [agency] = await db
@@ -455,6 +497,7 @@ export const agencyRouter = router({
    */
   getDashboardStats: agencyAdminProcedure.query(async ({ ctx }) => {
     const user = requireUser(ctx);
+    await assertAgencyTeamDashboardEntitlement(user.id, user.role);
     if (!user.agencyId) {
       return {
         totalListings: 0,
@@ -491,6 +534,7 @@ export const agencyRouter = router({
     .input(z.object({ months: z.number().default(6) }).optional())
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      await assertAgencyTeamDashboardEntitlement(user.id, user.role);
       if (!user.agencyId) {
         return [];
       }
@@ -509,6 +553,7 @@ export const agencyRouter = router({
     .input(z.object({ limit: z.number().default(5) }).optional())
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      await assertAgencyTeamDashboardEntitlement(user.id, user.role);
       if (!user.agencyId) {
         throw new Error('You must be part of an agency');
       }
@@ -522,6 +567,7 @@ export const agencyRouter = router({
     .input(z.object({ limit: z.number().default(5) }).optional())
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      await assertAgencyTeamDashboardEntitlement(user.id, user.role);
       if (!user.agencyId) {
         throw new Error('You must be part of an agency');
       }
@@ -533,6 +579,7 @@ export const agencyRouter = router({
    */
   listAgents: agencyAdminProcedure.query(async ({ ctx }) => {
     const user = requireUser(ctx);
+    await assertAgencyTeamDashboardEntitlement(user.id, user.role);
     if (!user.agencyId) {
       throw new Error('You must be part of an agency');
     }

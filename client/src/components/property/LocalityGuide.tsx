@@ -14,6 +14,16 @@ interface LocalityGuideProps {
 const DEFAULT_GUIDE_IMAGE =
   '/placeholders/urban-illustration-with-large-buildings-with-cars-and-trees-city-activities-vector.jpg';
 
+const resolveGuideImage = (images: string[]) => {
+  const firstValid = images.find(image => typeof image === 'string' && image.trim().length > 0);
+  return firstValid || DEFAULT_GUIDE_IMAGE;
+};
+
+const buildFallbackDescription = (suburb: string, city: string, province?: string) => {
+  const areaLabel = province ? `${suburb}, ${city}, ${province}` : `${suburb}, ${city}`;
+  return `${areaLabel} offers a practical mix of everyday convenience, commuter access, and local amenities. Buyers exploring developments here can expect a neighbourhood suited to daily living, with schools, shopping, and transport links shaping the local lifestyle.`;
+};
+
 export function LocalityGuide({
   suburb,
   city,
@@ -22,9 +32,9 @@ export function LocalityGuide({
   images = [],
 }: LocalityGuideProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const fallbackDescription = `${suburb} is a suburb in ${city}. Explore local amenities, transport links, and lifestyle highlights to understand what makes this area a great place to live.`;
+  const fallbackDescription = buildFallbackDescription(suburb, city, province);
   const resolvedDescription = description?.trim() ? description : fallbackDescription;
-  const resolvedImage = DEFAULT_GUIDE_IMAGE;
+  const resolvedImage = resolveGuideImage(images);
 
   return (
     <Card className="border-slate-200 shadow-sm bg-white">
@@ -54,6 +64,11 @@ export function LocalityGuide({
               src={resolvedImage}
               alt={`${suburb} locality`}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              onError={e => {
+                const target = e.currentTarget as HTMLImageElement;
+                if (target.src.includes(DEFAULT_GUIDE_IMAGE)) return;
+                target.src = DEFAULT_GUIDE_IMAGE;
+              }}
             />
           </div>
         </div>

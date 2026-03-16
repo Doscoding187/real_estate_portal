@@ -17,10 +17,18 @@ import { registerAuthRoutes } from './authRoutes';
 import { appRouter } from '../routers';
 import { createContext } from './context';
 import { serveStatic, setupVite } from './vite';
+import { ENV } from './env';
 import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint } from './health';
+import {
+  getDistributionSchemaReadinessSnapshot,
+  getMissingRuntimeSchemaTargets,
+  getRuntimeSchemaCapabilities,
+  type RuntimeSchemaStrictTarget,
+} from '../services/runtimeSchemaCapabilities';
+import internalCronRouter from '../routes/internalCron';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -71,6 +79,56 @@ async function startServer() {
   await initializeCache();
   console.log('[Server] Cache initialized');
 
+  console.log('[Server] Probing runtime schema capabilities...');
+  const schemaCapabilities = await getRuntimeSchemaCapabilities({ forceRefresh: true });
+  const strictTargets = (ENV.schemaCapabilitiesStrictTargets.length
+    ? ENV.schemaCapabilitiesStrictTargets
+    : ['demand_engine', 'economic_actors', 'showings']
+  ).filter((target): target is RuntimeSchemaStrictTarget =>
+    ['demand_engine', 'economic_actors', 'showings'].includes(target),
+  );
+  const missingTargets = getMissingRuntimeSchemaTargets(schemaCapabilities, strictTargets);
+
+  console.log('[SchemaCapabilities] Snapshot', {
+    checkedAt: schemaCapabilities.checkedAt,
+    demandEngineReady: schemaCapabilities.demandEngineReady,
+    economicActorsReady: schemaCapabilities.economicActorsReady,
+    showingsReady: schemaCapabilities.showingsReady,
+    strictMode: ENV.schemaCapabilitiesStrict,
+    strictTargets,
+    missingTargets,
+  });
+
+  if (missingTargets.length > 0) {
+    const failureMessage = `[SchemaCapabilities] Missing required schema capabilities: ${missingTargets.join(', ')}.`;
+    if (ENV.schemaCapabilitiesStrict) {
+      throw new Error(`${failureMessage} Refusing to boot because SCHEMA_CAPABILITIES_STRICT=true.`);
+    }
+    console.warn(`${failureMessage} Booting in compatibility mode because strict mode is disabled.`);
+  }
+
+  console.log('[Server] Probing distribution schema readiness...');
+  const distributionSchema = await getDistributionSchemaReadinessSnapshot({ forceRefresh: true });
+  console.log('[DistributionSchema] Snapshot', {
+    checkedAt: distributionSchema.checkedAt,
+    ready: distributionSchema.ready,
+    missingItems: distributionSchema.missingItems,
+    operations: Object.fromEntries(
+      Object.entries(distributionSchema.operations).map(([operation, status]) => [
+        operation,
+        {
+          ready: status.ready,
+          missingItems: status.missingItems,
+        },
+      ]),
+    ),
+  });
+  if (!distributionSchema.ready) {
+    console.warn(
+      '[DistributionSchema] Distribution admin routes will stay in guarded compatibility mode until missing migrations are applied.',
+    );
+  }
+
   const app = express();
   const server = createServer(app);
 
@@ -93,13 +151,22 @@ async function startServer() {
     'https://propertylistifysa.co.za',
     'http://localhost:3009',
   ];
+  const allowedOriginPatterns = [
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i,
+    /^https:\/\/([a-z0-9-]+\.)?propertylistifysa\.co\.za(?::\d+)?$/i,
+    /^https:\/\/[a-z0-9-]+\.vercel\.app(?::\d+)?$/i,
+    /^https:\/\/[a-z0-9-]+\.up\.railway\.app(?::\d+)?$/i,
+  ];
 
   app.use(
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        const isAllowed =
+          allowedOrigins.includes(origin) || allowedOriginPatterns.some(pattern => pattern.test(origin));
+
+        if (isAllowed) {
           console.log(`✅ CORS: Allowed origin: ${origin}`);
           callback(null, true);
         } else {
@@ -118,6 +185,7 @@ async function startServer() {
   // Apply auth rate limits after CORS so even 429 responses include CORS headers.
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
+  app.use('/api/auth/resend-verification', authLimiter);
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -139,6 +207,7 @@ async function startServer() {
 
   registerAuthRoutes(app);
   registerHealthEndpoint(app);
+  app.use('/internal', internalCronRouter);
 
   app.get('/api/test', async (req, res) => {
     try {
@@ -168,13 +237,15 @@ async function startServer() {
       router: appRouter,
       createContext,
       onError({ error, path, type }) {
+        const cause: any = (error as any)?.cause;
         console.error('❌ tRPC Error:', {
           path,
           type,
           code: error.code,
           message: error.message,
           stack: error.stack,
-          cause: (error as any).cause,
+          causeMessage: cause?.message || (typeof cause === 'string' ? cause : undefined),
+          causeCode: cause?.code,
         });
       },
     }),
@@ -184,8 +255,9 @@ async function startServer() {
   console.log('[Server] Loading optional routers...');
 
   await mountOptionalRouter(app, '/api/analytics', '../routes/analytics');
+  await mountOptionalRouter(app, '/api/kpi', '../routes/kpi');
 
-  console.log('[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount');
+  await mountOptionalRouter(app, '/api/partners', '../partnerPublicRouter');
 
   await mountOptionalRouter(app, '/api/partner-analytics', '../partnerAnalyticsRouter');
   await mountOptionalRouter(app, '/api/content', '../contentRouter');
@@ -198,6 +270,24 @@ async function startServer() {
   await mountOptionalRouter(app, '/api/explore/video', '../routes/exploreVideoUpload');
 
   console.log('[Server] Optional routers loaded');
+
+  try {
+    const { startKpiRollupScheduler } = await import('../services/kpiRollupService');
+    startKpiRollupScheduler();
+    console.log('[KPI Rollup] Scheduler started (daily at 02:00 UTC, plus startup backfill)');
+  } catch (error: any) {
+    console.warn('[KPI Rollup] Scheduler not started:', error?.message || error);
+  }
+
+  try {
+    const { startExploreActorScoringScheduler } = await import(
+      '../services/exploreActorScoringService'
+    );
+    startExploreActorScoringScheduler();
+    console.log('[ExploreActorScoring] Scheduler started (every 6h at minute 10 UTC)');
+  } catch (error: any) {
+    console.warn('[ExploreActorScoring] Scheduler not started:', error?.message || error);
+  }
 
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Using Vite development server');

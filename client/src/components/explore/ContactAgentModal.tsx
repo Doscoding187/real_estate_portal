@@ -32,6 +32,25 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
       // You could show an error toast here
     },
   });
+  const recordOutcome = trpc.explore.recordOutcome.useMutation();
+
+  const contactRoleLabel = (() => {
+    const domain = String(video?.contentDomain || '').toLowerCase();
+    const creatorType = String(video?.creatorType || '').toLowerCase();
+    if (domain === 'finance' || creatorType === 'bond_originator' || creatorType === 'financial_institution') {
+      return 'Advisor';
+    }
+    if (domain === 'improve' || creatorType === 'contractor' || creatorType === 'architect') {
+      return 'Provider';
+    }
+    if (domain === 'invest' || creatorType === 'investor') {
+      return 'Specialist';
+    }
+    if (domain === 'community') {
+      return 'Creator';
+    }
+    return 'Agent';
+  })();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -55,7 +74,7 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
   };
 
   const generateMessage = () => {
-    if (video.type === 'listing') {
+    if (video.type === 'listing' || video.kind === 'listing') {
       const propertyTitle = video.propertyTitle || 'the property';
       return `Hi ${video.agentName || 'there'}, I saw your video about ${propertyTitle} and would like to know more. Please contact me with more information.`;
     } else {
@@ -69,6 +88,14 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
     }
 
     const message = form.message.trim() || generateMessage();
+
+    recordOutcome.mutate({
+      contentId: Number(video.id),
+      outcomeType: 'leadSubmitted',
+      feedType: 'recommended',
+      outcomeContext: { source: 'contact_modal_submit' },
+      deviceType: 'mobile',
+    });
 
     contactAgent.mutate({
       agentId: video.agentId,
@@ -95,8 +122,8 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span>Contact Agent</span>
-            {video.type === 'listing' && (
+            <span>Contact {contactRoleLabel}</span>
+            {(video.type === 'listing' || video.kind === 'listing') && (
               <span className="text-sm text-muted-foreground">(Property Video)</span>
             )}
           </DialogTitle>
@@ -112,8 +139,8 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
                 </span>
               </div>
               <div>
-                <p className="font-medium">{video.agentName || 'Agent'}</p>
-                {video.type === 'listing' && video.propertyTitle && (
+                <p className="font-medium">{video.agentName || contactRoleLabel}</p>
+                {(video.type === 'listing' || video.kind === 'listing') && video.propertyTitle && (
                   <p className="text-sm text-muted-foreground">Regarding: {video.propertyTitle}</p>
                 )}
               </div>

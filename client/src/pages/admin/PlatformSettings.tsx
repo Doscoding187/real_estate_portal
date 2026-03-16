@@ -23,10 +23,15 @@ import { toast } from 'sonner';
 export default function PlatformSettings() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [modifiedKeys, setModifiedKeys] = useState<Set<string>>(new Set());
+  const [affordabilityDrafts, setAffordabilityDrafts] = useState<Record<string, number>>({});
 
   const { data: currentSettings, isLoading } = trpc.admin.getPlatformSettings.useQuery();
+  const affordabilityConfigQuery = trpc.admin.listAffordabilityConfig.useQuery(undefined, {
+    retry: false,
+  });
 
   const updateSettingMutation = trpc.admin.updatePlatformSetting.useMutation({
     onSuccess: () => {
@@ -35,6 +40,17 @@ export default function PlatformSettings() {
     },
     onError: error => {
       toast.error(error.message || 'Failed to update setting');
+    },
+  });
+
+  const updateAffordabilityConfigMutation = trpc.admin.updateAffordabilityConfig.useMutation({
+    onSuccess: async () => {
+      toast.success('Affordability config updated');
+      await affordabilityConfigQuery.refetch();
+      await utils.distribution.qualification.previewQuick.invalidate();
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to update affordability config');
     },
   });
 
@@ -87,6 +103,23 @@ export default function PlatformSettings() {
       default:
         return <Key className="h-4 w-4" />;
     }
+  };
+
+  const getAffordabilityValue = (row: any) => {
+    if (typeof affordabilityDrafts[row.key] === 'number') return affordabilityDrafts[row.key];
+    return Number(row.value || 0);
+  };
+
+  const handleAffordabilityValueChange = (key: string, value: number) => {
+    setAffordabilityDrafts(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveAffordability = (row: any) => {
+    const nextValue = getAffordabilityValue(row);
+    updateAffordabilityConfigMutation.mutate({
+      key: row.key,
+      value: Number(nextValue),
+    });
   };
 
   const categories = ['pricing', 'features', 'notifications', 'limits', 'other'];
@@ -222,6 +255,58 @@ export default function PlatformSettings() {
           </Card>
         ) : (
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Affordability Engine Config
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {affordabilityConfigQuery.isLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading affordability assumptions...</p>
+                ) : (
+                  (affordabilityConfigQuery.data?.entries || []).map((row: any) => (
+                    <div key={row.key} className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{row.label}</p>
+                        <p className="text-xs text-muted-foreground">{row.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Key: <code>{row.key}</code> | Default: {row.defaultValue}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step={row.valueType === 'integer' ? 1 : row.step || 0.01}
+                          min={row.min}
+                          max={row.max}
+                          value={getAffordabilityValue(row)}
+                          onChange={event =>
+                            handleAffordabilityValueChange(
+                              row.key,
+                              row.valueType === 'integer'
+                                ? parseInt(event.target.value || '0')
+                                : parseFloat(event.target.value || '0'),
+                            )
+                          }
+                          className="w-40"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveAffordability(row)}
+                          disabled={updateAffordabilityConfigMutation.isPending}
+                        >
+                          <Save className="h-3 w-3 mr-1" />
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
             {categories.map(category => (
               <Card key={category}>
                 <CardHeader>

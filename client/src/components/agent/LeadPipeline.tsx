@@ -27,6 +27,9 @@ interface Lead {
   phone: string | null;
   message: string | null;
   source: string | null;
+  campaignId?: number | null;
+  campaignName?: string | null;
+  matchConfidence?: 'high' | 'medium' | 'low' | null;
   createdAt: string;
   property?: {
     id: number;
@@ -66,14 +69,19 @@ export function LeadPipeline({ className }: LeadPipelineProps) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSource, setSelectedSource] = useState<string>('');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
+  const [selectedConfidence, setSelectedConfidence] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
 
   const utils = trpc.useUtils();
+  const { data: campaigns } = trpc.demand.listMyCampaigns.useQuery(undefined, { retry: false });
 
   // Fetch leads pipeline
   const { data: pipelineData, isLoading } = trpc.agent.getLeadsPipeline.useQuery({
     filters: {
       source: selectedSource || undefined,
+      campaignId: selectedCampaignId ? Number(selectedCampaignId) : undefined,
+      matchConfidence: (selectedConfidence as 'high' | 'medium' | 'low' | '') || undefined,
     },
   });
 
@@ -238,6 +246,37 @@ export function LeadPipeline({ className }: LeadPipelineProps) {
                   <option value="explore_feed">Explore Feed</option>
                   <option value="agent_profile">Agent Profile</option>
                   <option value="referral">Referral</option>
+                  <option value="demand">Demand Engine</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Campaign</label>
+                <select
+                  value={selectedCampaignId}
+                  onChange={e => setSelectedCampaignId(e.target.value)}
+                  className="ml-2 px-3 py-1 border rounded text-sm"
+                >
+                  <option value="">All Campaigns</option>
+                  {(campaigns || []).map(campaign => (
+                    <option key={campaign.id} value={String(campaign.id)}>
+                      {campaign.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Match</label>
+                <select
+                  value={selectedConfidence}
+                  onChange={e => setSelectedConfidence(e.target.value)}
+                  className="ml-2 px-3 py-1 border rounded text-sm"
+                >
+                  <option value="">All Confidence</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
                 </select>
               </div>
             </div>
@@ -341,6 +380,16 @@ function LeadCard({ lead }: { lead: Lead }) {
           {lead.source && (
             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
               {lead.source}
+            </Badge>
+          )}
+          {lead.campaignName && (
+            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+              {lead.campaignName}
+            </Badge>
+          )}
+          {lead.matchConfidence && (
+            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+              Match: {lead.matchConfidence}
             </Badge>
           )}
         </div>

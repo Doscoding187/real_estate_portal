@@ -1,5 +1,4 @@
-import { router } from './_core/trpc';
-import { agentProcedure } from './_core/trpc';
+import { router, agentProcedure, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { getDb } from './db';
 import {
@@ -13,13 +12,21 @@ import {
   propertyImages,
   users,
   notifications,
+  demandCampaigns,
+  demandLeadAssignments,
+  demandLeadMatches,
 } from '../drizzle/schema';
-import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, sql, count, inArray, like, or, ne } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { requireUser } from './_core/requireUser';
+import {
+  calculateAgentProfileCompletion,
+  getAgentEntitlementsForUserId,
+} from './services/agentEntitlementService';
+import { getRuntimeSchemaCapabilities, warnSchemaCapabilityOnce } from './services/runtimeSchemaCapabilities';
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -33,6 +40,50 @@ const NOTIFICATION_TYPES = [
   'system_alert',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120);
+}
+
+function splitCsv(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function parseSocialLinks(value: string | null | undefined): Record<string, string> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object') {
+      return Object.fromEntries(
+        Object.entries(parsed as Record<string, unknown>)
+          .filter(([, item]) => typeof item === 'string')
+          .map(([key, item]) => [key, String(item)]),
+      );
+    }
+  } catch {
+    // no-op
+  }
+  return {};
+}
+
+function parseFlags(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(item => String(item)) : [];
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Agent Router - Dashboard and CRM functionality for agents
@@ -149,6 +200,8 @@ export const agentRouter = router({
           .object({
             propertyId: z.number().optional(),
             source: z.string().optional(),
+            campaignId: z.number().optional(),
+            matchConfidence: z.enum(['high', 'medium', 'low']).optional(),
             dateRange: z
               .object({
                 start: z.string().optional(),
@@ -160,61 +213,18 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      // Build conditions
-      const conditions: SQL[] = [eq(leads.agentId, agentRecord.id)];
-
-      if (input.filters?.propertyId) {
-        conditions.push(eq(leads.propertyId, input.filters.propertyId));
-      }
-
-      if (input.filters?.source) {
-        conditions.push(eq(leads.source, input.filters.source));
-      }
-
-      if (input.filters?.dateRange?.start) {
-        conditions.push(
-          gte(leads.createdAt, new Date(input.filters.dateRange.start).toISOString()),
-        );
-      }
-
-      if (input.filters?.dateRange?.end) {
-        conditions.push(lte(leads.createdAt, new Date(input.filters.dateRange.end).toISOString()));
-      }
-
-      // Get all leads for this agent
-      const leadsList = await db
-        .select({
-          lead: leads,
-          property: properties,
-        })
-        .from(leads)
-        .leftJoin(properties, eq(leads.propertyId, properties.id))
-        .where(and(...conditions))
-        .orderBy(leads.createdAt);
-
-      // Define Output Type
       interface LeadPipelineItem {
         id: number;
         name: string;
         email: string;
-        phone: string;
+        phone: string | null;
         status: string;
-        source: string;
+        source: string | null;
         notes: string | null;
         createdAt: string | Date;
+        campaignId: number | null;
+        campaignName: string | null;
+        matchConfidence: 'high' | 'medium' | 'low' | null;
         property: {
           id: number;
           title: string;
@@ -223,61 +233,198 @@ export const agentRouter = router({
         } | null;
       }
 
-      // Group by pipeline stage
-      const pipeline: Record<PipelineStage, LeadPipelineItem[]> = {
+      const emptyPipeline = (): Record<PipelineStage, LeadPipelineItem[]> => ({
         new: [],
         contacted: [],
         viewing: [],
         offer: [],
         closed: [],
-      };
-
-      leadsList.forEach(({ lead, property }) => {
-        // Map lead status to pipeline stage
-        let stage: PipelineStage = 'new';
-        switch (lead.status) {
-          case 'new':
-            stage = 'new';
-            break;
-          case 'contacted':
-          case 'qualified':
-            stage = 'contacted';
-            break;
-          case 'viewing_scheduled':
-            stage = 'viewing';
-            break;
-          case 'offer_sent':
-          case 'converted':
-            stage = 'offer';
-            break;
-          case 'closed':
-            stage = 'closed';
-            break;
-          default:
-            stage = 'new';
-        }
-
-        pipeline[stage].push({
-          id: lead.id,
-          name: lead.name,
-          email: lead.email,
-          phone: lead.phone,
-          status: lead.status,
-          source: lead.source,
-          notes: lead.notes,
-          createdAt: lead.createdAt || new Date(),
-          property: property
-            ? {
-                id: property.id,
-                title: property.title,
-                city: property.city,
-                price: Number(property.price),
-              }
-            : null,
-        });
       });
 
-      return pipeline;
+      const mapRowsToPipeline = (
+        rows: Array<{
+          leadId: number;
+          leadName: string;
+          leadEmail: string;
+          leadPhone: string | null;
+          leadStatus: string;
+          leadSource: string | null;
+          leadNotes: string | null;
+          leadCreatedAt: string | Date | null;
+          propertyId: number | null;
+          propertyTitle: string | null;
+          propertyCity: string | null;
+          propertyPrice: number | string | null;
+          campaignId: number | null;
+          campaignName: string | null;
+          matchConfidence: 'high' | 'medium' | 'low' | null;
+        }>,
+      ) => {
+        const pipeline = emptyPipeline();
+
+        rows.forEach(row => {
+          let stage: PipelineStage = 'new';
+          switch (row.leadStatus) {
+            case 'new':
+              stage = 'new';
+              break;
+            case 'contacted':
+            case 'qualified':
+              stage = 'contacted';
+              break;
+            case 'viewing_scheduled':
+              stage = 'viewing';
+              break;
+            case 'offer_sent':
+            case 'converted':
+              stage = 'offer';
+              break;
+            case 'closed':
+              stage = 'closed';
+              break;
+            default:
+              stage = 'new';
+          }
+
+          pipeline[stage].push({
+            id: row.leadId,
+            name: row.leadName,
+            email: row.leadEmail,
+            phone: row.leadPhone,
+            status: row.leadStatus,
+            source: row.leadSource,
+            notes: row.leadNotes,
+            createdAt: row.leadCreatedAt || new Date(),
+            campaignId: row.campaignId ? Number(row.campaignId) : null,
+            campaignName: row.campaignName ? String(row.campaignName) : null,
+            matchConfidence: (row.matchConfidence as 'high' | 'medium' | 'low' | null) || null,
+            property: row.propertyId
+              ? {
+                  id: row.propertyId,
+                  title: row.propertyTitle || 'Untitled Property',
+                  city: row.propertyCity || '',
+                  price: Number(row.propertyPrice || 0),
+                }
+              : null,
+          });
+        });
+
+        return pipeline;
+      };
+
+      try {
+        const db = await getDb();
+        const capabilities = await getRuntimeSchemaCapabilities();
+        const demandEngineReady = capabilities.demandEngineReady;
+        if (!demandEngineReady) {
+          warnSchemaCapabilityOnce(
+            'agent-getLeadsPipeline-demand-not-ready',
+            '[agent.getLeadsPipeline] Demand tables not fully ready; returning pipeline without demand metadata.',
+            capabilities.demandEngineDetails,
+          );
+        }
+
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, requireUser(ctx).id))
+          .limit(1);
+
+        if (!agentRecord) {
+          return emptyPipeline();
+        }
+
+        const conditions: SQL[] = [eq(leads.agentId, agentRecord.id)];
+
+        if (input.filters?.propertyId) {
+          conditions.push(eq(leads.propertyId, input.filters.propertyId));
+        }
+
+        if (input.filters?.source) {
+          conditions.push(eq(leads.source, input.filters.source));
+        }
+
+        if (input.filters?.campaignId && demandEngineReady) {
+          conditions.push(eq(demandLeadAssignments.campaignId, Number(input.filters.campaignId)));
+        }
+
+        if (input.filters?.matchConfidence && demandEngineReady) {
+          conditions.push(eq(demandLeadMatches.confidence, input.filters.matchConfidence));
+        }
+
+        if (!demandEngineReady && (input.filters?.campaignId || input.filters?.matchConfidence)) {
+          warnSchemaCapabilityOnce(
+            'agent-getLeadsPipeline-demand-filter-ignored',
+            '[agent.getLeadsPipeline] Ignoring demand-specific filters because demand schema is not ready.',
+          );
+        }
+
+        if (input.filters?.dateRange?.start) {
+          conditions.push(gte(leads.createdAt, new Date(input.filters.dateRange.start).toISOString()));
+        }
+
+        if (input.filters?.dateRange?.end) {
+          conditions.push(lte(leads.createdAt, new Date(input.filters.dateRange.end).toISOString()));
+        }
+
+        if (demandEngineReady) {
+          const rows = await db
+            .select({
+              leadId: leads.id,
+              leadName: leads.name,
+              leadEmail: leads.email,
+              leadPhone: leads.phone,
+              leadStatus: leads.status,
+              leadSource: leads.source,
+              leadNotes: leads.notes,
+              leadCreatedAt: leads.createdAt,
+              propertyId: properties.id,
+              propertyTitle: properties.title,
+              propertyCity: properties.city,
+              propertyPrice: properties.price,
+              campaignId: demandLeadAssignments.campaignId,
+              campaignName: demandCampaigns.name,
+              matchConfidence: demandLeadMatches.confidence,
+            })
+            .from(leads)
+            .leftJoin(properties, eq(leads.propertyId, properties.id))
+            .leftJoin(demandLeadAssignments, eq(demandLeadAssignments.leadId, leads.id))
+            .leftJoin(demandCampaigns, eq(demandCampaigns.id, demandLeadAssignments.campaignId))
+            .leftJoin(demandLeadMatches, eq(demandLeadMatches.leadId, leads.id))
+            .where(and(...conditions))
+            .orderBy(desc(leads.createdAt));
+
+          return mapRowsToPipeline(rows as any);
+        }
+
+        const rowsWithoutDemand = await db
+          .select({
+            leadId: leads.id,
+            leadName: leads.name,
+            leadEmail: leads.email,
+            leadPhone: leads.phone,
+            leadStatus: leads.status,
+            leadSource: leads.source,
+            leadNotes: leads.notes,
+            leadCreatedAt: leads.createdAt,
+            propertyId: properties.id,
+            propertyTitle: properties.title,
+            propertyCity: properties.city,
+            propertyPrice: properties.price,
+            campaignId: sql<number | null>`NULL`,
+            campaignName: sql<string | null>`NULL`,
+            matchConfidence: sql<'high' | 'medium' | 'low' | null>`NULL`,
+          })
+          .from(leads)
+          .leftJoin(properties, eq(leads.propertyId, properties.id))
+          .where(and(...conditions))
+          .orderBy(desc(leads.createdAt));
+
+        return mapRowsToPipeline(rowsWithoutDemand as any);
+      } catch (error) {
+        console.warn('[agent.getLeadsPipeline] Returning empty pipeline due to error:', error);
+        return emptyPipeline();
+      }
     }),
 
   /**
@@ -525,7 +672,8 @@ export const agentRouter = router({
     .input(
       z.object({
         displayName: z.string().min(2).max(100),
-        phone: z.string().min(10).max(20),
+        phone: z.string().min(10).max(20).optional(),
+        phoneNumber: z.string().min(10).max(20).optional(),
         bio: z.string().max(1000).optional(),
         profilePhoto: z.string().optional(),
         licenseNumber: z.string().optional(),
@@ -534,6 +682,10 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean; agentId: number }> => {
       const db = await getDb();
+      const normalizedPhone = input.phone || input.phoneNumber;
+      if (!normalizedPhone) {
+        throw new Error('Phone number is required');
+      }
 
       // Check if agent profile already exists
       const [existing] = await db
@@ -550,7 +702,7 @@ export const agentRouter = router({
       const agentId = await db.createAgentProfile({
         userId: requireUser(ctx).id,
         displayName: input.displayName,
-        phone: input.phone,
+        phone: normalizedPhone,
         bio: input.bio,
         profilePhoto: input.profilePhoto,
         licenseNumber: input.licenseNumber,
@@ -780,46 +932,57 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
+      try {
+        const db = await getDb();
+        const capabilities = await getRuntimeSchemaCapabilities();
+        if (!capabilities.showingsReady) {
+          warnSchemaCapabilityOnce(
+            'agent-getMyShowings-schema-not-ready',
+            '[agent.getMyShowings] Showings schema not ready. Returning empty showings.',
+            capabilities.showingsDetails,
+          );
+          return [];
+        }
 
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, requireUser(ctx).id))
+          .limit(1);
 
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
+        if (!agentRecord) {
+          return [];
+        }
+
+        const conditions: SQL[] = [eq(showings.agentId, agentRecord.id)];
+
+        if (input.startDate) {
+          conditions.push(gte(showings.scheduledTime, new Date(input.startDate).toISOString()));
+        }
+        if (input.endDate) {
+          conditions.push(lte(showings.scheduledTime, new Date(input.endDate).toISOString()));
+        }
+        if (input.status && input.status !== 'all') {
+          conditions.push(eq(showings.status, input.status as any));
+        }
+
+        const showingsList = await db
+          .select({
+            showing: showings,
+          })
+          .from(showings)
+          .where(and(...conditions))
+          .orderBy(showings.scheduledTime);
+
+        return showingsList.map(({ showing }) => ({
+          ...showing,
+          property: null,
+          client: null,
+        }));
+      } catch (error) {
+        console.warn('[agent.getMyShowings] Returning empty showings due to error:', error);
+        return [];
       }
-
-      // Build conditions
-      const conditions: SQL[] = [eq(showings.agentId, agentRecord.id)];
-
-      if (input.startDate) {
-        conditions.push(gte(showings.scheduledTime, new Date(input.startDate).toISOString()));
-      }
-      if (input.endDate) {
-        conditions.push(lte(showings.scheduledTime, new Date(input.endDate).toISOString()));
-      }
-      if (input.status && input.status !== 'all') {
-        conditions.push(eq(showings.status, input.status as any));
-      }
-
-      // Fetch showings with property and lead info
-      const showingsList = await db
-        .select({
-          showing: showings,
-        })
-        .from(showings)
-        .where(and(...conditions))
-        .orderBy(showings.scheduledTime);
-
-      return showingsList.map(({ showing }) => ({
-        ...showing,
-        property: null,
-        client: null,
-      }));
     }),
 
   /**
@@ -1206,5 +1369,363 @@ export const agentRouter = router({
       await db.update(properties).set(updateData).where(eq(properties.id, input.propertyId));
 
       return { success: true };
+    }),
+
+  /**
+   * Agent onboarding/profile wizard: fetch current profile state.
+   */
+  getMyProfileOnboarding: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    const user = requireUser(ctx);
+
+    const [agentRecord] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.userId, user.id))
+      .limit(1);
+
+    const entitlements = await getAgentEntitlementsForUserId(user.id);
+    const completion = calculateAgentProfileCompletion(agentRecord || null);
+
+    return {
+      agent: agentRecord
+        ? {
+            id: agentRecord.id,
+            displayName: agentRecord.displayName || `${agentRecord.firstName} ${agentRecord.lastName}`.trim(),
+            phone: agentRecord.phone || '',
+            whatsapp: agentRecord.whatsapp || '',
+            bio: agentRecord.bio || '',
+            profileImage: agentRecord.profileImage || '',
+            licenseNumber: agentRecord.licenseNumber || '',
+            yearsExperience: agentRecord.yearsExperience || 0,
+            areasServed: splitCsv(agentRecord.areasServed),
+            specializations: splitCsv(agentRecord.specialization),
+            propertyTypes: splitCsv(agentRecord.propertyTypes),
+            languages: splitCsv(agentRecord.languages),
+            focus: agentRecord.focus || null,
+            socialLinks: parseSocialLinks(agentRecord.socialLinks),
+            slug: agentRecord.slug || '',
+            profileCompletionScore: agentRecord.profileCompletionScore ?? completion.score,
+            profileCompletionFlags: parseFlags(agentRecord.profileCompletionFlags),
+          }
+        : null,
+      entitlements,
+      recommendedNextStep:
+        completion.score >= 80 ? 'publish_profile' : 'complete_profile',
+    };
+  }),
+
+  /**
+   * Agent onboarding/profile wizard: save progress.
+   */
+  updateMyProfileOnboarding: agentProcedure
+    .input(
+      z.object({
+        displayName: z.string().min(2).max(120).optional(),
+        phone: z.string().min(7).max(30).optional(),
+        whatsapp: z.string().max(30).optional(),
+        bio: z.string().max(2000).optional(),
+        profileImage: z.string().max(1200).optional(),
+        licenseNumber: z.string().max(100).optional(),
+        yearsExperience: z.number().int().min(0).max(80).optional(),
+        focus: z.enum(['sales', 'rentals', 'both']).optional(),
+        areasServed: z.array(z.string().min(1)).optional(),
+        specializations: z.array(z.string().min(1)).optional(),
+        propertyTypes: z.array(z.string().min(1)).optional(),
+        languages: z.array(z.string().min(1)).optional(),
+        socialLinks: z.record(z.string(), z.string()).optional(),
+        slug: z.string().min(3).max(120).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      const user = requireUser(ctx);
+
+      let [agentRecord] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.userId, user.id))
+        .limit(1);
+
+      if (!agentRecord) {
+        const fallbackDisplayName =
+          input.displayName?.trim() || user.name || user.email?.split('@')[0] || 'Agent';
+        const fallbackPhone = input.phone || input.whatsapp || '';
+        if (!fallbackPhone) {
+          throw new Error('Phone number is required to create an agent profile');
+        }
+
+        await db.createAgentProfile({
+          userId: user.id,
+          displayName: fallbackDisplayName,
+          phone: fallbackPhone,
+        });
+
+        [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, user.id))
+          .limit(1);
+      }
+
+      if (!agentRecord) throw new Error('Agent profile not found');
+
+      let normalizedSlug: string | undefined;
+      if (typeof input.slug === 'string') {
+        normalizedSlug = slugify(input.slug);
+        if (normalizedSlug.length < 3) {
+          throw new Error('Profile slug must be at least 3 URL-safe characters');
+        }
+
+        const [slugConflict] = await db
+          .select({ id: agents.id })
+          .from(agents)
+          .where(and(eq(agents.slug, normalizedSlug), ne(agents.id, agentRecord.id)))
+          .limit(1);
+
+        if (slugConflict) {
+          throw new Error('This profile URL is already taken');
+        }
+      }
+
+      const updates: Record<string, unknown> = {
+        updatedAt: nowAsDbTimestamp(),
+      };
+
+      if (input.displayName !== undefined) {
+        const displayName = input.displayName.trim();
+        updates.displayName = displayName;
+        const [firstNameRaw, ...rest] = displayName.split(/\s+/).filter(Boolean);
+        updates.firstName = firstNameRaw || displayName;
+        updates.lastName = rest.join(' ') || '-';
+      }
+      if (input.phone !== undefined) updates.phone = input.phone;
+      if (input.whatsapp !== undefined) updates.whatsapp = input.whatsapp;
+      if (input.bio !== undefined) updates.bio = input.bio;
+      if (input.profileImage !== undefined) updates.profileImage = input.profileImage;
+      if (input.licenseNumber !== undefined) updates.licenseNumber = input.licenseNumber;
+      if (input.yearsExperience !== undefined) updates.yearsExperience = input.yearsExperience;
+      if (input.focus !== undefined) updates.focus = input.focus;
+      if (input.areasServed !== undefined) updates.areasServed = input.areasServed.join(', ');
+      if (input.specializations !== undefined) {
+        updates.specialization = input.specializations.join(', ');
+      }
+      if (input.propertyTypes !== undefined) updates.propertyTypes = input.propertyTypes.join(', ');
+      if (input.languages !== undefined) updates.languages = input.languages.join(', ');
+      if (input.socialLinks !== undefined) updates.socialLinks = JSON.stringify(input.socialLinks);
+      if (normalizedSlug !== undefined) updates.slug = normalizedSlug;
+
+      await db.update(agents).set(updates).where(eq(agents.id, agentRecord.id));
+
+      const [updatedAgent] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, agentRecord.id))
+        .limit(1);
+
+      const completion = calculateAgentProfileCompletion(updatedAgent || null);
+      await db
+        .update(agents)
+        .set({
+          profileCompletionScore: completion.score,
+          profileCompletionFlags: JSON.stringify(completion.flags),
+          updatedAt: nowAsDbTimestamp(),
+        })
+        .where(eq(agents.id, agentRecord.id));
+
+      const entitlements = await getAgentEntitlementsForUserId(user.id);
+
+      return {
+        success: true,
+        profileCompletionScore: completion.score,
+        profileCompletionFlags: completion.flags,
+        slug: (updatedAgent?.slug || normalizedSlug || '') as string,
+        entitlements,
+      };
+    }),
+
+  /**
+   * Publish/shareable profile URL generation.
+   */
+  publishMyProfile: agentProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    const user = requireUser(ctx);
+
+    const [agentRecord] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.userId, user.id))
+      .limit(1);
+
+    if (!agentRecord) {
+      throw new Error('Agent profile not found');
+    }
+
+    const completion = calculateAgentProfileCompletion(agentRecord);
+    let slug = agentRecord.slug;
+
+    if (!slug) {
+      const base = slugify(agentRecord.displayName || `${agentRecord.firstName} ${agentRecord.lastName}`);
+      slug = `${base || 'agent'}-${agentRecord.id}`;
+    }
+
+    await db
+      .update(agents)
+      .set({
+        slug,
+        profileCompletionScore: completion.score,
+        profileCompletionFlags: JSON.stringify(completion.flags),
+        status: 'approved',
+        approvedAt: agentRecord.approvedAt || nowAsDbTimestamp(),
+        updatedAt: nowAsDbTimestamp(),
+      })
+      .where(eq(agents.id, agentRecord.id));
+
+    const entitlements = await getAgentEntitlementsForUserId(user.id);
+
+    return {
+      success: true,
+      slug,
+      publicUrl: `${ENV.appUrl}/agents/${slug}`,
+      profileCompletionScore: completion.score,
+      canAppearInDirectory: Boolean(entitlements?.canAppearInDirectory),
+    };
+  }),
+
+  /**
+   * Public directory listing. Visibility is gated by profile readiness.
+   */
+  list: publicProcedure.query(async () => {
+    const db = await getDb();
+
+    const records = await db
+      .select({
+        id: agents.id,
+        slug: agents.slug,
+        firstName: agents.firstName,
+        lastName: agents.lastName,
+        displayName: agents.displayName,
+        bio: agents.bio,
+        profileImage: agents.profileImage,
+        phone: agents.phone,
+        email: agents.email,
+        specialization: agents.specialization,
+        areasServed: agents.areasServed,
+        yearsExperience: agents.yearsExperience,
+        rating: agents.rating,
+        reviewCount: agents.reviewCount,
+        totalSales: agents.totalSales,
+        profileCompletionScore: agents.profileCompletionScore,
+        profileCompletionFlags: agents.profileCompletionFlags,
+        status: agents.status,
+        isVerified: agents.isVerified,
+      })
+      .from(agents)
+      .where(eq(agents.status, 'approved'))
+      .orderBy(desc(agents.isFeatured), desc(agents.updatedAt))
+      .limit(200);
+
+    return records.filter(record => {
+      const completion = calculateAgentProfileCompletion(record as any);
+      return completion.score >= 80 && completion.hasPhoto && completion.hasAreas && Boolean(record.slug);
+    });
+  }),
+
+  /**
+   * Public profile by slug (/agents/:slug).
+   */
+  getPublicProfileBySlug: publicProcedure
+    .input(
+      z.object({
+        slug: z.string().min(3),
+      }),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      const [record] = await db
+        .select({
+          id: agents.id,
+          userId: agents.userId,
+          slug: agents.slug,
+          firstName: agents.firstName,
+          lastName: agents.lastName,
+          displayName: agents.displayName,
+          bio: agents.bio,
+          profileImage: agents.profileImage,
+          phone: agents.phone,
+          email: agents.email,
+          whatsapp: agents.whatsapp,
+          specialization: agents.specialization,
+          focus: agents.focus,
+          propertyTypes: agents.propertyTypes,
+          areasServed: agents.areasServed,
+          languages: agents.languages,
+          yearsExperience: agents.yearsExperience,
+          licenseNumber: agents.licenseNumber,
+          socialLinks: agents.socialLinks,
+          rating: agents.rating,
+          reviewCount: agents.reviewCount,
+          totalSales: agents.totalSales,
+          profileCompletionScore: agents.profileCompletionScore,
+          profileCompletionFlags: agents.profileCompletionFlags,
+          status: agents.status,
+          isVerified: agents.isVerified,
+          userEmail: users.email,
+        })
+        .from(agents)
+        .leftJoin(users, eq(users.id, agents.userId))
+        .where(eq(agents.slug, input.slug))
+        .limit(1);
+
+      if (!record || record.status === 'suspended') {
+        throw new Error('Agent profile not found');
+      }
+
+      const listingsPreview = await db
+        .select({
+          id: properties.id,
+          title: properties.title,
+          city: properties.city,
+          province: properties.province,
+          price: properties.price,
+          status: properties.status,
+          createdAt: properties.createdAt,
+        })
+        .from(properties)
+        .where(
+          and(
+            eq(properties.agentId, record.id),
+            inArray(properties.status, ['available', 'published', 'approved'] as any),
+          ),
+        )
+        .orderBy(desc(properties.createdAt))
+        .limit(12);
+
+      return {
+        id: record.id,
+        slug: record.slug,
+        displayName: record.displayName || `${record.firstName} ${record.lastName}`.trim(),
+        firstName: record.firstName,
+        lastName: record.lastName,
+        bio: record.bio || '',
+        profileImage: record.profileImage || '',
+        phone: record.phone || '',
+        email: record.email || record.userEmail || '',
+        whatsapp: record.whatsapp || '',
+        specializations: splitCsv(record.specialization),
+        focus: record.focus || null,
+        propertyTypes: splitCsv(record.propertyTypes),
+        areasServed: splitCsv(record.areasServed),
+        languages: splitCsv(record.languages),
+        yearsExperience: record.yearsExperience || 0,
+        licenseNumber: record.licenseNumber || '',
+        socialLinks: parseSocialLinks(record.socialLinks),
+        rating: record.rating || 0,
+        reviewCount: record.reviewCount || 0,
+        totalSales: record.totalSales || 0,
+        isVerified: record.isVerified === 1,
+        listingsPreview,
+      };
     }),
 });

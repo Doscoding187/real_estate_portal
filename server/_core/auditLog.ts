@@ -78,6 +78,8 @@ export const AuditActions = {
 
   // Sensitive actions
   UPDATE_SUBSCRIPTION: 'update_subscription',
+  UPDATE_MONETIZATION_RULE: 'update_monetization_rule',
   EXPORT_DATA: 'export_data',
   UPDATE_DEVELOPMENT: 'update_development',
+  RUN_KPI_ROLLUP: 'run_kpi_rollup',
 } as const;

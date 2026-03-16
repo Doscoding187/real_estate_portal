@@ -67,6 +67,27 @@ This checklist ensures safe database migrations and prevents schema drift.
   - Click "Publish"
   - Verify success message
 
+## Pricing/Governance Migration (0030) Verification
+
+- [ ] Run targeted verification:
+
+  ```bash
+  pnpm verify:pricing-governance
+  ```
+
+- [ ] Confirm required plan codes exist:
+  - `agent_starter`
+  - `agent_pro`
+  - `agent_elite`
+  - `agency_growth`
+  - `agency_pro`
+  - `enterprise`
+
+- [ ] Confirm agent downgrade behavior is safe:
+  - Downgrade from an unlimited plan to `agent_starter`
+  - If active listings exceed the new limit, excess listings are moved to `draft`
+  - No listings are deleted
+
 ## Rollback Procedure
 
 If migration fails:

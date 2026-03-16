@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
-import { getPlaceholderContentBlocks } from '@/data/explorePlaceholderData';
+import { getFeedItems } from '@/lib/exploreFeed';
+import { type ExploreIntent, readStoredExploreIntent } from '@/lib/exploreIntent';
 
 export interface DiscoveryItem {
   id: number;
@@ -19,14 +20,14 @@ export interface ContentBlock {
 interface UseDiscoveryFeedOptions {
   categoryId?: number;
   filters?: Record<string, any>;
-  usePlaceholder?: boolean; // Enable placeholder data for visualization
+  intent?: ExploreIntent | null;
 }
 
 export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
+  const intent = options.intent ?? readStoredExploreIntent();
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [usePlaceholderData] = useState(options.usePlaceholder ?? true);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Check if we have active filters (checking keys that matter)
@@ -43,6 +44,7 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
       feedType: 'recommended',
       limit: 20,
       offset: (page - 1) * 20,
+      intent: intent ?? undefined,
     },
     {
       enabled: !hasActiveFilters, // Only run if NO filters
@@ -106,7 +108,7 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
           type: blockType,
           items: blockItems.map((item: any) => ({
             id: item.id,
-            type: item.contentType,
+            type: item.contentType === 'short' || item.contentType === 'walkthrough' || item.contentType === 'showcase' ? 'video' : 'property',
             data: item,
           })),
         });
@@ -151,10 +153,9 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
         setHasMore(searchQuery.data.hasMore);
       }
     } else {
-      // Feed Mode - queries return { shorts: [...], hasMore, ... }
-      // We need to treat queryData as FeedResult
-      const feedResult = queryData as any; // Typed as any to avoid strict interface issues for now, but implies FeedResult
-      const contentArray = feedResult?.shorts || [];
+      // Feed Mode - canonical contract: { items: [...], cursor?, hasMore }
+      const feedResult = queryData as any;
+      const contentArray = getFeedItems(feedResult);
       const hasValidContent = Array.isArray(contentArray) && contentArray.length > 0;
 
       if (hasValidContent) {
@@ -168,9 +169,8 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
 
         // Use server's hasMore if available, otherwise fallback (though server should always provide it now)
         setHasMore(feedResult?.hasMore ?? contentArray.length === 20);
-      } else if (!isLoading && usePlaceholderData && contentBlocks.length === 0) {
-        // Only show placeholder if we have absolutely nothing and aren't loading
-        setContentBlocks(getPlaceholderContentBlocks());
+      } else if (!isLoading && contentBlocks.length === 0) {
+        setContentBlocks([]);
         setHasMore(false);
       }
     }
@@ -178,7 +178,6 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
     queryData,
     page,
     isLoading,
-    usePlaceholderData,
     hasActiveFilters,
     searchQuery.data,
     organizeIntoBlocks,
@@ -196,7 +195,7 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
     async (contentId: number, engagementType: 'view' | 'click' | 'save' | 'share') => {
       try {
         await recordEngagementMutation.mutateAsync({
-          shortId: contentId,
+          contentId,
           interactionType: engagementType === 'click' ? 'view' : engagementType,
           feedType: 'recommended',
         });

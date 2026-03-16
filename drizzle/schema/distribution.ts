@@ -1,4 +1,5 @@
 import {
+  foreignKey,
   index,
   int,
   json,
@@ -12,7 +13,7 @@ import {
   decimal,
 } from 'drizzle-orm/mysql-core';
 import { users } from './core';
-import { developments } from './developments';
+import { developerBrandProfiles, developments } from './developments';
 
 export const DISTRIBUTION_DEAL_STAGE_VALUES = [
   'viewing_scheduled',
@@ -35,6 +36,32 @@ export const DISTRIBUTION_VIEWING_STATUS_VALUES = [
 ] as const;
 
 export const DISTRIBUTION_IDENTITY_TYPE_VALUES = ['referrer', 'manager'] as const;
+export const DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES = [
+  'pending',
+  'active',
+  'paused',
+  'ended',
+] as const;
+export const DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES = [
+  'listed',
+  'included',
+  'excluded',
+  'paused',
+] as const;
+export const DISTRIBUTION_ACCESS_CHANNEL_SCOPE_VALUES = [
+  'distribution_network',
+  'referrer',
+  'manager',
+  'developer',
+  'admin',
+] as const;
+export const DISTRIBUTION_INVENTORY_STATE_VALUES = [
+  'hidden',
+  'listed',
+  'accessible',
+  'ready',
+  'enabled',
+] as const;
 
 const DISTRIBUTION_COMMISSION_MODEL_VALUES = [
   'flat_percentage',
@@ -42,9 +69,24 @@ const DISTRIBUTION_COMMISSION_MODEL_VALUES = [
   'fixed_amount',
   'hybrid',
 ] as const;
+const DISTRIBUTION_COMMISSION_TYPE_VALUES = ['flat', 'percentage'] as const;
+const DISTRIBUTION_COMMISSION_BASIS_VALUES = ['sale_price', 'base_price'] as const;
 
 const DISTRIBUTION_TIER_ACCESS_POLICY_VALUES = ['open', 'restricted', 'invite_only'] as const;
 const DISTRIBUTION_AGENT_ACCESS_STATUS_VALUES = ['active', 'paused', 'revoked'] as const;
+const DISTRIBUTION_PROGRAM_BANK_STRATEGY_VALUES = [
+  'single',
+  'multi_simultaneous',
+  'sequential',
+] as const;
+const DISTRIBUTION_PROGRAM_STEP_TYPE_VALUES = [
+  'internal',
+  'document',
+  'bank',
+  'decision',
+  'closure',
+] as const;
+const DISTRIBUTION_BANK_OUTCOME_STATUS_VALUES = ['pending', 'approved', 'declined', 'withdrawn'] as const;
 const DISTRIBUTION_COMMISSION_STATUS_VALUES = [
   'not_ready',
   'pending',
@@ -54,6 +96,17 @@ const DISTRIBUTION_COMMISSION_STATUS_VALUES = [
 ] as const;
 const DISTRIBUTION_COMMISSION_TRIGGER_STAGE_VALUES = ['contract_signed', 'bond_approved'] as const;
 const DISTRIBUTION_COMMISSION_ENTRY_STATUS_VALUES = ['pending', 'approved', 'paid', 'cancelled'] as const;
+const DISTRIBUTION_COMMISSION_SNAPSHOT_SOURCE_VALUES = [
+  'submission_gate',
+  'backfill',
+  'override',
+] as const;
+export const DISTRIBUTION_COMMISSION_LEDGER_ROLE_VALUES = [
+  'referrer',
+  'manager',
+  'platform',
+  'override',
+] as const;
 const DISTRIBUTION_DEAL_EVENT_TYPE_VALUES = [
   'stage_transition',
   'override',
@@ -78,6 +131,92 @@ const PLATFORM_TEAM_REGISTRATION_AREA_VALUES = [
   'other',
 ] as const;
 
+export const distributionBrandPartnerships = mysqlTable(
+  'distribution_brand_partnerships',
+  {
+    id: int().autoincrement().primaryKey(),
+    brandProfileId: int('brand_profile_id').notNull(),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('pending')
+      .notNull(),
+    channelScope: json('channel_scope'),
+    partneredAt: timestamp('partnered_at', { mode: 'string' }),
+    endedAt: timestamp('ended_at', { mode: 'string' }),
+    reasonCode: varchar('reason_code', { length: 80 }),
+    notes: text(),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    foreignKey({
+      columns: [table.brandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+      name: 'fk_dist_brand_partnership_brand',
+    }).onDelete('cascade'),
+    unique('ux_distribution_brand_partnerships_brand').on(table.brandProfileId),
+    index('idx_distribution_brand_partnerships_status').on(table.status),
+    index('idx_distribution_brand_partnerships_updated_at').on(table.updatedAt),
+  ],
+);
+
+export const distributionDevelopmentAccess = mysqlTable(
+  'distribution_development_access',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    brandPartnershipId: int('brand_partnership_id').notNull(),
+    brandProfileId: int('brand_profile_id').notNull(),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('listed')
+      .notNull(),
+    submissionAllowed: tinyint('submission_allowed').default(0).notNull(),
+    excludedByMandate: tinyint('excluded_by_mandate').default(0).notNull(),
+    excludedByExclusivity: tinyint('excluded_by_exclusivity').default(0).notNull(),
+    visibilityScope: json('visibility_scope'),
+    reasonCode: varchar('reason_code', { length: 80 }),
+    notes: text(),
+    includedAt: timestamp('included_at', { mode: 'string' }),
+    excludedAt: timestamp('excluded_at', { mode: 'string' }),
+    pausedAt: timestamp('paused_at', { mode: 'string' }),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    foreignKey({
+      columns: [table.brandPartnershipId],
+      foreignColumns: [distributionBrandPartnerships.id],
+      name: 'fk_dist_dev_access_partner',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.brandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+      name: 'fk_dist_dev_access_brand',
+    }).onDelete('cascade'),
+    unique('ux_distribution_development_access_development').on(table.developmentId),
+    index('idx_distribution_development_access_partnership').on(table.brandPartnershipId),
+    index('idx_distribution_development_access_brand').on(table.brandProfileId),
+    index('idx_distribution_development_access_status').on(table.status),
+    index('idx_distribution_development_access_submission_allowed').on(table.submissionAllowed),
+    index('idx_distribution_development_access_status_submission').on(
+      table.status,
+      table.submissionAllowed,
+    ),
+    index('idx_distribution_development_access_updated_at').on(table.updatedAt),
+  ],
+);
+
 export const distributionPrograms = mysqlTable(
   'distribution_programs',
   {
@@ -95,6 +234,24 @@ export const distributionPrograms = mysqlTable(
       .notNull(),
     defaultCommissionPercent: decimal('default_commission_percent', { precision: 5, scale: 2 }),
     defaultCommissionAmount: int('default_commission_amount'),
+    referrerCommissionType: mysqlEnum(
+      'referrer_commission_type',
+      DISTRIBUTION_COMMISSION_TYPE_VALUES as unknown as [string, ...string[]],
+    ),
+    referrerCommissionValue: decimal('referrer_commission_value', { precision: 12, scale: 2 }),
+    referrerCommissionBasis: mysqlEnum(
+      'referrer_commission_basis',
+      DISTRIBUTION_COMMISSION_BASIS_VALUES as unknown as [string, ...string[]],
+    ),
+    platformCommissionType: mysqlEnum(
+      'platform_commission_type',
+      DISTRIBUTION_COMMISSION_TYPE_VALUES as unknown as [string, ...string[]],
+    ),
+    platformCommissionValue: decimal('platform_commission_value', { precision: 12, scale: 2 }),
+    platformCommissionBasis: mysqlEnum(
+      'platform_commission_basis',
+      DISTRIBUTION_COMMISSION_BASIS_VALUES as unknown as [string, ...string[]],
+    ),
     tierAccessPolicy: mysqlEnum(
       'tier_access_policy',
       DISTRIBUTION_TIER_ACCESS_POLICY_VALUES as unknown as [string, ...string[]],
@@ -103,7 +260,7 @@ export const distributionPrograms = mysqlTable(
       .notNull(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -111,6 +268,88 @@ export const distributionPrograms = mysqlTable(
     index('idx_distribution_programs_is_active').on(table.isActive),
     index('idx_distribution_programs_referral_enabled').on(table.isReferralEnabled),
     index('idx_distribution_programs_updated_at').on(table.updatedAt),
+  ],
+);
+
+export const distributionProgramWorkflows = mysqlTable(
+  'distribution_program_workflows',
+  {
+    id: int().autoincrement().primaryKey(),
+    programId: int('program_id')
+      .notNull()
+      .references(() => distributionPrograms.id, { onDelete: 'cascade' }),
+    workflowKey: varchar('workflow_key', { length: 120 }).notNull(),
+    workflowName: varchar('workflow_name', { length: 180 }).notNull(),
+    bankStrategy: mysqlEnum(
+      'bank_strategy',
+      DISTRIBUTION_PROGRAM_BANK_STRATEGY_VALUES as unknown as [string, ...string[]],
+    )
+      .default('single')
+      .notNull(),
+    turnaroundHours: int('turnaround_hours').default(48).notNull(),
+    isActive: tinyint('is_active').default(1).notNull(),
+    configJson: json('config_json'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_program_workflows_program').on(table.programId),
+    index('idx_distribution_program_workflows_strategy').on(table.bankStrategy),
+    index('idx_distribution_program_workflows_active').on(table.isActive),
+    index('idx_distribution_program_workflows_updated_at').on(table.updatedAt),
+  ],
+);
+
+export const distributionProgramWorkflowSteps = mysqlTable(
+  'distribution_program_workflow_steps',
+  {
+    id: int().autoincrement().primaryKey(),
+    workflowId: int('workflow_id')
+      .notNull()
+      .references(() => distributionProgramWorkflows.id, { onDelete: 'cascade' }),
+    stepKey: varchar('step_key', { length: 80 }).notNull(),
+    stepLabel: varchar('step_label', { length: 160 }).notNull(),
+    stepType: mysqlEnum(
+      'step_type',
+      DISTRIBUTION_PROGRAM_STEP_TYPE_VALUES as unknown as [string, ...string[]],
+    )
+      .default('internal')
+      .notNull(),
+    stepOrder: int('step_order').notNull(),
+    isBlocking: tinyint('is_blocking').default(0).notNull(),
+    metadata: json(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_program_workflow_steps_key').on(table.workflowId, table.stepKey),
+    unique('ux_distribution_program_workflow_steps_order').on(table.workflowId, table.stepOrder),
+    index('idx_distribution_program_workflow_steps_workflow').on(table.workflowId),
+    index('idx_distribution_program_workflow_steps_type').on(table.stepType),
+  ],
+);
+
+export const distributionProgramRequiredDocuments = mysqlTable(
+  'distribution_program_required_documents',
+  {
+    id: int().autoincrement().primaryKey(),
+    workflowId: int('workflow_id')
+      .notNull()
+      .references(() => distributionProgramWorkflows.id, { onDelete: 'cascade' }),
+    documentKey: varchar('document_key', { length: 80 }).notNull(),
+    documentLabel: varchar('document_label', { length: 160 }).notNull(),
+    isRequired: tinyint('is_required').default(1).notNull(),
+    appliesWhen: varchar('applies_when', { length: 120 }),
+    displayOrder: int('display_order').default(0).notNull(),
+    notes: text(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_program_required_docs_key').on(table.workflowId, table.documentKey),
+    index('idx_distribution_program_required_docs_workflow').on(table.workflowId),
+    index('idx_distribution_program_required_docs_required').on(table.isRequired),
+    index('idx_distribution_program_required_docs_order').on(table.workflowId, table.displayOrder),
   ],
 );
 
@@ -140,10 +379,10 @@ export const distributionAgentAccess = mysqlTable(
       .default('active')
       .notNull(),
     grantedBy: int('granted_by').references(() => users.id, { onDelete: 'set null' }),
-    grantedAt: timestamp('granted_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    grantedAt: timestamp('granted_at', { mode: 'string' }).defaultNow().notNull(),
     revokedAt: timestamp('revoked_at', { mode: 'string' }),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -167,11 +406,11 @@ export const distributionAgentTiers = mysqlTable(
     windowDays: int('window_days').default(90).notNull(),
     reason: text(),
     effectiveFrom: timestamp('effective_from', { mode: 'string' })
-      .default('CURRENT_TIMESTAMP')
+      .defaultNow()
       .notNull(),
     effectiveTo: timestamp('effective_to', { mode: 'string' }),
     assignedBy: int('assigned_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -194,11 +433,45 @@ export const distributionDeals = mysqlTable(
     agentId: int('agent_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    ownerType: mysqlEnum('owner_type', ['agent', 'agency']).default('agent').notNull(),
+    ownerId: int('owner_id'),
+    assignedAgentId: int('assigned_agent_id').references(() => users.id, { onDelete: 'set null' }),
+    visibilityScope: mysqlEnum('visibility_scope', ['private', 'team', 'agency'])
+      .default('private')
+      .notNull(),
     managerUserId: int('manager_user_id').references(() => users.id, { onDelete: 'set null' }),
     externalRef: varchar('external_ref', { length: 100 }),
     buyerName: varchar('buyer_name', { length: 200 }).notNull(),
     buyerEmail: varchar('buyer_email', { length: 320 }),
     buyerPhone: varchar('buyer_phone', { length: 50 }),
+    dealAmount: int('deal_amount').default(0).notNull(),
+    platformAmount: int('platform_amount').default(0).notNull(),
+    commissionBaseAmount: int('commission_base_amount'),
+    referrerCommissionType: mysqlEnum(
+      'referrer_commission_type',
+      DISTRIBUTION_COMMISSION_TYPE_VALUES as unknown as [string, ...string[]],
+    ),
+    referrerCommissionValue: decimal('referrer_commission_value', { precision: 12, scale: 2 }),
+    referrerCommissionBasis: mysqlEnum(
+      'referrer_commission_basis',
+      DISTRIBUTION_COMMISSION_BASIS_VALUES as unknown as [string, ...string[]],
+    ),
+    referrerCommissionAmount: int('referrer_commission_amount'),
+    platformCommissionType: mysqlEnum(
+      'platform_commission_type',
+      DISTRIBUTION_COMMISSION_TYPE_VALUES as unknown as [string, ...string[]],
+    ),
+    platformCommissionValue: decimal('platform_commission_value', { precision: 12, scale: 2 }),
+    platformCommissionBasis: mysqlEnum(
+      'platform_commission_basis',
+      DISTRIBUTION_COMMISSION_BASIS_VALUES as unknown as [string, ...string[]],
+    ),
+    platformCommissionAmount: int('platform_commission_amount'),
+    snapshotVersion: int('snapshot_version'),
+    snapshotSource: mysqlEnum(
+      'snapshot_source',
+      DISTRIBUTION_COMMISSION_SNAPSHOT_SOURCE_VALUES as unknown as [string, ...string[]],
+    ),
     currentStage: mysqlEnum(
       'current_stage',
       DISTRIBUTION_DEAL_STAGE_VALUES as unknown as [string, ...string[]],
@@ -221,9 +494,9 @@ export const distributionDeals = mysqlTable(
     attributionLockedBy: int('attribution_locked_by').references(() => users.id, {
       onDelete: 'set null',
     }),
-    submittedAt: timestamp('submitted_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }).defaultNow().notNull(),
     closedAt: timestamp('closed_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -235,6 +508,65 @@ export const distributionDeals = mysqlTable(
     index('idx_distribution_deals_current_stage').on(table.currentStage),
     index('idx_distribution_deals_commission_status').on(table.commissionStatus),
     index('idx_distribution_deals_submitted_at').on(table.submittedAt),
+    index('idx_distribution_deals_owner').on(table.ownerType, table.ownerId),
+    index('idx_distribution_deals_assigned_agent').on(table.assignedAgentId),
+    index('idx_distribution_deals_deal_amount').on(table.dealAmount),
+    index('idx_distribution_deals_platform_amount').on(table.platformAmount),
+  ],
+);
+
+export const distributionDealDocumentStatuses = mysqlTable(
+  'distribution_deal_document_statuses',
+  {
+    id: int().autoincrement().primaryKey(),
+    dealId: int('deal_id')
+      .notNull()
+      .references(() => distributionDeals.id, { onDelete: 'cascade' }),
+    documentKey: varchar('document_key', { length: 80 }).notNull(),
+    isReceived: tinyint('is_received').default(0).notNull(),
+    receivedAt: timestamp('received_at', { mode: 'string' }),
+    receivedByUserId: int('received_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    notes: text(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_deal_document_statuses_key').on(table.dealId, table.documentKey),
+    index('idx_distribution_deal_document_statuses_deal').on(table.dealId),
+    index('idx_distribution_deal_document_statuses_received').on(table.isReceived),
+    index('idx_distribution_deal_document_statuses_updated_at').on(table.updatedAt),
+  ],
+);
+
+export const distributionDealBankOutcomes = mysqlTable(
+  'distribution_deal_bank_outcomes',
+  {
+    id: int().autoincrement().primaryKey(),
+    dealId: int('deal_id')
+      .notNull()
+      .references(() => distributionDeals.id, { onDelete: 'cascade' }),
+    bankCode: varchar('bank_code', { length: 32 }).notNull(),
+    bankName: varchar('bank_name', { length: 120 }).notNull(),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_BANK_OUTCOME_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('pending')
+      .notNull(),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }).defaultNow().notNull(),
+    outcomeAt: timestamp('outcome_at', { mode: 'string' }),
+    selectedForClient: tinyint('selected_for_client').default(0).notNull(),
+    selectionRank: int('selection_rank'),
+    notes: text(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_deal_bank_outcomes_bank').on(table.dealId, table.bankCode),
+    index('idx_distribution_deal_bank_outcomes_deal').on(table.dealId),
+    index('idx_distribution_deal_bank_outcomes_status').on(table.status),
+    index('idx_distribution_deal_bank_outcomes_selected').on(table.selectedForClient),
+    index('idx_distribution_deal_bank_outcomes_updated_at').on(table.updatedAt),
   ],
 );
 
@@ -257,10 +589,16 @@ export const distributionDealEvents = mysqlTable(
     ),
     toStage: mysqlEnum('to_stage', DISTRIBUTION_DEAL_STAGE_VALUES as unknown as [string, ...string[]]),
     actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    ownerType: mysqlEnum('owner_type', ['agent', 'agency']).default('agent').notNull(),
+    ownerId: int('owner_id'),
+    assignedAgentId: int('assigned_agent_id').references(() => users.id, { onDelete: 'set null' }),
+    visibilityScope: mysqlEnum('visibility_scope', ['private', 'team', 'agency'])
+      .default('private')
+      .notNull(),
     metadata: json(),
     notes: text(),
-    eventAt: timestamp('event_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    eventAt: timestamp('event_at', { mode: 'string' }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_distribution_deal_events_deal').on(table.dealId),
@@ -302,7 +640,7 @@ export const distributionViewings = mysqlTable(
     scheduledByUserId: int('scheduled_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     lastRescheduledBy: int('last_rescheduled_by').references(() => users.id, { onDelete: 'set null' }),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -340,9 +678,9 @@ export const distributionViewingValidations = mysqlTable(
       .notNull(),
     attributionLockApplied: tinyint('attribution_lock_applied').default(0).notNull(),
     attributionLockAt: timestamp('attribution_lock_at', { mode: 'string' }),
-    validatedAt: timestamp('validated_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    validatedAt: timestamp('validated_at', { mode: 'string' }).defaultNow().notNull(),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -390,7 +728,7 @@ export const distributionCommissionEntries = mysqlTable(
     notes: text(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -400,6 +738,58 @@ export const distributionCommissionEntries = mysqlTable(
     index('idx_distribution_commission_entries_agent').on(table.agentId),
     index('idx_distribution_commission_entries_status').on(table.entryStatus),
     index('idx_distribution_commission_entries_updated_at').on(table.updatedAt),
+  ],
+);
+
+export const distributionCommissionLedger = mysqlTable(
+  'distribution_commission_ledger',
+  {
+    id: int().autoincrement().primaryKey(),
+    distributionDealId: int('distribution_deal_id')
+      .notNull()
+      .references(() => distributionDeals.id, { onDelete: 'cascade' }),
+    recipientId: int('recipient_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: mysqlEnum(
+      'role',
+      DISTRIBUTION_COMMISSION_LEDGER_ROLE_VALUES as unknown as [string, ...string[]],
+    ).notNull(),
+    percentage: decimal('percentage', { precision: 7, scale: 4 }),
+    calculatedAmount: int('calculated_amount').notNull(),
+    currency: varchar({ length: 10 }).default('ZAR').notNull(),
+    calculationHash: varchar('calculation_hash', { length: 64 }).notNull(),
+    calculationInput: json('calculation_input').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_distribution_commission_ledger_deal').on(table.distributionDealId),
+    index('idx_distribution_commission_ledger_recipient').on(table.recipientId),
+    index('idx_distribution_commission_ledger_role').on(table.role),
+    index('idx_distribution_commission_ledger_created_at').on(table.createdAt),
+    unique('ux_distribution_commission_ledger_hash').on(table.calculationHash),
+  ],
+);
+
+export const distributionCommissionOverrides = mysqlTable(
+  'distribution_commission_overrides',
+  {
+    id: int().autoincrement().primaryKey(),
+    dealId: int('deal_id')
+      .notNull()
+      .references(() => distributionDeals.id, { onDelete: 'cascade' }),
+    actorUserId: int('actor_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    reason: text().notNull(),
+    previousSnapshot: json('previous_snapshot').notNull(),
+    nextSnapshot: json('next_snapshot').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_distribution_commission_overrides_deal').on(table.dealId),
+    index('idx_distribution_commission_overrides_actor').on(table.actorUserId),
+    index('idx_distribution_commission_overrides_created_at').on(table.createdAt),
   ],
 );
 
@@ -420,7 +810,7 @@ export const distributionManagerAssignments = mysqlTable(
     workloadCapacity: int('workload_capacity').default(0).notNull(),
     timezone: varchar({ length: 64 }),
     isActive: tinyint('is_active').default(1).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -444,7 +834,7 @@ export const distributionIdentities = mysqlTable(
     ).notNull(),
     active: tinyint().default(1).notNull(),
     displayName: varchar('display_name', { length: 255 }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -477,7 +867,7 @@ export const distributionReferrerApplications = mysqlTable(
     reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     reviewNotes: text('review_notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -513,7 +903,7 @@ export const platformTeamRegistrations = mysqlTable(
     reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     reviewNotes: text('review_notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [

@@ -1,7 +1,23 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure } from './_core/trpc';
+import { partnerService } from './services/partnerService';
 
 export const partnerRouter = router({
+  getPublicProfile: publicProcedure
+    .input(
+      z.object({
+        partnerId: z.string().min(1),
+      }),
+    )
+    .query(async ({ input }) => {
+      const profile = await partnerService.getPartnerProfile(input.partnerId);
+      if (!profile) {
+        return null;
+      }
+
+      return profile;
+    }),
+
   list: protectedProcedure
     .input(
       z.object({

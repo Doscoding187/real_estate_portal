@@ -1,10 +1,12 @@
 /**
- * Hook for managing Explore video feed state and interactions
- * Requirements: 1.1, 1.2, 2.3, 2.4
+ * Hook for managing Explore video feed state and interactions.
+ * Canonical source: trpc.explore.getFeed
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
+import { getFeedItems } from '@/lib/exploreFeed';
+import { readStoredExploreIntent } from '@/lib/exploreIntent';
 
 export interface ExploreVideo {
   id: number;
@@ -31,174 +33,195 @@ interface UseExploreVideoFeedOptions {
   limit?: number;
 }
 
+const getDeviceType = (): 'mobile' | 'tablet' | 'desktop' => {
+  if (typeof window === 'undefined') return 'desktop';
+  const width = window.innerWidth;
+  if (width < 768) return 'mobile';
+  if (width < 1024) return 'tablet';
+  return 'desktop';
+};
+
 export function useExploreVideoFeed(options: UseExploreVideoFeedOptions = {}) {
+  const limit = options.limit || 10;
+  const intent = readStoredExploreIntent();
+  const [offset, setOffset] = useState(0);
   const [videos, setVideos] = useState<ExploreVideo[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [sessionHistory, setSessionHistory] = useState<number[]>([]);
-  const [sessionId, setSessionId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestedOffsetsRef = useRef<Set<number>>(new Set([0]));
+  const watchStartRef = useRef<number>(Date.now());
 
-  const watchTimeRef = useRef<number>(0);
-  const watchStartRef = useRef<number>(0);
-
-  // Create session on mount
-  const createSessionMutation = trpc.recommendationEngine.createSession.useMutation();
-  const closeSessionMutation = trpc.recommendationEngine.closeSession.useMutation();
-  const recordEngagementMutation = trpc.recommendationEngine.recordEngagement.useMutation();
-
-  // Fetch video feed
-  const {
-    data: videoData,
-    isLoading: isFetching,
-    refetch,
-  } = trpc.exploreApi.getVideoFeed.useQuery({
-    sessionHistory,
-    categoryId: options.categoryId,
-    limit: options.limit || 10,
-    offset: 0,
+  const feedQuery = trpc.explore.getFeed.useQuery({
+    feedType: 'recommended',
+    limit,
+    offset,
+    intent: intent ?? undefined,
   });
 
-  // Initialize session
+  const recordInteraction = trpc.explore.recordInteraction.useMutation();
+  const saveProperty = trpc.explore.saveProperty.useMutation();
+  const shareProperty = trpc.explore.shareProperty.useMutation();
+
   useEffect(() => {
-    const initSession = async () => {
-      try {
-        const result = await createSessionMutation.mutateAsync({
-          deviceType: 'desktop', // TODO: Detect actual device type
-        });
-        setSessionId(result.data.sessionId);
-      } catch (err) {
-        console.error('Failed to create session:', err);
-      }
-    };
+    if (!feedQuery.data) return;
 
-    initSession();
+    const mapped = getFeedItems(feedQuery.data)
+      .filter(item => item.mediaUrl)
+      .map(item => ({
+        id: item.id,
+        title: item.title,
+        description: '',
+        thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
+        videoUrl: item.mediaUrl,
+        creatorId: item.actor.id || 0,
+        tags: [item.category],
+        lifestyleCategories: [item.category],
+        duration: item.durationSec || 0,
+        propertyId: item.linkedListingId,
+        developmentId: undefined,
+        totalViews: item.stats.views,
+        completionRate: 0,
+        engagementScore: 0,
+        createdAt: new Date(),
+      }));
 
-    // Cleanup: close session on unmount
-    return () => {
-      if (sessionId) {
-        closeSessionMutation.mutate({ sessionId });
-      }
-    };
-  }, []);
+    setHasMore(Boolean(feedQuery.data.hasMore));
+    setError(null);
 
-  // Load videos
+    setVideos(prev => {
+      if (offset === 0) return mapped;
+      const seen = new Set(prev.map(video => video.id));
+      const deduped = mapped.filter(video => !seen.has(video.id));
+      return [...prev, ...deduped];
+    });
+  }, [feedQuery.data, offset]);
+
   useEffect(() => {
-    if (videoData?.success && videoData.data.videos) {
-      setVideos(videoData.data.videos as any);
-      setIsLoading(false);
-      setError(null);
-    } else if (!isFetching && !videoData) {
-      setError('Failed to load videos');
-      setIsLoading(false);
+    if (feedQuery.error) {
+      setError(feedQuery.error.message);
     }
-  }, [videoData, isFetching]);
+  }, [feedQuery.error]);
 
-  // Start watch time tracking
-  const startWatchTime = useCallback(() => {
-    watchStartRef.current = Date.now();
-  }, []);
-
-  // Record engagement
-  const recordEngagement = useCallback(
+  const record = useCallback(
     async (
       contentId: number,
-      engagementType: 'view' | 'save' | 'share' | 'click' | 'skip' | 'complete',
-      completed: boolean = false,
+      interactionType:
+        | 'impression'
+        | 'view'
+        | 'viewProgress'
+        | 'viewComplete'
+        | 'save'
+        | 'share'
+        | 'listingOpen'
+        | 'notInterested',
     ) => {
-      const watchTime = watchStartRef.current
-        ? Math.floor((Date.now() - watchStartRef.current) / 1000)
-        : 0;
-
+      const watchMs = Date.now() - watchStartRef.current;
       try {
-        await recordEngagementMutation.mutateAsync({
+        await recordInteraction.mutateAsync({
           contentId,
-          engagementType,
-          watchTime,
-          completed,
-          sessionId: sessionId || undefined,
+          interactionType,
+          duration: Math.max(0, Math.round(watchMs / 1000)),
+          feedType: 'recommended',
+          deviceType: getDeviceType(),
         });
-      } catch (err) {
-        console.error('Failed to record engagement:', err);
+      } catch {
+        // Best effort tracking.
       }
     },
-    [sessionId, recordEngagementMutation],
+    [recordInteraction],
   );
 
-  // Navigate to next video
+  const loadMoreIfNeeded = useCallback(() => {
+    if (!hasMore || feedQuery.isFetching) return;
+    if (requestedOffsetsRef.current.has(videos.length)) return;
+    requestedOffsetsRef.current.add(videos.length);
+    setOffset(videos.length);
+  }, [hasMore, feedQuery.isFetching, videos.length]);
+
   const goToNext = useCallback(() => {
+    const currentVideo = videos[currentIndex];
+    if (!currentVideo) return;
+
     if (currentIndex < videos.length - 1) {
-      const currentVideo = videos[currentIndex];
-
-      // Record skip if video wasn't completed
-      if (currentVideo) {
-        recordEngagement(currentVideo.id, 'skip', false);
-      }
-
+      record(currentVideo.id, 'notInterested');
       setCurrentIndex(prev => prev + 1);
-      setSessionHistory(prev => [...prev, currentVideo.id]);
-      startWatchTime();
+      watchStartRef.current = Date.now();
 
-      // Preload more videos if near the end
       if (currentIndex >= videos.length - 3) {
-        refetch();
+        loadMoreIfNeeded();
       }
+      return;
     }
-  }, [currentIndex, videos, recordEngagement, refetch, startWatchTime]);
 
-  // Navigate to previous video
+    loadMoreIfNeeded();
+  }, [currentIndex, videos, record, loadMoreIfNeeded]);
+
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
-      startWatchTime();
+      watchStartRef.current = Date.now();
     }
-  }, [currentIndex, startWatchTime]);
+  }, [currentIndex]);
 
-  // Handle video completion
   const onVideoComplete = useCallback(() => {
     const currentVideo = videos[currentIndex];
     if (currentVideo) {
-      recordEngagement(currentVideo.id, 'complete', true);
+      record(currentVideo.id, 'viewComplete');
     }
-  }, [currentIndex, videos, recordEngagement]);
+  }, [currentIndex, videos, record]);
 
-  // Handle save action
   const onSave = useCallback(async () => {
     const currentVideo = videos[currentIndex];
-    if (currentVideo) {
-      recordEngagement(currentVideo.id, 'save', false);
-      // TODO: Call save API
+    if (!currentVideo) return;
+    await record(currentVideo.id, 'save');
+    try {
+      await saveProperty.mutateAsync({ contentId: currentVideo.id });
+    } catch {
+      // Save requires auth; interaction already captured.
     }
-  }, [currentIndex, videos, recordEngagement]);
+  }, [currentIndex, videos, record, saveProperty]);
 
-  // Handle share action
   const onShare = useCallback(async () => {
     const currentVideo = videos[currentIndex];
-    if (currentVideo) {
-      recordEngagement(currentVideo.id, 'share', false);
-      // TODO: Implement share functionality
+    if (!currentVideo) return;
+    await record(currentVideo.id, 'share');
+    try {
+      await shareProperty.mutateAsync({ contentId: currentVideo.id });
+    } catch {
+      // Share is best effort.
     }
-  }, [currentIndex, videos, recordEngagement]);
+  }, [currentIndex, videos, record, shareProperty]);
 
-  // Handle view listing action
   const onViewListing = useCallback(() => {
     const currentVideo = videos[currentIndex];
     if (currentVideo) {
-      recordEngagement(currentVideo.id, 'click', false);
-      // TODO: Navigate to listing page
+      record(currentVideo.id, 'listingOpen');
     }
-  }, [currentIndex, videos, recordEngagement]);
+  }, [currentIndex, videos, record]);
 
-  // Start watch time on mount and index change
   useEffect(() => {
-    startWatchTime();
-  }, [currentIndex, startWatchTime]);
+    const currentVideo = videos[currentIndex];
+    if (!currentVideo) return;
+    record(currentVideo.id, 'impression');
+    record(currentVideo.id, 'view');
+    record(currentVideo.id, 'viewProgress');
+    watchStartRef.current = Date.now();
+  }, [currentIndex, videos, record]);
+
+  const refetch = useCallback(async () => {
+    requestedOffsetsRef.current.clear();
+    requestedOffsetsRef.current.add(0);
+    setOffset(0);
+    setCurrentIndex(0);
+    await feedQuery.refetch();
+  }, [feedQuery]);
 
   return {
     videos,
     currentVideo: videos[currentIndex] || null,
     currentIndex,
-    isLoading,
+    isLoading: feedQuery.isLoading || (feedQuery.isFetching && videos.length === 0),
     error,
     goToNext,
     goToPrevious,
