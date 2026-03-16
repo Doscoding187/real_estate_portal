@@ -199,7 +199,7 @@ export default function PlanEditor() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/dashboard')}>
+          <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/overview')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

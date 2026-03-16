@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { Menu } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 import TopNavigationBar from '@/components/admin/TopNavigationBar';
 import SidebarNavigation from '@/components/admin/SidebarNavigation';
 
@@ -11,6 +12,7 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [, setLocation] = useLocation();
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   // Check authentication and redirect if not authenticated
   useEffect(() => {
@@ -24,11 +26,11 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
     }
 
     // If user is not a super admin, redirect to login
-    if (user?.role !== 'super_admin') {
+    if (!isSuperAdmin) {
       setLocation('/login');
       return;
     }
-  }, [isAuthenticated, user, loading, setLocation]);
+  }, [isAuthenticated, isSuperAdmin, loading, setLocation]);
 
   // Check if we're on mobile
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
 
   // If not authenticated or not a super admin, don't render anything
   // (redirect should have already happened)
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     return null;
   }
 
