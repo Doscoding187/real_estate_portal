@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
@@ -78,27 +78,7 @@ export function LocationTrendingFeedSection({
     limit: maxItems,
   });
 
-  const placeholders = useMemo(
-    () =>
-      Array.from({ length: maxItems }, (_, idx) => ({
-        id: `placeholder-${activeTab}-${idx + 1}`,
-        kind: 'placeholder' as const,
-        title: `Preview ${idx + 1}`,
-        city: city || province || locationName,
-        suburb: suburb || '',
-        priceFrom: 0,
-        priceTo: 0,
-        image: '',
-        href: '#',
-      })),
-    [activeTab, city, locationName, maxItems, province, suburb],
-  );
-
-  const liveItems = (feedData?.items || []).slice(0, maxItems);
-  const items =
-    liveItems.length > 0
-      ? [...liveItems, ...placeholders.slice(0, Math.max(0, maxItems - liveItems.length))]
-      : placeholders;
+  const items = (feedData?.items || []).slice(0, maxItems);
 
   const copy = TAB_COPY[activeTab];
   const title = `${copy.title} in ${locationName}`;
@@ -133,41 +113,47 @@ export function LocationTrendingFeedSection({
         </div>
       </div>
 
-      <div className="group/carousel relative w-full max-w-[1240px]">
-        <Carousel opts={{ align: 'start', loop: items.length > 4 }} className="w-full">
-          <CarouselContent className="-ml-3 pb-2 justify-start">
-            {items.map((item, index) => (
-              <CarouselItem
-                key={item.id}
-                className="pl-3 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
-              >
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
-                    #{index + 1}
-                  </span>
-                  <SimpleDevelopmentCard
-                    id={item.id}
-                    title={item.title}
-                    city={item.city}
-                    suburb={item.suburb}
-                    priceRange={{ min: item.priceFrom, max: item.priceTo }}
-                    image={
-                      item.kind === 'development'
-                        ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                        : item.image || ''
-                    }
-                    slug={item.kind === 'development' ? item.id : undefined}
-                    href={item.href}
-                    isHotSelling={item.kind !== 'placeholder'}
-                  />
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
-          <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
-        </Carousel>
-      </div>
+      {items.length > 0 ? (
+        <div className="group/carousel relative w-full max-w-[1240px]">
+          <Carousel opts={{ align: 'start', loop: items.length > 4 }} className="w-full">
+            <CarouselContent className="-ml-3 pb-2 justify-start">
+              {items.map((item, index) => (
+                <CarouselItem
+                  key={item.id}
+                  className="pl-3 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                >
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                      #{index + 1}
+                    </span>
+                    <SimpleDevelopmentCard
+                      id={item.id}
+                      title={item.title}
+                      city={item.city}
+                      suburb={item.suburb}
+                      priceRange={{ min: item.priceFrom, max: item.priceTo }}
+                      image={
+                        item.kind === 'development'
+                          ? getPrimaryDevelopmentImageUrl(item.image) || ''
+                          : item.image || ''
+                      }
+                      slug={item.kind === 'development' ? item.id : undefined}
+                      href={item.href}
+                      isHotSelling
+                    />
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
+            <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
+          </Carousel>
+        </div>
+      ) : (
+        <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
+          No properties found.
+        </div>
+      )}
     </section>
   );
 }

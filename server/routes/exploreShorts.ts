@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { exploreFeedService } from '../services/exploreFeedService';
 import { exploreInteractionService } from '../services/exploreInteractionService';
 
@@ -14,14 +14,14 @@ const router = Router();
  */
 
 // Middleware to check authentication (optional for some endpoints)
-const optionalAuth = (req: Request, res: Response, next: Function) => {
+const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
   // User ID will be available if authenticated, otherwise null
   // This allows both authenticated and guest users to browse
   next();
 };
 
 // Middleware to require authentication
-const requireAuth = (req: Request, res: Response, next: Function) => {
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -32,7 +32,7 @@ const requireAuth = (req: Request, res: Response, next: Function) => {
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 const rateLimit = (maxRequests: number, windowMs: number) => {
-  return (req: Request, res: Response, next: Function) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const identifier = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
 

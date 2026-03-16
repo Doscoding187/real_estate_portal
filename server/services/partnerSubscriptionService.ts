@@ -397,7 +397,7 @@ export async function canPerformAction(
   const features = subscription?.features || TIER_PRICING.free.features;
 
   switch (action) {
-    case 'create_content':
+    case 'create_content': {
       // Check monthly content limit
       const contentCount = await getMonthlyContentCount(partnerId);
       if (contentCount >= features.max_monthly_content) {
@@ -407,6 +407,7 @@ export async function canPerformAction(
         };
       }
       return { allowed: true };
+    }
 
     case 'boost_content':
       // All tiers can boost, but with different discounts

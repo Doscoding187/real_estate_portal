@@ -127,14 +127,18 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        const nextIndex = (index + 1) % sortedFAQs.length;
-        setFocusedIndex(nextIndex);
+        {
+          const nextIndex = (index + 1) % sortedFAQs.length;
+          setFocusedIndex(nextIndex);
+        }
         // Focus will be handled by the FAQAccordionItem
         break;
       case 'ArrowUp':
         e.preventDefault();
-        const prevIndex = (index - 1 + sortedFAQs.length) % sortedFAQs.length;
-        setFocusedIndex(prevIndex);
+        {
+          const prevIndex = (index - 1 + sortedFAQs.length) % sortedFAQs.length;
+          setFocusedIndex(prevIndex);
+        }
         break;
       case 'Home':
         e.preventDefault();

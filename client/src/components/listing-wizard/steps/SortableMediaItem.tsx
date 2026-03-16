@@ -89,7 +89,9 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
           variant="outline"
           onClick={e => {
             e.stopPropagation();
-            media.id && onSetPrimary(media.id);
+            if (media.id) {
+              onSetPrimary(media.id);
+            }
           }}
           className="w-full mt-2 text-xs"
         >

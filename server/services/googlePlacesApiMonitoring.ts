@@ -84,6 +84,16 @@ export interface MonitoringConfig {
   geocodeCostPer1000: number;
 }
 
+function extractRows(result: any): any[] {
+  if (Array.isArray(result?.rows)) {
+    return result.rows;
+  }
+  if (Array.isArray(result)) {
+    return Array.isArray(result[0]) ? result[0] : result;
+  }
+  return [];
+}
+
 // ============================================================================
 // Google Places API Monitoring Service
 // ============================================================================
@@ -151,26 +161,27 @@ export class GooglePlacesApiMonitoringService {
         WHERE date = ${today}
       `);
 
-      const summary = result.rows[0] as any;
+      const summary = extractRows(result)[0] as any;
 
       if (summary) {
         // Update existing summary
-        const totalRequests = summary.total_requests + 1;
-        const successfulRequests = summary.successful_requests + (log.success ? 1 : 0);
-        const failedRequests = summary.failed_requests + (log.success ? 0 : 1);
+        const totalRequests = Number(summary.total_requests || 0) + 1;
+        const successfulRequests = Number(summary.successful_requests || 0) + (log.success ? 1 : 0);
+        const failedRequests = Number(summary.failed_requests || 0) + (log.success ? 0 : 1);
 
         // Update request type counters
         const typeColumn = `${log.requestType}_requests`;
-        const typeCount = (summary[typeColumn] || 0) + 1;
+        const typeCount = Number(summary[typeColumn] || 0) + 1;
 
         // Calculate new average response time
-        const totalResponseTime = (summary.average_response_time_ms || 0) * summary.total_requests;
+        const totalResponseTime =
+          Number(summary.average_response_time_ms || 0) * Number(summary.total_requests || 0);
         const newAverageResponseTime = (totalResponseTime + log.responseTime) / totalRequests;
 
         // Calculate cost
         const config = await this.getConfig();
         const requestCost = this.calculateRequestCost(log.requestType, config);
-        const totalCost = (summary.total_cost_usd || 0) + requestCost;
+        const totalCost = Number(summary.total_cost_usd || 0) + requestCost;
 
         await db.execute(sql`
           UPDATE google_places_api_daily_summary
@@ -256,7 +267,7 @@ export class GooglePlacesApiMonitoringService {
         WHERE date = ${today}
       `);
 
-      const summary = result.rows[0] as any;
+      const summary = extractRows(result)[0] as any;
       if (!summary) return;
 
       // Check usage threshold (80% of daily limit)
@@ -335,7 +346,8 @@ export class GooglePlacesApiMonitoringService {
           AND resolved_at IS NULL
       `);
 
-      if (existing.rows.length === 0) {
+      const existingRows = extractRows(existing);
+      if (existingRows.length === 0) {
         // Create new alert
         await db.execute(sql`
           INSERT INTO google_places_api_alerts (
@@ -595,7 +607,7 @@ export class GooglePlacesApiMonitoringService {
       `);
 
       const configMap = new Map<string, string>();
-      for (const row of result.rows as any[]) {
+      for (const row of extractRows(result)) {
         configMap.set(row.config_key, row.config_value);
       }
 

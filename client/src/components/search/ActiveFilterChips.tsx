@@ -23,9 +23,10 @@ function getFilterLabel(key: string, value: any): string | null {
   switch (key) {
     case 'listingType':
       return value === 'sale' ? 'For Sale' : value === 'rent' ? 'To Rent' : null;
-    case 'propertyType':
+    case 'propertyType': {
       const slug = propertyTypeToSlug[value];
       return slug ? unslugify(slug) : value;
+    }
     case 'city':
       return value;
     case 'suburb':

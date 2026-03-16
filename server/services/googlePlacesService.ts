@@ -548,13 +548,7 @@ export class GooglePlacesService {
 
         // Wait 2 seconds before retry
         await new Promise(resolve => setTimeout(resolve, 2000));
-
-        try {
-          return await requestFn();
-        } catch (retryError) {
-          // If retry also fails, throw the error to be handled by caller
-          throw retryError;
-        }
+        return await requestFn();
       }
 
       // For non-network errors, throw immediately

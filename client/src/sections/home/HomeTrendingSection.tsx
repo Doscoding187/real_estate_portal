@@ -77,31 +77,8 @@ export function HomeTrendingSection({
     limit: 5,
   });
 
-  const buildPlaceholders = (count: number) => {
-    const labelByTab: Record<HeroTab, string> = {
-      buy: 'Residential Listing',
-      rent: 'Rental Listing',
-      developments: 'Residential Development',
-      shared_living: 'Shared Living',
-      plot_land: 'Land Development',
-      commercial: 'Commercial Listing',
-    };
-    const label = labelByTab[activeHeroTab] || 'Property';
-    return Array.from({ length: Math.max(0, count) }, (_, idx) => ({
-      id: `placeholder-${activeHeroTab}-${idx + 1}`,
-      kind: 'placeholder' as const,
-      title: `${label} Preview ${idx + 1}`,
-      city: selectedProvince,
-      suburb: 'Sample Area',
-      priceFrom: 0,
-      priceTo: 0,
-      image: '',
-      href: '/new-developments',
-    }));
-  };
-
   const liveItems = (trendingData?.items || []).slice(0, 5);
-  const trendingItems = [...liveItems, ...buildPlaceholders(5 - liveItems.length)].slice(0, 5);
+  const trendingItems = liveItems;
 
   return (
     <section className="py-16">
@@ -161,7 +138,7 @@ export function HomeTrendingSection({
                       }
                       slug={item.kind === 'development' ? item.id : undefined}
                       href={item.href}
-                      isHotSelling={item.kind !== 'placeholder'}
+                      isHotSelling
                     />
                   </div>
                 </CarouselItem>
@@ -173,7 +150,7 @@ export function HomeTrendingSection({
         </div>
       ) : (
         <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
-          No developments found.
+          No properties found.
         </div>
       )}
     </section>

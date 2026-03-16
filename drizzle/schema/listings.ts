@@ -309,6 +309,7 @@ export const properties = mysqlTable(
     ownerId: int()
       .notNull()
       .references(() => users.id),
+    sourceListingId: int('sourceListingId').references(() => listings.id, { onDelete: 'set null' }),
     propertySettings: text(),
     videoUrl: text(),
     virtualTourUrl: text(),
@@ -339,6 +340,7 @@ export const properties = mysqlTable(
     index('idx_properties_cityId_status').on(table.cityId, table.status),
     index('idx_properties_cityId_area').on(table.cityId, table.area),
     index('idx_properties_location_id').on(table.locationId),
+    index('idx_properties_sourceListingId').on(table.sourceListingId),
   ],
 );
 

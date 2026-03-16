@@ -1,6 +1,13 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 
+if (process.env.CI === 'true') {
+  console.log = () => undefined;
+  console.info = () => undefined;
+  console.warn = () => undefined;
+  console.error = () => undefined;
+}
+
 // Load .env.test when NODE_ENV=test
 if (process.env.NODE_ENV === 'test') {
   config({ path: resolve(process.cwd(), '.env.test'), override: true });

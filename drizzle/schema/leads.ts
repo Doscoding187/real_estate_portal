@@ -43,6 +43,11 @@ export const leads = mysqlTable('leads', {
   email: varchar({ length: 320 }).notNull(),
   phone: varchar({ length: 50 }),
   message: text(),
+  unitId: varchar('unit_id', { length: 36 }),
+  unitName: varchar('unit_name', { length: 255 }),
+  unitPriceFrom: decimal('unit_price_from', { precision: 15, scale: 2 }),
+  unitBedrooms: int('unit_bedrooms'),
+  unitBathrooms: decimal('unit_bathrooms', { precision: 3, scale: 1 }),
   leadType: mysqlEnum('leadType', ['inquiry', 'viewing_request', 'offer', 'callback'])
     .default('inquiry')
     .notNull(),
@@ -190,6 +195,8 @@ export const showings = mysqlTable('showings', {
   listingId: int()
     .notNull()
     .references(() => listings.id, { onDelete: 'cascade' }),
+  propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
+  leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
   agentId: int()
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
