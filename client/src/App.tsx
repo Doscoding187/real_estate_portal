@@ -99,6 +99,10 @@ const PlanEditor = lazy(() => import('./pages/admin/PlanEditor'));
 const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
 const AgentOsReadinessPage = lazy(() => import('./pages/admin/AgentOsReadinessPage'));
 const AgentInventoryBoundaryPage = lazy(() => import('./pages/admin/AgentInventoryBoundaryPage'));
+const PlatformSettings = lazy(() => import('./pages/admin/PlatformSettings'));
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const CreateAgency = lazy(() => import('./pages/admin/CreateAgency'));
+const ComingSoonModule = lazy(() => import('./pages/admin/ComingSoonModule'));
 const MarketingCampaignsPage = lazy(() => import('./pages/admin/MarketingCampaignsPage'));
 const CreateCampaignWizard = lazy(() => import('./pages/admin/CreateCampaignWizard'));
 const AgentApprovals = lazy(() => import('./pages/admin/AgentApprovals'));
@@ -474,6 +478,14 @@ function Router() {
             )}
           />
           <Route
+            path="/admin/dashboard"
+            component={() => (
+              <SuperAdminDashboard>
+                <Redirect to="/admin/overview" />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
             path="/admin/ecosystem"
             component={() => (
               <SuperAdminDashboard>
@@ -491,6 +503,22 @@ function Router() {
             )}
           />
           <Route
+            path="/admin/agencies/new"
+            component={() => (
+              <SuperAdminDashboard>
+                <CreateAgency />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
+            path="/admin/agencies/create"
+            component={() => (
+              <SuperAdminDashboard>
+                <CreateAgency />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
             path="/admin/agencies"
             component={() => (
               <SuperAdminDashboard>
@@ -499,10 +527,50 @@ function Router() {
             )}
           />
           <Route
+            path="/admin/agents"
+            component={() => (
+              <SuperAdminDashboard>
+                <UsersPage initialRole="agent" />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
             path="/admin/users"
             component={() => (
               <SuperAdminDashboard>
                 <UsersPage />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
+            path="/admin/content"
+            component={() => (
+              <SuperAdminDashboard>
+                <ComingSoonModule title="Content Manager" />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
+            path="/admin/communications"
+            component={() => (
+              <SuperAdminDashboard>
+                <ComingSoonModule title="Communications" />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
+            path="/admin/settings"
+            component={() => (
+              <SuperAdminDashboard>
+                <PlatformSettings />
+              </SuperAdminDashboard>
+            )}
+          />
+          <Route
+            path="/admin/system"
+            component={() => (
+              <SuperAdminDashboard>
+                <AuditLogs />
               </SuperAdminDashboard>
             )}
           />

@@ -57,7 +57,10 @@ const SidebarNavigation: React.FC = () => {
     else if (location.startsWith('/admin/analytics')) setActiveSection('insights');
     else if (location.startsWith('/admin/agent-os-readiness')) setActiveSection('insights');
     else if (location.startsWith('/admin/users')) setActiveSection('system');
+    else if (location.startsWith('/admin/content')) setActiveSection('system');
+    else if (location.startsWith('/admin/communications')) setActiveSection('system');
     else if (location.startsWith('/admin/settings')) setActiveSection('system');
+    else if (location.startsWith('/admin/system')) setActiveSection('system');
   }, [location]);
 
   const groups = [

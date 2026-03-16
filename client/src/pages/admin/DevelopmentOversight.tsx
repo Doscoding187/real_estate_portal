@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +57,7 @@ export default function DevelopmentOversight() {
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'request_changes' | null>(
     null,
   );
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   // Fetch pending developments
   const {
@@ -158,7 +160,7 @@ export default function DevelopmentOversight() {
   };
 
   // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     // In a real app, we might redirect, but for components used in dashboard layout,
     // we often rely on the parent to handle access control.
     // However, explicit check is safe.
