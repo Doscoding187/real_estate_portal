@@ -78,6 +78,10 @@ export default function DistributionNetworkPage() {
     return parts[2] || DEFAULT_SUBMODULE;
   }, [location]);
 
+  const showLegacyPartnerDevelopments =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('legacyPartnerDevelopments') === '1';
+
   useEffect(() => {
     if (location === '/admin/distribution') {
       setLocation(`/admin/distribution/${DEFAULT_SUBMODULE}`);
@@ -596,7 +600,7 @@ export default function DistributionNetworkPage() {
 
       {submoduleSlug === 'partner-developments' && <PartnerDevelopmentsBoard />}
 
-      {submoduleSlug === 'partner-developments' && false && (
+      {submoduleSlug === 'partner-developments' && showLegacyPartnerDevelopments && (
         <Card>
           <CardHeader>
             <CardTitle>Partner Developments</CardTitle>

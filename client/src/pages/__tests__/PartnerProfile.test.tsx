@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '../../test-utils/render';
 import { describe, it, expect } from 'vitest';
 import PartnerProfile from '../PartnerProfile';
 

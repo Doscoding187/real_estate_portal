@@ -16,6 +16,9 @@ ALTER TABLE showings
   ADD COLUMN leadId INT NULL;
 
 ALTER TABLE showings
+  ADD COLUMN listingId INT NULL;
+
+ALTER TABLE showings
   MODIFY COLUMN propertyId INT NULL;
 
 ALTER TABLE showings

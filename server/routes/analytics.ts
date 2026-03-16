@@ -98,63 +98,59 @@ async function persistEventToMemory(event: AnalyticsPayload, eventId: string) {
 }
 
 async function persistEventLegacy(db: any, event: AnalyticsPayload, eventId: string, req: Request) {
-  try {
-    // Best-effort dedupe for legacy schema by eventId inside event_data payload.
-    const dedupeResult = (await db.execute(sql`
-      SELECT id
-      FROM analytics_events
-      WHERE event_type = ${event.eventType.trim()}
-        AND session_id = ${typeof event.sessionId === 'string' && event.sessionId ? event.sessionId : 'unknown'}
-        AND JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.eventId')) = ${eventId}
-      LIMIT 1
-    `)) as any;
-    const dedupeRows = dedupeResult?.rows ?? dedupeResult?.[0] ?? [];
-    if (Array.isArray(dedupeRows) && dedupeRows.length > 0) {
-      return;
-    }
-
-    const payload = {
-      ...event,
-      eventId,
-    };
-
-    await db.execute(sql`
-      INSERT INTO analytics_events (
-        user_id,
-        session_id,
-        event_type,
-        event_data,
-        url,
-        referrer,
-        user_agent,
-        ip_address,
-        created_at
-      )
-      VALUES (
-        ${
-          event.userId !== undefined && event.userId !== null && Number.isFinite(Number(event.userId))
-            ? Number(event.userId)
-            : null
-        },
-        ${typeof event.sessionId === 'string' && event.sessionId ? event.sessionId : 'unknown'},
-        ${event.eventType.trim()},
-        ${JSON.stringify(payload)},
-        ${typeof req.originalUrl === 'string' ? req.originalUrl : null},
-        ${
-          typeof req.headers.referer === 'string'
-            ? req.headers.referer
-            : typeof req.headers.referrer === 'string'
-              ? req.headers.referrer
-              : null
-        },
-        ${typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : null},
-        ${typeof req.ip === 'string' ? req.ip : null},
-        ${parseTimestamp(event.timestamp)}
-      )
-    `);
-  } catch (legacyError) {
-    throw legacyError;
+  // Best-effort dedupe for legacy schema by eventId inside event_data payload.
+  const dedupeResult = (await db.execute(sql`
+    SELECT id
+    FROM analytics_events
+    WHERE event_type = ${event.eventType.trim()}
+      AND session_id = ${typeof event.sessionId === 'string' && event.sessionId ? event.sessionId : 'unknown'}
+      AND JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.eventId')) = ${eventId}
+    LIMIT 1
+  `)) as any;
+  const dedupeRows = dedupeResult?.rows ?? dedupeResult?.[0] ?? [];
+  if (Array.isArray(dedupeRows) && dedupeRows.length > 0) {
+    return;
   }
+
+  const payload = {
+    ...event,
+    eventId,
+  };
+
+  await db.execute(sql`
+    INSERT INTO analytics_events (
+      user_id,
+      session_id,
+      event_type,
+      event_data,
+      url,
+      referrer,
+      user_agent,
+      ip_address,
+      created_at
+    )
+    VALUES (
+      ${
+        event.userId !== undefined && event.userId !== null && Number.isFinite(Number(event.userId))
+          ? Number(event.userId)
+          : null
+      },
+      ${typeof event.sessionId === 'string' && event.sessionId ? event.sessionId : 'unknown'},
+      ${event.eventType.trim()},
+      ${JSON.stringify(payload)},
+      ${typeof req.originalUrl === 'string' ? req.originalUrl : null},
+      ${
+        typeof req.headers.referer === 'string'
+          ? req.headers.referer
+          : typeof req.headers.referrer === 'string'
+            ? req.headers.referrer
+            : null
+      },
+      ${typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : null},
+      ${typeof req.ip === 'string' ? req.ip : null},
+      ${parseTimestamp(event.timestamp)}
+    )
+  `);
 }
 
 /**

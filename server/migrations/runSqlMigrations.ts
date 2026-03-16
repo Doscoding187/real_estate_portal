@@ -379,7 +379,7 @@ function buildMysqlConnectionConfig(databaseUrl: string) {
   const wantsStrictSsl =
     sslParam === 'true' ||
     sslParam === '{"rejectUnauthorized":true}' ||
-    sslParam === '{\"rejectUnauthorized\":true}';
+    sslParam === '{"rejectUnauthorized":true}';
 
   return {
     uri: parsedUrl.toString(),
