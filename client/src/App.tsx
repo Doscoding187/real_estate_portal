@@ -16,6 +16,7 @@ import { useKeyboardMode } from './hooks/useKeyboardMode';
 import { SkipToContent } from './components/ui/SkipToContent';
 import '@/styles/keyboard-navigation.css';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
@@ -51,7 +52,6 @@ const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
-const ListingOversight = lazy(() => import('./pages/admin/ListingOversight'));
 const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
 const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
@@ -85,35 +85,7 @@ const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
-// Super Admin Dashboard Pages
-const OverviewPage = lazy(() => import('./pages/admin/OverviewPage'));
-const AgenciesPage = lazy(() => import('./pages/admin/AgenciesPage'));
-const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
-const DevelopersPage = lazy(() => import('./pages/admin/DevelopersPage'));
-const PropertiesPage = lazy(() => import('./pages/admin/PropertiesPage'));
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
-const RevenueCenterPage = lazy(() => import('./pages/admin/RevenueCenterPage'));
-const LocationMonetizationPage = lazy(() => import('./pages/admin/LocationMonetizationPage'));
-const SubscriptionManagementPage = lazy(() => import('./pages/admin/SubscriptionManagementPage'));
-const PlanEditor = lazy(() => import('./pages/admin/PlanEditor'));
-const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
-const AgentOsReadinessPage = lazy(() => import('./pages/admin/AgentOsReadinessPage'));
-const AgentInventoryBoundaryPage = lazy(() => import('./pages/admin/AgentInventoryBoundaryPage'));
-const PlatformSettings = lazy(() => import('./pages/admin/PlatformSettings'));
-const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
-const CreateAgency = lazy(() => import('./pages/admin/CreateAgency'));
-const ComingSoonModule = lazy(() => import('./pages/admin/ComingSoonModule'));
-const MarketingCampaignsPage = lazy(() => import('./pages/admin/MarketingCampaignsPage'));
-const CreateCampaignWizard = lazy(() => import('./pages/admin/CreateCampaignWizard'));
-const AgentApprovals = lazy(() => import('./pages/admin/AgentApprovals'));
-const CampaignDetailsPage = lazy(() => import('./pages/admin/CampaignDetailsPage'));
-const CampaignInsights = lazy(() => import('./pages/admin/CampaignInsights'));
-const DevelopmentOversight = lazy(() => import('./pages/admin/DevelopmentOversight'));
-const UnifiedApprovalsPage = lazy(() => import('./pages/admin/UnifiedApprovalsPage'));
-const EcosystemOverviewPage = lazy(() => import('./pages/admin/EcosystemOverviewPage'));
-const PartnerNetworkPage = lazy(() => import('./pages/admin/PartnerNetworkPage'));
-const DistributionNetworkPage = lazy(() => import('./pages/admin/DistributionNetworkPage'));
-const SuperAdminPublisher = lazy(() => import('./pages/admin/publisher/SuperAdminPublisher'));
 
 // Import new role-based dashboards
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
@@ -469,296 +441,13 @@ function Router() {
           <Route path="/subscription-plans" component={SubscriptionPlans} />
 
           {/* Super Admin Dashboard Routes */}
-          <Route
-            path="/admin"
-            component={() => (
-              <SuperAdminDashboard>
-                <OverviewPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/dashboard"
-            component={() => (
-              <SuperAdminDashboard>
-                <Redirect to="/admin/overview" />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/ecosystem"
-            component={() => (
-              <SuperAdminDashboard>
-                <EcosystemOverviewPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          <Route
-            path="/admin/overview"
-            component={() => (
-              <SuperAdminDashboard>
-                <OverviewPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agencies/new"
-            component={() => (
-              <SuperAdminDashboard>
-                <CreateAgency />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agencies/create"
-            component={() => (
-              <SuperAdminDashboard>
-                <CreateAgency />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agencies"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgenciesPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agents"
-            component={() => (
-              <SuperAdminDashboard>
-                <UsersPage initialRole="agent" />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/users"
-            component={() => (
-              <SuperAdminDashboard>
-                <UsersPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/content"
-            component={() => (
-              <SuperAdminDashboard>
-                <ComingSoonModule title="Content Manager" />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/communications"
-            component={() => (
-              <SuperAdminDashboard>
-                <ComingSoonModule title="Communications" />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/settings"
-            component={() => (
-              <SuperAdminDashboard>
-                <PlatformSettings />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/system"
-            component={() => (
-              <SuperAdminDashboard>
-                <AuditLogs />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/developers"
-            component={() => (
-              <SuperAdminDashboard>
-                <DevelopersPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/properties"
-            component={() => (
-              <SuperAdminDashboard>
-                <PropertiesPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/revenue"
-            component={() => (
-              <SuperAdminDashboard>
-                <RevenueCenterPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/monetization"
-            component={() => (
-              <SuperAdminDashboard>
-                <LocationMonetizationPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/subscriptions"
-            component={() => (
-              <SuperAdminDashboard>
-                <SubscriptionManagementPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/marketing"
-            component={() => (
-              <SuperAdminDashboard>
-                <MarketingCampaignsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/marketing/create"
-            component={() => (
-              <SuperAdminDashboard>
-                <CreateCampaignWizard />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/marketing/:id"
-            component={() => (
-              <SuperAdminDashboard>
-                <CampaignDetailsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/analytics"
-            component={() => (
-              <SuperAdminDashboard>
-                <AnalyticsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agent-os-readiness"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgentOsReadinessPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agent-inventory-boundary"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgentInventoryBoundaryPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Campaign Insights Route */}
-          <Route
-            path="/admin/marketing/campaign/:id"
-            component={() => (
-              <SuperAdminDashboard>
-                <CampaignInsights />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Lovable Integration Hub Route */}
-          <Route
-            path="/admin/lovable-hub"
-            component={() => (
-              <SuperAdminDashboard>
-                <LovableIntegrationHub />
-              </SuperAdminDashboard>
-            )}
-          />
-          {/* Unified Approvals Route */}
-          <Route
-            path="/admin/approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <UnifiedApprovalsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Listing Approval Queue Route */}
-          <Route
-            path="/admin/listing-approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <ListingOversight />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Agent Approval Queue Route */}
-          <Route
-            path="/admin/agent-approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgentApprovals />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Development Approval Queue Route */}
-          <Route
-            path="/admin/development-approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <DevelopmentOversight />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Partner Network Route */}
-          <Route
-            path="/admin/partners"
-            component={() => (
-              <SuperAdminDashboard>
-                <PartnerNetworkPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Distribution Network Routes */}
-          <Route
-            path="/admin/distribution"
-            component={() => (
-              <SuperAdminDashboard>
-                <DistributionNetworkPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/distribution/:submodule"
-            component={() => (
-              <SuperAdminDashboard>
-                <DistributionNetworkPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Developer Publisher Route */}
-          <Route
-            path="/admin/publisher"
-            component={() => (
-              <SuperAdminDashboard>
-                <SuperAdminPublisher />
-              </SuperAdminDashboard>
-            )}
-          />
+          {ADMIN_DASHBOARD_ROUTES.map(route => (
+            <Route
+              key={route.path}
+              path={route.path}
+              component={() => <SuperAdminDashboard>{route.render()}</SuperAdminDashboard>}
+            />
+          ))}
 
           {/* Other routes that might conflict */}
           <Route path="/dashboard" component={Dashboard} />
@@ -794,9 +483,6 @@ function Router() {
           </Route>
           <Route path="/agency/subscription" component={AgencySubscriptionPage} />
           <Route path="/agency/onboarding" component={AgencyOnboarding} />
-          <Route path="/admin/subscription-management" component={SubscriptionManagementPage} />
-          <Route path="/admin/plan-editor" component={PlanEditor} />
-          <Route path="/admin/revenue-center" component={RevenueCenterPage} />
           <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
           <Route path="/agency/invite" component={InviteAgents} />
           <Route path="/agency/agents" component={AgentManagement} />
