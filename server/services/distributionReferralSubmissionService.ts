@@ -74,20 +74,14 @@ async function resolveDb(db?: DbExecutor) {
 }
 
 function buildDuplicateReferralError(existingDealId: number): never {
-  const error = new TRPCError({
+  throw new TRPCError({
     code: 'BAD_REQUEST',
     message: 'A similar referral already exists for this development.',
-  }) as TRPCError & {
-    data?: {
-      errorCode: 'DUPLICATE_REFERRAL';
-      existingDealId: number;
-    };
-  };
-  error.data = {
-    errorCode: 'DUPLICATE_REFERRAL',
-    existingDealId,
-  };
-  throw error;
+    cause: {
+      errorCode: 'DUPLICATE_REFERRAL',
+      existingDealId,
+    },
+  });
 }
 
 export async function pickManagerForDevelopment(
@@ -154,9 +148,7 @@ async function findDuplicateByBuyerIdentity(
 
   const identityConditions: SQL[] = [];
   if (trimmedEmail) {
-    identityConditions.push(
-      sql`LOWER(${distributionDeals.buyerEmail}) = LOWER(${trimmedEmail})`,
-    );
+    identityConditions.push(sql`LOWER(${distributionDeals.buyerEmail}) = LOWER(${trimmedEmail})`);
   }
   if (normalizedPhone) {
     identityConditions.push(
@@ -259,19 +251,17 @@ export async function createReferralDeal(
   const buyerPhone = String(input.buyerPhone || '').trim() || null;
   const buyerEmail = String(input.buyerEmail || '').trim() || null;
   const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
-  let assessmentAttachment:
-    | {
-        assessmentId: string;
-        matchSnapshotId: string;
-        purchasePrice: number;
-        assumptionsSummary: {
-          interestRateAnnual: number | null;
-          termMonths: number | null;
-          maxRepaymentRatio: number | null;
-          calcVersion: string | null;
-        };
-      }
-    | null = null;
+  let assessmentAttachment: {
+    assessmentId: string;
+    matchSnapshotId: string;
+    purchasePrice: number;
+    assumptionsSummary: {
+      interestRateAnnual: number | null;
+      termMonths: number | null;
+      maxRepaymentRatio: number | null;
+      calcVersion: string | null;
+    };
+  } | null = null;
 
   if (normalizedAssessmentId) {
     const assessmentConditions: SQL[] = [eq(affordabilityAssessments.id, normalizedAssessmentId)];
@@ -496,7 +486,10 @@ async function computeDealDocumentProgressMap(
           .where(
             and(
               inArray(distributionDealDocuments.dealId, dealIds),
-              inArray(distributionDealDocuments.developmentRequiredDocumentId, allRequiredTemplateIds),
+              inArray(
+                distributionDealDocuments.developmentRequiredDocumentId,
+                allRequiredTemplateIds,
+              ),
             ),
           )
       : [];
@@ -511,7 +504,8 @@ async function computeDealDocumentProgressMap(
   }
 
   for (const row of input.dealRows) {
-    const requiredTemplates = requiredTemplateIdsByDevelopment.get(Number(row.developmentId)) || new Set<number>();
+    const requiredTemplates =
+      requiredTemplateIdsByDevelopment.get(Number(row.developmentId)) || new Set<number>();
     const verifiedTemplates = verifiedSetByDeal.get(Number(row.dealId)) || new Set<number>();
     progressMap.set(Number(row.dealId), {
       requiredCount: requiredTemplates.size,
@@ -694,17 +688,16 @@ export async function getMyReferralDeal(
       phone: deal.buyerPhone || null,
       email: deal.buyerEmail || null,
     },
-    manager:
-      deal.managerUserId
-        ? {
-            userId: Number(deal.managerUserId),
-            displayName:
-              String(deal.managerName || '').trim() ||
-              [deal.managerFirstName, deal.managerLastName].filter(Boolean).join(' ').trim() ||
-              null,
-            email: deal.managerEmail || null,
-          }
-        : null,
+    manager: deal.managerUserId
+      ? {
+          userId: Number(deal.managerUserId),
+          displayName:
+            String(deal.managerName || '').trim() ||
+            [deal.managerFirstName, deal.managerLastName].filter(Boolean).join(' ').trim() ||
+            null,
+          email: deal.managerEmail || null,
+        }
+      : null,
     affordability:
       deal.assessmentId && deal.matchSnapshotId
         ? {
@@ -719,7 +712,9 @@ export async function getMyReferralDeal(
       const isAssessmentAttachment = metadata?.source === 'partner.attachAssessment';
       return {
         at: event.at,
-        event: isAssessmentAttachment ? 'Affordability Snapshot Attached' : String(event.event || 'system'),
+        event: isAssessmentAttachment
+          ? 'Affordability Snapshot Attached'
+          : String(event.event || 'system'),
         byRole: event.actorRole ? String(event.actorRole) : 'system',
         note: event.note || null,
         metadata,

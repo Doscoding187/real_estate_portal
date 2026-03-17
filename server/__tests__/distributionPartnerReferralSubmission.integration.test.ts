@@ -21,8 +21,8 @@ import {
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe);
 
 const createdState = {
   userIds: [] as number[],
@@ -214,19 +214,27 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     const dealIds = uniqueIds(createdState.dealIds);
     if (dealIds.length) {
-      await db.delete(distributionDealDocuments).where(inArray(distributionDealDocuments.dealId, dealIds));
-      await db.delete(distributionDealEvents).where(inArray(distributionDealEvents.dealId, dealIds));
+      await db
+        .delete(distributionDealDocuments)
+        .where(inArray(distributionDealDocuments.dealId, dealIds));
+      await db
+        .delete(distributionDealEvents)
+        .where(inArray(distributionDealEvents.dealId, dealIds));
       await db.delete(distributionDeals).where(inArray(distributionDeals.id, dealIds));
     }
 
     const snapshotIds = uniqueStringIds(createdState.snapshotIds);
     if (snapshotIds.length) {
-      await db.delete(affordabilityMatchSnapshots).where(inArray(affordabilityMatchSnapshots.id, snapshotIds));
+      await db
+        .delete(affordabilityMatchSnapshots)
+        .where(inArray(affordabilityMatchSnapshots.id, snapshotIds));
     }
 
     const assessmentIds = uniqueStringIds(createdState.assessmentIds);
     if (assessmentIds.length) {
-      await db.delete(affordabilityAssessments).where(inArray(affordabilityAssessments.id, assessmentIds));
+      await db
+        .delete(affordabilityAssessments)
+        .where(inArray(affordabilityAssessments.id, assessmentIds));
     }
 
     const assignmentIds = uniqueIds(createdState.assignmentIds);
@@ -285,15 +293,15 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
         buyerName: 'Inactive Buyer',
       })
       .catch(error => error)) as TRPCError & {
-      data?: {
+      cause?: {
         errorCode: string;
         reasons: Array<{ code: string; message: string }>;
       };
     };
 
     expect(inactiveError).toBeInstanceOf(TRPCError);
-    expect(inactiveError.data?.errorCode).toBe('PROGRAM_NOT_ELIGIBLE');
-    expect(inactiveError.data?.reasons).toEqual(
+    expect((inactiveError.cause as any)?.errorCode).toBe('PROGRAM_NOT_ELIGIBLE');
+    expect((inactiveError.cause as any)?.reasons).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'PROGRAM_INACTIVE' })]),
     );
 
@@ -310,15 +318,15 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
         buyerName: 'Disabled Buyer',
       })
       .catch(error => error)) as TRPCError & {
-      data?: {
+      cause?: {
         errorCode: string;
         reasons: Array<{ code: string; message: string }>;
       };
     };
 
     expect(disabledError).toBeInstanceOf(TRPCError);
-    expect(disabledError.data?.errorCode).toBe('PROGRAM_NOT_ELIGIBLE');
-    expect(disabledError.data?.reasons).toEqual(
+    expect((disabledError.cause as any)?.errorCode).toBe('PROGRAM_NOT_ELIGIBLE');
+    expect((disabledError.cause as any)?.reasons).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'REFERRALS_DISABLED' })]),
     );
   });
@@ -544,7 +552,9 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       .from(distributionDealEvents)
       .where(eq(distributionDealEvents.dealId, Number(result.dealId)));
     expect(
-      affordabilityEvents.some(event => String(event.note || '').includes('Affordability Snapshot Attached')),
+      affordabilityEvents.some(event =>
+        String(event.note || '').includes('Affordability Snapshot Attached'),
+      ),
     ).toBe(true);
   });
 

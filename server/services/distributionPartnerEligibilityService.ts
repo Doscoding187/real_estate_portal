@@ -110,20 +110,14 @@ async function getCurrentTierForAgent(
 }
 
 function buildProgramNotEligibleError(reasons: EligibilityReason[]): never {
-  const error = new TRPCError({
+  throw new TRPCError({
     code: 'BAD_REQUEST',
     message: 'Program is not eligible for referral submission.',
-  }) as TRPCError & {
-    data?: {
-      errorCode: 'PROGRAM_NOT_ELIGIBLE';
-      reasons: EligibilityReason[];
-    };
-  };
-  error.data = {
-    errorCode: 'PROGRAM_NOT_ELIGIBLE',
-    reasons,
-  };
-  throw error;
+    cause: {
+      errorCode: 'PROGRAM_NOT_ELIGIBLE',
+      reasons,
+    },
+  });
 }
 
 function buildForbiddenReferralAccessError(): never {
@@ -160,7 +154,9 @@ async function findProgramByDevelopmentId(
 }
 
 function normalizePolicy(value: string | null) {
-  const policy = String(value || 'restricted').trim().toLowerCase();
+  const policy = String(value || 'restricted')
+    .trim()
+    .toLowerCase();
   if (policy === 'open' || policy === 'restricted' || policy === 'invite_only') {
     return policy;
   }
@@ -171,14 +167,12 @@ function mapActorRoleForSubmission(actorRole: string): 'admin' | 'referrer' {
   return actorRole === 'super_admin' ? 'admin' : 'referrer';
 }
 
-export async function validatePartnerSubmissionEligibility(
-  input: {
-    developmentId: number;
-    actorUserId: number;
-    actorRole: string;
-    db?: DbExecutor;
-  },
-) {
+export async function validatePartnerSubmissionEligibility(input: {
+  developmentId: number;
+  actorUserId: number;
+  actorRole: string;
+  db?: DbExecutor;
+}) {
   const db = await resolveDb(input.db);
   const reasons: EligibilityReason[] = [];
 

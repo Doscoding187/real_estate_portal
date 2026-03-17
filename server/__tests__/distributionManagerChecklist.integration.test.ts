@@ -19,8 +19,8 @@ import {
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe);
 
 type SeedOptions = {
   includePrimaryAssignment?: boolean;
@@ -106,6 +106,7 @@ async function insertDistributionIdentity(
 }
 
 async function insertManagerAssignment(input: {
+  programId: number;
   developmentId: number;
   managerUserId: number;
   isPrimary?: boolean;
@@ -113,11 +114,11 @@ async function insertManagerAssignment(input: {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const [assignmentInsert] = await db.insert(distributionManagerAssignments).values({
+    programId: input.programId,
     developmentId: input.developmentId,
     managerUserId: input.managerUserId,
     isPrimary: input.isPrimary ? 1 : 0,
     isActive: 1,
-    assignedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     workloadCapacity: 0,
     timezone: null,
   });
@@ -175,6 +176,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
 
   if (includePrimaryAssignment) {
     await insertManagerAssignment({
+      programId,
       developmentId,
       managerUserId,
       isPrimary: true,
@@ -252,7 +254,15 @@ async function insertViewing(input: {
 
 async function setDealStage(
   dealId: number,
-  stage: 'viewing_scheduled' | 'viewing_completed' | 'application_submitted' | 'contract_signed' | 'bond_approved' | 'commission_pending' | 'commission_paid' | 'cancelled',
+  stage:
+    | 'viewing_scheduled'
+    | 'viewing_completed'
+    | 'application_submitted'
+    | 'contract_signed'
+    | 'bond_approved'
+    | 'commission_pending'
+    | 'commission_paid'
+    | 'cancelled',
   commissionTriggerStage: 'contract_signed' | 'bond_approved' = 'bond_approved',
 ) {
   const db = await getDb();
@@ -287,7 +297,9 @@ describeWithDb('distribution.manager deal checklist integration', () => {
 
     const dealDocumentIds = uniqueIds(createdState.dealDocumentIds);
     if (dealDocumentIds.length) {
-      await db.delete(distributionDealDocuments).where(inArray(distributionDealDocuments.id, dealDocumentIds));
+      await db
+        .delete(distributionDealDocuments)
+        .where(inArray(distributionDealDocuments.id, dealDocumentIds));
     }
 
     const validationIds = uniqueIds(createdState.validationIds);
@@ -328,7 +340,9 @@ describeWithDb('distribution.manager deal checklist integration', () => {
 
     const identityIds = uniqueIds(createdState.identityIds);
     if (identityIds.length) {
-      await db.delete(distributionIdentities).where(inArray(distributionIdentities.id, identityIds));
+      await db
+        .delete(distributionIdentities)
+        .where(inArray(distributionIdentities.id, identityIds));
     }
 
     const developmentIds = uniqueIds(createdState.developmentIds);
@@ -354,7 +368,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('blocks checklist access for a manager not assigned to the development', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
     const caller = buildCaller(seed.outsiderManagerUserId);
 
     await expect(
@@ -367,7 +384,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('blocks checklist and deal mutations for a secondary manager on another manager deal', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
     await insertManagerAssignment({
       developmentId: seed.developmentId,
       managerUserId: seed.outsiderManagerUserId,
@@ -406,7 +426,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('returns checklist with pending statuses for assigned manager', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+    });
     const caller = buildCaller(seed.managerUserId);
 
     const checklist = await caller.distribution.manager.getDealChecklist({
@@ -415,16 +438,19 @@ describeWithDb('distribution.manager deal checklist integration', () => {
 
     expect(checklist.dealId).toBe(seed.dealId);
     expect(checklist.requiredDocuments).toHaveLength(2);
-    expect(checklist.requiredDocuments.every((document: any) => document.status === 'pending')).toBe(
-      true,
-    );
+    expect(
+      checklist.requiredDocuments.every((document: any) => document.status === 'pending'),
+    ).toBe(true);
     expect(checklist.computed.requiredCount).toBe(2);
     expect(checklist.computed.verifiedRequiredCount).toBe(0);
     expect(checklist.computed.payoutReady).toBe(false);
   });
 
   it('upserts document status and writes audit timestamps for received and verified', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
     const caller = buildCaller(seed.managerUserId);
 
     const receivedPayload = await caller.distribution.manager.updateDealDocumentStatus({
@@ -475,7 +501,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('computes payout readiness true when all required docs are verified', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+    });
     const caller = buildCaller(seed.managerUserId);
 
     for (const templateId of seed.templateIds) {
@@ -567,7 +596,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('blocks manager transition to commission_pending until payout readiness is satisfied', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+    });
     const caller = buildCaller(seed.managerUserId);
     await setDealStage(seed.dealId, 'bond_approved');
 
@@ -600,7 +632,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('blocks admin transition to commission_paid unless forced when payout readiness is missing', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
     const adminCaller = buildCaller(seed.managerUserId, 'super_admin');
     await setDealStage(seed.dealId, 'commission_pending');
 
@@ -638,7 +673,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('blocks document updates on cancelled deals', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
     const caller = buildCaller(seed.managerUserId);
     await setDealStage(seed.dealId, 'cancelled');
 
@@ -655,7 +693,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('blocks viewing validation and reschedule actions on commission-paid deals', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
     const managerCaller = buildCaller(seed.managerUserId);
     const agentCaller = buildCaller(seed.agentUserId);
     const viewingId = await insertViewing({

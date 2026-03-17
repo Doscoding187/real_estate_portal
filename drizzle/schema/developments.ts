@@ -607,3 +607,72 @@ export const unitTypes = mysqlTable(
     index('idx_unit_types_auction_status').on(table.auctionStatus),
   ],
 );
+
+export const DEVELOPMENT_REQUIRED_DOCUMENT_CODE_VALUES = [
+  'id_document',
+  'proof_of_address',
+  'proof_of_income',
+  'bank_statement',
+  'pre_approval',
+  'signed_offer_to_purchase',
+  'sale_agreement',
+  'attorney_instruction_letter',
+  'transfer_documents',
+  'custom',
+] as const;
+
+export const developmentRequiredDocuments = mysqlTable(
+  'development_required_documents',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    documentCode: mysqlEnum(
+      'document_code',
+      DEVELOPMENT_REQUIRED_DOCUMENT_CODE_VALUES as unknown as [string, ...string[]],
+    ).notNull(),
+    documentLabel: varchar('document_label', { length: 160 }).notNull(),
+    isRequired: tinyint('is_required').default(1).notNull(),
+    sortOrder: int('sort_order').default(0).notNull(),
+    isActive: tinyint('is_active').default(1).notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_development_required_documents_code').on(table.developmentId, table.documentCode),
+    index('idx_development_required_documents_development').on(table.developmentId),
+    index('idx_development_required_documents_required').on(table.isRequired),
+    index('idx_development_required_documents_active').on(table.isActive),
+    index('idx_development_required_documents_order').on(table.developmentId, table.sortOrder),
+  ],
+);
+
+export const developmentManagerAssignments = mysqlTable(
+  'development_manager_assignments',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    managerUserId: int('manager_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    isPrimary: tinyint('is_primary').default(0).notNull(),
+    workloadCapacity: int('workload_capacity').default(0).notNull(),
+    timezone: varchar({ length: 64 }),
+    isActive: tinyint('is_active').default(1).notNull(),
+    assignedAt: timestamp('assigned_at', { mode: 'string' }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_development_manager_assignment_development_manager').on(
+      table.developmentId,
+      table.managerUserId,
+    ),
+    index('idx_development_manager_assignments_manager').on(table.managerUserId),
+    index('idx_development_manager_assignments_development').on(table.developmentId),
+    index('idx_development_manager_assignments_active').on(table.isActive),
+  ],
+);

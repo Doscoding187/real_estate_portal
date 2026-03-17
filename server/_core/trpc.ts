@@ -20,6 +20,11 @@ const t = initTRPC.context<TrpcContext>().create({
       ? ((cause as any).flatten?.() ?? { formErrors: [], fieldErrors: {} })
       : undefined;
 
+    const custom =
+      cause && typeof cause === 'object' && !Array.isArray(cause) ? (cause as any) : null;
+    const customErrorCode =
+      custom && typeof custom.errorCode === 'string' ? custom.errorCode : undefined;
+
     return {
       ...shape,
       data: {
@@ -28,6 +33,16 @@ const t = initTRPC.context<TrpcContext>().create({
         zodError,
         _zod: zodError, // Backwards compatibility for some client versions
         cause: cause ? String((cause as any)?.message ?? cause) : undefined, // safe string
+        // Optional structured error payloads (safe, explicitly whitelisted).
+        errorCode: customErrorCode,
+        reasons:
+          customErrorCode && Array.isArray(custom?.reasons)
+            ? (custom.reasons as unknown[])
+            : undefined,
+        existingDealId:
+          customErrorCode === 'DUPLICATE_REFERRAL'
+            ? Number(custom?.existingDealId || 0) || undefined
+            : undefined,
       },
     };
   },

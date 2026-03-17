@@ -13,7 +13,7 @@ import {
   decimal,
 } from 'drizzle-orm/mysql-core';
 import { users } from './core';
-import { developerBrandProfiles, developments } from './developments';
+import { developerBrandProfiles, developmentRequiredDocuments, developments } from './developments';
 
 export const DISTRIBUTION_DEAL_STAGE_VALUES = [
   'viewing_scheduled',
@@ -512,6 +512,51 @@ export const distributionDeals = mysqlTable(
     index('idx_distribution_deals_assigned_agent').on(table.assignedAgentId),
     index('idx_distribution_deals_deal_amount').on(table.dealAmount),
     index('idx_distribution_deals_platform_amount').on(table.platformAmount),
+  ],
+);
+
+export const DISTRIBUTION_DEAL_DOCUMENT_STATUS_VALUES = [
+  'pending',
+  'received',
+  'verified',
+  'rejected',
+] as const;
+
+export const distributionDealDocuments = mysqlTable(
+  'distribution_deal_documents',
+  {
+    id: int().autoincrement().primaryKey(),
+    dealId: int('deal_id')
+      .notNull()
+      .references(() => distributionDeals.id, { onDelete: 'cascade' }),
+    developmentRequiredDocumentId: int('development_required_document_id')
+      .notNull()
+      .references(() => developmentRequiredDocuments.id, { onDelete: 'cascade' }),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_DEAL_DOCUMENT_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('pending')
+      .notNull(),
+    receivedAt: timestamp('received_at', { mode: 'string' }),
+    verifiedAt: timestamp('verified_at', { mode: 'string' }),
+    receivedBy: int('received_by').references(() => users.id, { onDelete: 'set null' }),
+    verifiedBy: int('verified_by').references(() => users.id, { onDelete: 'set null' }),
+    notes: text(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_deal_documents_required_document').on(
+      table.dealId,
+      table.developmentRequiredDocumentId,
+    ),
+    index('idx_distribution_deal_documents_deal').on(table.dealId),
+    index('idx_distribution_deal_documents_required_document').on(
+      table.developmentRequiredDocumentId,
+    ),
+    index('idx_distribution_deal_documents_status').on(table.status),
+    index('idx_distribution_deal_documents_updated_at').on(table.updatedAt),
   ],
 );
 

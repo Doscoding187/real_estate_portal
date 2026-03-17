@@ -35,7 +35,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[]!@#$%^&*()_+\-={}';:"\\|,.<>/?[]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}';:"\\|,.<>/?[\]]).{8,}$/;
       if (!passwordStrengthRegex.test(password)) {
         return res.status(400).json({
           error:
@@ -126,10 +126,7 @@ export function registerAuthRoutes(app: Express) {
             })
             .from(distributionIdentities)
             .where(
-              and(
-                eq(distributionIdentities.userId, user.id),
-                eq(distributionIdentities.active, 1),
-              ),
+              and(eq(distributionIdentities.userId, user.id), eq(distributionIdentities.active, 1)),
             );
           hasReferrerIdentity = identityRows.some(
             row => Boolean(row.id) && row.identityType === 'referrer',
@@ -275,7 +272,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[]!@#$%^&*()_+\-={}';:"\\|,.<>/?[]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}';:"\\|,.<>/?[\]]).{8,}$/;
       if (!passwordStrengthRegex.test(newPassword)) {
         return res.status(400).json({
           error:

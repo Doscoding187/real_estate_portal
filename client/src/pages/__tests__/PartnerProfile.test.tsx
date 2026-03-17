@@ -1,15 +1,14 @@
 import { render, screen } from '../../test-utils/render';
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import PartnerProfile from '../PartnerProfile';
 
 describe('PartnerProfile', () => {
-  it('renders the placeholder heading', () => {
-    render(<PartnerProfile />);
-    expect(screen.getByRole('heading', { name: 'Partner Profile' })).toBeInTheDocument();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('renders the coming soon placeholder body', () => {
-    render(<PartnerProfile />);
-    expect(screen.getByText('Coming soon...')).toBeInTheDocument();
+  it('renders nothing when partnerId param is missing', () => {
+    const { container } = render(<PartnerProfile />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
