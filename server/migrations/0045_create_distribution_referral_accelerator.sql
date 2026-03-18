@@ -42,5 +42,5 @@ CREATE TABLE IF NOT EXISTS qualification_pack_exports (
 ALTER TABLE distribution_deals
   ADD COLUMN affordability_assessment_id varchar(36) NULL;
 
-CREATE INDEX IF NOT EXISTS idx_distribution_deals_affordability_assessment
+CREATE INDEX idx_distribution_deals_affordability_assessment
   ON distribution_deals (affordability_assessment_id);
