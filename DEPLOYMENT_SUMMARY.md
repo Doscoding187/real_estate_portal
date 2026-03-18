@@ -40,7 +40,8 @@ git push origin main
 ### 3. Railway Deployment
 - Railway will automatically deploy from the GitHub repository
 - Build command: `pnpm build:railway`
-- Start command: `pnpm start`
+- Start command: `pnpm start:prod`
+- `railway.json` now pins the Railway deploy settings in repo
 
 ## Testing
 - Verify role-based redirection works correctly
