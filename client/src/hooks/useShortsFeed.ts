@@ -1,15 +1,16 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+﻿import { useState, useCallback, useRef, useEffect } from 'react';
 import { PropertyShort, FeedType } from '@/../../shared/types';
 import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
-import type { ExploreIntent } from '@/lib/exploreIntent';
+import { getFeedItems } from '@/lib/exploreFeed';
+import { type ExploreIntent } from '@/lib/exploreIntent';
 
 interface UseShortsFeedOptions {
   feedType: FeedType;
   feedId?: number;
   category?: string;
-  intent?: ExploreIntent | null;
   limit?: number;
+  intent?: ExploreIntent | null;
 }
 
 interface ShortsFeedState {
@@ -20,223 +21,421 @@ interface ShortsFeedState {
   error: string | null;
 }
 
+const getDeviceType = (): 'mobile' | 'tablet' | 'desktop' => {
+  if (typeof window === 'undefined') return 'desktop';
+  const width = window.innerWidth;
+  if (width < 768) return 'mobile';
+  if (width < 1024) return 'tablet';
+  return 'desktop';
+};
+
 export function useShortsFeed({
   feedType,
   feedId,
   category,
-  intent: _intent,
   limit = 20,
+  intent,
 }: UseShortsFeedOptions) {
-  const [state, setState] = useState<ShortsFeedState>({
-    cards: [],
-    currentIndex: 0,
-    isLoading: true,
-    hasMore: true,
-    error: null,
-  });
-
   const { toast } = useToast();
-  const loadingRef = useRef(false);
-  const offsetRef = useRef(0);
-  const useMockData = useRef(true); // Toggle for development
 
-  // Fetch feed data
-  const fetchFeed = useCallback(
-    async (reset: boolean = false) => {
-      if (loadingRef.current) return;
+  const [cards, setCards] = useState<PropertyShort[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
 
-      loadingRef.current = true;
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+  const requestedOffsetsRef = useRef<Set<number>>(new Set([0]));
+  const sessionIdRef = useRef(`shorts-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+  const impressionLoggedRef = useRef<Set<number>>(new Set());
+  const progressMilestonesRef = useRef<Map<number, Set<number>>>(new Map());
+  const completionLoggedRef = useRef<Set<number>>(new Set());
 
+  const queryInput: any = {
+    feedType,
+    limit,
+    offset,
+  };
+  if (feedType === 'agent' && feedId) queryInput.agentId = feedId;
+  if (feedType === 'developer' && feedId) queryInput.developerId = feedId;
+  if (feedType === 'agency' && feedId) queryInput.agencyId = feedId;
+  if (feedType === 'category' && category) queryInput.category = category;
+  if (feedType === 'area' && category) queryInput.location = category;
+  if (intent) queryInput.intent = intent;
+
+  const feedQuery = trpc.explore.getFeed.useQuery(queryInput, {
+    placeholderData: previousData => previousData,
+    refetchOnWindowFocus: false,
+  });
+  const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
+
+  const recordInteraction = useCallback(
+    async (
+      contentId: number,
+      interactionType:
+        | 'impression'
+        | 'view'
+        | 'skip'
+        | 'save'
+        | 'share'
+        | 'contact'
+        | 'whatsapp'
+        | 'book_viewing',
+      duration?: number,
+      feedContext?: Record<string, unknown>,
+    ) => {
       try {
-        const offset = reset ? 0 : offsetRef.current;
-
-        let mockCards: PropertyShort[];
-
-        // Use mock data for development (toggle useMockData.current to false for real API)
-        if (useMockData.current) {
-          // Mock response for development
-          mockCards = Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
-            id: offset + i + 1,
-            listingId: offset + i + 1,
-            agentId: 1,
-            title: `Beautiful Property ${offset + i + 1}`,
-            caption: 'Stunning property in prime location',
-            primaryMediaId: 1,
-            mediaIds: [1],
-            highlights: ['ready-to-move', 'pet-friendly'],
-            performanceScore: 85,
-            boostPriority: 0,
-            viewCount: 1250,
-            uniqueViewCount: 980,
-            saveCount: 45,
-            shareCount: 12,
-            skipCount: 23,
-            averageWatchTime: 8,
-            viewThroughRate: 78.4,
-            saveRate: 4.6,
-            shareRate: 1.2,
-            skipRate: 2.3,
-            isPublished: true,
-            isFeatured: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            property: {
-              price: 2500000 + i * 500000,
-              location: {
-                city: ['Cape Town', 'Johannesburg', 'Durban', 'Pretoria', 'Port Elizabeth'][i % 5],
-                suburb: ['Sandton', 'Camps Bay', 'Umhlanga', 'Waterkloof', 'Summerstrand'][i % 5],
-                province: ['Western Cape', 'Gauteng', 'KwaZulu-Natal', 'Gauteng', 'Eastern Cape'][
-                  i % 5
-                ],
-              },
-              specs: {
-                bedrooms: 3 + (i % 3),
-                bathrooms: 2 + (i % 2),
-                parking: 2,
-              },
-            },
-            media: [
-              {
-                id: 1,
-                type: 'image',
-                url: `https://images.unsplash.com/photo-${1560184697 + i}?w=800&h=1200&fit=crop`,
-                thumbnailUrl: `https://images.unsplash.com/photo-${1560184697 + i}?w=400&h=600&fit=crop`,
-                orientation: 'vertical' as const,
-                width: 800,
-                height: 1200,
-              },
-            ],
-            highlightTags: [
-              {
-                id: 1,
-                tagKey: 'ready-to-move',
-                label: 'Ready to Move',
-                category: 'status',
-                displayOrder: 1,
-                isActive: true,
-                createdAt: new Date(),
-              },
-              {
-                id: 2,
-                tagKey: 'pet-friendly',
-                label: 'Pet Friendly',
-                category: 'feature',
-                displayOrder: 2,
-                isActive: true,
-                createdAt: new Date(),
-              },
-            ],
-            agent: {
-              id: 1,
-              name: 'John Smith Properties',
-              phone: '+27 82 123 4567',
-              whatsapp: '+27821234567',
-              actorType: 'agent',
-              verificationStatus: 'verified',
-              trustBand: 'high',
-              momentumLabel: 'stable',
-              lowReports: true,
-            },
-          }));
-          const hasMore = offset < 15; // Simulate having 20 total cards
-        } else {
-          // Real API call (uncomment when backend is ready)
-          // const response = await trpc.explore.getFeed.query({
-          //   feedType,
-          //   limit,
-          //   offset,
-          //   ...(feedType === 'agent' && feedId && { agentId: feedId }),
-          //   ...(feedType === 'developer' && feedId && { developerId: feedId }),
-          //   ...(category && { category }),
-          // });
-          // mockCards = response;
-          mockCards = []; // Placeholder until API is ready
-        }
-
-        const hasMore = mockCards.length === limit;
-
-        setState(prev => ({
-          ...prev,
-          cards: reset ? mockCards : [...prev.cards, ...mockCards],
-          isLoading: false,
-          hasMore,
-          currentIndex: reset ? 0 : prev.currentIndex,
-        }));
-
-        offsetRef.current = reset ? mockCards.length : offsetRef.current + mockCards.length;
-      } catch (error) {
-        console.error('Failed to fetch feed:', error);
-        toast({
-          title: 'Error loading properties',
-          description: 'Failed to load properties. Please try again.',
-          variant: 'destructive',
+        await recordInteractionMutation.mutateAsync({
+          contentId,
+          interactionType,
+          duration,
+          feedType,
+          feedContext: {
+            source: 'explore_shorts',
+            ...(feedContext || {}),
+          },
+          deviceType: getDeviceType(),
         });
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: 'Failed to load properties. Please try again.',
-        }));
-      } finally {
-        loadingRef.current = false;
+      } catch {
+        // Best-effort analytics should never block feed playback.
       }
     },
-    [feedType, feedId, category, limit, toast],
+    [feedType, recordInteractionMutation],
   );
 
-  // Initial load
+  const mapToPropertyShort = useCallback((item: any): PropertyShort => {
+    const location = item.location || {};
+    const bedrooms = Number(item?.metadata?.bedrooms || 0);
+    const bathrooms = Number(item?.metadata?.bathrooms || 0);
+    const parking = Number(item?.metadata?.parking || 0);
+
+    return {
+      id: item.id,
+      listingId: item.linkedListingId,
+      developmentId: undefined,
+      agentId: item.actor?.actorType === 'agent' ? item.actor.id || undefined : undefined,
+      developerId: item.actor?.actorType === 'developer' ? item.actor.id || undefined : undefined,
+      agencyId: undefined,
+      title: item.title,
+      caption: item.category,
+      primaryMediaId: item.id,
+      mediaIds: [item.id],
+      highlights: [item.category],
+      performanceScore: Number(item.stats?.views || 0),
+      boostPriority: 0,
+      viewCount: Number(item.stats?.views || 0),
+      uniqueViewCount: Number(item.stats?.views || 0),
+      saveCount: Number(item.stats?.saves || 0),
+      shareCount: Number(item.stats?.shares || 0),
+      skipCount: 0,
+      averageWatchTime: Number(item.durationSec || 0),
+      viewThroughRate: 0,
+      saveRate: 0,
+      shareRate: 0,
+      skipRate: 0,
+      isPublished: true,
+      isFeatured: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      property: {
+        price: Number(item?.metadata?.price || 0),
+        location: {
+          city: location.city || '',
+          suburb: location.suburb || '',
+          province: location.province || '',
+        },
+        specs: {
+          bedrooms: Number.isFinite(bedrooms) ? bedrooms : undefined,
+          bathrooms: Number.isFinite(bathrooms) ? bathrooms : undefined,
+          parking: Number.isFinite(parking) ? parking : undefined,
+        },
+      },
+      media: [
+        {
+          id: item.id,
+          type: 'video',
+          url: item.mediaUrl,
+          thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
+          orientation: item.orientation || 'vertical',
+          width: Number(item.width || 720),
+          height: Number(item.height || 1280),
+          duration: Number(item.durationSec || 0),
+        },
+      ],
+      highlightTags: [
+        {
+          id: item.id,
+          tagKey: item.category,
+          label: item.category,
+          category: 'category',
+          displayOrder: 1,
+          isActive: true,
+          createdAt: new Date(),
+        },
+      ],
+      agent: {
+        id: item.actor?.id || 0,
+        name: item.actor?.displayName || 'Creator',
+        actorType: item.actor?.actorType,
+        verificationStatus: item.actor?.verificationStatus || 'unverified',
+        trustBand: item.actorInsights?.trustBand || 'standard',
+        momentumLabel: item.actorInsights?.momentumLabel || 'stable',
+        lowReports: Boolean(item.actorInsights?.lowReports),
+      },
+    };
+  }, []);
+
   useEffect(() => {
-    fetchFeed(true);
-  }, [fetchFeed]);
+    if (!feedQuery.data) return;
 
-  // Navigate to next card
+    const incoming = getFeedItems(feedQuery.data).map(mapToPropertyShort);
+
+    setHasMore(Boolean(feedQuery.data.hasMore));
+    setError(null);
+
+    setCards(previous => {
+      if (offset === 0) return incoming;
+      const seen = new Set(previous.map(card => card.id));
+      const deduped = incoming.filter(card => !seen.has(card.id));
+      return [...previous, ...deduped];
+    });
+  }, [feedQuery.data, mapToPropertyShort, offset]);
+
+  useEffect(() => {
+    if (!feedQuery.error) return;
+    const message = feedQuery.error.message || 'Failed to load properties. Please try again.';
+    setError(message);
+    toast({
+      title: 'Error loading properties',
+      description: message,
+      variant: 'destructive',
+    });
+  }, [feedQuery.error, toast]);
+
+  useEffect(() => {
+    requestedOffsetsRef.current = new Set([0]);
+    impressionLoggedRef.current.clear();
+    progressMilestonesRef.current.clear();
+    completionLoggedRef.current.clear();
+    setOffset(0);
+    setCards([]);
+    setCurrentIndex(0);
+    setHasMore(true);
+    setError(null);
+  }, [feedType, feedId, category, limit, intent]);
+
   const goToNext = useCallback(() => {
-    setState(prev => {
-      const nextIndex = prev.currentIndex + 1;
+    const current = cards[currentIndex];
+    if (current?.id) {
+      void recordInteraction(Number(current.id), 'skip', undefined, {
+        trigger: 'swipe_next',
+      });
+    }
 
-      // Trigger load more when approaching end
-      if (nextIndex >= prev.cards.length - 3 && prev.hasMore && !loadingRef.current) {
-        fetchFeed(false);
+    setCurrentIndex(previousIndex => {
+      const nextIndex = Math.min(previousIndex + 1, Math.max(cards.length - 1, 0));
+      const shouldLoadMore =
+        nextIndex >= cards.length - 3 && hasMore && !feedQuery.isFetching && cards.length > 0;
+
+      if (shouldLoadMore) {
+        const nextOffset = cards.length;
+        if (!requestedOffsetsRef.current.has(nextOffset)) {
+          requestedOffsetsRef.current.add(nextOffset);
+          setOffset(nextOffset);
+        }
       }
 
-      return {
-        ...prev,
-        currentIndex: Math.min(nextIndex, prev.cards.length - 1),
-      };
+      return nextIndex;
     });
-  }, [fetchFeed]);
+  }, [cards, currentIndex, hasMore, feedQuery.isFetching, recordInteraction]);
 
-  // Navigate to previous card
   const goToPrevious = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      currentIndex: Math.max(prev.currentIndex - 1, 0),
-    }));
+    setCurrentIndex(previous => Math.max(previous - 1, 0));
   }, []);
 
-  // Jump to specific index
-  const goToIndex = useCallback((index: number) => {
-    setState(prev => ({
-      ...prev,
-      currentIndex: Math.max(0, Math.min(index, prev.cards.length - 1)),
-    }));
-  }, []);
+  const goToIndex = useCallback(
+    (index: number) => {
+      const boundedIndex = Math.max(0, Math.min(index, cards.length - 1));
+      setCurrentIndex(boundedIndex);
 
-  // Refresh feed
+      const shouldLoadMore =
+        boundedIndex >= cards.length - 3 && hasMore && !feedQuery.isFetching && cards.length > 0;
+      if (shouldLoadMore) {
+        const nextOffset = cards.length;
+        if (!requestedOffsetsRef.current.has(nextOffset)) {
+          requestedOffsetsRef.current.add(nextOffset);
+          setOffset(nextOffset);
+        }
+      }
+    },
+    [cards.length, hasMore, feedQuery.isFetching],
+  );
+
   const refresh = useCallback(() => {
-    offsetRef.current = 0;
-    fetchFeed(true);
-  }, [fetchFeed]);
+    requestedOffsetsRef.current = new Set([0]);
+    impressionLoggedRef.current.clear();
+    progressMilestonesRef.current.clear();
+    completionLoggedRef.current.clear();
+    setOffset(0);
+    setCards([]);
+    setCurrentIndex(0);
+    setHasMore(true);
+    setError(null);
+    void feedQuery.refetch();
+  }, [feedQuery]);
 
-  const noopInteraction = useCallback((_contentId: number, ..._args: unknown[]) => undefined, []);
+  const currentCard = cards[currentIndex] || null;
 
-  // Get current card
-  const currentCard = state.cards[state.currentIndex] || null;
+  const recordImpression = useCallback(
+    (contentId: number) => {
+      if (impressionLoggedRef.current.has(contentId)) return;
+      impressionLoggedRef.current.add(contentId);
+      progressMilestonesRef.current.delete(contentId);
+      completionLoggedRef.current.delete(contentId);
+      void recordInteraction(contentId, 'impression', undefined, {
+        sessionId: sessionIdRef.current,
+      });
+    },
+    [recordInteraction],
+  );
 
-  // Get adjacent cards for preloading
+  const recordViewStart = useCallback(
+    (contentId: number, durationSec?: number) => {
+      void recordInteraction(contentId, 'view', durationSec, {
+        stage: 'viewStart',
+        sessionId: sessionIdRef.current,
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordViewProgress = useCallback(
+    (contentId: number, currentSec: number, durationSec: number) => {
+      if (!durationSec || durationSec <= 0) return;
+      const percent = (currentSec / durationSec) * 100;
+      const milestones = progressMilestonesRef.current.get(contentId) || new Set<number>();
+      const thresholds = [25, 50, 75];
+
+      for (const threshold of thresholds) {
+        if (percent >= threshold && !milestones.has(threshold)) {
+          milestones.add(threshold);
+          progressMilestonesRef.current.set(contentId, milestones);
+        }
+      }
+    },
+    [],
+  );
+
+  const recordViewComplete = useCallback((contentId: number, _durationSec?: number) => {
+    if (completionLoggedRef.current.has(contentId)) return;
+    completionLoggedRef.current.add(contentId);
+  }, []);
+
+  const recordSave = useCallback(
+    (contentId: number) => {
+      void recordInteraction(contentId, 'save', undefined, {
+        sessionId: sessionIdRef.current,
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordLike = useCallback((_contentId: number) => {}, []);
+
+  const recordShare = useCallback(
+    (contentId: number) => {
+      void recordInteraction(contentId, 'share', undefined, {
+        sessionId: sessionIdRef.current,
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordContactClick = useCallback(
+    (contentId: number) => {
+      void recordInteraction(contentId, 'contact', undefined, {
+        sessionId: sessionIdRef.current,
+        channel: 'in_app_contact',
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordViewingRequest = useCallback(
+    (contentId: number) => {
+      void recordInteraction(contentId, 'book_viewing', undefined, {
+        sessionId: sessionIdRef.current,
+        channel: 'book_viewing',
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordWhatsAppClick = useCallback(
+    (contentId: number) => {
+      void recordInteraction(contentId, 'whatsapp', undefined, {
+        sessionId: sessionIdRef.current,
+        channel: 'whatsapp',
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordQuoteRequest = useCallback(
+    (contentId: number) => {
+      void recordInteraction(contentId, 'contact', undefined, {
+        sessionId: sessionIdRef.current,
+        channel: 'request_quote',
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordListingOpen = useCallback((_contentId: number) => {}, []);
+
+  const recordModuleImpression = useCallback(
+    (contentId: number, moduleId: string, moduleType: string) => {
+      void recordInteraction(contentId, 'impression', undefined, {
+        sessionId: sessionIdRef.current,
+        source: 'module_break',
+        event: 'moduleImpression',
+        moduleId,
+        moduleType,
+      });
+    },
+    [recordInteraction],
+  );
+
+  const recordModuleListingOpen = useCallback(
+    (_contentId: number, _moduleId: string, _moduleType: string, _listingId?: number) => {},
+    [],
+  );
+
+  const recordNotInterested = useCallback(
+    (contentId: number) => {
+      void recordInteraction(contentId, 'skip', undefined, {
+        sessionId: sessionIdRef.current,
+        trigger: 'action_menu',
+      });
+    },
+    [recordInteraction],
+  );
+
+  useEffect(() => {
+    if (!currentCard?.id) return;
+    recordImpression(Number(currentCard.id));
+  }, [currentCard?.id, recordImpression]);
+
   const adjacentCards = {
-    previous: state.cards[state.currentIndex - 1] || null,
-    next: state.cards[state.currentIndex + 1] || null,
+    previous: cards[currentIndex - 1] || null,
+    next: cards[currentIndex + 1] || null,
+  };
+
+  const state: ShortsFeedState = {
+    cards,
+    currentIndex,
+    isLoading: feedQuery.isLoading || (feedQuery.isFetching && cards.length === 0),
+    hasMore,
+    error,
   };
 
   return {
@@ -247,15 +446,22 @@ export function useShortsFeed({
     goToPrevious,
     goToIndex,
     refresh,
-    recordImpression: noopInteraction,
-    recordViewStart: noopInteraction,
-    recordViewProgress: noopInteraction,
-    recordViewComplete: noopInteraction,
-    recordLike: noopInteraction,
-    recordSave: noopInteraction,
-    recordShare: noopInteraction,
-    recordNotInterested: noopInteraction,
-    isFirstCard: state.currentIndex === 0,
-    isLastCard: state.currentIndex === state.cards.length - 1,
+    recordImpression,
+    recordViewStart,
+    recordViewProgress,
+    recordViewComplete,
+    recordLike,
+    recordSave,
+    recordShare,
+    recordContactClick,
+    recordViewingRequest,
+    recordWhatsAppClick,
+    recordQuoteRequest,
+    recordListingOpen,
+    recordModuleImpression,
+    recordModuleListingOpen,
+    recordNotInterested,
+    isFirstCard: currentIndex === 0,
+    isLastCard: currentIndex === cards.length - 1,
   };
 }
