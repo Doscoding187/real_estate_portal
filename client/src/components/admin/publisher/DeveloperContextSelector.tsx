@@ -90,7 +90,10 @@ export const DeveloperContextSelector: React.FC = () => {
         </PopoverTrigger>
         <PopoverContent className="w-[350px] p-0 border-blue-100 shadow-md" align="start">
           <Command shouldFilter={false} className="border-blue-100">
-            <div className="flex items-center border-b border-blue-50 px-3" cmdk-input-wrapper="">
+            <div
+              className="flex items-center border-b border-blue-50 px-3"
+              data-cmdk-input-wrapper=""
+            >
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-blue-400" />
               <input
                 className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-blue-300 text-blue-900 disabled:cursor-not-allowed disabled:opacity-50"

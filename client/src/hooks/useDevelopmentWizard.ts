@@ -877,7 +877,9 @@ const createActions = (
         );
       }
 
-      const highlightCount = Array.isArray(wizardData.highlights) ? wizardData.highlights.length : 0;
+      const highlightCount = Array.isArray(wizardData.highlights)
+        ? wizardData.highlights.length
+        : 0;
       if (highlightCount < 4) {
         recommendations.push(
           'Add at least 4 highlights to keep chips consistent across cards (only the first few are shown).',
@@ -1139,7 +1141,7 @@ const createActions = (
           if (!state.developmentData?.location?.address) errors.push('Location is required');
           if (!state.developmentData?.location?.city) errors.push('City is required');
           break;
-        case 8:
+        case 8: {
           if ((state.developmentData?.highlights?.length || 0) < 3)
             errors.push('Add at least 3 key selling points');
           const overviewDescLen = String(state.developmentData?.description ?? '').trim().length;
@@ -1149,11 +1151,14 @@ const createActions = (
             errors.push('Description must be at least 50 characters');
           }
           break;
+        }
         case 9:
-          const media = state.developmentData?.media;
-          if (!media?.heroImage) errors.push('Hero image is required');
-          if ((media?.documents || []).length < 1)
-            errors.push('Add at least 1 brochure or document');
+          {
+            const media = state.developmentData?.media;
+            if (!media?.heroImage) errors.push('Hero image is required');
+            if ((media?.documents || []).length < 1)
+              errors.push('Add at least 1 brochure or document');
+          }
           break;
         case 10:
           if (state.classification?.type !== 'land' && (state.unitTypes?.length || 0) === 0)

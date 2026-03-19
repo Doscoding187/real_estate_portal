@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
-import { getPlaceholderContentBlocks } from '@/data/explorePlaceholderData';
 
 export interface DiscoveryItem {
   id: number;
@@ -19,14 +18,12 @@ export interface ContentBlock {
 interface UseDiscoveryFeedOptions {
   categoryId?: number;
   filters?: Record<string, any>;
-  usePlaceholder?: boolean; // Enable placeholder data for visualization
 }
 
 export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [usePlaceholderData] = useState(options.usePlaceholder ?? true);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Check if we have active filters (checking keys that matter)
@@ -154,7 +151,7 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
       // Feed Mode - queries return { shorts: [...], hasMore, ... }
       // We need to treat queryData as FeedResult
       const feedResult = queryData as any; // Typed as any to avoid strict interface issues for now, but implies FeedResult
-      const contentArray = feedResult?.shorts || [];
+      const contentArray = feedResult?.items ?? feedResult?.shorts ?? [];
       const hasValidContent = Array.isArray(contentArray) && contentArray.length > 0;
 
       if (hasValidContent) {
@@ -168,9 +165,9 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
 
         // Use server's hasMore if available, otherwise fallback (though server should always provide it now)
         setHasMore(feedResult?.hasMore ?? contentArray.length === 20);
-      } else if (!isLoading && usePlaceholderData && contentBlocks.length === 0) {
-        // Only show placeholder if we have absolutely nothing and aren't loading
-        setContentBlocks(getPlaceholderContentBlocks());
+      } else if (!isLoading && contentBlocks.length === 0) {
+        // No synthetic fallback in production paths; show true empty state upstream.
+        setContentBlocks([]);
         setHasMore(false);
       }
     }
@@ -178,7 +175,6 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
     queryData,
     page,
     isLoading,
-    usePlaceholderData,
     hasActiveFilters,
     searchQuery.data,
     organizeIntoBlocks,

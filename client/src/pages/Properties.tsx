@@ -59,7 +59,11 @@ export default function Properties() {
     offset: page * limit,
   };
 
-  const { data: properties, isLoading, refetch } = trpc.properties.search.useQuery(queryInput);
+  const {
+    data: properties,
+    isLoading,
+    refetch,
+  } = trpc.properties.search.useQuery(queryInput);
 
   const addFavoriteMutation = trpc.favorites.add.useMutation({
     onSuccess: () => {
@@ -152,7 +156,9 @@ export default function Properties() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
-                  {items.length > 0 ? `${items.length} Properties Found` : 'Available Properties'}
+                  {items.length > 0
+                    ? `${items.length} Properties Found`
+                    : 'Available Properties'}
                 </h2>
                 {Object.keys(filters).length > 0 && (
                   <p className="text-sm text-slate-500 mt-1">

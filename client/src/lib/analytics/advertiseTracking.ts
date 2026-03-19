@@ -15,7 +15,8 @@ export type AdvertiseEventType =
   | 'scroll_depth'
   | 'sticky_cta_dismiss'
   | 'pricing_card_click'
-  | 'feature_tile_hover';
+  | 'feature_tile_hover'
+  | 'funnel_step';
 
 // Device type detection
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
@@ -256,6 +257,45 @@ export const trackPageView = (): void => {
 
   if (process.env.NODE_ENV === 'development') {
     console.log('📊 Page View:', event);
+  }
+};
+
+export interface FunnelStepMetadata {
+  funnel: string;
+  step: string;
+  action: string;
+  role?: string;
+  path?: string;
+  plan?: string;
+  durationMs?: number;
+}
+
+export const trackFunnelStep = (metadata: FunnelStepMetadata): void => {
+  const event = {
+    eventType: 'funnel_step' as const,
+    ...getBaseMetadata(),
+    ...metadata,
+  };
+
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'advertise_funnel_step', {
+      event_category: 'funnel',
+      event_label: `${metadata.step}:${metadata.action}`,
+      funnel: metadata.funnel,
+      step: metadata.step,
+      action: metadata.action,
+      role: metadata.role,
+      path: metadata.path,
+      plan: metadata.plan,
+      duration_ms: metadata.durationMs,
+      ...getBaseMetadata(),
+    });
+  }
+
+  sendToAnalytics(event);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Funnel Step:', event);
   }
 };
 

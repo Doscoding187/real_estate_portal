@@ -293,20 +293,24 @@ describe('useEmptyState Hook', () => {
 
 describe('Integration Tests', () => {
   it('works with conditional rendering', () => {
+    const showEmptyInitially = false;
+    const showContentInitially = true;
     const { rerender } = render(
       <div>
-        {false && <EmptyState type="noResults" />}
-        {true && <div>Content</div>}
+        {showEmptyInitially ? <EmptyState type="noResults" /> : null}
+        {showContentInitially ? <div>Content</div> : null}
       </div>,
     );
 
     expect(screen.getByText('Content')).toBeInTheDocument();
     expect(screen.queryByText('No properties found')).not.toBeInTheDocument();
 
+    const showEmptyAfterRerender = true;
+    const showContentAfterRerender = false;
     rerender(
       <div>
-        {true && <EmptyState type="noResults" />}
-        {false && <div>Content</div>}
+        {showEmptyAfterRerender ? <EmptyState type="noResults" /> : null}
+        {showContentAfterRerender ? <div>Content</div> : null}
       </div>,
     );
 

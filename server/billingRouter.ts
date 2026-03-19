@@ -74,7 +74,11 @@ export const billingRouter = {
         const agencyId = requireAgencyId(ctx);
 
         // Get agency info
-        const [agency] = await db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1);
+        const [agency] = await db
+          .select()
+          .from(agencies)
+          .where(eq(agencies.id, agencyId))
+          .limit(1);
         if (!agency) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency not found' });
         }
