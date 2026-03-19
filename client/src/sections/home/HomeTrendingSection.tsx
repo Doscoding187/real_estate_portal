@@ -1,5 +1,6 @@
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { SimplePropertyListingCard } from '@/components/SimplePropertyListingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import {
   Carousel,
@@ -89,7 +90,7 @@ export function HomeTrendingSection({
     const label = labelByTab[activeHeroTab] || 'Property';
     return Array.from({ length: Math.max(0, count) }, (_, idx) => ({
       id: `placeholder-${activeHeroTab}-${idx + 1}`,
-      kind: 'placeholder' as const,
+      kind: (activeHeroTab === 'buy' || activeHeroTab === 'rent' ? 'listing' : 'placeholder') as const,
       title: `${label} Preview ${idx + 1}`,
       city: selectedProvince,
       suburb: 'Sample Area',
@@ -97,6 +98,13 @@ export function HomeTrendingSection({
       priceTo: 0,
       image: '',
       href: '/new-developments',
+      listingType: activeHeroTab === 'rent' ? 'rent' : 'sale',
+      bedrooms: null,
+      bathrooms: null,
+      area: null,
+      yardSize: null,
+      developmentName: null,
+      badges: [],
     }));
   };
 
@@ -110,7 +118,9 @@ export function HomeTrendingSection({
           <span className="text-lg">🔥</span>
           <span className="text-sm font-semibold text-orange-600">Trending Now</span>
         </div>
-        <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{heroContent.title}</h2>
+        <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+          {heroContent.title}
+        </h2>
         <p className="text-slate-600 max-w-2xl text-xs md:text-sm">{heroContent.subtitle}</p>
       </div>
 
@@ -145,24 +155,43 @@ export function HomeTrendingSection({
                     <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
                       #{index + 1}
                     </span>
-                    <SimpleDevelopmentCard
-                      id={item.id}
-                      title={item.title}
-                      city={item.city}
-                      suburb={item.suburb}
-                      priceRange={{
-                        min: item.priceFrom,
-                        max: item.priceTo,
-                      }}
-                      image={
-                        item.kind === 'development'
-                          ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                          : item.image || ''
-                      }
-                      slug={item.kind === 'development' ? item.id : undefined}
-                      href={item.href}
-                      isHotSelling={item.kind !== 'placeholder'}
-                    />
+                    {item.kind === 'listing' ? (
+                      <SimplePropertyListingCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        price={item.priceFrom}
+                        listingType={item.listingType}
+                        image={item.image || ''}
+                        href={item.href}
+                        bedrooms={item.bedrooms}
+                        bathrooms={item.bathrooms}
+                        area={item.area}
+                        yardSize={item.yardSize}
+                        developmentName={item.developmentName}
+                        badges={item.badges}
+                      />
+                    ) : (
+                      <SimpleDevelopmentCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        priceRange={{
+                          min: item.priceFrom,
+                          max: item.priceTo,
+                        }}
+                        image={
+                          item.kind === 'development'
+                            ? getPrimaryDevelopmentImageUrl(item.image) || ''
+                            : item.image || ''
+                        }
+                        slug={item.kind === 'development' ? item.id : undefined}
+                        href={item.href}
+                        isHotSelling={item.kind !== 'placeholder'}
+                      />
+                    )}
                   </div>
                 </CarouselItem>
               ))}

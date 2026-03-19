@@ -1,8 +1,15 @@
 import { useMemo, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { SimplePropertyListingCard } from '@/components/SimplePropertyListingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 export type FeedTab =
   | 'buy'
@@ -82,7 +89,7 @@ export function LocationTrendingFeedSection({
     () =>
       Array.from({ length: maxItems }, (_, idx) => ({
         id: `placeholder-${activeTab}-${idx + 1}`,
-        kind: 'placeholder' as const,
+        kind: (activeTab === 'buy' || activeTab === 'rent' ? 'listing' : 'placeholder') as const,
         title: `Preview ${idx + 1}`,
         city: city || province || locationName,
         suburb: suburb || '',
@@ -90,6 +97,13 @@ export function LocationTrendingFeedSection({
         priceTo: 0,
         image: '',
         href: '#',
+        listingType: activeTab === 'rent' ? 'rent' : 'sale',
+        bedrooms: null,
+        bathrooms: null,
+        area: null,
+        yardSize: null,
+        developmentName: null,
+        badges: [],
       })),
     [activeTab, city, locationName, maxItems, province, suburb],
   );
@@ -145,21 +159,40 @@ export function LocationTrendingFeedSection({
                   <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
                     #{index + 1}
                   </span>
-                  <SimpleDevelopmentCard
-                    id={item.id}
-                    title={item.title}
-                    city={item.city}
-                    suburb={item.suburb}
-                    priceRange={{ min: item.priceFrom, max: item.priceTo }}
-                    image={
-                      item.kind === 'development'
-                        ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                        : item.image || ''
-                    }
-                    slug={item.kind === 'development' ? item.id : undefined}
-                    href={item.href}
-                    isHotSelling={item.kind !== 'placeholder'}
-                  />
+                  {item.kind === 'listing' ? (
+                    <SimplePropertyListingCard
+                      id={item.id}
+                      title={item.title}
+                      city={item.city}
+                      suburb={item.suburb}
+                      price={item.priceFrom}
+                      listingType={item.listingType}
+                      image={item.image || ''}
+                      href={item.href}
+                      bedrooms={item.bedrooms}
+                      bathrooms={item.bathrooms}
+                      area={item.area}
+                      yardSize={item.yardSize}
+                      developmentName={item.developmentName}
+                      badges={item.badges}
+                    />
+                  ) : (
+                    <SimpleDevelopmentCard
+                      id={item.id}
+                      title={item.title}
+                      city={item.city}
+                      suburb={item.suburb}
+                      priceRange={{ min: item.priceFrom, max: item.priceTo }}
+                      image={
+                        item.kind === 'development'
+                          ? getPrimaryDevelopmentImageUrl(item.image) || ''
+                          : item.image || ''
+                      }
+                      slug={item.kind === 'development' ? item.id : undefined}
+                      href={item.href}
+                      isHotSelling={item.kind !== 'placeholder'}
+                    />
+                  )}
                 </div>
               </CarouselItem>
             ))}
