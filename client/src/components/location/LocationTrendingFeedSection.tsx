@@ -10,6 +10,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import type { SimplePropertyListingCardProps } from '@/components/SimplePropertyListingCard';
 
 export type FeedTab =
   | 'buy'
@@ -28,6 +29,25 @@ interface LocationTrendingFeedSectionProps {
   activeTab?: FeedTab;
   onTabChange?: (tab: FeedTab) => void;
 }
+
+type FeedItem = {
+  id: string;
+  kind: 'development' | 'listing' | 'placeholder';
+  title: string;
+  city: string;
+  suburb: string;
+  priceFrom: number;
+  priceTo: number;
+  image: string;
+  href: string;
+  listingType?: SimplePropertyListingCardProps['listingType'];
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  area?: number | null;
+  yardSize?: number | null;
+  developmentName?: string | null;
+  badges?: string[];
+};
 
 const FEED_TABS: Array<{ label: string; value: FeedTab }> = [
   { label: 'Buy', value: 'buy' },
@@ -85,26 +105,29 @@ export function LocationTrendingFeedSection({
     limit: maxItems,
   });
 
-  const buildPlaceholders = (count: number) =>
-    Array.from({ length: Math.max(0, count) }, (_, idx) => ({
-      id: `placeholder-${activeTab}-${idx + 1}`,
-      kind: (activeTab === 'buy' || activeTab === 'rent' ? 'listing' : 'placeholder') as const,
-      title: `Preview ${idx + 1}`,
-      city: city || province || locationName,
-      suburb: suburb || '',
-      priceFrom: 0,
-      priceTo: 0,
-      image: '',
-      href: '#',
-      listingType: activeTab === 'rent' ? 'rent' : 'sale',
-      bedrooms: null,
-      bathrooms: null,
-      area: null,
-      yardSize: null,
-      developmentName: null,
-      badges: [],
-    }));
-  const liveItems = (feedData?.items || []).slice(0, maxItems);
+  const buildPlaceholders = (count: number): FeedItem[] =>
+    Array.from(
+      { length: Math.max(0, count) },
+      (_, idx): FeedItem => ({
+        id: `placeholder-${activeTab}-${idx + 1}`,
+        kind: activeTab === 'buy' || activeTab === 'rent' ? 'listing' : 'placeholder',
+        title: `Preview ${idx + 1}`,
+        city: city || province || locationName,
+        suburb: suburb || '',
+        priceFrom: 0,
+        priceTo: 0,
+        image: '',
+        href: '#',
+        listingType: activeTab === 'rent' ? 'rent' : 'sale',
+        bedrooms: null,
+        bathrooms: null,
+        area: null,
+        yardSize: null,
+        developmentName: null,
+        badges: [],
+      }),
+    );
+  const liveItems = ((feedData?.items || []) as FeedItem[]).slice(0, maxItems);
   const items = [...liveItems, ...buildPlaceholders(maxItems - liveItems.length)].slice(
     0,
     maxItems,

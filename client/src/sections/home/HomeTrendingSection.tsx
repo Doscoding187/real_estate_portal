@@ -10,11 +10,31 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import type { HeroTab } from '@/types/hero';
+import type { SimplePropertyListingCardProps } from '@/components/SimplePropertyListingCard';
 
 type HomeTrendingSectionProps = {
   selectedProvince: string;
   onProvinceChange: (province: string) => void;
   activeHeroTab: HeroTab;
+};
+
+type TrendingItem = {
+  id: string;
+  kind: 'development' | 'listing' | 'placeholder';
+  title: string;
+  city: string;
+  suburb: string;
+  priceFrom: number;
+  priceTo: number;
+  image: string;
+  href: string;
+  listingType?: SimplePropertyListingCardProps['listingType'];
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  area?: number | null;
+  yardSize?: number | null;
+  developmentName?: string | null;
+  badges?: string[];
 };
 
 const PROVINCES = [
@@ -78,7 +98,7 @@ export function HomeTrendingSection({
     limit: 5,
   });
 
-  const buildPlaceholders = (count: number) => {
+  const buildPlaceholders = (count: number): TrendingItem[] => {
     const labelByTab: Record<HeroTab, string> = {
       buy: 'Residential Listing',
       rent: 'Rental Listing',
@@ -88,26 +108,29 @@ export function HomeTrendingSection({
       commercial: 'Commercial Listing',
     };
     const label = labelByTab[activeHeroTab] || 'Property';
-    return Array.from({ length: Math.max(0, count) }, (_, idx) => ({
-      id: `placeholder-${activeHeroTab}-${idx + 1}`,
-      kind: (activeHeroTab === 'buy' || activeHeroTab === 'rent' ? 'listing' : 'placeholder') as const,
-      title: `${label} Preview ${idx + 1}`,
-      city: selectedProvince,
-      suburb: 'Sample Area',
-      priceFrom: 0,
-      priceTo: 0,
-      image: '',
-      href: '/new-developments',
-      listingType: activeHeroTab === 'rent' ? 'rent' : 'sale',
-      bedrooms: null,
-      bathrooms: null,
-      area: null,
-      yardSize: null,
-      developmentName: null,
-      badges: [],
-    }));
+    return Array.from(
+      { length: Math.max(0, count) },
+      (_, idx): TrendingItem => ({
+        id: `placeholder-${activeHeroTab}-${idx + 1}`,
+        kind: activeHeroTab === 'buy' || activeHeroTab === 'rent' ? 'listing' : 'placeholder',
+        title: `${label} Preview ${idx + 1}`,
+        city: selectedProvince,
+        suburb: 'Sample Area',
+        priceFrom: 0,
+        priceTo: 0,
+        image: '',
+        href: '/new-developments',
+        listingType: activeHeroTab === 'rent' ? 'rent' : 'sale',
+        bedrooms: null,
+        bathrooms: null,
+        area: null,
+        yardSize: null,
+        developmentName: null,
+        badges: [],
+      }),
+    );
   };
-  const liveItems = (trendingData?.items || []).slice(0, 5);
+  const liveItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, 5);
   const trendingItems = [...liveItems, ...buildPlaceholders(5 - liveItems.length)].slice(0, 5);
 
   return (

@@ -805,6 +805,25 @@ export const developerRouter = router({
         href: `/development/${dev.slug || dev.id}`,
       });
 
+      type HomeFeedItem = {
+        id: string;
+        kind: 'development' | 'listing';
+        title: string;
+        city: string;
+        suburb: string;
+        priceFrom: number;
+        priceTo: number;
+        image: string;
+        href: string;
+        listingType?: 'sale' | 'rent';
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        area?: number | null;
+        yardSize?: number | null;
+        developmentName?: string | null;
+        badges?: string[];
+      };
+
       const normalizeListingImage = (prop: any): string => {
         const firstImage = Array.isArray(prop.images) ? prop.images[0] : undefined;
         const firstImageUrl =
@@ -856,7 +875,7 @@ export const developerRouter = router({
           : normalizedType;
       };
 
-      const mapListing = (prop: any) => ({
+      const mapListing = (prop: any): HomeFeedItem => ({
         id: String(prop.id),
         kind: 'listing' as const,
         title: buildListingTitle(prop),
@@ -871,31 +890,17 @@ export const developerRouter = router({
         bathrooms: Number(prop.bathrooms || 0) || null,
         area: Number(prop.floorSize || prop.area || 0) || null,
         yardSize: Number(prop.erfSize || prop.yardSize || 0) || null,
-        developmentName: String(prop.development?.name || prop.developmentName || '').trim() || null,
-        badges: Array.isArray(prop.badges) ? prop.badges : [],
+        developmentName:
+          String(prop.development?.name || prop.developmentName || '').trim() || null,
+        badges: Array.isArray(prop.badges)
+          ? prop.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
+          : [],
       });
 
       const fetchTabItems = async (
         locationFilter: LocationFilter,
       ): Promise<{
-        items: Array<{
-          id: string;
-          kind: 'development' | 'listing';
-          title: string;
-          city: string;
-          suburb: string;
-          priceFrom: number;
-          priceTo: number;
-          image: string;
-          href: string;
-          listingType?: 'sale' | 'rent';
-          bedrooms?: number | null;
-          bathrooms?: number | null;
-          area?: number | null;
-          yardSize?: number | null;
-          developmentName?: string | null;
-          badges?: string[];
-        }>;
+        items: HomeFeedItem[];
         source: 'developments' | 'listings';
       }> => {
         if (input.tab === 'buy') {
@@ -918,7 +923,10 @@ export const developerRouter = router({
             1,
             limit,
           );
-          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
+          return {
+            items: (result.properties || []).slice(0, limit).map(mapListing),
+            source: 'listings',
+          };
         }
 
         if (input.tab === 'rent') {
@@ -940,7 +948,10 @@ export const developerRouter = router({
             1,
             limit,
           );
-          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
+          return {
+            items: (result.properties || []).slice(0, limit).map(mapListing),
+            source: 'listings',
+          };
         }
 
         if (input.tab === 'developments') {
