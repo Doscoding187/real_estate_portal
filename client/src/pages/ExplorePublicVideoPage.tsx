@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useRoute } from 'wouter';
 import { ArrowLeft, Bookmark, Share2, UserPlus } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ExploreSoftGateOverlay } from '@/components/explore/ExploreSoftGateOverlay';
+import { getFeedItems } from '@/lib/exploreFeed';
+import { trpc } from '@/lib/trpc';
 
 function parseContentIdFromSlug(slug?: string): number | null {
   if (!slug) return null;
@@ -30,25 +31,35 @@ export default function ExplorePublicVideoPage() {
   const [match, params] = useRoute('/explore/@:handle/:slug');
   const contentId = useMemo(() => parseContentIdFromSlug(params?.slug), [params?.slug]);
 
-  const { data, isLoading } = trpc.explore.getPublicVideoPage.useQuery(
+  // Fall back to the public feed snapshot until a dedicated public-video query exists here.
+  const feedQuery = trpc.explore.getFeed.useQuery(
     {
-      contentId: contentId || 0,
-      relatedLimit: 8,
+      feedType: 'recommended',
+      limit: 50,
+      offset: 0,
     },
     {
       enabled: match && Boolean(contentId),
       retry: false,
+      refetchOnWindowFocus: false,
     },
   );
 
-  const video = data?.video;
-  const related = data?.related || [];
+  const feedItems = useMemo(() => getFeedItems(feedQuery.data), [feedQuery.data]);
+  const video = useMemo(
+    () => feedItems.find(item => item.id === contentId) ?? null,
+    [contentId, feedItems],
+  );
+  const related = useMemo(
+    () => feedItems.filter(item => item.id !== contentId).slice(0, 8),
+    [contentId, feedItems],
+  );
+  const canonicalPath =
+    typeof window !== 'undefined' ? window.location.pathname : `/explore/@${params?.handle || ''}/${params?.slug || ''}`;
 
   const shareVideo = async () => {
-    const canonical =
-      data?.canonicalPath || (typeof window !== 'undefined' ? window.location.pathname : '');
     const shareUrl =
-      typeof window !== 'undefined' ? `${window.location.origin}${canonical}` : canonical;
+      typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath;
 
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
@@ -68,9 +79,9 @@ export default function ExplorePublicVideoPage() {
     }
   };
 
-  const navigateToVideo = (item: any) => {
-    const handle = slugify(item?.actor?.displayName || 'creator');
-    const slug = `${slugify(item?.title || 'video')}-${item.id}`;
+  const navigateToVideo = (item: (typeof related)[number]) => {
+    const handle = slugify(item.actor?.displayName || 'creator');
+    const slug = `${slugify(item.title || 'video')}-${item.id}`;
     setLocation(`/explore/@${handle}/${slug}`);
   };
 
@@ -82,7 +93,7 @@ export default function ExplorePublicVideoPage() {
     );
   }
 
-  if (isLoading) {
+  if (feedQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black px-6 text-center text-white">
         Loading video...
