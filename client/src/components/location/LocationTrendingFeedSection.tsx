@@ -105,33 +105,7 @@ export function LocationTrendingFeedSection({
     limit: maxItems,
   });
 
-  const buildPlaceholders = (count: number): FeedItem[] =>
-    Array.from(
-      { length: Math.max(0, count) },
-      (_, idx): FeedItem => ({
-        id: `placeholder-${activeTab}-${idx + 1}`,
-        kind: activeTab === 'buy' || activeTab === 'rent' ? 'listing' : 'placeholder',
-        title: `Preview ${idx + 1}`,
-        city: city || province || locationName,
-        suburb: suburb || '',
-        priceFrom: 0,
-        priceTo: 0,
-        image: '',
-        href: '#',
-        listingType: activeTab === 'rent' ? 'rent' : 'sale',
-        bedrooms: null,
-        bathrooms: null,
-        area: null,
-        yardSize: null,
-        developmentName: null,
-        badges: [],
-      }),
-    );
-  const liveItems = ((feedData?.items || []) as FeedItem[]).slice(0, maxItems);
-  const items = [...liveItems, ...buildPlaceholders(maxItems - liveItems.length)].slice(
-    0,
-    maxItems,
-  );
+  const items = ((feedData?.items || []) as FeedItem[]).slice(0, maxItems);
 
   const copy = TAB_COPY[activeTab];
   const title = `${copy.title} in ${locationName}`;

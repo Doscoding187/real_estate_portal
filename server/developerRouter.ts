@@ -824,6 +824,32 @@ export const developerRouter = router({
         badges?: string[];
       };
 
+      const listingMediaBaseUrl =
+        ENV.cloudFrontUrl ||
+        (ENV.s3BucketName && ENV.awsRegion
+          ? `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`
+          : '');
+
+      const toPublicListingImageUrl = (value: unknown): string => {
+        if (typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        if (
+          trimmed.startsWith('http://') ||
+          trimmed.startsWith('https://') ||
+          trimmed.startsWith('data:') ||
+          trimmed.startsWith('blob:')
+        ) {
+          return trimmed;
+        }
+        if (!listingMediaBaseUrl) {
+          return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+        }
+        return trimmed.startsWith('/')
+          ? `${listingMediaBaseUrl}${trimmed}`
+          : `${listingMediaBaseUrl}/${trimmed}`;
+      };
+
       const normalizeListingImage = (prop: any): string => {
         const firstImage = Array.isArray(prop.images) ? prop.images[0] : undefined;
         const firstImageUrl =
@@ -832,16 +858,35 @@ export const developerRouter = router({
             : firstImage?.url ||
               firstImage?.imageUrl ||
               firstImage?.thumbnailUrl ||
+              firstImage?.processedUrl ||
+              firstImage?.originalUrl ||
+              firstImage?.fileUrl ||
+              firstImage?.key ||
               firstImage?.src;
 
-        return (
+        const primaryMediaUrl = Array.isArray(prop.media)
+          ? prop.media.find((item: any) => item?.isPrimary)?.url ||
+            prop.media.find((item: any) => item?.isPrimary)?.processedUrl ||
+            prop.media.find((item: any) => item?.isPrimary)?.originalUrl ||
+            prop.media.find((item: any) => item?.isPrimary)?.fileUrl
+          : '';
+
+        const fallbackMediaUrl = Array.isArray(prop.media)
+          ? prop.media[0]?.url ||
+            prop.media[0]?.processedUrl ||
+            prop.media[0]?.originalUrl ||
+            prop.media[0]?.fileUrl
+          : '';
+
+        return toPublicListingImageUrl(
           prop.mainImage ||
           prop.image ||
           prop.coverImage ||
+          prop.thumbnailUrl ||
+          prop.imageUrl ||
           firstImageUrl ||
-          (Array.isArray(prop.media) ? prop.media.find((item: any) => item?.isPrimary)?.url : '') ||
-          (Array.isArray(prop.media) ? prop.media[0]?.url : '') ||
-          ''
+          primaryMediaUrl ||
+          fallbackMediaUrl,
         );
       };
 
