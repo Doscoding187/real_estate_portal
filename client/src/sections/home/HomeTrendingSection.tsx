@@ -98,40 +98,7 @@ export function HomeTrendingSection({
     limit: 5,
   });
 
-  const buildPlaceholders = (count: number): TrendingItem[] => {
-    const labelByTab: Record<HeroTab, string> = {
-      buy: 'Residential Listing',
-      rent: 'Rental Listing',
-      developments: 'Residential Development',
-      shared_living: 'Shared Living',
-      plot_land: 'Land Development',
-      commercial: 'Commercial Listing',
-    };
-    const label = labelByTab[activeHeroTab] || 'Property';
-    return Array.from(
-      { length: Math.max(0, count) },
-      (_, idx): TrendingItem => ({
-        id: `placeholder-${activeHeroTab}-${idx + 1}`,
-        kind: activeHeroTab === 'buy' || activeHeroTab === 'rent' ? 'listing' : 'placeholder',
-        title: `${label} Preview ${idx + 1}`,
-        city: selectedProvince,
-        suburb: 'Sample Area',
-        priceFrom: 0,
-        priceTo: 0,
-        image: '',
-        href: '/new-developments',
-        listingType: activeHeroTab === 'rent' ? 'rent' : 'sale',
-        bedrooms: null,
-        bathrooms: null,
-        area: null,
-        yardSize: null,
-        developmentName: null,
-        badges: [],
-      }),
-    );
-  };
-  const liveItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, 5);
-  const trendingItems = [...liveItems, ...buildPlaceholders(5 - liveItems.length)].slice(0, 5);
+  const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, 5);
 
   return (
     <section className="py-16">
