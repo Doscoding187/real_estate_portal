@@ -435,15 +435,15 @@ export default function SearchResults({
                           <ListingResultCard
                             key={`prop-${normalized.id}-${index}`}
                             data={{
-                                id: normalized.id,
-                                title: normalized.title,
-                                location: normalized.location,
-                                price: normalized.price,
-                                image:
-                                  typeof (normalized as any).image === 'string'
-                                    ? (normalized as any).image
-                                    : (normalized as any).mainImage ??
-                                  '/placeholder-property.jpg',
+                              id: normalized.id,
+                              title: normalized.title,
+                              location: normalized.location,
+                              price: normalized.price,
+                              image:
+                                typeof normalized.image === 'string'
+                                  ? normalized.image
+                                  : (normalized as any).mainImage ?? '/placeholder-property.jpg',
+                              development: (normalized as any).development,
                               area: normalized.area,
                               bedrooms: normalized.bedrooms,
                               bathrooms: normalized.bathrooms,
@@ -453,9 +453,23 @@ export default function SearchResults({
                                   ? `${(normalized as any).yardSize}m2`
                                   : '-',
                               highlights: Array.isArray(normalized.highlights) ? normalized.highlights : [],
+                              badges: Array.isArray((normalized as any).badges)
+                                ? (normalized as any).badges
+                                : [],
                               description: normalized.description ?? undefined,
-                              postedBy: normalized.agent?.name,
-                              agentAvatarUrl: normalized.agent?.image ?? undefined,
+                              contactRole: normalized.agent?.name
+                                ? 'agent'
+                                : (normalized as any).developerBrand?.brandName
+                                  ? 'developer'
+                                  : 'private',
+                              postedBy:
+                                normalized.agent?.name ||
+                                (normalized as any).developerBrand?.brandName ||
+                                'Private Seller',
+                              agentAvatarUrl:
+                                normalized.agent?.image ||
+                                (normalized as any).developerBrand?.logoUrl ||
+                                undefined,
                             }}
                           />
                         );
@@ -470,6 +484,8 @@ export default function SearchResults({
                         if (!normalized) return null;
                         const cardProps = {
                           ...normalized,
+                          development: (normalized as any).development,
+                          developerBrand: (normalized as any).developerBrand,
                           image:
                             (normalized as any).image ??
                             (normalized as any).mainImage ??

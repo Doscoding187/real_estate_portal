@@ -1,4 +1,5 @@
 import type { PropertyCardProps } from '@/components/PropertyCard';
+import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 
 // Normalizes raw API property objects to the props expected by PropertyCard.
 export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
@@ -74,13 +75,87 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
       }
     : undefined;
 
+  const developerBrand = (() => {
+    const candidate = raw.developerBrand || raw.developerBrandProfile;
+    if (candidate && typeof candidate === 'object') {
+      const id = Number((candidate as any).id || 0);
+      const brandName = String((candidate as any).brandName || (candidate as any).name || '').trim();
+      const slug = String((candidate as any).slug || '').trim();
+      if (Number.isFinite(id) && id > 0 && brandName && slug) {
+        return {
+          id,
+          brandName,
+          slug,
+          logoUrl: (candidate as any).logoUrl ?? (candidate as any).logo ?? null,
+        };
+      }
+    }
+
+    const legacyId = Number(raw.developerBrandProfileId || 0);
+    const legacyName = String(raw.builderBrandName || '').trim();
+    const legacySlug = String(raw.builderSlug || '').trim();
+    if (Number.isFinite(legacyId) && legacyId > 0 && legacyName && legacySlug) {
+      return {
+        id: legacyId,
+        brandName: legacyName,
+        slug: legacySlug,
+        logoUrl: raw.builderLogoUrl ?? null,
+      };
+    }
+
+    return undefined;
+  })();
+
+  const development = (() => {
+    const candidate = raw.development;
+    if (candidate && typeof candidate === 'object') {
+      const name = String((candidate as any).name || '').trim();
+      const slug = String((candidate as any).slug || '').trim();
+      const id = Number((candidate as any).id || 0);
+      if (name || (Number.isFinite(id) && id > 0)) {
+        return {
+          id: Number.isFinite(id) && id > 0 ? id : null,
+          name: name || null,
+          slug: slug || null,
+        };
+      }
+    }
+
+    const name = String(raw.developmentName || '').trim();
+    const slug = String(raw.developmentSlug || '').trim();
+    const id = Number(raw.developmentId || 0);
+    if (name || (Number.isFinite(id) && id > 0)) {
+      return {
+        id: Number.isFinite(id) && id > 0 ? id : null,
+        name: name || null,
+        slug: slug || null,
+      };
+    }
+
+    const inferredName = String(details.developmentName || '').trim();
+    if (inferredName) {
+      return { id: null, name: inferredName, slug: null };
+    }
+
+    return undefined;
+  })();
+
   // Determine badges
+  const formatBadge = (badge: string) =>
+    BADGE_TEMPLATES[badge as keyof typeof BADGE_TEMPLATES]?.label ||
+    badge
+      .split(/[_-\s]+/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
   const badges: string[] = [];
   if (raw.status === 'sold') badges.push('Sold');
   if (raw.status === 'rented') badges.push('Rented');
   if (raw.featured) badges.push('Featured');
   if (raw.badges && Array.isArray(raw.badges)) {
-    badges.push(...raw.badges);
+    badges.push(...raw.badges.map(formatBadge));
+  }
+  if (details.badges && Array.isArray(details.badges)) {
+    badges.push(...details.badges.map(formatBadge));
   }
 
   // Determine media counts
@@ -128,7 +203,9 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     status: raw.status === 'available' ? 'Ready to Move' : raw.status, // Map backend status to UI status
     transactionType: raw.transactionType || (raw.listingType === 'rent' ? 'Rent' : 'Sale'),
     agent,
-    badges: badges.length > 0 ? badges : undefined,
+    developerBrand,
+    development,
+    badges: badges.length > 0 ? Array.from(new Set(badges)) : undefined,
     imageCount,
     videoCount,
     highlights: (() => {

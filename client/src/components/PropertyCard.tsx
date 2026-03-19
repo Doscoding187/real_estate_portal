@@ -38,6 +38,12 @@ interface DeveloperBrandInfo {
   slug: string;
 }
 
+interface DevelopmentInfo {
+  id?: number | string | null;
+  name?: string | null;
+  slug?: string | null;
+}
+
 export interface PropertyCardProps {
   id: string;
   title: string;
@@ -57,6 +63,7 @@ export interface PropertyCardProps {
   onFavoriteClick?: () => void;
   agent?: AgentInfo;
   developerBrand?: DeveloperBrandInfo; // Developer brand profile when linked
+  development?: DevelopmentInfo;
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
@@ -82,6 +89,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   onFavoriteClick,
   agent,
   developerBrand,
+  development,
   badges,
   imageCount = 15,
   videoCount = 2,
@@ -89,6 +97,24 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 }) => {
   const [, setLocation] = useLocation();
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
+  const isDevelopmentListing = !agent && !!developerBrand;
+  const isPrivateListing = !agent && !developerBrand;
+  const developmentHref = development?.slug
+    ? `/development/${development.slug}`
+    : development?.id
+      ? `/development/${development.id}`
+      : null;
+  const priceLabel =
+    price > 0
+      ? isDevelopmentListing
+        ? `From ${formatCurrency(price)}`
+        : formatCurrency(price)
+      : 'Price on request';
+  const contactButtonLabel = isDevelopmentListing
+    ? 'Contact Developer'
+    : isPrivateListing
+      ? 'Contact Seller'
+      : 'Contact Agent';
 
   // Determine area label based on property type
   const getAreaLabel = () => {
@@ -235,7 +261,46 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               <span>{location}</span>
             </div>
 
-            <div className="text-xl font-bold text-[#1e1b4b]">{formatCurrency(price)}</div>
+            {development?.name && (
+              <div className="flex items-center gap-1.5 text-slate-600 text-xs mb-3">
+                <Home className="h-3.5 w-3.5 text-slate-400" />
+                {developmentHref ? (
+                  <button
+                    type="button"
+                    className="min-w-0 truncate hover:text-blue-600 transition-colors"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setLocation(developmentHref);
+                    }}
+                    title={development.name ?? undefined}
+                  >
+                    Part of {development.name}
+                  </button>
+                ) : (
+                  <span className="min-w-0 truncate" title={development.name ?? undefined}>
+                    Part of {development.name}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="mb-3 flex flex-wrap gap-2">
+              {isDevelopmentListing ? (
+                <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">
+                  New Development
+                </Badge>
+              ) : isPrivateListing ? (
+                <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                  Private Listing
+                </Badge>
+              ) : (
+                <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                  Listed by Agent
+                </Badge>
+              )}
+            </div>
+
+            <div className="text-xl font-bold text-[#1e1b4b]">{priceLabel}</div>
           </div>
 
           {/* Specs */}
@@ -290,8 +355,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Footer Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
           <div className="flex items-center gap-3">
-            {/* Developer Brand takes priority if available */}
-            {developerBrand ? (
+            {isDevelopmentListing ? (
               <>
                 <div
                   className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200 cursor-pointer"
@@ -322,7 +386,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                   >
                     {developerBrand.brandName}
                   </div>
-                  <div className="text-[10px] text-slate-500">Developer</div>
+                  <div className="text-[10px] text-slate-500">Developer Team</div>
                 </div>
               </>
             ) : agent ? (
@@ -342,21 +406,17 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 </div>
                 <div>
                   <div className="text-xs font-medium text-slate-900">{agent.name}</div>
-                  <div className="text-[10px] text-slate-500">Featured Agent</div>
+                  <div className="text-[10px] text-slate-500">Listed by agent</div>
                 </div>
               </>
             ) : (
               <>
-                <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                  <img
-                    src="/assets/agent-placeholder.jpg"
-                    alt="Dealer"
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-8 w-8 rounded-full bg-slate-200 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold">
+                  PS
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-slate-900">Luxury Estates</div>
-                  <div className="text-[10px] text-slate-500">Featured Dealer</div>
+                  <div className="text-xs font-medium text-slate-900">Private Seller</div>
+                  <div className="text-[10px] text-slate-500">Private listing</div>
                 </div>
               </>
             )}
@@ -370,7 +430,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 // Contact logic
               }}
             >
-              Contact Agent
+              {contactButtonLabel}
             </Button>
           </div>
         </div>
