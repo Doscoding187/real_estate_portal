@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
+import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
@@ -49,6 +50,16 @@ import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
+
+function assertDeveloperDistributionEnabled() {
+  if (!ENV.distributionNetworkEnabled) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message:
+        'Distribution Network is disabled. Set FEATURE_DISTRIBUTION_NETWORK=true to enable this module.',
+    });
+  }
+}
 
 /**
  * Wizard v2 canonical parking types.
@@ -438,6 +449,30 @@ export const developerRouter = router({
     .query(async () => {
       return [] as any[];
     }),
+
+  searchDevelopers: publicProcedure
+    .input(
+      z.object({
+        query: z.string().trim().min(2),
+        limit: z.number().int().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopers(input.query, input.limit);
+    }),
+
+  searchDevelopments: publicProcedure
+    .input(
+      z.object({
+        query: z.string().trim().min(2),
+        developerId: z.number().int().positive().optional(),
+        limit: z.number().int().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopments(input.query, input.developerId, input.limit);
+    }),
+
   createProfile: protectedProcedure
     .input(
       z.object({
@@ -770,32 +805,102 @@ export const developerRouter = router({
         href: `/development/${dev.slug || dev.id}`,
       });
 
-      const mapListing = (prop: any) => ({
+      type HomeFeedItem = {
+        id: string;
+        kind: 'development' | 'listing';
+        title: string;
+        city: string;
+        suburb: string;
+        priceFrom: number;
+        priceTo: number;
+        image: string;
+        href: string;
+        listingType?: 'sale' | 'rent';
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        area?: number | null;
+        yardSize?: number | null;
+        developmentName?: string | null;
+        badges?: string[];
+      };
+
+      const normalizeListingImage = (prop: any): string => {
+        const firstImage = Array.isArray(prop.images) ? prop.images[0] : undefined;
+        const firstImageUrl =
+          typeof firstImage === 'string'
+            ? firstImage
+            : firstImage?.url ||
+              firstImage?.imageUrl ||
+              firstImage?.thumbnailUrl ||
+              firstImage?.src;
+
+        return (
+          prop.mainImage ||
+          prop.image ||
+          prop.coverImage ||
+          firstImageUrl ||
+          (Array.isArray(prop.media) ? prop.media.find((item: any) => item?.isPrimary)?.url : '') ||
+          (Array.isArray(prop.media) ? prop.media[0]?.url : '') ||
+          ''
+        );
+      };
+
+      const buildListingTitle = (prop: any): string => {
+        const explicitTitle = String(prop.title || '').trim();
+        if (
+          explicitTitle &&
+          explicitTitle.toLowerCase() !== 'property listing' &&
+          explicitTitle.toLowerCase() !== 'untitled property'
+        ) {
+          return explicitTitle;
+        }
+
+        const bedrooms = Number(prop.bedrooms || 0);
+        const propertyType = String(prop.propertyType || 'Property')
+          .replace(/_/g, ' ')
+          .trim();
+        const normalizedType =
+          propertyType.length > 0
+            ? propertyType.charAt(0).toUpperCase() + propertyType.slice(1).toLowerCase()
+            : 'Property';
+
+        if (bedrooms > 0) {
+          return String(prop.listingType || '').toLowerCase() === 'rent'
+            ? `${bedrooms} Bedroom ${normalizedType} to Rent`
+            : `${bedrooms} Bedroom ${normalizedType}`;
+        }
+
+        return String(prop.listingType || '').toLowerCase() === 'rent'
+          ? `${normalizedType} to Rent`
+          : normalizedType;
+      };
+
+      const mapListing = (prop: any): HomeFeedItem => ({
         id: String(prop.id),
         kind: 'listing' as const,
-        title: prop.title || 'Property Listing',
+        title: buildListingTitle(prop),
         city: prop.city || '',
         suburb: prop.suburb || '',
         priceFrom: Number(prop.price || 0),
         priceTo: Number(prop.price || 0),
-        image: Array.isArray(prop.images) && prop.images[0]?.url ? prop.images[0].url : '',
+        image: normalizeListingImage(prop),
         href: `/property/${prop.id}`,
+        listingType: String(prop.listingType || 'sale').toLowerCase() === 'rent' ? 'rent' : 'sale',
+        bedrooms: Number(prop.bedrooms || 0) || null,
+        bathrooms: Number(prop.bathrooms || 0) || null,
+        area: Number(prop.floorSize || prop.area || 0) || null,
+        yardSize: Number(prop.erfSize || prop.yardSize || 0) || null,
+        developmentName:
+          String(prop.development?.name || prop.developmentName || '').trim() || null,
+        badges: Array.isArray(prop.badges)
+          ? prop.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
+          : [],
       });
 
       const fetchTabItems = async (
         locationFilter: LocationFilter,
       ): Promise<{
-        items: Array<{
-          id: string;
-          kind: 'development' | 'listing';
-          title: string;
-          city: string;
-          suburb: string;
-          priceFrom: number;
-          priceTo: number;
-          image: string;
-          href: string;
-        }>;
+        items: HomeFeedItem[];
         source: 'developments' | 'listings';
       }> => {
         if (input.tab === 'buy') {
@@ -818,7 +923,10 @@ export const developerRouter = router({
             1,
             limit,
           );
-          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
+          return {
+            items: (result.properties || []).slice(0, limit).map(mapListing),
+            source: 'listings',
+          };
         }
 
         if (input.tab === 'rent') {
@@ -840,7 +948,10 @@ export const developerRouter = router({
             1,
             limit,
           );
-          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
+          return {
+            items: (result.properties || []).slice(0, limit).map(mapListing),
+            source: 'listings',
+          };
         }
 
         if (input.tab === 'developments') {
@@ -979,6 +1090,13 @@ export const developerRouter = router({
         priceTo: number;
         image: string;
         href: string;
+        listingType?: 'sale' | 'rent';
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        area?: number | null;
+        yardSize?: number | null;
+        developmentName?: string | null;
+        badges?: string[];
       }> = [];
       let source: 'developments' | 'listings' = 'developments';
       let selectedScope: LocationScope = requestedScope;
@@ -1207,6 +1325,7 @@ export const developerRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await getDeveloperDistributionSettings({
         developerId: profile.id,
@@ -1222,6 +1341,7 @@ export const developerRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await setDeveloperDistributionEnabled({
