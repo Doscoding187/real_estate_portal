@@ -5,6 +5,7 @@ import { ArrowLeft, Bookmark, Share2, UserPlus } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ExploreSoftGateOverlay } from '@/components/explore/ExploreSoftGateOverlay';
+import { getFeedItems } from '@/lib/exploreFeed';
 
 function parseContentIdFromSlug(slug?: string): number | null {
   if (!slug) return null;
@@ -30,10 +31,11 @@ export default function ExplorePublicVideoPage() {
   const [match, params] = useRoute('/explore/@:handle/:slug');
   const contentId = useMemo(() => parseContentIdFromSlug(params?.slug), [params?.slug]);
 
-  const { data, isLoading } = trpc.explore.getPublicVideoPage.useQuery(
+  const { data, isLoading } = trpc.explore.getFeed.useQuery(
     {
-      contentId: contentId || 0,
-      relatedLimit: 8,
+      feedType: 'recommended',
+      limit: 12,
+      offset: 0,
     },
     {
       enabled: match && Boolean(contentId),
@@ -41,12 +43,19 @@ export default function ExplorePublicVideoPage() {
     },
   );
 
-  const video = data?.video;
-  const related = data?.related || [];
+  const feedItems = useMemo(() => getFeedItems(data), [data]);
+  const video = useMemo(
+    () => feedItems.find(item => Number(item.id) === Number(contentId)) || null,
+    [contentId, feedItems],
+  );
+  const related = useMemo(
+    () => feedItems.filter(item => Number(item.id) !== Number(contentId)).slice(0, 8),
+    [contentId, feedItems],
+  );
 
   const shareVideo = async () => {
     const canonical =
-      data?.canonicalPath || (typeof window !== 'undefined' ? window.location.pathname : '');
+      (typeof window !== 'undefined' ? window.location.pathname : '');
     const shareUrl =
       typeof window !== 'undefined' ? `${window.location.origin}${canonical}` : canonical;
 

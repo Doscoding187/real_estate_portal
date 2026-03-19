@@ -1317,7 +1317,7 @@ export const distributionQualificationRouter = router({
         .from(distributionManagerAssignments)
         .where(
           and(
-            eq(distributionManagerAssignments.programId, Number(programAccess.programId)),
+            eq(distributionManagerAssignments.developmentId, Number(input.developmentId)),
             eq(distributionManagerAssignments.isActive, 1),
             eq(distributionManagerAssignments.isPrimary, 1),
           ),

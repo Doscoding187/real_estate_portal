@@ -18,6 +18,11 @@ export interface FeedItem {
   };
   actorInsights?: {
     trustBand: 'low' | 'standard' | 'high';
+    trustScore?: number;
+    momentumScore?: number;
+    abuseScore?: number;
+    momentumLabel?: 'rising' | 'stable' | 'cooling';
+    lowReports?: boolean;
   };
   stats: {
     views: number;
@@ -126,6 +131,20 @@ export function toFeedItem(raw: unknown): FeedItem | null {
       item.actorInsights || item.trustScore
         ? {
             trustBand: normalizeTrustBand(item.actorInsights?.trustBand ?? item.trustScore),
+            trustScore: asOptionalNumber(item.actorInsights?.trustScore ?? item.trustScore),
+            momentumScore: asOptionalNumber(
+              item.actorInsights?.momentumScore ?? item.momentumScore,
+            ),
+            abuseScore: asOptionalNumber(item.actorInsights?.abuseScore ?? item.abuseScore),
+            momentumLabel:
+              item.actorInsights?.momentumLabel === 'rising' ||
+              item.actorInsights?.momentumLabel === 'cooling'
+                ? item.actorInsights.momentumLabel
+                : 'stable',
+            lowReports:
+              typeof item.actorInsights?.lowReports === 'boolean'
+                ? item.actorInsights.lowReports
+                : undefined,
           }
         : undefined,
     stats: {
