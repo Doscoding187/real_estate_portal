@@ -140,6 +140,23 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     return undefined;
   })();
 
+  const listingSource =
+    raw.listingSource === 'development'
+      ? 'development'
+      : raw.listingSource === 'manual'
+        ? 'manual'
+        : !agent && !!developerBrand
+          ? 'development'
+          : 'manual';
+  const listerType =
+    raw.listerType === 'agency' || raw.listerType === 'agent' || raw.listerType === 'private'
+      ? raw.listerType
+      : agent
+        ? 'agent'
+        : listingSource === 'manual'
+          ? 'private'
+          : undefined;
+
   // Determine badges
   const formatBadge = (badge: string) =>
     BADGE_TEMPLATES[badge as keyof typeof BADGE_TEMPLATES]?.label ||
@@ -200,6 +217,8 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
       ? raw.propertyType.charAt(0).toUpperCase() + raw.propertyType.slice(1).replace('_', ' ')
       : undefined,
     listingType: raw.listingType || raw.action || 'sale',
+    listingSource,
+    listerType,
     status: raw.status === 'available' ? 'Ready to Move' : raw.status, // Map backend status to UI status
     transactionType: raw.transactionType || (raw.listingType === 'rent' ? 'Rent' : 'Sale'),
     agent,

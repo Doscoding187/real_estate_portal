@@ -735,6 +735,8 @@ export interface Property {
   province: string;
   propertyType: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
   listingType: 'sale' | 'rent';
+  listingSource?: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
   bedrooms?: number;
   bathrooms?: number;
   erfSize?: number; // in m²

@@ -241,8 +241,26 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         ? `/development/${development.id}`
         : null
     : null;
-  const isDeveloperListing = !agent && !!developerBrand;
-  const isPrivateListing = !agent && !developerBrand;
+  const listingSource =
+    (property as any).listingSource === 'development'
+      ? 'development'
+      : (property as any).listingSource === 'manual'
+        ? 'manual'
+        : !agent && !!developerBrand
+          ? 'development'
+          : 'manual';
+  const listerType =
+    (property as any).listerType === 'agency' ||
+    (property as any).listerType === 'agent' ||
+    (property as any).listerType === 'private'
+      ? (property as any).listerType
+      : agent
+        ? 'agent'
+        : listingSource === 'manual'
+          ? 'private'
+          : undefined;
+  const isDeveloperListing = listingSource === 'development';
+  const isPrivateListing = listingSource === 'manual' && listerType === 'private';
   const isRental = String(property.listingType || '').toLowerCase() === 'rent';
   const contactRoleLabel = isDeveloperListing
     ? 'Developer'
@@ -1002,9 +1020,13 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         agencyId={
           contactIdentity?.agencyId ? Number(contactIdentity.agencyId) : undefined
         }
-        developmentId={!agent && property?.developmentId ? Number(property.developmentId) : undefined}
+        developmentId={
+          listingSource === 'development' && property?.developmentId
+            ? Number(property.developmentId)
+            : undefined
+        }
         developerBrandProfileId={
-          !agent && (developerBrand?.id || property?.developerBrandProfileId)
+          listingSource === 'development' && (developerBrand?.id || property?.developerBrandProfileId)
             ? Number(developerBrand?.id || property.developerBrandProfileId)
             : undefined
         }

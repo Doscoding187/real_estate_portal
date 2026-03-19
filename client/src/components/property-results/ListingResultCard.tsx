@@ -21,6 +21,8 @@ export interface ListingResultCardData {
   highlights?: string[];
   badges?: string[];
   description?: string;
+  listingSource?: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
   contactRole?: 'agent' | 'developer' | 'private';
   postedBy?: string;
   agentAvatarUrl?: string;
@@ -35,8 +37,23 @@ function formatPrice(price: number, options?: { from?: boolean }) {
 
 export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const [, setLocation] = useLocation();
-  const isDevelopmentListing = data.contactRole === 'developer';
-  const isPrivateListing = data.contactRole === 'private';
+  const resolvedListingSource =
+    data.listingSource === 'development'
+      ? 'development'
+      : data.listingSource === 'manual'
+        ? 'manual'
+        : data.contactRole === 'developer'
+          ? 'development'
+          : 'manual';
+  const resolvedListerType =
+    data.listerType ||
+    (resolvedListingSource === 'manual'
+      ? data.contactRole === 'private'
+        ? 'private'
+        : 'agent'
+      : undefined);
+  const isDevelopmentListing = resolvedListingSource === 'development';
+  const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
   const identityDisplayName = data.postedBy?.trim()
     ? data.postedBy.trim()
     : isDevelopmentListing
