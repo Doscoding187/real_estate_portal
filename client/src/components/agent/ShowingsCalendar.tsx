@@ -4,6 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -22,10 +30,11 @@ import { toast } from 'sonner';
 
 interface Showing {
   id: number;
-  propertyId: number;
-  leadId: number | null;
+  listingId: number;
   scheduledAt: string;
-  status: 'requested' | 'confirmed' | 'completed' | 'cancelled';
+  scheduledTime?: string;
+  durationMinutes?: number;
+  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
   property?: {
     id: number;
@@ -57,9 +66,15 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<
-    'cancelled' | 'completed' | 'requested' | 'confirmed' | ''
-  >('');
+  const [statusFilter, setStatusFilter] = useState<'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''>('');
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    listingId: '',
+    visitorName: '',
+    scheduledAt: '',
+    durationMinutes: '30',
+    notes: '',
+  });
 
   const utils = trpc.useUtils();
 
@@ -96,6 +111,9 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     endDate: getDateRange().end,
     status: statusFilter || undefined,
   });
+  const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
+  const resolvedListings = availableListings.filter((listing: any) => listing.isResolved);
+  const legacyListings = availableListings.filter((listing: any) => !listing.isResolved);
 
   // Update showing status mutation
   const updateShowingStatusMutation = trpc.agent.updateShowingStatus.useMutation({
@@ -105,6 +123,23 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     },
     onError: error => {
       toast.error(error.message || 'Failed to update showing status');
+    },
+  });
+  const bookShowingMutation = trpc.agent.bookShowing.useMutation({
+    onSuccess: () => {
+      toast.success('Showing booked');
+      utils.agent.getMyShowings.invalidate();
+      setIsBookingOpen(false);
+      setBookingForm({
+        listingId: '',
+        visitorName: '',
+        scheduledAt: '',
+        durationMinutes: '30',
+        notes: '',
+      });
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to book showing');
     },
   });
 
@@ -130,6 +165,18 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     setCurrentDate(new Date());
   };
 
+  const openBookingDialog = () => {
+    const nextDate = selectedDate || currentDate;
+    const defaultDateTime = new Date(nextDate);
+    defaultDateTime.setHours(9, 0, 0, 0);
+
+    setBookingForm(prev => ({
+      ...prev,
+      scheduledAt: prev.scheduledAt || defaultDateTime.toISOString().slice(0, 16),
+    }));
+    setIsBookingOpen(true);
+  };
+
   const getShowingsForDate = (date: Date) => {
     if (!showings) return [];
 
@@ -153,14 +200,14 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'requested':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed':
+      case 'scheduled':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
+      case 'no_show':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -281,6 +328,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
           <h2 className="text-2xl font-bold">Showings Calendar</h2>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={openBookingDialog} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Book Showing
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -296,10 +347,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
             className="px-3 py-1 border rounded text-sm"
           >
             <option value="">All Statuses</option>
-            <option value="requested">Requested</option>
-            <option value="confirmed">Confirmed</option>
+            <option value="scheduled">Scheduled</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
+            <option value="no_show">No Show</option>
           </select>
         </div>
       </div>
@@ -345,33 +396,177 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
       </Card>
 
       {/* Calendar Grid or List View */}
-      {viewMode === 'month' && renderMonthView()}
-
-      {/* Selected Date Showings */}
-      {selectedDate && renderShowingsList()}
-
-      {/* All Showings List */}
-      {!selectedDate && filteredShowings.length > 0 && (
+      {isLoading ? (
         <Card>
-          <CardHeader>
-            <CardTitle>All Showings ({filteredShowings.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredShowings.map((showing: any) => (
-                <ShowingCard
-                  key={showing.id}
-                  showing={showing}
-                  onStatusUpdate={(showingId, status) =>
-                    updateShowingStatusMutation.mutate({ showingId, status })
-                  }
-                  isUpdating={updateShowingStatusMutation.isPending}
-                />
-              ))}
-            </div>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Loading showings...
           </CardContent>
         </Card>
+      ) : (
+        <>
+          {viewMode === 'month' && renderMonthView()}
+
+          {/* Selected Date Showings */}
+          {selectedDate && renderShowingsList()}
+
+          {/* All Showings List */}
+          {!selectedDate && filteredShowings.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>All Showings ({filteredShowings.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {filteredShowings.map((showing: any) => (
+                    <ShowingCard
+                      key={showing.id}
+                      showing={showing}
+                      onStatusUpdate={(showingId, status) =>
+                        updateShowingStatusMutation.mutate({ showingId, status })
+                      }
+                      isUpdating={updateShowingStatusMutation.isPending}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!selectedDate && filteredShowings.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                No showings found for the selected range.
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
+
+      <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Book Showing</DialogTitle>
+            <DialogDescription>
+              Create a real showing record for one of your listings. This writes to the canonical
+              scheduling workflow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Listing</label>
+              {availableListings.length === 0 ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  No schedulable inventory is currently available. Publish and bridge listings into
+                  Agent OS inventory before booking showings.
+                </div>
+              ) : null}
+              {resolvedListings.length > 0 && legacyListings.length > 0 ? (
+                <p className="text-xs text-amber-700">
+                  Legacy listing options are fallback only until inventory bridging is fully backfilled.
+                </p>
+              ) : null}
+              <select
+                value={bookingForm.listingId}
+                onChange={e => setBookingForm(prev => ({ ...prev, listingId: e.target.value }))}
+                className="w-full rounded-md border px-3 py-2 text-sm"
+              >
+                <option value="">Select listing</option>
+                {resolvedListings.length > 0 ? (
+                  <optgroup label="Resolved inventory">
+                    {resolvedListings.map((listing: any) => (
+                      <option key={listing.id} value={listing.id}>
+                        {listing.title} {listing.city ? `- ${listing.city}` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                {legacyListings.length > 0 ? (
+                  <optgroup label="Legacy fallback">
+                    {legacyListings.map((listing: any) => (
+                      <option key={listing.id} value={listing.id}>
+                        {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Visitor name</label>
+                <Input
+                  value={bookingForm.visitorName}
+                  onChange={e =>
+                    setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))
+                  }
+                  placeholder="Prospective buyer"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Duration (minutes)</label>
+                <Input
+                  type="number"
+                  min={15}
+                  max={240}
+                  step={15}
+                  value={bookingForm.durationMinutes}
+                  onChange={e =>
+                    setBookingForm(prev => ({ ...prev, durationMinutes: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Scheduled for</label>
+              <Input
+                type="datetime-local"
+                value={bookingForm.scheduledAt}
+                onChange={e => setBookingForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notes</label>
+              <Textarea
+                value={bookingForm.notes}
+                onChange={e => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Access notes, visitor context, or follow-up details"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsBookingOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() =>
+                  bookShowingMutation.mutate({
+                    listingId: Number(bookingForm.listingId),
+                    visitorName: bookingForm.visitorName.trim(),
+                    scheduledAt: new Date(bookingForm.scheduledAt).toISOString(),
+                    durationMinutes: Number(bookingForm.durationMinutes || 30),
+                    notes: bookingForm.notes.trim() || undefined,
+                  })
+                }
+                disabled={
+                  bookShowingMutation.isPending ||
+                  availableListings.length === 0 ||
+                  !bookingForm.listingId ||
+                  !bookingForm.visitorName.trim() ||
+                  !bookingForm.scheduledAt
+                }
+              >
+                {bookShowingMutation.isPending ? 'Booking...' : 'Save Showing'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -405,6 +600,11 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                     {showing.property.address}, {showing.property.city}
                   </div>
                 )}
+                {showing.property?.inventoryModel === 'legacy_listing' ? (
+                  <div className="text-amber-700 text-xs font-medium">
+                    Legacy listing fallback
+                  </div>
+                ) : null}
               </div>
 
               {showing.client && (
@@ -437,16 +637,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
           </div>
 
           <div className="flex flex-col gap-2 ml-4">
-            {showing.status === 'requested' && (
-              <Button
-                size="sm"
-                onClick={() => onStatusUpdate(showing.id, 'confirmed')}
-                disabled={isUpdating}
-              >
-                Confirm
-              </Button>
-            )}
-            {showing.status === 'confirmed' && (
+            {showing.status === 'scheduled' && (
               <Button
                 size="sm"
                 onClick={() => onStatusUpdate(showing.id, 'completed')}
@@ -455,7 +646,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                 Complete
               </Button>
             )}
-            {(showing.status === 'requested' || showing.status === 'confirmed') && (
+            {showing.status === 'scheduled' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -463,6 +654,16 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                 disabled={isUpdating}
               >
                 Cancel
+              </Button>
+            )}
+            {showing.status === 'scheduled' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onStatusUpdate(showing.id, 'no_show')}
+                disabled={isUpdating}
+              >
+                No Show
               </Button>
             )}
           </div>
@@ -474,14 +675,14 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
 
 function getStatusColor(status: string) {
   switch (status) {
-    case 'requested':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'confirmed':
+    case 'scheduled':
       return 'bg-blue-100 text-blue-800 border-blue-200';
     case 'completed':
       return 'bg-green-100 text-green-800 border-green-200';
     case 'cancelled':
       return 'bg-red-100 text-red-800 border-red-200';
+    case 'no_show':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }

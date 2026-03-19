@@ -47,7 +47,7 @@ export default function CompareProperties() {
   // Filter properties by selected IDs
   const propertyItems = Array.isArray(properties)
     ? properties
-    : ((properties as any)?.items ?? (properties as any)?.results ?? []);
+    : (properties as any)?.items ?? (properties as any)?.results ?? [];
   const selectedProperties =
     propertyItems.filter((p: any) => comparedProperties.includes(p.id)) || [];
   const normalized = selectedProperties.map(normalizePropertyForUI).filter(p => p !== null);

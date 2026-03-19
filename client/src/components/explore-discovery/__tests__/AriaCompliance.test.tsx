@@ -51,24 +51,57 @@ vi.mock('@/lib/trpc', () => ({
  * Requirements: 5.2
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PropertyCard } from '../cards/PropertyCard';
 import { VideoCard } from '../cards/VideoCard';
 import { NeighbourhoodCard } from '../cards/NeighbourhoodCard';
 import { InsightCard } from '../cards/InsightCard';
 import { DiscoveryCardFeed } from '../DiscoveryCardFeed';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+const mockUseDiscoveryFeed = vi.hoisted(() => vi.fn());
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-  },
+vi.mock('@/hooks/useDiscoveryFeed', () => ({
+  useDiscoveryFeed: mockUseDiscoveryFeed,
+}));
+
+const createFeedState = (overrides: Record<string, unknown> = {}) => ({
+  contentBlocks: [
+    {
+      id: 'block-1',
+      title: 'For You',
+      type: 'for-you',
+      items: [
+        {
+          id: 101,
+          type: 'property',
+          data: {
+            id: 101,
+            title: 'Feed Property',
+            price: 1500000,
+            location: 'Johannesburg',
+            beds: 2,
+            baths: 1,
+            size: 90,
+            imageUrl: 'https://example.com/feed.jpg',
+            propertyType: 'Apartment',
+          },
+        },
+      ],
+    },
+  ],
+  isLoading: false,
+  error: null,
+  hasMore: false,
+  recordEngagement: vi.fn(),
+  setupObserver: vi.fn(),
+  refetch: vi.fn(),
+  ...overrides,
 });
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-);
+beforeEach(() => {
+  mockUseDiscoveryFeed.mockReset();
+  mockUseDiscoveryFeed.mockReturnValue(createFeedState());
+});
 
 describe('ARIA Compliance - Card Components', () => {
   describe('PropertyCard', () => {
@@ -254,14 +287,15 @@ describe('ARIA Compliance - Card Components', () => {
 describe('ARIA Compliance - Feed Components', () => {
   describe('DiscoveryCardFeed', () => {
     it('should have feed role for main container', () => {
-      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
+      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
 
       const feed = screen.getByRole('feed', { name: /discovery feed/i });
       expect(feed).toBeInTheDocument();
     });
 
     it('should have aria-busy during loading', () => {
-      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
+      mockUseDiscoveryFeed.mockReturnValueOnce(createFeedState({ isLoading: true }));
+      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
 
       // The feed container itself should have aria-busy
       const feed = screen.getByRole('feed', { name: /discovery feed/i });
@@ -287,7 +321,7 @@ describe('ARIA Compliance - Feed Components', () => {
         refetch: vi.fn(),
       } as any);
 
-      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
+      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
 
       const alert = await screen.findByRole('alert');
       expect(alert).toBeInTheDocument();
@@ -335,7 +369,7 @@ describe('ARIA Compliance - Interactive Elements', () => {
 
 describe('ARIA Compliance - Live Regions', () => {
   it('should use aria-live="polite" for non-critical updates', () => {
-    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
+    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
 
     // Look for the end-of-feed status message which should have aria-live="polite"
     const endOfFeed = screen.getByText(/reached the end/i);
@@ -361,7 +395,7 @@ describe('ARIA Compliance - Live Regions', () => {
       refetch: vi.fn(),
     } as any);
 
-    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
+    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveAttribute('aria-live', 'assertive');

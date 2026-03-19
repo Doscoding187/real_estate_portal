@@ -24,6 +24,7 @@ describe('GET /api/health smoke', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.NODE_ENV = 'test';
+    process.env.GITHUB_SHA = 'deadbeefcafebabe';
     process.env.AWS_REGION = 'eu-north-1';
     process.env.S3_BUCKET_NAME = 'demo-bucket';
     process.env.AWS_ACCESS_KEY_ID = 'demo-key';
@@ -60,6 +61,8 @@ describe('GET /api/health smoke', () => {
       expect(response.status).toBe(200);
       expect(payload.ok).toBe(true);
       expect(payload.env).toBe('test');
+      expect(payload.build.sha).toBe('deadbeefcafebabe');
+      expect(response.headers.get('x-build-sha')).toBe('deadbeefcafebabe');
       expect(typeof payload.db.ok).toBe('boolean');
       expect(typeof payload.cache.ok).toBe('boolean');
       expect(['redis', 'memory']).toContain(payload.cache.mode);

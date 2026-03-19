@@ -71,7 +71,7 @@ describe('RequireRole', () => {
     });
   });
 
-  test('redirects to /login when user does not have required role', async () => {
+  test('redirects to role home when user does not have required role', async () => {
     const setLocation = vi.fn();
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
@@ -84,7 +84,7 @@ describe('RequireRole', () => {
     renderWithAuth({}, 'agency_admin');
 
     await waitFor(() => {
-      expect(setLocation).toHaveBeenCalledWith('/login');
+      expect(setLocation).toHaveBeenCalledWith('/agent/dashboard');
     });
   });
 

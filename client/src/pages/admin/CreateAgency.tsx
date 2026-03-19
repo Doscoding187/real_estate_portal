@@ -21,6 +21,7 @@ import {
 import { Navbar } from '@/components/Navbar';
 import { Building2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 
 const createAgencySchema = z.object({
   name: z.string().min(2, 'Agency name must be at least 2 characters'),
@@ -44,6 +45,7 @@ export default function CreateAgency() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   const form = useForm<CreateAgencyFormData>({
     resolver: zodResolver(createAgencySchema),
@@ -94,7 +96,7 @@ export default function CreateAgency() {
   };
 
   // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     setLocation('/login');
     return null;
   }
@@ -105,7 +107,7 @@ export default function CreateAgency() {
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Header */}
         <div className="mb-8">
-          <Button variant="ghost" onClick={() => setLocation('/admin/dashboard')} className="mb-4">
+          <Button variant="ghost" onClick={() => setLocation('/admin/overview')} className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
@@ -313,7 +315,7 @@ export default function CreateAgency() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setLocation('/admin/dashboard')}
+                    onClick={() => setLocation('/admin/overview')}
                     disabled={isSubmitting}
                   >
                     Cancel

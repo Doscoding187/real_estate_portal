@@ -20,7 +20,8 @@ import { serveStatic, setupVite } from './vite';
 import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
-import { registerHealthEndpoint } from './health';
+import { registerHealthEndpoint, registerVersionEndpoint } from './health';
+import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -71,6 +72,21 @@ async function startServer() {
   await initializeCache();
   console.log('[Server] Cache initialized');
 
+  console.log('[Server] Probing distribution schema readiness...');
+  try {
+    const distributionSchemaSnapshot = await getDistributionSchemaReadinessSnapshot({
+      forceRefresh: true,
+    });
+    console.log('[DistributionSchema] Snapshot', distributionSchemaSnapshot);
+    if (!distributionSchemaSnapshot.ready) {
+      console.warn(
+        '[DistributionSchema] Distribution admin routes are not fully ready in this environment.',
+      );
+    }
+  } catch (error) {
+    console.warn('[DistributionSchema] Failed to capture startup schema snapshot.', error);
+  }
+
   const app = express();
   const server = createServer(app);
 
@@ -109,7 +125,13 @@ async function startServer() {
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'trpc-batch-mode', 'x-operating-as-brand'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'trpc-batch-mode',
+        'x-operating-as-brand',
+        'x-request-id',
+      ],
       exposedHeaders: ['Set-Cookie'],
       maxAge: 86400,
     }),
@@ -139,6 +161,7 @@ async function startServer() {
 
   registerAuthRoutes(app);
   registerHealthEndpoint(app);
+  registerVersionEndpoint(app);
 
   app.get('/api/test', async (req, res) => {
     try {

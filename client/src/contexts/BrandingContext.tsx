@@ -43,6 +43,22 @@ interface BrandingProviderProps {
   children: React.ReactNode;
 }
 
+const PLATFORM_HOST_SUFFIX = 'propertylistifysa.co.za';
+const PLATFORM_RESERVED_SUBDOMAINS = new Set(['www', 'api']);
+
+const isPlatformDomain = (host: string): boolean => {
+  const normalizedHost = host.toLowerCase();
+  if (normalizedHost === 'localhost' || normalizedHost === '127.0.0.1' || normalizedHost === '::1') {
+    return true;
+  }
+  if (normalizedHost === PLATFORM_HOST_SUFFIX) return true;
+  if (normalizedHost.endsWith(`.${PLATFORM_HOST_SUFFIX}`)) {
+    const prefix = normalizedHost.slice(0, -1 * (`.${PLATFORM_HOST_SUFFIX}`.length));
+    return PLATFORM_RESERVED_SUBDOMAINS.has(prefix);
+  }
+  return false;
+};
+
 // Detect if we're on a white-label domain
 const detectWhiteLabel = (): { isWhiteLabel: boolean; branding?: BrandingConfig } => {
   // Check for branding data injected by server
@@ -56,11 +72,10 @@ const detectWhiteLabel = (): { isWhiteLabel: boolean; branding?: BrandingConfig 
     }
   }
 
-  // Check URL for subdomain (development fallback)
+  // Main platform domains should never enter white-label mode.
   const host = window.location.hostname;
-  if (host !== 'localhost' && !host.includes('yourplatform.com')) {
-    // This could be a custom domain or subdomain
-    // In production, the server would inject the branding data
+  if (!isPlatformDomain(host)) {
+    // Custom domains or non-reserved platform subdomains are treated as white-label.
     return { isWhiteLabel: true };
   }
 

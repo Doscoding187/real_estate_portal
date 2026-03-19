@@ -18,7 +18,7 @@ import { trpc } from '@/lib/trpc';
 
 interface LeadCaptureFormProps {
   developmentId: number;
-  unitId?: number;
+  unitId?: string;
   unitPrice?: number;
   affordabilityData?: {
     monthlyIncome: number;

@@ -4,7 +4,9 @@
 
 -- Step 1: Add brand_profile_id to listings table (nullable for existing rows)
 ALTER TABLE listings 
-ADD COLUMN brand_profile_id INT NULL COMMENT 'Brand that seeded this listing (null for real agent/owner listings)',
+ADD COLUMN brand_profile_id INT NULL COMMENT 'Brand that seeded this listing (null for real agent/owner listings)';
+
+ALTER TABLE listings
 ADD INDEX idx_listings_brand_profile_id (brand_profile_id);
 
 -- Step 2: Add FK constraint to leads.developer_brand_profile_id
