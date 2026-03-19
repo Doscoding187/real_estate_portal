@@ -46,6 +46,7 @@ export function PropertyMobileFooter({
             variant="outline"
             className="flex-1 border-slate-300 text-slate-700 bg-white"
             onClick={onCall}
+            disabled={!onCall}
           >
             <Phone className="h-4 w-4 mr-2" />
             Call
@@ -54,6 +55,7 @@ export function PropertyMobileFooter({
           <Button
             className="flex-1 bg-green-600 hover:bg-green-700 text-white border-0"
             onClick={onWhatsApp}
+            disabled={!onWhatsApp}
           >
             <MessageCircle className="h-4 w-4 mr-2" />
             WhatsApp

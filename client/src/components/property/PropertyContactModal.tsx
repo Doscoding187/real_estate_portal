@@ -41,7 +41,7 @@ export function PropertyContactModal({
   onClose,
   propertyId,
   propertyTitle,
-  agentName = 'Property Agent',
+  agentName = 'Property Contact',
   agentPhone,
   agentEmail,
   agentId,
@@ -107,7 +107,7 @@ export function PropertyContactModal({
         <DialogHeader>
           <DialogTitle>Contact {agentName}</DialogTitle>
           <DialogDescription>
-            Interested in {propertyTitle}? Send a message to the agent.
+            Interested in {propertyTitle}? Send an enquiry and we'll route it to the right contact.
           </DialogDescription>
         </DialogHeader>
 
