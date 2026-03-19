@@ -344,6 +344,56 @@ export const appRouter = router({
         };
       }),
 
+    searchDevelopmentListings: publicProcedure
+      .input(
+        z.object({
+          province: z.string().optional(),
+          city: z.string().optional(),
+          suburb: z.array(z.string()).optional(),
+          propertyType: z
+            .enum(['house', 'apartment', 'townhouse', 'plot', 'commercial'])
+            .optional(),
+          listingType: z.enum(['sale', 'rent']).optional(),
+          minPrice: z.number().optional(),
+          maxPrice: z.number().optional(),
+          minBedrooms: z.number().optional(),
+          maxBedrooms: z.number().optional(),
+          minBathrooms: z.number().optional(),
+          limit: z.number().default(20),
+          offset: z.number().default(0),
+          sortOption: z
+            .enum(['price_asc', 'price_desc', 'date_desc', 'date_asc', 'suburb_asc', 'suburb_desc'])
+            .optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { developmentDerivedListingService } = await import(
+          './services/developmentDerivedListingService'
+        );
+
+        const filters = {
+          province: input.province,
+          city: input.city,
+          suburb: input.suburb,
+          propertyType: input.propertyType ? [input.propertyType as any] : undefined,
+          listingType: input.listingType as any,
+          minPrice: input.minPrice,
+          maxPrice: input.maxPrice,
+          minBedrooms: input.minBedrooms,
+          maxBedrooms: input.maxBedrooms,
+          minBathrooms: input.minBathrooms,
+        };
+
+        const page = Math.floor(input.offset / input.limit) + 1;
+
+        return await developmentDerivedListingService.searchListings(
+          filters,
+          (input.sortOption as any) || 'date_desc',
+          page,
+          input.limit,
+        );
+      }),
+
     featured: publicProcedure
       .input(
         z.object({

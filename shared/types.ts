@@ -886,6 +886,53 @@ export interface SearchResults {
   };
 }
 
+export interface DevelopmentDerivedListing {
+  id: string;
+  unitTypeId: string;
+  developmentId: number;
+  title: string;
+  price: number;
+  priceTo?: number;
+  city: string;
+  suburb: string;
+  province: string;
+  propertyType: Property['propertyType'];
+  listingType: Property['listingType'];
+  transactionType: 'for_sale' | 'for_rent' | 'auction';
+  listingSource: 'development';
+  bedrooms?: number;
+  bathrooms?: number;
+  floorSize?: number;
+  erfSize?: number;
+  image?: string | null;
+  images?: ImageUrls[];
+  badges?: string[];
+  availableUnits?: number;
+  completionDate?: string | null;
+  listedDate: Date;
+  development: {
+    id: number;
+    name: string;
+    slug?: string | null;
+    status?: string | null;
+  };
+  developerBrand: {
+    id?: number | null;
+    brandName: string;
+    slug?: string | null;
+    logoUrl?: string | null;
+    publicContactEmail?: string | null;
+  };
+}
+
+export interface DevelopmentDerivedListingSearchResults {
+  items: DevelopmentDerivedListing[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
 // Saved search
 export interface SavedSearch {
   id: string;
