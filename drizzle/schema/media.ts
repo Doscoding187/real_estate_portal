@@ -27,7 +27,7 @@ import { agencies } from './agencies';
 export const videos = mysqlTable(
   'videos',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int().references(() => users.id, { onDelete: 'cascade' }),
     listingId: int().references(() => listings.id, { onDelete: 'set null' }),
     developmentId: int().references(() => developments.id, { onDelete: 'set null' }),
@@ -72,7 +72,7 @@ export const videos = mysqlTable(
 export const videoLikes = mysqlTable(
   'video_likes',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),

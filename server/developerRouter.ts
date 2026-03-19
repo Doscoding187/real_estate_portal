@@ -20,6 +20,17 @@ import { getKPIsWithCache } from './services/kpiService';
 import { seedCleanupService } from './services/seedCleanupService';
 import { capturePublicLead } from './services/publicLeadCaptureService';
 import {
+  assignDeveloperLead,
+  getDeveloperDistributionSettings,
+  getDeveloperFunnelAttention,
+  getDeveloperFunnelKpis,
+  listDeveloperLeads,
+  logDeveloperLeadActivity,
+  setDeveloperDistributionEnabled,
+  setDeveloperLeadNextAction,
+  transitionDeveloperLead,
+} from './services/developerFunnelService';
+import {
   developmentDrafts,
   developments,
   developers,
@@ -27,6 +38,12 @@ import {
   unitTypes,
 } from '../drizzle/schema';
 import { eq, desc, and, or, sql } from 'drizzle-orm';
+import {
+  AssignmentModeSchema,
+  LeadOwnerTypeSchema,
+  LeadStageSchema,
+  SlaStatusSchema,
+} from '../shared/developerFunnel';
 import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
@@ -1066,6 +1083,190 @@ export const developerRouter = router({
         utmMedium: input.utmMedium,
         utmCampaign: input.utmCampaign,
         affordabilityData: input.affordabilityData,
+      });
+    }),
+
+  getLeads: protectedProcedure
+    .input(
+      z
+        .object({
+          developmentId: z.number().int().positive().optional(),
+          stage: LeadStageSchema.optional(),
+          owner: LeadOwnerTypeSchema.optional(),
+          source: z.string().trim().max(120).optional(),
+          q: z.string().trim().max(120).optional(),
+          from: z.string().datetime().optional(),
+          to: z.string().datetime().optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+          offset: z.number().int().min(0).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await listDeveloperLeads({
+        developerId: profile.id,
+        developmentId: input?.developmentId,
+        stage: input?.stage,
+        owner: input?.owner,
+        source: input?.source,
+        q: input?.q,
+        from: input?.from,
+        to: input?.to,
+        limit: input?.limit,
+        offset: input?.offset,
+      });
+    }),
+
+  assignLead: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        ownerType: LeadOwnerTypeSchema,
+        ownerId: z.number().int().positive().nullable().optional(),
+        assignmentMode: AssignmentModeSchema.optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await assignDeveloperLead({
+        developerId: profile.id,
+        leadId: input.leadId,
+        ownerType: input.ownerType,
+        ownerId: input.ownerId ?? null,
+        assignmentMode: input.assignmentMode,
+      });
+    }),
+
+  transitionLead: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        toStage: LeadStageSchema,
+        notes: z.string().max(2000).optional(),
+        force: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await transitionDeveloperLead({
+        developerId: profile.id,
+        userId: user.id,
+        leadId: input.leadId,
+        toStage: input.toStage,
+        notes: input.notes,
+        force: input.force,
+      });
+    }),
+
+  logLeadActivity: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        type: z.enum(['note', 'call', 'email', 'meeting', 'status_change', 'whatsapp']),
+        description: z.string().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await logDeveloperLeadActivity({
+        developerId: profile.id,
+        userId: user.id,
+        leadId: input.leadId,
+        type: input.type,
+        description: input.description,
+      });
+    }),
+
+  setLeadNextAction: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        at: z.string().datetime(),
+        type: z.enum(['call', 'email', 'whatsapp', 'schedule_viewing', 'send_brochure', 'other']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await setDeveloperLeadNextAction({
+        developerId: profile.id,
+        userId: user.id,
+        leadId: input.leadId,
+        at: input.at,
+        type: input.type,
+      });
+    }),
+
+  getDistributionSettings: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await getDeveloperDistributionSettings({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+      });
+    }),
+
+  setDistributionEnabled: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        enabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await setDeveloperDistributionEnabled({
+        developerId: profile.id,
+        userId: user.id,
+        developmentId: input.developmentId,
+        enabled: input.enabled,
+      });
+    }),
+
+  getFunnelKPIs: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive().optional(),
+        range: z.enum(['7d', '30d', '90d']).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await getDeveloperFunnelKpis({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        range: input.range ?? '30d',
+      });
+    }),
+
+  getFunnelAttention: protectedProcedure
+    .input(
+      z
+        .object({
+          developmentId: z.number().int().positive().optional(),
+          range: z.enum(['7d', '30d', '90d']).optional(),
+          sla: SlaStatusSchema.optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await getDeveloperFunnelAttention({
+        developerId: profile.id,
+        developmentId: input?.developmentId,
+        range: input?.range ?? '30d',
+        sla: input?.sla,
+        limit: input?.limit,
       });
     }),
 

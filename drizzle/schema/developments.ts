@@ -26,7 +26,7 @@ import { locations } from './locations';
 export const developers = mysqlTable(
   'developers',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 255 }).notNull(),
     description: text(),
     logo: text(),
@@ -76,7 +76,7 @@ export const developers = mysqlTable(
 export const developerBrandProfiles = mysqlTable(
   'developer_brand_profiles',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     brandName: varchar('brand_name', { length: 255 }).notNull(),
     slug: varchar({ length: 255 }).notNull(),
     logoUrl: text('logo_url'),
@@ -124,7 +124,7 @@ export const developerBrandProfiles = mysqlTable(
 export const developerNotifications = mysqlTable(
   'developer_notifications',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int('developer_id')
       .notNull()
       .references(() => developers.id, { onDelete: 'cascade' }),
@@ -151,7 +151,7 @@ export const developerNotifications = mysqlTable(
 export const developerSubscriptions = mysqlTable(
   'developer_subscriptions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int('developer_id')
       .notNull()
       .references(() => developers.id),
@@ -176,7 +176,7 @@ export const developerSubscriptions = mysqlTable(
 export const developerSubscriptionLimits = mysqlTable(
   'developer_subscription_limits',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     subscriptionId: int('subscription_id')
       .notNull()
       .references(() => developerSubscriptions.id),
@@ -196,7 +196,7 @@ export const developerSubscriptionLimits = mysqlTable(
 export const developerSubscriptionUsage = mysqlTable(
   'developer_subscription_usage',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     subscriptionId: int('subscription_id')
       .notNull()
       .references(() => developerSubscriptions.id),
@@ -215,7 +215,7 @@ export const developerSubscriptionUsage = mysqlTable(
 export const developments = mysqlTable(
   'developments',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int('developer_id').references(() => developers.id, { onDelete: 'cascade' }),
     name: varchar({ length: 255 }).notNull(),
     description: text(),
@@ -336,7 +336,7 @@ export const developments = mysqlTable(
 export const developmentPhases = mysqlTable(
   'development_phases',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -373,7 +373,7 @@ export const developmentPhases = mysqlTable(
 export const developmentUnits = mysqlTable(
   'development_units',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -417,7 +417,7 @@ export const developmentUnits = mysqlTable(
 export const developmentDrafts = mysqlTable(
   'development_drafts',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int().references(() => developers.id, { onDelete: 'cascade' }),
     draftName: varchar({ length: 255 }),
     draftData: json().notNull(),
@@ -439,7 +439,7 @@ export const developmentDrafts = mysqlTable(
 export const developmentApprovalQueue = mysqlTable(
   'development_approval_queue',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -470,7 +470,7 @@ export const developmentApprovalQueue = mysqlTable(
 export const developmentLeadRoutes = mysqlTable(
   'development_lead_routes',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -509,7 +509,7 @@ export const developmentLeadRoutes = mysqlTable(
 export const unitTypes = mysqlTable(
   'unit_types',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id, { onDelete: 'cascade' }),

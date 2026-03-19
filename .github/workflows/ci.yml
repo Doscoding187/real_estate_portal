@@ -23,7 +23,7 @@ jobs:
           --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
+          --health-retries=8
 
     steps:
       - name: Checkout code
@@ -39,14 +39,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Setup test database
+      - name: Validate migration/schema consistency
+        run: pnpm run schema:sanity
+
+      - name: Apply Drizzle migrations
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:migrate:test
@@ -72,10 +75,15 @@ jobs:
         with:
           run_install: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
@@ -108,7 +116,7 @@ jobs:
           --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
+          --health-retries=8
 
     steps:
       - name: Checkout code
@@ -121,17 +129,22 @@ jobs:
         with:
           run_install: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Setup test database
+      - name: Apply Drizzle migrations
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:migrate:test
@@ -170,10 +183,15 @@ jobs:
         with:
           run_install: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
@@ -189,3 +207,4 @@ jobs:
           name: build-output
           path: dist/
           retention-days: 7
+

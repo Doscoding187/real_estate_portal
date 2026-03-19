@@ -23,7 +23,7 @@ import { users } from './core';
 import { agencies, agencySubscriptions } from './agencies';
 
 export const plans = mysqlTable('plans', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 100 }).notNull(),
   displayName: varchar({ length: 100 }).notNull(),
   description: text(),
@@ -88,7 +88,7 @@ export const subscriptions = mysqlTable(
 );
 
 export const coupons = mysqlTable('coupons', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   code: varchar({ length: 50 }).notNull(),
   stripeCouponId: varchar({ length: 100 }),
   name: varchar({ length: 100 }),
@@ -108,7 +108,7 @@ export const coupons = mysqlTable('coupons', {
 export const subscriptionPlans = mysqlTable(
   'subscription_plans',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     planId: varchar('plan_id', { length: 100 }).notNull(),
     category: mysqlEnum(['agent', 'agency', 'developer']).notNull(),
     name: varchar({ length: 100 }).notNull(),
@@ -144,7 +144,7 @@ export const subscriptionPlans = mysqlTable(
 export const subscriptionEvents = mysqlTable(
   'subscription_events',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -173,7 +173,7 @@ export const subscriptionEvents = mysqlTable(
 export const billingTransactions = mysqlTable(
   'billing_transactions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -205,7 +205,7 @@ export const billingTransactions = mysqlTable(
 export const boostCredits = mysqlTable(
   'boost_credits',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -220,7 +220,7 @@ export const boostCredits = mysqlTable(
 );
 
 export const invoices = mysqlTable('invoices', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -253,7 +253,7 @@ export const invoices = mysqlTable('invoices', {
 });
 
 export const paymentMethods = mysqlTable('payment_methods', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -275,7 +275,7 @@ export const paymentMethods = mysqlTable('payment_methods', {
 export const userSubscriptions = mysqlTable(
   'user_subscriptions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -324,7 +324,7 @@ export const userSubscriptions = mysqlTable(
 export const subscriptionUsage = mysqlTable(
   'subscription_usage',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
