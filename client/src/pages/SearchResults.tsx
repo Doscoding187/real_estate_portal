@@ -457,19 +457,22 @@ export default function SearchResults({
                                 ? (normalized as any).badges
                                 : [],
                               description: normalized.description ?? undefined,
-                              contactRole: normalized.agent?.name
-                                ? 'agent'
-                                : (normalized as any).developerBrand?.brandName
+                              listingSource: (normalized as any).listingSource,
+                              listerType: (normalized as any).listerType,
+                              contactRole:
+                                (normalized as any).listingSource === 'development'
                                   ? 'developer'
-                                  : 'private',
+                                  : (normalized as any).listerType === 'private'
+                                    ? 'private'
+                                    : 'agent',
                               postedBy:
-                                normalized.agent?.name ||
-                                (normalized as any).developerBrand?.brandName ||
-                                'Private Seller',
+                                (normalized as any).listingSource === 'development'
+                                  ? (normalized as any).developerBrand?.brandName || 'Developer Team'
+                                  : normalized.agent?.name || 'Private Seller',
                               agentAvatarUrl:
-                                normalized.agent?.image ||
-                                (normalized as any).developerBrand?.logoUrl ||
-                                undefined,
+                                (normalized as any).listingSource === 'development'
+                                  ? (normalized as any).developerBrand?.logoUrl || undefined
+                                  : normalized.agent?.image || undefined,
                             }}
                           />
                         );
@@ -486,6 +489,8 @@ export default function SearchResults({
                           ...normalized,
                           development: (normalized as any).development,
                           developerBrand: (normalized as any).developerBrand,
+                          listingSource: (normalized as any).listingSource,
+                          listerType: (normalized as any).listerType,
                           image:
                             (normalized as any).image ??
                             (normalized as any).mainImage ??

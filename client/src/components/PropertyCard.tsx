@@ -57,6 +57,8 @@ export interface PropertyCardProps {
   yardSize?: number; // Separate yard/land/plot size
   propertyType?: string;
   listingType?: string;
+  listingSource?: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
   status?: string;
   floor?: string;
   transactionType?: string;
@@ -83,6 +85,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   yardSize, // Yard/land size
   propertyType,
   listingType,
+  listingSource,
+  listerType,
   status = 'Ready to Move',
   floor,
   transactionType = 'New Booking',
@@ -97,13 +101,38 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 }) => {
   const [, setLocation] = useLocation();
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
-  const isDevelopmentListing = !agent && !!developerBrand;
-  const isPrivateListing = !agent && !developerBrand;
+  const resolvedListingSource =
+    listingSource === 'development'
+      ? 'development'
+      : listingSource === 'manual'
+        ? 'manual'
+        : !agent && !!developerBrand
+          ? 'development'
+          : 'manual';
+  const resolvedListerType =
+    listerType ||
+    (agent
+      ? 'agent'
+      : resolvedListingSource === 'development'
+        ? undefined
+        : 'private');
+  const isDevelopmentListing = resolvedListingSource === 'development';
+  const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
   const developmentHref = development?.slug
     ? `/development/${development.slug}`
     : development?.id
       ? `/development/${development.id}`
       : null;
+  const developerIdentity = isDevelopmentListing
+    ? {
+        brandName: developerBrand?.brandName || development?.name || 'Developer',
+        slug: developerBrand?.slug,
+        logoUrl: developerBrand?.logoUrl || null,
+      }
+    : null;
+  const developerProfileHref = developerIdentity?.slug
+    ? `/developer/${developerIdentity.slug}`
+    : developmentHref;
   const priceLabel =
     price > 0
       ? isDevelopmentListing
@@ -361,18 +390,20 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                   className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200 cursor-pointer"
                   onClick={e => {
                     e.stopPropagation();
-                    setLocation(`/developer/${developerBrand.slug}`);
+                    if (developerProfileHref) {
+                      setLocation(developerProfileHref);
+                    }
                   }}
                 >
-                  {developerBrand.logoUrl ? (
+                  {developerIdentity?.logoUrl ? (
                     <img
-                      src={developerBrand.logoUrl}
-                      alt={developerBrand.brandName}
+                      src={developerIdentity.logoUrl}
+                      alt={developerIdentity.brandName}
                       className="h-full w-full object-cover"
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center bg-indigo-600 text-white text-xs font-bold">
-                      {developerBrand.brandName.charAt(0)}
+                      {developerIdentity?.brandName?.charAt(0) || 'D'}
                     </div>
                   )}
                 </div>
@@ -381,10 +412,12 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                     className="text-xs font-medium text-slate-900 hover:text-indigo-600 cursor-pointer transition-colors"
                     onClick={e => {
                       e.stopPropagation();
-                      setLocation(`/developer/${developerBrand.slug}`);
+                      if (developerProfileHref) {
+                        setLocation(developerProfileHref);
+                      }
                     }}
                   >
-                    {developerBrand.brandName}
+                    {developerIdentity?.brandName || 'Developer'}
                   </div>
                   <div className="text-[10px] text-slate-500">Developer Team</div>
                 </div>
