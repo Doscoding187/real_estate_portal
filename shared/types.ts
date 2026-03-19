@@ -663,6 +663,11 @@ export interface PropertyShort extends ExploreShort {
     logo?: string;
     phone?: string;
     whatsapp?: string;
+    actorType?: 'agent' | 'developer' | 'contractor' | 'finance_partner' | 'user';
+    verificationStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
+    trustBand?: 'low' | 'standard' | 'high';
+    momentumLabel?: 'rising' | 'stable' | 'cooling';
+    lowReports?: boolean;
   };
 }
 

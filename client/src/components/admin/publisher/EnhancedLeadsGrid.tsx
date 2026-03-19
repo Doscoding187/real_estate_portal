@@ -43,6 +43,7 @@ interface EnhancedLead {
   phone?: string;
   createdAt: string;
   developmentId?: number;
+  unitName?: string;
   brandLeadStatus: 'captured' | 'claimed' | 'new' | 'qualified' | 'contacted';
   leadSource?: string;
   propertyInterest?: string;
@@ -230,7 +231,7 @@ const EnhancedLeadCard: React.FC<{
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             <span className="text-sm font-medium text-gray-700">
-              {lead.propertyInterest || 'General Inquiry'}
+              {lead.unitName || lead.propertyInterest || 'General Inquiry'}
             </span>
           </div>
 

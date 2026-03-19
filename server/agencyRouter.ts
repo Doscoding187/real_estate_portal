@@ -454,8 +454,7 @@ export const agencyRouter = router({
    * Get agency dashboard statistics
    */
   getDashboardStats: agencyAdminProcedure.query(async ({ ctx }) => {
-    const user = requireUser(ctx);
-    if (!user.agencyId) {
+    if (!ctx.user.agencyId) {
       return {
         totalListings: 0,
         totalSales: 0,
@@ -468,7 +467,7 @@ export const agencyRouter = router({
       };
     }
     try {
-      return await getAgencyDashboardStats(user.agencyId);
+      return await getAgencyDashboardStats(ctx.user.agencyId);
     } catch (error) {
       console.warn('[agency.getDashboardStats] Returning safe defaults due to error:', error);
       return {
@@ -490,12 +489,11 @@ export const agencyRouter = router({
   getPerformanceData: agencyAdminProcedure
     .input(z.object({ months: z.number().default(6) }).optional())
     .query(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      if (!user.agencyId) {
+      if (!ctx.user.agencyId) {
         return [];
       }
       try {
-        return await getAgencyPerformanceData(user.agencyId, input?.months || 6);
+        return await getAgencyPerformanceData(ctx.user.agencyId, input?.months || 6);
       } catch (error) {
         console.warn('[agency.getPerformanceData] Returning safe defaults due to error:', error);
         return [];

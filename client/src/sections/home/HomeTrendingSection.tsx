@@ -107,7 +107,6 @@ export function HomeTrendingSection({
       badges: [],
     }));
   };
-
   const liveItems = (trendingData?.items || []).slice(0, 5);
   const trendingItems = [...liveItems, ...buildPlaceholders(5 - liveItems.length)].slice(0, 5);
 
@@ -202,7 +201,7 @@ export function HomeTrendingSection({
         </div>
       ) : (
         <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
-          No developments found.
+          No properties found.
         </div>
       )}
     </section>

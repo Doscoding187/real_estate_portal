@@ -8,11 +8,11 @@ export * from './media';
 export * from './explore';
 export * from './economicActors';
 export * from './marketplace';
+export * from './distribution';
 export * from './views';
 export * from './analytics';
 export * from './leads';
 export * from './servicesEngine';
-export * from './distribution';
 export * from './demand';
 export * from './referrals';
 

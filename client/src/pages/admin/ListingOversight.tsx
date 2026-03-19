@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +60,7 @@ export default function ListingOversight() {
   const [propertyToDelete, setPropertyToDelete] = useState<any>(null);
   const [page, setPage] = useState(1);
   const limit = 20;
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   // Use the listing approval queue endpoint instead of admin.listProperties
   const {
@@ -113,7 +115,7 @@ export default function ListingOversight() {
   });
 
   // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     setLocation('/login');
     return null;
   }
@@ -225,7 +227,7 @@ export default function ListingOversight() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/overview')}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Eye className="h-8 w-8 text-primary" />

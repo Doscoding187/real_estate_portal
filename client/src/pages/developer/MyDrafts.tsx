@@ -41,7 +41,7 @@ export default function MyDrafts() {
   const { data: drafts, isLoading, refetch } = trpc.developer.getDrafts.useQuery();
   const draftItems = Array.isArray(drafts)
     ? drafts
-    : ((drafts as any)?.items ?? (drafts as any)?.results ?? []);
+    : (drafts as any)?.items ?? (drafts as any)?.results ?? [];
   const deleteDraft = trpc.developer.deleteDraft.useMutation({
     onSuccess: () => {
       toast.success('Draft deleted successfully');

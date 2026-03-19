@@ -16,6 +16,10 @@ import {
   SUBSCRIPTION_TIER_LIMITS,
 } from '../../shared/types.ts';
 
+function toMysqlDateTime(value: Date): string {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 export class DeveloperSubscriptionService {
   /**
    * Create a new developer subscription with free trial tier
@@ -31,9 +35,9 @@ export class DeveloperSubscriptionService {
       developerId,
       tier: 'free_trial',
       status: 'active',
-      trialEndsAt: trialEndsAt.toISOString(),
-      currentPeriodStart: new Date().toISOString(),
-      currentPeriodEnd: trialEndsAt.toISOString(),
+      trialEndsAt: toMysqlDateTime(trialEndsAt),
+      currentPeriodStart: toMysqlDateTime(new Date()),
+      currentPeriodEnd: toMysqlDateTime(trialEndsAt),
     });
 
     const subscriptionId = subscriptionResult[0].insertId;
@@ -53,7 +57,7 @@ export class DeveloperSubscriptionService {
       developmentsCount: 0,
       leadsThisMonth: 0,
       teamMembersCount: 0,
-      lastResetAt: new Date().toISOString(),
+      lastResetAt: toMysqlDateTime(new Date()),
     });
 
     const usageId = usageResult[0].insertId;
@@ -137,7 +141,7 @@ export class DeveloperSubscriptionService {
       .update(developerSubscriptions)
       .set({
         tier: newTier,
-        updatedAt: new Date().toISOString(),
+        updatedAt: toMysqlDateTime(new Date()),
       })
       .where(eq(developerSubscriptions.id, subscription.id));
 
@@ -147,7 +151,7 @@ export class DeveloperSubscriptionService {
       .update(developerSubscriptionLimits)
       .set({
         ...newLimits,
-        updatedAt: new Date().toISOString(),
+        updatedAt: toMysqlDateTime(new Date()),
       })
       .where(eq(developerSubscriptionLimits.subscriptionId, subscription.id));
 
@@ -275,8 +279,8 @@ export class DeveloperSubscriptionService {
       .update(developerSubscriptionUsage)
       .set({
         leadsThisMonth: 0,
-        lastResetAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        lastResetAt: toMysqlDateTime(new Date()),
+        updatedAt: toMysqlDateTime(new Date()),
       })
       .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
   }
@@ -307,7 +311,7 @@ export class DeveloperSubscriptionService {
         .update(developerSubscriptions)
         .set({
           status: 'expired',
-          updatedAt: new Date().toISOString(),
+          updatedAt: toMysqlDateTime(new Date()),
         })
         .where(eq(developerSubscriptions.id, subscription.id));
 
@@ -339,7 +343,7 @@ export class DeveloperSubscriptionService {
       .update(developerSubscriptionUsage)
       .set({
         developmentsCount: actualCount,
-        updatedAt: new Date().toISOString(),
+        updatedAt: toMysqlDateTime(new Date()),
       })
       .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
 

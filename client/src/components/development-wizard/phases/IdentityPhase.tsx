@@ -11,13 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, Calendar, Tag, AlertCircle, Lock } from 'lucide-react';
+import { Building2, Calendar, Tag, AlertCircle } from 'lucide-react';
 import {
   DEVELOPMENT_STATUS_OPTIONS,
-  TRANSACTION_TYPE_OPTIONS,
   OWNERSHIP_TYPE_OPTIONS,
   DEVELOPMENT_NATURE_OPTIONS,
-  MARKETING_ROLE_OPTIONS,
   OwnershipType,
   AUCTION_TYPE_OPTIONS,
 } from '@/types/wizardTypes';
@@ -47,8 +45,7 @@ export function IdentityPhase() {
     return error ? error.message : null;
   };
 
-  // Check if current status implies active construction/launch
-  const showCompletionDate = ['launching-soon', 'selling'].includes(developmentData.status);
+  const statusNeedsDates = ['launching-soon', 'selling'].includes(developmentData.status);
 
   // Helper for Ownership Type Toggle
   const toggleOwnershipType = (type: OwnershipType) => {
@@ -133,25 +130,6 @@ export function IdentityPhase() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="marketingRole">Marketing Mandate</Label>
-              <Select
-                value={developmentData.marketingRole || undefined}
-                onValueChange={(val: string) => handleFieldChange('marketingRole', val as any)}
-              >
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select marketing role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MARKETING_ROLE_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -206,35 +184,14 @@ export function IdentityPhase() {
               <p className="text-xs text-slate-500">Recommended for result card status badges.</p>
             </div>
 
-            {showCompletionDate && (
+            {statusNeedsDates ? (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                <Label htmlFor="completionDate">Expected Completion</Label>
-                <Input
-                  id="completionDate"
-                  type="date"
-                  value={
-                    developmentData.completionDate
-                      ? new Date(developmentData.completionDate).toISOString().split('T')[0]
-                      : ''
-                  }
-                  onChange={e =>
-                    handleFieldChange(
-                      'completionDate',
-                      e.target.value ? new Date(e.target.value) : null,
-                    )
-                  }
-                  className="h-11"
-                />
-              </div>
-            )}
-
-            {/* Launch Date - Always visible, conditionally required */}
-            {!showCompletionDate && (
-              <div className="space-y-2">
-                <Label htmlFor="launchDate">
-                  Launch Date
-                  {developmentData.status === 'launching-soon' && (
-                    <span className="text-red-500">*</span>
+                <Label htmlFor="launchDate" className="flex items-center gap-2">
+                  Launch Date <span className="text-red-500">*</span>
+                  {getError('launchDate') && (
+                    <span className="text-xs text-red-500 font-normal ml-auto flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Required
+                    </span>
                   )}
                 </Label>
                 <Input
@@ -251,11 +208,97 @@ export function IdentityPhase() {
                       e.target.value ? new Date(e.target.value) : null,
                     )
                   }
-                  className="h-11"
+                  className={`h-11 ${getError('launchDate') ? 'border-red-300' : ''}`}
                 />
+              </div>
+            ) : (
+              <div className="text-xs text-slate-500 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                No timeline dates are required when the development is marked as Sold Out.
               </div>
             )}
           </div>
+
+          {statusNeedsDates && (
+            <div className="grid md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-top-2">
+              <div className="space-y-2">
+                <Label htmlFor="completionDate" className="flex items-center gap-2">
+                  Expected Completion <span className="text-red-500">*</span>
+                  {getError('completionDate') && (
+                    <span className="text-xs text-red-500 font-normal ml-auto flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Required
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  id="completionDate"
+                  type="date"
+                  value={
+                    developmentData.completionDate
+                      ? new Date(developmentData.completionDate).toISOString().split('T')[0]
+                      : ''
+                  }
+                  onChange={e =>
+                    handleFieldChange(
+                      'completionDate',
+                      e.target.value ? new Date(e.target.value) : null,
+                    )
+                  }
+                  className={`h-11 ${getError('completionDate') ? 'border-red-300' : ''}`}
+                />
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-slate-200 p-4 bg-slate-50/40">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="handoverDuringConstruction"
+                    checked={!!developmentData.handoverDuringConstruction}
+                    onCheckedChange={checked =>
+                      handleFieldChange('handoverDuringConstruction', checked === true)
+                    }
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="handoverDuringConstruction" className="cursor-pointer">
+                      Handovers happen while construction continues
+                    </Label>
+                    <p className="text-xs text-slate-500">
+                      Enable this when early phases hand over before full project completion.
+                    </p>
+                  </div>
+                </div>
+
+                {developmentData.handoverDuringConstruction && (
+                  <div className="space-y-2">
+                    <Label htmlFor="expectedFirstHandoverDate" className="flex items-center gap-2">
+                      Expected First Handover <span className="text-red-500">*</span>
+                      {getError('expectedFirstHandoverDate') && (
+                        <span className="text-xs text-red-500 font-normal ml-auto flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> Required
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id="expectedFirstHandoverDate"
+                      type="date"
+                      value={
+                        developmentData.expectedFirstHandoverDate
+                          ? new Date(developmentData.expectedFirstHandoverDate)
+                              .toISOString()
+                              .split('T')[0]
+                          : ''
+                      }
+                      onChange={e =>
+                        handleFieldChange(
+                          'expectedFirstHandoverDate',
+                          e.target.value ? new Date(e.target.value) : null,
+                        )
+                      }
+                      className={`h-11 ${getError('expectedFirstHandoverDate') ? 'border-red-300' : ''}`}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -276,18 +319,6 @@ export function IdentityPhase() {
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <Label>
-                Transaction Type{' '}
-                <span className="text-slate-400 text-xs font-normal ml-2">(Read Only)</span>
-              </Label>
-              <div className="h-11 px-3 flex items-center bg-slate-100 border border-slate-200 rounded-md text-slate-500 text-sm cursor-not-allowed">
-                <Lock className="w-3 h-3 mr-2 text-slate-400" />
-                {TRANSACTION_TYPE_OPTIONS.find(o => o.value === developmentData.transactionType)
-                  ?.label || developmentData.transactionType}
-              </div>
-            </div>
-
             {developmentData.transactionType === 'auction' && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">

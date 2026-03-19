@@ -15,6 +15,7 @@ import Step3Targeting from '@/components/marketing/wizard/Step3Targeting';
 import Step4Budget from '@/components/marketing/wizard/Step4Budget';
 import Step5Channels from '@/components/marketing/wizard/Step5Channels';
 import Step6Creative from '@/components/marketing/wizard/Step6Creative';
+import Step7Review from '@/components/marketing/wizard/Step7Review';
 import Step8Billing from '@/components/marketing/wizard/Step8Billing';
 
 const STEPS = [

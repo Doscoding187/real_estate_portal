@@ -18,6 +18,13 @@ import type { SortOption, PropertyFilters } from '../../../shared/types';
 describe('PropertySearchService - Property-Based Tests', () => {
   let db: any;
   let skipTests = false;
+  const getInsertId = (insertResult: unknown): number => {
+    const candidate = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+    if (candidate && typeof candidate === 'object' && 'insertId' in candidate) {
+      return Number((candidate as { insertId: number }).insertId);
+    }
+    throw new Error('Unable to read insertId from insert result');
+  };
 
   // Test data setup
   const testProperties = [
@@ -136,6 +143,12 @@ describe('PropertySearchService - Property-Based Tests', () => {
   let insertedPropertyIds: number[] = [];
 
   beforeAll(async () => {
+    // TODO(test-infra): Run this property suite against real DB in CI once DATABASE_URL is guaranteed.
+    if (!process.env.DATABASE_URL) {
+      skipTests = true;
+      return;
+    }
+
     try {
       db = await getDb();
       if (!db) {
@@ -148,7 +161,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       // Insert test properties
       for (const prop of testProperties) {
         const result = await db.insert(properties).values(prop);
-        const insertedId = Number(result.insertId);
+        const insertedId = getInsertId(result);
         if (Number.isFinite(insertedId)) {
           insertedPropertyIds.push(insertedId);
         }

@@ -8,6 +8,55 @@
       "when": 1770032199639,
       "tag": "30001_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1771524316014,
+      "tag": "0001_30002_schema_sync_partner_and_location_searches",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771525470213,
+      "tag": "0002_30003_google_places_api_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1772547000000,
+      "tag": "0003_30004_add_users_trial_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1772559000000,
+      "tag": "0004_30005_add_agents_listing_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772721341100,
+      "tag": "0005_30006_distribution_onboarding_model_refactor",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772849000000,
+      "tag": "0006_30007_distribution_core_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1773312000000,
+      "tag": "0007_30008_add_agent_os_inventory_bridge",
+      "breakpoints": true
     }
   ]
 }

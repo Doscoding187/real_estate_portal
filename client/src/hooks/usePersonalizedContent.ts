@@ -44,7 +44,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       feedType: 'recommended',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -61,7 +60,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       location: options.location ? `${options.location.lat},${options.location.lng}` : '',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData && !!options.location,
@@ -77,7 +75,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       feedType: 'recommended',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -93,7 +90,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       feedType: 'recommended',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -465,6 +461,7 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     });
   }, [
     categoryKey,
+    intent,
     forYouData,
     popularNearYouData,
     newDevelopmentsData,

@@ -36,7 +36,8 @@ const GradientCheckbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   GradientCheckboxProps
 >(({ className, label, description, error, containerClassName, id, ...props }, ref) => {
-  const checkboxId = id || `checkbox-${React.useId()}`;
+  const generatedId = React.useId();
+  const checkboxId = id ?? `checkbox-${generatedId}`;
   const hasError = !!error;
 
   return (

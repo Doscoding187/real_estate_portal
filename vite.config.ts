@@ -5,9 +5,19 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 const plugins = [react(), tailwindcss()];
+const buildGitSha =
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.GITHUB_SHA ||
+  process.env.COMMIT_SHA ||
+  'local-dev';
+const buildTime = new Date().toISOString();
 
 export default defineConfig({
   plugins,
+  define: {
+    __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'client', 'src'),

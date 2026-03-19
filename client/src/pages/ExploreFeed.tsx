@@ -396,8 +396,6 @@ export default function ExploreFeed() {
                       caption: item.category,
                       highlights: [item.category],
                       agentName: item.actor.displayName,
-                      verificationStatus: item.actor.verificationStatus,
-                      trustBand: item.actorInsights?.trustBand || 'standard',
                     }}
                     isActive={idx === currentIndex}
                     onView={() => {
@@ -571,8 +569,6 @@ export default function ExploreFeed() {
                     caption: item.category,
                     highlights: [item.category],
                     agentName: item.actor.displayName,
-                    verificationStatus: item.actor.verificationStatus,
-                    trustBand: item.actorInsights?.trustBand || 'standard',
                   }}
                   isActive={idx === currentIndex}
                   onView={() => {

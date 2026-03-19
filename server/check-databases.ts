@@ -11,8 +11,7 @@ async function run() {
   const db = await getDb();
   if (!db) return;
 
-  // @ts-ignore
-  const [rows] = await db.execute(sql`SHOW DATABASES`);
+  const [rows] = (await db.execute(sql`SHOW DATABASES`)) as [{ Database: string }[], unknown];
   console.log(
     'Databases:',
     rows.map(r => r.Database),

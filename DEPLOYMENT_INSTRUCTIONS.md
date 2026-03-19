@@ -42,7 +42,8 @@ git push origin main
 #### Railway (Backend)
 - Railway is configured to automatically deploy from the GitHub repository
 - Build command: `pnpm build:railway`
-- Start command: `pnpm start`
+- Start command: `pnpm start:prod`
+- `railway.json` is the source of truth for Railway build/deploy commands
 - The deployment will be available at your configured Railway domain
 
 ## Files Changed/Added

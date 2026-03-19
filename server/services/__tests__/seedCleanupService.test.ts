@@ -247,18 +247,6 @@ describe('Seed Cleanup Service', () => {
       expect(brandCleanupService.executeCleanup).toHaveBeenCalledWith(1, true);
     });
 
-      const result = await seedCleanupService.handleSeedDeletionOnRegistration(
-        1,
-        'Test Brand',
-        'test-brand',
-      );
-
-      expect(result.deleted).toBe(true);
-      expect(result.reason).toBe('deleted_on_registration');
-      expect(result.deletedCounts?.brandProfileId).toBe(1);
-      expect(brandCleanupService.executeCleanup).toHaveBeenCalledWith(1, true);
-    });
-
     it('should throw and block registration when deletion fails', async () => {
       const seedCandidate = {
         id: 1,
