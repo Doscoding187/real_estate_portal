@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,7 @@ export default function PropertiesPage() {
   const [page, setPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   const { data, isLoading } = trpc.admin.listProperties.useQuery({
     page,
@@ -73,7 +75,7 @@ export default function PropertiesPage() {
   });
 
   // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     setLocation('/login');
     return null;
   }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +28,7 @@ export default function PlatformSettings() {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [modifiedKeys, setModifiedKeys] = useState<Set<string>>(new Set());
   const [affordabilityDrafts, setAffordabilityDrafts] = useState<Record<string, number>>({});
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   const { data: currentSettings, isLoading } = trpc.admin.getPlatformSettings.useQuery();
   const affordabilityConfigQuery = trpc.admin.listAffordabilityConfig.useQuery(undefined, {
@@ -55,7 +57,7 @@ export default function PlatformSettings() {
   });
 
   // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     setLocation('/login');
     return null;
   }
@@ -239,7 +241,7 @@ export default function PlatformSettings() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/overview')}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Settings className="h-8 w-8 text-primary" />

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure, publicProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
 import { ENV } from './_core/env';
@@ -393,18 +393,45 @@ const EMPTY_DEVELOPER_KPIS = {
 // ===========================================================================
 
 export const developerRouter = router({
-  adminListPendingDevelopers: protectedProcedure.input(z.void()).query(async () => {
-    return { developers: [] as any[], total: 0 };
+  adminListPendingDevelopers: superAdminProcedure.input(z.void()).query(async () => {
+    const developers = await db.listPendingDevelopers();
+    return { developers, total: developers.length };
   }),
 
-  adminListAllDevelopers: protectedProcedure.input(z.void()).query(async () => {
-    return { developers: [] as any[], total: 0 };
+  adminListAllDevelopers: superAdminProcedure.input(z.void()).query(async () => {
+    const developers = await db.listAllDevelopers();
+    return { developers, total: developers.length };
   }),
 
-  adminSetTrusted: protectedProcedure
-    .input(z.object({ developerId: z.number(), isTrusted: z.boolean() }))
-    .mutation(async () => {
+  adminApproveDeveloper: superAdminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await db.approveDeveloper(input.id, requireUser(ctx).id);
       return { ok: true };
+    }),
+
+  adminRejectDeveloper: superAdminProcedure
+    .input(z.object({ id: z.number(), reason: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await db.rejectDeveloper(input.id, requireUser(ctx).id, input.reason);
+      return { ok: true };
+    }),
+
+  adminSetTrusted: superAdminProcedure
+    .input(
+      z
+        .object({ developerId: z.number().optional(), id: z.number().optional(), isTrusted: z.boolean() })
+        .refine(value => typeof value.developerId === 'number' || typeof value.id === 'number', {
+          message: 'developerId or id is required',
+        }),
+    )
+    .mutation(async ({ input }) => {
+      const developerId = input.developerId ?? input.id;
+      await db.setDeveloperTrust(developerId as number, input.isTrusted);
+      return {
+        ok: true,
+        message: input.isTrusted ? 'Developer marked as trusted' : 'Developer trust removed',
+      };
     }),
   getPublicDeveloperBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))

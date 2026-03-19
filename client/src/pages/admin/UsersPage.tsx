@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Eye, MessageSquare, Download, Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,21 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { trpc } from '@/lib/trpc';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const UsersPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('all');
+type UsersPageProps = {
+  initialRole?: string;
+};
+
+const UsersPage: React.FC<UsersPageProps> = ({ initialRole }) => {
+  const [activeTab, setActiveTab] = useState(initialRole ?? 'all');
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!initialRole) return;
+    setActiveTab(initialRole);
+  }, [initialRole]);
 
   const { data, isLoading } = trpc.admin.listUsers.useQuery({
     page,
