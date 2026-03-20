@@ -10,7 +10,7 @@ import { blendSearchResults, resolveSearchBlendPolicy } from '@/lib/searchBlend'
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
-import { Loader2, Building2, Search, MapPin } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -33,6 +33,7 @@ import {
   ViewMode,
   SortOption,
 } from '@/components/search';
+import { SearchResultsEmptyState } from '@/components/search/SearchResultsEmptyState';
 import { SearchFallbackNotice } from '@/components/search/SearchFallbackNotice';
 import { ListingResultCard } from '@/components/property-results/ListingResultCard';
 
@@ -607,66 +608,37 @@ export default function SearchResults({
                     )}
                   </>
                 ) : (
-                  <div className="mx-auto flex max-w-lg flex-col items-center justify-center py-20 text-center">
-                    <div className="relative mb-6 rounded-full bg-slate-50 p-4">
-                      <Building2 className="h-12 w-12 text-slate-300" />
-                      <div className="absolute -bottom-1 -right-1 rounded-full border border-slate-200 bg-white p-1">
-                        <Search className="h-4 w-4 text-slate-400" />
-                      </div>
-                    </div>
-
-                    <h3 className="mb-2 text-xl font-bold text-slate-800">
-                      No matching properties found
-                    </h3>
-
-                    <p className="mb-8 max-w-md text-slate-500">
-                      We couldn't find any properties matching your exact criteria in
-                      <span className="font-semibold text-slate-700"> coverage area</span>.
-                    </p>
-
-                    <div className="flex w-full max-w-xs flex-col gap-3">
-                      {locationContext &&
-                        locationContext.type === 'suburb' &&
-                        locationContext.ids?.cityId && (
-                          <Button
-                            className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
-                            onClick={() => {
-                              const newFilters = { ...filters };
-                              delete newFilters.suburb;
-                              newFilters.city = locationContext.hierarchy.city;
-                              handleFilterChange(newFilters);
-                            }}
-                          >
-                            <MapPin className="h-4 w-4" />
-                            Search all {locationContext.hierarchy.city}
-                          </Button>
-                        )}
-
-                      {locationContext && locationContext.type === 'city' && (
-                        <Button
-                          variant="secondary"
-                          className="w-full gap-2"
-                          onClick={() => {
+                  <SearchResultsEmptyState
+                    filters={filters}
+                    locationContext={locationContext as any}
+                    onClearAllFilters={handleClearAllFilters}
+                    onSwitchToSource={handleListingSourceChange}
+                    onBroadenToCity={
+                      locationContext &&
+                      locationContext.type === 'suburb' &&
+                      locationContext.ids?.cityId &&
+                      locationContext.hierarchy?.city
+                        ? () => {
+                            const newFilters = { ...filters };
+                            delete newFilters.suburb;
+                            newFilters.city = locationContext.hierarchy.city;
+                            handleFilterChange(newFilters);
+                          }
+                        : undefined
+                    }
+                    onBroadenToProvince={
+                      locationContext &&
+                      locationContext.type === 'city' &&
+                      locationContext.hierarchy?.province
+                        ? () => {
                             const newFilters = { ...filters };
                             delete newFilters.city;
                             newFilters.province = locationContext.hierarchy.province;
                             handleFilterChange(newFilters);
-                          }}
-                        >
-                          <MapPin className="h-4 w-4" />
-                          Search all {locationContext.hierarchy.province}
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={handleClearAllFilters}
-                      >
-                        Clear Filters & Broaden Search
-                      </Button>
-                    </div>
-                  </div>
+                          }
+                        : undefined
+                    }
+                  />
                 )}
               </div>
             </div>
