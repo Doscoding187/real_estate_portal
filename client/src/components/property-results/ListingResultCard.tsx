@@ -82,6 +82,8 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         ? `/development/${data.development.id}`
         : null
     : null;
+  const listingHref =
+    isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`;
   const contactLabel = isDevelopmentListing
     ? 'New Development'
     : isPrivateListing
@@ -96,7 +98,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   return (
     <div
       className="w-full max-w-[760px] cursor-pointer overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md sm:min-h-[360px]"
-      onClick={() => setLocation(`/property/${data.id}`)}
+      onClick={() => setLocation(listingHref)}
     >
       <div className="flex flex-col sm:flex-row">
         <div className="relative h-52 flex-shrink-0 sm:h-auto sm:w-80">
