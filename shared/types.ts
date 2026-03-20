@@ -498,6 +498,7 @@ export interface BulkCreateUnitsInput {
 export type InteractionType =
   | 'impression'
   | 'view'
+  | 'like'
   | 'skip'
   | 'save'
   | 'share'
