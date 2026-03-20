@@ -52,7 +52,7 @@ describe('DevelopmentDerivedListingService', () => {
         legacyStatus: 'pre_launch',
         constructionPhase: 'planning',
         developmentImages:
-          '[{\"url\":\"https://example.com/dev-cover.jpg\"}]',
+          '[{"url":"https://example.com/dev-cover.jpg"}]',
         developmentCreatedAt: '2026-03-20 10:00:00',
         developerId: 7,
         developerBrandProfileId: 9,
@@ -80,7 +80,7 @@ describe('DevelopmentDerivedListingService', () => {
         availableUnits: 7,
         totalUnits: 12,
         unitBaseMedia:
-          '{\"gallery\":[{\"url\":\"https://example.com/unit-primary.jpg\"}]}',
+          '{"gallery":[{"url":"https://example.com/unit-primary.jpg"}]}',
         unitCreatedAt: '2026-03-21 09:00:00',
       },
     ]);
