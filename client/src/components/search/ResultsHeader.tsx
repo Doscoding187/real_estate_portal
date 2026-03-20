@@ -27,6 +27,8 @@ interface ResultsHeaderProps {
   developmentCount?: number;
   manualTotalCount?: number;
   developmentTotalCount?: number;
+  resultsSummaryText?: string;
+  pageSummaryText?: string;
   blendPolicyCopy?: string;
   isLoading?: boolean;
   viewMode: ViewMode;
@@ -54,6 +56,8 @@ export function ResultsHeader({
   developmentCount = 0,
   manualTotalCount = 0,
   developmentTotalCount = 0,
+  resultsSummaryText,
+  pageSummaryText,
   blendPolicyCopy,
   isLoading,
   viewMode,
@@ -95,11 +99,12 @@ export function ResultsHeader({
             <div className="mt-1">
               {!isLoading ? (
                 <span>
-                  Showing {displayedPropertyCount.toLocaleString()} of {resultCount.toLocaleString()}{' '}
-                  results
-                  {developmentCount > 0
-                    ? `, including ${developmentCount.toLocaleString()} development listings`
-                    : ''}
+                  {resultsSummaryText ??
+                    `Showing ${displayedPropertyCount.toLocaleString()} of ${resultCount.toLocaleString()} results${
+                      developmentCount > 0
+                        ? `, including ${developmentCount.toLocaleString()} development listings`
+                        : ''
+                    }`}
                 </span>
               ) : (
                 <span>Loading results...</span>
@@ -112,6 +117,9 @@ export function ResultsHeader({
             </div>
           )}
           {blendPolicyCopy && <div className="mt-1 text-xs text-slate-500">{blendPolicyCopy}</div>}
+          {!isLoading && pageSummaryText && (
+            <div className="mt-1 text-xs text-slate-500">{pageSummaryText}</div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
