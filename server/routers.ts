@@ -62,6 +62,7 @@ import { distributionRouter } from './distributionRouter';
 import { demandRouter } from './demandRouter';
 import { servicesEngineRouter } from './servicesEngineRouter';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import { discoveryRouter } from './domains/discovery/router';
 
 export const appRouter = router({
   system: systemRouter,
@@ -108,6 +109,7 @@ export const appRouter = router({
   distribution: distributionRouter,
   demand: demandRouter,
   servicesEngine: servicesEngineRouter,
+  discovery: discoveryRouter,
 
   propertyResults: propertyResultsRouter,
 

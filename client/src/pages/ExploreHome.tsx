@@ -5,12 +5,8 @@ import {
   Play,
   Grid3x3,
   SlidersHorizontal,
-  Home,
-  Wrench,
-  Hammer,
-  Wallet,
-  TrendingUp,
-  Building2,
+  ArrowRight,
+  Flame,
 } from 'lucide-react';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
@@ -120,65 +116,19 @@ function mapSectionToFocus(sectionId: string): ExploreFocus {
   }
 }
 
-interface FocusTile {
-  id: string;
-  title: string;
-  subtitle: string;
-  focus: ExploreFocus;
-  subFocus: string;
-  icon: typeof Home;
-}
+function getDiscoveryItemImage(item?: DiscoveryItem): string | undefined {
+  if (!item?.data) return undefined;
 
-const FOCUS_TILES: FocusTile[] = [
-  {
-    id: 'buying',
-    title: 'Buying a Home',
-    subtitle: 'Discover listings matched to your budget and lifestyle',
-    focus: 'buy',
-    subFocus: 'buying',
-    icon: Home,
-  },
-  {
-    id: 'selling',
-    title: 'Selling a Home',
-    subtitle: 'Market-ready ideas, pricing signals, and seller tips',
-    focus: 'sell',
-    subFocus: 'selling',
-    icon: TrendingUp,
-  },
-  {
-    id: 'renovating',
-    title: 'Renovating',
-    subtitle: 'Design upgrades and trusted build partners',
-    focus: 'renovate',
-    subFocus: 'renovating',
-    icon: Hammer,
-  },
-  {
-    id: 'services',
-    title: 'Home Services',
-    subtitle: 'Browse specialists for every room and repair',
-    focus: 'services',
-    subFocus: 'services',
-    icon: Wrench,
-  },
-  {
-    id: 'finance',
-    title: 'Finance & Bonds',
-    subtitle: 'Learn deposits, transfer costs, and affordability',
-    focus: 'finance',
-    subFocus: 'finance',
-    icon: Wallet,
-  },
-  {
-    id: 'investing',
-    title: 'Investment',
-    subtitle: 'Track areas, yields, and long-term opportunities',
-    focus: 'invest',
-    subFocus: 'investment',
-    icon: Building2,
-  },
-];
+  const data = item.data as Record<string, any>;
+
+  if (typeof data.imageUrl === 'string' && data.imageUrl) return data.imageUrl;
+  if (typeof data.heroBannerUrl === 'string' && data.heroBannerUrl) return data.heroBannerUrl;
+  if (typeof data.thumbnailUrl === 'string' && data.thumbnailUrl) return data.thumbnailUrl;
+  if (typeof data.mediaUrl === 'string' && data.mediaUrl) return data.mediaUrl;
+  if (typeof data.videoUrl === 'string' && data.videoUrl) return data.videoUrl;
+
+  return undefined;
+}
 
 export default function ExploreHome() {
   const { intent, setIntent } = useExploreIntent();
@@ -328,11 +278,16 @@ export default function ExploreHome() {
       })
       .map(item => item.section);
   }, [sections]);
+  const mediaGatewaySections = useMemo(() => orderedSections.slice(0, 6), [orderedSections]);
 
   return (
     <motion.div
       className="min-h-screen"
-      style={{ backgroundColor: designTokens.colors.bg.secondary }}
+      style={{
+        backgroundColor: designTokens.colors.bg.secondary,
+        backgroundImage:
+          'radial-gradient(circle at top, rgba(99, 102, 241, 0.14), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(244,247,251,1) 100%)',
+      }}
       initial="initial"
       animate="animate"
       exit="exit"
@@ -354,8 +309,8 @@ export default function ExploreHome() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Title and View Mode Toggle */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="min-w-0">
               <motion.h1
                 className="text-3xl font-bold"
                 style={{
@@ -368,6 +323,12 @@ export default function ExploreHome() {
               >
                 Explore
               </motion.h1>
+              <p
+                className="mt-1 text-sm"
+                style={{ color: designTokens.colors.text.secondary }}
+              >
+                Trending media, visual channels, and personalized discovery rails.
+              </p>
             </div>
 
             {/* View mode toggle - Modern pill design */}
@@ -475,57 +436,128 @@ export default function ExploreHome() {
             onSeeAll={handleTrendingVideosSeeAll}
           />
 
-          {/* Section-based home focus selection (not tabs/chips) */}
           <motion.section
             className="px-4 sm:px-0"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
             role="region"
-            aria-label="Choose your focus"
+            aria-label="Discovery channels"
           >
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold" style={{ color: designTokens.colors.text.primary }}>
-                Choose Your Focus
-              </h2>
-              <p className="text-sm mt-1" style={{ color: designTokens.colors.text.secondary }}>
-                Select what matters now and we will tune your feed instantly.
-              </p>
+            <div className="mb-4 flex items-center justify-between gap-3 px-1">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-600">
+                  <Flame className="h-3.5 w-3.5" />
+                  Discovery channels
+                </div>
+                <h2
+                  className="mt-3 text-2xl font-semibold"
+                  style={{ color: designTokens.colors.text.primary }}
+                >
+                  Open a section from the media itself
+                </h2>
+              </div>
+
+              <motion.button
+                type="button"
+                onClick={() => navigateToFeed('buy')}
+                className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white md:inline-flex"
+                style={{
+                  background: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)',
+                  boxShadow: '0 16px 30px rgba(239, 68, 68, 0.22)',
+                }}
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                Open Feed
+                <ArrowRight className="h-4 w-4" />
+              </motion.button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {FOCUS_TILES.map(tile => {
-                const Icon = tile.icon;
+
+            <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory">
+              {mediaGatewaySections.map((section, index) => {
+                const previewImages = Array.from(
+                  new Set(section.items.map(getDiscoveryItemImage).filter(Boolean) as string[]),
+                ).slice(0, 3);
+
+                const previewA = previewImages[0];
+                const previewB = previewImages[1] || previewImages[0];
+                const previewC = previewImages[2] || previewImages[1] || previewImages[0];
+
                 return (
                   <motion.button
-                    key={tile.id}
+                    key={section.id}
                     type="button"
-                    onClick={() => navigateToFeed(tile.focus, tile.subFocus)}
-                    className="text-left rounded-2xl p-4 border transition-all"
-                    style={{
-                      borderColor: designTokens.colors.bg.tertiary,
-                      backgroundColor: designTokens.colors.bg.primary,
-                      boxShadow: designTokens.shadows.sm,
-                    }}
-                    whileHover={{ y: -2 }}
+                    onClick={() => handleSeeAll(normalizeSectionId(section))}
+                    className="group relative w-[20rem] flex-shrink-0 snap-start overflow-hidden rounded-[30px] text-left md:w-[22rem]"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.28 }}
+                    whileHover={{ y: -4 }}
                     whileTap={{ scale: 0.99 }}
+                    style={{
+                      boxShadow: '0 20px 50px rgba(15, 23, 42, 0.12)',
+                    }}
                   >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center"
-                        style={{
-                          backgroundColor: `${designTokens.colors.accent.primary}15`,
-                          color: designTokens.colors.accent.primary,
-                        }}
-                      >
-                        <Icon className="w-5 h-5" />
+                    <div className="grid h-[18.5rem] grid-cols-[1.3fr_0.9fr] gap-1 rounded-[30px] bg-slate-200 p-1">
+                      <div className="relative overflow-hidden rounded-[26px]">
+                        {previewA ? (
+                          <img
+                            src={previewA}
+                            alt={section.title}
+                            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-slate-300" />
+                        )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold" style={{ color: designTokens.colors.text.primary }}>
-                          {tile.title}
-                        </h3>
-                        <p className="text-sm mt-1" style={{ color: designTokens.colors.text.secondary }}>
-                          {tile.subtitle}
+                      <div className="grid gap-1">
+                        <div className="relative overflow-hidden rounded-[22px]">
+                          {previewB ? (
+                            <img
+                              src={previewB}
+                              alt=""
+                              className="h-full min-h-[120px] w-full object-cover transition duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="h-full min-h-[120px] w-full bg-slate-300" />
+                          )}
+                        </div>
+                        <div className="relative overflow-hidden rounded-[22px]">
+                          {previewC ? (
+                            <img
+                              src={previewC}
+                              alt=""
+                              className="h-full min-h-[120px] w-full object-cover transition duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="h-full min-h-[120px] w-full bg-slate-300" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/24 to-transparent" />
+
+                    <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="rounded-full border border-white/18 bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80 backdrop-blur-sm">
+                          {section.items.length} items
+                        </span>
+                        <span className="rounded-full border border-white/18 bg-black/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70 backdrop-blur-sm">
+                          Channel
+                        </span>
+                      </div>
+                      <h3 className="text-xl font-semibold leading-tight">{section.title}</h3>
+                      {section.subtitle && (
+                        <p className="mt-2 max-w-sm text-sm leading-6 text-white/74 line-clamp-2">
+                          {section.subtitle}
                         </p>
+                      )}
+                      <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">
+                        Watch the feed
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                       </div>
                     </div>
                   </motion.button>

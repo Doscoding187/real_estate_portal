@@ -16,8 +16,11 @@ import { getFeedItems } from '@/lib/exploreFeed';
 import { useExploreIntent } from '@/hooks/useExploreIntent';
 import { ExploreIntentPrompt } from '@/components/explore/ExploreIntentPrompt';
 import { mapFocusToLegacyIntent, readExploreIntent } from '@/lib/exploreIntentSession';
+import { useSearch } from 'wouter';
+import DiscoveryFeedScreen from '@/domains/discovery/screens/DiscoveryFeedScreen';
+import { isDiscoveryFeedEnabled } from '@/lib/discoveryFeedGate';
 
-export default function ExploreFeed() {
+function LegacyExploreFeed() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -596,4 +599,14 @@ export default function ExploreFeed() {
       />
     </motion.div>
   );
+}
+
+export default function ExploreFeed() {
+  const search = useSearch();
+
+  if (isDiscoveryFeedEnabled(search)) {
+    return <DiscoveryFeedScreen />;
+  }
+
+  return <LegacyExploreFeed />;
 }
