@@ -133,6 +133,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   const developerProfileHref = developerIdentity?.slug
     ? `/developer/${developerIdentity.slug}`
     : developmentHref;
+  const listingHref =
+    isDevelopmentListing && (developmentHref || developerProfileHref)
+      ? developmentHref || developerProfileHref || `/property/${id}`
+      : `/property/${id}`;
   const priceLabel =
     price > 0
       ? isDevelopmentListing
@@ -168,7 +172,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   return (
     <div
       className="group relative w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col cursor-pointer"
-      onClick={() => setLocation(`/property/${id}`)}
+      onClick={() => setLocation(listingHref)}
     >
       {/* Image  Section */}
       <div className="relative w-full h-56 overflow-hidden">
@@ -279,7 +283,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-2"
               onClick={e => {
                 e.stopPropagation();
-                setLocation(`/property/${id}`);
+                setLocation(listingHref);
               }}
             >
               {title}

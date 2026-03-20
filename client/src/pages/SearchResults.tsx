@@ -32,7 +32,6 @@ import {
   SortOption,
 } from '@/components/search';
 import { SearchFallbackNotice } from '@/components/search/SearchFallbackNotice';
-import { DevelopmentResultCard } from '@/components/property-results/DevelopmentResultCard';
 import { ListingResultCard } from '@/components/property-results/ListingResultCard';
 
 // URL utilities
@@ -101,6 +100,8 @@ export default function SearchResults({
   const [saveSearchName, setSaveSearchName] = useState('');
 
   const limit = 12;
+  const blendFetchLimit = Math.max(limit, (page + 1) * limit);
+  const backendSortOption = sortBy === 'relevance' ? undefined : sortBy;
 
   // SEO
   useEffect(() => {
@@ -114,7 +115,7 @@ export default function SearchResults({
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
 
   // Build query input for tRPC
-  const queryInput = useMemo(
+  const propertyQueryInput = useMemo(
     () => ({
       ...filters,
       city: filters.city, // Explicitly ensure these are passed
@@ -128,15 +129,38 @@ export default function SearchResults({
       maxPrice: filters.maxPrice,
       minBedrooms: filters.minBedrooms,
       status: 'available' as const,
-      limit,
-      offset: page * limit,
-      includeDevelopments: true,
+      limit: blendFetchLimit,
+      offset: 0,
+      sortOption: backendSortOption,
+      includeDevelopments: false,
     }),
-    [filters, page],
+    [backendSortOption, blendFetchLimit, filters],
   );
 
-  // Fetch properties
-  const { data: searchResults, isLoading } = trpc.properties.search.useQuery(queryInput);
+  const developmentListingQueryInput = useMemo(
+    () => ({
+      city: filters.city,
+      province: filters.province,
+      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+      propertyType: filters.propertyType as any,
+      listingType: filters.listingType as any,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      minBedrooms: filters.minBedrooms,
+      maxBedrooms: filters.maxBedrooms,
+      minBathrooms: filters.minBathrooms,
+      limit: blendFetchLimit,
+      offset: 0,
+      sortOption: backendSortOption,
+    }),
+    [backendSortOption, blendFetchLimit, filters],
+  );
+
+  const { data: propertySearchResults, isLoading: isPropertySearchLoading } =
+    trpc.properties.search.useQuery(propertyQueryInput);
+  const { data: developmentListingResults, isLoading: isDevelopmentSearchLoading } =
+    trpc.properties.searchDevelopmentListings.useQuery(developmentListingQueryInput);
+  const isLoading = isPropertySearchLoading || isDevelopmentSearchLoading;
   const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
     filters: {
       city: filters.city,
@@ -151,10 +175,12 @@ export default function SearchResults({
     },
   });
 
-  const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
-  const developmentResults = (searchResults as any)?.developments?.items ?? [];
-  const resultTotal = (searchResults as any)?.total ?? 0;
-  const locationContext = (searchResults as any)?.locationContext;
+  const properties =
+    (propertySearchResults as any)?.items ?? (propertySearchResults as any)?.properties ?? [];
+  const developmentResults = (developmentListingResults as any)?.items ?? [];
+  const resultTotal =
+    ((propertySearchResults as any)?.total ?? 0) + ((developmentListingResults as any)?.total ?? 0);
+  const locationContext = (propertySearchResults as any)?.locationContext;
 
   // Mutations
   const saveSearchMutation = trpc.savedSearch.create.useMutation({
@@ -267,68 +293,128 @@ export default function SearchResults({
     setPage(0);
   };
 
-  // Only show real properties
-  const displayProperties = properties || [];
-
-  // Client-side sort fallback
-  const sortedProperties = useMemo(() => {
-    const propsToUse = displayProperties as any[];
-    if (!propsToUse.length) return [];
-
-    const sorted = [...propsToUse];
-    switch (sortBy) {
-      case 'price_asc':
-        sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
-        break;
-      case 'price_desc':
-        sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-        break;
-      default:
-        break;
-    }
-    return sorted;
-  }, [displayProperties, sortBy]);
-
-  const mixedListResults = useMemo(() => {
-    const propertyItems = sortedProperties.map(property => ({
+  const combinedSearchResults = useMemo(() => {
+    const propertyItems = (properties as any[]).map(property => ({
       kind: 'property' as const,
       value: property,
     }));
-    const developmentItems = (developmentResults as any[]).map(development => ({
+    const derivedDevelopmentItems = (developmentResults as any[]).map(development => ({
       kind: 'development' as const,
       value: development,
     }));
 
-    if (!developmentItems.length) return propertyItems;
-    if (!propertyItems.length) return developmentItems;
+    if (!derivedDevelopmentItems.length) return propertyItems;
+    if (!propertyItems.length) return derivedDevelopmentItems;
+
+    if (sortBy === 'price_asc' || sortBy === 'price_desc') {
+      return [...propertyItems, ...derivedDevelopmentItems].sort((left, right) => {
+        const leftPrice = Number((left.value as any)?.price || 0);
+        const rightPrice = Number((right.value as any)?.price || 0);
+        return sortBy === 'price_asc' ? leftPrice - rightPrice : rightPrice - leftPrice;
+      });
+    }
+
+    if (sortBy === 'date_asc' || sortBy === 'date_desc') {
+      return [...propertyItems, ...derivedDevelopmentItems].sort((left, right) => {
+        const leftDate = new Date((left.value as any)?.listedDate || (left.value as any)?.createdAt || 0);
+        const rightDate = new Date((right.value as any)?.listedDate || (right.value as any)?.createdAt || 0);
+        return sortBy === 'date_asc'
+          ? leftDate.getTime() - rightDate.getTime()
+          : rightDate.getTime() - leftDate.getTime();
+      });
+    }
 
     const mixed: Array<
       | { kind: 'property'; value: (typeof propertyItems)[number]['value'] }
-      | { kind: 'development'; value: (typeof developmentItems)[number]['value'] }
+      | { kind: 'development'; value: (typeof derivedDevelopmentItems)[number]['value'] }
     > = [];
 
-    let p = 0;
-    let d = 0;
-    while (p < propertyItems.length || d < developmentItems.length) {
-      if (d < developmentItems.length) {
-        mixed.push(developmentItems[d]);
-        d += 1;
+    let propertyIndex = 0;
+    let developmentIndex = 0;
+    while (propertyIndex < propertyItems.length || developmentIndex < derivedDevelopmentItems.length) {
+      if (developmentIndex < derivedDevelopmentItems.length) {
+        mixed.push(derivedDevelopmentItems[developmentIndex]);
+        developmentIndex += 1;
       }
-      let inserted = 0;
-      while (p < propertyItems.length && inserted < 3) {
-        mixed.push(propertyItems[p]);
-        p += 1;
-        inserted += 1;
+
+      let insertedProperties = 0;
+      while (propertyIndex < propertyItems.length && insertedProperties < 3) {
+        mixed.push(propertyItems[propertyIndex]);
+        propertyIndex += 1;
+        insertedProperties += 1;
       }
     }
 
     return mixed;
-  }, [sortedProperties, developmentResults]);
+  }, [developmentResults, properties, sortBy]);
 
+  const pagedResults = useMemo(() => {
+    const start = page * limit;
+    return combinedSearchResults.slice(start, start + limit);
+  }, [combinedSearchResults, limit, page]);
+
+  const renderedResults = useMemo(
+    () =>
+      pagedResults
+        .map(item => {
+          const normalized = normalizePropertyForUI(item.value);
+          return normalized ? { ...item, normalized } : null;
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
+    [pagedResults],
+  );
+
+  const mapResults = useMemo(
+    () =>
+      renderedResults
+        .map((item, index) => {
+          const raw = item.value as any;
+          const latitude = parseFloat(String(raw.latitude || ''));
+          const longitude = parseFloat(String(raw.longitude || ''));
+          if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+          const navigationHref =
+            item.kind === 'development'
+              ? item.normalized.development?.slug
+                ? `/development/${item.normalized.development.slug}`
+                : item.normalized.development?.id
+                  ? `/development/${item.normalized.development.id}`
+                  : `/property/${item.normalized.id}`
+              : `/property/${item.normalized.id}`;
+
+          return {
+            markerId: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(item.normalized.id),
+            href: navigationHref,
+            property: {
+              id: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(item.normalized.id),
+              title: item.normalized.title,
+              price: item.normalized.price,
+              propertyType: item.normalized.propertyType ?? 'unknown',
+              listingType: item.normalized.listingType ?? 'sale',
+              latitude,
+              longitude,
+              mainImage:
+                (item.normalized as any).image ??
+                (item.normalized as any).mainImage ??
+                (item.normalized as any).images?.[0],
+              address: (item.normalized as any).address,
+              city: (item.normalized as any).city,
+              bedrooms: item.normalized.bedrooms,
+              bathrooms: item.normalized.bathrooms,
+              area: item.normalized.area,
+            },
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
+    [limit, page, renderedResults],
+  );
+
+  const displayedResultCount = renderedResults.length;
+  const displayedDevelopmentCount = renderedResults.filter(item => item.kind === 'development').length;
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
   const hasRenderableResults =
-    viewMode === 'list' ? mixedListResults.length > 0 : sortedProperties.length > 0;
+    viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -358,8 +444,8 @@ export default function SearchResults({
               <ResultsHeader
                 filters={filters}
                 resultCount={resultCount}
-                displayedPropertyCount={sortedProperties.length}
-                developmentCount={developmentResults.length}
+                displayedPropertyCount={displayedResultCount}
+                developmentCount={displayedDevelopmentCount}
                 isLoading={isLoading}
                 viewMode={viewMode}
                 sortBy={sortBy}
@@ -404,223 +490,181 @@ export default function SearchResults({
                   <>
                     {viewMode === 'list' && (
                       <div className="flex flex-col items-start gap-4">
-                      {mixedListResults.map((item, index) => {
-                        if (item.kind === 'development') {
-                          const development = item.value as any;
+                        {renderedResults.map((item, index) => {
+                          const normalized = item.normalized;
                           return (
-                            <DevelopmentResultCard
-                              key={`dev-${development.id}-${index}`}
-                              id={development.id}
-                              name={development.name}
-                              slug={development.slug}
-                                suburb={development.suburb}
-                                city={development.city}
-                              province={development.province}
-                              status={development.status}
-                              isFeatured={development.isFeatured}
-                              rating={development.rating}
-                              highlights={Array.isArray(development.highlights) ? development.highlights : []}
-                              builderName={development.builderName}
-                              builderLogoUrl={development.builderLogoUrl}
-                              description={development.description ?? null}
-                              configurations={development.configurations}
-                              images={development.images}
-                              />
-                            );
-                          }
-
-                          const normalized = normalizePropertyForUI(item.value);
-                        if (!normalized) return null;
-                        return (
-                          <ListingResultCard
-                            key={`prop-${normalized.id}-${index}`}
-                            data={{
-                              id: normalized.id,
-                              title: normalized.title,
-                              location: normalized.location,
-                              price: normalized.price,
-                              image:
-                                typeof normalized.image === 'string'
-                                  ? normalized.image
-                                  : (normalized as any).mainImage ?? '/placeholder-property.jpg',
-                              development: (normalized as any).development,
-                              area: normalized.area,
-                              bedrooms: normalized.bedrooms,
-                              bathrooms: normalized.bathrooms,
-                              floor:
-                                typeof (normalized as any).yardSize === 'number' &&
-                                (normalized as any).yardSize > 0
-                                  ? `${(normalized as any).yardSize}m2`
-                                  : '-',
-                              highlights: Array.isArray(normalized.highlights) ? normalized.highlights : [],
-                              badges: Array.isArray((normalized as any).badges)
-                                ? (normalized as any).badges
-                                : [],
-                              description: normalized.description ?? undefined,
-                              listingSource: (normalized as any).listingSource,
-                              listerType: (normalized as any).listerType,
-                              contactRole:
-                                (normalized as any).listingSource === 'development'
-                                  ? 'developer'
-                                  : (normalized as any).listerType === 'private'
-                                    ? 'private'
-                                    : 'agent',
-                              postedBy:
-                                (normalized as any).listingSource === 'development'
-                                  ? (normalized as any).developerBrand?.brandName || 'Developer Team'
-                                  : normalized.agent?.name || 'Private Seller',
-                              agentAvatarUrl:
-                                (normalized as any).listingSource === 'development'
-                                  ? (normalized as any).developerBrand?.logoUrl || undefined
-                                  : normalized.agent?.image || undefined,
-                            }}
-                          />
-                        );
+                            <ListingResultCard
+                              key={`prop-${normalized.id}-${index}`}
+                              data={{
+                                id: normalized.id,
+                                title: normalized.title,
+                                location: normalized.location,
+                                price: normalized.price,
+                                image:
+                                  typeof normalized.image === 'string'
+                                    ? normalized.image
+                                    : (normalized as any).mainImage ?? '/placeholder-property.jpg',
+                                development: (normalized as any).development,
+                                area: normalized.area,
+                                bedrooms: normalized.bedrooms,
+                                bathrooms: normalized.bathrooms,
+                                floor:
+                                  typeof (normalized as any).yardSize === 'number' &&
+                                  (normalized as any).yardSize > 0
+                                    ? `${(normalized as any).yardSize}m2`
+                                    : '-',
+                                highlights: Array.isArray(normalized.highlights)
+                                  ? normalized.highlights
+                                  : [],
+                                badges: Array.isArray((normalized as any).badges)
+                                  ? (normalized as any).badges
+                                  : [],
+                                description: normalized.description ?? undefined,
+                                listingSource: (normalized as any).listingSource,
+                                listerType: (normalized as any).listerType,
+                                contactRole:
+                                  (normalized as any).listingSource === 'development'
+                                    ? 'developer'
+                                    : (normalized as any).listerType === 'private'
+                                      ? 'private'
+                                      : 'agent',
+                                postedBy:
+                                  (normalized as any).listingSource === 'development'
+                                    ? (normalized as any).developerBrand?.brandName ||
+                                      'Developer Team'
+                                    : normalized.agent?.name || 'Private Seller',
+                                agentAvatarUrl:
+                                  (normalized as any).listingSource === 'development'
+                                    ? (normalized as any).developerBrand?.logoUrl || undefined
+                                    : normalized.agent?.image || undefined,
+                              }}
+                            />
+                          );
                         })}
                       </div>
                     )}
 
-                  {viewMode === 'grid' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {sortedProperties.map(property => {
-                        const normalized = normalizePropertyForUI(property);
-                        if (!normalized) return null;
-                        const cardProps = {
-                          ...normalized,
-                          development: (normalized as any).development,
-                          developerBrand: (normalized as any).developerBrand,
-                          listingSource: (normalized as any).listingSource,
-                          listerType: (normalized as any).listerType,
-                          image:
-                            (normalized as any).image ??
-                            (normalized as any).mainImage ??
-                            (normalized as any).images?.[0] ??
-                            '/placeholder-property.jpg',
-                        };
-                        return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
-                      })}
-                    </div>
-                  )}
-
-                  {viewMode === 'map' && (
-                    <GooglePropertyMap
-                      properties={sortedProperties
-                        .map(p => {
-                          const normalized = normalizePropertyForUI(p);
-                          if (!normalized) return null;
-                          return {
-                            id: parseInt(normalized.id),
-                            title: normalized.title,
-                            price: normalized.price,
-                            propertyType: normalized.propertyType ?? 'unknown',
-                            listingType: normalized.listingType ?? 'sale',
-                            latitude: parseFloat(p.latitude || '-26.2041'),
-                            longitude: parseFloat(p.longitude || '28.0473'),
-                            mainImage:
+                    {viewMode === 'grid' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {renderedResults.map(item => {
+                          const normalized = item.normalized;
+                          const cardProps = {
+                            ...normalized,
+                            development: (normalized as any).development,
+                            developerBrand: (normalized as any).developerBrand,
+                            listingSource: (normalized as any).listingSource,
+                            listerType: (normalized as any).listerType,
+                            image:
                               (normalized as any).image ??
                               (normalized as any).mainImage ??
-                              (normalized as any).images?.[0],
-                            address: (normalized as any).address,
-                            city: (normalized as any).city,
-                            bedrooms: normalized.bedrooms,
-                            bathrooms: normalized.bathrooms,
-                            area: normalized.area,
+                              (normalized as any).images?.[0] ??
+                              '/placeholder-property.jpg',
                           };
-                        })
-                        .filter((p): p is NonNullable<typeof p> => p !== null)}
-                      onPropertySelect={id => {
-                        window.location.href = `/property/${id}`;
-                      }}
-                      onBoundsChange={handleBoundsChange}
-                    />
-                  )}
+                          return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
+                        })}
+                      </div>
+                    )}
 
-                  {/* Pagination */}
-                  {resultCount >= limit && (
-                    <div className="flex justify-center items-center gap-4 mt-8">
-                      <Button
-                        variant="outline"
-                        disabled={page === 0}
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                      >
-                        Previous
-                      </Button>
-                      <span className="text-sm text-muted-foreground">Page {page + 1}</span>
-                      <Button
-                        variant="outline"
-                        disabled={resultCount < limit}
-                        onClick={() => setPage(p => p + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
-                  <div className="bg-slate-50 p-4 rounded-full mb-6 relative">
-                    <Building2 className="h-12 w-12 text-slate-300" />
-                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 border border-slate-200">
-                      <Search className="h-4 w-4 text-slate-400" />
-                    </div>
-                  </div>
+                    {viewMode === 'map' && (
+                      <GooglePropertyMap
+                        properties={mapResults.map(item => item.property)}
+                        onPropertySelect={id => {
+                          const target = mapResults.find(item => item.markerId === id);
+                          if (target) {
+                            window.location.href = target.href;
+                          }
+                        }}
+                        onBoundsChange={handleBoundsChange}
+                      />
+                    )}
 
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">
-                    No matching properties found
-                  </h3>
-
-                  <p className="text-slate-500 mb-8 max-w-md">
-                    We couldn't find any properties matching your exact criteria in
-                    <span className="font-semibold text-slate-700"> coverage area</span>.
-                  </p>
-
-                  <div className="flex flex-col gap-3 w-full max-w-xs">
-                    {/* Smart Fallback Suggestions */}
-                    {locationContext &&
-                      locationContext.type === 'suburb' &&
-                      locationContext.ids?.cityId && (
+                    {/* Pagination */}
+                    {resultCount >= limit && (
+                      <div className="mt-8 flex items-center justify-center gap-4">
                         <Button
-                          className="w-full bg-blue-600 hover:bg-blue-700 gap-2"
+                          variant="outline"
+                          disabled={page === 0}
+                          onClick={() => setPage(p => Math.max(0, p - 1))}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground">Page {page + 1}</span>
+                        <Button
+                          variant="outline"
+                          disabled={(page + 1) * limit >= resultCount}
+                          onClick={() => setPage(p => p + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="mx-auto flex max-w-lg flex-col items-center justify-center py-20 text-center">
+                    <div className="relative mb-6 rounded-full bg-slate-50 p-4">
+                      <Building2 className="h-12 w-12 text-slate-300" />
+                      <div className="absolute -bottom-1 -right-1 rounded-full border border-slate-200 bg-white p-1">
+                        <Search className="h-4 w-4 text-slate-400" />
+                      </div>
+                    </div>
+
+                    <h3 className="mb-2 text-xl font-bold text-slate-800">
+                      No matching properties found
+                    </h3>
+
+                    <p className="mb-8 max-w-md text-slate-500">
+                      We couldn't find any properties matching your exact criteria in
+                      <span className="font-semibold text-slate-700"> coverage area</span>.
+                    </p>
+
+                    <div className="flex w-full max-w-xs flex-col gap-3">
+                      {locationContext &&
+                        locationContext.type === 'suburb' &&
+                        locationContext.ids?.cityId && (
+                          <Button
+                            className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
+                            onClick={() => {
+                              const newFilters = { ...filters };
+                              delete newFilters.suburb;
+                              newFilters.city = locationContext.hierarchy.city;
+                              handleFilterChange(newFilters);
+                            }}
+                          >
+                            <MapPin className="h-4 w-4" />
+                            Search all {locationContext.hierarchy.city}
+                          </Button>
+                        )}
+
+                      {locationContext && locationContext.type === 'city' && (
+                        <Button
+                          variant="secondary"
+                          className="w-full gap-2"
                           onClick={() => {
-                            // Keep filters, but expand location to City
                             const newFilters = { ...filters };
-                            delete newFilters.suburb;
-                            newFilters.city = locationContext.hierarchy.city; // Fallback to city name
+                            delete newFilters.city;
+                            newFilters.province = locationContext.hierarchy.province;
                             handleFilterChange(newFilters);
                           }}
                         >
                           <MapPin className="h-4 w-4" />
-                          Search all {locationContext.hierarchy.city}
+                          Search all {locationContext.hierarchy.province}
                         </Button>
                       )}
 
-                    {locationContext && locationContext.type === 'city' && (
                       <Button
-                        variant="secondary"
-                        className="w-full gap-2"
-                        onClick={() => {
-                          // Keep filters, but expand location to Province
-                          const newFilters = { ...filters };
-                          delete newFilters.city;
-                          newFilters.province = locationContext.hierarchy.province;
-                          handleFilterChange(newFilters);
-                        }}
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleClearAllFilters}
                       >
-                        <MapPin className="h-4 w-4" />
-                        Search all {locationContext.hierarchy.province}
+                        Clear Filters & Broaden Search
                       </Button>
-                    )}
-
-                    <Button variant="outline" className="w-full" onClick={handleClearAllFilters}>
-                      Clear Filters & Broaden Search
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Mobile Sticky Controls (Persistent Bottom Bar) */}

@@ -231,6 +231,8 @@ export class DevelopmentDerivedListingService {
         city: developments.city,
         suburb: developments.suburb,
         province: developments.province,
+        latitude: developments.latitude,
+        longitude: developments.longitude,
         completionDate: developments.completionDate,
         legacyStatus: developments.legacyStatus,
         constructionPhase: developments.constructionPhase,
@@ -342,6 +344,8 @@ export class DevelopmentDerivedListingService {
           availableUnits: toNumberOrNull(row.availableUnits) ?? undefined,
           completionDate: row.completionDate || null,
           listedDate: new Date(row.unitCreatedAt || row.developmentCreatedAt || new Date()),
+          latitude: toNumberOrNull(row.latitude) ?? undefined,
+          longitude: toNumberOrNull(row.longitude) ?? undefined,
           development: {
             id: Number(row.developmentId),
             name: row.developmentName,

@@ -910,6 +910,8 @@ export interface DevelopmentDerivedListing {
   availableUnits?: number;
   completionDate?: string | null;
   listedDate: Date;
+  latitude?: number;
+  longitude?: number;
   development: {
     id: number;
     name: string;

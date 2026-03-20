@@ -76,8 +76,10 @@ export function ResultsHeader({
             {!isLoading ? (
               <span>
                 Showing {displayedPropertyCount.toLocaleString()} of {resultCount.toLocaleString()}{' '}
-                properties
-                {developmentCount > 0 ? ` and ${developmentCount.toLocaleString()} developments` : ''}
+                results
+                {developmentCount > 0
+                  ? `, including ${developmentCount.toLocaleString()} development listings`
+                  : ''}
               </span>
             ) : (
               <span>Loading results...</span>
