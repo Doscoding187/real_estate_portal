@@ -16,6 +16,7 @@ import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { ResponsiveHighlights } from './ResponsiveHighlights';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import { getDisplayListingBadges } from '@/lib/listingBadges';
 
 interface ImageUrls {
   thumbnail: string;
@@ -148,6 +149,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     : isPrivateListing
       ? 'Contact Seller'
       : 'Contact Agent';
+  const displayBadges = getDisplayListingBadges(badges, { maxBadges: 2 });
 
   // Determine area label based on property type
   const getAreaLabel = () => {
@@ -222,7 +224,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           )}
 
           {/* Dynamic Badges */}
-          {badges?.map((badge, index) => {
+          {displayBadges.map((badge, index) => {
             const lower = badge.toLowerCase();
             let colorClass = 'bg-blue-600/90 text-white'; // Default Marketing
 

@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MapPin, Bed, Bath, House, LandPlot, Phone, Mail } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { getDisplayListingBadges } from '@/lib/listingBadges';
 
 export interface ListingResultCardData {
   id: string;
@@ -94,6 +95,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     : isPrivateListing
       ? 'Contact Seller'
       : 'Contact Agent';
+  const displayBadges = getDisplayListingBadges(data.badges, { maxBadges: 2 });
 
   return (
     <div
@@ -151,15 +153,14 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             >
               {contactLabel}
             </span>
-            {Array.isArray(data.badges) &&
-              data.badges.slice(0, 2).map(badge => (
-                <span
-                  key={badge}
-                  className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
-                >
-                  {badge}
-                </span>
-              ))}
+            {displayBadges.map(badge => (
+              <span
+                key={badge}
+                className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+              >
+                {badge}
+              </span>
+            ))}
           </div>
 
           <p className="mt-2.5 text-2xl font-bold text-foreground">
