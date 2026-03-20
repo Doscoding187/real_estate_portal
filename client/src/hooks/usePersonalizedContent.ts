@@ -460,7 +460,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     });
   }, [
     categoryKey,
-    intent,
     forYouData,
     popularNearYouData,
     newDevelopmentsData,
