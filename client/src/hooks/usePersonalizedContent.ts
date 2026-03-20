@@ -8,7 +8,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import { DiscoveryItem } from './useDiscoveryFeed';
 import { getFeedItems, type FeedItem as CanonicalFeedItem } from '@/lib/exploreFeed';
-import { type ExploreIntent, readStoredExploreIntent } from '@/lib/exploreIntent';
+import { type ExploreIntent } from '@/lib/exploreIntent';
 import { getExploreMockFeedItems } from '@/data/exploreMockFeed';
 import { isExploreMockMode } from '@/lib/exploreMockMode';
 
@@ -29,7 +29,6 @@ interface UsePersonalizedContentOptions {
 }
 
 export function usePersonalizedContent(options: UsePersonalizedContentOptions = {}) {
-  const intent = options.intent ?? readStoredExploreIntent();
   const [sections, setSections] = useState<PersonalizedSection[]>([]);
   const useMockData = isExploreMockMode();
   const allowPlacementMock = import.meta.env.DEV;
@@ -44,7 +43,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       feedType: 'recommended',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -61,7 +59,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       location: options.location ? `${options.location.lat},${options.location.lng}` : '',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData && !!options.location,
@@ -77,7 +74,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       feedType: 'recommended',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -93,7 +89,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       feedType: 'recommended',
       limit: 10,
       offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
