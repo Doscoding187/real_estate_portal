@@ -6,7 +6,7 @@ import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBadges';
 import { normalizePropertyForUI } from '@/lib/normalizers';
-import { blendSearchResults, SEARCH_BLEND_POLICY_COPY } from '@/lib/searchBlend';
+import { blendSearchResults, resolveSearchBlendPolicy } from '@/lib/searchBlend';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
@@ -319,8 +319,8 @@ export default function SearchResults({
       value: development,
     }));
 
-    return blendSearchResults(propertyItems, derivedDevelopmentItems, sortBy);
-  }, [developmentResults, properties, sortBy]);
+    return blendSearchResults(propertyItems, derivedDevelopmentItems, sortBy, filters);
+  }, [developmentResults, filters, properties, sortBy]);
 
   const pagedResults = useMemo(() => {
     const start = page * limit;
@@ -390,9 +390,10 @@ export default function SearchResults({
   const displayedDevelopmentCount = renderedResults.filter(item => item.kind === 'development').length;
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
+  const blendPolicy = useMemo(() => resolveSearchBlendPolicy(filters, sortBy), [filters, sortBy]);
   const blendPolicyCopy =
     !filters.listingSource && displayedDevelopmentCount > 0 && sortBy === 'relevance'
-      ? SEARCH_BLEND_POLICY_COPY
+      ? blendPolicy.copy
       : undefined;
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
