@@ -415,6 +415,7 @@ export const appRouter = router({
               suburb: z.array(z.string()).optional(),
               propertyType: z.string().optional(),
               listingType: z.string().optional(),
+              listingSource: z.enum(['manual', 'development']).optional(),
               minPrice: z.number().optional(),
               maxPrice: z.number().optional(),
               minBedrooms: z.number().optional(),
@@ -426,6 +427,9 @@ export const appRouter = router({
       .query(async ({ input }) => {
         try {
           const { propertySearchService } = await import('./services/propertySearchService');
+          const { developmentDerivedListingService } = await import(
+            './services/developmentDerivedListingService'
+          );
           const filters = input.filters || {};
           const normalizedFilters = {
             ...filters,
@@ -435,10 +439,76 @@ export const appRouter = router({
                 : filters.propertyType,
             listingType: filters.listingType as any,
           };
-          return await propertySearchService.getFilterCounts(normalizedFilters);
+
+          if (filters.listingSource === 'manual') {
+            return await propertySearchService.getFilterCounts(normalizedFilters);
+          }
+
+          if (filters.listingSource === 'development') {
+            return await developmentDerivedListingService.getFilterCounts(normalizedFilters);
+          }
+
+          const [manualCounts, developmentCounts] = await Promise.all([
+            propertySearchService.getFilterCounts(normalizedFilters),
+            developmentDerivedListingService.getFilterCounts(normalizedFilters),
+          ]);
+
+          const mergeCountMaps = (
+            left: Record<string, number>,
+            right: Record<string, number>,
+          ): Record<string, number> => {
+            const merged = { ...left };
+            Object.entries(right).forEach(([key, value]) => {
+              merged[key] = (merged[key] || 0) + Number(value || 0);
+            });
+            return merged;
+          };
+
+          const locationMap = new Map<string, { name: string; slug: string; count: number }>();
+          [...manualCounts.byLocation, ...developmentCounts.byLocation].forEach(item => {
+            const existing = locationMap.get(item.slug);
+            if (existing) {
+              existing.count += Number(item.count || 0);
+            } else {
+              locationMap.set(item.slug, {
+                name: item.name,
+                slug: item.slug,
+                count: Number(item.count || 0),
+              });
+            }
+          });
+
+          const priceRangeMap = new Map<string, number>();
+          [...manualCounts.byPriceRange, ...developmentCounts.byPriceRange].forEach(item => {
+            priceRangeMap.set(item.range, (priceRangeMap.get(item.range) || 0) + Number(item.count || 0));
+          });
+
+          return {
+            total: Number(manualCounts.total || 0) + Number(developmentCounts.total || 0),
+            byType: mergeCountMaps(manualCounts.byType, developmentCounts.byType),
+            byBedrooms: mergeCountMaps(manualCounts.byBedrooms, developmentCounts.byBedrooms),
+            byLocation: Array.from(locationMap.values())
+              .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name))
+              .slice(0, 12),
+            byPropertyType: mergeCountMaps(
+              manualCounts.byPropertyType,
+              developmentCounts.byPropertyType,
+            ),
+            byPriceRange: Array.from(priceRangeMap.entries()).map(([range, count]) => ({
+              range,
+              count,
+            })),
+          };
         } catch (error) {
           console.error('Error getting filter counts:', error);
-          return { total: 0, byType: {}, byBedrooms: {}, byLocation: [], byPriceRange: [] };
+          return {
+            total: 0,
+            byType: {},
+            byBedrooms: {},
+            byLocation: [],
+            byPropertyType: {},
+            byPriceRange: [],
+          };
         }
       }),
 

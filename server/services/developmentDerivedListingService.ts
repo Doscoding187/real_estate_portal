@@ -21,6 +21,15 @@ interface DevelopmentDerivedListingFilters {
   minBathrooms?: number;
 }
 
+interface DevelopmentDerivedListingFilterCounts {
+  total: number;
+  byType: Record<string, number>;
+  byBedrooms: Record<string, number>;
+  byLocation: Array<{ name: string; slug: string; count: number }>;
+  byPropertyType: Record<string, number>;
+  byPriceRange: Array<{ range: string; count: number }>;
+}
+
 function parseJsonArray(value: unknown): any[] {
   if (Array.isArray(value)) return value;
   if (!value) return [];
@@ -68,6 +77,15 @@ function toNumberOrNull(value: unknown): number | null {
 
 function toNumberOrZero(value: unknown): number {
   return toNumberOrNull(value) ?? 0;
+}
+
+function slugifyText(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function mapStructuralTypeToPropertyType(
@@ -375,6 +393,63 @@ export class DevelopmentDerivedListingService {
       page,
       pageSize,
       hasMore: offset + pageSize < total,
+    };
+  }
+
+  async getFilterCounts(
+    filters: DevelopmentDerivedListingFilters,
+  ): Promise<DevelopmentDerivedListingFilterCounts> {
+    const { items } = await this.searchListings(filters, 'date_desc', 1, 100000);
+
+    const byPropertyType: Record<string, number> = {};
+    const byBedrooms: Record<string, number> = {};
+    const locationMap = new Map<string, { name: string; slug: string; count: number }>();
+    const currentSuburbs = new Set((filters.suburb || []).map(value => value.toLowerCase()));
+
+    items.forEach(item => {
+      byPropertyType[item.propertyType] = (byPropertyType[item.propertyType] || 0) + 1;
+
+      if ((item.bedrooms || 0) > 0) {
+        const key = String(item.bedrooms);
+        byBedrooms[key] = (byBedrooms[key] || 0) + 1;
+      }
+
+      const locationName = String(item.suburb || item.city || '').trim();
+      const locationSlug = slugifyText(locationName);
+      if (locationName && locationSlug && !currentSuburbs.has(locationName.toLowerCase())) {
+        const existing = locationMap.get(locationSlug);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          locationMap.set(locationSlug, {
+            name: locationName,
+            slug: locationSlug,
+            count: 1,
+          });
+        }
+      }
+    });
+
+    const byPriceRange = [
+      { range: 'Under R1M', min: 0, max: 1000000 },
+      { range: 'R1M - R2M', min: 1000000, max: 2000000 },
+      { range: 'R2M - R3M', min: 2000000, max: 3000000 },
+      { range: 'R3M - R5M', min: 3000000, max: 5000000 },
+      { range: 'Over R5M', min: 5000000, max: Number.MAX_SAFE_INTEGER },
+    ].map(({ range, min, max }) => ({
+      range,
+      count: items.filter(item => item.price >= min && item.price <= max).length,
+    }));
+
+    return {
+      total: items.length,
+      byType: { ...byPropertyType },
+      byBedrooms,
+      byLocation: Array.from(locationMap.values())
+        .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name))
+        .slice(0, 12),
+      byPropertyType,
+      byPriceRange,
     };
   }
 }
