@@ -28,6 +28,9 @@ interface PropertyMarker {
   price: number;
   propertyType: string;
   listingType: string;
+  listingSource?: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
+  primaryBadge?: string;
   latitude: number;
   longitude: number;
   mainImage?: string;
@@ -191,7 +194,28 @@ export function GooglePropertyMap({
                 />
               )}
               <h3 className="font-bold text-sm mb-1">{selectedProperty.title}</h3>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    selectedProperty.listingSource === 'development'
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {selectedProperty.listingSource === 'development'
+                    ? 'New Development'
+                    : selectedProperty.listerType === 'private'
+                      ? 'Private Listing'
+                      : 'Listed by Agent'}
+                </span>
+                {selectedProperty.primaryBadge ? (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    {selectedProperty.primaryBadge}
+                  </span>
+                ) : null}
+              </div>
               <p className="text-blue-600 font-bold text-sm mb-1">
+                {selectedProperty.listingSource === 'development' ? 'From ' : ''}
                 {new Intl.NumberFormat('en-ZA', {
                   style: 'currency',
                   currency: 'ZAR',

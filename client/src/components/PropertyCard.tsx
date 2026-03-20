@@ -148,6 +148,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     : isPrivateListing
       ? 'Contact Seller'
       : 'Contact Agent';
+  const displayBadges = Array.isArray(badges)
+    ? badges.filter(badge => !String(badge || '').toLowerCase().startsWith('part of '))
+    : [];
 
   // Determine area label based on property type
   const getAreaLabel = () => {
@@ -222,7 +225,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           )}
 
           {/* Dynamic Badges */}
-          {badges?.map((badge, index) => {
+          {displayBadges.map((badge, index) => {
             const lower = badge.toLowerCase();
             let colorClass = 'bg-blue-600/90 text-white'; // Default Marketing
 

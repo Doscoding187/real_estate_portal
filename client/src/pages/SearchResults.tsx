@@ -4,6 +4,7 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
+import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBadges';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -102,6 +103,8 @@ export default function SearchResults({
   const limit = 12;
   const blendFetchLimit = Math.max(limit, (page + 1) * limit);
   const backendSortOption = sortBy === 'relevance' ? undefined : sortBy;
+  const shouldFetchManualListings = filters.listingSource !== 'development';
+  const shouldFetchDevelopmentListings = filters.listingSource !== 'manual';
 
   // SEO
   useEffect(() => {
@@ -157,29 +160,43 @@ export default function SearchResults({
   );
 
   const { data: propertySearchResults, isLoading: isPropertySearchLoading } =
-    trpc.properties.search.useQuery(propertyQueryInput);
+    trpc.properties.search.useQuery(propertyQueryInput, {
+      enabled: shouldFetchManualListings,
+    });
   const { data: developmentListingResults, isLoading: isDevelopmentSearchLoading } =
-    trpc.properties.searchDevelopmentListings.useQuery(developmentListingQueryInput);
+    trpc.properties.searchDevelopmentListings.useQuery(developmentListingQueryInput, {
+      enabled: shouldFetchDevelopmentListings,
+    });
   const isLoading = isPropertySearchLoading || isDevelopmentSearchLoading;
-  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
-    filters: {
-      city: filters.city,
-      province: filters.province,
-      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      listingType: filters.listingType,
-      propertyType: filters.propertyType,
-      minPrice: filters.minPrice,
-      maxPrice: filters.maxPrice,
-      minBedrooms: filters.minBedrooms,
-      maxBedrooms: filters.maxBedrooms,
+  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery(
+    {
+      filters: {
+        city: filters.city,
+        province: filters.province,
+        suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+        listingType: filters.listingType,
+        propertyType: filters.propertyType,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        minBedrooms: filters.minBedrooms,
+        maxBedrooms: filters.maxBedrooms,
+      },
     },
-  });
+    {
+      enabled: shouldFetchManualListings,
+    },
+  );
 
   const properties =
-    (propertySearchResults as any)?.items ?? (propertySearchResults as any)?.properties ?? [];
-  const developmentResults = (developmentListingResults as any)?.items ?? [];
+    shouldFetchManualListings
+      ? (propertySearchResults as any)?.items ?? (propertySearchResults as any)?.properties ?? []
+      : [];
+  const developmentResults = shouldFetchDevelopmentListings
+    ? (developmentListingResults as any)?.items ?? []
+    : [];
   const resultTotal =
-    ((propertySearchResults as any)?.total ?? 0) + ((developmentListingResults as any)?.total ?? 0);
+    (shouldFetchManualListings ? (propertySearchResults as any)?.total ?? 0 : 0) +
+    (shouldFetchDevelopmentListings ? (developmentListingResults as any)?.total ?? 0 : 0);
   const locationContext = (propertySearchResults as any)?.locationContext;
 
   // Mutations
@@ -391,6 +408,9 @@ export default function SearchResults({
               price: item.normalized.price,
               propertyType: item.normalized.propertyType ?? 'unknown',
               listingType: item.normalized.listingType ?? 'sale',
+              listingSource: (item.normalized as any).listingSource,
+              listerType: (item.normalized as any).listerType,
+              primaryBadge: getPrimaryListingBadge((item.normalized as any).badges),
               latitude,
               longitude,
               mainImage:
@@ -470,7 +490,7 @@ export default function SearchResults({
               <div className="sticky top-24">
                 <SidebarFilters
                   filters={filters}
-                  filterCounts={filterCounts as any}
+                  filterCounts={shouldFetchManualListings ? (filterCounts as any) : undefined}
                   locationContext={locationContext}
                   onFilterChange={handleFilterChange}
                   onSaveSearch={handleSaveSearch}
@@ -516,9 +536,7 @@ export default function SearchResults({
                                 highlights: Array.isArray(normalized.highlights)
                                   ? normalized.highlights
                                   : [],
-                                badges: Array.isArray((normalized as any).badges)
-                                  ? (normalized as any).badges
-                                  : [],
+                                badges: getDisplayListingBadges((normalized as any).badges),
                                 description: normalized.description ?? undefined,
                                 listingSource: (normalized as any).listingSource,
                                 listerType: (normalized as any).listerType,
