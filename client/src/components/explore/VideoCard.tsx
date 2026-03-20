@@ -50,6 +50,8 @@ interface Video {
   highlights?: string[];
   agentName?: string;
   shares?: number;
+  verificationStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
+  trustBand?: 'low' | 'standard' | 'high';
   // Expanded fields for accurate card rendering
   unitSize?: number;
   parking?: string;
@@ -120,12 +122,14 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const [showPropertyDetails, setShowPropertyDetails] = useState(false);
 
-  const toggleLike = trpc.video.toggleLike.useMutation({
+  const discoveryEngage = trpc.discovery.engage.useMutation({
     onSuccess: data => {
-      setLiked(data.liked);
+      if (data?.success) {
+        setLiked(true);
+      }
     },
     onError: error => {
-      console.error('Failed to toggle like:', error);
+      console.error('Failed to record discovery engagement:', error);
     },
   });
 
@@ -170,6 +174,11 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
     if (navigator.share && navigator.canShare(shareData)) {
       try {
         await navigator.share(shareData);
+        await discoveryEngage.mutateAsync({
+          itemId: video.id,
+          action: 'share',
+          context: { mode: 'feed' },
+        });
       } catch (err) {
         console.log('Error sharing:', err);
       }
@@ -177,6 +186,11 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
       // Fallback to clipboard
       try {
         await navigator.clipboard.writeText(window.location.href);
+        await discoveryEngage.mutateAsync({
+          itemId: video.id,
+          action: 'share',
+          context: { mode: 'feed' },
+        });
         // You could show a toast notification here
         console.log('Link copied to clipboard');
       } catch (err) {
@@ -198,7 +212,11 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
   // Double tap to like (TikTok-style)
   const handleDoubleTap = () => {
     if (!liked) {
-      toggleLike.mutate({ videoId: parseInt(video.id) });
+      discoveryEngage.mutate({
+        itemId: video.id,
+        action: 'like',
+        context: { mode: 'feed' },
+      });
       setShowLikeAnimation(true);
       setTimeout(() => setShowLikeAnimation(false), 1000);
     }
@@ -657,7 +675,11 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
         {/* Like Button */}
         <motion.button
           onClick={() => {
-            toggleLike.mutate({ videoId: parseInt(video.id) });
+            discoveryEngage.mutate({
+              itemId: video.id,
+              action: 'like',
+              context: { mode: 'feed' },
+            });
             if (!liked) {
               setShowLikeAnimation(true);
               setTimeout(() => setShowLikeAnimation(false), 1000);
@@ -667,7 +689,7 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
           whileHover="hover"
           whileTap="tap"
           className="flex flex-col items-center"
-          disabled={toggleLike.isPending}
+          disabled={discoveryEngage.isPending}
         >
           <div
             className="p-3 md:p-3.5 rounded-full shadow-xl transition-all duration-300"
