@@ -6,6 +6,7 @@ import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBadges';
 import { normalizePropertyForUI } from '@/lib/normalizers';
+import { blendSearchResults, SEARCH_BLEND_POLICY_COPY } from '@/lib/searchBlend';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
@@ -318,49 +319,7 @@ export default function SearchResults({
       value: development,
     }));
 
-    if (!derivedDevelopmentItems.length) return propertyItems;
-    if (!propertyItems.length) return derivedDevelopmentItems;
-
-    if (sortBy === 'price_asc' || sortBy === 'price_desc') {
-      return [...propertyItems, ...derivedDevelopmentItems].sort((left, right) => {
-        const leftPrice = Number((left.value as any)?.price || 0);
-        const rightPrice = Number((right.value as any)?.price || 0);
-        return sortBy === 'price_asc' ? leftPrice - rightPrice : rightPrice - leftPrice;
-      });
-    }
-
-    if (sortBy === 'date_asc' || sortBy === 'date_desc') {
-      return [...propertyItems, ...derivedDevelopmentItems].sort((left, right) => {
-        const leftDate = new Date((left.value as any)?.listedDate || (left.value as any)?.createdAt || 0);
-        const rightDate = new Date((right.value as any)?.listedDate || (right.value as any)?.createdAt || 0);
-        return sortBy === 'date_asc'
-          ? leftDate.getTime() - rightDate.getTime()
-          : rightDate.getTime() - leftDate.getTime();
-      });
-    }
-
-    const mixed: Array<
-      | { kind: 'property'; value: (typeof propertyItems)[number]['value'] }
-      | { kind: 'development'; value: (typeof derivedDevelopmentItems)[number]['value'] }
-    > = [];
-
-    let propertyIndex = 0;
-    let developmentIndex = 0;
-    while (propertyIndex < propertyItems.length || developmentIndex < derivedDevelopmentItems.length) {
-      if (developmentIndex < derivedDevelopmentItems.length) {
-        mixed.push(derivedDevelopmentItems[developmentIndex]);
-        developmentIndex += 1;
-      }
-
-      let insertedProperties = 0;
-      while (propertyIndex < propertyItems.length && insertedProperties < 3) {
-        mixed.push(propertyItems[propertyIndex]);
-        propertyIndex += 1;
-        insertedProperties += 1;
-      }
-    }
-
-    return mixed;
+    return blendSearchResults(propertyItems, derivedDevelopmentItems, sortBy);
   }, [developmentResults, properties, sortBy]);
 
   const pagedResults = useMemo(() => {
@@ -431,6 +390,10 @@ export default function SearchResults({
   const displayedDevelopmentCount = renderedResults.filter(item => item.kind === 'development').length;
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
+  const blendPolicyCopy =
+    !filters.listingSource && displayedDevelopmentCount > 0 && sortBy === 'relevance'
+      ? SEARCH_BLEND_POLICY_COPY
+      : undefined;
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
@@ -464,6 +427,7 @@ export default function SearchResults({
                 resultCount={resultCount}
                 displayedPropertyCount={displayedResultCount}
                 developmentCount={displayedDevelopmentCount}
+                blendPolicyCopy={blendPolicyCopy}
                 isLoading={isLoading}
                 viewMode={viewMode}
                 sortBy={sortBy}
