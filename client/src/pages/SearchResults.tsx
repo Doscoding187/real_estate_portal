@@ -175,15 +175,13 @@ export default function SearchResults({
         province: filters.province,
         suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
         listingType: filters.listingType,
+        listingSource: filters.listingSource,
         propertyType: filters.propertyType,
         minPrice: filters.minPrice,
         maxPrice: filters.maxPrice,
         minBedrooms: filters.minBedrooms,
         maxBedrooms: filters.maxBedrooms,
       },
-    },
-    {
-      enabled: shouldFetchManualListings,
     },
   );
 
@@ -490,7 +488,7 @@ export default function SearchResults({
               <div className="sticky top-24">
                 <SidebarFilters
                   filters={filters}
-                  filterCounts={shouldFetchManualListings ? (filterCounts as any) : undefined}
+                  filterCounts={filterCounts as any}
                   locationContext={locationContext}
                   onFilterChange={handleFilterChange}
                   onSaveSearch={handleSaveSearch}
