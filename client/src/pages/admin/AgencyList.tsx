@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,7 @@ export default function AgencyList() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   const { data, isLoading, refetch } = trpc.agency.list.useQuery({
     search: searchTerm || undefined,
@@ -53,7 +55,7 @@ export default function AgencyList() {
   });
 
   // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     setLocation('/login');
     return null;
   }
@@ -81,7 +83,7 @@ export default function AgencyList() {
               <p className="text-muted-foreground">Manage real estate agencies on the platform</p>
             </div>
           </div>
-          <Button onClick={() => setLocation('/admin/agencies/create')}>
+          <Button onClick={() => setLocation('/admin/agencies/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Create Agency
           </Button>

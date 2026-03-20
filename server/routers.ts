@@ -5,6 +5,9 @@ import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from '../shared/db-enu
 import { systemRouter } from './_core/systemRouter';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import * as db from './db';
+import { getDb } from './db-connection';
+import { developments, developers, developerBrandProfiles, agents, agencies } from '../drizzle/schema';
+import { eq } from 'drizzle-orm';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
 import { userRouter } from './userRouter';
@@ -343,6 +346,56 @@ export const appRouter = router({
         };
       }),
 
+    searchDevelopmentListings: publicProcedure
+      .input(
+        z.object({
+          province: z.string().optional(),
+          city: z.string().optional(),
+          suburb: z.array(z.string()).optional(),
+          propertyType: z
+            .enum(['house', 'apartment', 'townhouse', 'plot', 'commercial'])
+            .optional(),
+          listingType: z.enum(['sale', 'rent']).optional(),
+          minPrice: z.number().optional(),
+          maxPrice: z.number().optional(),
+          minBedrooms: z.number().optional(),
+          maxBedrooms: z.number().optional(),
+          minBathrooms: z.number().optional(),
+          limit: z.number().default(20),
+          offset: z.number().default(0),
+          sortOption: z
+            .enum(['price_asc', 'price_desc', 'date_desc', 'date_asc', 'suburb_asc', 'suburb_desc'])
+            .optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { developmentDerivedListingService } = await import(
+          './services/developmentDerivedListingService'
+        );
+
+        const filters = {
+          province: input.province,
+          city: input.city,
+          suburb: input.suburb,
+          propertyType: input.propertyType ? [input.propertyType as any] : undefined,
+          listingType: input.listingType as any,
+          minPrice: input.minPrice,
+          maxPrice: input.maxPrice,
+          minBedrooms: input.minBedrooms,
+          maxBedrooms: input.maxBedrooms,
+          minBathrooms: input.minBathrooms,
+        };
+
+        const page = Math.floor(input.offset / input.limit) + 1;
+
+        return await developmentDerivedListingService.searchListings(
+          filters,
+          (input.sortOption as any) || 'date_desc',
+          page,
+          input.limit,
+        );
+      }),
+
     featured: publicProcedure
       .input(
         z.object({
@@ -419,20 +472,19 @@ export const appRouter = router({
       .query(async ({ input }) => {
         await db.incrementPropertyViews(input.id);
 
+        const drizzleDb = await getDb();
+
         // Try listings table first (new)
         const listing = await db.getListingById(input.id);
         if (listing) {
           const rawImages = await db.getListingMedia(input.id);
 
-          // Transform images to include imageUrl for PropertyImageGallery compatibility
-          // S3 bucket configuration
           const bucketName = process.env.S3_BUCKET_NAME || 'listify-properties-sa';
           const awsRegion = process.env.AWS_REGION || 'af-south-1';
           const cdnUrl =
             process.env.CLOUDFRONT_URL || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
 
           const images = rawImages.map(img => {
-            // If originalUrl is already a full URL, use it; otherwise construct from bucket
             const imageUrl = img.originalUrl.startsWith('http')
               ? img.originalUrl
               : `${cdnUrl}/${img.originalUrl}`;
@@ -444,15 +496,134 @@ export const appRouter = router({
             };
           });
 
-          // Transform listing to match property structure for backward compatibility
           const propertyDetails = (listing.propertyDetails as any) || {};
+          const resolvedDevelopmentId = Number(
+            propertyDetails.developmentId || (listing as any).developmentId || 0,
+          );
+          const resolvedAgentId = Number((listing as any).agentId || 0);
+
+          let development: any = null;
+          let developerBrand: any = null;
+          let agent: any = null;
+
+          if (drizzleDb && Number.isFinite(resolvedAgentId) && resolvedAgentId > 0) {
+            const [agentRow] = await drizzleDb
+              .select({
+                id: agents.id,
+                firstName: agents.firstName,
+                lastName: agents.lastName,
+                displayName: agents.displayName,
+                profileImage: agents.profileImage,
+                phone: agents.phone,
+                whatsapp: agents.whatsapp,
+                email: agents.email,
+                agencyId: agencies.id,
+                agencyName: agencies.name,
+              })
+              .from(agents)
+              .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+              .where(eq(agents.id, resolvedAgentId))
+              .limit(1);
+
+            if (agentRow) {
+              const name =
+                String(agentRow.displayName || '').trim() ||
+                [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
+              agent = {
+                id: String(agentRow.id),
+                name: name || 'Agent',
+                agency: String(agentRow.agencyName || ''),
+                phone: String(agentRow.phone || ''),
+                whatsapp: String(agentRow.whatsapp || ''),
+                email: String(agentRow.email || ''),
+                image: agentRow.profileImage || undefined,
+                agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
+              };
+            }
+          }
+
+          if (drizzleDb && Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
+            const [dev] = await drizzleDb
+              .select({
+                id: developments.id,
+                name: developments.name,
+                slug: developments.slug,
+                developerId: developments.developerId,
+                developerBrandProfileId: developments.developerBrandProfileId,
+                developerName: developers.name,
+              })
+              .from(developments)
+              .leftJoin(developers, eq(developments.developerId, developers.id))
+              .where(eq(developments.id, resolvedDevelopmentId))
+              .limit(1);
+
+            if (dev) {
+              development = {
+                id: Number(dev.id),
+                name: dev.name,
+                slug: dev.slug || null,
+                developerId: dev.developerId ?? null,
+                developerName: dev.developerName ?? null,
+              };
+
+              const resolvedBrandProfileId = Number(
+                propertyDetails.developerBrandProfileId || dev.developerBrandProfileId || 0,
+              );
+
+              if (Number.isFinite(resolvedBrandProfileId) && resolvedBrandProfileId > 0) {
+                const [brand] = await drizzleDb
+                  .select({
+                    id: developerBrandProfiles.id,
+                    brandName: developerBrandProfiles.brandName,
+                    slug: developerBrandProfiles.slug,
+                    logoUrl: developerBrandProfiles.logoUrl,
+                    about: developerBrandProfiles.about,
+                    headOfficeLocation: developerBrandProfiles.headOfficeLocation,
+                    websiteUrl: developerBrandProfiles.websiteUrl,
+                    publicContactEmail: developerBrandProfiles.publicContactEmail,
+                    brandTier: developerBrandProfiles.brandTier,
+                    propertyFocus: developerBrandProfiles.propertyFocus,
+                  })
+                  .from(developerBrandProfiles)
+                  .where(eq(developerBrandProfiles.id, resolvedBrandProfileId))
+                  .limit(1);
+
+                if (brand) {
+                  developerBrand = brand as any;
+                }
+              }
+            }
+          } else if (drizzleDb) {
+            const resolvedBrandProfileId = Number(propertyDetails.developerBrandProfileId || 0);
+            if (Number.isFinite(resolvedBrandProfileId) && resolvedBrandProfileId > 0) {
+              const [brand] = await drizzleDb
+                .select({
+                  id: developerBrandProfiles.id,
+                  brandName: developerBrandProfiles.brandName,
+                  slug: developerBrandProfiles.slug,
+                  logoUrl: developerBrandProfiles.logoUrl,
+                  about: developerBrandProfiles.about,
+                  headOfficeLocation: developerBrandProfiles.headOfficeLocation,
+                  websiteUrl: developerBrandProfiles.websiteUrl,
+                  publicContactEmail: developerBrandProfiles.publicContactEmail,
+                  brandTier: developerBrandProfiles.brandTier,
+                  propertyFocus: developerBrandProfiles.propertyFocus,
+                })
+                .from(developerBrandProfiles)
+                .where(eq(developerBrandProfiles.id, resolvedBrandProfileId))
+                .limit(1);
+
+              if (brand) {
+                developerBrand = brand as any;
+              }
+            }
+          }
+
           const transformedProperty = {
             ...listing,
-            // Map pricing fields
             price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
-            listingType: listing.action, // 'sell', 'rent', 'auction'
+            listingType: listing.action,
             transactionType: listing.action,
-            // Extract property details from JSON
             bedrooms: propertyDetails.bedrooms || 0,
             bathrooms: propertyDetails.bathrooms || 0,
             area:
@@ -464,7 +635,6 @@ export const appRouter = router({
             amenities:
               propertyDetails.amenitiesFeatures || propertyDetails.propertyHighlights || [],
             features: propertyDetails.propertyHighlights || propertyDetails.amenitiesFeatures || [],
-            // Map property settings for specs display
             propertySettings: {
               ownershipType: propertyDetails.ownershipType,
               powerBackup: propertyDetails.powerBackup,
@@ -476,11 +646,19 @@ export const appRouter = router({
               petFriendly: propertyDetails.petFriendly,
               electricitySupply: propertyDetails.electricitySupply,
               additionalRooms: propertyDetails.additionalRooms,
+              developmentName: propertyDetails.developmentName,
             },
-            // Map location fields
             zipCode: listing.postalCode,
-            // Keep original fields
             ownerId: listing.ownerId,
+            listingSource: 'manual',
+            listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
+            developmentId:
+              Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0
+                ? resolvedDevelopmentId
+                : undefined,
+            development: development || undefined,
+            developerBrand: developerBrand || undefined,
+            agent: agent || undefined,
           };
 
           return { property: transformedProperty, images };
@@ -490,7 +668,6 @@ export const appRouter = router({
         const property = await db.getPropertyById(input.id);
         const rawImages = await db.getPropertyImages(input.id);
 
-        // Transform legacy images with CloudFront URL
         const bucketName = ENV.s3BucketName || 'listify-properties-sa';
         const awsRegion = ENV.awsRegion || 'eu-north-1';
         const cdnUrl = ENV.cloudFrontUrl || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
@@ -498,14 +675,11 @@ export const appRouter = router({
         const images = rawImages.map(img => ({
           ...img,
           imageUrl: img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`,
-          // Alias for components expecting 'url'
           url: img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`,
         }));
 
-        // Parse propertySettings to get amenities
         let amenities: string[] = [];
         try {
-          // Add existing amenities if it's a valid string (not JSON)
           if (typeof property.amenities === 'string' && !property.amenities.startsWith('[')) {
             amenities.push(property.amenities);
           } else if (typeof property.amenities === 'string') {
@@ -521,19 +695,146 @@ export const appRouter = router({
             if (settings.propertyHighlights && Array.isArray(settings.propertyHighlights)) {
               amenities = [...amenities, ...settings.propertyHighlights];
             }
-            // securityFeatures and additionalRooms are handled separately by frontend via propertySettings
           }
         } catch (e) {
           console.error('Failed to parse legacy amenities', e);
         }
 
-        // Deduplicate
         const uniqueAmenities = Array.from(new Set(amenities));
+
+        let development: any = null;
+        let developerBrand: any = null;
+        let agent: any = null;
+
+        if (drizzleDb) {
+          const resolvedDevelopmentId = Number((property as any).developmentId || 0);
+          const resolvedBrandProfileIdCandidate = Number(
+            (property as any).developerBrandProfileId || 0,
+          );
+          const resolvedAgentId = Number((property as any).agentId || 0);
+
+          if (Number.isFinite(resolvedAgentId) && resolvedAgentId > 0) {
+            const [agentRow] = await drizzleDb
+              .select({
+                id: agents.id,
+                firstName: agents.firstName,
+                lastName: agents.lastName,
+                displayName: agents.displayName,
+                profileImage: agents.profileImage,
+                phone: agents.phone,
+                whatsapp: agents.whatsapp,
+                email: agents.email,
+                agencyId: agencies.id,
+                agencyName: agencies.name,
+              })
+              .from(agents)
+              .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+              .where(eq(agents.id, resolvedAgentId))
+              .limit(1);
+
+            if (agentRow) {
+              const name =
+                String(agentRow.displayName || '').trim() ||
+                [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
+              agent = {
+                id: String(agentRow.id),
+                name: name || 'Agent',
+                agency: String(agentRow.agencyName || ''),
+                phone: String(agentRow.phone || ''),
+                whatsapp: String(agentRow.whatsapp || ''),
+                email: String(agentRow.email || ''),
+                image: agentRow.profileImage || undefined,
+                agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
+              };
+            }
+          }
+
+          if (Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
+            const [dev] = await drizzleDb
+              .select({
+                id: developments.id,
+                name: developments.name,
+                slug: developments.slug,
+                developerId: developments.developerId,
+                developerBrandProfileId: developments.developerBrandProfileId,
+                developerName: developers.name,
+              })
+              .from(developments)
+              .leftJoin(developers, eq(developments.developerId, developers.id))
+              .where(eq(developments.id, resolvedDevelopmentId))
+              .limit(1);
+
+            if (dev) {
+              development = {
+                id: Number(dev.id),
+                name: dev.name,
+                slug: dev.slug || null,
+                developerId: dev.developerId ?? null,
+                developerName: dev.developerName ?? null,
+              };
+            }
+
+            const resolvedBrandProfileId = Number(
+              resolvedBrandProfileIdCandidate || dev?.developerBrandProfileId || 0,
+            );
+            if (Number.isFinite(resolvedBrandProfileId) && resolvedBrandProfileId > 0) {
+              const [brand] = await drizzleDb
+                .select({
+                  id: developerBrandProfiles.id,
+                  brandName: developerBrandProfiles.brandName,
+                  slug: developerBrandProfiles.slug,
+                  logoUrl: developerBrandProfiles.logoUrl,
+                  about: developerBrandProfiles.about,
+                  headOfficeLocation: developerBrandProfiles.headOfficeLocation,
+                  websiteUrl: developerBrandProfiles.websiteUrl,
+                  publicContactEmail: developerBrandProfiles.publicContactEmail,
+                  brandTier: developerBrandProfiles.brandTier,
+                  propertyFocus: developerBrandProfiles.propertyFocus,
+                })
+                .from(developerBrandProfiles)
+                .where(eq(developerBrandProfiles.id, resolvedBrandProfileId))
+                .limit(1);
+
+              if (brand) {
+                developerBrand = brand as any;
+              }
+            }
+          } else if (
+            Number.isFinite(resolvedBrandProfileIdCandidate) &&
+            resolvedBrandProfileIdCandidate > 0
+          ) {
+            const [brand] = await drizzleDb
+              .select({
+                id: developerBrandProfiles.id,
+                brandName: developerBrandProfiles.brandName,
+                slug: developerBrandProfiles.slug,
+                logoUrl: developerBrandProfiles.logoUrl,
+                about: developerBrandProfiles.about,
+                headOfficeLocation: developerBrandProfiles.headOfficeLocation,
+                websiteUrl: developerBrandProfiles.websiteUrl,
+                publicContactEmail: developerBrandProfiles.publicContactEmail,
+                brandTier: developerBrandProfiles.brandTier,
+                propertyFocus: developerBrandProfiles.propertyFocus,
+              })
+              .from(developerBrandProfiles)
+              .where(eq(developerBrandProfiles.id, resolvedBrandProfileIdCandidate))
+              .limit(1);
+
+            if (brand) {
+              developerBrand = brand as any;
+            }
+          }
+        }
 
         return {
           property: {
             ...property,
             amenities: uniqueAmenities,
+            listingSource: 'manual',
+            listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
+            development: development || undefined,
+            developerBrand: developerBrand || undefined,
+            agent: agent || undefined,
           },
           images,
         };

@@ -26,6 +26,11 @@ export interface CaptureBrandLeadInput {
   developerBrandProfileId: number;
   developmentId?: number;
   propertyId?: number;
+  unitId?: string;
+  unitName?: string;
+  unitPriceFrom?: number;
+  unitBedrooms?: number;
+  unitBathrooms?: number;
   name: string;
   email: string;
   phone?: string;
@@ -90,6 +95,11 @@ async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRouti
     developerBrandProfileId: input.developerBrandProfileId,
     developmentId: input.developmentId || null,
     propertyId: input.propertyId || null,
+    unitId: input.unitId || null,
+    unitName: input.unitName || null,
+    unitPriceFrom: input.unitPriceFrom ?? null,
+    unitBedrooms: input.unitBedrooms ?? null,
+    unitBathrooms: input.unitBathrooms ?? null,
     name: input.name,
     email: input.email,
     phone: input.phone || null,

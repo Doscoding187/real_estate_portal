@@ -26,7 +26,7 @@ export function Navbar() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasIdentity);
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
@@ -73,6 +73,8 @@ export function Navbar() {
       : []),
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
+    { href: '/services', label: 'Services' },
+    { href: '/distribution-network', label: 'Referrals', icon: Briefcase },
     { href: '/agents', label: 'Agents' },
     { href: '/listing-template', label: 'Listing Template' },
     { href: '/dashboard', label: 'My Properties', protected: true },

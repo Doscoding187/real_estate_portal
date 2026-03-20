@@ -94,9 +94,7 @@ export const subscriptionRouter = router({
   togglePlanStatus: protectedProcedure.input(z.any()).mutation(async () => ({ ok: true })),
   getPaymentProofs: protectedProcedure.input(z.any()).query(async () => ({ proofs: [] as any[] })),
   verifyPayment: protectedProcedure.input(z.any()).mutation(async () => ({ ok: true })),
-  getCurrentSubscription: protectedProcedure
-    .input(z.void())
-    .query(async () => ({ subscription: null })),
+  getCurrentSubscription: protectedProcedure.input(z.void()).query(async () => ({ subscription: null })),
   getMyInvoices: protectedProcedure
     .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }))
     .query(async () => ({ invoices: [] as any[], total: 0 })),
@@ -313,10 +311,7 @@ export const subscriptionRouter = router({
   getUpgradePrompt: protectedProcedure
     .input(z.object({ blocked_feature: z.string() }))
     .query(async ({ ctx, input }) => {
-      const prompt = await subscriptionService.getUpgradePrompt(
-        getUserId(ctx),
-        input.blocked_feature,
-      );
+      const prompt = await subscriptionService.getUpgradePrompt(getUserId(ctx), input.blocked_feature);
       return prompt;
     }),
 

@@ -664,6 +664,11 @@ export interface PropertyShort extends ExploreShort {
     logo?: string;
     phone?: string;
     whatsapp?: string;
+    actorType?: 'agent' | 'developer' | 'contractor' | 'finance_partner' | 'user';
+    verificationStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
+    trustBand?: 'low' | 'standard' | 'high';
+    momentumLabel?: 'rising' | 'stable' | 'cooling';
+    lowReports?: boolean;
   };
 }
 
@@ -731,6 +736,8 @@ export interface Property {
   province: string;
   propertyType: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
   listingType: 'sale' | 'rent';
+  listingSource?: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
   bedrooms?: number;
   bathrooms?: number;
   erfSize?: number; // in m²
@@ -878,6 +885,55 @@ export interface SearchResults {
       suburbId?: number;
     };
   };
+}
+
+export interface DevelopmentDerivedListing {
+  id: string;
+  unitTypeId: string;
+  developmentId: number;
+  title: string;
+  price: number;
+  priceTo?: number;
+  city: string;
+  suburb: string;
+  province: string;
+  propertyType: Property['propertyType'];
+  listingType: Property['listingType'];
+  transactionType: 'for_sale' | 'for_rent' | 'auction';
+  listingSource: 'development';
+  bedrooms?: number;
+  bathrooms?: number;
+  floorSize?: number;
+  erfSize?: number;
+  image?: string | null;
+  images?: ImageUrls[];
+  badges?: string[];
+  availableUnits?: number;
+  completionDate?: string | null;
+  listedDate: Date;
+  latitude?: number;
+  longitude?: number;
+  development: {
+    id: number;
+    name: string;
+    slug?: string | null;
+    status?: string | null;
+  };
+  developerBrand: {
+    id?: number | null;
+    brandName: string;
+    slug?: string | null;
+    logoUrl?: string | null;
+    publicContactEmail?: string | null;
+  };
+}
+
+export interface DevelopmentDerivedListingSearchResults {
+  items: DevelopmentDerivedListing[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 }
 
 // Saved search

@@ -173,7 +173,9 @@ export async function extractVideoMetadata(
       }),
     );
     fileSize = head.ContentLength || 0;
-  } catch {}
+  } catch (_error) {
+    // Continue with conservative defaults when metadata lookup fails.
+  }
 
   const duration = providedDuration ?? 30;
   const bitrate = fileSize > 0 ? Math.floor((fileSize * 8) / duration) : 5_000_000;

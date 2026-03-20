@@ -1,5 +1,6 @@
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { SimplePropertyListingCard } from '@/components/SimplePropertyListingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import {
   Carousel,
@@ -9,11 +10,31 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import type { HeroTab } from '@/types/hero';
+import type { SimplePropertyListingCardProps } from '@/components/SimplePropertyListingCard';
 
 type HomeTrendingSectionProps = {
   selectedProvince: string;
   onProvinceChange: (province: string) => void;
   activeHeroTab: HeroTab;
+};
+
+type TrendingItem = {
+  id: string;
+  kind: 'development' | 'listing' | 'placeholder';
+  title: string;
+  city: string;
+  suburb: string;
+  priceFrom: number;
+  priceTo: number;
+  image: string;
+  href: string;
+  listingType?: SimplePropertyListingCardProps['listingType'];
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  area?: number | null;
+  yardSize?: number | null;
+  developmentName?: string | null;
+  badges?: string[];
 };
 
 const PROVINCES = [
@@ -77,31 +98,7 @@ export function HomeTrendingSection({
     limit: 5,
   });
 
-  const buildPlaceholders = (count: number) => {
-    const labelByTab: Record<HeroTab, string> = {
-      buy: 'Residential Listing',
-      rent: 'Rental Listing',
-      developments: 'Residential Development',
-      shared_living: 'Shared Living',
-      plot_land: 'Land Development',
-      commercial: 'Commercial Listing',
-    };
-    const label = labelByTab[activeHeroTab] || 'Property';
-    return Array.from({ length: Math.max(0, count) }, (_, idx) => ({
-      id: `placeholder-${activeHeroTab}-${idx + 1}`,
-      kind: 'placeholder' as const,
-      title: `${label} Preview ${idx + 1}`,
-      city: selectedProvince,
-      suburb: 'Sample Area',
-      priceFrom: 0,
-      priceTo: 0,
-      image: '',
-      href: '/new-developments',
-    }));
-  };
-
-  const liveItems = (trendingData?.items || []).slice(0, 5);
-  const trendingItems = [...liveItems, ...buildPlaceholders(5 - liveItems.length)].slice(0, 5);
+  const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, 5);
 
   return (
     <section className="py-16">
@@ -110,7 +107,9 @@ export function HomeTrendingSection({
           <span className="text-lg">🔥</span>
           <span className="text-sm font-semibold text-orange-600">Trending Now</span>
         </div>
-        <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{heroContent.title}</h2>
+        <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+          {heroContent.title}
+        </h2>
         <p className="text-slate-600 max-w-2xl text-xs md:text-sm">{heroContent.subtitle}</p>
       </div>
 
@@ -145,24 +144,43 @@ export function HomeTrendingSection({
                     <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
                       #{index + 1}
                     </span>
-                    <SimpleDevelopmentCard
-                      id={item.id}
-                      title={item.title}
-                      city={item.city}
-                      suburb={item.suburb}
-                      priceRange={{
-                        min: item.priceFrom,
-                        max: item.priceTo,
-                      }}
-                      image={
-                        item.kind === 'development'
-                          ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                          : item.image || ''
-                      }
-                      slug={item.kind === 'development' ? item.id : undefined}
-                      href={item.href}
-                      isHotSelling={item.kind !== 'placeholder'}
-                    />
+                    {item.kind === 'listing' ? (
+                      <SimplePropertyListingCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        price={item.priceFrom}
+                        listingType={item.listingType}
+                        image={item.image || ''}
+                        href={item.href}
+                        bedrooms={item.bedrooms}
+                        bathrooms={item.bathrooms}
+                        area={item.area}
+                        yardSize={item.yardSize}
+                        developmentName={item.developmentName}
+                        badges={item.badges}
+                      />
+                    ) : (
+                      <SimpleDevelopmentCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        priceRange={{
+                          min: item.priceFrom,
+                          max: item.priceTo,
+                        }}
+                        image={
+                          item.kind === 'development'
+                            ? getPrimaryDevelopmentImageUrl(item.image) || ''
+                            : item.image || ''
+                        }
+                        slug={item.kind === 'development' ? item.id : undefined}
+                        href={item.href}
+                        isHotSelling={item.kind !== 'placeholder'}
+                      />
+                    )}
                   </div>
                 </CarouselItem>
               ))}
@@ -173,7 +191,7 @@ export function HomeTrendingSection({
         </div>
       ) : (
         <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
-          No developments found.
+          No properties found.
         </div>
       )}
     </section>

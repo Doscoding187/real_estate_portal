@@ -33,6 +33,12 @@ export default function UserDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
+  const normalizeRole = (value?: string | null) => {
+    if (value === 'user') return 'visitor';
+    if (value === 'admin') return 'super_admin';
+    return value;
+  };
+  const normalizedRole = normalizeRole(user?.role);
 
   // Fetch user dashboard data
   const { data: favorites, isLoading: favoritesLoading } = trpc.favorites.list.useQuery();
@@ -45,7 +51,7 @@ export default function UserDashboard() {
   // Get comparison properties details
   const allPropertyItems = Array.isArray(allProperties)
     ? allProperties
-    : ((allProperties as any)?.items ?? (allProperties as any)?.results ?? []);
+    : (allProperties as any)?.items ?? (allProperties as any)?.results ?? [];
   const comparisonProperties =
     allPropertyItems.filter((p: any) => comparedProperties.includes(p.id)) || [];
 
@@ -73,7 +79,7 @@ export default function UserDashboard() {
     return null;
   }
 
-  if (user?.role !== 'visitor') {
+  if (normalizedRole !== 'visitor') {
     setLocation('/dashboard');
     return null;
   }

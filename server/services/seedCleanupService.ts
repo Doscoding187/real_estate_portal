@@ -249,13 +249,7 @@ export async function handleSeedDeletionOnRegistration(
   });
 
   // 1. Find seed candidate (throws on ambiguous match)
-  let candidate: SeedCandidate | null;
-  try {
-    candidate = await findSeedCandidate(brandName, generatedSlug, seedBatchId);
-  } catch (error) {
-    // Ambiguous match - re-throw to block registration
-    throw error;
-  }
+  const candidate = await findSeedCandidate(brandName, generatedSlug, seedBatchId);
 
   // 2. No match - proceed normally
   if (!candidate) {

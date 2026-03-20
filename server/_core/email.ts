@@ -28,7 +28,16 @@ export async function sendVerificationEmail({
   verificationToken,
   name,
 }: SendVerificationEmailParams) {
-  const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+  const rawApiBaseUrl =
+    process.env.VITE_API_URL ||
+    process.env.API_URL ||
+    process.env.RAILWAY_PUBLIC_DOMAIN ||
+    process.env.APP_URL ||
+    'http://localhost:3000';
+  const normalizedApiBaseUrl = rawApiBaseUrl.startsWith('http')
+    ? rawApiBaseUrl.replace(/\/+$/, '')
+    : `https://${rawApiBaseUrl.replace(/\/+$/, '')}`;
+  const verificationUrl = `${normalizedApiBaseUrl}/api/auth/verify-email?token=${verificationToken}`;
 
   const resend = getResend();
   if (!resend) {

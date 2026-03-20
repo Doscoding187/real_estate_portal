@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useGuestActivity } from '@/contexts/GuestActivityContext';
+import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -168,7 +169,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   }
 
   const { property, images } = data as any;
-  const agent = (data as any)?.agent;
+  const agent = (property as any)?.agent || (data as any)?.agent;
 
   // Safely parse amenities with error handling
   let amenitiesList: string[] = [];
@@ -229,6 +230,101 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     console.error('Failed to parse property settings', e);
   }
 
+  const developerBrand =
+    ((property as any).developerBrand || (property as any).developerBrandProfile) as any;
+  const development = (property as any).development as any;
+  const developmentName = String(development?.name || '').trim();
+  const developmentHref = developmentName
+    ? development?.slug
+      ? `/development/${development.slug}`
+      : development?.id
+        ? `/development/${development.id}`
+        : null
+    : null;
+  const listingSource =
+    (property as any).listingSource === 'development'
+      ? 'development'
+      : (property as any).listingSource === 'manual'
+        ? 'manual'
+        : !agent && !!developerBrand
+          ? 'development'
+          : 'manual';
+  const listerType =
+    (property as any).listerType === 'agency' ||
+    (property as any).listerType === 'agent' ||
+    (property as any).listerType === 'private'
+      ? (property as any).listerType
+      : agent
+        ? 'agent'
+        : listingSource === 'manual'
+          ? 'private'
+          : undefined;
+  const isDeveloperListing = listingSource === 'development';
+  const isPrivateListing = listingSource === 'manual' && listerType === 'private';
+  const isRental = String(property.listingType || '').toLowerCase() === 'rent';
+  const contactRoleLabel = isDeveloperListing
+    ? 'Developer'
+    : isPrivateListing
+      ? 'Seller'
+      : 'Agent';
+  const contactSectionTitle = isDeveloperListing
+    ? 'Developer Team'
+    : isPrivateListing
+      ? 'Private Seller'
+      : 'Agent Overview';
+  const contactBadgeLabel = isDeveloperListing
+    ? 'DEVELOPER TEAM'
+    : isPrivateListing
+      ? 'PRIVATE SELLER'
+      : 'PRO AGENT';
+  const contactIdentity =
+    agent ||
+    (isDeveloperListing
+      ? {
+          id: undefined,
+          agencyId: undefined,
+          name: String(developerBrand.brandName || '').trim() || 'Developer Team',
+          image: developerBrand.logoUrl,
+          phone: undefined,
+          whatsapp: undefined,
+          email: developerBrand?.publicContactEmail,
+        }
+      : {
+          id: undefined,
+          agencyId: undefined,
+          name: 'Private Seller',
+          image: undefined,
+          phone: undefined,
+          whatsapp: undefined,
+          email: undefined,
+        });
+  const formatBadgeLabel = (badge: string) =>
+    BADGE_TEMPLATES[badge as keyof typeof BADGE_TEMPLATES]?.label ||
+    badge
+      .split(/[_-\s]+/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  const propertyBadges = [
+    ...(Array.isArray((property as any).badges) ? (property as any).badges : []),
+    ...(Array.isArray((specs as any).badges) ? (specs as any).badges : []),
+  ]
+    .map((badge: string) => formatBadgeLabel(String(badge || '').trim()))
+    .filter(Boolean)
+    .filter((badge: string, index: number, list: string[]) => list.indexOf(badge) === index);
+  const listingContextLabel = isDeveloperListing
+    ? 'New Development'
+    : isPrivateListing
+      ? 'Private Listing'
+      : 'Listed by Agent';
+  const priceLabel =
+    Number(property.price) > 0
+      ? isRental
+        ? `${formatCurrency(property.price, { compact: false })}/month`
+        : isDeveloperListing
+          ? `From ${formatCurrency(property.price, { compact: false })}`
+          : formatCurrency(property.price, { compact: false })
+      : 'Price on request';
+
   const similarProperties = (similarPropertiesData ?? []).filter(p => p.id !== propertyId);
 
   return (
@@ -259,10 +355,32 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             )}
             <Badge
               variant="secondary"
-              className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+              className={
+                isDeveloperListing
+                  ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
+              }
             >
-              Ready to move
+              {listingContextLabel}
             </Badge>
+            {propertyBadges.length > 0 ? (
+              propertyBadges.slice(0, 2).map((badge: string) => (
+                <Badge
+                  key={badge}
+                  variant="secondary"
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+                >
+                  {badge}
+                </Badge>
+              ))
+            ) : (
+              <Badge
+                variant="secondary"
+                className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+              >
+                Ready to move
+              </Badge>
+            )}
           </div>
 
           {/* Title Row with Action Buttons */}
@@ -275,6 +393,25 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   {property.address}, {property.city}, {property.province}
                 </span>
               </div>
+              {developmentName && (
+                <div className="mt-2 flex items-center gap-2 text-slate-500">
+                  <Home className="h-4 w-4" />
+                  {developmentHref ? (
+                    <button
+                      type="button"
+                      className="text-sm hover:text-blue-600 hover:underline transition-colors truncate"
+                      onClick={() => setLocation(developmentHref)}
+                      title={developmentName}
+                    >
+                      Part of {developmentName}
+                    </button>
+                  ) : (
+                    <span className="text-sm truncate" title={developmentName}>
+                      Part of {developmentName}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -304,7 +441,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
                 onClick={() => setIsContactModalOpen(true)}
               >
-                Contact Agent
+                Contact {contactRoleLabel}
               </Button>
             </div>
           </div>
@@ -326,17 +463,19 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             {/* Price Section */}
             <div>
               <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
-                {formatCurrency(property.price, { compact: false })}
+                {priceLabel}
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-500 font-medium">Estimated Repayment:</span>
-                <span className="text-slate-900 font-bold">
-                  {formatCurrency(Math.round(property.price * 0.0095), { compact: false })}/Pm
-                </span>
-                <button className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1">
-                  Get Pre-Qualified
-                </button>
-              </div>
+              {!isRental && Number(property.price) > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-500 font-medium">Estimated Repayment:</span>
+                  <span className="text-slate-900 font-bold">
+                    {formatCurrency(Math.round(property.price * 0.0095), { compact: false })}/Pm
+                  </span>
+                  <button className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1">
+                    Get Pre-Qualified
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Property Details */}
@@ -607,74 +746,98 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               </Card>
             )}
 
-            {/* 2.3 Agent Overview */}
-            {/* 2.3 Agent Overview */}
             <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
               <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                <h3 className="text-fluid-h3 font-bold text-slate-900">Agent Overview</h3>
+                <h3 className="text-fluid-h3 font-bold text-slate-900">{contactSectionTitle}</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Left Column: Agent Profile Card */}
+                {/* Left Column: Contact Profile Card */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-                  {/* Header Area */}
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
-                      {agent?.image ? (
+                      {contactIdentity?.image ? (
                         <img
-                          src={agent.image}
-                          alt={agent.name}
+                          src={contactIdentity.image}
+                          alt={contactIdentity.name}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
-                          {agent?.name?.charAt(0) || 'A'}
+                          {contactIdentity?.name?.charAt(0) || 'A'}
                         </div>
                       )}
                     </div>
                     <div>
                       <h4 className="text-lg font-bold text-slate-900">
-                        {agent?.name || 'Property Agent'}
+                        {contactIdentity?.name || `Property ${contactRoleLabel}`}
                       </h4>
                       <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
-                        PRO AGENT
+                        {contactBadgeLabel}
                       </Badge>
                     </div>
                   </div>
 
-                  {/* Stats Row */}
-                  <div className="flex gap-4 mb-6">
-                    <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="text-fluid-h2 font-bold text-orange-500">
-                          {agent?.experience || 9}
+                  {agent ? (
+                    <>
+                      <div className="flex gap-4 mb-6">
+                        <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <div className="text-fluid-h2 font-bold text-orange-500">
+                              {contactIdentity?.experience || 9}
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium">years of Experience</p>
+                        </div>
+                        <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <div className="text-fluid-h2 font-bold text-orange-500">
+                              {contactIdentity?.totalListings || 54}
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium">Total Listings</p>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-500 font-medium">years of Experience</p>
-                    </div>
-                    <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="text-fluid-h2 font-bold text-orange-500">
-                          {agent?.totalListings || 54}
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium">Total Listings</p>
-                    </div>
-                  </div>
 
-                  {/* Current Listings Button */}
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
-                  >
-                    <span className="font-medium text-slate-700">Current Listings</span>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full group-hover:bg-white">
-                        {agent?.totalListings || 53}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
+                      >
+                        <span className="font-medium text-slate-700">Current Listings</span>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full group-hover:bg-white">
+                            {contactIdentity?.totalListings || 53}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </div>
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-sm font-medium text-slate-900">
+                          {isDeveloperListing
+                            ? 'Developer-managed enquiry'
+                            : 'Seller-managed enquiry'}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {isDeveloperListing
+                            ? 'This listing is presented as part of a development. Enquiries go to the developer team.'
+                            : 'This property is listed directly by the seller. Enquiries go to the seller.'}
+                        </p>
+                      </div>
+                      {developmentHref && (
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
+                          onClick={() => setLocation(developmentHref)}
+                        >
+                          <span className="font-medium text-slate-700">View Development</span>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </Button>
+                      )}
                     </div>
-                  </Button>
+                  )}
                 </div>
 
                 {/* Right Column: Contact Form */}
@@ -703,21 +866,14 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   </div>
 
                   <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg mt-6 shadow-sm">
-                    Whatsapp Agent
+                    Whatsapp {contactRoleLabel}
                   </Button>
                 </div>
               </div>
             </div>
 
             {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
-            {((property as any).developerBrand || (property as any).developerBrandProfile) && (
-              <DeveloperBrandSection
-                brand={
-                  ((property as any).developerBrand ||
-                    (property as any).developerBrandProfile) as DeveloperBrandData
-                }
-              />
-            )}
+            {developerBrand && <DeveloperBrandSection brand={developerBrand as DeveloperBrandData} />}
 
             {/* 2.5 Nearby Landmarks */}
             <NearbyLandmarks property={property} />
@@ -835,11 +991,19 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
       {/* Sticky Mobile Footer */}
       <PropertyMobileFooter
-        agentName={agent?.name || 'Agent'}
-        onCall={() => window.open(`tel:${agent?.phone || ''}`)}
+        agentName={contactIdentity?.name || contactRoleLabel}
+        onCall={
+          contactIdentity?.phone ? () => window.open(`tel:${contactIdentity.phone}`) : undefined
+        }
         onEmail={() => setIsContactModalOpen(true)}
-        onWhatsApp={() =>
-          window.open(`https://wa.me/${agent?.phone?.replace(/\s+/g, '') || ''}`, '_blank')
+        onWhatsApp={
+          contactIdentity?.phone
+            ? () =>
+                window.open(
+                  `https://wa.me/${contactIdentity.phone.replace(/\s+/g, '')}`,
+                  '_blank',
+                )
+            : undefined
         }
       />
 
@@ -849,12 +1013,22 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         onClose={() => setIsContactModalOpen(false)}
         propertyId={propertyId}
         propertyTitle={property.title}
-        agentName="Property Agent"
-        agentId={property?.agentId ? Number(property.agentId) : undefined}
-        agencyId={property?.agencyId ? Number(property.agencyId) : undefined}
-        developmentId={property?.developmentId ? Number(property.developmentId) : undefined}
+        agentName={contactIdentity?.name || `Property ${contactRoleLabel}`}
+        agentPhone={contactIdentity?.phone || undefined}
+        agentEmail={contactIdentity?.email || undefined}
+        agentId={agent?.id ? Number(agent.id) : property?.agentId ? Number(property.agentId) : undefined}
+        agencyId={
+          contactIdentity?.agencyId ? Number(contactIdentity.agencyId) : undefined
+        }
+        developmentId={
+          listingSource === 'development' && property?.developmentId
+            ? Number(property.developmentId)
+            : undefined
+        }
         developerBrandProfileId={
-          property?.developerBrandProfileId ? Number(property.developerBrandProfileId) : undefined
+          listingSource === 'development' && (developerBrand?.id || property?.developerBrandProfileId)
+            ? Number(developerBrand?.id || property.developerBrandProfileId)
+            : undefined
         }
       />
 

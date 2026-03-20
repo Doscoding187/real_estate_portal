@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { router, protectedProcedure, publicProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
+import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
@@ -49,6 +50,16 @@ import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
+
+function assertDeveloperDistributionEnabled() {
+  if (!ENV.distributionNetworkEnabled) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message:
+        'Distribution Network is disabled. Set FEATURE_DISTRIBUTION_NETWORK=true to enable this module.',
+    });
+  }
+}
 
 /**
  * Wizard v2 canonical parking types.
@@ -382,18 +393,45 @@ const EMPTY_DEVELOPER_KPIS = {
 // ===========================================================================
 
 export const developerRouter = router({
-  adminListPendingDevelopers: protectedProcedure.input(z.void()).query(async () => {
-    return { developers: [] as any[], total: 0 };
+  adminListPendingDevelopers: superAdminProcedure.input(z.void()).query(async () => {
+    const developers = await db.listPendingDevelopers();
+    return { developers, total: developers.length };
   }),
 
-  adminListAllDevelopers: protectedProcedure.input(z.void()).query(async () => {
-    return { developers: [] as any[], total: 0 };
+  adminListAllDevelopers: superAdminProcedure.input(z.void()).query(async () => {
+    const developers = await db.listAllDevelopers();
+    return { developers, total: developers.length };
   }),
 
-  adminSetTrusted: protectedProcedure
-    .input(z.object({ developerId: z.number(), isTrusted: z.boolean() }))
-    .mutation(async () => {
+  adminApproveDeveloper: superAdminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await db.approveDeveloper(input.id, requireUser(ctx).id);
       return { ok: true };
+    }),
+
+  adminRejectDeveloper: superAdminProcedure
+    .input(z.object({ id: z.number(), reason: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await db.rejectDeveloper(input.id, requireUser(ctx).id, input.reason);
+      return { ok: true };
+    }),
+
+  adminSetTrusted: superAdminProcedure
+    .input(
+      z
+        .object({ developerId: z.number().optional(), id: z.number().optional(), isTrusted: z.boolean() })
+        .refine(value => typeof value.developerId === 'number' || typeof value.id === 'number', {
+          message: 'developerId or id is required',
+        }),
+    )
+    .mutation(async ({ input }) => {
+      const developerId = input.developerId ?? input.id;
+      await db.setDeveloperTrust(developerId as number, input.isTrusted);
+      return {
+        ok: true,
+        message: input.isTrusted ? 'Developer marked as trusted' : 'Developer trust removed',
+      };
     }),
   getPublicDeveloperBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
@@ -411,6 +449,30 @@ export const developerRouter = router({
     .query(async () => {
       return [] as any[];
     }),
+
+  searchDevelopers: publicProcedure
+    .input(
+      z.object({
+        query: z.string().trim().min(2),
+        limit: z.number().int().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopers(input.query, input.limit);
+    }),
+
+  searchDevelopments: publicProcedure
+    .input(
+      z.object({
+        query: z.string().trim().min(2),
+        developerId: z.number().int().positive().optional(),
+        limit: z.number().int().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopments(input.query, input.developerId, input.limit);
+    }),
+
   createProfile: protectedProcedure
     .input(
       z.object({
@@ -701,14 +763,7 @@ export const developerRouter = router({
   getHomeTrendingFeed: publicProcedure
     .input(
       z.object({
-        tab: z.enum([
-          'buy',
-          'rent',
-          'developments',
-          'shared_living',
-          'plot_land',
-          'commercial',
-        ]),
+        tab: z.enum(['buy', 'rent', 'developments', 'shared_living', 'plot_land', 'commercial']),
         province: z.string().optional(),
         city: z.string().optional(),
         suburb: z.string().optional(),
@@ -750,54 +805,198 @@ export const developerRouter = router({
         href: `/development/${dev.slug || dev.id}`,
       });
 
-      const mapListing = (prop: any) => ({
+      type HomeFeedItem = {
+        id: string;
+        kind: 'development' | 'listing';
+        title: string;
+        city: string;
+        suburb: string;
+        priceFrom: number;
+        priceTo: number;
+        image: string;
+        href: string;
+        listingType?: 'sale' | 'rent';
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        area?: number | null;
+        yardSize?: number | null;
+        developmentName?: string | null;
+        badges?: string[];
+      };
+
+      const listingMediaBaseUrl =
+        ENV.cloudFrontUrl ||
+        (ENV.s3BucketName && ENV.awsRegion
+          ? `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`
+          : '');
+
+      const toPublicListingImageUrl = (value: unknown): string => {
+        if (typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        if (
+          trimmed.startsWith('http://') ||
+          trimmed.startsWith('https://') ||
+          trimmed.startsWith('data:') ||
+          trimmed.startsWith('blob:')
+        ) {
+          return trimmed;
+        }
+        if (!listingMediaBaseUrl) {
+          return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+        }
+        return trimmed.startsWith('/')
+          ? `${listingMediaBaseUrl}${trimmed}`
+          : `${listingMediaBaseUrl}/${trimmed}`;
+      };
+
+      const normalizeListingImage = (prop: any): string => {
+        const firstImage = Array.isArray(prop.images) ? prop.images[0] : undefined;
+        const firstImageUrl =
+          typeof firstImage === 'string'
+            ? firstImage
+            : firstImage?.url ||
+              firstImage?.imageUrl ||
+              firstImage?.thumbnailUrl ||
+              firstImage?.processedUrl ||
+              firstImage?.originalUrl ||
+              firstImage?.fileUrl ||
+              firstImage?.key ||
+              firstImage?.src;
+
+        const primaryMediaUrl = Array.isArray(prop.media)
+          ? prop.media.find((item: any) => item?.isPrimary)?.url ||
+            prop.media.find((item: any) => item?.isPrimary)?.processedUrl ||
+            prop.media.find((item: any) => item?.isPrimary)?.originalUrl ||
+            prop.media.find((item: any) => item?.isPrimary)?.fileUrl
+          : '';
+
+        const fallbackMediaUrl = Array.isArray(prop.media)
+          ? prop.media[0]?.url ||
+            prop.media[0]?.processedUrl ||
+            prop.media[0]?.originalUrl ||
+            prop.media[0]?.fileUrl
+          : '';
+
+        return toPublicListingImageUrl(
+          prop.mainImage ||
+          prop.image ||
+          prop.coverImage ||
+          prop.thumbnailUrl ||
+          prop.imageUrl ||
+          firstImageUrl ||
+          primaryMediaUrl ||
+          fallbackMediaUrl,
+        );
+      };
+
+      const buildListingTitle = (prop: any): string => {
+        const explicitTitle = String(prop.title || '').trim();
+        if (
+          explicitTitle &&
+          explicitTitle.toLowerCase() !== 'property listing' &&
+          explicitTitle.toLowerCase() !== 'untitled property'
+        ) {
+          return explicitTitle;
+        }
+
+        const bedrooms = Number(prop.bedrooms || 0);
+        const propertyType = String(prop.propertyType || 'Property')
+          .replace(/_/g, ' ')
+          .trim();
+        const normalizedType =
+          propertyType.length > 0
+            ? propertyType.charAt(0).toUpperCase() + propertyType.slice(1).toLowerCase()
+            : 'Property';
+
+        if (bedrooms > 0) {
+          return String(prop.listingType || '').toLowerCase() === 'rent'
+            ? `${bedrooms} Bedroom ${normalizedType} to Rent`
+            : `${bedrooms} Bedroom ${normalizedType}`;
+        }
+
+        return String(prop.listingType || '').toLowerCase() === 'rent'
+          ? `${normalizedType} to Rent`
+          : normalizedType;
+      };
+
+      const mapListing = (prop: any): HomeFeedItem => ({
         id: String(prop.id),
         kind: 'listing' as const,
-        title: prop.title || 'Property Listing',
+        title: buildListingTitle(prop),
         city: prop.city || '',
         suburb: prop.suburb || '',
         priceFrom: Number(prop.price || 0),
         priceTo: Number(prop.price || 0),
-        image: Array.isArray(prop.images) && prop.images[0]?.url ? prop.images[0].url : '',
+        image: normalizeListingImage(prop),
         href: `/property/${prop.id}`,
+        listingType: String(prop.listingType || 'sale').toLowerCase() === 'rent' ? 'rent' : 'sale',
+        bedrooms: Number(prop.bedrooms || 0) || null,
+        bathrooms: Number(prop.bathrooms || 0) || null,
+        area: Number(prop.floorSize || prop.area || 0) || null,
+        yardSize: Number(prop.erfSize || prop.yardSize || 0) || null,
+        developmentName:
+          String(prop.development?.name || prop.developmentName || '').trim() || null,
+        badges: Array.isArray(prop.badges)
+          ? prop.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
+          : [],
       });
 
-      const fetchTabItems = async (locationFilter: LocationFilter): Promise<{
-        items: Array<{
-          id: string;
-          kind: 'development' | 'listing';
-          title: string;
-          city: string;
-          suburb: string;
-          priceFrom: number;
-          priceTo: number;
-          image: string;
-          href: string;
-        }>;
+      const fetchTabItems = async (
+        locationFilter: LocationFilter,
+      ): Promise<{
+        items: HomeFeedItem[];
         source: 'developments' | 'listings';
       }> => {
         if (input.tab === 'buy') {
-          const devs = await developmentService.listPublicDevelopments({
-            province: locationFilter.province,
-            city: locationFilter.city,
-            suburb: locationFilter.suburb,
+          const { propertySearchService } = await import('./services/propertySearchService');
+          const residentialListingTypes: Array<'house' | 'apartment' | 'townhouse' | 'plot'> = [
+            'house',
+            'apartment',
+            'townhouse',
+            'plot',
+          ];
+          const result = await propertySearchService.searchProperties(
+            {
+              province: locationFilter.province,
+              city: locationFilter.city,
+              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+              listingType: 'sale',
+              propertyType: residentialListingTypes,
+            } as any,
+            'date_desc',
+            1,
             limit,
-            developmentType: 'residential',
-            transactionType: 'for_sale',
-          });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+          );
+          return {
+            items: (result.properties || []).slice(0, limit).map(mapListing),
+            source: 'listings',
+          };
         }
 
         if (input.tab === 'rent') {
-          const devs = await developmentService.listPublicDevelopments({
-            province: locationFilter.province,
-            city: locationFilter.city,
-            suburb: locationFilter.suburb,
+          const { propertySearchService } = await import('./services/propertySearchService');
+          const residentialListingTypes: Array<'house' | 'apartment' | 'townhouse'> = [
+            'house',
+            'apartment',
+            'townhouse',
+          ];
+          const result = await propertySearchService.searchProperties(
+            {
+              province: locationFilter.province,
+              city: locationFilter.city,
+              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+              listingType: 'rent',
+              propertyType: residentialListingTypes,
+            } as any,
+            'date_desc',
+            1,
             limit,
-            developmentType: 'residential',
-            transactionType: 'for_rent',
-          });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+          );
+          return {
+            items: (result.properties || []).slice(0, limit).map(mapListing),
+            source: 'listings',
+          };
         }
 
         if (input.tab === 'developments') {
@@ -936,6 +1135,13 @@ export const developerRouter = router({
         priceTo: number;
         image: string;
         href: string;
+        listingType?: 'sale' | 'rent';
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        area?: number | null;
+        yardSize?: number | null;
+        developmentName?: string | null;
+        badges?: string[];
       }> = [];
       let source: 'developments' | 'listings' = 'developments';
       let selectedScope: LocationScope = requestedScope;
@@ -952,7 +1158,6 @@ export const developerRouter = router({
 
       const usedFallback = requestedScope !== selectedScope;
       const fallbackLevel = usedFallback ? `${requestedScope}_to_${selectedScope}` : 'none';
-
 
       return {
         items,
@@ -994,6 +1199,11 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         developerBrandProfileId: z.number().int().positive().optional(),
+        unitId: z.string().trim().max(36).optional(),
+        unitName: z.string().trim().max(255).optional(),
+        unitPriceFrom: z.number().nonnegative().optional(),
+        unitBedrooms: z.number().int().nonnegative().optional(),
+        unitBathrooms: z.number().nonnegative().optional(),
         name: z.string().min(1),
         email: z.string().email(),
         phone: z.string().optional(),
@@ -1019,6 +1229,11 @@ export const developerRouter = router({
       return await capturePublicLead({
         developmentId: input.developmentId,
         developerBrandProfileId: input.developerBrandProfileId,
+        unitId: input.unitId,
+        unitName: input.unitName,
+        unitPriceFrom: input.unitPriceFrom,
+        unitBedrooms: input.unitBedrooms,
+        unitBathrooms: input.unitBathrooms,
         name: input.name,
         email: input.email,
         phone: input.phone,
@@ -1155,6 +1370,7 @@ export const developerRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await getDeveloperDistributionSettings({
         developerId: profile.id,
@@ -1170,6 +1386,7 @@ export const developerRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await setDeveloperDistributionEnabled({
@@ -1295,11 +1512,7 @@ export const developerRouter = router({
     .query(async ({ ctx, input }) => {
       try {
         const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-        return await getKPIsWithCache(
-          profile.id,
-          input?.timeRange ?? '30d',
-          input?.forceRefresh ?? false,
-        );
+        return await getKPIsWithCache(profile.id, input?.timeRange, input?.forceRefresh ?? false);
       } catch (error) {
         console.warn('[developer.getDashboardKPIs] Returning safe defaults due to error:', error);
         return EMPTY_DEVELOPER_KPIS;
