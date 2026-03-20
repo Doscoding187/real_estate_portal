@@ -17,6 +17,7 @@ interface ResultsHeaderProps {
   resultCount: number;
   displayedPropertyCount?: number;
   developmentCount?: number;
+  blendPolicyCopy?: string;
   isLoading?: boolean;
   viewMode: ViewMode;
   sortBy: SortOption;
@@ -40,6 +41,7 @@ export function ResultsHeader({
   resultCount,
   displayedPropertyCount = resultCount,
   developmentCount = 0,
+  blendPolicyCopy,
   isLoading,
   viewMode,
   sortBy,
@@ -90,6 +92,9 @@ export function ResultsHeader({
           <div className="mt-1 text-xs text-slate-500">
             Searching in: <span className="text-slate-700">{locationHierarchy}</span>
           </div>
+        )}
+        {blendPolicyCopy && (
+          <div className="mt-1 text-xs text-slate-500">{blendPolicyCopy}</div>
         )}
       </div>
 
