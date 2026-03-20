@@ -256,6 +256,23 @@ export default function SearchResults({
     setLocation(generateIntentUrl(updatedIntent));
   };
 
+  const handleListingSourceChange = (source?: SearchFilters['listingSource']) => {
+    const nextFilters = { ...searchIntent.filters };
+    if (source) {
+      nextFilters.listingSource = source;
+    } else {
+      delete nextFilters.listingSource;
+    }
+
+    const updatedIntent: SearchIntent = {
+      ...searchIntent,
+      filters: nextFilters,
+    };
+
+    setLocation(generateIntentUrl(updatedIntent));
+    setPage(0);
+  };
+
   const handleSaveSearch = () => {
     if (!isAuthenticated) {
       toast.error('Please login to save searches');
@@ -388,6 +405,12 @@ export default function SearchResults({
 
   const displayedResultCount = renderedResults.length;
   const displayedDevelopmentCount = renderedResults.filter(item => item.kind === 'development').length;
+  const manualTotalCount = shouldFetchManualListings
+    ? (propertySearchResults as any)?.total ?? properties.length
+    : 0;
+  const developmentTotalCount = shouldFetchDevelopmentListings
+    ? (developmentListingResults as any)?.total ?? developmentResults.length
+    : 0;
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
   const blendPolicy = useMemo(() => resolveSearchBlendPolicy(filters, sortBy), [filters, sortBy]);
@@ -428,12 +451,15 @@ export default function SearchResults({
                 resultCount={resultCount}
                 displayedPropertyCount={displayedResultCount}
                 developmentCount={displayedDevelopmentCount}
+                manualTotalCount={manualTotalCount}
+                developmentTotalCount={developmentTotalCount}
                 blendPolicyCopy={blendPolicyCopy}
                 isLoading={isLoading}
                 viewMode={viewMode}
                 sortBy={sortBy}
                 onViewModeChange={setViewMode}
                 onSortChange={setSortBy}
+                onListingSourceChange={handleListingSourceChange}
                 onOpenFilters={() => setIsMobileFilterOpen(true)}
               />
               <div className="mt-2">
