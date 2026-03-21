@@ -7,6 +7,10 @@ import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBadges';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { blendSearchResults, resolveSearchBlendPolicy } from '@/lib/searchBlend';
+import {
+  getSavedSearchNotificationDescription,
+  getSavedSearchSuggestedName,
+} from '@/lib/savedSearchUtils';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
@@ -118,6 +122,11 @@ export default function SearchResults({
   }, [filters]);
 
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
+  const suggestedSaveSearchName = useMemo(() => getSavedSearchSuggestedName(filters), [filters]);
+  const saveSearchDescription = useMemo(
+    () => getSavedSearchNotificationDescription(filters, 'weekly'),
+    [filters],
+  );
 
   // Build query input for tRPC
   const propertyQueryInput = useMemo(
@@ -279,13 +288,15 @@ export default function SearchResults({
       toast.error('Please login to save searches');
       return;
     }
+    setSaveSearchName(current => current.trim() || suggestedSaveSearchName);
     setIsSaveSearchOpen(true);
   };
 
   const confirmSaveSearch = () => {
-    if (!saveSearchName.trim()) return;
+    const resolvedSearchName = saveSearchName.trim() || suggestedSaveSearchName;
+    if (!resolvedSearchName) return;
     saveSearchMutation.mutate({
-      name: saveSearchName,
+      name: resolvedSearchName,
       criteria: filters,
       notificationFrequency: 'weekly',
     });
@@ -728,16 +739,14 @@ export default function SearchResults({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Search</DialogTitle>
-            <DialogDescription>
-              Save your current search criteria to get notified about new properties.
-            </DialogDescription>
+            <DialogDescription>{saveSearchDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="search-name">Search Name</Label>
               <Input
                 id="search-name"
-                placeholder="e.g. 2 Bed Apartments in Sandton"
+                placeholder={suggestedSaveSearchName}
                 value={saveSearchName}
                 onChange={e => setSaveSearchName(e.target.value)}
               />
@@ -749,7 +758,7 @@ export default function SearchResults({
             </Button>
             <Button
               onClick={confirmSaveSearch}
-              disabled={saveSearchMutation.isPending || !saveSearchName.trim()}
+              disabled={saveSearchMutation.isPending}
             >
               {saveSearchMutation.isPending ? 'Saving...' : 'Save Search'}
             </Button>

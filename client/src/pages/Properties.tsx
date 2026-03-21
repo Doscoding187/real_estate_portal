@@ -5,6 +5,10 @@ import { SearchFilters } from '@/lib/urlUtils';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCardList from '@/components/PropertyCardList';
 import { normalizePropertyForUI } from '@/lib/normalizers';
+import {
+  getSavedSearchNotificationDescription,
+  getSavedSearchSuggestedName,
+} from '@/lib/savedSearchUtils';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import { Building2, Loader2, MapPin, LayoutGrid, List, Map as MapIcon } from 'lucide-react';
@@ -33,6 +37,8 @@ export default function Properties() {
 
   const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
+  const suggestedSaveSearchName = getSavedSearchSuggestedName(filters);
+  const saveSearchDescription = getSavedSearchNotificationDescription(filters, 'weekly');
 
   // Parse URL params on mount
   useEffect(() => {
@@ -120,13 +126,15 @@ export default function Properties() {
       toast.error('Please login to save searches');
       return;
     }
+    setSaveSearchName(current => current.trim() || suggestedSaveSearchName);
     setIsSaveSearchOpen(true);
   };
 
   const confirmSaveSearch = () => {
-    if (!saveSearchName.trim()) return;
+    const resolvedSearchName = saveSearchName.trim() || suggestedSaveSearchName;
+    if (!resolvedSearchName) return;
     saveSearchMutation.mutate({
-      name: saveSearchName,
+      name: resolvedSearchName,
       criteria: filters,
       notificationFrequency: 'weekly',
     });
@@ -275,16 +283,14 @@ export default function Properties() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Search</DialogTitle>
-            <DialogDescription>
-              Save your current search criteria to get notified about new properties.
-            </DialogDescription>
+            <DialogDescription>{saveSearchDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="search-name">Search Name</Label>
               <Input
                 id="search-name"
-                placeholder="e.g. 2 Bed Apartments in Sandton"
+                placeholder={suggestedSaveSearchName}
                 value={saveSearchName}
                 onChange={e => setSaveSearchName(e.target.value)}
               />
@@ -296,7 +302,7 @@ export default function Properties() {
             </Button>
             <Button
               onClick={confirmSaveSearch}
-              disabled={saveSearchMutation.isPending || !saveSearchName.trim()}
+              disabled={saveSearchMutation.isPending}
             >
               {saveSearchMutation.isPending ? 'Saving...' : 'Save Search'}
             </Button>
