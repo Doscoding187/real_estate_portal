@@ -28,6 +28,10 @@ import {
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { normalizePropertyForUI } from '@/lib/normalizers';
+import {
+  getSavedSearchNotificationDescription,
+  getSavedSearchSourceLabel,
+} from '@/lib/savedSearchUtils';
 
 export default function UserDashboard() {
   const [, setLocation] = useLocation();
@@ -439,10 +443,15 @@ export default function UserDashboard() {
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-lg mb-1">{search.name}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            <Bell className="h-3 w-3 mr-1" />
-                            {search.notificationFrequency}
-                          </Badge>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              <Bell className="h-3 w-3 mr-1" />
+                              {search.notificationFrequency}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {getSavedSearchSourceLabel((search.criteria as any) ?? {})}
+                            </Badge>
+                          </div>
                         </div>
                         <Button
                           variant="ghost"
@@ -452,10 +461,17 @@ export default function UserDashboard() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
+                      <p className="mb-3 text-sm text-slate-500">
+                        {getSavedSearchNotificationDescription(
+                          (search.criteria as any) ?? {},
+                          search.notificationFrequency,
+                        )}
+                      </p>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {search.criteria &&
                           Object.entries(search.criteria as any).map(
                             ([key, value]: [string, any]) => {
+                              if (key === 'listingSource') return null;
                               if (!value || (Array.isArray(value) && value.length === 0))
                                 return null;
                               return (
