@@ -4,6 +4,18 @@
   "framework": null,
   "routes": [
     {
+      "src": "/robots.txt",
+      "dest": "https://realestateportal-production-9bb8.up.railway.app/robots.txt"
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "https://realestateportal-production-9bb8.up.railway.app/sitemap.xml"
+    },
+    {
+      "src": "/sitemap-(.*)\\.xml",
+      "dest": "https://realestateportal-production-9bb8.up.railway.app/sitemap-$1.xml"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
