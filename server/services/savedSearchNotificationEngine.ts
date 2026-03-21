@@ -231,12 +231,6 @@ function normalizeSavedSearchCriteria(criteria: Record<string, unknown>): Normal
   };
 }
 
-function getSourceLabel(listingSource: ListingSourceFilter): string {
-  if (listingSource === 'manual') return 'property listings';
-  if (listingSource === 'development') return 'new developments';
-  return 'search results';
-}
-
 function getDueWindowMs(frequency: SavedSearch['notificationFrequency']): number | null {
   switch (frequency) {
     case 'daily':
@@ -286,6 +280,90 @@ function formatPrice(price: number | null | undefined, listingType: SavedSearchN
 
 function getRecipientName(recipient: SavedSearchEmailRecipient): string {
   return recipient.firstName?.trim() || recipient.name?.trim() || 'there';
+}
+
+function pluralize(count: number, singular: string, plural?: string): string {
+  if (count === 1) {
+    return singular;
+  }
+
+  if (plural) {
+    return plural;
+  }
+
+  return singular.endsWith('ch') ? `${singular}es` : `${singular}s`;
+}
+
+function getMatchLocation(match: SavedSearchNotificationMatch): string {
+  return [match.suburb, match.city].filter(Boolean).join(', ');
+}
+
+function getMatchesLocationSummary(matches: SavedSearchNotificationMatch[]): string | null {
+  const preciseLocations = [...new Set(matches.map(getMatchLocation).filter(Boolean))];
+  if (preciseLocations.length === 1) {
+    return preciseLocations[0];
+  }
+
+  const cities = [...new Set(matches.map(match => match.city).filter(Boolean))];
+  if (cities.length === 1) {
+    return cities[0];
+  }
+
+  return null;
+}
+
+function getNotificationMatchLabel(listingSource: ListingSourceFilter, count: number): string {
+  if (listingSource === 'manual') {
+    return pluralize(count, 'property match');
+  }
+
+  if (listingSource === 'development') {
+    return pluralize(count, 'development match');
+  }
+
+  return pluralize(count, 'match');
+}
+
+function getNotificationSourceSummary(listingSource: ListingSourceFilter): string {
+  if (listingSource === 'manual') return 'property listings';
+  if (listingSource === 'development') return 'new developments';
+  return 'listings and developments';
+}
+
+function getSavedSearchTitle(
+  searchName: string,
+  listingSource: ListingSourceFilter,
+  newMatchCount: number,
+): string {
+  return `${newMatchCount} new ${getNotificationMatchLabel(listingSource, newMatchCount)} for ${searchName}`;
+}
+
+function getSavedSearchContent(
+  listingSource: ListingSourceFilter,
+  evaluation: SearchEvaluationResult,
+): string {
+  const locationSummary = getMatchesLocationSummary(evaluation.matches);
+  const topMatchTitle = evaluation.matches[0]?.title;
+  const lead = locationSummary ? `${locationSummary}: ` : '';
+  const matchSummary =
+    listingSource === 'all'
+      ? `${evaluation.newMatchCount} new ${getNotificationMatchLabel(listingSource, evaluation.newMatchCount)} across ${getNotificationSourceSummary(listingSource)}.`
+      : `${evaluation.newMatchCount} new ${getNotificationMatchLabel(listingSource, evaluation.newMatchCount)}.`;
+  const topResult = topMatchTitle ? ` Top result: ${topMatchTitle}.` : '';
+
+  return `${lead}${matchSummary}${topResult} ${evaluation.totalMatches} total active.`.trim();
+}
+
+function getSavedSearchMatchSourceLabel(match: SavedSearchNotificationMatch): string {
+  if (match.listingSource === 'development') {
+    return 'New development';
+  }
+
+  return match.listingType === 'rent' ? 'Rental listing' : 'Property listing';
+}
+
+function getSavedSearchMatchStatusLabel(match: SavedSearchNotificationMatch): string {
+  return match.listingType === 'rent' ? 'To rent' : 'For sale';
 }
 
 function buildSavedSearchEmailText(
@@ -347,6 +425,62 @@ function buildSavedSearchEmailHtml(
       </div>
     </div>
   `;
+}
+
+function getSavedSearchPreviewSummary(payload: SavedSearchNotificationPayload): string {
+  return payload.totalMatches > payload.matches.length
+    ? `Showing the top ${payload.matches.length} of ${payload.totalMatches} active matches`
+    : `Showing ${payload.matches.length} active ${getNotificationMatchLabel(payload.listingSource, payload.matches.length)}`;
+}
+
+function buildSavedSearchSummaryCardsHtml(payload: SavedSearchNotificationPayload): string {
+  return `
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 24px;">
+      <div style="border-radius: 12px; background-color: #f8fafc; padding: 14px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px;">New</div>
+        <div style="font-size: 22px; font-weight: 700; color: #0f172a;">${payload.newMatchCount}</div>
+      </div>
+      <div style="border-radius: 12px; background-color: #f8fafc; padding: 14px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px;">Active</div>
+        <div style="font-size: 22px; font-weight: 700; color: #0f172a;">${payload.totalMatches}</div>
+      </div>
+      <div style="border-radius: 12px; background-color: #f8fafc; padding: 14px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px;">Source</div>
+        <div style="font-size: 14px; font-weight: 700; color: #0f172a;">${escapeHtml(getNotificationSourceSummary(payload.listingSource))}</div>
+      </div>
+    </div>
+  `;
+}
+
+function formatSavedSearchEmailText(
+  recipient: SavedSearchEmailRecipient,
+  payload: SavedSearchNotificationPayload,
+): string {
+  const base = buildSavedSearchEmailText(recipient, payload).replace(
+    `View results: ${buildAbsoluteUrl(payload.actionUrl)}`,
+    `Open saved search: ${buildAbsoluteUrl(payload.actionUrl)}`,
+  );
+
+  return base.replace(
+    payload.content,
+    `${payload.title}\n\n${payload.content}\n\n${getSavedSearchPreviewSummary(payload)}:`,
+  );
+}
+
+function formatSavedSearchEmailHtml(
+  recipient: SavedSearchEmailRecipient,
+  payload: SavedSearchNotificationPayload,
+): string {
+  const summaryHtml = buildSavedSearchSummaryCardsHtml(payload);
+  const previewSummary = getSavedSearchPreviewSummary(payload);
+
+  return buildSavedSearchEmailHtml(recipient, payload)
+    .replace('Saved search update', 'Saved search digest')
+    .replace(
+      `${escapeHtml(payload.content)}</p>\n        <div style="border-bottom: 1px solid #e2e8f0; margin-bottom: 8px;"></div>`,
+      `${escapeHtml(payload.content)}</p>\n        ${summaryHtml}\n        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em;">${escapeHtml(previewSummary)}</div>\n        <div style="border-bottom: 1px solid #e2e8f0; margin-bottom: 8px;"></div>`,
+    )
+    .replace('View results', 'Open saved search');
 }
 
 function isSavedSearchDue(search: SavedSearch, now: Date): boolean {
@@ -549,10 +683,8 @@ export class SavedSearchNotificationEngine {
     }
 
     const { listingSource } = normalizeSavedSearchCriteria(search.criteria);
-    const sourceLabel = getSourceLabel(listingSource);
-    const pluralLabel = evaluation.newMatchCount === 1 ? 'match' : 'matches';
-    const title = `${evaluation.newMatchCount} new ${pluralLabel} for ${search.name}`;
-    const content = `We found ${evaluation.newMatchCount} new ${sourceLabel} for your saved search. ${evaluation.totalMatches} ${sourceLabel} currently match.`;
+    const title = getSavedSearchTitle(search.name, listingSource, evaluation.newMatchCount);
+    const content = getSavedSearchContent(listingSource, evaluation);
     const actionUrl = evaluation.matches[0]?.href || '/properties';
 
     return {
@@ -614,8 +746,8 @@ export class SavedSearchNotificationEngine {
     return EmailService.sendEmail({
       to: recipient.email,
       subject: payload.title,
-      html: buildSavedSearchEmailHtml(recipient, payload),
-      text: buildSavedSearchEmailText(recipient, payload),
+      html: formatSavedSearchEmailHtml(recipient, payload),
+      text: formatSavedSearchEmailText(recipient, payload),
     });
   }
 }
