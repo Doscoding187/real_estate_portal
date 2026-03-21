@@ -44,13 +44,17 @@ export function getSavedSearchSuggestedName(filters: Partial<SearchFilters>): st
 
 export function getSavedSearchNotificationDescription(
   filters: Partial<SearchFilters>,
-  frequency: 'never' | 'daily' | 'weekly' = 'weekly',
+  frequency: 'never' | 'instant' | 'daily' | 'weekly' = 'weekly',
 ): string {
   const sourceLabel = getSavedSearchSourceLabel(filters).toLowerCase();
   const locationLabel = getLocationLabel(filters);
 
   if (frequency === 'never') {
     return `This search is saved for ${sourceLabel} in ${locationLabel}, with notifications turned off.`;
+  }
+
+  if (frequency === 'instant') {
+    return `You'll get instant updates for ${sourceLabel} in ${locationLabel}.`;
   }
 
   return `You'll get ${frequency} updates for ${sourceLabel} in ${locationLabel}.`;
