@@ -1,11 +1,13 @@
-import { and, desc, eq } from 'drizzle-orm';
-import { notifications, savedSearches } from '../../drizzle/schema';
+import { desc, eq, inArray } from 'drizzle-orm';
+import { notifications, savedSearches, users } from '../../drizzle/schema';
 import type {
   DevelopmentDerivedListing,
   Property,
   PropertyFilters,
   SavedSearch,
 } from '../../shared/types';
+import { ENV } from '../_core/env';
+import { EmailService } from '../_core/emailService';
 import { getDb } from '../db-connection';
 import { normalizeSavedSearch } from '../lib/savedSearchContract';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
@@ -58,6 +60,7 @@ export interface SavedSearchNotificationEngineResult {
   scannedSearches: number;
   dueSearches: number;
   emittedNotifications: number;
+  emailedNotifications: number;
   dryRun: boolean;
   notifications: SavedSearchNotificationPayload[];
 }
@@ -78,6 +81,13 @@ interface SearchEvaluationResult {
   totalMatches: number;
   newMatchCount: number;
   matches: SavedSearchNotificationMatch[];
+}
+
+interface SavedSearchEmailRecipient {
+  id: number;
+  email: string;
+  firstName: string | null;
+  name: string | null;
 }
 
 function toString(value: unknown): string | undefined {
@@ -241,6 +251,104 @@ function getDueWindowMs(frequency: SavedSearch['notificationFrequency']): number
   }
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildAbsoluteUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  const baseUrl = ENV.appUrl.replace(/\/+$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${baseUrl}${normalizedPath}`;
+}
+
+function formatPrice(price: number | null | undefined, listingType: SavedSearchNotificationMatch['listingType']): string {
+  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+    return 'Price on request';
+  }
+
+  const formatted = new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    maximumFractionDigits: 0,
+  }).format(price);
+
+  return listingType === 'rent' ? `${formatted} / month` : formatted;
+}
+
+function getRecipientName(recipient: SavedSearchEmailRecipient): string {
+  return recipient.firstName?.trim() || recipient.name?.trim() || 'there';
+}
+
+function buildSavedSearchEmailText(
+  recipient: SavedSearchEmailRecipient,
+  payload: SavedSearchNotificationPayload,
+): string {
+  const lines = [
+    `Hi ${getRecipientName(recipient)},`,
+    '',
+    payload.content,
+    '',
+    ...payload.matches.map(
+      match =>
+        `- ${match.title} — ${formatPrice(match.price, match.listingType)} — ${[
+          match.suburb,
+          match.city,
+        ]
+          .filter(Boolean)
+          .join(', ')} — ${buildAbsoluteUrl(match.href)}`,
+    ),
+    '',
+    `View results: ${buildAbsoluteUrl(payload.actionUrl)}`,
+  ];
+
+  return lines.join('\n');
+}
+
+function buildSavedSearchEmailHtml(
+  recipient: SavedSearchEmailRecipient,
+  payload: SavedSearchNotificationPayload,
+): string {
+  const matchCards = payload.matches
+    .map(match => {
+      const location = [match.suburb, match.city].filter(Boolean).join(', ');
+      return `
+        <div style="padding: 16px 0; border-top: 1px solid #e2e8f0;">
+          <div style="font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 6px;">
+            <a href="${escapeHtml(buildAbsoluteUrl(match.href))}" style="color: #0f172a; text-decoration: none;">${escapeHtml(match.title)}</a>
+          </div>
+          <div style="font-size: 14px; color: #334155; margin-bottom: 4px;">${escapeHtml(formatPrice(match.price, match.listingType))}</div>
+          <div style="font-size: 13px; color: #64748b;">${escapeHtml(location || 'South Africa')}</div>
+        </div>
+      `;
+    })
+    .join('');
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 24px;">
+      <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px;">
+        <div style="font-size: 14px; color: #64748b; margin-bottom: 12px;">Saved search update</div>
+        <h1 style="font-size: 24px; line-height: 1.3; color: #0f172a; margin: 0 0 12px;">${escapeHtml(payload.title)}</h1>
+        <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px;">Hi ${escapeHtml(getRecipientName(recipient))},</p>
+        <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 24px;">${escapeHtml(payload.content)}</p>
+        <div style="border-bottom: 1px solid #e2e8f0; margin-bottom: 8px;"></div>
+        ${matchCards}
+        <div style="margin-top: 24px;">
+          <a href="${escapeHtml(buildAbsoluteUrl(payload.actionUrl))}" style="display: inline-block; background-color: #2774AE; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: 600;">View results</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function isSavedSearchDue(search: SavedSearch, now: Date): boolean {
   const dueWindowMs = getDueWindowMs(search.notificationFrequency);
   if (dueWindowMs === null) return false;
@@ -312,6 +420,7 @@ export class SavedSearchNotificationEngine {
         scannedSearches: 0,
         dueSearches: 0,
         emittedNotifications: 0,
+        emailedNotifications: 0,
         dryRun: options.dryRun ?? false,
         notifications: [],
       };
@@ -332,9 +441,11 @@ export class SavedSearchNotificationEngine {
       .map(normalizeSavedSearch)
       .filter(search => search.notificationFrequency !== 'never')
       .slice(0, limit);
+    const recipientsByUserId = await this.loadRecipients(db, normalizedSearches);
 
     const notificationsToEmit: SavedSearchNotificationPayload[] = [];
     let dueSearches = 0;
+    let emailedNotifications = 0;
 
     for (const search of normalizedSearches) {
       if (!isSavedSearchDue(search, now)) {
@@ -374,6 +485,14 @@ export class SavedSearchNotificationEngine {
           .update(savedSearches)
           .set({ lastNotifiedAt: now.toISOString() })
           .where(eq(savedSearches.id, payload.savedSearchId));
+
+        const recipient = recipientsByUserId.get(search.userId);
+        if (recipient) {
+          const delivered = await this.sendSavedSearchEmail(recipient, payload);
+          if (delivered) {
+            emailedNotifications += 1;
+          }
+        }
       }
     }
 
@@ -382,9 +501,37 @@ export class SavedSearchNotificationEngine {
       scannedSearches: normalizedSearches.length,
       dueSearches,
       emittedNotifications: notificationsToEmit.length,
+      emailedNotifications,
       dryRun: options.dryRun ?? false,
       notifications: notificationsToEmit,
     };
+  }
+
+  private async loadRecipients(db: Awaited<ReturnType<typeof getDb>>, searches: SavedSearch[]) {
+    const userIds = [...new Set(searches.map(search => search.userId).filter(Number.isFinite))];
+    if (userIds.length === 0) {
+      return new Map<number, SavedSearchEmailRecipient>();
+    }
+
+    const rows = await (db.select().from(users) as any).where(inArray(users.id, userIds));
+    const recipients = new Map<number, SavedSearchEmailRecipient>();
+
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const id = typeof row.id === 'number' ? row.id : Number(row.id);
+      const email = toString(row.email);
+      if (!Number.isFinite(id) || !email) {
+        continue;
+      }
+
+      recipients.set(id, {
+        id,
+        email,
+        firstName: toString(row.firstName) ?? null,
+        name: toString(row.name) ?? null,
+      });
+    }
+
+    return recipients;
   }
 
   private async buildNotificationPayload(
@@ -452,6 +599,18 @@ export class SavedSearchNotificationEngine {
       newMatchCount,
       matches: previewMatches,
     };
+  }
+
+  private async sendSavedSearchEmail(
+    recipient: SavedSearchEmailRecipient,
+    payload: SavedSearchNotificationPayload,
+  ): Promise<boolean> {
+    return EmailService.sendEmail({
+      to: recipient.email,
+      subject: payload.title,
+      html: buildSavedSearchEmailHtml(recipient, payload),
+      text: buildSavedSearchEmailText(recipient, payload),
+    });
   }
 }
 
