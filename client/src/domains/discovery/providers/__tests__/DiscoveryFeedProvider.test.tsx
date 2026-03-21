@@ -18,14 +18,12 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 function Consumer() {
-  const { items, hasMore, fetchNextPage, request } = useDiscoveryFeed();
+  const { items, hasMore, fetchNextPage } = useDiscoveryFeed();
 
   return (
     <div>
       <div data-testid="count">{items.length}</div>
       <div data-testid="title">{items[0]?.title ?? 'none'}</div>
-      <div data-testid="feed-type">{request.feedType}</div>
-      <div data-testid="offset">{request.offset}</div>
       <div data-testid="has-more">{String(hasMore)}</div>
       <button onClick={fetchNextPage}>Next</button>
     </div>
@@ -51,10 +49,21 @@ describe('DiscoveryFeedProvider', () => {
       data: {
         items: [
           {
-            id: 101,
+            id: '101',
             title: 'Discovery One',
-            contentType: 'short',
-            thumbnailUrl: 'https://example.com/one.jpg',
+            type: 'video',
+            media: {
+              coverUrl: 'https://example.com/one.jpg',
+              videoUrl: 'https://example.com/one.mp4',
+            },
+            engagement: {
+              likes: 10,
+              saves: 4,
+              views: 120,
+            },
+            metadata: {
+              actor: { id: 7 },
+            },
           },
         ],
         hasMore: true,
@@ -69,10 +78,18 @@ describe('DiscoveryFeedProvider', () => {
       data: {
         items: [
           {
-            id: 202,
+            id: '202',
             title: 'Discovery Two',
-            contentType: 'short',
-            thumbnailUrl: 'https://example.com/two.jpg',
+            type: 'video',
+            media: {
+              coverUrl: 'https://example.com/two.jpg',
+              videoUrl: 'https://example.com/two.mp4',
+            },
+            engagement: {
+              likes: 8,
+              saves: 3,
+              views: 90,
+            },
           },
         ],
         hasMore: false,
@@ -95,7 +112,7 @@ describe('DiscoveryFeedProvider', () => {
     });
   });
 
-  it('maps the legacy feed response into canonical discovery items', async () => {
+  it('reads canonical discovery items directly from the discovery router response', async () => {
     render(
       <DiscoveryFeedProvider>
         <Consumer />
@@ -107,7 +124,13 @@ describe('DiscoveryFeedProvider', () => {
     });
 
     expect(screen.getByTestId('title')).toHaveTextContent('Discovery One');
-    expect(screen.getByTestId('feed-type')).toHaveTextContent('recommended');
+    expect(useFeedQueryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'feed',
+        limit: 20,
+      }),
+      expect.any(Object),
+    );
   });
 
   it('appends the next page when fetchNextPage advances the cursor', async () => {
@@ -129,7 +152,12 @@ describe('DiscoveryFeedProvider', () => {
       expect(screen.getByTestId('count')).toHaveTextContent('2');
     });
 
-    expect(screen.getByTestId('offset')).toHaveTextContent('1');
+    expect(useFeedQueryMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        cursor: '1',
+      }),
+      expect.any(Object),
+    );
     expect(screen.getByTestId('has-more')).toHaveTextContent('false');
   });
 
@@ -140,16 +168,19 @@ describe('DiscoveryFeedProvider', () => {
       </DiscoveryFeedProvider>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('feed-type')).toHaveTextContent('recommended');
-    });
+    await waitFor(() => expect(useFeedQueryMock).toHaveBeenCalled());
 
     act(() => {
       useDiscoveryStore.getState().setQuery({ category: 'property' });
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('feed-type')).toHaveTextContent('category');
+      expect(useFeedQueryMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          category: 'property',
+        }),
+        expect.any(Object),
+      );
     });
   });
 });

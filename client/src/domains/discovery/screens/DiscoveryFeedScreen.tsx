@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, MapPin, RotateCcw, Settings2, Sparkles, WalletCards } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,7 +19,51 @@ const INTENT_PILLS: Array<{ value: DiscoveryIntentPill; label: string }> = [
   { value: 'explore', label: 'Explore' },
 ];
 
-function DiscoveryFeedBody() {
+function formatCompactCount(value?: number): string | undefined {
+  if (!Number.isFinite(value) || (value ?? 0) <= 0) return undefined;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return String(value);
+}
+
+function getCreatorInitials(name?: string): string {
+  const parts = String(name || 'Discovery')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  return parts.map(part => part[0]?.toUpperCase() ?? '').join('') || 'DS';
+}
+
+function getDiscoveryBadgeLabel(itemType: string, raw: Record<string, any>): string {
+  const contentType = String(raw?.contentType || '').toLowerCase();
+  const category = String(raw?.category || '').toLowerCase();
+
+  if (contentType === 'walkthrough' || category === 'walkthrough') return 'Walkthrough';
+  if (itemType === 'property') return 'Listing';
+  if (itemType === 'development') return 'Development';
+  if (itemType === 'location') return 'Neighbourhood';
+  if (itemType === 'service') return 'Home service';
+  if (itemType === 'insight') return 'Insight';
+  return 'Discovery';
+}
+
+interface DiscoveryVideoViewportProps {
+  overlay?: ReactNode;
+  emptyTitle?: string;
+  emptyCopy?: string;
+  background?: string;
+  showMetaChips?: boolean;
+}
+
+export function DiscoveryVideoViewport({
+  overlay,
+  emptyTitle = 'No discovery items yet',
+  emptyCopy = 'Adjust your discovery mode or category and try again.',
+  background = 'linear-gradient(135deg, #06121f 0%, #102c47 48%, #0f766e 100%)',
+  showMetaChips = true,
+}: DiscoveryVideoViewportProps) {
   const { items, isLoading, isFetching, hasMore, fetchNextPage, query } = useDiscoveryFeed();
   const [currentIndex, setCurrentIndex] = useState(0);
   const engageMutation = trpc.discovery.engage.useMutation();
@@ -28,6 +72,13 @@ function DiscoveryFeedBody() {
     () =>
       items.map(item => {
         const raw = (item.metadata ?? {}) as any;
+        const creatorName =
+          raw?.actor?.displayName || raw?.authorName || raw?.creatorName || 'Discovery';
+        const itemType = item.type === 'property' || item.type === 'development' ? 'listing' : 'content';
+        const badgeStat = formatCompactCount(
+          Number(raw?.videoCount ?? raw?.stats?.posts ?? raw?.viewCount ?? item.engagement.views),
+        );
+
         return {
           id: item.id,
           title: item.title || 'Discovery item',
@@ -39,7 +90,7 @@ function DiscoveryFeedBody() {
           shares: raw?.shareCount ?? raw?.stats?.shares ?? 0,
           userId: raw?.actor?.id || 0,
           createdAt: new Date(raw?.createdAt || Date.now()),
-          type: 'listing',
+          type: itemType,
           propertyTitle: item.title,
           propertyLocation:
             item.location?.name ||
@@ -47,7 +98,10 @@ function DiscoveryFeedBody() {
           propertyPrice: item.price,
           caption: item.description || raw?.category || '',
           highlights: raw?.highlights || [raw?.category].filter(Boolean),
-          agentName: raw?.actor?.displayName || 'Discovery',
+          agentName: creatorName,
+          creatorInitials: getCreatorInitials(creatorName),
+          badgeLabel: getDiscoveryBadgeLabel(item.type, raw),
+          badgeStat,
           isLiked: false,
         };
       }),
@@ -93,10 +147,10 @@ function DiscoveryFeedBody() {
       <div className="flex h-screen items-center justify-center px-6 text-center" style={{ backgroundColor: designTokens.colors.bg.dark }}>
         <div>
           <h2 className="mb-3 text-2xl font-semibold" style={{ color: designTokens.colors.text.inverse }}>
-            No discovery items yet
+            {emptyTitle}
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.8)' }}>
-            Adjust your discovery mode or category and try again.
+            {emptyCopy}
           </p>
         </div>
       </div>
@@ -105,24 +159,27 @@ function DiscoveryFeedBody() {
 
   return (
     <motion.div
-      className="h-screen overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #06121f 0%, #102c47 48%, #0f766e 100%)' }}
+      className="relative h-screen overflow-hidden"
+      style={{ background }}
       initial="initial"
       animate="animate"
       exit="exit"
       variants={getVariants(pageVariants)}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_38%)]" />
+      {overlay}
 
-      <div className="absolute left-4 right-4 top-4 z-30 flex items-center justify-between gap-3">
-        <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl">
-          Discovery mode: {query.mode}
-          {query.category ? ` / ${query.category}` : ''}
+      {showMetaChips ? (
+        <div className="absolute left-4 right-4 top-4 z-30 flex items-center justify-between gap-3">
+          <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl">
+            Discovery mode: {query.mode}
+            {query.category ? ` / ${query.category}` : ''}
+          </div>
+          <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs text-white/80 backdrop-blur-xl">
+            {videos.length} items
+          </div>
         </div>
-        <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs text-white/80 backdrop-blur-xl">
-          {videos.length} items
-        </div>
-      </div>
+      ) : null}
 
       <div
         className="h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
@@ -134,10 +191,14 @@ function DiscoveryFeedBody() {
         onScroll={handleScroll}
       >
         {videos.map((video, idx) => (
-          <div key={video.id} className="h-screen w-full snap-start snap-always">
+          <div
+            key={video.id}
+            className="flex h-screen w-full snap-start snap-always items-center justify-center px-3 py-3 md:px-5 md:py-6"
+          >
             <VideoCard
               video={video}
               isActive={idx === currentIndex}
+              discoveryMode={query.mode}
               onView={() => {
                 void engageMutation.mutateAsync({
                   itemId: video.id,
@@ -206,97 +267,97 @@ export default function DiscoveryFeedScreen() {
   };
 
   return (
-    <div className="relative h-screen overflow-hidden">
-      <div className="absolute left-4 right-4 top-4 z-30 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl">
-            Discovery feed
-            {activeFilterCount > 0 ? ` / ${activeFilterCount} active filters` : ''}
-          </div>
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl transition hover:bg-black/45"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset
-          </button>
-        </div>
-
-        <Tabs value={tab} onValueChange={value => setTab(value as DiscoveryTab)} className="w-full max-w-md">
-          <TabsList className="w-full rounded-full border border-white/15 bg-black/35 p-1 backdrop-blur-xl">
-            <TabsTrigger value="all" className="flex items-center gap-2 rounded-full text-white data-[state=active]:bg-white/20">
-              <Sparkles className="h-4 w-4" />
-              All
-            </TabsTrigger>
-            <TabsTrigger value="property" className="flex items-center gap-2 rounded-full text-white data-[state=active]:bg-white/20">
-              <MapPin className="h-4 w-4" />
-              Property
-            </TabsTrigger>
-            <TabsTrigger value="service" className="flex items-center gap-2 rounded-full text-white data-[state=active]:bg-white/20">
-              <Settings2 className="h-4 w-4" />
-              Service
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="rounded-3xl border border-white/15 bg-black/30 p-4 backdrop-blur-xl">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white/90">
-            <WalletCards className="h-4 w-4" />
-            Discovery filters
-          </div>
-
-          <div className="mb-3 flex flex-wrap gap-2">
-            {INTENT_PILLS.map(intent => (
+    <DiscoveryFeedProvider mode="feed">
+      <DiscoveryVideoViewport
+        overlay={
+          <div className="absolute left-4 right-4 top-4 z-30 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl">
+                Discovery feed
+                {activeFilterCount > 0 ? ` / ${activeFilterCount} active filters` : ''}
+              </div>
               <button
-                key={intent.value}
                 type="button"
-                onClick={() =>
-                  setQuery({
-                    intent: query.intent === intent.value ? undefined : intent.value,
-                  })
-                }
-                className={`rounded-full px-3 py-1.5 text-sm transition ${
-                  query.intent === intent.value
-                    ? 'bg-white text-slate-900'
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
+                onClick={resetFilters}
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl transition hover:bg-black/45"
               >
-                {intent.label}
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
               </button>
-            ))}
-          </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-white/70">Min price</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={query.priceRange?.min ?? ''}
-                onChange={event => setPriceMin(event.target.value)}
-                placeholder="Any"
-                className="w-full rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/35"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-white/70">Max price</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={query.priceRange?.max ?? ''}
-                onChange={event => setPriceMax(event.target.value)}
-                placeholder="Any"
-                className="w-full rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/35"
-              />
-            </label>
-          </div>
-        </div>
-      </div>
+            <Tabs value={tab} onValueChange={value => setTab(value as DiscoveryTab)} className="w-full max-w-md">
+              <TabsList className="w-full rounded-full border border-white/15 bg-black/35 p-1 backdrop-blur-xl">
+                <TabsTrigger value="all" className="flex items-center gap-2 rounded-full text-white data-[state=active]:bg-white/20">
+                  <Sparkles className="h-4 w-4" />
+                  All
+                </TabsTrigger>
+                <TabsTrigger value="property" className="flex items-center gap-2 rounded-full text-white data-[state=active]:bg-white/20">
+                  <MapPin className="h-4 w-4" />
+                  Property
+                </TabsTrigger>
+                <TabsTrigger value="service" className="flex items-center gap-2 rounded-full text-white data-[state=active]:bg-white/20">
+                  <Settings2 className="h-4 w-4" />
+                  Service
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-      <DiscoveryFeedProvider mode="feed">
-        <DiscoveryFeedBody />
-      </DiscoveryFeedProvider>
-    </div>
+            <div className="rounded-3xl border border-white/15 bg-black/30 p-4 backdrop-blur-xl">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white/90">
+                <WalletCards className="h-4 w-4" />
+                Discovery filters
+              </div>
+
+              <div className="mb-3 flex flex-wrap gap-2">
+                {INTENT_PILLS.map(intent => (
+                  <button
+                    key={intent.value}
+                    type="button"
+                    onClick={() =>
+                      setQuery({
+                        intent: query.intent === intent.value ? undefined : intent.value,
+                      })
+                    }
+                    className={`rounded-full px-3 py-1.5 text-sm transition ${
+                      query.intent === intent.value
+                        ? 'bg-white text-slate-900'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    {intent.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-white/70">Min price</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={query.priceRange?.min ?? ''}
+                    onChange={event => setPriceMin(event.target.value)}
+                    placeholder="Any"
+                    className="w-full rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/35"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-white/70">Max price</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={query.priceRange?.max ?? ''}
+                    onChange={event => setPriceMax(event.target.value)}
+                    placeholder="Any"
+                    className="w-full rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/35"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        }
+      />
+    </DiscoveryFeedProvider>
   );
 }
