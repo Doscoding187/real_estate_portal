@@ -22,6 +22,7 @@ import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter'
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
+import sitemapRouter from '../routes/sitemap';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -159,6 +160,7 @@ async function startServer() {
   app.use(domainRoutingMiddleware);
   app.use(customDomainMiddleware);
 
+  app.use('/', sitemapRouter);
   registerAuthRoutes(app);
   registerHealthEndpoint(app);
   registerVersionEndpoint(app);
