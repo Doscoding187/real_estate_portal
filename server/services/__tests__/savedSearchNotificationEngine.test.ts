@@ -286,4 +286,44 @@ describe('savedSearchNotificationEngine', () => {
     expect(mockSendEmail).not.toHaveBeenCalled();
     expect(result.emailedNotifications).toBe(0);
   });
+
+  it('respects email-only delivery preferences without writing in-app notifications', async () => {
+    mockDbSelect
+      .mockReturnValueOnce({ from: mockSavedSearchFrom })
+      .mockReturnValueOnce({ from: mockUsersFrom });
+    mockDbWhere.mockResolvedValue([
+      {
+        id: 15,
+        userId: 7,
+        name: 'Johannesburg Apartments',
+        criteria: {
+          city: 'Johannesburg',
+          listingType: 'sale',
+          propertyType: 'apartment',
+          __deliveryPreferences: {
+            emailEnabled: true,
+            inAppEnabled: false,
+          },
+        },
+        notificationFrequency: 'daily',
+        createdAt: '2026-03-21T08:00:00.000Z',
+        updatedAt: '2026-03-21T08:00:00.000Z',
+        lastNotifiedAt: '2026-03-19T08:00:00.000Z',
+      },
+    ]);
+    mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+
+    const result = await savedSearchNotificationEngine.processDueNotifications({
+      userId: 7,
+      now: new Date('2026-03-21T10:00:00.000Z'),
+    });
+
+    expect(mockInsertValues).not.toHaveBeenCalled();
+    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockUpdateWhere).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({
+      emittedNotifications: 1,
+      emailedNotifications: 1,
+    });
+  });
 });

@@ -8,6 +8,7 @@ import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBa
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { blendSearchResults, resolveSearchBlendPolicy } from '@/lib/searchBlend';
 import {
+  DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
   getSavedSearchNotificationDescription,
   getSavedSearchSuggestedName,
 } from '@/lib/savedSearchUtils';
@@ -26,6 +27,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Search components
 import {
@@ -105,6 +108,15 @@ export default function SearchResults({
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
+  const [saveSearchNotificationFrequency, setSaveSearchNotificationFrequency] = useState<
+    'instant' | 'daily' | 'weekly' | 'never'
+  >('weekly');
+  const [saveSearchEmailEnabled, setSaveSearchEmailEnabled] = useState(
+    DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.emailEnabled,
+  );
+  const [saveSearchInAppEnabled, setSaveSearchInAppEnabled] = useState(
+    DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.inAppEnabled,
+  );
 
   const limit = 12;
   const blendFetchLimit = Math.max(limit, (page + 1) * limit);
@@ -124,8 +136,12 @@ export default function SearchResults({
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
   const suggestedSaveSearchName = useMemo(() => getSavedSearchSuggestedName(filters), [filters]);
   const saveSearchDescription = useMemo(
-    () => getSavedSearchNotificationDescription(filters, 'weekly'),
-    [filters],
+    () =>
+      getSavedSearchNotificationDescription(filters, saveSearchNotificationFrequency, {
+        emailEnabled: saveSearchEmailEnabled,
+        inAppEnabled: saveSearchInAppEnabled,
+      }),
+    [filters, saveSearchEmailEnabled, saveSearchInAppEnabled, saveSearchNotificationFrequency],
   );
 
   // Build query input for tRPC
@@ -214,6 +230,9 @@ export default function SearchResults({
       toast.success('Search saved successfully');
       setIsSaveSearchOpen(false);
       setSaveSearchName('');
+      setSaveSearchNotificationFrequency('weekly');
+      setSaveSearchEmailEnabled(DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.emailEnabled);
+      setSaveSearchInAppEnabled(DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.inAppEnabled);
     },
     onError: error => toast.error(error.message),
   });
@@ -298,7 +317,9 @@ export default function SearchResults({
     saveSearchMutation.mutate({
       name: resolvedSearchName,
       criteria: filters,
-      notificationFrequency: 'weekly',
+      notificationFrequency: saveSearchNotificationFrequency,
+      emailEnabled: saveSearchEmailEnabled,
+      inAppEnabled: saveSearchInAppEnabled,
     });
   };
 
@@ -750,6 +771,49 @@ export default function SearchResults({
                 value={saveSearchName}
                 onChange={e => setSaveSearchName(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="search-frequency">Alert Frequency</Label>
+              <Select
+                value={saveSearchNotificationFrequency}
+                onValueChange={value =>
+                  setSaveSearchNotificationFrequency(value as typeof saveSearchNotificationFrequency)
+                }
+              >
+                <SelectTrigger id="search-frequency">
+                  <SelectValue placeholder="Select alert frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instant">Instant</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="never">Never</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="search-email-alerts">Email alerts</Label>
+                  <p className="text-xs text-slate-500">Send new matches to your inbox.</p>
+                </div>
+                <Switch
+                  id="search-email-alerts"
+                  checked={saveSearchEmailEnabled}
+                  onCheckedChange={checked => setSaveSearchEmailEnabled(Boolean(checked))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="search-inapp-alerts">In-app alerts</Label>
+                  <p className="text-xs text-slate-500">Keep updates in your dashboard.</p>
+                </div>
+                <Switch
+                  id="search-inapp-alerts"
+                  checked={saveSearchInAppEnabled}
+                  onCheckedChange={checked => setSaveSearchInAppEnabled(Boolean(checked))}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

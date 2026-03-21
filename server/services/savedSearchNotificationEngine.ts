@@ -448,6 +448,10 @@ export class SavedSearchNotificationEngine {
     let emailedNotifications = 0;
 
     for (const search of normalizedSearches) {
+      if (!search.emailEnabled && !search.inAppEnabled) {
+        continue;
+      }
+
       if (!isSavedSearchDue(search, now)) {
         continue;
       }
@@ -461,25 +465,27 @@ export class SavedSearchNotificationEngine {
       notificationsToEmit.push(payload);
 
       if (!options.dryRun) {
-        await db.insert(notifications).values({
-          userId: search.userId,
-          type: 'system_alert',
-          title: payload.title,
-          content: payload.content,
-          data: JSON.stringify({
-            kind: 'saved_search_matches',
-            savedSearchId: payload.savedSearchId,
-            searchName: payload.searchName,
-            notificationFrequency: payload.notificationFrequency,
-            listingSource: payload.listingSource,
-            totalMatches: payload.totalMatches,
-            newMatchCount: payload.newMatchCount,
-            actionUrl: payload.actionUrl,
-            matches: payload.matches,
-            criteria: payload.criteria,
-          }),
-          isRead: 0,
-        });
+        if (search.inAppEnabled) {
+          await db.insert(notifications).values({
+            userId: search.userId,
+            type: 'system_alert',
+            title: payload.title,
+            content: payload.content,
+            data: JSON.stringify({
+              kind: 'saved_search_matches',
+              savedSearchId: payload.savedSearchId,
+              searchName: payload.searchName,
+              notificationFrequency: payload.notificationFrequency,
+              listingSource: payload.listingSource,
+              totalMatches: payload.totalMatches,
+              newMatchCount: payload.newMatchCount,
+              actionUrl: payload.actionUrl,
+              matches: payload.matches,
+              criteria: payload.criteria,
+            }),
+            isRead: 0,
+          });
+        }
 
         await db
           .update(savedSearches)
@@ -487,7 +493,7 @@ export class SavedSearchNotificationEngine {
           .where(eq(savedSearches.id, payload.savedSearchId));
 
         const recipient = recipientsByUserId.get(search.userId);
-        if (recipient) {
+        if (search.emailEnabled && recipient) {
           const delivered = await this.sendSavedSearchEmail(recipient, payload);
           if (delivered) {
             emailedNotifications += 1;

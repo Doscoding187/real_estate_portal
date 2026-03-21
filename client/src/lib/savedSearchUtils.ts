@@ -1,5 +1,15 @@
 import type { SearchFilters } from '@/lib/urlUtils';
 
+export interface SavedSearchDeliveryPreferences {
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+}
+
+export const DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES: SavedSearchDeliveryPreferences = {
+  emailEnabled: true,
+  inAppEnabled: true,
+};
+
 function titleize(value?: string | null): string {
   if (!value) return '';
   return String(value)
@@ -45,17 +55,38 @@ export function getSavedSearchSuggestedName(filters: Partial<SearchFilters>): st
 export function getSavedSearchNotificationDescription(
   filters: Partial<SearchFilters>,
   frequency: 'never' | 'instant' | 'daily' | 'weekly' = 'weekly',
+  deliveryPreferences: SavedSearchDeliveryPreferences = DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
 ): string {
   const sourceLabel = getSavedSearchSourceLabel(filters).toLowerCase();
   const locationLabel = getLocationLabel(filters);
+  const deliveryLabel = getSavedSearchDeliveryLabel(deliveryPreferences).toLowerCase();
+
+  if (!deliveryPreferences.emailEnabled && !deliveryPreferences.inAppEnabled) {
+    return `This search is saved for ${sourceLabel} in ${locationLabel}, with delivery paused.`;
+  }
 
   if (frequency === 'never') {
     return `This search is saved for ${sourceLabel} in ${locationLabel}, with notifications turned off.`;
   }
 
   if (frequency === 'instant') {
-    return `You'll get instant updates for ${sourceLabel} in ${locationLabel}.`;
+    return `You'll get instant ${deliveryLabel} updates for ${sourceLabel} in ${locationLabel}.`;
   }
 
-  return `You'll get ${frequency} updates for ${sourceLabel} in ${locationLabel}.`;
+  return `You'll get ${frequency} ${deliveryLabel} updates for ${sourceLabel} in ${locationLabel}.`;
+}
+
+export function getSavedSearchDeliveryLabel(
+  deliveryPreferences: SavedSearchDeliveryPreferences = DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
+): string {
+  if (deliveryPreferences.emailEnabled && deliveryPreferences.inAppEnabled) {
+    return 'Email + in-app';
+  }
+  if (deliveryPreferences.emailEnabled) {
+    return 'Email';
+  }
+  if (deliveryPreferences.inAppEnabled) {
+    return 'In-app';
+  }
+  return 'No alerts';
 }
