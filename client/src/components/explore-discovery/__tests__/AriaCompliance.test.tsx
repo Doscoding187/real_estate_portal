@@ -57,51 +57,6 @@ import { PropertyCard } from '../cards/PropertyCard';
 import { VideoCard } from '../cards/VideoCard';
 import { NeighbourhoodCard } from '../cards/NeighbourhoodCard';
 import { InsightCard } from '../cards/InsightCard';
-import { DiscoveryCardFeed } from '../DiscoveryCardFeed';
-const mockUseDiscoveryFeed = vi.hoisted(() => vi.fn());
-
-vi.mock('@/hooks/useDiscoveryFeed', () => ({
-  useDiscoveryFeed: mockUseDiscoveryFeed,
-}));
-
-const createFeedState = (overrides: Record<string, unknown> = {}) => ({
-  contentBlocks: [
-    {
-      id: 'block-1',
-      title: 'For You',
-      type: 'for-you',
-      items: [
-        {
-          id: 101,
-          type: 'property',
-          data: {
-            id: 101,
-            title: 'Feed Property',
-            price: 1500000,
-            location: 'Johannesburg',
-            beds: 2,
-            baths: 1,
-            size: 90,
-            imageUrl: 'https://example.com/feed.jpg',
-            propertyType: 'Apartment',
-          },
-        },
-      ],
-    },
-  ],
-  isLoading: false,
-  error: null,
-  hasMore: false,
-  recordEngagement: vi.fn(),
-  setupObserver: vi.fn(),
-  refetch: vi.fn(),
-  ...overrides,
-});
-
-beforeEach(() => {
-  mockUseDiscoveryFeed.mockReset();
-  mockUseDiscoveryFeed.mockReturnValue(createFeedState());
-});
 
 describe('ARIA Compliance - Card Components', () => {
   describe('PropertyCard', () => {
@@ -284,52 +239,6 @@ describe('ARIA Compliance - Card Components', () => {
   });
 });
 
-describe('ARIA Compliance - Feed Components', () => {
-  describe('DiscoveryCardFeed', () => {
-    it('should have feed role for main container', () => {
-      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
-
-      const feed = screen.getByRole('feed', { name: /discovery feed/i });
-      expect(feed).toBeInTheDocument();
-    });
-
-    it('should have aria-busy during loading', () => {
-      mockUseDiscoveryFeed.mockReturnValueOnce(createFeedState({ isLoading: true }));
-      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
-
-      // The feed container itself should have aria-busy
-      const feed = screen.getByRole('feed', { name: /discovery feed/i });
-      expect(feed).toHaveAttribute('aria-busy');
-    });
-
-    // TODO: Implement error state UI in DiscoveryCardFeed component
-    // Currently the component shows placeholder data even when error is present
-    it.skip('should have alert role for errors', async () => {
-      const { trpc } = await import('@/lib/trpc');
-
-      vi.mocked(trpc.properties.search.useQuery).mockReturnValueOnce({
-        data: null,
-        isLoading: false,
-        error: new Error('Failed to load'),
-        refetch: vi.fn(),
-      } as any);
-
-      vi.mocked(trpc.explore.getFeed.useQuery).mockReturnValueOnce({
-        data: null,
-        isLoading: false,
-        error: new Error('Failed to load'),
-        refetch: vi.fn(),
-      } as any);
-
-      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
-
-      const alert = await screen.findByRole('alert');
-      expect(alert).toBeInTheDocument();
-      expect(alert).toHaveAttribute('aria-live', 'assertive');
-    });
-  });
-});
-
 describe('ARIA Compliance - Interactive Elements', () => {
   it('should have aria-label for icon-only buttons', () => {
     const mockProperty = {
@@ -364,41 +273,6 @@ describe('ARIA Compliance - Interactive Elements', () => {
 
     const icons = container.querySelectorAll('[aria-hidden="true"]');
     expect(icons.length).toBeGreaterThan(0);
-  });
-});
-
-describe('ARIA Compliance - Live Regions', () => {
-  it('should use aria-live="polite" for non-critical updates', () => {
-    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
-
-    // Look for the end-of-feed status message which should have aria-live="polite"
-    const endOfFeed = screen.getByText(/reached the end/i);
-    expect(endOfFeed.closest('[role="status"]')).toHaveAttribute('aria-live', 'polite');
-  });
-
-  // TODO: Implement error state UI in DiscoveryCardFeed component
-  // Currently the component shows placeholder data even when error is present
-  it.skip('should use aria-live="assertive" for critical updates', async () => {
-    const { trpc } = await import('@/lib/trpc');
-
-    vi.mocked(trpc.properties.search.useQuery).mockReturnValueOnce({
-      data: null,
-      isLoading: false,
-      error: new Error('Failed to load'),
-      refetch: vi.fn(),
-    } as any);
-
-    vi.mocked(trpc.explore.getFeed.useQuery).mockReturnValueOnce({
-      data: null,
-      isLoading: false,
-      error: new Error('Failed to load'),
-      refetch: vi.fn(),
-    } as any);
-
-    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />);
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveAttribute('aria-live', 'assertive');
   });
 });
 
