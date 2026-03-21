@@ -5,6 +5,8 @@ import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Home,
@@ -29,15 +31,18 @@ import {
 import { trpc } from '@/lib/trpc';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import {
+  getSavedSearchDeliveryLabel,
   getSavedSearchNotificationDescription,
   getSavedSearchSourceLabel,
 } from '@/lib/savedSearchUtils';
 import type { SavedSearch } from '@shared/types';
+import { toast } from 'sonner';
 
 export default function UserDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
+  const utils = trpc.useUtils();
   const normalizeRole = (value?: string | null) => {
     if (value === 'user') return 'visitor';
     if (value === 'admin') return 'super_admin';
@@ -62,9 +67,32 @@ export default function UserDashboard() {
 
   const deleteSavedSearchMutation = trpc.savedSearch.delete.useMutation({
     onSuccess: () => {
-      window.location.reload();
+      utils.savedSearch.getAll.invalidate();
     },
   });
+
+  const updateSavedSearchMutation = trpc.savedSearch.updatePreferences.useMutation({
+    onSuccess: () => {
+      utils.savedSearch.getAll.invalidate();
+      toast.success('Saved search preferences updated');
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  const handleSavedSearchPreferenceChange = (
+    search: SavedSearch,
+    nextPreferences: Partial<
+      Pick<SavedSearch, 'notificationFrequency' | 'emailEnabled' | 'inAppEnabled'>
+    >,
+  ) => {
+    updateSavedSearchMutation.mutate({
+      id: search.id,
+      notificationFrequency:
+        nextPreferences.notificationFrequency ?? search.notificationFrequency,
+      emailEnabled: nextPreferences.emailEnabled ?? search.emailEnabled,
+      inAppEnabled: nextPreferences.inAppEnabled ?? search.inAppEnabled,
+    });
+  };
 
   // Show loading spinner
   if (loading) {
@@ -452,6 +480,12 @@ export default function UserDashboard() {
                             <Badge variant="secondary" className="text-xs">
                               {getSavedSearchSourceLabel((search.criteria as any) ?? {})}
                             </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {getSavedSearchDeliveryLabel({
+                                emailEnabled: search.emailEnabled,
+                                inAppEnabled: search.inAppEnabled,
+                              })}
+                            </Badge>
                           </div>
                         </div>
                         <Button
@@ -466,8 +500,67 @@ export default function UserDashboard() {
                         {getSavedSearchNotificationDescription(
                           (search.criteria as any) ?? {},
                           search.notificationFrequency,
+                          {
+                            emailEnabled: search.emailEnabled,
+                            inAppEnabled: search.inAppEnabled,
+                          },
                         )}
                       </p>
+                      <div className="mb-4 grid gap-3 rounded-lg border border-slate-200 p-4 md:grid-cols-3">
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Frequency
+                          </p>
+                          <Select
+                            value={search.notificationFrequency}
+                            onValueChange={value =>
+                              handleSavedSearchPreferenceChange(search, {
+                                notificationFrequency: value as SavedSearch['notificationFrequency'],
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="instant">Instant</SelectItem>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="never">Never</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">Email</p>
+                            <p className="text-xs text-slate-500">Inbox delivery</p>
+                          </div>
+                          <Switch
+                            checked={search.emailEnabled}
+                            onCheckedChange={checked =>
+                              handleSavedSearchPreferenceChange(search, {
+                                emailEnabled: Boolean(checked),
+                              })
+                            }
+                            disabled={updateSavedSearchMutation.isPending}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">In-app</p>
+                            <p className="text-xs text-slate-500">Dashboard alerts</p>
+                          </div>
+                          <Switch
+                            checked={search.inAppEnabled}
+                            onCheckedChange={checked =>
+                              handleSavedSearchPreferenceChange(search, {
+                                inAppEnabled: Boolean(checked),
+                              })
+                            }
+                            disabled={updateSavedSearchMutation.isPending}
+                          />
+                        </div>
+                      </div>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {search.criteria &&
                           Object.entries(search.criteria as any).map(

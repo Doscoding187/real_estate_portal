@@ -19,6 +19,7 @@ import { requireUser } from './_core/requireUser';
 import {
   normalizeSavedSearch,
   savedSearchNotificationFrequencySchema,
+  serializeSavedSearchCriteria,
 } from './lib/savedSearchContract';
 
 function getUserId(ctx: { user: { id: number } | null }) {
@@ -75,6 +76,8 @@ const propertyResultsSavedSearchCreateSchema = z
     criteria: propertyFiltersSchema.optional(),
     filters: propertyFiltersSchema.optional(),
     notificationFrequency: savedSearchNotificationFrequencySchema.default('weekly'),
+    emailEnabled: z.boolean().default(true),
+    inAppEnabled: z.boolean().default(true),
   })
   .refine(input => Boolean(input.criteria || input.filters), {
     message: 'Saved search criteria are required',
@@ -169,7 +172,7 @@ export const propertyResultsRouter = router({
           const result = await db.insert(savedSearches).values({
             userId: getUserId(ctx),
             name: input.name,
-            criteria: criteria as any,
+            criteria: serializeSavedSearchCriteria(criteria as any, input),
             notificationFrequency: input.notificationFrequency,
           });
 

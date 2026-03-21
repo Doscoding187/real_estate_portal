@@ -943,6 +943,8 @@ export interface SavedSearch {
   name: string;
   criteria: Record<string, unknown>;
   notificationFrequency: 'instant' | 'daily' | 'weekly' | 'never';
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   lastNotifiedAt?: string | null;

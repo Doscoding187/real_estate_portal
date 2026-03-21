@@ -9,6 +9,7 @@ import {
   normalizeSavedSearch,
   savedSearchCriteriaSchema,
   savedSearchNotificationFrequencySchema,
+  serializeSavedSearchCriteria,
 } from './lib/savedSearchContract';
 import { savedSearchNotificationEngine } from './services/savedSearchNotificationEngine';
 
@@ -23,6 +24,8 @@ export const savedSearchRouter = router({
         name: z.string().min(1).max(255),
         criteria: savedSearchCriteriaSchema,
         notificationFrequency: savedSearchNotificationFrequencySchema.default('never'),
+        emailEnabled: z.boolean().default(true),
+        inAppEnabled: z.boolean().default(true),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -33,7 +36,7 @@ export const savedSearchRouter = router({
       const result = await db.insert(savedSearches).values({
         userId: getUserId(ctx),
         name: input.name,
-        criteria: input.criteria,
+        criteria: serializeSavedSearchCriteria(input.criteria, input),
         notificationFrequency: input.notificationFrequency,
       });
 
@@ -79,6 +82,49 @@ export const savedSearchRouter = router({
       await db.delete(savedSearches).where(eq(savedSearches.id, input.id));
 
       return { success: true };
+    }),
+
+  updatePreferences: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        notificationFrequency: savedSearchNotificationFrequencySchema,
+        emailEnabled: z.boolean(),
+        inAppEnabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const search = await db
+        .select()
+        .from(savedSearches)
+        .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, getUserId(ctx))))
+        .limit(1);
+
+      if (search.length === 0) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Saved search not found' });
+      }
+
+      const normalized = normalizeSavedSearch(search[0]);
+
+      await db
+        .update(savedSearches)
+        .set({
+          notificationFrequency: input.notificationFrequency,
+          criteria: serializeSavedSearchCriteria(normalized.criteria, input),
+        })
+        .where(eq(savedSearches.id, input.id));
+
+      const updatedSearch = await db
+        .select()
+        .from(savedSearches)
+        .where(eq(savedSearches.id, input.id))
+        .limit(1);
+
+      return normalizeSavedSearch(updatedSearch[0]);
     }),
 
   processNotifications: protectedProcedure
