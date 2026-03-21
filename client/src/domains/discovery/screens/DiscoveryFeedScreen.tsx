@@ -20,7 +20,7 @@ const INTENT_PILLS: Array<{ value: DiscoveryIntentPill; label: string }> = [
 ];
 
 function formatCompactCount(value?: number): string | undefined {
-  if (!Number.isFinite(value) || (value ?? 0) <= 0) return undefined;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return undefined;
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
   return String(value);

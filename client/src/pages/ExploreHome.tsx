@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Flame,
   Clapperboard,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';

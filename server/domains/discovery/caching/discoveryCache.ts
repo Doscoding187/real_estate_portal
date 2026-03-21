@@ -5,11 +5,13 @@ interface DiscoveryCacheContext {
   userId?: number;
 }
 
+type DiscoveryLocationFilter = NonNullable<DiscoveryQuery['location']>;
+
 interface DiscoveryFeedCacheKeyParts {
   userId: number | 'guest';
   mode: DiscoveryQuery['mode'];
   intent: DiscoveryQuery['intent'] | 'any';
-  locationType: DiscoveryQuery['location']['type'] | 'any';
+  locationType: DiscoveryLocationFilter['type'] | 'any';
   locationId: number | 'any';
   category: DiscoveryQuery['category'] | 'any';
   creatorActorId: number | 'any';
