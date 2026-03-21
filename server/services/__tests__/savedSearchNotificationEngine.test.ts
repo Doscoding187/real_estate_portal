@@ -3,25 +3,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   mockGetDb,
   mockDbSelect,
-  mockDbFrom,
+  mockSavedSearchFrom,
+  mockUsersFrom,
   mockDbOrderBy,
   mockDbWhere,
+  mockUsersWhere,
   mockInsertValues,
   mockUpdateSet,
   mockUpdateWhere,
   mockSearchProperties,
   mockSearchDevelopmentListings,
+  mockSendEmail,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockDbSelect: vi.fn(),
-  mockDbFrom: vi.fn(),
+  mockSavedSearchFrom: vi.fn(),
+  mockUsersFrom: vi.fn(),
   mockDbOrderBy: vi.fn(),
   mockDbWhere: vi.fn(),
+  mockUsersWhere: vi.fn(),
   mockInsertValues: vi.fn(),
   mockUpdateSet: vi.fn(),
   mockUpdateWhere: vi.fn(),
   mockSearchProperties: vi.fn(),
   mockSearchDevelopmentListings: vi.fn(),
+  mockSendEmail: vi.fn(),
 }));
 
 vi.mock('../../db-connection', () => ({
@@ -40,14 +46,23 @@ vi.mock('../developmentDerivedListingService', () => ({
   },
 }));
 
+vi.mock('../../_core/emailService', () => ({
+  EmailService: {
+    sendEmail: mockSendEmail,
+  },
+}));
+
 import { savedSearchNotificationEngine } from '../savedSearchNotificationEngine';
 
 describe('savedSearchNotificationEngine', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockDbSelect.mockReturnValue({ from: mockDbFrom });
-    mockDbFrom.mockReturnValue({ orderBy: mockDbOrderBy });
+    mockDbSelect
+      .mockReturnValueOnce({ from: mockSavedSearchFrom })
+      .mockReturnValueOnce({ from: mockUsersFrom });
+    mockSavedSearchFrom.mockReturnValue({ orderBy: mockDbOrderBy });
+    mockUsersFrom.mockReturnValue({ where: mockUsersWhere });
     mockDbOrderBy.mockReturnValue([{ id: 11 }]);
     mockDbWhere.mockResolvedValue([
       {
@@ -65,10 +80,19 @@ describe('savedSearchNotificationEngine', () => {
         lastNotifiedAt: '2026-03-19T08:00:00.000Z',
       },
     ]);
+    mockUsersWhere.mockResolvedValue([
+      {
+        id: 7,
+        email: 'buyer@example.com',
+        firstName: 'Ava',
+        name: 'Ava Buyer',
+      },
+    ]);
 
     mockInsertValues.mockResolvedValue([{ insertId: 101 }]);
     mockUpdateWhere.mockResolvedValue(undefined);
     mockUpdateSet.mockReturnValue({ where: mockUpdateWhere });
+    mockSendEmail.mockResolvedValue(true);
 
     mockGetDb.mockResolvedValue({
       select: mockDbSelect,
@@ -130,10 +154,12 @@ describe('savedSearchNotificationEngine', () => {
     );
     expect(mockInsertValues).toHaveBeenCalledOnce();
     expect(mockUpdateWhere).toHaveBeenCalledOnce();
+    expect(mockSendEmail).toHaveBeenCalledOnce();
     expect(result).toMatchObject({
       scannedSearches: 1,
       dueSearches: 1,
       emittedNotifications: 1,
+      emailedNotifications: 1,
       dryRun: false,
     });
     expect(result.notifications[0]).toMatchObject({
@@ -171,7 +197,9 @@ describe('savedSearchNotificationEngine', () => {
 
     expect(mockInsertValues).not.toHaveBeenCalled();
     expect(mockUpdateWhere).not.toHaveBeenCalled();
+    expect(mockSendEmail).not.toHaveBeenCalled();
     expect(result.emittedNotifications).toBe(0);
+    expect(result.emailedNotifications).toBe(0);
   });
 
   it('supports development-only dry runs without writing notifications', async () => {
@@ -226,11 +254,36 @@ describe('savedSearchNotificationEngine', () => {
 
     expect(mockSearchDevelopmentListings).toHaveBeenCalled();
     expect(mockInsertValues).not.toHaveBeenCalled();
+    expect(mockSendEmail).not.toHaveBeenCalled();
     expect(result.notifications[0]).toMatchObject({
       listingSource: 'development',
       totalMatches: 2,
       newMatchCount: 2,
       actionUrl: '/development/sandton-rise',
     });
+  });
+
+  it('skips email delivery when the saved-search user has no email address', async () => {
+    mockDbSelect
+      .mockReturnValueOnce({ from: mockSavedSearchFrom })
+      .mockReturnValueOnce({ from: mockUsersFrom });
+    mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+    mockUsersWhere.mockResolvedValue([
+      {
+        id: 7,
+        email: null,
+        firstName: 'Ava',
+        name: 'Ava Buyer',
+      },
+    ]);
+
+    const result = await savedSearchNotificationEngine.processDueNotifications({
+      userId: 7,
+      now: new Date('2026-03-21T10:00:00.000Z'),
+    });
+
+    expect(mockInsertValues).toHaveBeenCalledOnce();
+    expect(mockSendEmail).not.toHaveBeenCalled();
+    expect(result.emailedNotifications).toBe(0);
   });
 });

@@ -22,6 +22,7 @@ describe('savedSearch.processNotifications contract', () => {
       scannedSearches: 2,
       dueSearches: 1,
       emittedNotifications: 1,
+      emailedNotifications: 1,
       dryRun: true,
       notifications: [],
     });
@@ -47,6 +48,7 @@ describe('savedSearch.processNotifications contract', () => {
     expect(result).toMatchObject({
       dueSearches: 1,
       emittedNotifications: 1,
+      emailedNotifications: 1,
       dryRun: true,
     });
   });
