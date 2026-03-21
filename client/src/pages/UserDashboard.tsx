@@ -32,6 +32,7 @@ import {
   getSavedSearchNotificationDescription,
   getSavedSearchSourceLabel,
 } from '@/lib/savedSearchUtils';
+import type { SavedSearch } from '@shared/types';
 
 export default function UserDashboard() {
   const [, setLocation] = useLocation();
@@ -437,7 +438,7 @@ export default function UserDashboard() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {savedSearches!.map((search: any) => (
+                {savedSearches!.map((search: SavedSearch) => (
                   <Card key={search.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-3">
