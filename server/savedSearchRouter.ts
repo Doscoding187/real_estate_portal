@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from './db';
 import { savedSearches } from '../drizzle/schema';
@@ -12,12 +12,80 @@ import {
   serializeSavedSearchCriteria,
 } from './lib/savedSearchContract';
 import { savedSearchNotificationEngine } from './services/savedSearchNotificationEngine';
+import { verifySavedSearchDeliveryActionToken } from './services/savedSearchDeliveryActionTokenService';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
 }
 
 export const savedSearchRouter = router({
+  applyDeliveryActionByToken: publicProcedure
+    .input(
+      z.object({
+        token: z.string().trim().min(16).max(2048),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      let tokenPayload: ReturnType<typeof verifySavedSearchDeliveryActionToken>;
+      try {
+        tokenPayload = verifySavedSearchDeliveryActionToken(input.token);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: (error as Error)?.message || 'Invalid saved search action token.',
+        });
+      }
+
+      const search = await db
+        .select()
+        .from(savedSearches)
+        .where(
+          and(
+            eq(savedSearches.id, tokenPayload.savedSearchId),
+            eq(savedSearches.userId, tokenPayload.userId),
+          ),
+        )
+        .limit(1);
+
+      if (search.length === 0) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Saved search not found' });
+      }
+
+      const normalized = normalizeSavedSearch(search[0]);
+      const nextState =
+        tokenPayload.action === 'pause'
+          ? {
+              ...normalized,
+              notificationFrequency: 'never' as const,
+            }
+          : {
+              ...normalized,
+              emailEnabled: false,
+            };
+
+      await db
+        .update(savedSearches)
+        .set({
+          notificationFrequency: nextState.notificationFrequency,
+          criteria: serializeSavedSearchCriteria(nextState.criteria, nextState),
+        })
+        .where(eq(savedSearches.id, normalized.id));
+
+      return {
+        success: true,
+        action: tokenPayload.action,
+        savedSearch: nextState,
+        message:
+          tokenPayload.action === 'pause'
+            ? 'Saved-search alerts have been paused.'
+            : 'Saved-search email alerts have been turned off.',
+      };
+    }),
+
   create: protectedProcedure
     .input(
       z.object({

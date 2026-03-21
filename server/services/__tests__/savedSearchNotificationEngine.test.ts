@@ -162,6 +162,18 @@ describe('savedSearchNotificationEngine', () => {
         html: expect.stringContaining('Saved search digest'),
       }),
     );
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('Pause alerts: http://localhost:5173/saved-search/manage?token='),
+        html: expect.stringContaining('Pause alerts'),
+      }),
+    );
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('Turn off email alerts: http://localhost:5173/saved-search/manage?token='),
+        html: expect.stringContaining('Turn off email alerts'),
+      }),
+    );
     expect(result).toMatchObject({
       scannedSearches: 1,
       dueSearches: 1,
