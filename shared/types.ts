@@ -938,14 +938,14 @@ export interface DevelopmentDerivedListingSearchResults {
 
 // Saved search
 export interface SavedSearch {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   name: string;
-  filters: PropertyFilters;
-  notificationMethod: 'email' | 'whatsapp' | 'both' | 'none';
-  notificationFrequency: 'instant' | 'daily' | 'weekly';
-  createdAt: Date;
-  lastNotified?: Date;
+  criteria: Record<string, unknown>;
+  notificationFrequency: 'instant' | 'daily' | 'weekly' | 'never';
+  createdAt: string;
+  updatedAt: string;
+  lastNotifiedAt?: string | null;
 }
 
 // Quick filter presets for SA market

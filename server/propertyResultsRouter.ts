@@ -16,6 +16,10 @@ import { eq, desc, and } from 'drizzle-orm';
 import { propertySearchService } from './services/propertySearchService';
 import type { PropertyFilters, SortOption } from '../shared/types';
 import { requireUser } from './_core/requireUser';
+import {
+  normalizeSavedSearch,
+  savedSearchNotificationFrequencySchema,
+} from './lib/savedSearchContract';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -64,6 +68,17 @@ const sortOptionSchema = z.enum([
   'suburb_asc',
   'suburb_desc',
 ]);
+
+const propertyResultsSavedSearchCreateSchema = z
+  .object({
+    name: z.string().min(1).max(255),
+    criteria: propertyFiltersSchema.optional(),
+    filters: propertyFiltersSchema.optional(),
+    notificationFrequency: savedSearchNotificationFrequencySchema.default('weekly'),
+  })
+  .refine(input => Boolean(input.criteria || input.filters), {
+    message: 'Saved search criteria are required',
+  });
 
 export const propertyResultsRouter = router({
   /**
@@ -136,17 +151,10 @@ export const propertyResultsRouter = router({
   savedSearches: router({
     /**
      * Create a saved search
-     * Requirement 4.1: Store filter criteria with notification options
+     * Requirement 4.1: Store filter criteria with notification frequency
      */
     create: protectedProcedure
-      .input(
-        z.object({
-          name: z.string().min(1).max(255),
-          filters: propertyFiltersSchema,
-          notificationMethod: z.enum(['email', 'whatsapp', 'both', 'none']).default('none'),
-          notificationFrequency: z.enum(['instant', 'daily', 'weekly']).default('weekly'),
-        }),
-      )
+      .input(propertyResultsSavedSearchCreateSchema)
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) {
@@ -157,11 +165,11 @@ export const propertyResultsRouter = router({
         }
 
         try {
+          const criteria = (input.criteria ?? input.filters ?? {}) as PropertyFilters;
           const result = await db.insert(savedSearches).values({
             userId: getUserId(ctx),
             name: input.name,
-            filters: input.filters as any,
-            notificationMethod: input.notificationMethod,
+            criteria: criteria as any,
             notificationFrequency: input.notificationFrequency,
           });
 
@@ -204,40 +212,32 @@ export const propertyResultsRouter = router({
         const searchesWithCounts = await Promise.all(
           searches.map(async (search: any) => {
             try {
-              const filters = search.filters as PropertyFilters;
-              const counts = await propertySearchService.getFilterCounts(filters);
+              const savedSearch = normalizeSavedSearch(search);
+              const criteria = savedSearch.criteria as PropertyFilters;
+              const counts = await propertySearchService.getFilterCounts(criteria);
 
-              // Extract location info from filters
-              const location = [filters.suburb?.join(', '), filters.city, filters.province]
+              // Extract location info from criteria
+              const location = [criteria.suburb?.join(', '), criteria.city, criteria.province]
                 .filter(Boolean)
                 .join(', ');
 
               return {
-                id: search.id,
-                name: search.name,
-                filters: search.filters,
+                ...savedSearch,
+                filters: savedSearch.criteria,
                 location,
                 resultCount: counts.total,
-                notificationMethod: search.notificationMethod,
-                notificationFrequency: search.notificationFrequency,
-                createdAt: search.createdAt,
-                lastNotified: search.lastNotified,
               };
             } catch (error) {
               console.error(
                 `[PropertyResults] Error getting counts for search ${search.id}:`,
                 error,
               );
+              const savedSearch = normalizeSavedSearch(search);
               return {
-                id: search.id,
-                name: search.name,
-                filters: search.filters,
+                ...savedSearch,
+                filters: savedSearch.criteria,
                 location: '',
                 resultCount: 0,
-                notificationMethod: search.notificationMethod,
-                notificationFrequency: search.notificationFrequency,
-                createdAt: search.createdAt,
-                lastNotified: search.lastNotified,
               };
             }
           }),
@@ -294,14 +294,13 @@ export const propertyResultsRouter = router({
             });
           }
 
+          const savedSearch = normalizeSavedSearch(search[0]);
+
           return {
             success: true,
             data: {
-              id: search[0].id,
-              name: search[0].name,
-              filters: search[0].filters as PropertyFilters,
-              notificationMethod: search[0].notificationMethod,
-              notificationFrequency: search[0].notificationFrequency,
+              ...savedSearch,
+              filters: savedSearch.criteria,
             },
           };
         } catch (error) {
