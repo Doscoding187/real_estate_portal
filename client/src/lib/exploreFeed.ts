@@ -66,6 +66,23 @@ export interface FeedItem {
   metadata?: Record<string, unknown>;
 }
 
+function isDiscoveryFeedItem(value: unknown): value is {
+  metadata?: unknown;
+  media?: { coverUrl?: string; videoUrl?: string };
+  engagement?: { likes?: number; saves?: number; views?: number };
+} {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.id !== 'undefined' &&
+    typeof item.type === 'string' &&
+    !!item.media &&
+    typeof item.media === 'object' &&
+    !!item.engagement &&
+    typeof item.engagement === 'object'
+  );
+}
+
 const ALLOWED_CONTENT_TYPES: FeedContentType[] = ['short', 'walkthrough', 'showcase'];
 const ALLOWED_CATEGORIES: FeedCategory[] = [
   'property',
@@ -318,10 +335,20 @@ export function toFeedItem(raw: unknown): FeedItem | null {
 function pickRawItems(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
   if (!payload || typeof payload !== 'object') return [];
-  if (Array.isArray(payload.items)) return payload.items;
+  if (Array.isArray(payload.items)) {
+    if (payload.items.some(isDiscoveryFeedItem)) {
+      return payload.items.map((item: any) => item?.metadata ?? item);
+    }
+    return payload.items;
+  }
   if (Array.isArray(payload.shorts)) return payload.shorts;
   if (Array.isArray(payload.data)) return payload.data;
-  if (Array.isArray(payload.data?.items)) return payload.data.items;
+  if (Array.isArray(payload.data?.items)) {
+    if (payload.data.items.some(isDiscoveryFeedItem)) {
+      return payload.data.items.map((item: any) => item?.metadata ?? item);
+    }
+    return payload.data.items;
+  }
   return [];
 }
 

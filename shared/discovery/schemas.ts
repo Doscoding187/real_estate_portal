@@ -77,6 +77,13 @@ export const discoveryFeedItemSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const discoveryFeedResponseSchema = z.object({
+  items: z.array(discoveryFeedItemSchema),
+  hasMore: z.boolean(),
+  offset: z.number().int().nonnegative(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const discoveryEngagementContextSchema = z.object({
   mode: discoveryFeedModeSchema.optional(),
   position: z.number().int().nonnegative().optional(),
@@ -91,4 +98,5 @@ export const discoveryEngagementSchema = z.object({
 
 export type DiscoveryQueryInput = z.infer<typeof discoveryQuerySchema>;
 export type DiscoveryFeedItemInput = z.infer<typeof discoveryFeedItemSchema>;
+export type DiscoveryFeedResponseInput = z.infer<typeof discoveryFeedResponseSchema>;
 export type DiscoveryEngagementInput = z.infer<typeof discoveryEngagementSchema>;

@@ -91,6 +91,13 @@ export interface DiscoveryFeedItem {
   metadata?: Record<string, unknown>;
 }
 
+export interface DiscoveryFeedResponse {
+  items: DiscoveryFeedItem[];
+  hasMore: boolean;
+  offset: number;
+  metadata?: Record<string, unknown>;
+}
+
 export interface DiscoveryEngagementContext {
   mode?: DiscoveryFeedMode;
   position?: number;

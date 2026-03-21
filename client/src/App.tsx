@@ -59,7 +59,6 @@ const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
-const ExploreDiscovery = lazy(() => import('./pages/ExploreDiscovery'));
 const ExploreMap = lazy(() => import('./pages/ExploreMap'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
@@ -105,7 +104,6 @@ const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDeta
 const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
-const ExploreComponentDemo = lazy(() => import('./pages/ExploreComponentDemo'));
 const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 
 // Import Developer Dashboard Pages
@@ -365,11 +363,12 @@ function Router() {
           <Route path="/explore/upload/video">
             <Redirect to="/explore/upload" />
           </Route>
-          <Route path="/explore/component-demo" component={ExploreComponentDemo} />
           <Route path="/map-preview-demo" component={MapPreviewDemo} />
 
           {/* New Explore Pages */}
-          <Route path="/explore/discovery" component={ExploreDiscovery} />
+          <Route path="/explore/discovery">
+            <Redirect to="/explore/feed" />
+          </Route>
           <Route path="/explore/map" component={ExploreMap} />
 
           {/* Legacy Feed */}

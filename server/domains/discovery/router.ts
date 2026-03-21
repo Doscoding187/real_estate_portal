@@ -1,14 +1,21 @@
 import { publicProcedure, router } from '../../_core/trpc';
-import { discoveryEngagementSchema, discoveryQuerySchema } from '../../../shared/discovery/schemas';
+import {
+  discoveryEngagementSchema,
+  discoveryFeedResponseSchema,
+  discoveryQuerySchema,
+} from '../../../shared/discovery/schemas';
 import { discoveryFeedService } from './services/discoveryFeedService';
 import { discoveryEngagementService } from './services/discoveryEngagementService';
 
 export const discoveryRouter = router({
-  getFeed: publicProcedure.input(discoveryQuerySchema).query(async ({ input, ctx }) => {
-    return discoveryFeedService.getFeed(input, {
-      userId: ctx.user?.id,
-    });
-  }),
+  getFeed: publicProcedure
+    .input(discoveryQuerySchema)
+    .output(discoveryFeedResponseSchema)
+    .query(async ({ input, ctx }) => {
+      return discoveryFeedService.getFeed(input, {
+        userId: ctx.user?.id,
+      });
+    }),
 
   engage: publicProcedure.input(discoveryEngagementSchema).mutation(async ({ input, ctx }) => {
     return discoveryEngagementService.handle(input, {

@@ -498,11 +498,14 @@ export interface BulkCreateUnitsInput {
 export type InteractionType =
   | 'impression'
   | 'view'
+  | 'complete'
   | 'like'
   | 'skip'
   | 'save'
   | 'share'
+  | 'click_cta'
   | 'contact'
+  | 'comment'
   | 'whatsapp'
   | 'book_viewing';
 

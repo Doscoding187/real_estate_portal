@@ -9,6 +9,7 @@
 
 import { useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
+import { getFeedItems } from '@/lib/exploreFeed';
 
 export interface TrendingVideo {
   id: number;
@@ -139,40 +140,40 @@ const placeholderTrendingVideos: TrendingVideo[] = [
 
 export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTrendingVideosReturn {
   const { categoryId, limit = 12 } = options;
+  const discoveryCategoryMap = [
+    undefined,
+    'property',
+    'service',
+    'insight',
+    'insight',
+    'service',
+  ] as const;
+  const category = categoryId !== undefined ? discoveryCategoryMap[categoryId] : undefined;
 
   // Fetch trending videos from API
-  const feedQuery = trpc.explore.getFeed.useQuery({
-    feedType: 'recommended',
-    limit: limit,
-    offset: 0,
+  const feedQuery = trpc.discovery.getFeed.useQuery({
+    mode: 'home',
+    contentType: 'video',
+    category,
+    limit,
   });
 
   // Process and filter videos
   const videos = useMemo(() => {
-    const feedData = feedQuery.data;
+    const videoItems = getFeedItems(feedQuery.data);
 
-    // Check if we have valid data
-    if (Array.isArray(feedData) && feedData.length > 0) {
-      // Filter to only video content
-      let videoItems = feedData.filter((item: any) => item.contentType === 'video');
-
-      // Apply category filter if provided
-      if (categoryId) {
-        videoItems = videoItems.filter((item: any) => item.categoryId === categoryId);
-      }
-
-      // Map to TrendingVideo format
+    if (videoItems.length > 0) {
       return videoItems.slice(0, limit).map((item: any) => ({
         id: item.id,
         title: item.title || 'Property Video',
         thumbnailUrl: item.thumbnailUrl || item.imageUrl || '',
-        videoUrl: item.videoUrl,
-        duration: item.duration || 30,
-        views: item.views || 0,
-        saves: item.saves || 0,
-        creatorName: item.creatorName || 'Agent',
-        creatorAvatar: item.creatorAvatar,
-        categoryId: item.categoryId,
+        videoUrl: item.mediaUrl,
+        duration: item.durationSec || item.duration || 30,
+        views: item.views || item.viewCount || item.stats?.views || 0,
+        saves: item.saves || item.saveCount || item.stats?.saves || 0,
+        creatorName: item.creatorName || item.actor?.displayName || 'Agent',
+        creatorAvatar: item.creatorAvatar || item.actor?.avatarUrl,
+        categoryId: categoryId,
         propertyId: item.propertyId,
         createdAt: item.createdAt,
       }));

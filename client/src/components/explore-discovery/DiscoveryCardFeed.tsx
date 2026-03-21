@@ -1,10 +1,11 @@
 import { useRef, useEffect } from 'react';
 import { ChevronRight, Loader2 } from 'lucide-react';
+import type { ContentBlock, DiscoveryItem } from '@/domains/discovery/types';
 import { PropertyCard } from './cards/PropertyCard';
 import { VideoCard } from './cards/VideoCard';
 import { NeighbourhoodCard } from './cards/NeighbourhoodCard';
 import { InsightCard } from './cards/InsightCard';
-import { useDiscoveryFeed, ContentBlock, DiscoveryItem } from '@/hooks/useDiscoveryFeed';
+import { useDiscoveryFeed } from '@/hooks/useDiscoveryFeed';
 
 interface DiscoveryCardFeedProps {
   categoryId?: number;
