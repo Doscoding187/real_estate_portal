@@ -155,6 +155,13 @@ describe('savedSearchNotificationEngine', () => {
     expect(mockInsertValues).toHaveBeenCalledOnce();
     expect(mockUpdateWhere).toHaveBeenCalledOnce();
     expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: '2 new matches for Johannesburg Apartments',
+        text: expect.stringContaining('Top result: 2 Bedroom Apartment for Sale in Rosebank.'),
+        html: expect.stringContaining('Saved search digest'),
+      }),
+    );
     expect(result).toMatchObject({
       scannedSearches: 1,
       dueSearches: 1,
@@ -166,6 +173,9 @@ describe('savedSearchNotificationEngine', () => {
       savedSearchId: 11,
       userId: 7,
       listingSource: 'all',
+      title: '2 new matches for Johannesburg Apartments',
+      content:
+        'Johannesburg: 2 new matches across listings and developments. Top result: 2 Bedroom Apartment for Sale in Rosebank. 2 total active.',
       totalMatches: 2,
       newMatchCount: 2,
       actionUrl: '/property/55',
@@ -257,6 +267,9 @@ describe('savedSearchNotificationEngine', () => {
     expect(mockSendEmail).not.toHaveBeenCalled();
     expect(result.notifications[0]).toMatchObject({
       listingSource: 'development',
+      title: '2 new development matches for Off-plan Sandton',
+      content:
+        'Sandton, Johannesburg: 2 new development matches. Top result: 2 Bedroom Apartment for Sale in Sandton. 2 total active.',
       totalMatches: 2,
       newMatchCount: 2,
       actionUrl: '/development/sandton-rise',
