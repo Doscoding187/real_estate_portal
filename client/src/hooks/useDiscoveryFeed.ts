@@ -1,19 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
+import type { ContentBlock, DiscoveryItem } from '@/domains/discovery/types';
 
-export interface DiscoveryItem {
-  id: number;
-  type: 'property' | 'video' | 'neighbourhood' | 'insight';
-  data: any;
-  partnerId?: number | null;
-}
-
-export interface ContentBlock {
-  id: string;
-  title: string;
-  type: 'for-you' | 'popular-near-you' | 'new-developments' | 'trending' | 'partner';
-  items: DiscoveryItem[];
-}
+export type { ContentBlock, DiscoveryItem } from '@/domains/discovery/types';
 
 interface UseDiscoveryFeedOptions {
   categoryId?: number;

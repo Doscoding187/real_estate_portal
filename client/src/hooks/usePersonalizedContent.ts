@@ -5,8 +5,8 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import type { DiscoveryItem } from '@/domains/discovery/types';
 import { trpc } from '@/lib/trpc';
-import { DiscoveryItem } from './useDiscoveryFeed';
 import { getFeedItems, type FeedItem as CanonicalFeedItem } from '@/lib/exploreFeed';
 import { type ExploreIntent } from '@/lib/exploreIntent';
 import { getExploreMockFeedItems } from '@/data/exploreMockFeed';
@@ -24,7 +24,6 @@ export interface PersonalizedSection {
 
 interface UsePersonalizedContentOptions {
   categoryId?: number;
-  location?: { lat: number; lng: number };
   intent?: ExploreIntent | null;
 }
 
@@ -38,11 +37,11 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const mockItems = useMemo(() => getExploreMockFeedItems(), []);
 
   // Fetch "For You" personalized content
-  const forYouQuery = trpc.explore.getFeed.useQuery(
+  const forYouQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'recommended',
+      mode: 'home',
+      contentType: 'video',
       limit: 10,
-      offset: 0,
     },
     {
       enabled: !useMockData,
@@ -52,16 +51,14 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const forYouData = forYouQuery.data;
   const forYouLoading = forYouQuery.isLoading;
 
-  // Fetch "Popular Near You" location-based content
-  const popularNearYouQuery = trpc.explore.getFeed.useQuery(
+  const popularNearYouQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'area',
-      location: options.location ? `${options.location.lat},${options.location.lng}` : '',
+      mode: 'home',
+      contentType: 'video',
       limit: 10,
-      offset: 0,
     },
     {
-      enabled: !useMockData && !!options.location,
+      enabled: !useMockData,
     },
   );
 
@@ -69,11 +66,12 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const popularNearYouLoading = popularNearYouQuery.isLoading;
 
   // Fetch "New Developments" content
-  const newDevelopmentsQuery = trpc.explore.getFeed.useQuery(
+  const newDevelopmentsQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'recommended',
+      mode: 'home',
+      contentType: 'video',
+      category: 'property',
       limit: 10,
-      offset: 0,
     },
     {
       enabled: !useMockData,
@@ -84,11 +82,11 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const newDevelopmentsLoading = newDevelopmentsQuery.isLoading;
 
   // Fetch "Trending" content
-  const trendingQuery = trpc.explore.getFeed.useQuery(
+  const trendingQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'recommended',
+      mode: 'home',
+      contentType: 'video',
       limit: 10,
-      offset: 0,
     },
     {
       enabled: !useMockData,
