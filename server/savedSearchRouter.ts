@@ -10,6 +10,7 @@ import {
   savedSearchCriteriaSchema,
   savedSearchNotificationFrequencySchema,
 } from './lib/savedSearchContract';
+import { savedSearchNotificationEngine } from './services/savedSearchNotificationEngine';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -78,5 +79,22 @@ export const savedSearchRouter = router({
       await db.delete(savedSearches).where(eq(savedSearches.id, input.id));
 
       return { success: true };
+    }),
+
+  processNotifications: protectedProcedure
+    .input(
+      z
+        .object({
+          dryRun: z.boolean().default(false),
+          limit: z.number().int().positive().max(100).optional(),
+        })
+        .default({}),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return savedSearchNotificationEngine.processDueNotifications({
+        userId: getUserId(ctx),
+        dryRun: input.dryRun,
+        limit: input.limit,
+      });
     }),
 });
