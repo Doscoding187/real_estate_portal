@@ -20,6 +20,7 @@ const TEXT_CONTENT_TYPE = 'text/plain; charset=utf-8';
 const SITEMAP_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=3600';
 const LIVE_PROPERTY_STATUSES = ['available', 'published'] as const;
 const AREA_LISTING_TYPES = ['sale', 'rent'] as const;
+const DEFAULT_PUBLIC_SITE_URL = 'https://www.propertylistifysa.co.za';
 
 type SitemapUrlEntry = {
   loc: string;
@@ -29,14 +30,38 @@ type SitemapUrlEntry = {
 };
 
 function getFallbackBaseUrl(): string {
-  return ENV.appUrl.replace(/\/+$/, '');
+  const candidates = [
+    process.env.FRONTEND_URL,
+    ENV.appUrl,
+    DEFAULT_PUBLIC_SITE_URL,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    try {
+      const url = new URL(candidate);
+      if (!isLocalHost(url.host)) {
+        return url.origin.replace(/\/+$/, '');
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return DEFAULT_PUBLIC_SITE_URL;
 }
 
 function isLocalHost(host: string): boolean {
   return /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host);
 }
 
+function isPublicSiteHost(host: string): boolean {
+  return /^(www\.)?propertylistifysa\.co\.za$/i.test(host);
+}
+
 function resolveBaseUrl(req: Request): string {
+  const fallbackBaseUrl = getFallbackBaseUrl();
   const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
     .split(',')[0]
     .trim();
@@ -45,12 +70,12 @@ function resolveBaseUrl(req: Request): string {
     .trim();
   const host = forwardedHost || req.get('host') || '';
 
-  if (host && !isLocalHost(host)) {
+  if (host && !isLocalHost(host) && isPublicSiteHost(host)) {
     const protocol = forwardedProto || req.protocol || 'https';
     return `${protocol}://${host}`.replace(/\/+$/, '');
   }
 
-  return getFallbackBaseUrl();
+  return fallbackBaseUrl;
 }
 
 function escapeXml(value: string): string {
