@@ -12,6 +12,10 @@ import { getDb } from '../db-connection';
 import { normalizeSavedSearch } from '../lib/savedSearchContract';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
 import { propertySearchService } from './propertySearchService';
+import {
+  createSavedSearchDeliveryActionToken,
+  type SavedSearchDeliveryAction,
+} from './savedSearchDeliveryActionTokenService';
 
 const PREVIEW_QUERY_LIMIT = 100;
 const PREVIEW_MATCH_LIMIT = 3;
@@ -88,6 +92,11 @@ interface SavedSearchEmailRecipient {
   email: string;
   firstName: string | null;
   name: string | null;
+}
+
+interface SavedSearchDeliveryLinks {
+  pauseUrl: string;
+  unsubscribeEmailUrl: string;
 }
 
 function toString(value: unknown): string | undefined {
@@ -452,18 +461,40 @@ function buildSavedSearchSummaryCardsHtml(payload: SavedSearchNotificationPayloa
   `;
 }
 
+function buildSavedSearchDeliveryLinks(payload: SavedSearchNotificationPayload): SavedSearchDeliveryLinks {
+  const buildManagementUrl = (action: SavedSearchDeliveryAction) => {
+    const token = createSavedSearchDeliveryActionToken({
+      action,
+      savedSearchId: payload.savedSearchId,
+      userId: payload.userId,
+    });
+
+    return buildAbsoluteUrl(`/saved-search/manage?token=${encodeURIComponent(token)}`);
+  };
+
+  return {
+    pauseUrl: buildManagementUrl('pause'),
+    unsubscribeEmailUrl: buildManagementUrl('unsubscribe_email'),
+  };
+}
+
 function formatSavedSearchEmailText(
   recipient: SavedSearchEmailRecipient,
   payload: SavedSearchNotificationPayload,
 ): string {
+  const links = buildSavedSearchDeliveryLinks(payload);
   const base = buildSavedSearchEmailText(recipient, payload).replace(
     `View results: ${buildAbsoluteUrl(payload.actionUrl)}`,
     `Open saved search: ${buildAbsoluteUrl(payload.actionUrl)}`,
   );
 
-  return base.replace(
+  return (
+    base
+      .replace(
     payload.content,
     `${payload.title}\n\n${payload.content}\n\n${getSavedSearchPreviewSummary(payload)}:`,
+      )
+      + `\n\nPause alerts: ${links.pauseUrl}\nTurn off email alerts: ${links.unsubscribeEmailUrl}`
   );
 }
 
@@ -473,12 +504,26 @@ function formatSavedSearchEmailHtml(
 ): string {
   const summaryHtml = buildSavedSearchSummaryCardsHtml(payload);
   const previewSummary = getSavedSearchPreviewSummary(payload);
+  const links = buildSavedSearchDeliveryLinks(payload);
+  const managementHtml = `
+    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+      <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">Manage these alerts</div>
+      <div style="font-size: 13px; line-height: 1.7;">
+        <a href="${escapeHtml(links.pauseUrl)}" style="color: #2774AE; text-decoration: none; margin-right: 16px;">Pause alerts</a>
+        <a href="${escapeHtml(links.unsubscribeEmailUrl)}" style="color: #2774AE; text-decoration: none;">Turn off email alerts</a>
+      </div>
+    </div>
+  `;
 
   return buildSavedSearchEmailHtml(recipient, payload)
     .replace('Saved search update', 'Saved search digest')
     .replace(
       `${escapeHtml(payload.content)}</p>\n        <div style="border-bottom: 1px solid #e2e8f0; margin-bottom: 8px;"></div>`,
       `${escapeHtml(payload.content)}</p>\n        ${summaryHtml}\n        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em;">${escapeHtml(previewSummary)}</div>\n        <div style="border-bottom: 1px solid #e2e8f0; margin-bottom: 8px;"></div>`,
+    )
+    .replace(
+      '</div>\n      </div>\n    </div>',
+      `${managementHtml}\n      </div>\n      </div>\n    </div>`,
     )
     .replace('View results', 'Open saved search');
 }
