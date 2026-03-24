@@ -22,6 +22,7 @@ import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter'
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
+import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import sitemapRouter from '../routes/sitemap';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
@@ -224,6 +225,9 @@ async function startServer() {
 
   console.log('[Server] Optional routers loaded');
 
+  const savedSearchSchedulerStatus = savedSearchDeliveryScheduler.start();
+  console.log('[SavedSearchScheduler] Startup status', savedSearchSchedulerStatus);
+
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Using Vite development server');
     await setupVite(app, server);
@@ -250,12 +254,14 @@ startServer().catch(console.error);
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...');
+  await savedSearchDeliveryScheduler.stop();
   await shutdownCache();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down...');
+  await savedSearchDeliveryScheduler.stop();
   await shutdownCache();
   process.exit(0);
 });

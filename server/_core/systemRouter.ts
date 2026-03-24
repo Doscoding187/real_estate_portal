@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { notifyOwner } from './notification';
 import { adminProcedure, publicProcedure, router } from './trpc';
 import { getDb } from '../db';
+import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 
 export const systemRouter = router({
   health: publicProcedure
@@ -51,4 +52,8 @@ export const systemRouter = router({
         success: delivered,
       } as const;
     }),
+
+  savedSearchSchedulerStatus: adminProcedure.query(() => {
+    return savedSearchDeliveryScheduler.getStatus();
+  }),
 });
