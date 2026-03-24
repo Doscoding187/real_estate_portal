@@ -56,4 +56,9 @@ export const systemRouter = router({
   savedSearchSchedulerStatus: adminProcedure.query(() => {
     return savedSearchDeliveryScheduler.getStatus();
   }),
+
+  runSavedSearchScheduler: adminProcedure.mutation(async () => {
+    await savedSearchDeliveryScheduler.runDueNotifications('manual');
+    return savedSearchDeliveryScheduler.getStatus();
+  }),
 });
