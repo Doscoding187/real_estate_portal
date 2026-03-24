@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { toast } from 'sonner';
 
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
@@ -75,6 +76,15 @@ const EcosystemOverviewPage: React.FC = () => {
     refetch: refetchSchedulerStatus,
   } = trpc.system.savedSearchSchedulerStatus.useQuery(undefined, {
     refetchInterval: 60_000,
+  });
+  const runScheduler = trpc.system.runSavedSearchScheduler.useMutation({
+    onSuccess: async () => {
+      toast.success('Saved search scheduler run completed');
+      await refetchSchedulerStatus();
+    },
+    onError: error => {
+      toast.error(error.message || 'Unable to run saved search scheduler');
+    },
   });
 
   const StatCard = ({
@@ -241,11 +251,20 @@ const EcosystemOverviewPage: React.FC = () => {
               </Badge>
             )}
             <Button
+              size="sm"
+              className="bg-slate-900 text-white hover:bg-slate-800"
+              onClick={() => runScheduler.mutate()}
+              disabled={schedulerFetching || runScheduler.isPending}
+            >
+              <BellRing className={`mr-2 h-4 w-4 ${runScheduler.isPending ? 'animate-pulse' : ''}`} />
+              Run now
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               className="bg-white/70"
               onClick={() => void refetchSchedulerStatus()}
-              disabled={schedulerFetching}
+              disabled={schedulerFetching || runScheduler.isPending}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${schedulerFetching ? 'animate-spin' : ''}`} />
               Refresh
@@ -265,7 +284,7 @@ const EcosystemOverviewPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <SchedulerMetric
                   label="Schedule"
                   value={
@@ -279,6 +298,11 @@ const EcosystemOverviewPage: React.FC = () => {
                   label="Last Completed"
                   value={formatDateTime(schedulerStatus?.lastRunCompletedAt)}
                   subtext={formatAgo(schedulerStatus?.lastRunCompletedAt)}
+                />
+                <SchedulerMetric
+                  label="Last Trigger"
+                  value={schedulerStatus?.recentRuns?.[0]?.trigger || '—'}
+                  subtext={schedulerStatus?.running ? 'Manual run in progress' : null}
                 />
                 <SchedulerMetric
                   label="Notifications"

@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetStatus } = vi.hoisted(() => ({
+const { mockGetStatus, mockRunDueNotifications } = vi.hoisted(() => ({
   mockGetStatus: vi.fn(),
+  mockRunDueNotifications: vi.fn(),
 }));
 
 vi.mock('../services/savedSearchDeliveryScheduler', () => ({
   savedSearchDeliveryScheduler: {
     getStatus: mockGetStatus,
+    runDueNotifications: mockRunDueNotifications,
   },
 }));
 
@@ -15,6 +17,7 @@ import { appRouter } from '../routers';
 describe('system.savedSearchSchedulerStatus contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRunDueNotifications.mockResolvedValue(undefined);
     mockGetStatus.mockReturnValue({
       enabled: true,
       running: false,
@@ -32,6 +35,7 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         emittedNotifications: 3,
         emailedNotifications: 2,
       },
+      recentRuns: [],
     });
   });
 
@@ -54,6 +58,24 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         emittedNotifications: 3,
         emailedNotifications: 2,
       },
+    });
+  });
+
+  it('runs the scheduler manually for admins', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: 1, role: 'super_admin' },
+    } as any);
+
+    const result = await caller.system.runSavedSearchScheduler();
+
+    expect(mockRunDueNotifications).toHaveBeenCalledOnce();
+    expect(mockRunDueNotifications).toHaveBeenCalledWith('manual');
+    expect(mockGetStatus).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({
+      enabled: true,
+      timerActive: true,
     });
   });
 });
