@@ -225,7 +225,7 @@ async function startServer() {
 
   console.log('[Server] Optional routers loaded');
 
-  const savedSearchSchedulerStatus = savedSearchDeliveryScheduler.start();
+  const savedSearchSchedulerStatus = await savedSearchDeliveryScheduler.start();
   console.log('[SavedSearchScheduler] Startup status', savedSearchSchedulerStatus);
 
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
