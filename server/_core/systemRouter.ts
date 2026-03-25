@@ -68,6 +68,45 @@ function deriveDeliveryRecoveryState(row: {
   return 'terminal';
 }
 
+function normalizeDeliveryHistoryRow(row: any) {
+  return {
+    ...row,
+    inAppRequested: Boolean(row.inAppRequested),
+    emailRequested: Boolean(row.emailRequested),
+    inAppDelivered: Boolean(row.inAppDelivered),
+    emailDelivered: Boolean(row.emailDelivered),
+    diagnosticCategory: deriveDeliveryFailureCategory({
+      status: row.status,
+      retryState: row.retryState,
+      error: row.error,
+      emailRequested: row.emailRequested,
+      emailDelivered: row.emailDelivered,
+      retryCount: Number(row.retryCount ?? 0),
+      maxRetryCount: Number(row.maxRetryCount ?? 0),
+    }),
+    recoveryState: deriveDeliveryRecoveryState({
+      retryState: row.retryState,
+      emailRequested: row.emailRequested,
+      emailDelivered: row.emailDelivered,
+    }),
+  };
+}
+
+function escapeCsvCell(value: unknown) {
+  if (value === null || value === undefined) {
+    return '""';
+  }
+
+  const normalized =
+    typeof value === 'string'
+      ? value
+      : typeof value === 'number' || typeof value === 'boolean'
+        ? String(value)
+        : JSON.stringify(value);
+
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
 function getDeliveryHistoryWhereClause(filter: DeliveryHistoryFilter) {
   switch (filter) {
     case 'attention':
@@ -273,26 +312,96 @@ export const systemRouter = router({
         .orderBy(desc(savedSearchDeliveryHistory.processedAt))
         .limit(input.limit);
 
-      return rows.map(row => ({
-        ...row,
-        inAppRequested: Boolean(row.inAppRequested),
-        emailRequested: Boolean(row.emailRequested),
-        inAppDelivered: Boolean(row.inAppDelivered),
-        emailDelivered: Boolean(row.emailDelivered),
-        diagnosticCategory: deriveDeliveryFailureCategory({
-          status: row.status,
-          retryState: row.retryState,
-          error: row.error,
-          emailRequested: row.emailRequested,
-          emailDelivered: row.emailDelivered,
-          retryCount: Number(row.retryCount ?? 0),
-          maxRetryCount: Number(row.maxRetryCount ?? 0),
-        }),
-        recoveryState: deriveDeliveryRecoveryState({
-          retryState: row.retryState,
-          emailRequested: row.emailRequested,
-          emailDelivered: row.emailDelivered,
-        }),
-      }));
+      return rows.map(normalizeDeliveryHistoryRow);
+    }),
+
+  exportSavedSearchDeliveryHistory: adminProcedure
+    .input(
+      z
+        .object({
+          filter: deliveryHistoryFilterSchema.default('all'),
+        })
+        .default({}),
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const whereClause = getDeliveryHistoryWhereClause(input.filter);
+      const baseQuery = db.select().from(savedSearchDeliveryHistory) as any;
+      const rows = await (
+        whereClause ? baseQuery.where(whereClause) : baseQuery
+      )
+        .orderBy(desc(savedSearchDeliveryHistory.processedAt))
+        .limit(5000);
+
+      const normalizedRows = rows.map(normalizeDeliveryHistoryRow);
+      const headers = [
+        'Processed At',
+        'Saved Search ID',
+        'User ID',
+        'Search Name',
+        'Alert Title',
+        'Alert Content',
+        'Listing Source',
+        'Notification Frequency',
+        'Status',
+        'Diagnostic Category',
+        'Recovery State',
+        'Total Matches',
+        'New Matches',
+        'In-App Requested',
+        'In-App Delivered',
+        'Email Requested',
+        'Email Delivered',
+        'Retry State',
+        'Retry Count',
+        'Max Retry Count',
+        'Next Retry At',
+        'Last Retry At',
+        'Action Url',
+        'Error',
+      ];
+
+      const csvRows = normalizedRows.map(row => [
+        row.processedAt,
+        row.savedSearchId ?? '',
+        row.userId,
+        row.searchName,
+        row.title,
+        row.content,
+        row.listingSource,
+        row.notificationFrequency,
+        row.status,
+        row.diagnosticCategory,
+        row.recoveryState,
+        row.totalMatches,
+        row.newMatchCount,
+        row.inAppRequested,
+        row.inAppDelivered,
+        row.emailRequested,
+        row.emailDelivered,
+        row.retryState,
+        row.retryCount,
+        row.maxRetryCount,
+        row.nextRetryAt ?? '',
+        row.lastRetryAt ?? '',
+        row.actionUrl ?? '',
+        row.error ?? '',
+      ]);
+
+      const content = [headers, ...csvRows]
+        .map(row => row.map(escapeCsvCell).join(','))
+        .join('\n');
+      const filterSuffix = input.filter === 'all' ? 'all' : input.filter;
+
+      return {
+        filename: `saved-search-delivery-history-${filterSuffix}-${new Date()
+          .toISOString()
+          .split('T')[0]}.csv`,
+        content,
+      };
     }),
 });
