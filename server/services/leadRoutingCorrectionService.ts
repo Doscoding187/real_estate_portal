@@ -174,9 +174,10 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
           ? `brand:${input.developerBrandProfileId}`
           : input.routeType;
 
-  const activityDescription =
-    input.note?.trim() ||
-    `Lead routing corrected from ${currentRouteLabel} to ${targetRouteLabel}`;
+  const noteSuffix = input.note?.trim();
+  const activityDescription = noteSuffix
+    ? `Lead routing corrected from ${currentRouteLabel} to ${targetRouteLabel} — ${noteSuffix}`
+    : `Lead routing corrected from ${currentRouteLabel} to ${targetRouteLabel}`;
 
   await db.insert(leadActivities).values({
     leadId: input.leadId,
