@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+  AlertCircle,
   Play,
   Grid3x3,
   ArrowRight,
   Flame,
   Clapperboard,
+  RefreshCw,
   SlidersHorizontal,
 } from 'lucide-react';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
@@ -213,7 +215,13 @@ export default function ExploreHome() {
   const getFilterCount = useExploreFiltersStore(state => state.getFilterCount);
 
   // Get personalized content sections
-  const { sections, isLoading: sectionsLoading } = usePersonalizedContent({
+  const {
+    sections,
+    isLoading: sectionsLoading,
+    error: sectionsError,
+    hasAnyContent,
+    refetch: refetchSections,
+  } = usePersonalizedContent({
     categoryId: selectedCategoryId ?? undefined,
     intent,
   });
@@ -321,6 +329,7 @@ export default function ExploreHome() {
   const mediaGatewaySections = useMemo(() => orderedSections.slice(0, 6), [orderedSections]);
   const featuredGatewaySections = useMemo(() => mediaGatewaySections.slice(0, 3), [mediaGatewaySections]);
   const quickGatewaySections = useMemo(() => mediaGatewaySections.slice(3, 6), [mediaGatewaySections]);
+  const hasRenderableSections = hasAnyContent && orderedSections.length > 0;
 
   return (
     <motion.div
@@ -756,6 +765,46 @@ export default function ExploreHome() {
                 />
               </motion.div>
             </motion.div>
+          ) : sectionsError && !hasRenderableSections ? (
+            <motion.section
+              className="rounded-[36px] border border-red-100 bg-white px-6 py-10 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)]"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              aria-label="Discovery home unavailable"
+            >
+              <div className="mx-auto flex max-w-xl flex-col items-center">
+                <div className="mb-4 rounded-full bg-red-50 p-4 text-red-600">
+                  <AlertCircle className="h-8 w-8" />
+                </div>
+                <h3 className="text-2xl font-semibold text-slate-950">Discovery home could not load</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  The personalized discovery rails are temporarily unavailable. Retry loading them or jump straight into the main feed.
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <motion.button
+                    type="button"
+                    onClick={() => void refetchSections()}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Retry loading channels
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={() => navigateToFeed('buy')}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900"
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Open feed
+                    <ArrowRight className="h-4 w-4" />
+                  </motion.button>
+                </div>
+              </div>
+            </motion.section>
           ) : (
             <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
               {orderedSections.map(section => (
@@ -779,7 +828,7 @@ export default function ExploreHome() {
           )}
 
           {/* Empty state - Modern design */}
-          {!sectionsLoading && orderedSections.length === 0 && (
+          {!sectionsLoading && !sectionsError && !hasRenderableSections && (
             <motion.div
               className="text-center py-16 px-4"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -806,7 +855,7 @@ export default function ExploreHome() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                Start Exploring
+                Discovery is ready for more content
               </motion.h3>
               <motion.p
                 className="text-lg mb-8 max-w-md mx-auto"
@@ -815,7 +864,7 @@ export default function ExploreHome() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
               >
-                Discover properties tailored to your preferences
+                We do not have enough media in this lane yet. Open the feed to explore everything that is live right now.
               </motion.p>
               <motion.button
                 onClick={() => navigateToFeed('buy')}

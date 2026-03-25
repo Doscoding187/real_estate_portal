@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Flame, Video } from 'lucide-react';
+import { AlertCircle, ChevronRight, Flame, RefreshCw, Video } from 'lucide-react';
 import { TrendingVideoCard } from './TrendingVideoCard';
 import { useTrendingVideos, TrendingVideo } from '@/hooks/useTrendingVideos';
 import { designTokens } from '@/lib/design-tokens';
@@ -18,7 +18,22 @@ export function TrendingVideosSection({
   onSeeAll,
 }: TrendingVideosSectionProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { videos, isLoading, isEmpty } = useTrendingVideos({ categoryId, limit: 12 });
+  const { videos, isLoading, isEmpty, error, refetch } = useTrendingVideos({ categoryId, limit: 12 });
+
+  if (error && !isLoading) {
+    return (
+      <motion.section
+        className="py-4"
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+        exit={{ opacity: 0, height: 0 }}
+        role="region"
+        aria-label="Trending videos"
+      >
+        <ErrorCategoryState onRetry={() => void refetch()} />
+      </motion.section>
+    );
+  }
 
   if (isEmpty && !isLoading) {
     return (
@@ -183,6 +198,43 @@ function EmptyCategoryState({ onViewAll }: { onViewAll: () => void }) {
       >
         View all videos
       </motion.button>
+    </motion.div>
+  );
+}
+
+function ErrorCategoryState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <motion.div
+      className="flex flex-col items-center justify-center px-4 py-8 text-center"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div
+        className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-50"
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <AlertCircle className="h-6 w-6 text-red-600" />
+      </motion.div>
+      <p className="mb-2 text-base font-semibold text-slate-900">
+        Trending media is temporarily unavailable
+      </p>
+      <p className="mb-4 max-w-md text-sm text-slate-600">
+        Discovery could not load the trending shelf right now. Retry the request or continue into the main feed.
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <motion.button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Retry
+        </motion.button>
+      </div>
     </motion.div>
   );
 }

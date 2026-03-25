@@ -10,6 +10,7 @@
 import { useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import { getFeedItems } from '@/lib/exploreFeed';
+import { isExploreMockMode } from '@/lib/exploreMockMode';
 
 export interface TrendingVideo {
   id: number;
@@ -140,6 +141,7 @@ const placeholderTrendingVideos: TrendingVideo[] = [
 
 export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTrendingVideosReturn {
   const { categoryId, limit = 12 } = options;
+  const useMockData = isExploreMockMode();
   const discoveryCategoryMap = [
     undefined,
     'property',
@@ -156,10 +158,22 @@ export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTr
     contentType: 'video',
     category,
     limit,
+  }, {
+    enabled: !useMockData,
   });
 
   // Process and filter videos
   const videos = useMemo(() => {
+    if (useMockData) {
+      let placeholders = [...placeholderTrendingVideos];
+
+      if (categoryId) {
+        placeholders = placeholders.slice(0, Math.max(3, Math.floor(placeholders.length / 2)));
+      }
+
+      return placeholders.slice(0, limit);
+    }
+
     const videoItems = getFeedItems(feedQuery.data);
 
     if (videoItems.length > 0) {
@@ -179,20 +193,11 @@ export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTr
       }));
     }
 
-    // Fall back to placeholder data
-    let placeholders = [...placeholderTrendingVideos];
-
-    // Simulate category filtering on placeholders
-    if (categoryId) {
-      // For demo, just return fewer items to simulate filtering
-      placeholders = placeholders.slice(0, Math.max(3, Math.floor(placeholders.length / 2)));
-    }
-
-    return placeholders.slice(0, limit);
-  }, [feedQuery.data, categoryId, limit]);
+    return [];
+  }, [feedQuery.data, categoryId, limit, useMockData]);
 
   // Determine if empty (no videos after filtering)
-  const isEmpty = !feedQuery.isLoading && videos.length === 0;
+  const isEmpty = !feedQuery.isLoading && !feedQuery.error && videos.length === 0;
 
   return {
     videos,

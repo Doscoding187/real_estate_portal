@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, MapPin, RotateCcw, Settings2, Sparkles, WalletCards } from 'lucide-react';
+import { Loader2, MapPin, RefreshCw, RotateCcw, Settings2, Sparkles, WalletCards } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import VideoCard from '@/components/explore/VideoCard';
 import { DiscoveryFeedProvider, useDiscoveryFeed } from '../providers/DiscoveryFeedProvider';
@@ -64,7 +64,7 @@ export function DiscoveryVideoViewport({
   background = 'linear-gradient(135deg, #06121f 0%, #102c47 48%, #0f766e 100%)',
   showMetaChips = true,
 }: DiscoveryVideoViewportProps) {
-  const { items, isLoading, isFetching, hasMore, fetchNextPage, query } = useDiscoveryFeed();
+  const { items, isLoading, isFetching, error, hasMore, fetchNextPage, query, refetch } = useDiscoveryFeed();
   const [currentIndex, setCurrentIndex] = useState(0);
   const engageMutation = trpc.discovery.engage.useMutation();
 
@@ -137,6 +137,37 @@ export function DiscoveryVideoViewport({
           <p className="text-sm" style={{ color: designTokens.colors.text.inverse }}>
             Loading discovery feed...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && videos.length === 0) {
+    return (
+      <div
+        className="flex h-screen items-center justify-center px-6 text-center"
+        style={{ backgroundColor: designTokens.colors.bg.dark }}
+      >
+        <div className="max-w-md">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <RotateCcw className="h-7 w-7" style={{ color: designTokens.colors.text.inverse }} />
+          </div>
+          <h2 className="mb-3 text-2xl font-semibold" style={{ color: designTokens.colors.text.inverse }}>
+            Discovery feed is temporarily unavailable
+          </h2>
+          <p className="mb-6 text-sm leading-6" style={{ color: 'rgba(255,255,255,0.8)' }}>
+            We could not load this discovery lane right now. Retry the request or adjust your mode and try again.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
