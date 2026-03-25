@@ -6,6 +6,7 @@ import { TRPCError } from '@trpc/server';
 import { getDb } from '../db';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import { getLeadRoutingAudit } from '../services/leadRoutingAuditService';
+import { correctLeadRouting } from '../services/leadRoutingCorrectionService';
 import { savedSearchDeliveryHistory } from '../../drizzle/schema';
 
 const deliveryHistoryFilterSchema = z.enum([
@@ -417,5 +418,20 @@ export const systemRouter = router({
     )
     .query(async ({ input }) => {
       return getLeadRoutingAudit(input);
+    }),
+
+  correctLeadRouting: adminProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        routeType: z.enum(['agent', 'agency', 'brand', 'private', 'clear']),
+        agentId: z.number().int().positive().optional(),
+        agencyId: z.number().int().positive().optional(),
+        developerBrandProfileId: z.number().int().positive().optional(),
+        note: z.string().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return correctLeadRouting(input, Number(ctx.user.id));
     }),
 });

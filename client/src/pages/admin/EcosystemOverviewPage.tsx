@@ -21,6 +21,7 @@ import {
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -71,6 +72,12 @@ function formatAgo(value?: string | null) {
 
 const EcosystemOverviewPage: React.FC = () => {
   const [leadAuditDays, setLeadAuditDays] = useState<7 | 30 | 90>(30);
+  const [activeCorrectionLeadId, setActiveCorrectionLeadId] = useState<number | null>(null);
+  const [correctionRouteType, setCorrectionRouteType] = useState<
+    'agent' | 'agency' | 'brand' | 'private' | 'clear'
+  >('agent');
+  const [correctionTargetId, setCorrectionTargetId] = useState('');
+  const [correctionNote, setCorrectionNote] = useState('');
   const [deliveryFilter, setDeliveryFilter] = useState<
     'all' | 'attention' | 'pending_retry' | 'abandoned' | 'recovered'
   >('all');
@@ -147,6 +154,19 @@ const EcosystemOverviewPage: React.FC = () => {
       toast.error(error.message || 'Unable to export delivery history');
     },
   });
+  const correctLeadRoutingMutation = trpc.system.correctLeadRouting.useMutation({
+    onSuccess: async () => {
+      toast.success('Lead routing updated');
+      setActiveCorrectionLeadId(null);
+      setCorrectionTargetId('');
+      setCorrectionNote('');
+      setCorrectionRouteType('agent');
+      await refetchLeadRoutingAudit();
+    },
+    onError: error => {
+      toast.error(error.message || 'Unable to update lead routing');
+    },
+  });
 
   const StatCard = ({
     title,
@@ -220,6 +240,37 @@ const EcosystemOverviewPage: React.FC = () => {
   );
 
   const pendingRetryActionId = updateRetryState.variables?.deliveryHistoryId;
+
+  const requiresTargetId =
+    correctionRouteType === 'agent' ||
+    correctionRouteType === 'agency' ||
+    correctionRouteType === 'brand';
+
+  const getCorrectionInputLabel = () => {
+    if (correctionRouteType === 'agent') return 'Agent ID';
+    if (correctionRouteType === 'agency') return 'Agency ID';
+    if (correctionRouteType === 'brand') return 'Developer Brand ID';
+    return 'Target ID';
+  };
+
+  const applyLeadCorrection = (leadId: number) => {
+    const trimmedNote = correctionNote.trim();
+    const numericTargetId = correctionTargetId.trim() ? Number(correctionTargetId.trim()) : undefined;
+
+    if (requiresTargetId && (!numericTargetId || Number.isNaN(numericTargetId) || numericTargetId <= 0)) {
+      toast.error(`${getCorrectionInputLabel()} is required`);
+      return;
+    }
+
+    correctLeadRoutingMutation.mutate({
+      leadId,
+      routeType: correctionRouteType,
+      agentId: correctionRouteType === 'agent' ? numericTargetId : undefined,
+      agencyId: correctionRouteType === 'agency' ? numericTargetId : undefined,
+      developerBrandProfileId: correctionRouteType === 'brand' ? numericTargetId : undefined,
+      note: trimmedNote || undefined,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -861,6 +912,7 @@ const EcosystemOverviewPage: React.FC = () => {
                         <TableHead className="text-slate-500 font-semibold">Route</TableHead>
                         <TableHead className="text-slate-500 font-semibold">Source</TableHead>
                         <TableHead className="text-slate-500 font-semibold">Context</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -898,6 +950,102 @@ const EcosystemOverviewPage: React.FC = () => {
                           <TableCell className="text-xs text-slate-500">
                             Property: {entry.propertyId ?? '—'} · Development:{' '}
                             {entry.developmentId ?? '—'}
+                          </TableCell>
+                          <TableCell className="text-slate-700">
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                variant={activeCorrectionLeadId === entry.id ? 'default' : 'outline'}
+                                size="sm"
+                                className="h-8"
+                                onClick={() => {
+                                  if (activeCorrectionLeadId === entry.id) {
+                                    setActiveCorrectionLeadId(null);
+                                    setCorrectionTargetId('');
+                                    setCorrectionNote('');
+                                    setCorrectionRouteType('agent');
+                                    return;
+                                  }
+
+                                  setActiveCorrectionLeadId(entry.id);
+                                  setCorrectionTargetId('');
+                                  setCorrectionNote('');
+                                  setCorrectionRouteType(
+                                    entry.issue === 'brand_capture_only' ? 'brand' : 'agent',
+                                  );
+                                }}
+                              >
+                                {activeCorrectionLeadId === entry.id ? 'Close' : 'Correct'}
+                              </Button>
+                            </div>
+                            {activeCorrectionLeadId === entry.id ? (
+                              <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {[
+                                    ['agent', 'Agent'],
+                                    ['agency', 'Agency'],
+                                    ['brand', 'Brand'],
+                                    ['private', 'Private'],
+                                    ['clear', 'Clear'],
+                                  ].map(([value, label]) => (
+                                    <Button
+                                      key={value}
+                                      type="button"
+                                      size="sm"
+                                      variant={correctionRouteType === value ? 'default' : 'outline'}
+                                      className="h-8"
+                                      onClick={() =>
+                                        setCorrectionRouteType(
+                                          value as 'agent' | 'agency' | 'brand' | 'private' | 'clear',
+                                        )
+                                      }
+                                    >
+                                      {label}
+                                    </Button>
+                                  ))}
+                                </div>
+
+                                {requiresTargetId ? (
+                                  <Input
+                                    value={correctionTargetId}
+                                    onChange={event => setCorrectionTargetId(event.target.value)}
+                                    placeholder={getCorrectionInputLabel()}
+                                    inputMode="numeric"
+                                  />
+                                ) : null}
+
+                                <Input
+                                  value={correctionNote}
+                                  onChange={event => setCorrectionNote(event.target.value)}
+                                  placeholder="Optional correction note"
+                                />
+
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => applyLeadCorrection(entry.id)}
+                                    disabled={correctLeadRoutingMutation.isPending}
+                                  >
+                                    Apply
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setActiveCorrectionLeadId(null);
+                                      setCorrectionTargetId('');
+                                      setCorrectionNote('');
+                                      setCorrectionRouteType('agent');
+                                    }}
+                                    disabled={correctLeadRoutingMutation.isPending}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : null}
                           </TableCell>
                         </TableRow>
                       ))}
