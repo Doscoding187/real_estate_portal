@@ -1,5 +1,5 @@
 import { desc, eq, inArray } from 'drizzle-orm';
-import { notifications, savedSearches, users } from '../../drizzle/schema';
+import { notifications, savedSearchDeliveryHistory, savedSearches, users } from '../../drizzle/schema';
 import type {
   DevelopmentDerivedListing,
   Property,
@@ -98,6 +98,8 @@ interface SavedSearchDeliveryLinks {
   pauseUrl: string;
   unsubscribeEmailUrl: string;
 }
+
+type SavedSearchDeliveryStatus = 'delivered' | 'partial' | 'skipped' | 'failed';
 
 function toString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -644,39 +646,68 @@ export class SavedSearchNotificationEngine {
       notificationsToEmit.push(payload);
 
       if (!options.dryRun) {
-        if (search.inAppEnabled) {
-          await db.insert(notifications).values({
-            userId: search.userId,
-            type: 'system_alert',
-            title: payload.title,
-            content: payload.content,
-            data: JSON.stringify({
-              kind: 'saved_search_matches',
-              savedSearchId: payload.savedSearchId,
-              searchName: payload.searchName,
-              notificationFrequency: payload.notificationFrequency,
-              listingSource: payload.listingSource,
-              totalMatches: payload.totalMatches,
-              newMatchCount: payload.newMatchCount,
-              actionUrl: payload.actionUrl,
-              matches: payload.matches,
-              criteria: payload.criteria,
-            }),
-            isRead: 0,
-          });
-        }
-
-        await db
-          .update(savedSearches)
-          .set({ lastNotifiedAt: now.toISOString() })
-          .where(eq(savedSearches.id, payload.savedSearchId));
-
         const recipient = recipientsByUserId.get(search.userId);
-        if (search.emailEnabled && recipient) {
-          const delivered = await this.sendSavedSearchEmail(recipient, payload);
-          if (delivered) {
-            emailedNotifications += 1;
+        let inAppDelivered = false;
+        let emailDelivered = false;
+
+        try {
+          if (search.inAppEnabled) {
+            await db.insert(notifications).values({
+              userId: search.userId,
+              type: 'system_alert',
+              title: payload.title,
+              content: payload.content,
+              data: JSON.stringify({
+                kind: 'saved_search_matches',
+                savedSearchId: payload.savedSearchId,
+                searchName: payload.searchName,
+                notificationFrequency: payload.notificationFrequency,
+                listingSource: payload.listingSource,
+                totalMatches: payload.totalMatches,
+                newMatchCount: payload.newMatchCount,
+                actionUrl: payload.actionUrl,
+                matches: payload.matches,
+                criteria: payload.criteria,
+              }),
+              isRead: 0,
+            });
+            inAppDelivered = true;
           }
+
+          await db
+            .update(savedSearches)
+            .set({ lastNotifiedAt: now.toISOString() })
+            .where(eq(savedSearches.id, payload.savedSearchId));
+
+          if (search.emailEnabled && recipient) {
+            emailDelivered = await this.sendSavedSearchEmail(recipient, payload);
+            if (emailDelivered) {
+              emailedNotifications += 1;
+            }
+          }
+
+          await this.recordDeliveryHistory(db, payload, {
+            inAppRequested: search.inAppEnabled,
+            emailRequested: search.emailEnabled,
+            inAppDelivered,
+            emailDelivered,
+            status: this.resolveDeliveryStatus({
+              inAppRequested: search.inAppEnabled,
+              emailRequested: search.emailEnabled,
+              inAppDelivered,
+              emailDelivered,
+            }),
+          });
+        } catch (error) {
+          await this.recordDeliveryHistory(db, payload, {
+            inAppRequested: search.inAppEnabled,
+            emailRequested: search.emailEnabled,
+            inAppDelivered,
+            emailDelivered,
+            status: 'failed',
+            error: (error as Error)?.message || 'Unknown delivery error',
+          }).catch(() => undefined);
+          throw error;
         }
       }
     }
@@ -793,6 +824,60 @@ export class SavedSearchNotificationEngine {
       subject: payload.title,
       html: formatSavedSearchEmailHtml(recipient, payload),
       text: formatSavedSearchEmailText(recipient, payload),
+    });
+  }
+
+  private resolveDeliveryStatus(input: {
+    inAppRequested: boolean;
+    emailRequested: boolean;
+    inAppDelivered: boolean;
+    emailDelivered: boolean;
+  }): SavedSearchDeliveryStatus {
+    const requestedCount = Number(input.inAppRequested) + Number(input.emailRequested);
+    const deliveredCount = Number(input.inAppDelivered) + Number(input.emailDelivered);
+
+    if (deliveredCount === 0) {
+      return 'skipped';
+    }
+
+    if (requestedCount > 0 && deliveredCount < requestedCount) {
+      return 'partial';
+    }
+
+    return 'delivered';
+  }
+
+  private async recordDeliveryHistory(
+    db: Awaited<ReturnType<typeof getDb>>,
+    payload: SavedSearchNotificationPayload,
+    input: {
+      inAppRequested: boolean;
+      emailRequested: boolean;
+      inAppDelivered: boolean;
+      emailDelivered: boolean;
+      status: SavedSearchDeliveryStatus;
+      error?: string;
+    },
+  ) {
+    await db.insert(savedSearchDeliveryHistory).values({
+      savedSearchId: payload.savedSearchId,
+      userId: payload.userId,
+      searchName: payload.searchName,
+      title: payload.title,
+      content: payload.content,
+      listingSource: payload.listingSource,
+      notificationFrequency: payload.notificationFrequency,
+      totalMatches: payload.totalMatches,
+      newMatchCount: payload.newMatchCount,
+      inAppRequested: input.inAppRequested ? 1 : 0,
+      emailRequested: input.emailRequested ? 1 : 0,
+      inAppDelivered: input.inAppDelivered ? 1 : 0,
+      emailDelivered: input.emailDelivered ? 1 : 0,
+      status: input.status,
+      actionUrl: payload.actionUrl,
+      previewMatches: payload.matches,
+      error: input.error || null,
+      processedAt: new Date().toISOString(),
     });
   }
 }
