@@ -6,16 +6,24 @@ const {
   mockGetDb,
   mockSelect,
   mockFrom,
+  mockWhere,
   mockOrderBy,
   mockLimit,
+  mockUpdate,
+  mockUpdateSet,
+  mockUpdateWhere,
 } = vi.hoisted(() => ({
   mockGetStatus: vi.fn(),
   mockRunDueNotifications: vi.fn(),
   mockGetDb: vi.fn(),
   mockSelect: vi.fn(),
   mockFrom: vi.fn(),
+  mockWhere: vi.fn(),
   mockOrderBy: vi.fn(),
   mockLimit: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockUpdateSet: vi.fn(),
+  mockUpdateWhere: vi.fn(),
 }));
 
 vi.mock('../services/savedSearchDeliveryScheduler', () => ({
@@ -40,7 +48,8 @@ describe('system.savedSearchSchedulerStatus contract', () => {
     vi.clearAllMocks();
     mockRunDueNotifications.mockResolvedValue(undefined);
     mockSelect.mockReturnValue({ from: mockFrom });
-    mockFrom.mockReturnValue({ orderBy: mockOrderBy });
+    mockFrom.mockReturnValue({ orderBy: mockOrderBy, where: mockWhere });
+    mockWhere.mockReturnValue({ limit: mockLimit });
     mockOrderBy.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue([
       {
@@ -70,9 +79,13 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         processedAt: '2026-03-22T10:05:02.000Z',
       },
     ]);
+    mockUpdateSet.mockReturnValue({ where: mockUpdateWhere });
+    mockUpdateWhere.mockResolvedValue(undefined);
     mockGetDb.mockResolvedValue({
       select: mockSelect,
+      update: mockUpdate,
     });
+    mockUpdate.mockReturnValue({ set: mockUpdateSet });
     mockGetStatus.mockReturnValue({
       enabled: true,
       running: false,
@@ -162,5 +175,176 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         retryCount: 1,
       }),
     ]);
+  });
+
+  it('requeues an abandoned delivery for admins', async () => {
+    mockLimit
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          savedSearchId: 11,
+          userId: 7,
+          searchName: 'Johannesburg Apartments',
+          title: '2 new matches for Johannesburg Apartments',
+          content: 'Johannesburg: 2 new matches.',
+          listingSource: 'all',
+          notificationFrequency: 'daily',
+          totalMatches: 2,
+          newMatchCount: 2,
+          inAppRequested: 1,
+          emailRequested: 1,
+          inAppDelivered: 1,
+          emailDelivered: 0,
+          status: 'partial',
+          retryState: 'abandoned',
+          retryCount: 3,
+          maxRetryCount: 3,
+          nextRetryAt: null,
+          lastRetryAt: '2026-03-22T10:06:00.000Z',
+          actionUrl: '/property/55',
+          previewMatches: [],
+          error: 'Email delivery returned false',
+          processedAt: '2026-03-22T10:05:02.000Z',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          savedSearchId: 11,
+          userId: 7,
+          searchName: 'Johannesburg Apartments',
+          title: '2 new matches for Johannesburg Apartments',
+          content: 'Johannesburg: 2 new matches.',
+          listingSource: 'all',
+          notificationFrequency: 'daily',
+          totalMatches: 2,
+          newMatchCount: 2,
+          inAppRequested: 1,
+          emailRequested: 1,
+          inAppDelivered: 1,
+          emailDelivered: 0,
+          status: 'partial',
+          retryState: 'pending',
+          retryCount: 3,
+          maxRetryCount: 4,
+          nextRetryAt: '2026-03-22T10:10:00.000Z',
+          lastRetryAt: '2026-03-22T10:06:00.000Z',
+          actionUrl: '/property/55',
+          previewMatches: [],
+          error: null,
+          processedAt: '2026-03-22T10:05:02.000Z',
+        },
+      ]);
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: 1, role: 'super_admin' },
+    } as any);
+
+    const result = await caller.system.updateSavedSearchDeliveryRetryState({
+      deliveryHistoryId: 1,
+      action: 'requeue',
+    });
+
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retryState: 'pending',
+        error: null,
+        maxRetryCount: 4,
+      }),
+    );
+    expect(result).toMatchObject({
+      id: 1,
+      retryState: 'pending',
+      maxRetryCount: 4,
+      emailRequested: true,
+      emailDelivered: false,
+    });
+  });
+
+  it('abandons a pending delivery for admins', async () => {
+    mockLimit
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          savedSearchId: 11,
+          userId: 7,
+          searchName: 'Johannesburg Apartments',
+          title: '2 new matches for Johannesburg Apartments',
+          content: 'Johannesburg: 2 new matches.',
+          listingSource: 'all',
+          notificationFrequency: 'daily',
+          totalMatches: 2,
+          newMatchCount: 2,
+          inAppRequested: 1,
+          emailRequested: 1,
+          inAppDelivered: 1,
+          emailDelivered: 0,
+          status: 'partial',
+          retryState: 'pending',
+          retryCount: 1,
+          maxRetryCount: 3,
+          nextRetryAt: '2026-03-22T10:10:00.000Z',
+          lastRetryAt: null,
+          actionUrl: '/property/55',
+          previewMatches: [],
+          error: 'Email delivery returned false',
+          processedAt: '2026-03-22T10:05:02.000Z',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          savedSearchId: 11,
+          userId: 7,
+          searchName: 'Johannesburg Apartments',
+          title: '2 new matches for Johannesburg Apartments',
+          content: 'Johannesburg: 2 new matches.',
+          listingSource: 'all',
+          notificationFrequency: 'daily',
+          totalMatches: 2,
+          newMatchCount: 2,
+          inAppRequested: 1,
+          emailRequested: 1,
+          inAppDelivered: 1,
+          emailDelivered: 0,
+          status: 'partial',
+          retryState: 'abandoned',
+          retryCount: 1,
+          maxRetryCount: 3,
+          nextRetryAt: null,
+          lastRetryAt: null,
+          actionUrl: '/property/55',
+          previewMatches: [],
+          error: 'Email delivery returned false',
+          processedAt: '2026-03-22T10:05:02.000Z',
+        },
+      ]);
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: 1, role: 'super_admin' },
+    } as any);
+
+    const result = await caller.system.updateSavedSearchDeliveryRetryState({
+      deliveryHistoryId: 1,
+      action: 'abandon',
+    });
+
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retryState: 'abandoned',
+        nextRetryAt: null,
+      }),
+    );
+    expect(result).toMatchObject({
+      id: 1,
+      retryState: 'abandoned',
+      emailRequested: true,
+      emailDelivered: false,
+    });
   });
 });
