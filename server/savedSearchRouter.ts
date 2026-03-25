@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from './db';
-import { savedSearches } from '../drizzle/schema';
+import { savedSearchDeliveryHistory, savedSearches } from '../drizzle/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { requireUser } from './_core/requireUser';
 import {
@@ -16,6 +16,74 @@ import { verifySavedSearchDeliveryActionToken } from './services/savedSearchDeli
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
+}
+
+function normalizeSavedSearchPreviewMatches(value: unknown) {
+  const parsed =
+    typeof value === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return [];
+          }
+        })()
+      : value;
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed
+    .map(match => {
+      if (!match || typeof match !== 'object') {
+        return null;
+      }
+
+      const candidate = match as Record<string, unknown>;
+      if (
+        typeof candidate.id !== 'string' ||
+        typeof candidate.title !== 'string' ||
+        typeof candidate.href !== 'string'
+      ) {
+        return null;
+      }
+
+      return {
+        id: candidate.id,
+        title: candidate.title,
+        href: candidate.href,
+        city: typeof candidate.city === 'string' ? candidate.city : '',
+        suburb: typeof candidate.suburb === 'string' ? candidate.suburb : '',
+        image: typeof candidate.image === 'string' ? candidate.image : null,
+        listingType:
+          candidate.listingType === 'rent' || candidate.listingType === 'sale'
+            ? candidate.listingType
+            : 'sale',
+        listingSource:
+          candidate.listingSource === 'development' || candidate.listingSource === 'manual'
+            ? candidate.listingSource
+            : 'manual',
+        price:
+          typeof candidate.price === 'number'
+            ? candidate.price
+            : typeof candidate.price === 'string' && candidate.price.trim()
+              ? Number(candidate.price)
+              : null,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeSavedSearchAlertHistoryRow(row: Record<string, any>) {
+  return {
+    ...row,
+    inAppRequested: Boolean(row.inAppRequested),
+    emailRequested: Boolean(row.emailRequested),
+    inAppDelivered: Boolean(row.inAppDelivered),
+    emailDelivered: Boolean(row.emailDelivered),
+    previewMatches: normalizeSavedSearchPreviewMatches(row.previewMatches),
+  };
 }
 
 export const savedSearchRouter = router({
@@ -129,6 +197,38 @@ export const savedSearchRouter = router({
 
     return searches.map(normalizeSavedSearch);
   }),
+
+  getAlertHistory: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().positive().max(50).default(20),
+          savedSearchId: z.number().int().positive().optional(),
+        })
+        .default({}),
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const whereClause =
+        typeof input.savedSearchId === 'number'
+          ? and(
+              eq(savedSearchDeliveryHistory.userId, getUserId(ctx)),
+              eq(savedSearchDeliveryHistory.savedSearchId, input.savedSearchId),
+            )
+          : eq(savedSearchDeliveryHistory.userId, getUserId(ctx));
+
+      const rows = await db
+        .select()
+        .from(savedSearchDeliveryHistory)
+        .where(whereClause)
+        .orderBy(desc(savedSearchDeliveryHistory.processedAt))
+        .limit(input.limit);
+
+      return rows.map(row => normalizeSavedSearchAlertHistoryRow(row as Record<string, any>));
+    }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
