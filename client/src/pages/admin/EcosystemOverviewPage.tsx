@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock3,
   Code,
+  Download,
   RefreshCw,
   RotateCcw,
   TrendingUp,
@@ -114,6 +115,23 @@ const EcosystemOverviewPage: React.FC = () => {
     },
     onError: error => {
       toast.error(error.message || 'Unable to update delivery retry state');
+    },
+  });
+  const exportDeliveryHistory = trpc.system.exportSavedSearchDeliveryHistory.useMutation({
+    onSuccess: data => {
+      const blob = new Blob([data.content], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = data.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Saved-search delivery history exported');
+    },
+    onError: error => {
+      toast.error(error.message || 'Unable to export delivery history');
     },
   });
 
@@ -471,6 +489,21 @@ const EcosystemOverviewPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{(deliveryHistory || []).length} recorded</Badge>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 bg-white/80"
+                      onClick={() => exportDeliveryHistory.mutate({ filter: deliveryFilter })}
+                      disabled={exportDeliveryHistory.isPending}
+                    >
+                      <Download
+                        className={`mr-2 h-3.5 w-3.5 ${
+                          exportDeliveryHistory.isPending ? 'animate-pulse' : ''
+                        }`}
+                      />
+                      Export CSV
+                    </Button>
                     <div className="flex flex-wrap gap-2">
                       {[
                         ['all', 'All'],

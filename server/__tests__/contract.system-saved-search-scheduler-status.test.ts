@@ -179,6 +179,26 @@ describe('system.savedSearchSchedulerStatus contract', () => {
     ]);
   });
 
+  it('exports saved-search delivery history for admins', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: 1, role: 'super_admin' },
+    } as any);
+
+    const result = await caller.system.exportSavedSearchDeliveryHistory({
+      filter: 'attention',
+    });
+
+    expect(mockGetDb).toHaveBeenCalledOnce();
+    expect(mockWhere).toHaveBeenCalled();
+    expect(mockLimit).toHaveBeenCalledWith(5000);
+    expect(result.filename).toMatch(/^saved-search-delivery-history-attention-\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(result.content).toContain('"Processed At"');
+    expect(result.content).toContain('"Johannesburg Apartments"');
+    expect(result.content).toContain('"recovered"');
+  });
+
   it('filters saved-search delivery history by diagnostic state', async () => {
     mockLimit.mockResolvedValueOnce([
       {
