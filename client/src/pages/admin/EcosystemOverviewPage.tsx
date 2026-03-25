@@ -70,6 +70,7 @@ function formatAgo(value?: string | null) {
 }
 
 const EcosystemOverviewPage: React.FC = () => {
+  const [leadAuditDays, setLeadAuditDays] = useState<7 | 30 | 90>(30);
   const [deliveryFilter, setDeliveryFilter] = useState<
     'all' | 'attention' | 'pending_retry' | 'abandoned' | 'recovered'
   >('all');
@@ -91,6 +92,18 @@ const EcosystemOverviewPage: React.FC = () => {
     refetch: refetchDeliveryHistory,
   } = trpc.system.savedSearchDeliveryHistory.useQuery(
     { limit: 10, filter: deliveryFilter },
+    {
+      refetchInterval: 60_000,
+    },
+  );
+  const {
+    data: leadRoutingAudit,
+    isLoading: leadRoutingAuditLoading,
+    isFetching: leadRoutingAuditFetching,
+    error: leadRoutingAuditError,
+    refetch: refetchLeadRoutingAudit,
+  } = trpc.system.leadRoutingAudit.useQuery(
+    { days: leadAuditDays, attentionLimit: 8 },
     {
       refetchInterval: 60_000,
     },
@@ -313,17 +326,26 @@ const EcosystemOverviewPage: React.FC = () => {
               variant="outline"
               size="sm"
               className="bg-white/70"
-              onClick={() => void Promise.all([refetchSchedulerStatus(), refetchDeliveryHistory()])}
+              onClick={() =>
+                void Promise.all([
+                  refetchSchedulerStatus(),
+                  refetchDeliveryHistory(),
+                  refetchLeadRoutingAudit(),
+                ])
+              }
               disabled={
                 schedulerFetching ||
                 deliveryHistoryFetching ||
+                leadRoutingAuditFetching ||
                 runScheduler.isPending ||
                 updateRetryState.isPending
               }
             >
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${
-                  schedulerFetching || deliveryHistoryFetching ? 'animate-spin' : ''
+                  schedulerFetching || deliveryHistoryFetching || leadRoutingAuditFetching
+                    ? 'animate-spin'
+                    : ''
                 }`}
               />
               Refresh
@@ -719,6 +741,171 @@ const EcosystemOverviewPage: React.FC = () => {
                 ) : (
                   <div className="px-4 py-6 text-sm text-slate-500">
                     No saved-search deliveries have been recorded yet.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </GlassCard>
+
+      <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <CardTitle className="text-slate-800 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-indigo-600" />
+              Lead Routing Audit
+            </CardTitle>
+            <p className="mt-2 text-sm text-slate-500">
+              Audit current lead destinations across manual, private, and brand-routed enquiries.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[7, 30, 90].map(days => (
+              <Button
+                key={days}
+                type="button"
+                variant={leadAuditDays === days ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setLeadAuditDays(days as 7 | 30 | 90)}
+              >
+                Last {days}d
+              </Button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {leadRoutingAuditLoading ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
+              {[1, 2, 3, 4, 5, 6].map(item => (
+                <Skeleton key={item} className="h-24 rounded-xl" />
+              ))}
+            </div>
+          ) : leadRoutingAuditError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              Failed to load lead-routing audit: {leadRoutingAuditError.message}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
+                <SchedulerMetric
+                  label="Total Leads"
+                  value={String(leadRoutingAudit?.summary.totalLeads ?? 0)}
+                  subtext={`Last ${leadRoutingAudit?.days ?? leadAuditDays} days`}
+                />
+                <SchedulerMetric
+                  label="Brand Route"
+                  value={String(leadRoutingAudit?.summary.brandRoute ?? 0)}
+                  subtext={`Email ${leadRoutingAudit?.summary.brandDeliveredEmail ?? 0} · Subscriber ${leadRoutingAudit?.summary.brandDeliveredSubscriber ?? 0}`}
+                />
+                <SchedulerMetric
+                  label="Brand Capture Only"
+                  value={String(leadRoutingAudit?.summary.brandCapturedOnly ?? 0)}
+                  subtext="Leads held without external delivery"
+                />
+                <SchedulerMetric
+                  label="Direct to Agent"
+                  value={String(leadRoutingAudit?.summary.directToAgent ?? 0)}
+                  subtext={`Agency ${leadRoutingAudit?.summary.directToAgency ?? 0}`}
+                />
+                <SchedulerMetric
+                  label="Direct to Private"
+                  value={String(leadRoutingAudit?.summary.directToPrivate ?? 0)}
+                  subtext={`Context only ${leadRoutingAudit?.summary.directContextOnly ?? 0}`}
+                />
+                <SchedulerMetric
+                  label="Unknown"
+                  value={String(leadRoutingAudit?.summary.unknownRoute ?? 0)}
+                  subtext={`Brand + agent context ${leadRoutingAudit?.summary.brandWithAgentContext ?? 0}`}
+                />
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white/70 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">Top Lead Sources</h3>
+                    <p className="text-xs text-slate-500">
+                      Current routing volume by source channel
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(leadRoutingAudit?.topSources || []).map(source => (
+                      <Badge key={source.source} variant="secondary">
+                        {source.source}: {source.count}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white/70">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">Needs Attention</h3>
+                    <p className="text-xs text-slate-500">
+                      Recent leads where routing needs review or manual follow-up.
+                    </p>
+                  </div>
+                  <Badge variant="secondary">
+                    {(leadRoutingAudit?.attentionLeads || []).length} flagged
+                  </Badge>
+                </div>
+
+                {(leadRoutingAudit?.attentionLeads || []).length > 0 ? (
+                  <Table>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow className="border-slate-100 hover:bg-transparent">
+                        <TableHead className="text-slate-500 font-semibold">Created</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Lead</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Issue</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Route</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Source</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Context</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leadRoutingAudit?.attentionLeads.map(entry => (
+                        <TableRow key={entry.id} className="border-slate-100">
+                          <TableCell className="text-slate-600">
+                            <div>{formatDateTime(entry.createdAt)}</div>
+                            <div className="text-xs text-slate-400">{formatAgo(entry.createdAt)}</div>
+                          </TableCell>
+                          <TableCell className="text-slate-700">
+                            <div className="font-medium">{entry.name}</div>
+                            <div className="text-xs text-slate-500">{entry.email}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                entry.issue === 'brand_capture_only' ? 'secondary' : 'destructive'
+                              }
+                              className={
+                                entry.issue === 'brand_capture_only'
+                                  ? 'border-amber-200 bg-amber-100 text-amber-800'
+                                  : ''
+                              }
+                            >
+                              {entry.issue.replace(/_/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-700">
+                            <div className="capitalize">{entry.routeType}</div>
+                            <div className="text-xs text-slate-500 capitalize">
+                              {entry.recipientType.replace(/_/g, ' ')}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-slate-700">{entry.leadSource}</TableCell>
+                          <TableCell className="text-xs text-slate-500">
+                            Property: {entry.propertyId ?? '—'} · Development:{' '}
+                            {entry.developmentId ?? '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="px-4 py-6 text-sm text-slate-500">
+                    No routing issues found in this period.
                   </div>
                 )}
               </div>
