@@ -5,6 +5,7 @@ import { adminProcedure, publicProcedure, router } from './trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from '../db';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
+import { getLeadRoutingAudit } from '../services/leadRoutingAuditService';
 import { savedSearchDeliveryHistory } from '../../drizzle/schema';
 
 const deliveryHistoryFilterSchema = z.enum([
@@ -403,5 +404,18 @@ export const systemRouter = router({
           .split('T')[0]}.csv`,
         content,
       };
+    }),
+
+  leadRoutingAudit: adminProcedure
+    .input(
+      z
+        .object({
+          days: z.number().int().positive().max(365).default(30),
+          attentionLimit: z.number().int().positive().max(50).default(10),
+        })
+        .default({}),
+    )
+    .query(async ({ input }) => {
+      return getLeadRoutingAudit(input);
     }),
 });
