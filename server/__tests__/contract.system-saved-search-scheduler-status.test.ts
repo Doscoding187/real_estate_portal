@@ -49,7 +49,7 @@ describe('system.savedSearchSchedulerStatus contract', () => {
     mockRunDueNotifications.mockResolvedValue(undefined);
     mockSelect.mockReturnValue({ from: mockFrom });
     mockFrom.mockReturnValue({ orderBy: mockOrderBy, where: mockWhere });
-    mockWhere.mockReturnValue({ limit: mockLimit });
+    mockWhere.mockReturnValue({ orderBy: mockOrderBy, limit: mockLimit });
     mockOrderBy.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue([
       {
@@ -173,6 +173,60 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         emailDelivered: true,
         retryState: 'succeeded',
         retryCount: 1,
+        diagnosticCategory: 'recovered',
+        recoveryState: 'recovered',
+      }),
+    ]);
+  });
+
+  it('filters saved-search delivery history by diagnostic state', async () => {
+    mockLimit.mockResolvedValueOnce([
+      {
+        id: 2,
+        savedSearchId: 12,
+        userId: 7,
+        searchName: 'Sandton Rentals',
+        title: '1 new match for Sandton Rentals',
+        content: 'Sandton: 1 new match.',
+        listingSource: 'manual',
+        notificationFrequency: 'daily',
+        totalMatches: 1,
+        newMatchCount: 1,
+        inAppRequested: 1,
+        emailRequested: 1,
+        inAppDelivered: 1,
+        emailDelivered: 0,
+        status: 'partial',
+        retryState: 'pending',
+        retryCount: 1,
+        maxRetryCount: 3,
+        nextRetryAt: '2026-03-22T10:10:00.000Z',
+        lastRetryAt: '2026-03-22T10:06:00.000Z',
+        actionUrl: '/property/99',
+        previewMatches: [],
+        error: 'Email delivery returned false',
+        processedAt: '2026-03-22T10:05:02.000Z',
+      },
+    ]);
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: 1, role: 'super_admin' },
+    } as any);
+
+    const result = await caller.system.savedSearchDeliveryHistory({
+      limit: 5,
+      filter: 'pending_retry',
+    });
+
+    expect(mockWhere).toHaveBeenCalled();
+    expect(mockLimit).toHaveBeenCalledWith(5);
+    expect(result).toEqual([
+      expect.objectContaining({
+        searchName: 'Sandton Rentals',
+        diagnosticCategory: 'retry_pending',
+        recoveryState: 'recoverable',
       }),
     ]);
   });

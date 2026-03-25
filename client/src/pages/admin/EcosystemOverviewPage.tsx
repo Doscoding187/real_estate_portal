@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +69,9 @@ function formatAgo(value?: string | null) {
 }
 
 const EcosystemOverviewPage: React.FC = () => {
+  const [deliveryFilter, setDeliveryFilter] = useState<
+    'all' | 'attention' | 'pending_retry' | 'abandoned' | 'recovered'
+  >('all');
   const { data: stats, isLoading } = trpc.admin.getEcosystemStats.useQuery();
   const {
     data: schedulerStatus,
@@ -86,7 +89,7 @@ const EcosystemOverviewPage: React.FC = () => {
     error: deliveryHistoryError,
     refetch: refetchDeliveryHistory,
   } = trpc.system.savedSearchDeliveryHistory.useQuery(
-    { limit: 10 },
+    { limit: 10, filter: deliveryFilter },
     {
       refetchInterval: 60_000,
     },
@@ -466,7 +469,38 @@ const EcosystemOverviewPage: React.FC = () => {
                       Per-search delivery audit for recent saved-search alerts
                     </p>
                   </div>
-                  <Badge variant="secondary">{(deliveryHistory || []).length} recorded</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{(deliveryHistory || []).length} recorded</Badge>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        ['all', 'All'],
+                        ['attention', 'Attention'],
+                        ['pending_retry', 'Pending Retry'],
+                        ['abandoned', 'Abandoned'],
+                        ['recovered', 'Recovered'],
+                      ].map(([value, label]) => (
+                        <Button
+                          key={value}
+                          type="button"
+                          variant={deliveryFilter === value ? 'default' : 'outline'}
+                          size="sm"
+                          className="h-8"
+                          onClick={() =>
+                            setDeliveryFilter(
+                              value as
+                                | 'all'
+                                | 'attention'
+                                | 'pending_retry'
+                                | 'abandoned'
+                                | 'recovered',
+                            )
+                          }
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {deliveryHistoryLoading ? (
@@ -486,6 +520,7 @@ const EcosystemOverviewPage: React.FC = () => {
                           <TableHead className="text-slate-500 font-semibold">Processed</TableHead>
                           <TableHead className="text-slate-500 font-semibold">Search</TableHead>
                           <TableHead className="text-slate-500 font-semibold">Status</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Diagnostics</TableHead>
                           <TableHead className="text-slate-500 font-semibold">Matches</TableHead>
                           <TableHead className="text-slate-500 font-semibold">Channels</TableHead>
                           <TableHead className="text-slate-500 font-semibold">Retry</TableHead>
@@ -532,6 +567,31 @@ const EcosystemOverviewPage: React.FC = () => {
                                 Delivered
                               </Badge>
                             )}
+                          </TableCell>
+                          <TableCell className="text-slate-700">
+                            <div className="space-y-1">
+                              <Badge
+                                variant={
+                                  entry.recoveryState === 'terminal'
+                                    ? 'destructive'
+                                    : entry.recoveryState === 'recoverable'
+                                      ? 'secondary'
+                                      : 'outline'
+                                }
+                                className={
+                                  entry.recoveryState === 'recovered'
+                                    ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                                    : entry.recoveryState === 'recoverable'
+                                      ? 'border-amber-200 bg-amber-100 text-amber-800'
+                                      : ''
+                                }
+                              >
+                                {entry.diagnosticCategory.replace(/_/g, ' ')}
+                              </Badge>
+                              <div className="text-xs text-slate-500 capitalize">
+                                {entry.recoveryState.replace(/_/g, ' ')}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell className="text-slate-700">
                             <div>{entry.newMatchCount} new</div>
