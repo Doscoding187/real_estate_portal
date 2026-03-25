@@ -99,6 +99,12 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   // Calculate isLoading BEFORE using it in useEffect
   const isLoading =
     !useMockData && (forYouLoading || popularNearYouLoading || newDevelopmentsLoading || trendingLoading);
+  const error =
+    forYouQuery.error ??
+    popularNearYouQuery.error ??
+    newDevelopmentsQuery.error ??
+    trendingQuery.error ??
+    null;
 
   // Organize data into sections
   useEffect(() => {
@@ -467,8 +473,25 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     allowPlacementMock,
   ]);
 
+  const hasAnyContent = sections.some(section => section.items.length > 0);
+  const isEmpty = !isLoading && !error && !hasAnyContent;
+  const refetch = async () => {
+    if (useMockData) return [];
+
+    return Promise.all([
+      forYouQuery.refetch(),
+      popularNearYouQuery.refetch(),
+      newDevelopmentsQuery.refetch(),
+      trendingQuery.refetch(),
+    ]);
+  };
+
   return {
     sections,
     isLoading,
+    error,
+    hasAnyContent,
+    isEmpty,
+    refetch,
   };
 }
