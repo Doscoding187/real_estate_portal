@@ -152,7 +152,22 @@ describe('savedSearchNotificationEngine', () => {
       1,
       100,
     );
-    expect(mockInsertValues).toHaveBeenCalledOnce();
+    expect(mockInsertValues).toHaveBeenCalledTimes(2);
+    expect(mockInsertValues).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        savedSearchId: 11,
+        userId: 7,
+        searchName: 'Johannesburg Apartments',
+        status: 'delivered',
+        inAppRequested: 1,
+        emailRequested: 1,
+        inAppDelivered: 1,
+        emailDelivered: 1,
+        newMatchCount: 2,
+        totalMatches: 2,
+      }),
+    );
     expect(mockUpdateWhere).toHaveBeenCalledOnce();
     expect(mockSendEmail).toHaveBeenCalledOnce();
     expect(mockSendEmail).toHaveBeenCalledWith(
@@ -307,7 +322,17 @@ describe('savedSearchNotificationEngine', () => {
       now: new Date('2026-03-21T10:00:00.000Z'),
     });
 
-    expect(mockInsertValues).toHaveBeenCalledOnce();
+    expect(mockInsertValues).toHaveBeenCalledTimes(2);
+    expect(mockInsertValues).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        status: 'partial',
+        inAppRequested: 1,
+        emailRequested: 1,
+        inAppDelivered: 1,
+        emailDelivered: 0,
+      }),
+    );
     expect(mockSendEmail).not.toHaveBeenCalled();
     expect(result.emailedNotifications).toBe(0);
   });
@@ -343,7 +368,17 @@ describe('savedSearchNotificationEngine', () => {
       now: new Date('2026-03-21T10:00:00.000Z'),
     });
 
-    expect(mockInsertValues).not.toHaveBeenCalled();
+    expect(mockInsertValues).toHaveBeenCalledOnce();
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        savedSearchId: 15,
+        status: 'delivered',
+        inAppRequested: 0,
+        emailRequested: 1,
+        inAppDelivered: 0,
+        emailDelivered: 1,
+      }),
+    );
     expect(mockSendEmail).toHaveBeenCalledOnce();
     expect(mockUpdateWhere).toHaveBeenCalledOnce();
     expect(result).toMatchObject({

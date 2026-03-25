@@ -77,10 +77,22 @@ const EcosystemOverviewPage: React.FC = () => {
   } = trpc.system.savedSearchSchedulerStatus.useQuery(undefined, {
     refetchInterval: 60_000,
   });
+  const {
+    data: deliveryHistory,
+    isLoading: deliveryHistoryLoading,
+    isFetching: deliveryHistoryFetching,
+    error: deliveryHistoryError,
+    refetch: refetchDeliveryHistory,
+  } = trpc.system.savedSearchDeliveryHistory.useQuery(
+    { limit: 10 },
+    {
+      refetchInterval: 60_000,
+    },
+  );
   const runScheduler = trpc.system.runSavedSearchScheduler.useMutation({
     onSuccess: async () => {
       toast.success('Saved search scheduler run completed');
-      await refetchSchedulerStatus();
+      await Promise.all([refetchSchedulerStatus(), refetchDeliveryHistory()]);
     },
     onError: error => {
       toast.error(error.message || 'Unable to run saved search scheduler');
@@ -263,10 +275,14 @@ const EcosystemOverviewPage: React.FC = () => {
               variant="outline"
               size="sm"
               className="bg-white/70"
-              onClick={() => void refetchSchedulerStatus()}
-              disabled={schedulerFetching || runScheduler.isPending}
+              onClick={() => void Promise.all([refetchSchedulerStatus(), refetchDeliveryHistory()])}
+              disabled={schedulerFetching || deliveryHistoryFetching || runScheduler.isPending}
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${schedulerFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${
+                  schedulerFetching || deliveryHistoryFetching ? 'animate-spin' : ''
+                }`}
+              />
               Refresh
             </Button>
           </div>
@@ -406,6 +422,94 @@ const EcosystemOverviewPage: React.FC = () => {
                 ) : (
                   <div className="px-4 py-6 text-sm text-slate-500">
                     No scheduler runs have been recorded yet.
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white/70">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">Recent Deliveries</h3>
+                    <p className="text-xs text-slate-500">
+                      Per-search delivery audit for recent saved-search alerts
+                    </p>
+                  </div>
+                  <Badge variant="secondary">{(deliveryHistory || []).length} recorded</Badge>
+                </div>
+
+                {deliveryHistoryLoading ? (
+                  <div className="space-y-3 px-4 py-4">
+                    {[1, 2, 3].map(item => (
+                      <Skeleton key={item} className="h-12 rounded-lg" />
+                    ))}
+                  </div>
+                ) : deliveryHistoryError ? (
+                  <div className="px-4 py-6 text-sm text-rose-700">
+                    Failed to load delivery history: {deliveryHistoryError.message}
+                  </div>
+                ) : (deliveryHistory?.length || 0) > 0 ? (
+                  <Table>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow className="border-slate-100 hover:bg-transparent">
+                        <TableHead className="text-slate-500 font-semibold">Processed</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Search</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Status</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Matches</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Channels</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {deliveryHistory?.map(entry => (
+                        <TableRow key={entry.id} className="border-slate-100">
+                          <TableCell className="text-slate-600">
+                            <div>{formatDateTime(entry.processedAt)}</div>
+                            <div className="text-xs text-slate-400">{formatAgo(entry.processedAt)}</div>
+                          </TableCell>
+                          <TableCell className="text-slate-700">
+                            <div className="font-medium">{entry.searchName}</div>
+                            <div className="text-xs text-slate-500">{entry.title}</div>
+                          </TableCell>
+                          <TableCell>
+                            {entry.status === 'failed' ? (
+                              <div className="space-y-1">
+                                <Badge variant="destructive">Failed</Badge>
+                                {entry.error ? (
+                                  <p className="max-w-xs text-xs text-rose-700">{entry.error}</p>
+                                ) : null}
+                              </div>
+                            ) : entry.status === 'partial' ? (
+                              <Badge className="border-amber-200 bg-amber-100 text-amber-800">
+                                Partial
+                              </Badge>
+                            ) : entry.status === 'skipped' ? (
+                              <Badge variant="secondary">Skipped</Badge>
+                            ) : (
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                                Delivered
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-slate-700">
+                            <div>{entry.newMatchCount} new</div>
+                            <div className="text-xs text-slate-500">{entry.totalMatches} total</div>
+                          </TableCell>
+                          <TableCell className="text-slate-700">
+                            <div className="space-y-1 text-xs">
+                              <div>
+                                In-app: {entry.inAppDelivered ? 'sent' : entry.inAppRequested ? 'requested' : 'off'}
+                              </div>
+                              <div>
+                                Email: {entry.emailDelivered ? 'sent' : entry.emailRequested ? 'requested' : 'off'}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="px-4 py-6 text-sm text-slate-500">
+                    No saved-search deliveries have been recorded yet.
                   </div>
                 )}
               </div>
