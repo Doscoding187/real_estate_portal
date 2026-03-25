@@ -1,11 +1,105 @@
 import { z } from 'zod';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, or } from 'drizzle-orm';
 import { notifyOwner } from './notification';
 import { adminProcedure, publicProcedure, router } from './trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from '../db';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import { savedSearchDeliveryHistory } from '../../drizzle/schema';
+
+const deliveryHistoryFilterSchema = z.enum([
+  'all',
+  'attention',
+  'pending_retry',
+  'abandoned',
+  'recovered',
+]);
+
+type DeliveryHistoryFilter = z.infer<typeof deliveryHistoryFilterSchema>;
+
+function deriveDeliveryFailureCategory(row: {
+  status: string;
+  retryState: string;
+  error: string | null;
+  emailRequested: number | boolean;
+  emailDelivered: number | boolean;
+  retryCount: number;
+  maxRetryCount: number;
+}) {
+  const emailRequested = Boolean(row.emailRequested);
+  const emailDelivered = Boolean(row.emailDelivered);
+  const error = (row.error || '').toLowerCase();
+
+  if (row.retryState === 'succeeded') {
+    return 'recovered';
+  }
+
+  if (!emailRequested || emailDelivered) {
+    return row.status === 'partial' ? 'partial_delivery' : 'healthy';
+  }
+
+  if (error.includes('recipient email unavailable')) {
+    return 'recipient_missing';
+  }
+
+  if (row.retryState === 'abandoned' && row.retryCount >= row.maxRetryCount) {
+    return 'retry_exhausted';
+  }
+
+  if (row.retryState === 'abandoned') {
+    return 'abandoned_by_admin';
+  }
+
+  if (row.retryState === 'pending' || row.retryState === 'retrying') {
+    return 'retry_pending';
+  }
+
+  return row.status === 'failed' ? 'delivery_failed' : 'partial_delivery';
+}
+
+function deriveDeliveryRecoveryState(row: {
+  retryState: string;
+  emailRequested: number | boolean;
+  emailDelivered: number | boolean;
+}) {
+  if (row.retryState === 'succeeded') return 'recovered';
+  if (!Boolean(row.emailRequested) || Boolean(row.emailDelivered)) return 'healthy';
+  if (row.retryState === 'pending' || row.retryState === 'retrying') return 'recoverable';
+  return 'terminal';
+}
+
+function getDeliveryHistoryWhereClause(filter: DeliveryHistoryFilter) {
+  switch (filter) {
+    case 'attention':
+      return or(
+        eq(savedSearchDeliveryHistory.retryState, 'pending'),
+        eq(savedSearchDeliveryHistory.retryState, 'retrying'),
+        eq(savedSearchDeliveryHistory.retryState, 'abandoned'),
+        eq(savedSearchDeliveryHistory.status, 'failed'),
+        eq(savedSearchDeliveryHistory.status, 'partial'),
+      );
+    case 'pending_retry':
+      return and(
+        eq(savedSearchDeliveryHistory.emailRequested, 1),
+        eq(savedSearchDeliveryHistory.emailDelivered, 0),
+        inArray(savedSearchDeliveryHistory.retryState, ['pending', 'retrying']),
+      );
+    case 'abandoned':
+      return and(
+        eq(savedSearchDeliveryHistory.emailRequested, 1),
+        eq(savedSearchDeliveryHistory.emailDelivered, 0),
+        eq(savedSearchDeliveryHistory.retryState, 'abandoned'),
+      );
+    case 'recovered':
+      return or(
+        eq(savedSearchDeliveryHistory.retryState, 'succeeded'),
+        and(eq(savedSearchDeliveryHistory.emailDelivered, 1), gt(savedSearchDeliveryHistory.retryCount, 0)),
+      );
+    case 'all':
+    default:
+      return undefined;
+  }
+}
 
 export const systemRouter = router({
   health: publicProcedure
@@ -161,6 +255,7 @@ export const systemRouter = router({
       z
         .object({
           limit: z.number().int().positive().max(100).default(10),
+          filter: deliveryHistoryFilterSchema.default('all'),
         })
         .default({}),
     )
@@ -170,9 +265,11 @@ export const systemRouter = router({
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       }
 
-      const rows = await db
-        .select()
-        .from(savedSearchDeliveryHistory)
+      const whereClause = getDeliveryHistoryWhereClause(input.filter);
+      const baseQuery = db.select().from(savedSearchDeliveryHistory) as any;
+      const rows = await (
+        whereClause ? baseQuery.where(whereClause) : baseQuery
+      )
         .orderBy(desc(savedSearchDeliveryHistory.processedAt))
         .limit(input.limit);
 
@@ -182,6 +279,20 @@ export const systemRouter = router({
         emailRequested: Boolean(row.emailRequested),
         inAppDelivered: Boolean(row.inAppDelivered),
         emailDelivered: Boolean(row.emailDelivered),
+        diagnosticCategory: deriveDeliveryFailureCategory({
+          status: row.status,
+          retryState: row.retryState,
+          error: row.error,
+          emailRequested: row.emailRequested,
+          emailDelivered: row.emailDelivered,
+          retryCount: Number(row.retryCount ?? 0),
+          maxRetryCount: Number(row.maxRetryCount ?? 0),
+        }),
+        recoveryState: deriveDeliveryRecoveryState({
+          retryState: row.retryState,
+          emailRequested: row.emailRequested,
+          emailDelivered: row.emailDelivered,
+        }),
       }));
     }),
 });
