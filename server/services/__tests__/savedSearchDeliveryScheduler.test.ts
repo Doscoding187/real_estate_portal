@@ -78,6 +78,9 @@ describe('savedSearchDeliveryScheduler', () => {
           dueSearches: 2,
           emittedNotifications: 2,
           emailedNotifications: 1,
+          retriedEmailDeliveries: 0,
+          failedEmailRetries: 1,
+          abandonedEmailRetries: 0,
         })
         .mockResolvedValueOnce({
           processedAt: '2026-03-22T10:00:01.000Z',
@@ -85,6 +88,9 @@ describe('savedSearchDeliveryScheduler', () => {
           dueSearches: 1,
           emittedNotifications: 1,
           emailedNotifications: 1,
+          retriedEmailDeliveries: 1,
+          failedEmailRetries: 0,
+          abandonedEmailRetries: 0,
         });
 
       const scheduler = new SavedSearchDeliveryScheduler();
@@ -108,6 +114,9 @@ describe('savedSearchDeliveryScheduler', () => {
           dueSearches: 1,
           emittedNotifications: 1,
           emailedNotifications: 1,
+          retriedEmailDeliveries: 1,
+          failedEmailRetries: 0,
+          abandonedEmailRetries: 0,
         },
       });
       expect(status.recentRuns).toEqual(
@@ -117,6 +126,7 @@ describe('savedSearchDeliveryScheduler', () => {
             result: expect.objectContaining({
               dueSearches: 1,
               emailedNotifications: 1,
+              retriedEmailDeliveries: 1,
             }),
           }),
           expect.objectContaining({
@@ -124,6 +134,7 @@ describe('savedSearchDeliveryScheduler', () => {
             result: expect.objectContaining({
               dueSearches: 2,
               emailedNotifications: 1,
+              failedEmailRetries: 1,
             }),
           }),
         ]),
@@ -175,6 +186,9 @@ describe('savedSearchDeliveryScheduler', () => {
               dueSearches: 2,
               emittedNotifications: 2,
               emailedNotifications: 1,
+              retriedEmailDeliveries: 1,
+              failedEmailRetries: 0,
+              abandonedEmailRetries: 0,
             },
           },
         ]),
@@ -192,6 +206,7 @@ describe('savedSearchDeliveryScheduler', () => {
       lastResult: {
         dueSearches: 2,
         emailedNotifications: 1,
+        retriedEmailDeliveries: 1,
       },
     });
     expect(status.recentRuns).toEqual([

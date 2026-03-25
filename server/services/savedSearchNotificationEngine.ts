@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, lte, or } from 'drizzle-orm';
 import { notifications, savedSearchDeliveryHistory, savedSearches, users } from '../../drizzle/schema';
 import type {
   DevelopmentDerivedListing,
@@ -21,6 +21,8 @@ const PREVIEW_QUERY_LIMIT = 100;
 const PREVIEW_MATCH_LIMIT = 3;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const WEEK_IN_MS = 7 * DAY_IN_MS;
+const RETRY_DELAYS_MS = [15 * 60 * 1000, 60 * 60 * 1000, 6 * 60 * 60 * 1000] as const;
+const DEFAULT_MAX_RETRY_COUNT = RETRY_DELAYS_MS.length;
 
 type ListingSourceFilter = 'manual' | 'development' | 'all';
 
@@ -65,6 +67,9 @@ export interface SavedSearchNotificationEngineResult {
   dueSearches: number;
   emittedNotifications: number;
   emailedNotifications: number;
+  retriedEmailDeliveries: number;
+  failedEmailRetries: number;
+  abandonedEmailRetries: number;
   dryRun: boolean;
   notifications: SavedSearchNotificationPayload[];
 }
@@ -100,6 +105,14 @@ interface SavedSearchDeliveryLinks {
 }
 
 type SavedSearchDeliveryStatus = 'delivered' | 'partial' | 'skipped' | 'failed';
+type SavedSearchDeliveryRetryState = 'not_needed' | 'pending' | 'retrying' | 'succeeded' | 'abandoned';
+
+interface SavedSearchEmailDeliveryAttempt {
+  delivered: boolean;
+  recipientAvailable: boolean;
+  retryEligible: boolean;
+  error?: string;
+}
 
 function toString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -254,6 +267,19 @@ function getDueWindowMs(frequency: SavedSearch['notificationFrequency']): number
     default:
       return null;
   }
+}
+
+function getRetryDelayMs(retryCount: number): number | null {
+  return RETRY_DELAYS_MS[retryCount] ?? null;
+}
+
+function getNextRetryAt(now: Date, retryCount: number): string | null {
+  const delayMs = getRetryDelayMs(retryCount);
+  if (delayMs === null) {
+    return null;
+  }
+
+  return new Date(now.getTime() + delayMs).toISOString();
 }
 
 function escapeHtml(value: string): string {
@@ -554,6 +580,75 @@ function sortMatchesByDateDesc<T extends { listedDate: Date }>(matches: T[]): T[
   );
 }
 
+function normalizeHistoryPreviewMatches(value: unknown): SavedSearchNotificationMatch[] {
+  const rawMatches =
+    typeof value === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return [];
+          }
+        })()
+      : value;
+
+  if (!Array.isArray(rawMatches)) {
+    return [];
+  }
+
+  return rawMatches
+    .map(match => {
+      if (!match || typeof match !== 'object') {
+        return null;
+      }
+
+      const candidate = match as Record<string, unknown>;
+      const id = toString(candidate.id);
+      const title = toString(candidate.title);
+      const city = toString(candidate.city);
+      const suburb = toString(candidate.suburb);
+      const href = toString(candidate.href);
+      const image = toString(candidate.image) ?? null;
+      const listingType = toString(candidate.listingType);
+      const listingSource = toString(candidate.listingSource);
+      const listedDateValue = candidate.listedDate;
+      const listedDate =
+        listedDateValue instanceof Date
+          ? listedDateValue
+          : typeof listedDateValue === 'string' || typeof listedDateValue === 'number'
+            ? new Date(listedDateValue)
+            : null;
+
+      if (
+        !id ||
+        !title ||
+        !href ||
+        !listingType ||
+        (listingType !== 'sale' && listingType !== 'rent') ||
+        !listingSource ||
+        (listingSource !== 'manual' && listingSource !== 'development') ||
+        !listedDate ||
+        Number.isNaN(listedDate.getTime())
+      ) {
+        return null;
+      }
+
+      return {
+        id,
+        title,
+        city: city || '',
+        suburb: suburb || '',
+        href,
+        image,
+        listingType,
+        listingSource,
+        listedDate,
+        price: toNumber(candidate.price) ?? null,
+      } as SavedSearchNotificationMatch;
+    })
+    .filter((match): match is SavedSearchNotificationMatch => Boolean(match));
+}
+
 function buildManualMatch(property: Property): ManualNotificationMatch {
   return {
     id: property.id,
@@ -602,6 +697,9 @@ export class SavedSearchNotificationEngine {
         dueSearches: 0,
         emittedNotifications: 0,
         emailedNotifications: 0,
+        retriedEmailDeliveries: 0,
+        failedEmailRetries: 0,
+        abandonedEmailRetries: 0,
         dryRun: options.dryRun ?? false,
         notifications: [],
       };
@@ -623,6 +721,10 @@ export class SavedSearchNotificationEngine {
       .filter(search => search.notificationFrequency !== 'never')
       .slice(0, limit);
     const recipientsByUserId = await this.loadRecipients(db, normalizedSearches);
+    const retryResult =
+      options.dryRun
+        ? { retriedEmailDeliveries: 0, failedEmailRetries: 0, abandonedEmailRetries: 0 }
+        : await this.retryPendingEmailDeliveries(db, recipientsByUserId, now);
 
     const notificationsToEmit: SavedSearchNotificationPayload[] = [];
     let dueSearches = 0;
@@ -646,9 +748,12 @@ export class SavedSearchNotificationEngine {
       notificationsToEmit.push(payload);
 
       if (!options.dryRun) {
-        const recipient = recipientsByUserId.get(search.userId);
         let inAppDelivered = false;
-        let emailDelivered = false;
+        let emailAttempt: SavedSearchEmailDeliveryAttempt = {
+          delivered: false,
+          recipientAvailable: false,
+          retryEligible: false,
+        };
 
         try {
           if (search.inAppEnabled) {
@@ -679,9 +784,12 @@ export class SavedSearchNotificationEngine {
             .set({ lastNotifiedAt: now.toISOString() })
             .where(eq(savedSearches.id, payload.savedSearchId));
 
-          if (search.emailEnabled && recipient) {
-            emailDelivered = await this.sendSavedSearchEmail(recipient, payload);
-            if (emailDelivered) {
+          if (search.emailEnabled) {
+            emailAttempt = await this.deliverSavedSearchEmail(
+              recipientsByUserId.get(search.userId),
+              payload,
+            );
+            if (emailAttempt.delivered) {
               emailedNotifications += 1;
             }
           }
@@ -690,22 +798,27 @@ export class SavedSearchNotificationEngine {
             inAppRequested: search.inAppEnabled,
             emailRequested: search.emailEnabled,
             inAppDelivered,
-            emailDelivered,
+            emailDelivered: emailAttempt.delivered,
+            emailRetryEligible: emailAttempt.retryEligible,
             status: this.resolveDeliveryStatus({
               inAppRequested: search.inAppEnabled,
               emailRequested: search.emailEnabled,
               inAppDelivered,
-              emailDelivered,
+              emailDelivered: emailAttempt.delivered,
             }),
+            error: emailAttempt.error,
+            processedAt: now,
           });
         } catch (error) {
           await this.recordDeliveryHistory(db, payload, {
             inAppRequested: search.inAppEnabled,
             emailRequested: search.emailEnabled,
             inAppDelivered,
-            emailDelivered,
+            emailDelivered: emailAttempt.delivered,
+            emailRetryEligible: false,
             status: 'failed',
             error: (error as Error)?.message || 'Unknown delivery error',
+            processedAt: now,
           }).catch(() => undefined);
           throw error;
         }
@@ -718,6 +831,9 @@ export class SavedSearchNotificationEngine {
       dueSearches,
       emittedNotifications: notificationsToEmit.length,
       emailedNotifications,
+      retriedEmailDeliveries: retryResult.retriedEmailDeliveries,
+      failedEmailRetries: retryResult.failedEmailRetries,
+      abandonedEmailRetries: retryResult.abandonedEmailRetries,
       dryRun: options.dryRun ?? false,
       notifications: notificationsToEmit,
     };
@@ -827,6 +943,177 @@ export class SavedSearchNotificationEngine {
     });
   }
 
+  private async deliverSavedSearchEmail(
+    recipient: SavedSearchEmailRecipient | undefined,
+    payload: SavedSearchNotificationPayload,
+  ): Promise<SavedSearchEmailDeliveryAttempt> {
+    if (!recipient) {
+      return {
+        delivered: false,
+        recipientAvailable: false,
+        retryEligible: false,
+        error: 'Recipient email unavailable',
+      };
+    }
+
+    try {
+      const delivered = await this.sendSavedSearchEmail(recipient, payload);
+      if (delivered) {
+        return {
+          delivered: true,
+          recipientAvailable: true,
+          retryEligible: false,
+        };
+      }
+
+      return {
+        delivered: false,
+        recipientAvailable: true,
+        retryEligible: true,
+        error: 'Email delivery returned false',
+      };
+    } catch (error) {
+      return {
+        delivered: false,
+        recipientAvailable: true,
+        retryEligible: true,
+        error: (error as Error)?.message || 'Unknown email delivery error',
+      };
+    }
+  }
+
+  private async retryPendingEmailDeliveries(
+    db: Awaited<ReturnType<typeof getDb>>,
+    recipientsByUserId: Map<number, SavedSearchEmailRecipient>,
+    now: Date,
+  ) {
+    const rows = await (db.select().from(savedSearchDeliveryHistory) as any).where(
+      and(
+        eq(savedSearchDeliveryHistory.emailRequested, 1),
+        eq(savedSearchDeliveryHistory.emailDelivered, 0),
+        or(
+          eq(savedSearchDeliveryHistory.retryState, 'pending'),
+          eq(savedSearchDeliveryHistory.retryState, 'retrying'),
+        ),
+        lte(savedSearchDeliveryHistory.nextRetryAt, now.toISOString()),
+      ),
+    );
+    const retryUserIds = [
+      ...new Set(
+        (rows as Array<Record<string, unknown>>)
+          .map(row => toNumber(row.userId))
+          .filter((userId): userId is number => typeof userId === 'number' && Number.isFinite(userId)),
+      ),
+    ];
+    const missingUserIds = retryUserIds.filter(userId => !recipientsByUserId.has(userId));
+    if (missingUserIds.length > 0) {
+      const retryRecipientRows = await (db.select().from(users) as any).where(
+        inArray(users.id, missingUserIds),
+      );
+
+      for (const row of retryRecipientRows as Array<Record<string, unknown>>) {
+        const id = typeof row.id === 'number' ? row.id : Number(row.id);
+        const email = toString(row.email);
+        if (!Number.isFinite(id) || !email) {
+          continue;
+        }
+
+        recipientsByUserId.set(id, {
+          id,
+          email,
+          firstName: toString(row.firstName) ?? null,
+          name: toString(row.name) ?? null,
+        });
+      }
+    }
+
+    let retriedEmailDeliveries = 0;
+    let failedEmailRetries = 0;
+    let abandonedEmailRetries = 0;
+
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const historyId = toNumber(row.id);
+      const userId = toNumber(row.userId);
+      if (!historyId || !userId) {
+        continue;
+      }
+
+      const retryCount = toNumber(row.retryCount) ?? 0;
+      const maxRetryCount = toNumber(row.maxRetryCount) ?? DEFAULT_MAX_RETRY_COUNT;
+      const payload = this.buildPayloadFromHistoryRow(row);
+      if (!payload) {
+        await this.updateDeliveryRetryState(db, historyId, {
+          retryState: 'abandoned',
+          retryCount,
+          lastRetryAt: now.toISOString(),
+          nextRetryAt: null,
+          error: 'Retry payload could not be reconstructed',
+        });
+        abandonedEmailRetries += 1;
+        continue;
+      }
+
+      await this.updateDeliveryRetryState(db, historyId, {
+        retryState: 'retrying',
+        retryCount,
+        lastRetryAt: now.toISOString(),
+        nextRetryAt: null,
+      });
+
+      const attempt = await this.deliverSavedSearchEmail(recipientsByUserId.get(userId), payload);
+      const nextRetryCount = retryCount + 1;
+
+      if (attempt.delivered) {
+        await db
+          .update(savedSearchDeliveryHistory)
+          .set({
+            emailDelivered: 1,
+            status: this.resolveDeliveryStatus({
+              inAppRequested: Boolean(toNumber(row.inAppRequested)),
+              emailRequested: true,
+              inAppDelivered: Boolean(toNumber(row.inAppDelivered)),
+              emailDelivered: true,
+            }),
+            retryState: 'succeeded',
+            retryCount: nextRetryCount,
+            lastRetryAt: now.toISOString(),
+            nextRetryAt: null,
+            error: null,
+          })
+          .where(eq(savedSearchDeliveryHistory.id, historyId));
+        retriedEmailDeliveries += 1;
+        continue;
+      }
+
+      const nextRetryAt =
+        attempt.retryEligible && nextRetryCount < maxRetryCount
+          ? getNextRetryAt(now, nextRetryCount)
+          : null;
+      const retryState: SavedSearchDeliveryRetryState =
+        attempt.retryEligible && nextRetryAt ? 'pending' : 'abandoned';
+
+      await this.updateDeliveryRetryState(db, historyId, {
+        retryState,
+        retryCount: nextRetryCount,
+        lastRetryAt: now.toISOString(),
+        nextRetryAt,
+        error: attempt.error,
+      });
+
+      if (retryState === 'pending') {
+        failedEmailRetries += 1;
+      } else {
+        abandonedEmailRetries += 1;
+      }
+    }
+
+    return {
+      retriedEmailDeliveries,
+      failedEmailRetries,
+      abandonedEmailRetries,
+    };
+  }
+
   private resolveDeliveryStatus(input: {
     inAppRequested: boolean;
     emailRequested: boolean;
@@ -847,6 +1134,84 @@ export class SavedSearchNotificationEngine {
     return 'delivered';
   }
 
+  private resolveInitialRetryState(input: {
+    emailRequested: boolean;
+    emailDelivered: boolean;
+    emailRetryEligible: boolean;
+  }): SavedSearchDeliveryRetryState {
+    if (!input.emailRequested || input.emailDelivered) {
+      return 'not_needed';
+    }
+
+    return input.emailRetryEligible ? 'pending' : 'abandoned';
+  }
+
+  private buildPayloadFromHistoryRow(
+    row: Record<string, unknown>,
+  ): SavedSearchNotificationPayload | null {
+    const savedSearchId = toNumber(row.savedSearchId);
+    const userId = toNumber(row.userId);
+    const searchName = toString(row.searchName);
+    const title = toString(row.title);
+    const content = toString(row.content);
+    const actionUrl = toString(row.actionUrl);
+    const notificationFrequency = toString(row.notificationFrequency);
+    const listingSource = toString(row.listingSource);
+
+    if (
+      !savedSearchId ||
+      !userId ||
+      !searchName ||
+      !title ||
+      !content ||
+      !actionUrl ||
+      !notificationFrequency ||
+      !['instant', 'daily', 'weekly', 'never'].includes(notificationFrequency) ||
+      !listingSource ||
+      !['manual', 'development', 'all'].includes(listingSource)
+    ) {
+      return null;
+    }
+
+    return {
+      savedSearchId,
+      userId,
+      searchName,
+      title,
+      content,
+      actionUrl,
+      notificationFrequency: notificationFrequency as SavedSearch['notificationFrequency'],
+      listingSource: listingSource as ListingSourceFilter,
+      totalMatches: toNumber(row.totalMatches) ?? 0,
+      newMatchCount: toNumber(row.newMatchCount) ?? 0,
+      matches: normalizeHistoryPreviewMatches(row.previewMatches),
+      criteria: {},
+    };
+  }
+
+  private async updateDeliveryRetryState(
+    db: Awaited<ReturnType<typeof getDb>>,
+    historyId: number,
+    input: {
+      retryState: SavedSearchDeliveryRetryState;
+      retryCount: number;
+      lastRetryAt: string | null;
+      nextRetryAt: string | null;
+      error?: string;
+    },
+  ) {
+    await db
+      .update(savedSearchDeliveryHistory)
+      .set({
+        retryState: input.retryState,
+        retryCount: input.retryCount,
+        lastRetryAt: input.lastRetryAt,
+        nextRetryAt: input.nextRetryAt,
+        error: input.error ?? null,
+      })
+      .where(eq(savedSearchDeliveryHistory.id, historyId));
+  }
+
   private async recordDeliveryHistory(
     db: Awaited<ReturnType<typeof getDb>>,
     payload: SavedSearchNotificationPayload,
@@ -855,10 +1220,20 @@ export class SavedSearchNotificationEngine {
       emailRequested: boolean;
       inAppDelivered: boolean;
       emailDelivered: boolean;
+      emailRetryEligible: boolean;
       status: SavedSearchDeliveryStatus;
       error?: string;
+      processedAt: Date;
     },
   ) {
+    const retryState = this.resolveInitialRetryState({
+      emailRequested: input.emailRequested,
+      emailDelivered: input.emailDelivered,
+      emailRetryEligible: input.emailRetryEligible,
+    });
+    const nextRetryAt =
+      retryState === 'pending' ? getNextRetryAt(input.processedAt, 0) : null;
+
     await db.insert(savedSearchDeliveryHistory).values({
       savedSearchId: payload.savedSearchId,
       userId: payload.userId,
@@ -874,10 +1249,15 @@ export class SavedSearchNotificationEngine {
       inAppDelivered: input.inAppDelivered ? 1 : 0,
       emailDelivered: input.emailDelivered ? 1 : 0,
       status: input.status,
+      retryState,
+      retryCount: 0,
+      maxRetryCount: DEFAULT_MAX_RETRY_COUNT,
+      nextRetryAt,
+      lastRetryAt: null,
       actionUrl: payload.actionUrl,
       previewMatches: payload.matches,
       error: input.error || null,
-      processedAt: new Date().toISOString(),
+      processedAt: input.processedAt.toISOString(),
     });
   }
 }

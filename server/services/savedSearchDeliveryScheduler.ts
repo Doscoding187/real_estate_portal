@@ -16,7 +16,14 @@ export interface SavedSearchDeliverySchedulerRun {
   error: string | null;
   result: Pick<
     SavedSearchNotificationEngineResult,
-    'processedAt' | 'scannedSearches' | 'dueSearches' | 'emittedNotifications' | 'emailedNotifications'
+    | 'processedAt'
+    | 'scannedSearches'
+    | 'dueSearches'
+    | 'emittedNotifications'
+    | 'emailedNotifications'
+    | 'retriedEmailDeliveries'
+    | 'failedEmailRetries'
+    | 'abandonedEmailRetries'
   > | null;
 }
 
@@ -32,7 +39,14 @@ export interface SavedSearchDeliverySchedulerStatus {
   lastError: string | null;
   lastResult: Pick<
     SavedSearchNotificationEngineResult,
-    'processedAt' | 'scannedSearches' | 'dueSearches' | 'emittedNotifications' | 'emailedNotifications'
+    | 'processedAt'
+    | 'scannedSearches'
+    | 'dueSearches'
+    | 'emittedNotifications'
+    | 'emailedNotifications'
+    | 'retriedEmailDeliveries'
+    | 'failedEmailRetries'
+    | 'abandonedEmailRetries'
   > | null;
   recentRuns: SavedSearchDeliverySchedulerRun[];
 }
@@ -214,6 +228,9 @@ export class SavedSearchDeliveryScheduler {
           dueSearches: result.dueSearches,
           emittedNotifications: result.emittedNotifications,
           emailedNotifications: result.emailedNotifications,
+          retriedEmailDeliveries: result.retriedEmailDeliveries,
+          failedEmailRetries: result.failedEmailRetries,
+          abandonedEmailRetries: result.abandonedEmailRetries,
         };
         const completedAt = new Date().toISOString();
         this.status.lastRunCompletedAt = completedAt;
@@ -225,6 +242,9 @@ export class SavedSearchDeliveryScheduler {
           dueSearches: result.dueSearches,
           emittedNotifications: result.emittedNotifications,
           emailedNotifications: result.emailedNotifications,
+          retriedEmailDeliveries: result.retriedEmailDeliveries,
+          failedEmailRetries: result.failedEmailRetries,
+          abandonedEmailRetries: result.abandonedEmailRetries,
         });
       } catch (error) {
         const failedAt = new Date().toISOString();

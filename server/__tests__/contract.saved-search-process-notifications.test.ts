@@ -23,6 +23,9 @@ describe('savedSearch.processNotifications contract', () => {
       dueSearches: 1,
       emittedNotifications: 1,
       emailedNotifications: 1,
+      retriedEmailDeliveries: 0,
+      failedEmailRetries: 0,
+      abandonedEmailRetries: 0,
       dryRun: true,
       notifications: [],
     });
@@ -49,6 +52,7 @@ describe('savedSearch.processNotifications contract', () => {
       dueSearches: 1,
       emittedNotifications: 1,
       emailedNotifications: 1,
+      retriedEmailDeliveries: 0,
       dryRun: true,
     });
   });

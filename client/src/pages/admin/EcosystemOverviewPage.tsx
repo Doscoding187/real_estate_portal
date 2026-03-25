@@ -320,11 +320,11 @@ const EcosystemOverviewPage: React.FC = () => {
                   value={schedulerStatus?.recentRuns?.[0]?.trigger || '—'}
                   subtext={schedulerStatus?.running ? 'Manual run in progress' : null}
                 />
-                <SchedulerMetric
-                  label="Notifications"
-                  value={String(schedulerStatus?.lastResult?.emittedNotifications ?? 0)}
-                  subtext={`Emails sent: ${schedulerStatus?.lastResult?.emailedNotifications ?? 0}`}
-                />
+                  <SchedulerMetric
+                    label="Notifications"
+                    value={String(schedulerStatus?.lastResult?.emittedNotifications ?? 0)}
+                    subtext={`Emails sent: ${schedulerStatus?.lastResult?.emailedNotifications ?? 0} · Retries recovered: ${schedulerStatus?.lastResult?.retriedEmailDeliveries ?? 0}`}
+                  />
                 <SchedulerMetric
                   label="Searches Processed"
                   value={String(schedulerStatus?.lastResult?.dueSearches ?? 0)}
@@ -363,14 +363,15 @@ const EcosystemOverviewPage: React.FC = () => {
                 {(schedulerStatus?.recentRuns || []).length > 0 ? (
                   <Table>
                     <TableHeader className="bg-slate-50/50">
-                      <TableRow className="border-slate-100 hover:bg-transparent">
-                        <TableHead className="text-slate-500 font-semibold">Run</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Started</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Status</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Due</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">In-App</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Email</TableHead>
-                      </TableRow>
+                        <TableRow className="border-slate-100 hover:bg-transparent">
+                          <TableHead className="text-slate-500 font-semibold">Run</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Started</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Status</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Due</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">In-App</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Email</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Retries</TableHead>
+                        </TableRow>
                     </TableHeader>
                     <TableBody>
                       {schedulerStatus?.recentRuns.map(run => {
@@ -414,6 +415,15 @@ const EcosystemOverviewPage: React.FC = () => {
                             <TableCell className="text-slate-700">
                               {run.result?.emailedNotifications ?? 0}
                             </TableCell>
+                            <TableCell className="text-slate-700">
+                              <div className="text-xs">
+                                Recovered: {run.result?.retriedEmailDeliveries ?? 0}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Failed: {run.result?.failedEmailRetries ?? 0} · Abandoned:{' '}
+                                {run.result?.abandonedEmailRetries ?? 0}
+                              </div>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -450,13 +460,14 @@ const EcosystemOverviewPage: React.FC = () => {
                 ) : (deliveryHistory?.length || 0) > 0 ? (
                   <Table>
                     <TableHeader className="bg-slate-50/50">
-                      <TableRow className="border-slate-100 hover:bg-transparent">
-                        <TableHead className="text-slate-500 font-semibold">Processed</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Search</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Status</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Matches</TableHead>
-                        <TableHead className="text-slate-500 font-semibold">Channels</TableHead>
-                      </TableRow>
+                        <TableRow className="border-slate-100 hover:bg-transparent">
+                          <TableHead className="text-slate-500 font-semibold">Processed</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Search</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Status</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Matches</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Channels</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Retry</TableHead>
+                        </TableRow>
                     </TableHeader>
                     <TableBody>
                       {deliveryHistory?.map(entry => (
@@ -493,18 +504,41 @@ const EcosystemOverviewPage: React.FC = () => {
                             <div>{entry.newMatchCount} new</div>
                             <div className="text-xs text-slate-500">{entry.totalMatches} total</div>
                           </TableCell>
-                          <TableCell className="text-slate-700">
-                            <div className="space-y-1 text-xs">
-                              <div>
-                                In-app: {entry.inAppDelivered ? 'sent' : entry.inAppRequested ? 'requested' : 'off'}
-                              </div>
+                            <TableCell className="text-slate-700">
+                              <div className="space-y-1 text-xs">
+                                <div>
+                                  In-app: {entry.inAppDelivered ? 'sent' : entry.inAppRequested ? 'requested' : 'off'}
+                                </div>
                               <div>
                                 Email: {entry.emailDelivered ? 'sent' : entry.emailRequested ? 'requested' : 'off'}
                               </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-slate-700">
+                              <div className="space-y-1 text-xs">
+                                <div>
+                                  {entry.retryState === 'pending'
+                                    ? `Pending retry ${entry.retryCount}/${entry.maxRetryCount}`
+                                    : entry.retryState === 'succeeded'
+                                      ? `Recovered after ${entry.retryCount} ${entry.retryCount === 1 ? 'retry' : 'retries'}`
+                                      : entry.retryState === 'abandoned'
+                                        ? 'Retry abandoned'
+                                        : 'No retry needed'}
+                                </div>
+                                {entry.nextRetryAt ? (
+                                  <div className="text-slate-500">
+                                    Next: {formatDateTime(entry.nextRetryAt)}
+                                  </div>
+                                ) : null}
+                                {entry.lastRetryAt ? (
+                                  <div className="text-slate-500">
+                                    Last: {formatDateTime(entry.lastRetryAt)}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 ) : (
