@@ -7,6 +7,7 @@ import { getDb } from '../db';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import { getLeadRoutingAudit } from '../services/leadRoutingAuditService';
 import { correctLeadRouting } from '../services/leadRoutingCorrectionService';
+import { getLeadRoutingConversionReport } from '../services/leadRoutingConversionReportService';
 import { savedSearchDeliveryHistory } from '../../drizzle/schema';
 
 const deliveryHistoryFilterSchema = z.enum([
@@ -433,5 +434,17 @@ export const systemRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       return correctLeadRouting(input, Number(ctx.user.id));
+    }),
+
+  leadRoutingConversionReport: adminProcedure
+    .input(
+      z
+        .object({
+          days: z.number().int().positive().max(365).default(30),
+        })
+        .default({}),
+    )
+    .query(async ({ input }) => {
+      return getLeadRoutingConversionReport(input);
     }),
 });

@@ -115,10 +115,27 @@ const EcosystemOverviewPage: React.FC = () => {
       refetchInterval: 60_000,
     },
   );
+  const {
+    data: leadRoutingConversionReport,
+    isLoading: leadRoutingConversionLoading,
+    isFetching: leadRoutingConversionFetching,
+    error: leadRoutingConversionError,
+    refetch: refetchLeadRoutingConversionReport,
+  } = trpc.system.leadRoutingConversionReport.useQuery(
+    { days: leadAuditDays },
+    {
+      refetchInterval: 60_000,
+    },
+  );
   const runScheduler = trpc.system.runSavedSearchScheduler.useMutation({
     onSuccess: async () => {
       toast.success('Saved search scheduler run completed');
-      await Promise.all([refetchSchedulerStatus(), refetchDeliveryHistory()]);
+      await Promise.all([
+        refetchSchedulerStatus(),
+        refetchDeliveryHistory(),
+        refetchLeadRoutingAudit(),
+        refetchLeadRoutingConversionReport(),
+      ]);
     },
     onError: error => {
       toast.error(error.message || 'Unable to run saved search scheduler');
@@ -131,7 +148,12 @@ const EcosystemOverviewPage: React.FC = () => {
           ? 'Delivery requeued for retry'
           : 'Delivery retry abandoned',
       );
-      await Promise.all([refetchSchedulerStatus(), refetchDeliveryHistory()]);
+      await Promise.all([
+        refetchSchedulerStatus(),
+        refetchDeliveryHistory(),
+        refetchLeadRoutingAudit(),
+        refetchLeadRoutingConversionReport(),
+      ]);
     },
     onError: error => {
       toast.error(error.message || 'Unable to update delivery retry state');
@@ -161,7 +183,7 @@ const EcosystemOverviewPage: React.FC = () => {
       setCorrectionTargetId('');
       setCorrectionNote('');
       setCorrectionRouteType('agent');
-      await refetchLeadRoutingAudit();
+      await Promise.all([refetchLeadRoutingAudit(), refetchLeadRoutingConversionReport()]);
     },
     onError: error => {
       toast.error(error.message || 'Unable to update lead routing');
@@ -382,19 +404,24 @@ const EcosystemOverviewPage: React.FC = () => {
                   refetchSchedulerStatus(),
                   refetchDeliveryHistory(),
                   refetchLeadRoutingAudit(),
+                  refetchLeadRoutingConversionReport(),
                 ])
               }
               disabled={
                 schedulerFetching ||
                 deliveryHistoryFetching ||
                 leadRoutingAuditFetching ||
+                leadRoutingConversionFetching ||
                 runScheduler.isPending ||
                 updateRetryState.isPending
               }
             >
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${
-                  schedulerFetching || deliveryHistoryFetching || leadRoutingAuditFetching
+                  schedulerFetching ||
+                  deliveryHistoryFetching ||
+                  leadRoutingAuditFetching ||
+                  leadRoutingConversionFetching
                     ? 'animate-spin'
                     : ''
                 }`}
@@ -1054,6 +1081,153 @@ const EcosystemOverviewPage: React.FC = () => {
                 ) : (
                   <div className="px-4 py-6 text-sm text-slate-500">
                     No routing issues found in this period.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </GlassCard>
+
+      <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+        <CardHeader>
+          <div>
+            <CardTitle className="text-slate-800 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-indigo-600" />
+              Lead Routing Conversion
+            </CardTitle>
+            <p className="mt-2 text-sm text-slate-500">
+              Conversion outcomes by routing path, source, and whether a lead was corrected.
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {leadRoutingConversionLoading ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
+              {[1, 2, 3, 4, 5, 6].map(item => (
+                <Skeleton key={item} className="h-24 rounded-xl" />
+              ))}
+            </div>
+          ) : leadRoutingConversionError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              Failed to load lead-routing conversion report: {leadRoutingConversionError.message}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
+                <SchedulerMetric
+                  label="Conversion Rate"
+                  value={`${leadRoutingConversionReport?.summary.conversionRate ?? 0}%`}
+                  subtext={`${leadRoutingConversionReport?.summary.convertedLeads ?? 0} converted / closed`}
+                />
+                <SchedulerMetric
+                  label="Corrected Leads"
+                  value={String(leadRoutingConversionReport?.summary.correctedLeads ?? 0)}
+                  subtext={`${leadRoutingConversionReport?.summary.correctedConversionRate ?? 0}% corrected conversion`}
+                />
+                <SchedulerMetric
+                  label="Qualified"
+                  value={String(leadRoutingConversionReport?.summary.qualifiedLeads ?? 0)}
+                  subtext="Reached qualified or beyond"
+                />
+                <SchedulerMetric
+                  label="Viewings"
+                  value={String(leadRoutingConversionReport?.summary.viewingLeads ?? 0)}
+                  subtext="Reached viewing stage or beyond"
+                />
+                <SchedulerMetric
+                  label="Offers"
+                  value={String(leadRoutingConversionReport?.summary.offerLeads ?? 0)}
+                  subtext="Reached offer stage or beyond"
+                />
+                <SchedulerMetric
+                  label="Lost"
+                  value={String(leadRoutingConversionReport?.summary.lostLeads ?? 0)}
+                  subtext="Marked lost in current window"
+                />
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white/70 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">Source Performance</h3>
+                    <p className="text-xs text-slate-500">
+                      Conversion rate by source for the selected period
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(leadRoutingConversionReport?.sourceBreakdown || []).map(source => (
+                      <Badge key={source.source} variant="secondary">
+                        {source.source}: {source.conversionRate}%
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white/70">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">Route Breakdown</h3>
+                    <p className="text-xs text-slate-500">
+                      Outcome comparison across routing destinations
+                    </p>
+                  </div>
+                  <Badge variant="secondary">
+                    {(leadRoutingConversionReport?.routeBreakdown || []).length} routes
+                  </Badge>
+                </div>
+
+                {(leadRoutingConversionReport?.routeBreakdown || []).length > 0 ? (
+                  <Table>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow className="border-slate-100 hover:bg-transparent">
+                        <TableHead className="text-slate-500 font-semibold">Route</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Leads</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Corrected</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Qualified</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Viewing</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Offer</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Converted</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Lost</TableHead>
+                        <TableHead className="text-slate-500 font-semibold">Rate</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leadRoutingConversionReport?.routeBreakdown.map(entry => (
+                        <TableRow key={entry.key} className="border-slate-100">
+                          <TableCell className="text-slate-700">
+                            <div className="capitalize">{entry.routeType}</div>
+                            <div className="text-xs text-slate-500 capitalize">
+                              {entry.recipientType.replace(/_/g, ' ')}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-slate-700">{entry.totalLeads}</TableCell>
+                          <TableCell className="text-slate-700">{entry.correctedLeads}</TableCell>
+                          <TableCell className="text-slate-700">{entry.qualifiedLeads}</TableCell>
+                          <TableCell className="text-slate-700">{entry.viewingLeads}</TableCell>
+                          <TableCell className="text-slate-700">{entry.offerLeads}</TableCell>
+                          <TableCell className="text-slate-700">{entry.convertedLeads}</TableCell>
+                          <TableCell className="text-slate-700">{entry.lostLeads}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={entry.conversionRate >= 20 ? 'default' : 'secondary'}
+                              className={
+                                entry.conversionRate >= 20
+                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                  : ''
+                              }
+                            >
+                              {entry.conversionRate}%
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="px-4 py-6 text-sm text-slate-500">
+                    No lead-routing conversion data is available yet.
                   </div>
                 )}
               </div>
