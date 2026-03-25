@@ -5,12 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import {
   Activity,
   AlertTriangle,
+  Ban,
   BellRing,
   Building2,
   CheckCircle2,
   Clock3,
   Code,
   RefreshCw,
+  RotateCcw,
   TrendingUp,
   User,
   Users,
@@ -98,6 +100,19 @@ const EcosystemOverviewPage: React.FC = () => {
       toast.error(error.message || 'Unable to run saved search scheduler');
     },
   });
+  const updateRetryState = trpc.system.updateSavedSearchDeliveryRetryState.useMutation({
+    onSuccess: async (_, variables) => {
+      toast.success(
+        variables.action === 'requeue'
+          ? 'Delivery requeued for retry'
+          : 'Delivery retry abandoned',
+      );
+      await Promise.all([refetchSchedulerStatus(), refetchDeliveryHistory()]);
+    },
+    onError: error => {
+      toast.error(error.message || 'Unable to update delivery retry state');
+    },
+  });
 
   const StatCard = ({
     title,
@@ -169,6 +184,8 @@ const EcosystemOverviewPage: React.FC = () => {
       {subtext ? <p className="mt-1 text-xs text-slate-500">{subtext}</p> : null}
     </div>
   );
+
+  const pendingRetryActionId = updateRetryState.variables?.deliveryHistoryId;
 
   if (isLoading) {
     return (
@@ -276,7 +293,12 @@ const EcosystemOverviewPage: React.FC = () => {
               size="sm"
               className="bg-white/70"
               onClick={() => void Promise.all([refetchSchedulerStatus(), refetchDeliveryHistory()])}
-              disabled={schedulerFetching || deliveryHistoryFetching || runScheduler.isPending}
+              disabled={
+                schedulerFetching ||
+                deliveryHistoryFetching ||
+                runScheduler.isPending ||
+                updateRetryState.isPending
+              }
             >
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${
@@ -467,10 +489,21 @@ const EcosystemOverviewPage: React.FC = () => {
                           <TableHead className="text-slate-500 font-semibold">Matches</TableHead>
                           <TableHead className="text-slate-500 font-semibold">Channels</TableHead>
                           <TableHead className="text-slate-500 font-semibold">Retry</TableHead>
+                          <TableHead className="text-slate-500 font-semibold">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {deliveryHistory?.map(entry => (
+                      {deliveryHistory?.map(entry => {
+                        const canRequeue =
+                          (entry.retryState === 'pending' || entry.retryState === 'abandoned') &&
+                          entry.emailRequested &&
+                          !entry.emailDelivered;
+                        const canAbandon =
+                          (entry.retryState === 'pending' || entry.retryState === 'retrying') &&
+                          entry.emailRequested &&
+                          !entry.emailDelivered;
+
+                        return (
                         <TableRow key={entry.id} className="border-slate-100">
                           <TableCell className="text-slate-600">
                             <div>{formatDateTime(entry.processedAt)}</div>
@@ -537,8 +570,57 @@ const EcosystemOverviewPage: React.FC = () => {
                                 ) : null}
                               </div>
                             </TableCell>
+                            <TableCell className="text-slate-700">
+                              <div className="flex flex-wrap gap-2">
+                                {canRequeue ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8"
+                                    disabled={updateRetryState.isPending}
+                                    onClick={() =>
+                                      updateRetryState.mutate({
+                                        deliveryHistoryId: entry.id,
+                                        action: 'requeue',
+                                      })
+                                    }
+                                  >
+                                    <RotateCcw
+                                      className={`mr-2 h-3.5 w-3.5 ${
+                                        updateRetryState.isPending &&
+                                        pendingRetryActionId === entry.id
+                                          ? 'animate-spin'
+                                          : ''
+                                      }`}
+                                    />
+                                    Requeue
+                                  </Button>
+                                ) : null}
+                                {canAbandon ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 border-rose-200 text-rose-700 hover:bg-rose-50"
+                                    disabled={updateRetryState.isPending}
+                                    onClick={() =>
+                                      updateRetryState.mutate({
+                                        deliveryHistoryId: entry.id,
+                                        action: 'abandon',
+                                      })
+                                    }
+                                  >
+                                    <Ban className="mr-2 h-3.5 w-3.5" />
+                                    Abandon
+                                  </Button>
+                                ) : null}
+                                {!canRequeue && !canAbandon ? (
+                                  <span className="text-xs text-slate-400">No action</span>
+                                ) : null}
+                              </div>
+                            </TableCell>
                           </TableRow>
-                        ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 ) : (
