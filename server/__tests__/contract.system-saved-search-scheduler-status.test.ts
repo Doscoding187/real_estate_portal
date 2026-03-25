@@ -59,6 +59,11 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         inAppDelivered: 1,
         emailDelivered: 1,
         status: 'delivered',
+        retryState: 'succeeded',
+        retryCount: 1,
+        maxRetryCount: 3,
+        nextRetryAt: null,
+        lastRetryAt: '2026-03-22T10:06:00.000Z',
         actionUrl: '/property/55',
         previewMatches: [],
         error: null,
@@ -84,6 +89,9 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         dueSearches: 3,
         emittedNotifications: 3,
         emailedNotifications: 2,
+        retriedEmailDeliveries: 1,
+        failedEmailRetries: 0,
+        abandonedEmailRetries: 0,
       },
       recentRuns: [],
     });
@@ -107,6 +115,7 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         dueSearches: 3,
         emittedNotifications: 3,
         emailedNotifications: 2,
+        retriedEmailDeliveries: 1,
       },
     });
   });
@@ -149,6 +158,8 @@ describe('system.savedSearchSchedulerStatus contract', () => {
         emailRequested: true,
         inAppDelivered: true,
         emailDelivered: true,
+        retryState: 'succeeded',
+        retryCount: 1,
       }),
     ]);
   });

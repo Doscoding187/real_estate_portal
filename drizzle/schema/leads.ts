@@ -296,6 +296,19 @@ export const savedSearchDeliveryHistory = mysqlTable(
     ])
       .notNull()
       .default('delivered'),
+    retryState: mysqlEnum('saved_search_delivery_retry_state', [
+      'not_needed',
+      'pending',
+      'retrying',
+      'succeeded',
+      'abandoned',
+    ])
+      .notNull()
+      .default('not_needed'),
+    retryCount: int('retry_count').notNull().default(0),
+    maxRetryCount: int('max_retry_count').notNull().default(3),
+    nextRetryAt: timestamp('next_retry_at', { mode: 'string' }),
+    lastRetryAt: timestamp('last_retry_at', { mode: 'string' }),
     actionUrl: varchar('action_url', { length: 500 }),
     previewMatches: json('preview_matches'),
     error: text(),
@@ -305,6 +318,8 @@ export const savedSearchDeliveryHistory = mysqlTable(
     index('idx_saved_search_delivery_history_saved_search').on(table.savedSearchId),
     index('idx_saved_search_delivery_history_user').on(table.userId),
     index('idx_saved_search_delivery_history_status').on(table.status),
+    index('idx_saved_search_delivery_history_retry_state').on(table.retryState),
+    index('idx_saved_search_delivery_history_next_retry').on(table.nextRetryAt),
     index('idx_saved_search_delivery_history_processed').on(table.processedAt),
   ],
 );

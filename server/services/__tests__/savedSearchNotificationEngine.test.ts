@@ -5,9 +5,11 @@ const {
   mockDbSelect,
   mockSavedSearchFrom,
   mockUsersFrom,
+  mockDeliveryHistoryFrom,
   mockDbOrderBy,
   mockDbWhere,
   mockUsersWhere,
+  mockDeliveryHistoryWhere,
   mockInsertValues,
   mockUpdateSet,
   mockUpdateWhere,
@@ -19,9 +21,11 @@ const {
   mockDbSelect: vi.fn(),
   mockSavedSearchFrom: vi.fn(),
   mockUsersFrom: vi.fn(),
+  mockDeliveryHistoryFrom: vi.fn(),
   mockDbOrderBy: vi.fn(),
   mockDbWhere: vi.fn(),
   mockUsersWhere: vi.fn(),
+  mockDeliveryHistoryWhere: vi.fn(),
   mockInsertValues: vi.fn(),
   mockUpdateSet: vi.fn(),
   mockUpdateWhere: vi.fn(),
@@ -60,9 +64,11 @@ describe('savedSearchNotificationEngine', () => {
 
     mockDbSelect
       .mockReturnValueOnce({ from: mockSavedSearchFrom })
-      .mockReturnValueOnce({ from: mockUsersFrom });
+      .mockReturnValueOnce({ from: mockUsersFrom })
+      .mockReturnValueOnce({ from: mockDeliveryHistoryFrom });
     mockSavedSearchFrom.mockReturnValue({ orderBy: mockDbOrderBy });
     mockUsersFrom.mockReturnValue({ where: mockUsersWhere });
+    mockDeliveryHistoryFrom.mockReturnValue({ where: mockDeliveryHistoryWhere });
     mockDbOrderBy.mockReturnValue([{ id: 11 }]);
     mockDbWhere.mockResolvedValue([
       {
@@ -88,6 +94,7 @@ describe('savedSearchNotificationEngine', () => {
         name: 'Ava Buyer',
       },
     ]);
+    mockDeliveryHistoryWhere.mockResolvedValue([]);
 
     mockInsertValues.mockResolvedValue([{ insertId: 101 }]);
     mockUpdateWhere.mockResolvedValue(undefined);
@@ -306,8 +313,10 @@ describe('savedSearchNotificationEngine', () => {
   it('skips email delivery when the saved-search user has no email address', async () => {
     mockDbSelect
       .mockReturnValueOnce({ from: mockSavedSearchFrom })
-      .mockReturnValueOnce({ from: mockUsersFrom });
+      .mockReturnValueOnce({ from: mockUsersFrom })
+      .mockReturnValueOnce({ from: mockDeliveryHistoryFrom });
     mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+    mockDeliveryHistoryWhere.mockResolvedValue([]);
     mockUsersWhere.mockResolvedValue([
       {
         id: 7,
@@ -331,6 +340,7 @@ describe('savedSearchNotificationEngine', () => {
         emailRequested: 1,
         inAppDelivered: 1,
         emailDelivered: 0,
+        retryState: 'abandoned',
       }),
     );
     expect(mockSendEmail).not.toHaveBeenCalled();
@@ -340,7 +350,8 @@ describe('savedSearchNotificationEngine', () => {
   it('respects email-only delivery preferences without writing in-app notifications', async () => {
     mockDbSelect
       .mockReturnValueOnce({ from: mockSavedSearchFrom })
-      .mockReturnValueOnce({ from: mockUsersFrom });
+      .mockReturnValueOnce({ from: mockUsersFrom })
+      .mockReturnValueOnce({ from: mockDeliveryHistoryFrom });
     mockDbWhere.mockResolvedValue([
       {
         id: 15,
@@ -362,6 +373,7 @@ describe('savedSearchNotificationEngine', () => {
       },
     ]);
     mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+    mockDeliveryHistoryWhere.mockResolvedValue([]);
 
     const result = await savedSearchNotificationEngine.processDueNotifications({
       userId: 7,
@@ -377,6 +389,7 @@ describe('savedSearchNotificationEngine', () => {
         emailRequested: 1,
         inAppDelivered: 0,
         emailDelivered: 1,
+        retryState: 'not_needed',
       }),
     );
     expect(mockSendEmail).toHaveBeenCalledOnce();
@@ -384,6 +397,128 @@ describe('savedSearchNotificationEngine', () => {
     expect(result).toMatchObject({
       emittedNotifications: 1,
       emailedNotifications: 1,
+    });
+  });
+
+  it('schedules a retry when email delivery fails without aborting the batch', async () => {
+    mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+    mockDeliveryHistoryWhere.mockResolvedValue([]);
+    mockSendEmail.mockResolvedValue(false);
+
+    const result = await savedSearchNotificationEngine.processDueNotifications({
+      userId: 7,
+      now: new Date('2026-03-21T10:00:00.000Z'),
+    });
+
+    expect(mockInsertValues).toHaveBeenCalledTimes(2);
+    expect(mockInsertValues).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        status: 'partial',
+        retryState: 'pending',
+        retryCount: 0,
+        maxRetryCount: 3,
+        emailDelivered: 0,
+        error: 'Email delivery returned false',
+        nextRetryAt: expect.any(String),
+      }),
+    );
+    expect(result).toMatchObject({
+      emittedNotifications: 1,
+      emailedNotifications: 0,
+      retriedEmailDeliveries: 0,
+      failedEmailRetries: 0,
+      abandonedEmailRetries: 0,
+    });
+  });
+
+  it('retries pending email deliveries from history before processing fresh matches', async () => {
+    mockDbSelect
+      .mockReset()
+      .mockReturnValueOnce({ from: mockSavedSearchFrom })
+      .mockReturnValueOnce({ from: mockDeliveryHistoryFrom })
+      .mockReturnValueOnce({ from: mockUsersFrom });
+    mockSavedSearchFrom.mockReturnValue({ orderBy: mockDbOrderBy });
+    mockDbOrderBy.mockReturnValue([]);
+    mockDeliveryHistoryFrom.mockReturnValue({ where: mockDeliveryHistoryWhere });
+    mockUsersFrom.mockReturnValue({ where: mockUsersWhere });
+    mockDeliveryHistoryWhere.mockResolvedValue([
+      {
+        id: 301,
+        savedSearchId: 11,
+        userId: 7,
+        searchName: 'Johannesburg Apartments',
+        title: '2 new matches for Johannesburg Apartments',
+        content: 'Johannesburg: 2 new matches.',
+        listingSource: 'all',
+        notificationFrequency: 'daily',
+        totalMatches: 2,
+        newMatchCount: 2,
+        inAppRequested: 1,
+        emailRequested: 1,
+        inAppDelivered: 1,
+        emailDelivered: 0,
+        status: 'partial',
+        retryState: 'pending',
+        retryCount: 0,
+        maxRetryCount: 3,
+        nextRetryAt: '2026-03-21T09:30:00.000Z',
+        lastRetryAt: null,
+        actionUrl: '/property/55',
+        previewMatches: [
+          {
+            id: '55',
+            title: '2 Bedroom Apartment for Sale in Rosebank',
+            price: 1450000,
+            city: 'Johannesburg',
+            suburb: 'Rosebank',
+            listingType: 'sale',
+            listingSource: 'manual',
+            href: '/property/55',
+            image: 'https://example.com/property.jpg',
+            listedDate: '2026-03-21T09:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+    mockUsersWhere.mockResolvedValue([
+      {
+        id: 7,
+        email: 'buyer@example.com',
+        firstName: 'Ava',
+        name: 'Ava Buyer',
+      },
+    ]);
+
+    const result = await savedSearchNotificationEngine.processDueNotifications({
+      now: new Date('2026-03-21T10:00:00.000Z'),
+    });
+
+    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockUpdateSet).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        retryState: 'retrying',
+        retryCount: 0,
+      }),
+    );
+    expect(mockUpdateSet).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        retryState: 'succeeded',
+        retryCount: 1,
+        emailDelivered: 1,
+        error: null,
+      }),
+    );
+    expect(result).toMatchObject({
+      scannedSearches: 0,
+      dueSearches: 0,
+      emittedNotifications: 0,
+      emailedNotifications: 0,
+      retriedEmailDeliveries: 1,
+      failedEmailRetries: 0,
+      abandonedEmailRetries: 0,
     });
   });
 });
