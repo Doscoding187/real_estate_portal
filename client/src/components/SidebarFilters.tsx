@@ -39,6 +39,19 @@ const AMENITIES = [
   'Wi-Fi',
 ];
 
+const LISTING_SOURCE_OPTIONS = [
+  {
+    value: 'manual',
+    label: 'Property Listings',
+    description: 'Show agent and private property listings only.',
+  },
+  {
+    value: 'development',
+    label: 'New Developments',
+    description: 'Show unit-type inventory from developments only.',
+  },
+] as const;
+
 export function SidebarFilters({
   filters,
   filterCounts,
@@ -88,6 +101,19 @@ export function SidebarFilters({
     } else {
       onFilterChange({ ...filters, minBedrooms: beds });
     }
+  };
+
+  const handleListingSourceChange = (source: SearchFilters['listingSource'] | undefined) => {
+    if (!source || filters.listingSource === source) {
+      const { listingSource, ...rest } = filters;
+      onFilterChange(rest);
+      return;
+    }
+
+    onFilterChange({
+      ...filters,
+      listingSource: source,
+    });
   };
 
   const handleAmenitiesChange = (value: string, checked: boolean) => {
@@ -192,9 +218,47 @@ export function SidebarFilters({
 
       <Accordion
         type="multiple"
-        defaultValue={['budget', 'locations', 'type', 'bedrooms']}
+        defaultValue={['listing-source', 'budget', 'locations', 'type', 'bedrooms']}
         className="w-full"
       >
+        <AccordionItem value="listing-source">
+          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
+            Listing source
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2 pt-2">
+              <Button
+                variant={!filters.listingSource ? 'default' : 'outline'}
+                className={`w-full justify-start ${
+                  !filters.listingSource
+                    ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                    : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
+                }`}
+                onClick={() => handleListingSourceChange(undefined)}
+              >
+                All Results
+              </Button>
+              {LISTING_SOURCE_OPTIONS.map(option => (
+                <Button
+                  key={option.value}
+                  variant={filters.listingSource === option.value ? 'default' : 'outline'}
+                  className={`h-auto w-full justify-start whitespace-normal px-3 py-3 text-left ${
+                    filters.listingSource === option.value
+                      ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                      : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
+                  }`}
+                  onClick={() => handleListingSourceChange(option.value)}
+                >
+                  <span>
+                    <span className="block font-semibold">{option.label}</span>
+                    <span className="mt-1 block text-xs opacity-80">{option.description}</span>
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
         {/* Budget Filter */}
         <AccordionItem value="budget">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">

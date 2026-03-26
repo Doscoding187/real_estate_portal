@@ -19,23 +19,33 @@ export function isLowEndDevice(): boolean {
     return false;
   }
 
+  type ConnectionInfo = {
+    effectiveType?: string;
+  };
+  type NavigatorWithPerfHints = Navigator & {
+    deviceMemory?: number;
+    connection?: ConnectionInfo;
+    mozConnection?: ConnectionInfo;
+    webkitConnection?: ConnectionInfo;
+  };
+  const perfNavigator = navigator as NavigatorWithPerfHints;
+
   // Check hardware concurrency (CPU cores)
   // Low-end devices typically have 2 or fewer cores
-  const cores = navigator.hardwareConcurrency;
+  const cores = perfNavigator.hardwareConcurrency;
   if (cores && cores <= 2) {
     return true;
   }
 
   // Check device memory (if available)
-  // @ts-ignore - deviceMemory is not in TypeScript types yet
-  const memory = navigator.deviceMemory;
+  const memory = perfNavigator.deviceMemory;
   if (memory && memory <= 2) {
     return true;
   }
 
   // Check connection speed (if available)
-  // @ts-ignore - connection is not in TypeScript types yet
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const connection =
+    perfNavigator.connection || perfNavigator.mozConnection || perfNavigator.webkitConnection;
   if (connection) {
     const effectiveType = connection.effectiveType;
     // 2g or slow-2g indicates low-end device or poor connection

@@ -79,6 +79,7 @@ export function unslugify(slug: string): string {
 // Search filters type
 export interface SearchFilters {
   listingType?: 'sale' | 'rent' | 'rent_to_buy' | 'auction';
+  listingSource?: 'manual' | 'development';
   propertyType?: string;
   city?: string;
   suburb?: string;

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { trpc } from '@/lib/trpc';
 import { Navbar } from '@/components/Navbar';
-import { Building2, MapPin, Star, Phone, Mail } from 'lucide-react';
+import { Building2, Phone, Mail } from 'lucide-react';
 import { Link } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +43,7 @@ export default function Agents() {
           ) : agents && agents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {agents.map(agent => (
-                <Link key={agent.id} href={`/agent/${agent.id}`}>
+                <Link key={agent.id} href={`/agents/${agent.slug || agent.id}`}>
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                     <CardContent className="p-6">
                       {/* Agent Image */}
@@ -60,15 +60,6 @@ export default function Agents() {
                             <Building2 className="h-4 w-4" />
                             <span className="capitalize">{agent.role.replace('_', ' ')}</span>
                           </div>
-                          {agent.rating > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span className="text-sm font-medium">{agent.rating / 100}</span>
-                              <span className="text-sm text-muted-foreground">
-                                ({agent.reviewCount} reviews)
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
 

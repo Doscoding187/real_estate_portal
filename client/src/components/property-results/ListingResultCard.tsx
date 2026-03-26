@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MapPin, Bed, Bath, House, LandPlot, Phone, Mail } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { getDisplayListingBadges } from '@/lib/listingBadges';
 
 export interface ListingResultCardData {
   id: string;
@@ -9,34 +10,97 @@ export interface ListingResultCardData {
   location: string;
   price: number;
   image: string;
+  development?: {
+    id?: string | number | null;
+    name?: string | null;
+    slug?: string | null;
+  };
   area?: number;
   bedrooms?: number;
   bathrooms?: number;
   floor?: string;
   highlights?: string[];
+  badges?: string[];
   description?: string;
+  listingSource?: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
+  contactRole?: 'agent' | 'developer' | 'private';
   postedBy?: string;
   agentAvatarUrl?: string;
 }
 
-function formatPrice(price: number) {
-  return `R ${Number(price || 0).toLocaleString()}`;
+function formatPrice(price: number, options?: { from?: boolean }) {
+  const normalizedPrice = Number(price || 0);
+  if (normalizedPrice <= 0) return 'Price on request';
+  const formattedPrice = `R ${normalizedPrice.toLocaleString()}`;
+  return options?.from ? `From ${formattedPrice}` : formattedPrice;
 }
 
 export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const [, setLocation] = useLocation();
-  const agentDisplayName = data.postedBy?.trim() || '-';
-  const hasAgentName = agentDisplayName !== '-';
+  const resolvedListingSource =
+    data.listingSource === 'development'
+      ? 'development'
+      : data.listingSource === 'manual'
+        ? 'manual'
+        : data.contactRole === 'developer'
+          ? 'development'
+          : 'manual';
+  const resolvedListerType =
+    data.listerType ||
+    (resolvedListingSource === 'manual'
+      ? data.contactRole === 'private'
+        ? 'private'
+        : 'agent'
+      : undefined);
+  const isDevelopmentListing = resolvedListingSource === 'development';
+  const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
+  const identityDisplayName = data.postedBy?.trim()
+    ? data.postedBy.trim()
+    : isDevelopmentListing
+      ? 'Developer Team'
+      : isPrivateListing
+        ? 'Private Seller'
+        : 'Listing Agent';
+  const hasAgentName = identityDisplayName !== '-';
   const [agentFirstName, ...agentSurnameParts] = hasAgentName
-    ? agentDisplayName.split(/\s+/)
+    ? identityDisplayName.split(/\s+/)
     : ['-'];
   const agentSurname = agentSurnameParts.join(' ');
-  const agentInitials = hasAgentName ? agentDisplayName.slice(0, 2).toUpperCase() : 'AG';
+  const agentInitials = hasAgentName
+    ? identityDisplayName
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(part => part.charAt(0))
+        .join('')
+        .toUpperCase()
+    : 'AG';
+  const developmentName = String(data.development?.name || '').trim();
+  const developmentHref = developmentName
+    ? data.development?.slug
+      ? `/development/${data.development.slug}`
+      : data.development?.id
+        ? `/development/${data.development.id}`
+        : null
+    : null;
+  const listingHref =
+    isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`;
+  const contactLabel = isDevelopmentListing
+    ? 'New Development'
+    : isPrivateListing
+      ? 'Private Listing'
+      : 'Listed by Agent';
+  const contactCtaLabel = isDevelopmentListing
+    ? 'Contact Developer'
+    : isPrivateListing
+      ? 'Contact Seller'
+      : 'Contact Agent';
+  const displayBadges = getDisplayListingBadges(data.badges, { maxBadges: 2 });
 
   return (
     <div
       className="w-full max-w-[760px] cursor-pointer overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md sm:min-h-[360px]"
-      onClick={() => setLocation(`/property/${data.id}`)}
+      onClick={() => setLocation(listingHref)}
     >
       <div className="flex flex-col sm:flex-row">
         <div className="relative h-52 flex-shrink-0 sm:h-auto sm:w-80">
@@ -58,7 +122,50 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             <MapPin className="h-3.5 w-3.5" />
             {data.location || '-'}
           </p>
-          <p className="mt-2.5 text-2xl font-bold text-foreground">{formatPrice(data.price)}</p>
+          {developmentName && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <House className="h-3.5 w-3.5" />
+              {developmentHref ? (
+                <button
+                  type="button"
+                  className="truncate hover:text-primary transition-colors"
+                  onClick={event => {
+                    event.stopPropagation();
+                    setLocation(developmentHref);
+                  }}
+                  title={developmentName}
+                >
+                  Part of {developmentName}
+                </button>
+              ) : (
+                <span className="truncate" title={developmentName}>
+                  Part of {developmentName}
+                </span>
+              )}
+            </p>
+          )}
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                isDevelopmentListing ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {contactLabel}
+            </span>
+            {displayBadges.map(badge => (
+              <span
+                key={badge}
+                className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+              >
+                {badge}
+              </span>
+            ))}
+          </div>
+
+          <p className="mt-2.5 text-2xl font-bold text-foreground">
+            {formatPrice(data.price, { from: isDevelopmentListing })}
+          </p>
 
           <div className="mt-4 flex flex-wrap gap-4 pr-2">
             <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
@@ -103,7 +210,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           <div className="mt-5 flex flex-col gap-3 pr-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2">
               <Avatar className="h-7 w-7 shrink-0">
-                <AvatarImage src={data.agentAvatarUrl || ''} alt={agentDisplayName} />
+                <AvatarImage src={data.agentAvatarUrl || ''} alt={identityDisplayName} />
                 <AvatarFallback className="text-[10px]">{agentInitials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 max-w-[140px] sm:max-w-[180px]">
@@ -127,7 +234,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 className="h-7 gap-1 bg-primary px-2 text-[10px] text-primary-foreground hover:bg-primary/90"
               >
                 <Mail className="h-3 w-3" />
-                Contact
+                {contactCtaLabel}
               </Button>
             </div>
           </div>

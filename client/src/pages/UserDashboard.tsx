@@ -5,6 +5,8 @@ import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Home,
@@ -28,15 +30,56 @@ import {
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { normalizePropertyForUI } from '@/lib/normalizers';
+import {
+  getSavedSearchDeliveryLabel,
+  getSavedSearchNotificationDescription,
+  getSavedSearchSourceLabel,
+} from '@/lib/savedSearchUtils';
+import type { SavedSearch } from '@shared/types';
+import { toast } from 'sonner';
+
+function formatDashboardDate(value?: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatDashboardAgo(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const diffMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.round(diffHours / 24)}d ago`;
+}
 
 export default function UserDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
+  const utils = trpc.useUtils();
+  const normalizeRole = (value?: string | null) => {
+    if (value === 'user') return 'visitor';
+    if (value === 'admin') return 'super_admin';
+    return value;
+  };
+  const normalizedRole = normalizeRole(user?.role);
 
   // Fetch user dashboard data
   const { data: favorites, isLoading: favoritesLoading } = trpc.favorites.list.useQuery();
   const { data: savedSearches, isLoading: searchesLoading } = trpc.savedSearch.getAll.useQuery();
+  const { data: savedSearchAlertHistory, isLoading: alertHistoryLoading } =
+    trpc.savedSearch.getAlertHistory.useQuery({ limit: 20 });
   const { data: allProperties } = trpc.properties.search.useQuery({
     status: 'available',
     limit: 100,
@@ -45,15 +88,44 @@ export default function UserDashboard() {
   // Get comparison properties details
   const allPropertyItems = Array.isArray(allProperties)
     ? allProperties
-    : ((allProperties as any)?.items ?? (allProperties as any)?.results ?? []);
+    : (allProperties as any)?.items ?? (allProperties as any)?.results ?? [];
   const comparisonProperties =
     allPropertyItems.filter((p: any) => comparedProperties.includes(p.id)) || [];
+  const latestAlertBySearch = (savedSearchAlertHistory || []).reduce((map, entry: any) => {
+    if (!map.has(entry.savedSearchId)) {
+      map.set(entry.savedSearchId, entry);
+    }
+    return map;
+  }, new Map<number, any>());
 
   const deleteSavedSearchMutation = trpc.savedSearch.delete.useMutation({
     onSuccess: () => {
-      window.location.reload();
+      utils.savedSearch.getAll.invalidate();
     },
   });
+
+  const updateSavedSearchMutation = trpc.savedSearch.updatePreferences.useMutation({
+    onSuccess: () => {
+      utils.savedSearch.getAll.invalidate();
+      toast.success('Saved search preferences updated');
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  const handleSavedSearchPreferenceChange = (
+    search: SavedSearch,
+    nextPreferences: Partial<
+      Pick<SavedSearch, 'notificationFrequency' | 'emailEnabled' | 'inAppEnabled'>
+    >,
+  ) => {
+    updateSavedSearchMutation.mutate({
+      id: search.id,
+      notificationFrequency:
+        nextPreferences.notificationFrequency ?? search.notificationFrequency,
+      emailEnabled: nextPreferences.emailEnabled ?? search.emailEnabled,
+      inAppEnabled: nextPreferences.inAppEnabled ?? search.inAppEnabled,
+    });
+  };
 
   // Show loading spinner
   if (loading) {
@@ -73,7 +145,7 @@ export default function UserDashboard() {
     return null;
   }
 
-  if (user?.role !== 'visitor') {
+  if (normalizedRole !== 'visitor') {
     setLocation('/dashboard');
     return null;
   }
@@ -427,16 +499,49 @@ export default function UserDashboard() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {savedSearches!.map((search: any) => (
+                {savedSearches!.map((search: SavedSearch) => (
                   <Card key={search.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
+                      {(() => {
+                        const latestAlert = latestAlertBySearch.get(search.id) as any;
+                        return latestAlert ? (
+                          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                                Latest alert
+                              </Badge>
+                              <span className="text-xs text-slate-500">
+                                {formatDashboardDate(latestAlert.processedAt)}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {formatDashboardAgo(latestAlert.processedAt)}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm font-medium text-slate-900">
+                              {latestAlert.title}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-600">{latestAlert.content}</p>
+                          </div>
+                        ) : null;
+                      })()}
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-lg mb-1">{search.name}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            <Bell className="h-3 w-3 mr-1" />
-                            {search.notificationFrequency}
-                          </Badge>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              <Bell className="h-3 w-3 mr-1" />
+                              {search.notificationFrequency}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {getSavedSearchSourceLabel((search.criteria as any) ?? {})}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {getSavedSearchDeliveryLabel({
+                                emailEnabled: search.emailEnabled,
+                                inAppEnabled: search.inAppEnabled,
+                              })}
+                            </Badge>
+                          </div>
                         </div>
                         <Button
                           variant="ghost"
@@ -446,10 +551,76 @@ export default function UserDashboard() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
+                      <p className="mb-3 text-sm text-slate-500">
+                        {getSavedSearchNotificationDescription(
+                          (search.criteria as any) ?? {},
+                          search.notificationFrequency,
+                          {
+                            emailEnabled: search.emailEnabled,
+                            inAppEnabled: search.inAppEnabled,
+                          },
+                        )}
+                      </p>
+                      <div className="mb-4 grid gap-3 rounded-lg border border-slate-200 p-4 md:grid-cols-3">
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Frequency
+                          </p>
+                          <Select
+                            value={search.notificationFrequency}
+                            onValueChange={value =>
+                              handleSavedSearchPreferenceChange(search, {
+                                notificationFrequency: value as SavedSearch['notificationFrequency'],
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="instant">Instant</SelectItem>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="never">Never</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">Email</p>
+                            <p className="text-xs text-slate-500">Inbox delivery</p>
+                          </div>
+                          <Switch
+                            checked={search.emailEnabled}
+                            onCheckedChange={checked =>
+                              handleSavedSearchPreferenceChange(search, {
+                                emailEnabled: Boolean(checked),
+                              })
+                            }
+                            disabled={updateSavedSearchMutation.isPending}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">In-app</p>
+                            <p className="text-xs text-slate-500">Dashboard alerts</p>
+                          </div>
+                          <Switch
+                            checked={search.inAppEnabled}
+                            onCheckedChange={checked =>
+                              handleSavedSearchPreferenceChange(search, {
+                                inAppEnabled: Boolean(checked),
+                              })
+                            }
+                            disabled={updateSavedSearchMutation.isPending}
+                          />
+                        </div>
+                      </div>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {search.criteria &&
                           Object.entries(search.criteria as any).map(
                             ([key, value]: [string, any]) => {
+                              if (key === 'listingSource') return null;
                               if (!value || (Array.isArray(value) && value.length === 0))
                                 return null;
                               return (
@@ -503,12 +674,100 @@ export default function UserDashboard() {
               <h2 className="text-2xl font-bold">Notifications</h2>
             </div>
 
-            <Card>
-              <CardContent className="py-8 text-center">
-                <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No notifications at this time.</p>
-              </CardContent>
-            </Card>
+            {alertHistoryLoading ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Loading saved-search alerts...
+                </CardContent>
+              </Card>
+            ) : (savedSearchAlertHistory?.length ?? 0) === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No saved-search alerts yet.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    When your saved searches find new matches, they will appear here.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {savedSearchAlertHistory!.map((entry: any) => (
+                  <Card key={entry.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <Badge variant="outline">
+                              {getSavedSearchSourceLabel({ listingSource: entry.listingSource } as any)}
+                            </Badge>
+                            <Badge
+                              variant={
+                                entry.status === 'delivered'
+                                  ? 'default'
+                                  : entry.status === 'partial'
+                                    ? 'secondary'
+                                    : 'outline'
+                              }
+                            >
+                              {entry.status}
+                            </Badge>
+                            <span className="text-xs text-slate-500">
+                              {formatDashboardDate(entry.processedAt)}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {formatDashboardAgo(entry.processedAt)}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900">{entry.title}</h3>
+                          <p className="mt-1 text-sm text-slate-600">{entry.content}</p>
+                          <p className="mt-2 text-xs text-slate-500">
+                            Search: {entry.searchName} · {entry.newMatchCount} new · {entry.totalMatches} total
+                          </p>
+                        </div>
+                        <Button variant="outline" onClick={() => setLocation(entry.actionUrl)}>
+                          <Search className="h-4 w-4 mr-2" />
+                          Open Search
+                        </Button>
+                      </div>
+
+                      {(entry.previewMatches?.length ?? 0) > 0 ? (
+                        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex items-center gap-2 mb-3 text-sm font-medium text-slate-800">
+                            <Eye className="h-4 w-4" />
+                            Matched properties
+                          </div>
+                          <div className="grid gap-3">
+                            {entry.previewMatches.map((match: any) => (
+                              <div
+                                key={`${entry.id}-${match.id}`}
+                                className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2"
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-slate-900">
+                                    {match.title}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {[match.suburb, match.city].filter(Boolean).join(', ') || 'South Africa'}
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setLocation(match.href)}
+                                >
+                                  View
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

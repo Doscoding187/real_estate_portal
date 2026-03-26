@@ -57,7 +57,9 @@ async function verifyFastTrack() {
   if (!sub) {
     try {
       await developerSubscriptionService.createSubscription(dev.id);
-    } catch (e) {}
+    } catch (_error) {
+      // Subscription may already exist due to parallel runs.
+    }
   }
 
   console.log(`Using Developer: ${dev.name} (ID: ${dev.id})`);
@@ -181,7 +183,9 @@ async function verifyFastTrack() {
   console.log('\n--- Cleanup ---');
   try {
     await developmentService.deleteDevelopment(newDev.id, dev.id);
-  } catch (e) {} // Already deleted
+  } catch (_error) {
+    // Already deleted in earlier cleanup path.
+  }
 
   await db.update(developers).set({ isTrusted: false }).where(eq(developers.id, dev.id));
   console.log('Test development deleted and developer trust reverted.');

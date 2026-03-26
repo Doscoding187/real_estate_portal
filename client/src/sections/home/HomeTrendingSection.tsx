@@ -81,6 +81,15 @@ const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
   },
 };
 
+const MOBILE_FRIENDLY_SUBTITLES: Record<HeroTab, string> = {
+  buy: 'Discover standout homes for sale across South Africa.',
+  rent: 'Browse in-demand rental homes and apartments available now.',
+  developments: 'Explore new residential and mixed-use developments across South Africa.',
+  shared_living: 'Find student accommodation and shared living in prime urban hubs.',
+  plot_land: 'View land opportunities suited to building or long-term investment.',
+  commercial: 'Discover office, retail, and industrial projects in growth corridors.',
+};
+
 export function HomeTrendingSection({
   selectedProvince,
   onProvinceChange,
@@ -88,7 +97,7 @@ export function HomeTrendingSection({
 }: HomeTrendingSectionProps) {
   const heroContent = {
     title: `${TAB_COPY[activeHeroTab].titleBase} in ${selectedProvince}`,
-    subtitle: TAB_COPY[activeHeroTab].subtitleBase,
+    subtitle: MOBILE_FRIENDLY_SUBTITLES[activeHeroTab] || TAB_COPY[activeHeroTab].subtitleBase,
   };
 
   const { data: trendingData } = trpc.developer.getHomeTrendingFeed.useQuery({

@@ -116,9 +116,7 @@ export const exploreAnalyticsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Get creator analytics
-      const creatorAnalytics = await exploreAnalyticsService.getCreatorAnalytics(
-        requireUser(ctx).id,
-      );
+      const creatorAnalytics = await exploreAnalyticsService.getCreatorAnalytics(requireUser(ctx).id);
 
       // Get aggregated metrics for the period
       const periodMetrics = await exploreAnalyticsService.getAggregatedMetrics(
@@ -174,3 +172,4 @@ export const exploreAnalyticsRouter = router({
     };
   }),
 });
+

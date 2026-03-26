@@ -73,7 +73,9 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
     if (typeof details === 'string') {
       try {
         details = JSON.parse(details);
-      } catch (e) {}
+      } catch (_error) {
+        // Ignore malformed payloads and treat as missing specs.
+      }
     }
 
     if (
@@ -127,7 +129,9 @@ export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
     try {
       const parsed = JSON.parse(dev.images);
       if (Array.isArray(parsed)) imageCount = parsed.length;
-    } catch (e) {}
+    } catch (_error) {
+      // Ignore malformed image payloads and keep count at zero.
+    }
   }
 
   if (imageCount >= 1) {
@@ -144,7 +148,9 @@ export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
     try {
       const parsed = JSON.parse(dev.amenities);
       if (Array.isArray(parsed)) amenityCount = parsed.length;
-    } catch (e) {}
+    } catch (_error) {
+      // Ignore malformed amenities payloads and keep count at zero.
+    }
   }
 
   if (amenityCount >= 3) {

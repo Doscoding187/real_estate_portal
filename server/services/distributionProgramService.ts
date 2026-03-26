@@ -3,6 +3,15 @@ type ProgramActivationInput = {
   defaultCommissionPercent: number | null;
   defaultCommissionAmount: number | null;
   tierAccessPolicy: 'open' | 'restricted' | 'invite_only' | null;
+  payoutMilestone:
+    | 'attorney_instruction'
+    | 'attorney_signing'
+    | 'bond_approval'
+    | 'transfer_registration'
+    | 'occupation'
+    | 'custom'
+    | null;
+  currencyCode: string | null;
   hasPrimaryManager: boolean;
 };
 
@@ -21,6 +30,15 @@ type ProgramEnsureDeps = {
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
     tierAccessPolicy: 'open' | 'restricted' | 'invite_only';
+    payoutMilestone:
+      | 'attorney_instruction'
+      | 'attorney_signing'
+      | 'bond_approval'
+      | 'transfer_registration'
+      | 'occupation'
+      | 'custom';
+    payoutMilestoneNotes: string | null;
+    currencyCode: string;
     createdBy: number;
     updatedBy: number;
   }) => Promise<{ id: number }>;
@@ -62,6 +80,15 @@ export function getProgramActivationReadiness(input: ProgramActivationInput) {
     missingRequirements.push('tierAccessPolicy');
   }
 
+  if (!input.payoutMilestone) {
+    missingRequirements.push('payoutMilestone');
+  }
+
+  const normalizedCurrency = (input.currencyCode || '').trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
+    missingRequirements.push('currencyCode');
+  }
+
   if (!input.hasPrimaryManager) {
     missingRequirements.push('primaryManagerAssignment');
   }
@@ -89,6 +116,9 @@ export async function ensureDistributionProgramForDevelopment(
     defaultCommissionPercent: null,
     defaultCommissionAmount: null,
     tierAccessPolicy: 'restricted',
+    payoutMilestone: 'attorney_signing',
+    payoutMilestoneNotes: null,
+    currencyCode: 'ZAR',
     createdBy: input.actorUserId,
     updatedBy: input.actorUserId,
   });

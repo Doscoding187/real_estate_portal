@@ -13,12 +13,19 @@ vi.mock('../services/propertySearchService', () => ({
 
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
-import { developers, developments } from '../../drizzle/schema';
+import { developers, developments, users } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
 
-describe('Development Card Data Flow Integration', () => {
+const hasDb = Boolean(process.env.DATABASE_URL);
+const describeWithDb: typeof describe = hasDb
+  ? describe
+  : ((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe;
+
+describeWithDb('Development Card Data Flow Integration', () => {
   let createdDevelopmentId: number | null = null;
   let createdDeveloperId: number | null = null;
+  let createdUserId: number | null = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -45,6 +52,11 @@ describe('Development Card Data Flow Integration', () => {
       await db.delete(developers).where(eq(developers.id, createdDeveloperId));
       createdDeveloperId = null;
     }
+
+    if (createdUserId) {
+      await db.delete(users).where(eq(users.id, createdUserId));
+      createdUserId = null;
+    }
   });
 
   it('keeps wizard-origin development fields intact through properties.search includeDevelopments', async () => {
@@ -52,12 +64,22 @@ describe('Development Card Data Flow Integration', () => {
     expect(db).toBeTruthy();
 
     const suffix = Date.now();
-    const testUserId = 1700000000 + Math.floor(Math.random() * 1000000);
     const builderName = `Card Flow Builder ${suffix}`;
     const developmentName = `Card Flow Development ${suffix}`;
     const description =
       'This description is created in the wizard flow and should be shown exactly on result cards.';
     const highlights = ['24-Hour Security', 'Prime Location', 'Lifestyle Amenities'];
+
+    const userInsertResult = await db!.insert(users).values({
+      email: `card-flow-user-${suffix}@example.com`,
+      role: 'property_developer',
+      firstName: 'Card',
+      lastName: 'Flow',
+      name: 'Card Flow User',
+      emailVerified: 1,
+    });
+    const testUserId = Number(userInsertResult[0].insertId);
+    createdUserId = testUserId;
 
     const insertResult = await db!.insert(developers).values({
       userId: testUserId,
@@ -148,7 +170,16 @@ describe('Development Card Data Flow Integration', () => {
     expect(db).toBeTruthy();
 
     const suffix = Date.now();
-    const testUserId = 1800000000 + Math.floor(Math.random() * 1000000);
+    const userInsertResult = await db!.insert(users).values({
+      email: `no-description-user-${suffix}@example.com`,
+      role: 'property_developer',
+      firstName: 'No',
+      lastName: 'Description',
+      name: 'No Description User',
+      emailVerified: 1,
+    });
+    const testUserId = Number(userInsertResult[0].insertId);
+    createdUserId = testUserId;
 
     const insertResult = await db!.insert(developers).values({
       userId: testUserId,

@@ -1,109 +1,119 @@
 import { Building2, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface DeveloperOverviewProps {
   developerName: string;
   developerLogo?: string | null;
+  developerDescription?: string | null;
+  developerWebsite?: string | null;
+  developerSlug?: string | null;
+  headOfficeLocation?: string | null;
+  projectCount?: number | null;
+  foundedYear?: number | null;
   isVerified?: boolean;
 }
 
 export function DeveloperOverview({
   developerName,
   developerLogo,
+  developerDescription,
+  developerSlug,
+  headOfficeLocation,
+  projectCount,
+  foundedYear,
   isVerified = false,
 }: DeveloperOverviewProps) {
+  const currentYear = new Date().getFullYear();
+  const yearsExperience =
+    foundedYear && foundedYear > 1900 && foundedYear <= currentYear
+      ? currentYear - foundedYear
+      : null;
+
   return (
-    <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
-      <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+      <div className="mb-6 border-b border-slate-200 pb-4">
         <h3 className="text-xl font-bold text-slate-900">Developer Overview</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left Column: Developer Profile Card */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 h-full flex flex-col justify-between">
-          <div>
-            {/* Header Area */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 overflow-hidden border-2 border-slate-200 shrink-0 flex items-center justify-center">
-                {developerLogo ? (
-                  <img
-                    src={developerLogo}
-                    alt={developerName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Building2 className="w-8 h-8 text-white" />
-                )}
-              </div>
-              <div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
+              {developerLogo ? (
+                <img
+                  src={developerLogo}
+                  alt={developerName}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <Building2 className="h-8 w-8 text-slate-500" />
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-lg font-bold text-slate-900">{developerName}</h4>
                 {isVerified && (
-                  <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
+                  <Badge className="border-none bg-orange-500 px-3 py-0.5 text-xs font-medium text-white hover:bg-orange-600">
                     VERIFIED DEVELOPER
                   </Badge>
                 )}
               </div>
-            </div>
 
-            {/* Stats Row */}
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <div className="text-2xl font-bold text-orange-500">20+</div>
-                </div>
-                <p className="text-xs text-slate-500 font-medium">Years Experience</p>
-              </div>
-              <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <div className="text-2xl font-bold text-orange-500">15</div>
-                </div>
-                <p className="text-xs text-slate-500 font-medium">Developments</p>
-              </div>
+              {headOfficeLocation && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(headOfficeLocation)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 block line-clamp-2 text-sm text-slate-500 hover:text-slate-700 hover:underline"
+                >
+                  {headOfficeLocation}
+                </a>
+              )}
             </div>
           </div>
 
-          {/* View Profile Button */}
-          <Button
-            variant="outline"
-            className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
-          >
-            <span className="font-medium text-slate-700">View Developer Profile</span>
-            <div className="flex items-center gap-2">
-              <ChevronRight className="h-4 w-4 text-slate-400" />
-            </div>
-          </Button>
+          <p className="mt-5 line-clamp-3 text-sm leading-relaxed text-slate-600">
+            {developerDescription?.trim()
+              ? developerDescription
+              : 'Professional property developer focused on delivering quality developments.'}
+          </p>
         </div>
 
-        {/* Right Column: Contact Form */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col h-full">
-          <div className="space-y-4 flex-1">
-            <div className="space-y-1">
-              <Input
-                placeholder="Name"
-                className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-              />
-            </div>
-            <div className="space-y-1">
-              <Input
-                type="email"
-                placeholder="Email"
-                className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-              />
-            </div>
-            <div className="space-y-1">
-              <Input
-                type="tel"
-                placeholder="Phone Number"
-                className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-              />
-            </div>
+        <div className="flex h-full flex-col justify-between rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="space-y-4">
+            {(yearsExperience || projectCount) && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {yearsExperience ? (
+                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-center">
+                    <div className="text-2xl font-bold text-orange-500">{yearsExperience}+</div>
+                    <p className="mt-1 text-xs font-medium text-slate-500">Years Experience</p>
+                  </div>
+                ) : null}
+
+                {projectCount ? (
+                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-center">
+                    <div className="text-2xl font-bold text-orange-500">{projectCount}</div>
+                    <p className="mt-1 text-xs font-medium text-slate-500">Public Developments</p>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
 
-          <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg mt-6 shadow-sm">
-            Contact Developer
-          </Button>
+          {developerSlug ? (
+            <Button
+              asChild
+              variant="outline"
+              className="mt-6 h-12 justify-between rounded-lg border-slate-200"
+            >
+              <a href={`/developer/${developerSlug}`}>
+                <span className="font-medium text-slate-700">View Developer Profile</span>
+                <ChevronRight className="h-4 w-4 text-slate-400" />
+              </a>
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

@@ -24,7 +24,7 @@ export type FeedCreatorType =
 export interface FeedItem {
   id: number;
   contentType: FeedContentType;
-  category: FeedCategory;
+  category: FeedCategory | string;
   contentDomain?: FeedContentDomain;
   contentKind?: FeedContentKind;
   creatorType?: FeedCreatorType;
@@ -41,12 +41,12 @@ export interface FeedItem {
     verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   };
   actorInsights?: {
-    trustScore: number;
-    momentumScore: number;
-    abuseScore: number;
     trustBand: 'low' | 'standard' | 'high';
-    momentumLabel: 'rising' | 'stable' | 'cooling';
-    lowReports: boolean;
+    trustScore?: number;
+    momentumScore?: number;
+    abuseScore?: number;
+    momentumLabel?: 'rising' | 'stable' | 'cooling';
+    lowReports?: boolean;
   };
   stats: {
     views: number;
@@ -62,6 +62,25 @@ export interface FeedItem {
   };
   referenceId?: number;
   linkedListingId?: number;
+  listingId?: number;
+  metadata?: Record<string, unknown>;
+}
+
+function isDiscoveryFeedItem(value: unknown): value is {
+  metadata?: unknown;
+  media?: { coverUrl?: string; videoUrl?: string };
+  engagement?: { likes?: number; saves?: number; views?: number };
+} {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.id !== 'undefined' &&
+    typeof item.type === 'string' &&
+    !!item.media &&
+    typeof item.media === 'object' &&
+    !!item.engagement &&
+    typeof item.engagement === 'object'
+  );
 }
 
 const ALLOWED_CONTENT_TYPES: FeedContentType[] = ['short', 'walkthrough', 'showcase'];
@@ -114,18 +133,21 @@ function normalizeContentType(value: unknown): FeedContentType {
     : 'short';
 }
 
-function normalizeCategory(value: unknown): FeedCategory {
+function normalizeCategory(value: unknown): FeedCategory | string {
   const raw = asString(value, 'property').toLowerCase();
-  return ALLOWED_CATEGORIES.includes(raw as FeedCategory) ? (raw as FeedCategory) : 'property';
+  return ALLOWED_CATEGORIES.includes(raw as FeedCategory) ? (raw as FeedCategory) : raw;
 }
 
-function normalizeOrientation(value: unknown, width: number, height: number): FeedOrientation {
+function normalizeOrientation(value: unknown, width?: number, height?: number): FeedOrientation {
   const raw = asString(value).toLowerCase();
   if (ALLOWED_ORIENTATIONS.includes(raw as FeedOrientation)) {
     return raw as FeedOrientation;
   }
-  if (height > width) return 'vertical';
-  if (width > height) return 'horizontal';
+  if (raw === 'landscape') return 'horizontal';
+  if (width && height) {
+    if (height > width) return 'vertical';
+    if (width > height) return 'horizontal';
+  }
   return 'square';
 }
 
@@ -167,7 +189,7 @@ function normalizeCreatorType(value: unknown): FeedCreatorType {
 }
 
 function inferDomainAndKind(
-  category: FeedCategory,
+  category: FeedCategory | string,
   contentType: FeedContentType,
   referenceId: number,
   referenceTypeRaw: unknown,
@@ -196,92 +218,142 @@ function inferDomainAndKind(
   }
 }
 
-export function toFeedItem(raw: any): FeedItem | null {
-  const id = asNumber(raw?.id);
+export function toFeedItem(raw: unknown): FeedItem | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const item = raw as Record<string, any>;
+
+  const id = asNumber(item.id);
   if (!id) return null;
 
-  const width = asNumber(raw?.width ?? raw?.metadata?.width);
-  const height = asNumber(raw?.height ?? raw?.metadata?.height);
-  const mediaUrl = asString(raw?.mediaUrl ?? raw?.primaryMediaUrl ?? raw?.videoUrl);
-  const thumbnailUrl = asString(raw?.thumbnailUrl ?? raw?.metadata?.thumbnailUrl);
-  const title = asString(raw?.title, 'Untitled');
+  const width = asNumber(item.width ?? item.metadata?.width, 0);
+  const height = asNumber(item.height ?? item.metadata?.height, 0);
+  const mediaUrl = asString(item.mediaUrl ?? item.primaryMediaUrl ?? item.videoUrl ?? item.url);
+  const thumbnailUrl = asString(
+    item.thumbnailUrl ?? item.imageUrl ?? item.posterUrl ?? item.metadata?.thumbnailUrl,
+  );
   const referenceId = asNumber(
-    raw?.referenceId ?? raw?.linkedListingId ?? raw?.metadata?.listingId,
+    item.referenceId ?? item.linkedListingId ?? item.listingId ?? item.metadata?.listingId,
     0,
   );
-  const actorId = asNumber(raw?.actor?.id ?? raw?.actorId, 0);
-  const actorType = asString(raw?.actor?.actorType ?? raw?.creatorType ?? 'user').toLowerCase();
-  const creatorType = normalizeCreatorType(
-    raw?.creatorType ?? raw?.actor?.actorType ?? raw?.metadata?.creatorType,
+  const actorId = asNumber(item.actor?.id ?? item.actorId, 0);
+  const actorType = asString(item.actor?.actorType ?? item.creatorType ?? 'user').toLowerCase();
+  const trustScore = clamp(
+    asNumber(item.actorInsights?.trustScore ?? item.trustScore, 50),
+    0,
+    100,
   );
-  const trustScore = clamp(asNumber(raw?.trustScore, 50), 0, 100);
-  const momentumScore = clamp(asNumber(raw?.momentumScore, 50), 0, 100);
-  const abuseScore = clamp(asNumber(raw?.actorAbuseScore ?? raw?.abuseScore, 50), 0, 100);
-  const contentType = normalizeContentType(raw?.contentType);
-  const category = normalizeCategory(raw?.category ?? raw?.metadata?.category);
+  const momentumScore = clamp(
+    asNumber(item.actorInsights?.momentumScore ?? item.momentumScore, 50),
+    0,
+    100,
+  );
+  const abuseScore = clamp(
+    asNumber(item.actorInsights?.abuseScore ?? item.actorAbuseScore ?? item.abuseScore, 50),
+    0,
+    100,
+  );
+  const contentType = normalizeContentType(item.contentType);
+  const category = normalizeCategory(item.category ?? item.metadata?.category);
   const { contentDomain, contentKind } = inferDomainAndKind(
     category,
     contentType,
     referenceId,
-    raw?.referenceType ?? raw?.metadata?.referenceType,
+    item.referenceType ?? item.metadata?.referenceType,
   );
-  const mediaType = inferMediaType(mediaUrl);
+  const mediaType = inferMediaType(mediaUrl || thumbnailUrl);
 
   return {
     id,
-    contentType,
+    title: asString(item.title, 'Untitled'),
     category,
+    contentType,
     contentDomain,
     contentKind,
-    creatorType,
-    title,
-    mediaUrl,
+    creatorType: normalizeCreatorType(item.creatorType ?? item.actor?.actorType),
+    mediaUrl: mediaUrl || thumbnailUrl || '',
     mediaType,
-    thumbnailUrl: thumbnailUrl || null,
-    durationSec: asNumber(raw?.durationSec ?? raw?.duration ?? raw?.metadata?.durationSec, 0),
-    orientation: normalizeOrientation(
-      raw?.orientation ?? raw?.metadata?.orientation,
-      width,
-      height,
-    ),
+    thumbnailUrl: thumbnailUrl || mediaUrl || null,
+    durationSec: asNumber(item.durationSec ?? item.duration ?? item.metadata?.durationSec, 0),
+    orientation: normalizeOrientation(item.orientation ?? item.metadata?.orientation, width, height),
     actor: {
       id: actorId > 0 ? actorId : null,
-      displayName: asString(raw?.actor?.displayName ?? raw?.creatorName, 'Creator'),
+      displayName: asString(item.actor?.displayName ?? item.creatorName, 'Creator'),
       actorType: ['agent', 'developer', 'contractor', 'finance_partner', 'user'].includes(actorType)
         ? (actorType as FeedItem['actor']['actorType'])
         : 'user',
-      verificationStatus: (asString(raw?.actor?.verificationStatus, 'unverified').toLowerCase() ||
+      verificationStatus: (asString(item.actor?.verificationStatus, 'unverified').toLowerCase() ||
         'unverified') as FeedItem['actor']['verificationStatus'],
     },
-    actorInsights: {
-      trustScore,
-      momentumScore,
-      abuseScore,
-      trustBand: toTrustBand(trustScore),
-      momentumLabel: toMomentumLabel(momentumScore),
-      lowReports: abuseScore >= 60,
-    },
-    stats: {
-      views: asNumber(raw?.stats?.views ?? raw?.viewCount),
-      saves: asNumber(raw?.stats?.saves ?? raw?.saveCount),
-      shares: asNumber(raw?.stats?.shares ?? raw?.shareCount),
-    },
-    location:
-      raw?.location && typeof raw.location === 'object'
+    actorInsights:
+      item.actorInsights || item.trustScore
         ? {
-            city: raw.location.city,
-            suburb: raw.location.suburb,
-            province: raw.location.province,
-            latitude: asOptionalNumber(raw.location.latitude),
-            longitude: asOptionalNumber(raw.location.longitude),
+            trustBand:
+              item.actorInsights?.trustBand === 'low' ||
+              item.actorInsights?.trustBand === 'high' ||
+              item.actorInsights?.trustBand === 'standard'
+                ? item.actorInsights.trustBand
+                : toTrustBand(trustScore),
+            trustScore,
+            momentumScore,
+            abuseScore,
+            momentumLabel:
+              item.actorInsights?.momentumLabel === 'rising' ||
+              item.actorInsights?.momentumLabel === 'cooling'
+                ? item.actorInsights.momentumLabel
+                : toMomentumLabel(momentumScore),
+            lowReports:
+              typeof item.actorInsights?.lowReports === 'boolean'
+                ? item.actorInsights.lowReports
+                : abuseScore >= 60,
           }
         : undefined,
-    referenceId,
-    linkedListingId: referenceId > 0 ? referenceId : undefined,
+    stats: {
+      views: asNumber(item.stats?.views ?? item.views ?? item.viewCount),
+      saves: asNumber(item.stats?.saves ?? item.saves ?? item.saveCount),
+      shares: asNumber(item.stats?.shares ?? item.shares ?? item.shareCount),
+    },
+    location:
+      item.location && typeof item.location === 'object'
+        ? {
+            city: asString(item.location.city),
+            suburb: asString(item.location.suburb),
+            province: asString(item.location.province),
+            latitude: asOptionalNumber(item.location.latitude),
+            longitude: asOptionalNumber(item.location.longitude),
+          }
+        : undefined,
+    referenceId: referenceId || undefined,
+    linkedListingId: referenceId || undefined,
+    listingId: referenceId || undefined,
+    metadata:
+      item.metadata && typeof item.metadata === 'object'
+        ? (item.metadata as Record<string, unknown>)
+        : undefined,
   };
 }
 
-export function getFeedItems(payload: any): FeedItem[] {
-  const items = Array.isArray(payload?.items) ? payload.items : [];
-  return items.map(toFeedItem).filter((item): item is FeedItem => item !== null);
+function pickRawItems(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  if (Array.isArray(payload.items)) {
+    if (payload.items.some(isDiscoveryFeedItem)) {
+      return payload.items.map((item: any) => item?.metadata ?? item);
+    }
+    return payload.items;
+  }
+  if (Array.isArray(payload.shorts)) return payload.shorts;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.data?.items)) {
+    if (payload.data.items.some(isDiscoveryFeedItem)) {
+      return payload.data.items.map((item: any) => item?.metadata ?? item);
+    }
+    return payload.data.items;
+  }
+  return [];
+}
+
+export function getFeedItems(payload: unknown): FeedItem[] {
+  return pickRawItems(payload)
+    .map(toFeedItem)
+    .filter((item): item is FeedItem => item !== null);
 }
