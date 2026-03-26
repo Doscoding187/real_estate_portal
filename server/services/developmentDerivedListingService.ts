@@ -339,6 +339,9 @@ export class DevelopmentDerivedListingService {
           id: `dev-${row.developmentId}-${row.unitTypeId}`,
           unitTypeId: String(row.unitTypeId),
           developmentId: Number(row.developmentId),
+          href: row.developmentSlug
+            ? `/development/${row.developmentSlug}/unit/${row.unitTypeId}`
+            : `/development/${row.developmentId}/unit/${row.unitTypeId}`,
           title,
           price,
           priceTo: priceTo ?? undefined,

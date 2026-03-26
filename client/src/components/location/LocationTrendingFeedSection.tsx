@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-import { SimplePropertyListingCard } from '@/components/SimplePropertyListingCard';
+import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
+import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import {
   Carousel,
@@ -31,7 +32,7 @@ interface LocationTrendingFeedSectionProps {
 
 type TrendingFeedItem = {
   id: string;
-  kind: 'development' | 'listing';
+  kind: 'development' | 'listing' | 'unit';
   title: string;
   city: string;
   suburb: string;
@@ -44,6 +45,8 @@ type TrendingFeedItem = {
   bathrooms?: number | null;
   area?: number | null;
   yardSize?: number | null;
+  unitSize?: number | null;
+  propertyType?: string | null;
   developmentName?: string | null;
   badges?: string[];
 };
@@ -104,15 +107,7 @@ export function LocationTrendingFeedSection({
     limit: maxItems,
   });
 
-  const items = ((feedData?.items || []) as TrendingFeedItem[])
-    .filter(item => {
-      if (item.kind === 'listing') {
-        return Boolean(item.image?.trim());
-      }
-
-      return Boolean(getPrimaryDevelopmentImageUrl(item.image));
-    })
-    .slice(0, maxItems);
+  const items = ((feedData?.items || []) as TrendingFeedItem[]).slice(0, maxItems);
 
   const copy = TAB_COPY[activeTab];
   const title = `${copy.title} in ${locationName}`;
@@ -161,21 +156,37 @@ export function LocationTrendingFeedSection({
                       #{index + 1}
                     </span>
                     {item.kind === 'listing' ? (
-                      <SimplePropertyListingCard
+                      <SimpleHomeListingCard
                         id={item.id}
                         title={item.title}
                         city={item.city}
                         suburb={item.suburb}
-                        price={item.priceFrom}
-                        listingType={item.listingType}
                         image={item.image || ''}
                         href={item.href}
+                        price={item.priceFrom}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
                         area={item.area}
                         yardSize={item.yardSize}
-                        developmentName={item.developmentName}
-                        badges={item.badges}
+                        propertyType={item.propertyType}
+                        badgeLabel="Resale"
+                      />
+                    ) : item.kind === 'unit' ? (
+                      <SimpleDevelopmentUnitCard
+                        id={item.id}
+                        title={item.title}
+                        developmentName={item.developmentName || 'Featured Development'}
+                        city={item.city}
+                        suburb={item.suburb}
+                        image={item.image || ''}
+                        href={item.href}
+                        priceFrom={item.priceFrom}
+                        priceTo={item.priceTo}
+                        bedrooms={item.bedrooms}
+                        bathrooms={item.bathrooms}
+                        unitSize={item.unitSize}
+                        yardSize={item.yardSize}
+                        badgeLabel="New Development"
                       />
                     ) : (
                       <SimpleDevelopmentCard
@@ -200,7 +211,7 @@ export function LocationTrendingFeedSection({
         </div>
       ) : (
         <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
-          No trending properties found for this selection yet.
+          No live inventory found for this location yet.
         </div>
       )}
     </section>
