@@ -10,7 +10,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import type { SimplePropertyListingCardProps } from '@/components/SimplePropertyListingCard';
 
 export type FeedTab =
   | 'buy'
@@ -30,9 +29,9 @@ interface LocationTrendingFeedSectionProps {
   onTabChange?: (tab: FeedTab) => void;
 }
 
-type FeedItem = {
+type TrendingFeedItem = {
   id: string;
-  kind: 'development' | 'listing' | 'placeholder';
+  kind: 'development' | 'listing';
   title: string;
   city: string;
   suburb: string;
@@ -40,7 +39,7 @@ type FeedItem = {
   priceTo: number;
   image: string;
   href: string;
-  listingType?: SimplePropertyListingCardProps['listingType'];
+  listingType?: 'sale' | 'rent';
   bedrooms?: number | null;
   bathrooms?: number | null;
   area?: number | null;
@@ -105,7 +104,15 @@ export function LocationTrendingFeedSection({
     limit: maxItems,
   });
 
-  const items = ((feedData?.items || []) as FeedItem[]).slice(0, maxItems);
+  const items = ((feedData?.items || []) as TrendingFeedItem[])
+    .filter(item => {
+      if (item.kind === 'listing') {
+        return Boolean(item.image?.trim());
+      }
+
+      return Boolean(getPrimaryDevelopmentImageUrl(item.image));
+    })
+    .slice(0, maxItems);
 
   const copy = TAB_COPY[activeTab];
   const title = `${copy.title} in ${locationName}`;
@@ -177,14 +184,10 @@ export function LocationTrendingFeedSection({
                         city={item.city}
                         suburb={item.suburb}
                         priceRange={{ min: item.priceFrom, max: item.priceTo }}
-                        image={
-                          item.kind === 'development'
-                            ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                            : item.image || ''
-                        }
+                        image={getPrimaryDevelopmentImageUrl(item.image) || ''}
                         slug={item.kind === 'development' ? item.id : undefined}
                         href={item.href}
-                        isHotSelling={item.kind !== 'placeholder'}
+                        isHotSelling
                       />
                     )}
                   </div>
@@ -196,8 +199,8 @@ export function LocationTrendingFeedSection({
           </Carousel>
         </div>
       ) : (
-        <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
-          No properties found.
+        <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
+          No trending properties found for this selection yet.
         </div>
       )}
     </section>

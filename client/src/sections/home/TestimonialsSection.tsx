@@ -29,15 +29,15 @@ const testimonials = [
 
 export function TestimonialsSection() {
   return (
-    <section className="bg-gradient-to-b from-slate-50/50 to-white px-3 py-10 sm:px-4 md:px-6 md:py-16">
-      <div className="mb-6 text-left md:mb-12">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-1.5 sm:mb-4 sm:px-4 sm:py-2">
+    <section className="bg-gradient-to-b from-slate-50/50 to-white px-3 py-8 sm:px-4 md:px-6 md:py-16">
+      <div className="mb-5 text-left md:mb-12">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-1 sm:mb-4 sm:px-4 sm:py-2">
           <Star className="h-4 w-4 fill-current text-yellow-500 sm:h-5 sm:w-5" />
-          <span className="text-xs font-semibold text-yellow-700 sm:text-sm">
+          <span className="text-[11px] font-semibold text-yellow-700 sm:text-sm">
             Trusted by Thousands
           </span>
         </div>
-        <h2 className="mb-2 text-xl font-bold text-slate-900 md:text-[26px]">
+        <h2 className="mb-2 text-[1.125rem] font-bold text-slate-900 sm:text-xl md:text-[26px]">
           What Our Clients Say
         </h2>
         <p className="max-w-2xl text-sm leading-6 text-slate-600 md:text-sm md:leading-relaxed">
@@ -51,19 +51,19 @@ export function TestimonialsSection() {
           {testimonials.map((testimonial, idx) => (
             <div
               key={idx}
-              className="group relative w-[82vw] max-w-[304px] flex-none snap-start rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl sm:w-[320px] sm:p-6 md:w-auto md:p-8"
+              className="group relative w-[78vw] max-w-[292px] flex-none snap-start rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl sm:w-[320px] sm:p-6 md:w-auto md:p-8"
             >
-              <div className="absolute right-4 top-4 text-5xl font-serif leading-none text-[#2774AE]/10 transition-colors group-hover:text-[#2774AE]/20 sm:right-6 sm:top-6 sm:text-6xl">
+              <div className="absolute right-4 top-4 text-4xl font-serif leading-none text-[#2774AE]/10 transition-colors group-hover:text-[#2774AE]/20 sm:right-6 sm:top-6 sm:text-6xl">
                 "
               </div>
 
               <div className="relative">
-                <div className="mb-3 flex items-center gap-1 sm:mb-4">
+                <div className="mb-2.5 flex items-center gap-1 sm:mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-current text-yellow-400 sm:h-5 sm:w-5" />
                   ))}
                 </div>
-                <p className="mb-5 text-sm italic leading-6 text-slate-700 sm:mb-6 sm:text-base sm:leading-relaxed">
+                <p className="mb-4 text-[13px] italic leading-5 text-slate-700 sm:mb-6 sm:text-base sm:leading-relaxed">
                   "{testimonial.text}"
                 </p>
                 <div className="flex items-center gap-3 border-t border-slate-100 pt-4 sm:gap-4">

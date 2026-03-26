@@ -19,7 +19,7 @@ type HomeTrendingSectionProps = {
 
 type TrendingItem = {
   id: string;
-  kind: 'development' | 'listing' | 'placeholder';
+  kind: 'development' | 'listing';
   title: string;
   city: string;
   suburb: string;
@@ -106,45 +106,15 @@ export function HomeTrendingSection({
     limit: 5,
   });
 
-  const buildPlaceholders = (count: number): TrendingItem[] => {
-    const labelByTab: Record<HeroTab, string> = {
-      buy: 'Residential Listing',
-      rent: 'Rental Listing',
-      developments: 'Residential Development',
-      shared_living: 'Shared Living',
-      plot_land: 'Land Development',
-      commercial: 'Commercial Listing',
-    };
-    const label = labelByTab[activeHeroTab] || 'Property';
-    return Array.from({ length: Math.max(0, count) }, (_, idx): TrendingItem => {
-      const kind: TrendingItem['kind'] =
-        activeHeroTab === 'buy' || activeHeroTab === 'rent' ? 'listing' : 'placeholder';
-      const listingType: TrendingItem['listingType'] =
-        activeHeroTab === 'rent' ? 'rent' : activeHeroTab === 'buy' ? 'sale' : undefined;
+  const trendingItems = ((trendingData?.items || []) as TrendingItem[])
+    .filter(item => {
+      if (item.kind === 'listing') {
+        return Boolean(item.image?.trim());
+      }
 
-      return {
-        id: `placeholder-${activeHeroTab}-${idx + 1}`,
-        kind,
-        title: `${label} Preview ${idx + 1}`,
-        city: selectedProvince,
-        suburb: 'Sample Area',
-        priceFrom: 0,
-        priceTo: 0,
-        image: '',
-        href: '/new-developments',
-        listingType,
-        bedrooms: null,
-        bathrooms: null,
-        area: null,
-        yardSize: null,
-        developmentName: null,
-        badges: [],
-      };
-    });
-  };
-
-  const liveItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, 5);
-  const trendingItems = [...liveItems, ...buildPlaceholders(5 - liveItems.length)].slice(0, 5);
+      return Boolean(getPrimaryDevelopmentImageUrl(item.image));
+    })
+    .slice(0, 5);
 
   return (
     <section className="py-9 md:py-16">
@@ -153,10 +123,10 @@ export function HomeTrendingSection({
           <span className="text-lg">🔥</span>
           <span className="text-sm font-semibold text-orange-600">Trending Now</span>
         </div>
-        <h2 className="mb-2 max-w-[20.5rem] text-xl font-bold text-slate-900 md:text-[26px]">
+        <h2 className="mb-2 max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
           {heroContent.title}
         </h2>
-        <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 md:max-w-2xl md:text-sm md:leading-6">
+        <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
           {heroContent.subtitle}
         </p>
       </div>
@@ -219,14 +189,10 @@ export function HomeTrendingSection({
                           min: item.priceFrom,
                           max: item.priceTo,
                         }}
-                        image={
-                          item.kind === 'development'
-                            ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                            : item.image || ''
-                        }
+                        image={getPrimaryDevelopmentImageUrl(item.image) || ''}
                         slug={item.kind === 'development' ? item.id : undefined}
                         href={item.href}
-                        isHotSelling={item.kind !== 'placeholder'}
+                        isHotSelling
                       />
                     )}
                   </div>
@@ -240,7 +206,7 @@ export function HomeTrendingSection({
         </div>
       ) : (
         <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
-          No developments found.
+          No trending properties found for this selection yet.
         </div>
       )}
     </section>

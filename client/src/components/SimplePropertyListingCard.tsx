@@ -97,10 +97,10 @@ export function SimplePropertyListingCard({
         <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-sky-50" />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
           <span className="rounded-full border border-white/80 bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 shadow-sm">
-            Property Preview
+            Property Listing
           </span>
           <House className="h-12 w-12" />
-          <span className="text-[11px] font-medium text-slate-500">Images loading soon</span>
+          <span className="text-[11px] font-medium text-slate-500">Image coming soon</span>
         </div>
 
         {resolvedImage && (

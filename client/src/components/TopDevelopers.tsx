@@ -18,6 +18,18 @@ export function TopDevelopers() {
     const num = Number(value);
     return Number.isFinite(num) && num > 0 ? String(num) : '-';
   };
+  const displayMetric = (value: unknown, fallback = 'Info soon') => {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? String(num) : fallback;
+  };
+  const displayCount = (value: unknown, fallback = 'Soon') => {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? String(num) : fallback;
+  };
+  const hasNumericValue = (value: unknown) => {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0;
+  };
 
   // Fetch visible brand profiles (now enriched with stats)
   const { data: developers, isLoading } = trpc.brandProfile.listBrandProfiles.useQuery({
@@ -32,12 +44,12 @@ export function TopDevelopers() {
       <div className="container">
         {/* Section Header */}
         <div className="mb-6 md:mb-8">
-          <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
             Top Developers in South Africa
           </h2>
           <p className="text-slate-600 max-w-3xl leading-relaxed text-xs md:text-sm">
-            Explore South Africa’s most trusted property developers, building with purpose and
-            precision.
+            Explore trusted property developers building across South Africa&apos;s leading
+            markets.
           </p>
         </div>
 
@@ -95,7 +107,7 @@ export function TopDevelopers() {
                             )}
                           </div>
                           <div className="flex flex-col justify-center min-w-0">
-                            <h3 className="text-base font-bold text-slate-900 leading-tight mb-0.5 truncate">
+                            <h3 className="mb-0.5 line-clamp-2 min-h-[2.5rem] text-[15px] font-bold leading-tight text-slate-900">
                               {developer.brandName}
                             </h3>
                             <p className="text-xs text-slate-500 font-medium truncate">
@@ -107,8 +119,14 @@ export function TopDevelopers() {
                         {/* Stats Row */}
                         <div className="grid grid-cols-2 gap-2 mb-3">
                           <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                            <span className="block text-lg font-bold text-slate-900">
-                              {displayValue(developer.stats?.totalProjects)}
+                            <span
+                              className={`block font-bold text-slate-900 ${
+                                hasNumericValue(developer.stats?.totalProjects)
+                                  ? 'text-lg'
+                                  : 'text-sm'
+                              }`}
+                            >
+                              {displayMetric(developer.stats?.totalProjects, 'New')}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
                               Projects
@@ -116,8 +134,14 @@ export function TopDevelopers() {
                           </div>
 
                           <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-right">
-                            <span className="block text-lg font-bold text-slate-900">
-                              {displayValue(developer.stats?.experience)}
+                            <span
+                              className={`block font-bold text-slate-900 ${
+                                hasNumericValue(developer.stats?.experience)
+                                  ? 'text-lg'
+                                  : 'text-sm'
+                              }`}
+                            >
+                              {displayMetric(developer.stats?.experience, 'Info soon')}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
                               Experience
@@ -137,7 +161,7 @@ export function TopDevelopers() {
                               Ready to Move
                             </span>
                             <span className="text-[11px] font-semibold text-slate-500">
-                              {displayValue(developer.stats?.readyToMove)}
+                              {displayCount(developer.stats?.readyToMove)}
                             </span>
                           </button>
 
@@ -151,7 +175,7 @@ export function TopDevelopers() {
                               Under Const.
                             </span>
                             <span className="text-[11px] font-semibold text-slate-500">
-                              {displayValue(developer.stats?.underConstruction)}
+                              {displayCount(developer.stats?.underConstruction)}
                             </span>
                           </button>
 
@@ -165,7 +189,7 @@ export function TopDevelopers() {
                               New Launch
                             </span>
                             <span className="text-[11px] font-semibold text-slate-500">
-                              {displayValue(developer.stats?.newLaunch)}
+                              {displayCount(developer.stats?.newLaunch)}
                             </span>
                           </button>
                         </div>
