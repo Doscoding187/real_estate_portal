@@ -46,6 +46,7 @@ interface DevelopmentInfo {
 
 export interface PropertyCardProps {
   id: string;
+  href?: string;
   title: string;
   price: number;
   location: string;
@@ -134,9 +135,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     ? `/developer/${developerIdentity.slug}`
     : developmentHref;
   const listingHref =
-    isDevelopmentListing && (developmentHref || developerProfileHref)
+    href ||
+    (isDevelopmentListing && (developmentHref || developerProfileHref)
       ? developmentHref || developerProfileHref || `/property/${id}`
-      : `/property/${id}`;
+      : `/property/${id}`);
   const priceLabel =
     price > 0
       ? isDevelopmentListing

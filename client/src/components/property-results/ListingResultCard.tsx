@@ -6,6 +6,7 @@ import { getDisplayListingBadges } from '@/lib/listingBadges';
 
 export interface ListingResultCardData {
   id: string;
+  href?: string;
   title: string;
   location: string;
   price: number;
@@ -84,7 +85,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         : null
     : null;
   const listingHref =
-    isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`;
+    data.href || (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
   const contactLabel = isDevelopmentListing
     ? 'New Development'
     : isPrivateListing

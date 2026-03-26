@@ -372,6 +372,28 @@ export default function SearchResults({
     return blendSearchResults(propertyItems, derivedDevelopmentItems, sortBy, filters);
   }, [developmentResults, filters, properties, sortBy]);
 
+  const resolveDevelopmentListingHref = (item: any, normalized: any) => {
+    if (typeof item?.href === 'string' && item.href.trim()) {
+      return item.href;
+    }
+
+    const developmentSlug = normalized?.development?.slug || item?.development?.slug;
+    const developmentId = normalized?.development?.id || item?.development?.id || item?.developmentId;
+    const unitTypeId = item?.unitTypeId;
+
+    if (developmentSlug && unitTypeId) {
+      return `/development/${developmentSlug}/unit/${unitTypeId}`;
+    }
+
+    if (developmentId && unitTypeId) {
+      return `/development/${developmentId}/unit/${unitTypeId}`;
+    }
+
+    if (developmentSlug) return `/development/${developmentSlug}`;
+    if (developmentId) return `/development/${developmentId}`;
+    return `/property/${normalized?.id || item?.id}`;
+  };
+
   const pagedResults = useMemo(() => {
     const start = page * limit;
     return combinedSearchResults.slice(start, start + limit);
@@ -399,11 +421,7 @@ export default function SearchResults({
 
           const navigationHref =
             item.kind === 'development'
-              ? item.normalized.development?.slug
-                ? `/development/${item.normalized.development.slug}`
-                : item.normalized.development?.id
-                  ? `/development/${item.normalized.development.id}`
-                  : `/property/${item.normalized.id}`
+              ? resolveDevelopmentListingHref(raw, item.normalized)
               : `/property/${item.normalized.id}`;
 
           return {
@@ -591,6 +609,10 @@ export default function SearchResults({
                               key={`prop-${normalized.id}-${index}`}
                               data={{
                                 id: normalized.id,
+                                href:
+                                  item.kind === 'development'
+                                    ? resolveDevelopmentListingHref(item.value, normalized)
+                                    : undefined,
                                 title: normalized.title,
                                 location: normalized.location,
                                 price: normalized.price,
@@ -642,6 +664,10 @@ export default function SearchResults({
                           const normalized = item.normalized;
                           const cardProps = {
                             ...normalized,
+                            href:
+                              item.kind === 'development'
+                                ? resolveDevelopmentListingHref(item.value, normalized)
+                                : undefined,
                             development: (normalized as any).development,
                             developerBrand: (normalized as any).developerBrand,
                             listingSource: (normalized as any).listingSource,
