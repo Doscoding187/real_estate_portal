@@ -493,7 +493,7 @@ export function EnhancedHero({
 
       <div className="container relative z-10 flex flex-col py-3 md:py-24">
         {/* Hero Title */}
-        <div className="mt-1.5 mb-7 max-w-[22rem] text-left sm:mx-auto sm:mt-0 sm:mb-6 sm:max-w-4xl sm:text-center">
+        <div className="mt-1.5 mb-7 max-w-[22rem] text-left sm:mx-auto sm:mt-0 sm:mb-4 sm:max-w-4xl sm:text-center">
           {title ? (
             // Location / Context Title
             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight text-blue-950">
@@ -508,7 +508,6 @@ export function EnhancedHero({
                   Fastest Growing
                 </span>
               </span>
-              <br />
               <span className="block">Real Estate Platform</span>
             </h1>
           )}
@@ -528,7 +527,7 @@ export function EnhancedHero({
         </div>
 
         {/* Categories/Tabs */}
-        <div className="mb-4 sm:mb-8">
+        <div className="mb-4 sm:mb-6">
           <div className="-mx-4 overflow-x-auto px-4 scrollbar-hide sm:mx-0 sm:overflow-visible sm:px-0">
             <div className="flex min-w-max items-stretch gap-0.5 sm:hidden">
               {HERO_CATEGORIES.map(category => {
@@ -563,7 +562,7 @@ export function EnhancedHero({
               })}
             </div>
 
-            <div className="hidden rounded-full border border-slate-200/50 bg-white/90 p-1.5 shadow-lg backdrop-blur-md scrollbar-hide sm:mx-auto sm:inline-flex sm:w-fit sm:max-w-none sm:overflow-visible">
+            <div className="hidden rounded-full border border-slate-200/50 bg-white/90 p-1.5 shadow-lg backdrop-blur-md scrollbar-hide sm:mx-auto sm:flex sm:w-fit sm:max-w-none sm:overflow-visible">
               {HERO_CATEGORIES.map(category => {
                 const Icon = category.icon;
                 const isActive = normalizedActiveTab === category.id;
