@@ -7,6 +7,7 @@ Disallow: /auth/
 
 # Sitemap
 Sitemap: https://propertylistifysa.co.za/sitemap.xml
+Sitemap: https://propertylistifysa.co.za/sitemap-units.xml
 
 # Crawl-delay for bots
 User-agent: *

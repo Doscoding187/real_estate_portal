@@ -34,6 +34,10 @@ import {
 import { SearchFallbackNotice } from '@/components/search/SearchFallbackNotice';
 import { DevelopmentResultCard } from '@/components/property-results/DevelopmentResultCard';
 import { ListingResultCard } from '@/components/property-results/ListingResultCard';
+import { DevelopmentUnitResultCard } from '@/components/property-results/DevelopmentUnitResultCard';
+import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
+import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 
 // URL utilities
 import { MetaControl } from '@/components/seo/MetaControl';
@@ -131,6 +135,7 @@ export default function SearchResults({
       limit,
       offset: page * limit,
       includeDevelopments: true,
+      includeDevelopmentUnits: true,
     }),
     [filters, page],
   );
@@ -153,6 +158,7 @@ export default function SearchResults({
 
   const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
   const developmentResults = (searchResults as any)?.developments?.items ?? [];
+  const unitResults = (searchResults as any)?.units?.items ?? [];
   const resultTotal = (searchResults as any)?.total ?? 0;
   const locationContext = (searchResults as any)?.locationContext;
 
@@ -294,28 +300,34 @@ export default function SearchResults({
       kind: 'property' as const,
       value: property,
     }));
+    const unitItems = (unitResults as any[]).map(unit => ({
+      kind: 'unit' as const,
+      value: unit,
+    }));
     const developmentItems = (developmentResults as any[]).map(development => ({
       kind: 'development' as const,
       value: development,
     }));
+    const supportingItems = [...unitItems, ...developmentItems];
 
-    if (!developmentItems.length) return propertyItems;
-    if (!propertyItems.length) return developmentItems;
+    if (!supportingItems.length) return propertyItems;
+    if (!propertyItems.length) return supportingItems;
 
     const mixed: Array<
       | { kind: 'property'; value: (typeof propertyItems)[number]['value'] }
+      | { kind: 'unit'; value: (typeof unitItems)[number]['value'] }
       | { kind: 'development'; value: (typeof developmentItems)[number]['value'] }
     > = [];
 
     let p = 0;
-    let d = 0;
-    while (p < propertyItems.length || d < developmentItems.length) {
-      if (d < developmentItems.length) {
-        mixed.push(developmentItems[d]);
-        d += 1;
+    let s = 0;
+    while (p < propertyItems.length || s < supportingItems.length) {
+      if (s < supportingItems.length) {
+        mixed.push(supportingItems[s]);
+        s += 1;
       }
       let inserted = 0;
-      while (p < propertyItems.length && inserted < 3) {
+      while (p < propertyItems.length && inserted < 2) {
         mixed.push(propertyItems[p]);
         p += 1;
         inserted += 1;
@@ -323,12 +335,33 @@ export default function SearchResults({
     }
 
     return mixed;
-  }, [sortedProperties, developmentResults]);
+  }, [sortedProperties, unitResults, developmentResults]);
+
+  const mixedGridResults = useMemo(() => {
+    const propertyItems = sortedProperties.map(property => ({
+      kind: 'property' as const,
+      value: property,
+    }));
+    const unitItems = (unitResults as any[]).map(unit => ({
+      kind: 'unit' as const,
+      value: unit,
+    }));
+    const developmentItems = (developmentResults as any[]).map(development => ({
+      kind: 'development' as const,
+      value: development,
+    }));
+
+    return [...unitItems, ...propertyItems, ...developmentItems];
+  }, [sortedProperties, unitResults, developmentResults]);
 
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
   const hasRenderableResults =
-    viewMode === 'list' ? mixedListResults.length > 0 : sortedProperties.length > 0;
+    viewMode === 'map'
+      ? sortedProperties.length > 0
+      : viewMode === 'list'
+        ? mixedListResults.length > 0
+        : mixedGridResults.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -359,6 +392,7 @@ export default function SearchResults({
                 filters={filters}
                 resultCount={resultCount}
                 displayedPropertyCount={sortedProperties.length}
+                unitCount={unitResults.length}
                 developmentCount={developmentResults.length}
                 isLoading={isLoading}
                 viewMode={viewMode}
@@ -429,6 +463,32 @@ export default function SearchResults({
                             );
                           }
 
+                          if (item.kind === 'unit') {
+                            const unit = item.value as any;
+                            return (
+                              <DevelopmentUnitResultCard
+                                key={`unit-${unit.id}-${index}`}
+                                id={unit.id}
+                                href={unit.href}
+                                title={unit.unitTypeName || unit.title}
+                                developmentName={unit.developmentName}
+                                city={unit.city}
+                                suburb={unit.suburb}
+                                image={unit.image}
+                                listingType={unit.listingType}
+                                propertyType={unit.propertyType}
+                                priceFrom={unit.priceFrom}
+                                priceTo={unit.priceTo}
+                                bedrooms={unit.bedrooms}
+                                bathrooms={unit.bathrooms}
+                                unitSize={unit.unitSize}
+                                availableUnits={unit.availableUnits}
+                                totalUnits={unit.totalUnits}
+                                description={unit.description}
+                              />
+                            );
+                          }
+
                           const normalized = normalizePropertyForUI(item.value);
                         if (!normalized) return null;
                         return (
@@ -465,8 +525,50 @@ export default function SearchResults({
 
                   {viewMode === 'grid' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {sortedProperties.map(property => {
-                        const normalized = normalizePropertyForUI(property);
+                      {mixedGridResults.map((item, index) => {
+                        if (item.kind === 'unit') {
+                          const unit = item.value as any;
+                          return (
+                            <SimpleDevelopmentUnitCard
+                              key={`grid-unit-${unit.id}-${index}`}
+                              id={unit.id}
+                              title={unit.unitTypeName || unit.title}
+                              developmentName={unit.developmentName}
+                              city={unit.city}
+                              suburb={unit.suburb}
+                              image={unit.image}
+                              href={unit.href}
+                              priceFrom={unit.priceFrom}
+                              priceTo={unit.priceTo}
+                              bedrooms={unit.bedrooms}
+                              bathrooms={unit.bathrooms}
+                              unitSize={unit.unitSize}
+                              listingType={unit.listingType}
+                            />
+                          );
+                        }
+
+                        if (item.kind === 'development') {
+                          const development = item.value as any;
+                          return (
+                            <SimpleDevelopmentCard
+                              key={`grid-dev-${development.id}-${index}`}
+                              id={String(development.id)}
+                              title={development.name}
+                              city={development.city}
+                              suburb={development.suburb}
+                              priceRange={{
+                                min: development.priceFrom || 0,
+                                max: development.priceTo || 0,
+                              }}
+                              image={getPrimaryDevelopmentImageUrl(development.images) || ''}
+                              href={`/development/${development.slug || development.id}`}
+                              isHotSelling={Boolean(development.isFeatured)}
+                            />
+                          );
+                        }
+
+                        const normalized = normalizePropertyForUI(item.value);
                         if (!normalized) return null;
                         const cardProps = {
                           ...normalized,
@@ -476,7 +578,7 @@ export default function SearchResults({
                             (normalized as any).images?.[0] ??
                             '/placeholder-property.jpg',
                         };
-                        return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
+                        return <PropertyCard key={`grid-prop-${normalized.id}-${index}`} {...(cardProps as any)} />;
                       })}
                     </div>
                   )}

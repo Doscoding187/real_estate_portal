@@ -1,5 +1,7 @@
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
+import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import {
   Carousel,
@@ -66,6 +68,7 @@ export function HomeTrendingSection({
   onProvinceChange,
   activeHeroTab,
 }: HomeTrendingSectionProps) {
+  const railLimit = 10;
   const heroContent = {
     title: `${TAB_COPY[activeHeroTab].titleBase} in ${selectedProvince}`,
     subtitle: TAB_COPY[activeHeroTab].subtitleBase,
@@ -74,34 +77,9 @@ export function HomeTrendingSection({
   const { data: trendingData } = trpc.developer.getHomeTrendingFeed.useQuery({
     tab: activeHeroTab,
     province: selectedProvince,
-    limit: 5,
+    limit: railLimit,
   });
-
-  const buildPlaceholders = (count: number) => {
-    const labelByTab: Record<HeroTab, string> = {
-      buy: 'Residential Listing',
-      rent: 'Rental Listing',
-      developments: 'Residential Development',
-      shared_living: 'Shared Living',
-      plot_land: 'Land Development',
-      commercial: 'Commercial Listing',
-    };
-    const label = labelByTab[activeHeroTab] || 'Property';
-    return Array.from({ length: Math.max(0, count) }, (_, idx) => ({
-      id: `placeholder-${activeHeroTab}-${idx + 1}`,
-      kind: 'placeholder' as const,
-      title: `${label} Preview ${idx + 1}`,
-      city: selectedProvince,
-      suburb: 'Sample Area',
-      priceFrom: 0,
-      priceTo: 0,
-      image: '',
-      href: '/new-developments',
-    }));
-  };
-
-  const liveItems = (trendingData?.items || []).slice(0, 5);
-  const trendingItems = [...liveItems, ...buildPlaceholders(5 - liveItems.length)].slice(0, 5);
+  const trendingItems = (trendingData?.items || []).slice(0, railLimit);
 
   return (
     <section className="py-16">
@@ -145,24 +123,67 @@ export function HomeTrendingSection({
                     <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
                       #{index + 1}
                     </span>
-                    <SimpleDevelopmentCard
-                      id={item.id}
-                      title={item.title}
-                      city={item.city}
-                      suburb={item.suburb}
-                      priceRange={{
-                        min: item.priceFrom,
-                        max: item.priceTo,
-                      }}
-                      image={
-                        item.kind === 'development'
-                          ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                          : item.image || ''
-                      }
-                      slug={item.kind === 'development' ? item.id : undefined}
-                      href={item.href}
-                      isHotSelling={item.kind !== 'placeholder'}
-                    />
+                    {item.kind === 'listing' ? (
+                      <SimpleHomeListingCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        image={item.image}
+                        href={item.href}
+                        price={item.priceFrom}
+                        bedrooms={item.bedrooms ?? null}
+                        bathrooms={item.bathrooms ?? null}
+                        area={item.area ?? null}
+                        propertyType={item.propertyType ?? null}
+                        badgeLabel="Resale"
+                      />
+                    ) : item.kind === 'unit' ? (
+                      (() => {
+                        const unitItem = item as typeof item & {
+                          bedrooms?: number | null;
+                          bathrooms?: number | null;
+                          unitSize?: number | null;
+                        };
+
+                        return (
+                          <SimpleDevelopmentUnitCard
+                            id={unitItem.id}
+                            title={unitItem.title}
+                            developmentName={unitItem.developmentName || 'Featured Development'}
+                            city={unitItem.city}
+                            suburb={unitItem.suburb}
+                            image={unitItem.image}
+                            href={unitItem.href}
+                            priceFrom={unitItem.priceFrom}
+                            priceTo={unitItem.priceTo}
+                            bedrooms={unitItem.bedrooms ?? null}
+                            bathrooms={unitItem.bathrooms ?? null}
+                            unitSize={unitItem.unitSize ?? null}
+                            badgeLabel="New Development"
+                          />
+                        );
+                      })()
+                    ) : (
+                      <SimpleDevelopmentCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        priceRange={{
+                          min: item.priceFrom,
+                          max: item.priceTo,
+                        }}
+                        image={
+                          item.kind === 'development'
+                            ? getPrimaryDevelopmentImageUrl(item.image) || ''
+                            : item.image || ''
+                        }
+                        slug={item.kind === 'development' ? item.id : undefined}
+                        href={item.href}
+                        isHotSelling
+                      />
+                    )}
                   </div>
                 </CarouselItem>
               ))}
@@ -173,7 +194,7 @@ export function HomeTrendingSection({
         </div>
       ) : (
         <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
-          No developments found.
+          No live inventory found for this province yet.
         </div>
       )}
     </section>

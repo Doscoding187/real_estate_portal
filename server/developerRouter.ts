@@ -47,6 +47,7 @@ import {
 import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
+import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
@@ -727,6 +728,24 @@ export const developerRouter = router({
         city?: string;
         suburb?: string;
       };
+      type FeedItem = {
+        id: string;
+        kind: 'development' | 'listing' | 'unit';
+        title: string;
+        city: string;
+        suburb: string;
+        priceFrom: number;
+        priceTo: number;
+        image: string;
+        href: string;
+        developmentName?: string;
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        unitSize?: number | null;
+        area?: number | null;
+        propertyType?: string | null;
+        listingType?: 'sale' | 'rent' | 'auction';
+      };
 
       const normalizeDevImage = (images: any): string => {
         if (!images) return '';
@@ -758,46 +777,90 @@ export const developerRouter = router({
         suburb: prop.suburb || '',
         priceFrom: Number(prop.price || 0),
         priceTo: Number(prop.price || 0),
-        image: Array.isArray(prop.images) && prop.images[0]?.url ? prop.images[0].url : '',
+        image:
+          Array.isArray(prop.images) && prop.images[0]
+            ? prop.images[0]?.url || prop.images[0]?.imageUrl || prop.images[0]
+            : '',
         href: `/property/${prop.id}`,
+        bedrooms: Number(prop.bedrooms || 0) || null,
+        bathrooms: Number(prop.bathrooms || 0) || null,
+        area: Number(prop.floorArea || prop.erfSize || prop.area || 0) || null,
+        propertyType: prop.propertyType || null,
+        listingType: (prop.listingType as 'sale' | 'rent' | 'auction') || undefined,
       });
 
-      const fetchTabItems = async (locationFilter: LocationFilter): Promise<{
-        items: Array<{
-          id: string;
-          kind: 'development' | 'listing';
-          title: string;
-          city: string;
-          suburb: string;
-          priceFrom: number;
-          priceTo: number;
-          image: string;
-          href: string;
-        }>;
-        source: 'developments' | 'listings';
-      }> => {
-        if (input.tab === 'buy') {
-          const devs = await developmentService.listPublicDevelopments({
+      const mapUnit = (unit: any) => ({
+        id: String(unit.id),
+        kind: 'unit' as const,
+        title: unit.unitTypeName || unit.title,
+        city: unit.city || '',
+        suburb: unit.suburb || '',
+        priceFrom: Number(unit.priceFrom || 0),
+        priceTo: Number(unit.priceTo || unit.monthlyRentTo || 0),
+        image: String(unit.image || ''),
+        href: unit.href,
+        developmentName: unit.developmentName || '',
+        bedrooms: Number(unit.bedrooms || 0) || null,
+        bathrooms: Number(unit.bathrooms || 0) || null,
+        unitSize: Number(unit.unitSize || 0) || null,
+        listingType: unit.listingType || undefined,
+      });
+
+      const composeResidentialHomeFeed = async (
+        locationFilter: LocationFilter,
+        listingType: 'sale' | 'rent',
+      ): Promise<{ items: FeedItem[]; source: 'mixed' | 'listings' | 'units' }> => {
+        const { propertySearchService } = await import('./services/propertySearchService');
+        const poolLimit = Math.max(limit * 2, 12);
+        const [listingResults, units] = await Promise.all([
+          propertySearchService.searchProperties(
+            {
+              province: locationFilter.province,
+              city: locationFilter.city,
+              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+              propertyType: ['apartment', 'house', 'villa', 'townhouse', 'cluster_home'],
+              listingType,
+            } as any,
+            'date_desc',
+            1,
+            poolLimit,
+          ),
+          developmentService.listPublicDevelopmentUnits({
             province: locationFilter.province,
             city: locationFilter.city,
             suburb: locationFilter.suburb,
-            limit,
-            developmentType: 'residential',
-            transactionType: 'for_sale',
-          });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+            limit: poolLimit,
+            transactionType: listingType === 'rent' ? 'for_rent' : 'for_sale',
+            perDevelopmentCap: 1,
+          }),
+        ]);
+
+        const listingItems = (listingResults.properties || []).map(mapListing);
+        const unitItems = units.map(mapUnit);
+        const { items: composed, source } = composeResidentialHomeFeedItems(
+          listingItems,
+          unitItems,
+          limit,
+        );
+
+        return {
+          items: composed as FeedItem[],
+          source,
+        };
+      };
+
+      const fetchTabItems = async (
+        locationFilter: LocationFilter,
+      ): Promise<{
+        items: FeedItem[];
+        source: 'developments' | 'listings' | 'units' | 'mixed';
+      }> => {
+        if (input.tab === 'buy') {
+          return composeResidentialHomeFeed(locationFilter, 'sale');
         }
 
         if (input.tab === 'rent') {
-          const devs = await developmentService.listPublicDevelopments({
-            province: locationFilter.province,
-            city: locationFilter.city,
-            suburb: locationFilter.suburb,
-            limit,
-            developmentType: 'residential',
-            transactionType: 'for_rent',
-          });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+          return composeResidentialHomeFeed(locationFilter, 'rent');
         }
 
         if (input.tab === 'developments') {
@@ -926,18 +989,8 @@ export const developerRouter = router({
           ) === idx,
       );
 
-      let items: Array<{
-        id: string;
-        kind: 'development' | 'listing';
-        title: string;
-        city: string;
-        suburb: string;
-        priceFrom: number;
-        priceTo: number;
-        image: string;
-        href: string;
-      }> = [];
-      let source: 'developments' | 'listings' = 'developments';
+      let items: FeedItem[] = [];
+      let source: 'developments' | 'listings' | 'units' | 'mixed' = 'developments';
       let selectedScope: LocationScope = requestedScope;
 
       for (const candidate of dedupedCandidates) {
@@ -975,6 +1028,17 @@ export const developerRouter = router({
     .input(z.object({ slugOrId: z.string().min(1) }))
     .query(async ({ input }) => {
       return await developmentService.getPublicDevelopmentBySlug(input.slugOrId);
+    }),
+
+  getPublicDevelopmentUnitBySlug: publicProcedure
+    .input(
+      z.object({
+        slugOrId: z.string().min(1),
+        unitSlug: z.string().min(1),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await developmentService.getPublicDevelopmentUnitBySlug(input.slugOrId, input.unitSlug);
     }),
 
   listPublicDevelopments: publicProcedure

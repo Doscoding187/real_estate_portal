@@ -196,6 +196,7 @@ export const appRouter = router({
             .enum(['price_asc', 'price_desc', 'date_desc', 'date_asc', 'suburb_asc', 'suburb_desc'])
             .optional(), // Added sort option support
           includeDevelopments: z.boolean().optional(),
+          includeDevelopmentUnits: z.boolean().optional(),
         }),
       )
       .query(async ({ input }) => {
@@ -241,16 +242,43 @@ export const appRouter = router({
           input.limit,
         );
 
-        if (!input.includeDevelopments) {
+        if (!input.includeDevelopments && !input.includeDevelopmentUnits) {
           return propertyResults;
         }
 
         const { developmentService } = await import('./services/developmentService');
-        const nearbyDevelopments = await developmentService.listPublicDevelopments({
-          province: input.province,
-          city: input.city,
-          limit: Math.min(input.limit, 6),
-        });
+        const [nearbyDevelopments, nearbyUnits] = await Promise.all([
+          input.includeDevelopments
+            ? developmentService.listPublicDevelopments({
+                province: input.province,
+                city: input.city,
+                limit: Math.min(input.limit, 6),
+              })
+            : Promise.resolve([]),
+          input.includeDevelopmentUnits
+            ? developmentService.listPublicDevelopmentUnits({
+                province: input.province,
+                city: input.city,
+                suburb: input.suburb,
+                limit: Math.min(input.limit, 8),
+                perDevelopmentCap: 2,
+                transactionType:
+                  input.listingType === 'rent'
+                    ? 'for_rent'
+                    : input.listingType === 'auction'
+                      ? 'auction'
+                      : input.listingType === 'sale'
+                        ? 'for_sale'
+                        : undefined,
+                propertyType: input.propertyType,
+                minPrice: input.minPrice,
+                maxPrice: input.maxPrice,
+                minBedrooms: input.minBedrooms,
+                maxBedrooms: input.maxBedrooms,
+                minBathrooms: input.minBathrooms,
+              })
+            : Promise.resolve([]),
+        ]);
 
         const filteredDevelopments =
           input.suburb && input.suburb.length > 0
@@ -285,6 +313,37 @@ export const appRouter = router({
               developerBrandProfileId: dev.developerBrandProfileId ?? null,
             })),
             total: filteredDevelopments.length,
+          },
+          units: {
+            items: nearbyUnits.map((unit: any) => ({
+              id: unit.id,
+              developmentId: unit.developmentId,
+              unitTypeId: unit.unitTypeId,
+              href: unit.href,
+              title: unit.title,
+              unitTypeName: unit.unitTypeName,
+              developmentName: unit.developmentName,
+              developmentSlug: unit.developmentSlug ?? null,
+              listingType: unit.listingType,
+              propertyType: unit.propertyType ?? null,
+              city: unit.city,
+              suburb: unit.suburb ?? null,
+              province: unit.province,
+              address: unit.address ?? null,
+              priceFrom: unit.priceFrom ?? null,
+              priceTo: unit.priceTo ?? null,
+              bedrooms: unit.bedrooms ?? null,
+              bathrooms: unit.bathrooms ?? null,
+              unitSize: unit.unitSize ?? null,
+              yardSize: unit.yardSize ?? null,
+              availableUnits: unit.availableUnits ?? 0,
+              totalUnits: unit.totalUnits ?? 0,
+              description: unit.description ?? null,
+              image: unit.image ?? null,
+              gallery: Array.isArray(unit.gallery) ? unit.gallery : [],
+              developerDisplay: unit.developerDisplay ?? null,
+            })),
+            total: nearbyUnits.length,
           },
         };
       }),

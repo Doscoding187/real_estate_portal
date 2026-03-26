@@ -20,6 +20,12 @@ interface LeadCaptureFormProps {
   developmentId: number;
   unitId?: number;
   unitPrice?: number;
+  developerBrandProfileId?: number;
+  defaultMessage?: string;
+  leadSource?: string;
+  title?: string;
+  description?: string;
+  submitLabel?: string;
   affordabilityData?: {
     monthlyIncome: number;
     monthlyExpenses?: number;
@@ -35,13 +41,19 @@ export function LeadCaptureForm({
   developmentId,
   unitId,
   unitPrice,
+  developerBrandProfileId,
+  defaultMessage,
+  leadSource,
+  title,
+  description,
+  submitLabel,
   affordabilityData,
   onSuccess,
 }: LeadCaptureFormProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(defaultMessage || '');
   const [submitted, setSubmitted] = useState(false);
 
   // Capture UTM parameters from URL
@@ -63,6 +75,12 @@ export function LeadCaptureForm({
     });
   }, []);
 
+  useEffect(() => {
+    if (typeof defaultMessage === 'string') {
+      setMessage(defaultMessage);
+    }
+  }, [defaultMessage]);
+
   const createLeadMutation = trpc.developer.createLead.useMutation({
     onSuccess: () => {
       setSubmitted(true);
@@ -78,11 +96,13 @@ export function LeadCaptureForm({
     createLeadMutation.mutate({
       developmentId,
       unitId,
+      developerBrandProfileId,
       name,
       email,
       phone: phone || undefined,
       message: message || undefined,
       affordabilityData,
+      leadSource: leadSource || undefined,
       ...utmParams,
     });
   };
@@ -117,9 +137,9 @@ export function LeadCaptureForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Header */}
         <div>
-          <h3 className="text-xl font-bold mb-2">Express Your Interest</h3>
+          <h3 className="text-xl font-bold mb-2">{title || 'Express Your Interest'}</h3>
           <p className="text-sm text-gray-600">
-            Fill in your details and we'll get back to you shortly
+            {description || "Fill in your details and we'll get back to you shortly"}
           </p>
         </div>
 
@@ -215,7 +235,7 @@ export function LeadCaptureForm({
           className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
           size="lg"
         >
-          {createLeadMutation.isPending ? 'Submitting...' : 'Submit Inquiry'}
+          {createLeadMutation.isPending ? 'Submitting...' : submitLabel || 'Submit Inquiry'}
         </Button>
 
         {/* Privacy Notice */}

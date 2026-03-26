@@ -3,7 +3,7 @@ import type { InferSelectModel } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { randomUUID } from 'crypto';
 import { getDb } from '../db-connection';
-import { generateUniqueSlug } from '../_core/utils/slug';
+import { generateUniqueSlug, slugify } from '../_core/utils/slug';
 import { normalizeForPublish, validateNormalizedPayload } from './publishNormalizer';
 import type { NormalizedDevelopmentPayload, WizardData } from './publishNormalizer';
 
@@ -217,6 +217,23 @@ function stringifyJsonValue(value: unknown, fallback: unknown): string {
   }
 }
 
+function normalizeLocationMatchValue(value: unknown): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchesNormalizedLocation(value: unknown, expected?: string | null): boolean {
+  if (!expected) return true;
+  const left = normalizeLocationMatchValue(value);
+  const right = normalizeLocationMatchValue(expected);
+  if (!left || !right) return false;
+  return left === right;
+}
+
 function createError(message: string, code: string, meta?: Record<string, unknown>): TRPCError {
   return new TRPCError({
     code: code as any,
@@ -383,6 +400,233 @@ function buildDeveloperDisplay(dev: any) {
     description: 'Professional property developer committed to quality and excellence.',
     slug: undefined,
     isVerified,
+  };
+}
+
+type PublicDevelopmentUnitProjection = {
+  id: string;
+  kind: 'development_unit';
+  developmentId: number;
+  unitTypeId: string;
+  slug: string;
+  href: string;
+  title: string;
+  developmentName: string;
+  developmentSlug: string | null;
+  unitTypeName: string;
+  listingType: 'sale' | 'rent' | 'auction';
+  propertyType: string | null;
+  priceFrom: number | null;
+  priceTo: number | null;
+  monthlyRentFrom: number | null;
+  monthlyRentTo: number | null;
+  startingBid: number | null;
+  reservePrice: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  unitSize: number | null;
+  yardSize: number | null;
+  availableUnits: number;
+  totalUnits: number;
+  description: string | null;
+  image: string | null;
+  gallery: string[];
+  city: string;
+  suburb: string | null;
+  province: string;
+  address: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  developerBrandProfileId: number | null;
+  developerDisplay: ReturnType<typeof buildDeveloperDisplay>;
+  brandProfile?: {
+    id: number;
+    name: string;
+    slug: string | null;
+    logoUrl: string | null;
+    websiteUrl: string | null;
+    description: string | null;
+  } | null;
+};
+
+function coerceNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function normalizeUnitBaseMedia(baseMedia: unknown): Record<string, any> {
+  if (!baseMedia) return { gallery: [] };
+  if (typeof baseMedia === 'object' && !Array.isArray(baseMedia)) {
+    return baseMedia as Record<string, any>;
+  }
+  if (typeof baseMedia !== 'string') return { gallery: [] };
+
+  try {
+    const parsed = JSON.parse(baseMedia);
+    if (typeof parsed === 'string') return normalizeUnitBaseMedia(parsed);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, any>;
+    }
+  } catch {
+    return { gallery: [] };
+  }
+
+  return { gallery: [] };
+}
+
+function getUnitGalleryUrls(unit: any, developmentImages: unknown): string[] {
+  const baseMedia = normalizeUnitBaseMedia(unit?.baseMedia);
+  const gallery = Array.isArray(baseMedia.gallery) ? baseMedia.gallery : [];
+
+  const unitUrls = gallery
+    .map((item: any) => {
+      const candidate = item?.url || item?.src || item?.imageUrl || item?.key;
+      return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : null;
+    })
+    .filter((value: string | null): value is string => !!value);
+
+  if (unitUrls.length > 0) return unitUrls;
+
+  return parseJsonField(developmentImages)
+    .map((item: any) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object') {
+        const candidate = item.url || item.src || item.imageUrl || item.key;
+        return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : null;
+      }
+      return null;
+    })
+    .filter((value: string | null): value is string => !!value);
+}
+
+function mapTransactionTypeToListingType(
+  transactionType: unknown,
+): PublicDevelopmentUnitProjection['listingType'] {
+  const normalized = String(transactionType || '').toLowerCase();
+  if (normalized === 'for_rent') return 'rent';
+  if (normalized === 'auction') return 'auction';
+  return 'sale';
+}
+
+function mapStructuralTypeToPropertyType(value: unknown): string | null {
+  const normalized = String(value || '').toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'apartment' || normalized === 'studio' || normalized === 'penthouse') {
+    return 'apartment';
+  }
+  if (normalized === 'townhouse' || normalized === 'simplex' || normalized === 'duplex') {
+    return 'townhouse';
+  }
+  if (normalized === 'freestanding-house' || normalized === 'plot-and-plan') {
+    return 'house';
+  }
+  return null;
+}
+
+function deriveProjectionPropertyType(development: any, unit: any): string | null {
+  const unitType = mapStructuralTypeToPropertyType(unit?.structuralType);
+  if (unitType) return unitType;
+
+  const devPropertyTypes = parseJsonField(development?.propertyTypes).filter(
+    (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0,
+  );
+
+  if (devPropertyTypes.length > 0) {
+    return String(devPropertyTypes[0]).trim().toLowerCase();
+  }
+
+  return null;
+}
+
+function buildUnitProjectionSlug(unit: any): string {
+  const base = slugify(String(unit?.name || unit?.label || 'unit'));
+  const suffix = slugify(String(unit?.id || ''));
+  return suffix ? `${base || 'unit'}-${suffix}` : base || 'unit';
+}
+
+function buildUnitProjection(
+  development: any,
+  unit: any,
+  options?: {
+    brandProfile?: {
+      id: number;
+      name: string;
+      slug: string | null;
+      logoUrl: string | null;
+      websiteUrl: string | null;
+      description: string | null;
+    } | null;
+  },
+): PublicDevelopmentUnitProjection {
+  const listingType = mapTransactionTypeToListingType(development?.transactionType);
+  const slug = buildUnitProjectionSlug(unit);
+  const developmentSlug = development?.slug ? String(development.slug) : null;
+  const href = `/development/${developmentSlug || development.id}/units/${slug}`;
+  const gallery = getUnitGalleryUrls(unit, development?.images);
+  const image = gallery[0] || null;
+  const propertyType = deriveProjectionPropertyType(development, unit);
+  const priceFrom =
+    listingType === 'sale'
+      ? coerceNumber(unit?.priceFrom) ??
+        coerceNumber(unit?.basePriceFrom) ??
+        coerceNumber(development?.priceFrom)
+      : listingType === 'rent'
+        ? coerceNumber(unit?.monthlyRentFrom) ?? coerceNumber(development?.monthlyRentFrom)
+        : coerceNumber(unit?.startingBid) ?? coerceNumber(development?.startingBidFrom);
+  const priceTo =
+    listingType === 'sale'
+      ? coerceNumber(unit?.priceTo) ??
+        coerceNumber(unit?.basePriceTo) ??
+        coerceNumber(development?.priceTo)
+      : listingType === 'rent'
+        ? coerceNumber(unit?.monthlyRentTo) ?? coerceNumber(development?.monthlyRentTo)
+        : coerceNumber(unit?.reservePrice) ?? coerceNumber(development?.reservePriceFrom);
+
+  return {
+    id: `${development.id}_${unit.id}`,
+    kind: 'development_unit',
+    developmentId: Number(development.id),
+    unitTypeId: String(unit.id),
+    slug,
+    href,
+    title: `${development.name} - ${unit.name}`,
+    developmentName: String(development.name || ''),
+    developmentSlug,
+    unitTypeName: String(unit.name || ''),
+    listingType,
+    propertyType,
+    priceFrom,
+    priceTo,
+    monthlyRentFrom: coerceNumber(unit?.monthlyRentFrom) ?? coerceNumber(development?.monthlyRentFrom),
+    monthlyRentTo: coerceNumber(unit?.monthlyRentTo) ?? coerceNumber(development?.monthlyRentTo),
+    startingBid: coerceNumber(unit?.startingBid) ?? coerceNumber(development?.startingBidFrom),
+    reservePrice: coerceNumber(unit?.reservePrice) ?? coerceNumber(development?.reservePriceFrom),
+    bedrooms: coerceNumber(unit?.bedrooms),
+    bathrooms: coerceNumber(unit?.bathrooms),
+    unitSize: coerceNumber(unit?.unitSize),
+    yardSize: coerceNumber(unit?.yardSize),
+    availableUnits: Math.max(0, Number(unit?.availableUnits || 0)),
+    totalUnits: Math.max(0, Number(unit?.totalUnits || 0)),
+    description:
+      sanitizeString(unit?.description) ||
+      sanitizeString(unit?.configDescription) ||
+      sanitizeString(development?.description),
+    image,
+    gallery,
+    city: String(development.city || ''),
+    suburb: sanitizeString(development.suburb),
+    province: String(development.province || ''),
+    address: sanitizeString(development.address),
+    latitude: sanitizeString(development.latitude),
+    longitude: sanitizeString(development.longitude),
+    developerBrandProfileId: coerceNumber(development.developerBrandProfileId),
+    developerDisplay: buildDeveloperDisplay({
+      developer: development.developer,
+      brandProfile: options?.brandProfile || development.brandProfile || development.publisher,
+      publisher: options?.brandProfile || development.publisher,
+    }),
+    brandProfile: options?.brandProfile || development.brandProfile || development.publisher || null,
   };
 }
 
@@ -605,6 +849,36 @@ export async function getPublicDevelopment(id: number) {
   };
 }
 
+export async function getPublicDevelopmentUnitBySlug(slugOrId: string, unitSlug: string) {
+  const development = await getPublicDevelopmentBySlug(slugOrId);
+  if (!development) return null;
+
+  const normalizedUnitSlug = slugify(unitSlug);
+  const units = Array.isArray((development as any).unitTypes) ? (development as any).unitTypes : [];
+  const targetUnit = units.find((unit: any) => buildUnitProjectionSlug(unit) === normalizedUnitSlug);
+
+  if (!targetUnit) return null;
+
+  const projection = buildUnitProjection(development, targetUnit, {
+    brandProfile: (development as any).brandProfile || (development as any).publisher || null,
+  });
+
+  const siblings = units
+    .filter((unit: any) => String(unit.id) !== String(targetUnit.id))
+    .map((unit: any) =>
+      buildUnitProjection(development, unit, {
+        brandProfile: (development as any).brandProfile || (development as any).publisher || null,
+      }),
+    )
+    .slice(0, 6);
+
+  return {
+    ...projection,
+    development,
+    siblings,
+  };
+}
+
 export async function listPublicDevelopments(options: {
   limit?: number;
   province?: string;
@@ -617,11 +891,10 @@ export async function listPublicDevelopments(options: {
   if (!db) return [];
 
   const { limit = 20, province, city, suburb, developmentType, transactionType } = options;
+  const hasLocationFilter = Boolean(province || city || suburb);
+  const fetchLimit = hasLocationFilter ? Math.max(limit * 6, 120) : limit;
 
   const conditions: any[] = [eq(developments.isPublished, 1), eq(developments.approvalStatus, 'approved')];
-  if (province) conditions.push(eq(developments.province, province));
-  if (city) conditions.push(eq(developments.city, city));
-  if (suburb) conditions.push(eq(developments.suburb, suburb));
   if (developmentType) conditions.push(eq(developments.developmentType, developmentType as any));
   if (transactionType) conditions.push(eq(developments.transactionType, transactionType as any));
 
@@ -655,7 +928,7 @@ export async function listPublicDevelopments(options: {
     )
     .where(and(...conditions))
     .orderBy(desc(developments.createdAt))
-    .limit(limit);
+    .limit(fetchLimit);
 
   const developmentIds = results.map((d: any) => Number(d.id)).filter(Boolean);
   const unitRows =
@@ -708,16 +981,271 @@ export async function listPublicDevelopments(options: {
     });
   }
 
-  return results.map((d: any) => ({
-    ...d,
-    images: parseJsonField(d.images),
-    highlights: parseJsonField(d.highlights),
-    rating: d.rating != null ? Number(d.rating) : null,
-    isFeatured: Number(d.isFeatured || 0) === 1,
-    builderName: d.brandName || d.developerName || null,
-    builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
-    configurations: unitsByDevelopment.get(Number(d.id)) || [],
-  }));
+  return results
+    .map((d: any) => ({
+      ...d,
+      images: parseJsonField(d.images),
+      highlights: parseJsonField(d.highlights),
+      rating: d.rating != null ? Number(d.rating) : null,
+      isFeatured: Number(d.isFeatured || 0) === 1,
+      builderName: d.brandName || d.developerName || null,
+      builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
+      configurations: unitsByDevelopment.get(Number(d.id)) || [],
+    }))
+    .filter((development: any) => {
+      if (!matchesNormalizedLocation(development.province, province)) return false;
+      if (!matchesNormalizedLocation(development.city, city)) return false;
+      if (!matchesNormalizedLocation(development.suburb, suburb)) return false;
+      return true;
+    })
+    .slice(0, limit);
+}
+
+export async function listPublicDevelopmentUnits(options: {
+  limit?: number;
+  province?: string;
+  city?: string;
+  suburb?: string | string[];
+  transactionType?: 'for_sale' | 'for_rent' | 'auction';
+  perDevelopmentCap?: number;
+  propertyType?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  minBathrooms?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const {
+    limit = 20,
+    province,
+    city,
+    suburb,
+    transactionType,
+    perDevelopmentCap = 2,
+    propertyType,
+    minPrice,
+    maxPrice,
+    minBedrooms,
+    maxBedrooms,
+    minBathrooms,
+  } = options;
+  const hasLocationFilter = Boolean(province || city || suburb);
+  const fetchLimit = hasLocationFilter
+    ? Math.max(limit * Math.max(perDevelopmentCap, 1) * 8, 240)
+    : Math.max(limit * Math.max(perDevelopmentCap, 1) * 4, 120);
+
+  const conditions: any[] = [
+    eq(developments.isPublished, 1),
+    eq(developments.approvalStatus, 'approved'),
+    eq(unitTypes.isActive, 1),
+  ];
+  if (transactionType) conditions.push(eq(developments.transactionType, transactionType as any));
+
+  const rows = await db
+    .select({
+      developmentId: developments.id,
+      developmentName: developments.name,
+      developmentSlug: developments.slug,
+      developmentDescription: developments.description,
+      developmentImages: developments.images,
+      city: developments.city,
+      suburb: developments.suburb,
+      province: developments.province,
+      address: developments.address,
+      latitude: developments.latitude,
+      longitude: developments.longitude,
+      developmentPriceFrom: developments.priceFrom,
+      developmentPriceTo: developments.priceTo,
+      developmentMonthlyRentFrom: developments.monthlyRentFrom,
+      developmentMonthlyRentTo: developments.monthlyRentTo,
+      developmentStartingBidFrom: developments.startingBidFrom,
+      developmentReservePriceFrom: developments.reservePriceFrom,
+      developmentTransactionType: developments.transactionType,
+      developmentPropertyTypes: developments.propertyTypes,
+      developerBrandProfileId: developments.developerBrandProfileId,
+      developerName: developers.name,
+      developerSlug: developers.slug,
+      developerLogo: developers.logo,
+      developerDescription: developers.description,
+      developerWebsite: developers.website,
+      brandProfileId: developerBrandProfiles.id,
+      brandName: developerBrandProfiles.brandName,
+      brandSlug: developerBrandProfiles.slug,
+      brandLogoUrl: developerBrandProfiles.logoUrl,
+      brandWebsiteUrl: developerBrandProfiles.websiteUrl,
+      brandDescription: developerBrandProfiles.about,
+      unitTypeId: unitTypes.id,
+      unitName: unitTypes.name,
+      unitBedrooms: unitTypes.bedrooms,
+      unitBathrooms: unitTypes.bathrooms,
+      unitSize: unitTypes.unitSize,
+      yardSize: unitTypes.yardSize,
+      basePriceFrom: unitTypes.basePriceFrom,
+      basePriceTo: unitTypes.basePriceTo,
+      unitPriceFrom: unitTypes.priceFrom,
+      unitPriceTo: unitTypes.priceTo,
+      monthlyRentFrom: unitTypes.monthlyRentFrom,
+      monthlyRentTo: unitTypes.monthlyRentTo,
+      startingBid: unitTypes.startingBid,
+      reservePrice: unitTypes.reservePrice,
+      totalUnits: unitTypes.totalUnits,
+      availableUnits: unitTypes.availableUnits,
+      displayOrder: unitTypes.displayOrder,
+      structuralType: unitTypes.structuralType,
+      unitDescription: unitTypes.description,
+      unitConfigDescription: unitTypes.configDescription,
+      baseMedia: unitTypes.baseMedia,
+    })
+    .from(unitTypes)
+    .innerJoin(developments, eq(unitTypes.developmentId, developments.id))
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(
+      developerBrandProfiles,
+      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+    )
+    .where(and(...conditions))
+    .orderBy(desc(developments.createdAt), unitTypes.displayOrder, unitTypes.basePriceFrom);
+    // Pull a wider pool, then normalize-filter in JS for more tolerant location matching.
+  const limitedRows = (rows as any[]).slice(0, fetchLimit);
+
+  const countsByDevelopment = new Map<number, number>();
+  const projections: PublicDevelopmentUnitProjection[] = [];
+
+  for (const row of limitedRows as any[]) {
+    const developmentId = Number(row.developmentId);
+    const currentCount = countsByDevelopment.get(developmentId) || 0;
+    if (currentCount >= perDevelopmentCap) continue;
+    const projection = buildUnitProjection(
+      {
+        id: row.developmentId,
+        name: row.developmentName,
+        slug: row.developmentSlug,
+        description: row.developmentDescription,
+        images: row.developmentImages,
+        city: row.city,
+        suburb: row.suburb,
+        province: row.province,
+        address: row.address,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        priceFrom: row.developmentPriceFrom,
+        priceTo: row.developmentPriceTo,
+        monthlyRentFrom: row.developmentMonthlyRentFrom,
+        monthlyRentTo: row.developmentMonthlyRentTo,
+        startingBidFrom: row.developmentStartingBidFrom,
+        reservePriceFrom: row.developmentReservePriceFrom,
+        transactionType: row.developmentTransactionType,
+        propertyTypes: row.developmentPropertyTypes,
+        developerBrandProfileId: row.developerBrandProfileId,
+        developer: {
+          id: null,
+          name: row.developerName,
+          slug: row.developerSlug,
+          logo: row.developerLogo,
+          description: row.developerDescription,
+          website: row.developerWebsite,
+        },
+      },
+      {
+        id: row.unitTypeId,
+        name: row.unitName,
+        bedrooms: row.unitBedrooms,
+        bathrooms: row.unitBathrooms,
+        unitSize: row.unitSize,
+        yardSize: row.yardSize,
+        basePriceFrom: row.basePriceFrom,
+        basePriceTo: row.basePriceTo,
+        priceFrom: row.unitPriceFrom,
+        priceTo: row.unitPriceTo,
+        monthlyRentFrom: row.monthlyRentFrom,
+        monthlyRentTo: row.monthlyRentTo,
+        startingBid: row.startingBid,
+        reservePrice: row.reservePrice,
+        totalUnits: row.totalUnits,
+        availableUnits: row.availableUnits,
+        description: row.unitDescription,
+        configDescription: row.unitConfigDescription,
+        structuralType: row.structuralType,
+        baseMedia: row.baseMedia,
+      },
+      {
+        brandProfile: row.brandProfileId
+          ? {
+              id: Number(row.brandProfileId),
+              name: row.brandName,
+              slug: row.brandSlug,
+              logoUrl: row.brandLogoUrl,
+              websiteUrl: row.brandWebsiteUrl,
+              description: row.brandDescription,
+            }
+          : null,
+      },
+    );
+
+    const suburbFilters = Array.isArray(suburb)
+      ? suburb.filter(value => typeof value === 'string' && value.trim().length > 0)
+      : typeof suburb === 'string' && suburb.trim().length > 0
+        ? [suburb]
+        : [];
+
+    if (!matchesNormalizedLocation(projection.province, province)) {
+      continue;
+    }
+
+    if (!matchesNormalizedLocation(projection.city, city)) {
+      continue;
+    }
+
+    if (
+      suburbFilters.length > 0 &&
+      !suburbFilters.some(value => matchesNormalizedLocation(projection.suburb, value))
+    ) {
+      continue;
+    }
+
+    if (propertyType && projection.propertyType !== propertyType) {
+      continue;
+    }
+
+    if (typeof minPrice === 'number' && (projection.priceFrom == null || projection.priceFrom < minPrice)) {
+      continue;
+    }
+
+    if (typeof maxPrice === 'number' && (projection.priceFrom == null || projection.priceFrom > maxPrice)) {
+      continue;
+    }
+
+    if (
+      typeof minBedrooms === 'number' &&
+      (projection.bedrooms == null || projection.bedrooms < minBedrooms)
+    ) {
+      continue;
+    }
+
+    if (
+      typeof maxBedrooms === 'number' &&
+      (projection.bedrooms == null || projection.bedrooms > maxBedrooms)
+    ) {
+      continue;
+    }
+
+    if (
+      typeof minBathrooms === 'number' &&
+      (projection.bathrooms == null || projection.bathrooms < minBathrooms)
+    ) {
+      continue;
+    }
+
+    projections.push(projection);
+    if (projections.length >= limit) break;
+
+    countsByDevelopment.set(developmentId, currentCount + 1);
+  }
+
+  return projections;
 }
 
 // ===========================================================================
@@ -2776,6 +3304,8 @@ export const developmentService = {
   getPublicDevelopmentBySlug,
   getPublicDevelopment,
   listPublicDevelopments,
+  getPublicDevelopmentUnitBySlug,
+  listPublicDevelopmentUnits,
 
   createDevelopment,
   updateDevelopment,

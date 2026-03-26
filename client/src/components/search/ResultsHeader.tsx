@@ -17,6 +17,7 @@ interface ResultsHeaderProps {
   resultCount: number;
   displayedPropertyCount?: number;
   developmentCount?: number;
+  unitCount?: number;
   isLoading?: boolean;
   viewMode: ViewMode;
   sortBy: SortOption;
@@ -40,6 +41,7 @@ export function ResultsHeader({
   resultCount,
   displayedPropertyCount = resultCount,
   developmentCount = 0,
+  unitCount = 0,
   isLoading,
   viewMode,
   sortBy,
@@ -77,6 +79,7 @@ export function ResultsHeader({
               <span>
                 Showing {displayedPropertyCount.toLocaleString()} of {resultCount.toLocaleString()}{' '}
                 properties
+                {unitCount > 0 ? `, plus ${unitCount.toLocaleString()} development units` : ''}
                 {developmentCount > 0 ? ` and ${developmentCount.toLocaleString()} developments` : ''}
               </span>
             ) : (

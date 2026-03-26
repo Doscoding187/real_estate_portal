@@ -1,5 +1,6 @@
-import { useParams } from 'wouter';
+import { Link, useParams } from 'wouter';
 import { useEffect, useRef, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { trpc } from '@/lib/trpc';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { MediaLightbox } from '@/components/MediaLightbox';
@@ -80,6 +81,7 @@ import {
 } from '@/lib/media-logic';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { formatPriceCompact } from '@/lib/formatPrice';
+import { slugify } from '@/lib/urlUtils';
 
 type AmenityTabKey = AmenityCategory | 'other';
 
@@ -181,9 +183,17 @@ const formatParkingLabel = (parking?: string | number, parkingBays?: number): st
 
 type UnitTypeCarouselProps = {
   units: any[];
+  developmentSlugOrId: string;
 };
 
-function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
+function buildDevelopmentUnitHref(developmentSlugOrId: string, unit: any) {
+  const base = slugify(String(unit?.name || unit?.label || 'unit'));
+  const suffix = slugify(String(unit?.id || ''));
+  const unitSlug = suffix ? `${base || 'unit'}-${suffix}` : base || 'unit';
+  return `/development/${developmentSlugOrId}/units/${unitSlug}`;
+}
+
+function UnitTypeCarousel({ units, developmentSlugOrId }: UnitTypeCarouselProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [snapCount, setSnapCount] = useState(0);
@@ -225,6 +235,7 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
             const houseSizeLabel = formatSizeValue(unit.floorSize);
             const landSizeLabel = formatSizeValue(unit.landSize);
             const parkingLabel = formatParkingLabel(unit.parkingType, unit.parkingBays);
+            const unitHref = buildDevelopmentUnitHref(developmentSlugOrId, unit);
 
             return (
               <CarouselItem key={unit.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/3">
@@ -247,6 +258,9 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
                   <CardContent className="p-3 space-y-3 flex-1 flex flex-col">
                     <div className="flex justify-between items-start">
                       <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2774AE]">
+                          Development Unit
+                        </p>
                         <h4 className="font-bold text-slate-900 text-base">
                           {formatPriceCompact(unit.basePriceFrom)}
                         </h4>
@@ -326,10 +340,11 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
 
                     <div className="pt-1">
                       <Button
+                        asChild
                         variant="outline"
                         className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 h-9 text-xs font-bold rounded-md shadow-none uppercase tracking-wide"
                       >
-                        Request callback
+                        <Link href={unitHref}>View unit page</Link>
                       </Button>
                     </div>
                   </CardContent>
@@ -851,16 +866,133 @@ export default function DevelopmentDetail() {
 
     unifiedMedia: unifiedMedia,
   };
+  const siteOrigin =
+    typeof window !== 'undefined' ? window.location.origin : 'https://propertylistifysa.co.za';
+  const developmentSlugOrId = String(dev.slug || dev.id);
+  const canonicalUrl = `${siteOrigin}/development/${developmentSlugOrId}`;
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${siteOrigin}/`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Developments',
+        item: `${siteOrigin}/new-developments`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: development.name,
+        item: canonicalUrl,
+      },
+    ],
+  };
+  const developmentSchema: Record<string, any> = {
+    '@context': 'https://schema.org',
+    '@type': development.developmentType === 'residential' ? 'ApartmentComplex' : 'Place',
+    name: development.name,
+    description: development.description,
+    url: canonicalUrl,
+    image: development.galleryImages
+      .map((image: any) => image?.url)
+      .filter((value: string | undefined) => Boolean(value)),
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: development.address || undefined,
+      addressLocality: dev.city,
+      addressRegion: dev.province,
+      addressCountry: 'ZA',
+    },
+    numberOfAccommodationUnits: sales.total || development.totalUnits || undefined,
+    additionalProperty: [
+      sales.available > 0
+        ? {
+            '@type': 'PropertyValue',
+            name: 'Available Units',
+            value: sales.available,
+          }
+        : null,
+      sales.sold > 0
+        ? {
+            '@type': 'PropertyValue',
+            name: 'Sold Units',
+            value: sales.sold,
+          }
+        : null,
+      development.startingPrice > 0
+        ? {
+            '@type': 'PropertyValue',
+            name: 'Starting Price',
+            value: development.startingPrice,
+            unitText: 'ZAR',
+          }
+        : null,
+    ].filter(Boolean),
+    containsPlace: development.units.slice(0, 10).map((unit: any) => ({
+      '@type':
+        String(unit.normalizedType || '')
+          .toLowerCase()
+          .includes('house')
+          ? 'SingleFamilyResidence'
+          : 'Apartment',
+      name: unit.name,
+      url: `${siteOrigin}${buildDevelopmentUnitHref(developmentSlugOrId, unit)}`,
+      image: resolveMediaUrl(unit.normalizedImage || '') || undefined,
+      offers:
+        unit.basePriceFrom != null
+          ? {
+              '@type': 'Offer',
+              priceCurrency: 'ZAR',
+              price: Number(unit.basePriceFrom),
+              availability:
+                Number(unit.availableUnits || 0) > 0
+                  ? 'https://schema.org/InStock'
+                  : 'https://schema.org/PreOrder',
+            }
+          : undefined,
+    })),
+  };
+
+  if (dev.latitude && dev.longitude) {
+    developmentSchema.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: Number(dev.latitude),
+      longitude: Number(dev.longitude),
+    };
+  }
+
+  if (development.startingPrice > 0) {
+    developmentSchema.offers = {
+      '@type': 'AggregateOffer',
+      lowPrice: development.startingPrice,
+      priceCurrency: 'ZAR',
+      offerCount: sales.available || undefined,
+      availability:
+        sales.available > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
+    };
+  }
 
   return (
     <>
       <MetaControl
+        canonicalUrl={canonicalUrl}
         title={`${development.name} | ${development.developer}`}
         description={development.description}
         image={
           development.heroMedia.type === 'image' ? development.heroMedia.image?.url : undefined
         }
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
+        <script type="application/ld+json">{JSON.stringify(developmentSchema)}</script>
+      </Helmet>
 
       <div className="min-h-screen bg-slate-50 pb-20">
         <ListingNavbar />
@@ -1186,7 +1318,10 @@ export default function DevelopmentDetail() {
                             value={key}
                             className="mt-0 focus-visible:outline-none"
                           >
-                            <UnitTypeCarousel units={bedroomGroups.get(key)?.units || []} />
+                            <UnitTypeCarousel
+                              units={bedroomGroups.get(key)?.units || []}
+                              developmentSlugOrId={String(dev.slug || dev.id)}
+                            />
                           </TabsContent>
                         ))}
                       </Tabs>

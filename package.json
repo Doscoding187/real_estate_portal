@@ -31,6 +31,8 @@
     "test:integration": "vitest run tests/integration",
     "db:verify": "tsx scripts/db-contract-verify.ts",
     "db:verify:ci": "tsx scripts/db-contract-verify.ts --format=json",
+    "backfill:unit-types": "tsx server/scripts/backfill-unit-types-from-drafts.ts",
+    "diagnose:home-feed": "tsx server/scripts/diagnose-home-feed.ts",
     "schema:sanity": "node scripts/schema-sanity-check.mjs",
     "test:wizard:e2e": "npx tsx scripts/verify-wizard-e2e.ts",
     "test:visual": "playwright test",

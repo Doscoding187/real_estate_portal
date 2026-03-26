@@ -112,6 +112,7 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
+const DevelopmentUnitDetail = lazy(() => import('./pages/DevelopmentUnitDetail'));
 // DeveloperSetupWizard (unused in routes?) - keeping imported if it was used, but checking usage...
 // It was imported but not used in the Route list in the original file! I will comment it out or lazy load it if I see it.
 // Ah, checking original file... L98 imported it. L230 uses CreateDevelopment.
@@ -277,6 +278,7 @@ function Router() {
               return null;
             }}
           />
+          <Route path="/development/:slug/units/:unitSlug" component={DevelopmentUnitDetail} />
           <Route path="/development/:slug" component={DevelopmentDetail} />
 
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
