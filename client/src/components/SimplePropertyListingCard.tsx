@@ -91,11 +91,16 @@ export function SimplePropertyListingCard({
   return (
     <Link
       href={href || `/property/${id}`}
-      className="group block relative rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-lg transition-all duration-300 w-full max-w-[288px]"
+      className="group relative block w-full max-w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg"
     >
-      <div className="relative aspect-[16/9] bg-slate-100 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-sky-50" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+          <span className="rounded-full border border-white/80 bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 shadow-sm">
+            Property Preview
+          </span>
           <House className="h-12 w-12" />
+          <span className="text-[11px] font-medium text-slate-500">Images loading soon</span>
         </div>
 
         {resolvedImage && (
@@ -112,7 +117,7 @@ export function SimplePropertyListingCard({
           />
         )}
 
-        <div className="absolute left-3 top-3 z-20 flex flex-col gap-1.5">
+        <div className="absolute left-2.5 top-2.5 z-20 flex flex-col gap-1.5">
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-sm ${listingBadgeClass}`}>
             {listingBadgeLabel}
           </span>
@@ -136,23 +141,23 @@ export function SimplePropertyListingCard({
         </div>
       </div>
 
-      <div className="p-5">
+      <div className="p-4">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
           {listingType === 'rent' ? 'Monthly rental' : 'Property listing'}
         </div>
-        <div className="mb-2 text-xl font-bold text-[#1e1b4b]">{priceLabel}</div>
+        <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">{priceLabel}</div>
 
         <h3 className="mb-1 line-clamp-2 text-sm font-semibold leading-tight text-slate-900 group-hover:text-[#2774AE] transition-colors">
           {title}
         </h3>
 
-        <div className="mb-4 flex items-center gap-1 text-xs text-slate-500">
+        <div className="mb-3 flex items-center gap-1 text-xs text-slate-500">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           <span className="truncate">{locationLabel}</span>
         </div>
 
         {specItems.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-700">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-2.5 text-xs text-slate-700">
             {specItems.map(item => (
               <div key={item.key} className="flex items-center gap-1.5 whitespace-nowrap">
                 {item.icon}
@@ -161,7 +166,7 @@ export function SimplePropertyListingCard({
             ))}
           </div>
         ) : (
-          <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-3 text-xs text-slate-500">
+          <div className="mt-2.5 flex items-center gap-1.5 border-t border-slate-100 pt-2.5 text-xs text-slate-500">
             <Building2 className="h-3.5 w-3.5 text-slate-400" />
             <span>
               {listingType === 'rent'

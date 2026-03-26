@@ -1,7 +1,7 @@
 import { useLocation } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Building2, MapPin, ArrowRight } from 'lucide-react';
+import { ChevronRight, Building2, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Carousel,
@@ -25,12 +25,13 @@ export function TopDevelopers() {
     limit: 12,
   });
   const hasDevelopers = Boolean(developers && developers.length > 0);
+  const compactDevelopers = developers?.slice(0, 10) ?? [];
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-10 md:py-16 bg-white">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
             Top Developers in South Africa
           </h2>
@@ -72,14 +73,17 @@ export function TopDevelopers() {
               }}
               className="w-full"
             >
-              <CarouselContent className="-ml-6">
-                {developers?.map((developer: any) => (
-                  <CarouselItem key={developer.id} className="pl-6 md:basis-1/2 lg:basis-1/4">
+              <CarouselContent className="-ml-4 md:-ml-6">
+                {compactDevelopers.map((developer: any) => (
+                  <CarouselItem
+                    key={developer.id}
+                    className="pl-4 md:pl-6 basis-[78%] sm:basis-[56%] md:basis-1/2 lg:basis-1/4"
+                  >
                     <Card className="h-full border border-slate-200 hover:border-slate-300 transition-colors bg-white rounded-xl shadow-sm hover:shadow-md">
-                      <CardContent className="p-4">
+                        <CardContent className="p-3.5 sm:p-4">
                         {/* Header: Logo & Identity */}
-                        <div className="flex gap-4 mb-4">
-                          <div className="w-14 h-14 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
+                        <div className="flex gap-3 mb-3">
+                          <div className="w-12 h-12 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
                             {developer.logoUrl ? (
                               <img
                                 src={developer.logoUrl}
@@ -87,11 +91,11 @@ export function TopDevelopers() {
                                 className="max-w-full max-h-full object-contain"
                               />
                             ) : (
-                              <Building2 className="h-6 w-6 text-slate-300" />
+                              <Building2 className="h-5 w-5 text-slate-300" />
                             )}
                           </div>
                           <div className="flex flex-col justify-center min-w-0">
-                            <h3 className="text-lg font-bold text-slate-900 leading-tight mb-0.5 truncate">
+                            <h3 className="text-base font-bold text-slate-900 leading-tight mb-0.5 truncate">
                               {developer.brandName}
                             </h3>
                             <p className="text-xs text-slate-500 font-medium truncate">
@@ -101,9 +105,9 @@ export function TopDevelopers() {
                         </div>
 
                         {/* Stats Row */}
-                        <div className="flex items-center justify-between mb-4 px-1">
-                          <div className="flex flex-col">
-                            <span className="text-xl font-bold text-slate-900">
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                            <span className="block text-lg font-bold text-slate-900">
                               {displayValue(developer.stats?.totalProjects)}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
@@ -111,8 +115,8 @@ export function TopDevelopers() {
                             </span>
                           </div>
 
-                          <div className="flex flex-col text-right">
-                            <span className="text-xl font-bold text-slate-900">
+                          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-right">
+                            <span className="block text-lg font-bold text-slate-900">
                               {displayValue(developer.stats?.experience)}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
@@ -130,9 +134,11 @@ export function TopDevelopers() {
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
-                              Ready to Move ({displayValue(developer.stats?.readyToMove)})
+                              Ready to Move
                             </span>
-                            <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              {displayValue(developer.stats?.readyToMove)}
+                            </span>
                           </button>
 
                           <button
@@ -142,23 +148,35 @@ export function TopDevelopers() {
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
-                              Under Const. ({displayValue(developer.stats?.underConstruction)})
+                              Under Const.
                             </span>
-                            <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              {displayValue(developer.stats?.underConstruction)}
+                            </span>
                           </button>
 
                           <button
-                            className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
+                            className="hidden sm:flex w-full items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
                             onClick={() =>
                               setLocation(`/developer/${developer.slug}?status=new-launch`)
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
-                              New Launch ({displayValue(developer.stats?.newLaunch)})
+                              New Launch
                             </span>
-                            <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              {displayValue(developer.stats?.newLaunch)}
+                            </span>
                           </button>
                         </div>
+
+                        <button
+                          className="mt-3 flex w-full items-center justify-between rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
+                          onClick={() => setLocation(`/developer/${developer.slug}`)}
+                        >
+                          <span>View Developer</span>
+                          <ChevronRight className="h-3.5 w-3.5 text-white/80" />
+                        </button>
                       </CardContent>
                     </Card>
                   </CarouselItem>
@@ -167,11 +185,15 @@ export function TopDevelopers() {
               <CarouselPrevious className="hidden md:flex -left-4 bg-white shadow-md border-slate-200 text-slate-600 hover:text-slate-900" />
               <CarouselNext className="hidden md:flex -right-4 bg-white shadow-md border-slate-200 text-slate-600 hover:text-slate-900" />
             </Carousel>
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/90 to-transparent md:hidden" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
-              <Card key={i} className="h-full border border-slate-200 bg-white rounded-xl shadow-sm">
+              <Card
+                key={i}
+                className="h-full border border-slate-200 bg-white rounded-xl shadow-sm"
+              >
                 <CardContent className="p-4">
                   <div className="flex gap-4 mb-4">
                     <div className="w-14 h-14 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
@@ -202,15 +224,21 @@ export function TopDevelopers() {
 
                   <div className="space-y-2">
                     <div className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-700 font-medium truncate">Ready to Move (-)</span>
+                      <span className="text-xs text-slate-700 font-medium truncate">
+                        Ready to Move (-)
+                      </span>
                       <ChevronRight className="h-3 w-3 text-slate-400 flex-shrink-0" />
                     </div>
                     <div className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-700 font-medium truncate">Under Const. (-)</span>
+                      <span className="text-xs text-slate-700 font-medium truncate">
+                        Under Const. (-)
+                      </span>
                       <ChevronRight className="h-3 w-3 text-slate-400 flex-shrink-0" />
                     </div>
                     <div className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-700 font-medium truncate">New Launch (-)</span>
+                      <span className="text-xs text-slate-700 font-medium truncate">
+                        New Launch (-)
+                      </span>
                       <ChevronRight className="h-3 w-3 text-slate-400 flex-shrink-0" />
                     </div>
                   </div>

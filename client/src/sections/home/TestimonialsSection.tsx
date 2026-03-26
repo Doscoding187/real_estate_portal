@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react';
+import { MapPin, Star } from 'lucide-react';
 
 const testimonials = [
   {
@@ -6,73 +6,87 @@ const testimonials = [
     location: 'Johannesburg',
     rating: 5,
     text: 'Found my perfect apartment in Sandton within 2 weeks. The team was professional and responsive throughout the process.',
-    avatar: '👨🏿',
+    initials: 'TM',
+    accent: 'from-amber-200 via-orange-200 to-amber-100',
   },
   {
     name: 'Sarah van der Merwe',
     location: 'Cape Town',
     rating: 5,
     text: 'Excellent service! They helped me find a beautiful family home in Constantia. Highly recommend for anyone looking in the Western Cape.',
-    avatar: '👩🏼',
+    initials: 'SM',
+    accent: 'from-sky-200 via-blue-200 to-cyan-100',
   },
   {
     name: 'Priya Naidoo',
     location: 'Durban',
     rating: 5,
     text: 'The property insights and market data helped me make an informed decision. Great platform for first-time buyers!',
-    avatar: '👩🏾',
+    initials: 'PN',
+    accent: 'from-emerald-200 via-teal-200 to-cyan-100',
   },
 ];
 
 export function TestimonialsSection() {
   return (
-    <section className="py-16 px-3 sm:px-4 md:px-6 bg-gradient-to-b from-slate-50/50 to-white">
-      <div className="text-left mb-8 md:mb-12">
-        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 mb-3 sm:mb-4">
-          <span className="text-xl sm:text-2xl">⭐</span>
-          <span className="text-xs sm:text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
+    <section className="bg-gradient-to-b from-slate-50/50 to-white px-3 py-10 sm:px-4 md:px-6 md:py-16">
+      <div className="mb-6 text-left md:mb-12">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-1.5 sm:mb-4 sm:px-4 sm:py-2">
+          <Star className="h-4 w-4 fill-current text-yellow-500 sm:h-5 sm:w-5" />
+          <span className="text-xs font-semibold text-yellow-700 sm:text-sm">
+            Trusted by Thousands
+          </span>
         </div>
-        <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">What Our Clients Say</h2>
-        <p className="text-slate-600 text-xs md:text-sm max-w-2xl leading-relaxed">
+        <h2 className="mb-2 text-xl font-bold text-slate-900 md:text-[26px]">
+          What Our Clients Say
+        </h2>
+        <p className="max-w-2xl text-sm leading-6 text-slate-600 md:text-sm md:leading-relaxed">
           Real experiences from people who found their dream homes
         </p>
       </div>
 
-      <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-hide px-1 sm:px-2 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:px-0">
-        {testimonials.map((testimonial, idx) => (
-          <div
-            key={idx}
-            className="flex-none w-[280px] sm:w-[320px] md:w-auto snap-center relative bg-white p-5 sm:p-6 md:p-8 rounded-xl md:rounded-2xl border border-slate-200/60 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 group"
-          >
-            <div className="absolute top-6 right-6 text-6xl text-[#2774AE]/10 group-hover:text-[#2774AE]/20 transition-colors font-serif leading-none">
-              "
-            </div>
-
-            <div className="relative">
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <span key={i} className="text-yellow-400 text-xl">
-                    ★
-                  </span>
-                ))}
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white via-white/90 to-transparent md:hidden" />
+        <div className="scrollbar-hide flex snap-x gap-3 overflow-x-auto px-0.5 pb-4 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:px-0">
+          {testimonials.map((testimonial, idx) => (
+            <div
+              key={idx}
+              className="group relative w-[82vw] max-w-[304px] flex-none snap-start rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl sm:w-[320px] sm:p-6 md:w-auto md:p-8"
+            >
+              <div className="absolute right-4 top-4 text-5xl font-serif leading-none text-[#2774AE]/10 transition-colors group-hover:text-[#2774AE]/20 sm:right-6 sm:top-6 sm:text-6xl">
+                "
               </div>
-              <p className="text-slate-700 mb-6 leading-relaxed text-base italic">"{testimonial.text}"</p>
-              <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
-                <div className="text-5xl">{testimonial.avatar}</div>
-                <div>
-                  <p className="font-bold text-slate-900 text-base">{testimonial.name}</p>
-                  <p className="text-sm text-slate-500 flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {testimonial.location}
-                  </p>
+
+              <div className="relative">
+                <div className="mb-3 flex items-center gap-1 sm:mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-current text-yellow-400 sm:h-5 sm:w-5" />
+                  ))}
+                </div>
+                <p className="mb-5 text-sm italic leading-6 text-slate-700 sm:mb-6 sm:text-base sm:leading-relaxed">
+                  "{testimonial.text}"
+                </p>
+                <div className="flex items-center gap-3 border-t border-slate-100 pt-4 sm:gap-4">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${testimonial.accent} text-sm font-bold text-slate-800 shadow-sm sm:h-14 sm:w-14 sm:text-base`}
+                  >
+                    {testimonial.initials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900 sm:text-base">
+                      {testimonial.name}
+                    </p>
+                    <p className="flex items-center gap-1 text-sm text-slate-500">
+                      <MapPin className="h-3 w-3" />
+                      {testimonial.location}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
 }
-
-

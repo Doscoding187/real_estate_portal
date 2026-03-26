@@ -173,7 +173,11 @@ export function TopLocalities({
       return {
         id: toNumber(locality.id),
         name: String(locality.name || '-'),
-        slug: locality.slug ? String(locality.slug) : String(locality.name || '').toLowerCase().replace(/\s+/g, '-'),
+        slug: locality.slug
+          ? String(locality.slug)
+          : String(locality.name || '')
+              .toLowerCase()
+              .replace(/\s+/g, '-'),
         avgSalePrice,
         avgRentalPrice,
         propertiesForSale,
@@ -197,16 +201,17 @@ export function TopLocalities({
 
     return [...live, ...fallbacks];
   }, [data, selectedCity]);
+  const compactLocalities = localities.slice(0, 5);
 
   return (
-    <div className="py-16">
+    <div className="py-10 md:py-16">
       <div className="container">
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
-        <div className="flex justify-start mb-10 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex justify-start mb-6 md:mb-10 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
             {cities.map(city => (
               <button
@@ -228,28 +233,30 @@ export function TopLocalities({
         </div>
 
         {isLoading ? (
-          <div className="rounded-xl border border-slate-100 bg-white p-6 text-sm text-slate-500">Loading localities...</div>
+          <div className="rounded-xl border border-slate-100 bg-white p-6 text-sm text-slate-500">
+            Loading localities...
+          </div>
         ) : (
           <div className="relative group/carousel">
             <div className="overflow-hidden rounded-xl" ref={emblaRef}>
-              <div className="flex gap-6">
-                {localities.map((locality, idx) => {
+              <div className="flex gap-4 md:gap-6">
+                {compactLocalities.map((locality, idx) => {
                   const localityUrl = `/${provinceSlug}/${citySlug}/${locality.slug}`;
 
                   return (
                     <div
                       key={locality.id || idx}
-                      className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_25%]"
+                      className="flex-[0_0_78%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_25%]"
                     >
                       <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group h-full">
-                        <CardContent className="p-4">
+                        <CardContent className="p-3.5 sm:p-4">
                           <Link href={localityUrl}>
-                            <div className="flex items-center gap-3 mb-4 cursor-pointer">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
-                                <MapPin className="h-6 w-6 text-white" />
+                            <div className="flex items-center gap-3 mb-3 cursor-pointer">
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
+                                <MapPin className="h-5 w-5 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-lg mb-1 text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                <h3 className="font-bold text-[1.05rem] mb-0.5 text-gray-900 group-hover:text-blue-600 transition-colors truncate">
                                   {locality.name}
                                 </h3>
                                 <div className="flex items-center gap-2 text-xs">
@@ -257,29 +264,33 @@ export function TopLocalities({
                                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                     <span className="font-bold text-yellow-700">-</span>
                                   </div>
-                                  <span className="text-muted-foreground text-[10px]">(-)</span>
+                                  <span className="text-muted-foreground text-[10px]">Market pulse</span>
                                 </div>
                               </div>
                             </div>
                           </Link>
 
-                          <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50/80 rounded-lg border border-gray-100">
+                          <div className="grid grid-cols-2 gap-2 mb-3 p-2.5 bg-gray-50/80 rounded-lg border border-gray-100">
                             <div>
                               <p className="text-[10px] text-muted-foreground mb-0.5 font-medium uppercase tracking-wide truncate">
-                                Avg. Sale Price
+                                Avg. Sale
                               </p>
                               <p className="font-bold text-sm text-gray-900 truncate">
                                 {formatMoney(locality.avgSalePrice)}
-                                <span className="text-[10px] text-muted-foreground font-normal">/m2</span>
+                                <span className="text-[10px] text-muted-foreground font-normal">
+                                  /m2
+                                </span>
                               </p>
                             </div>
                             <div>
                               <p className="text-[10px] text-muted-foreground mb-0.5 font-medium uppercase tracking-wide truncate">
-                                Avg. Rental
+                                Avg. Rent
                               </p>
                               <p className="font-bold text-sm text-gray-900 truncate">
                                 {formatMoney(locality.avgRentalPrice)}
-                                <span className="text-[10px] text-muted-foreground font-normal">/m2</span>
+                                <span className="text-[10px] text-muted-foreground font-normal">
+                                  /m2
+                                </span>
                               </p>
                             </div>
                           </div>
@@ -291,7 +302,7 @@ export function TopLocalities({
                             >
                               <div className="min-w-0">
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
-                                  {formatCount(locality.propertiesForSale)} Properties for Sale
+                                  {formatCount(locality.propertiesForSale)} For Sale
                                 </p>
                                 <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
                               </div>
@@ -305,7 +316,7 @@ export function TopLocalities({
                             >
                               <div className="min-w-0">
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
-                                  {formatCount(locality.propertiesForRent)} Properties for Rent
+                                  {formatCount(locality.propertiesForRent)} For Rent
                                 </p>
                                 <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
                               </div>
@@ -338,6 +349,7 @@ export function TopLocalities({
             >
               <ChevronRight className="h-5 w-5" />
             </Button>
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/90 to-transparent md:hidden" />
           </div>
         )}
 

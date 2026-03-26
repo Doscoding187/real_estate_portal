@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
-import { useLocation, Link } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,16 +14,12 @@ import {
 } from '@/components/ui/select';
 import {
   Home,
-  Heart,
   Building2,
-  Hotel,
-  MapPin,
   Briefcase,
   Users,
   Search,
   Mic,
   MapPinned,
-  ChevronDown,
   Loader2,
   Key,
   Building,
@@ -54,25 +50,15 @@ export interface EnhancedHeroProps {
   onTabChange?: (tab: string) => void;
 }
 
-const categoryIcons: Record<string, any> = {
-  Buy: Home,
-  Rent: Key,
-  'Shared Living': Users,
-  'Plot & Land': MapPinned,
-  Commercial: Building2,
-  Developments: Building,
-  Agents: Briefcase,
-};
-
-const categories = [
-  { label: 'Buy', icon: Home },
-  { label: 'Rent', icon: Key },
-  { label: 'Shared Living', icon: Users },
-  { label: 'Plot & Land', icon: MapPinned },
-  { label: 'Commercial', icon: Building2 },
-  { label: 'Developments', icon: Building },
-  { label: 'Agents', icon: Briefcase },
-];
+const HERO_CATEGORIES = [
+  { id: 'buy', label: 'Buy', mobileLabel: 'Buy', icon: Home },
+  { id: 'rental', label: 'Rental', mobileLabel: 'Rent', icon: Key },
+  { id: 'projects', label: 'Developments', mobileLabel: 'Projects', icon: Building2 },
+  { id: 'pg', label: 'Shared Living', mobileLabel: 'Shared', icon: Users },
+  { id: 'plot', label: 'Plot & Land', mobileLabel: 'Plots', icon: MapPinned },
+  { id: 'commercial', label: 'Commercial', mobileLabel: 'Other', icon: Briefcase },
+  { id: 'agents', label: 'Agents', mobileLabel: 'Agents', icon: Users },
+] as const;
 
 export function EnhancedHero({
   variant = 'home',
@@ -87,7 +73,7 @@ export function EnhancedHero({
   onTabChange,
 }: EnhancedHeroProps) {
   const [, setLocation] = useLocation();
-  const [internalTab, setInternalTab] = useState('Buy');
+  const [internalTab, setInternalTab] = useState('buy');
   const activeTab = controlledTab ?? internalTab;
 
   const handleTabChange = (tab: string) => {
@@ -99,8 +85,6 @@ export function EnhancedHero({
   const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
   // computed for backward compatibility in single-select logic
   const selectedLocation = selectedLocations.length === 1 ? selectedLocations[0] : null;
-
-  const [budget, setBudget] = useState('');
 
   // Filter panel state
   const [showFilters, setShowFilters] = useState(false);
@@ -197,19 +181,8 @@ export function EnhancedHero({
 
   // Comprehensive South African location data with context
 
-  const categories = [
-    { id: 'buy', label: 'Buy', icon: Home },
-    { id: 'rental', label: 'Rental', icon: Heart },
-    { id: 'projects', label: 'Developments', icon: Building2 },
-    { id: 'pg', label: 'Shared Living', icon: Users },
-    { id: 'plot', label: 'Plot & Land', icon: MapPin },
-    { id: 'commercial', label: 'Commercial', icon: Briefcase },
-    { id: 'agents', label: 'Agents', icon: Users },
-  ];
-
   const handleCategoryClick = (categoryId: string) => {
-    setActiveTab(categoryId);
-    // Show filters for all categories except agents (which navigates directly)
+    handleTabChange(categoryId);
     if (categoryId === 'agents') {
       setLocation('/agents');
       setShowFilters(false);
@@ -487,6 +460,9 @@ export function EnhancedHero({
   };
 
   const isNavigationMode = heroMode === 'province' || heroMode === 'city';
+  const normalizedActiveTab = String(activeTab || '')
+    .trim()
+    .toLowerCase();
 
   return (
     <div className="relative bg-gradient-to-br from-blue-50 via-white to-blue-50 text-slate-900 overflow-hidden">
@@ -514,9 +490,9 @@ export function EnhancedHero({
       {/* Grid Pattern Overlay - Dark stroke for light bg */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAyMDYxNyIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlQikiLz48L3N2Zz4=')] opacity-30 mix-blend-multiply"></div>
 
-      <div className="container relative py-16 md:py-24 z-10">
+      <div className="container relative z-10 flex flex-col py-4 md:py-24">
         {/* Hero Title */}
-        <div className="text-center mb-6 max-w-4xl mx-auto">
+        <div className="order-3 mx-auto mt-2 mb-3 max-w-4xl text-center sm:order-1 sm:mt-0 sm:mb-6">
           {title ? (
             // Location / Context Title
             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight text-blue-950">
@@ -524,81 +500,107 @@ export function EnhancedHero({
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight tracking-tight text-blue-950">
-              South Africa's{' '}
-              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+            <h1 className="mb-2 text-[1.8rem] font-bold leading-[1.06] tracking-tight text-blue-950 sm:mb-4 sm:text-2xl md:text-4xl lg:text-5xl">
+              <span className="block sm:inline">South Africa&apos;s</span>{' '}
+              <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
                 Fastest Growing
               </span>
-              <br className="hidden sm:block" />
-              <span className="sm:hidden"> </span>
-              Real Estate Platform
+              <br />
+              <span className="block">Real Estate Platform</span>
             </h1>
           )}
 
-          <p className="text-sm sm:text-base md:text-lg text-slate-600 animate-fade-in max-w-2xl mx-auto">
+          <p className="mx-auto max-w-[19rem] animate-fade-in text-[0.95rem] leading-7 text-slate-600 sm:max-w-2xl sm:text-base md:text-lg md:leading-relaxed">
             {subtitle || (
               <>
-                Your dream home is just a search away. Discover thousands of properties
+                Your dream home is just a search away.
                 <span className="hidden sm:inline">
                   <br />
                 </span>
-                <span className="sm:hidden"> </span>
-                for sale and rent across South Africa.
+                <span className="sm:hidden block h-0" />
+                Discover thousands of properties for sale and rent across South Africa.
               </>
             )}
           </p>
         </div>
 
         {/* Categories/Tabs */}
-        <div className="flex justify-center mb-6 sm:mb-8">
-          <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full inline-flex shadow-lg border border-slate-200/50 overflow-x-auto max-w-[95vw] sm:max-w-none scrollbar-hide">
-            {categories.map(category => {
-              // Only show specific tabs if needed, for instance
-              if (category.label === 'Projects') return null; // Logic from original if needed
+        <div className="order-1 mb-3 sm:order-2 sm:mb-8">
+          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
+            <div className="flex min-w-max items-stretch gap-0.5 sm:hidden">
+              {HERO_CATEGORIES.map(category => {
+                const Icon = category.icon;
+                const isActive = normalizedActiveTab === category.id;
 
-              // Fallback icon logic if not in map
-              const Icon = categoryIcons[category.label] || Home;
-              const isActive = activeTab === category.label;
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryClick(category.id)}
+                    className={`relative flex min-w-[4rem] flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-1.5 text-[0.61rem] font-semibold transition-all ${
+                      isActive
+                        ? 'border-blue-100 bg-white/95 text-blue-700 shadow-sm'
+                        : 'border-transparent bg-transparent text-slate-500'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 items-center justify-center rounded-2xl ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-200/70'
+                          : 'bg-white/85 text-slate-500 shadow-sm'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="leading-tight text-center">{category.mobileLabel}</span>
+                    {isActive ? (
+                      <span className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-blue-600" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
 
-              return (
-                <button
-                  key={category.label}
-                  onClick={() => handleTabChange(category.label)}
-                  className={`
-                        flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300
-                        whitespace-nowrap flex-shrink-0
-                        ${
-                          isActive
-                            ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                            : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
-                        }
-                      `}
-                >
-                  <Icon
-                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-500'}`}
-                  />
-                  {category.label}
-                </button>
-              );
-            })}
+            <div className="hidden sm:inline-flex bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-slate-200/50 overflow-x-auto max-w-[95vw] sm:max-w-none scrollbar-hide">
+              {HERO_CATEGORIES.map(category => {
+                const Icon = category.icon;
+                const isActive = normalizedActiveTab === category.id;
+
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryClick(category.id)}
+                    className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-md transform scale-105'
+                        : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon
+                      className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-white' : 'text-slate-400'}`}
+                    />
+                    {category.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Search Card */}
-        <div className="max-w-5xl mx-auto">
-          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl">
-            <CardContent className="p-3 sm:p-4 md:p-6">
+        <div className="order-2 mx-auto w-full max-w-5xl sm:order-3">
+          <Card className="rounded-[1rem] border-0 bg-white/95 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:shadow-2xl">
+            <CardContent className="p-2 sm:p-4 md:p-6">
               {/* Main Search Row */}
-              <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex flex-col gap-2.5 md:flex-row sm:gap-4">
                 {/* Unified Search Input */}
                 <div className="flex-1 relative group">
                   {/* Search Icon */}
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] sm:h-5 sm:w-5 text-muted-foreground z-10 pointer-events-none" />
 
                   <LocationAutosuggest
                     placeholder="Search by city, suburb, or area..."
                     className="w-full"
-                    inputClassName="pl-12 pr-24 h-14 text-base border-2 hover:border-primary/50 focus:border-primary transition-colors w-full bg-transparent rounded-xl"
+                    inputClassName="h-10 w-full rounded-2xl border-2 bg-transparent pl-11 pr-24 text-[15px] transition-colors hover:border-primary/50 focus:border-primary sm:h-14 sm:text-base"
                     showIcon={false}
                     selectedLocations={selectedLocations}
                     onRemove={index => {
@@ -633,18 +635,18 @@ export function EnhancedHero({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 hover:bg-primary/10 rounded-lg"
+                      className="h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:h-10 sm:w-10"
                       title="Use current location"
                     >
-                      <MapPinned className="h-5 w-5" />
+                      <MapPinned className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 hover:bg-primary/10 rounded-lg"
+                      className="h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:h-10 sm:w-10"
                       title="Voice search"
                     >
-                      <Mic className="h-5 w-5" />
+                      <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                   </div>
                 </div>
@@ -652,7 +654,7 @@ export function EnhancedHero({
                 {/* Search Button */}
                 <Button
                   onClick={handleSearch}
-                  className="bg-blue-600 hover:bg-blue-700 text-white h-12 sm:h-14 px-6 sm:px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-sm sm:text-base min-w-[100px] sm:min-w-[140px] rounded-xl"
+                  className="h-10 min-w-[100px] rounded-2xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:h-14 sm:min-w-[140px] sm:px-8 sm:text-base"
                   size="lg"
                 >
                   {isCountLoading ? (
