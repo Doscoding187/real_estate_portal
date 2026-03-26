@@ -43,11 +43,16 @@ import { logAudit, AuditActions } from './_core/auditLog';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
 import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
+import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
 
 /**
  * Admin router - Super admin and agency admin endpoints
  */
 export const adminRouter = router({
+  getDiscoveryOpsReport: superAdminProcedure.query(async () => {
+    return getDiscoveryOpsReport();
+  }),
+
   getAgentInventoryBoundaryReport: superAdminProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
