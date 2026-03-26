@@ -193,19 +193,19 @@ export function ExploreCities({
     description || "Browse properties in South Africa's most sought-after locations.";
 
   return (
-    <section className="bg-white py-10 md:py-16">
+    <section className="bg-white py-8 md:py-16">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-6 flex flex-col gap-3 text-left md:mb-10 md:flex-row md:items-end md:justify-between md:gap-4">
+        <div className="mb-5 flex flex-col gap-2.5 text-left md:mb-10 md:flex-row md:items-end md:justify-between md:gap-4">
           <div className="max-w-3xl">
-            <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-500">{displayDescription}</p>
+            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">{displayDescription}</p>
           </div>
 
           <Link href="/property-for-sale">
             <Button
               variant="ghost"
-              className="group h-10 justify-start rounded-full border border-slate-200 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:justify-center md:rounded-md md:border-0 md:px-0"
+              className="group h-9 justify-start rounded-full border border-slate-200 px-3.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:justify-center md:rounded-md md:border-0 md:px-0 md:text-sm"
             >
               View All Locations{' '}
               <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
@@ -224,16 +224,16 @@ export function ExploreCities({
                   /\/\//g,
                   '/',
                 )}
-                className="w-[78vw] max-w-[248px] flex-none snap-start sm:w-auto"
+                className="w-[75vw] max-w-[236px] flex-none snap-start sm:w-auto"
               >
                 <div className="group h-full cursor-pointer">
-                  <div className="flex h-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-slate-300 group-hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:gap-4 sm:rounded-xl sm:border-transparent sm:bg-transparent sm:p-3 sm:shadow-none sm:hover:border-slate-100 sm:hover:bg-slate-50">
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-500 shadow-sm sm:h-16 sm:w-16 sm:rounded-lg">
-                      <Building className="h-7 w-7 opacity-90 sm:h-8 sm:w-8" />
+                  <div className="flex h-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-slate-300 group-hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:gap-4 sm:rounded-xl sm:border-transparent sm:bg-transparent sm:p-3 sm:shadow-none sm:hover:border-slate-100 sm:hover:bg-slate-50">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-500 shadow-sm sm:h-16 sm:w-16 sm:rounded-lg">
+                      <Building className="h-6 w-6 opacity-90 sm:h-8 sm:w-8" />
                     </div>
 
                     <div className="min-w-0 flex-1 py-0.5">
-                      <h3 className="truncate text-base font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-lg">
+                      <h3 className="truncate text-[15px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-lg">
                         {city.name}
                       </h3>
 

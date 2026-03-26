@@ -114,7 +114,7 @@ export function DiscoverProperties({
   locationName = 'South Africa',
 }: DiscoverPropertiesProps = {}) {
   const defaultTitle = `Discover Properties in ${locationName}`;
-  const defaultSubtitle = `Explore property sales, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} most vibrant locations.`;
+  const defaultSubtitle = `Browse homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
 
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
@@ -149,19 +149,19 @@ export function DiscoverProperties({
   > = {
     sale: {
       title: 'Properties for Sale',
-      description: `Find your dream home in ${selectedCity}. From affordable apartments to premium family houses, explore properties that match your budget and lifestyle.`,
+      description: `Explore apartments, houses, and townhomes for sale in ${selectedCity}.`,
       href: '/properties?action=sale',
       cta: 'View Sale Listings',
     },
     rent: {
       title: 'Properties for Rent',
-      description: `Searching for a rental in ${selectedCity}? Browse apartments, garden cottages, and flexible rental options available now.`,
+      description: `Browse apartments, cottages, and flexible rentals now available in ${selectedCity}.`,
       href: '/properties?action=rent',
       cta: 'View Rental Listings',
     },
     developments: {
       title: 'New Developments',
-      description: `Explore new developments in ${selectedCity}, from off-plan launches to ready-to-move opportunities in high-demand areas.`,
+      description: `See the newest off-plan and ready-to-move developments in ${selectedCity}.`,
       href: '/developments',
       cta: 'View Developments',
     },
@@ -237,7 +237,7 @@ export function DiscoverProperties({
     <div className="py-10 md:py-16 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
         <div className="mb-6 md:mb-8">
-          <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
@@ -336,8 +336,7 @@ export function DiscoverProperties({
                 >
                   <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Find your dream home in {selectedCity}. From affordable apartments to premium
-                      family houses, explore properties that match your budget and lifestyle.
+                      Explore apartments, houses, and townhomes for sale in {selectedCity}.
                     </p>
                     <a
                       href="/properties?action=sale"
@@ -376,8 +375,8 @@ export function DiscoverProperties({
                 >
                   <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Searching for a rental in {selectedCity}? Browse our selection of apartments,
-                      garden cottages, and corporate rentals available now.
+                      Browse apartments, cottages, and flexible rentals now available in{' '}
+                      {selectedCity}.
                     </p>
                     <a
                       href="/properties?action=rent"
@@ -416,8 +415,7 @@ export function DiscoverProperties({
                 >
                   <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Invest in the future with new developments in {selectedCity}. Explore off-plan
-                      opportunities and brand new estates.
+                      See the newest off-plan and ready-to-move developments in {selectedCity}.
                     </p>
                     <a
                       href="/developments"

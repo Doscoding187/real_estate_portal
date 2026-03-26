@@ -141,31 +141,31 @@ export function ModernFooter() {
   return (
     <footer className="bg-slate-900 text-white">
       <section className="border-b border-slate-800">
-        <div className="container mx-auto px-4 py-8 md:py-12">
-          <div className="mx-auto max-w-4xl rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-slate-800 to-slate-900 px-4 py-6 text-center shadow-[0_24px_64px_rgba(2,6,23,0.35)] sm:px-6 md:px-8 md:py-8">
-            <div className="mb-3 inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-200">
+        <div className="container mx-auto px-4 py-7 md:py-12">
+          <div className="mx-auto max-w-4xl rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-slate-800 to-slate-900 px-4 py-5 text-center shadow-[0_24px_64px_rgba(2,6,23,0.35)] sm:px-6 md:px-8 md:py-8">
+            <div className="mb-2.5 inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">
               Weekly market brief
             </div>
-            <h3 className="mb-3 text-xl font-bold leading-tight sm:text-2xl">
+            <h3 className="mb-2.5 text-lg font-bold leading-tight sm:text-2xl">
               Stay Updated with Latest Property Trends
             </h3>
-            <p className="mx-auto mb-5 max-w-2xl text-sm leading-6 text-slate-300 md:mb-6">
+            <p className="mx-auto mb-4 max-w-2xl text-[13px] leading-5 text-slate-300 md:mb-6 md:text-sm md:leading-6">
               Get exclusive property listings, market insights, and expert tips delivered to your
               inbox.
             </p>
 
-            <form onSubmit={handleSubscribe} className="mx-auto flex max-w-md flex-col gap-3 sm:flex-row">
+            <form onSubmit={handleSubscribe} className="mx-auto flex max-w-md flex-col gap-2.5 sm:flex-row">
               <Input
                 type="email"
                 placeholder="Enter your email address"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="h-12 rounded-full border-slate-700 bg-slate-800 px-4 text-white placeholder:text-slate-400 focus:border-blue-500"
+                className="h-11 rounded-full border-slate-700 bg-slate-800 px-4 text-white placeholder:text-slate-400 focus:border-blue-500"
                 required
               />
               <Button
                 type="submit"
-                className="h-12 rounded-full bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700"
+                className="h-11 rounded-full bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Subscribe Now
               </Button>
@@ -179,7 +179,7 @@ export function ModernFooter() {
       </section>
 
       <div className="container mx-auto px-4 py-10 md:py-12">
-        <div className="space-y-3 md:hidden">
+        <div className="space-y-2.5 md:hidden">
           {footerSections.map((section, index) => {
             const IconComponent = section.icon;
 
@@ -188,7 +188,7 @@ export function ModernFooter() {
                 key={index}
                 className="group overflow-hidden rounded-2xl border border-slate-800 bg-slate-800/70"
               >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600">
                       <IconComponent className="h-4 w-4 text-white" />
@@ -244,7 +244,7 @@ export function ModernFooter() {
           })}
         </div>
 
-        <div className="mt-10 border-t border-slate-800 pt-8 md:mt-12">
+        <div className="mt-8 border-t border-slate-800 pt-7 md:mt-12">
           <h4 className="mb-4 flex items-center gap-2 font-semibold text-white">
             <TrendingUp className="h-4 w-4" />
             Popular Cities
@@ -263,7 +263,7 @@ export function ModernFooter() {
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 border-t border-slate-800 pt-8 lg:mt-12 lg:grid-cols-2 lg:gap-8">
+        <div className="mt-8 grid grid-cols-1 gap-5 border-t border-slate-800 pt-7 lg:mt-12 lg:grid-cols-2 lg:gap-8">
           <div className="rounded-2xl border border-slate-800 bg-slate-800/70 p-5 lg:border-0 lg:bg-transparent lg:p-0">
             <h4 className="mb-4 font-semibold text-white">Get in Touch</h4>
             <div className="space-y-3">
@@ -315,18 +315,18 @@ export function ModernFooter() {
           </div>
         </div>
 
-        <div className="mt-10 rounded-[1.75rem] bg-slate-800 p-5 md:mt-12 md:p-6">
+        <div className="mt-8 rounded-[1.5rem] bg-slate-800 p-4 md:mt-12 md:p-6">
           <div className="flex flex-col items-center gap-5 lg:flex-row lg:gap-6">
             <div className="flex-1 text-center lg:text-left">
-              <h4 className="mb-2 text-xl font-bold text-white">Get the Property Listify App</h4>
-              <p className="text-slate-300">
+              <h4 className="mb-2 text-lg font-bold text-white md:text-xl">Get the Property Listify App</h4>
+              <p className="text-sm text-slate-300 md:text-base">
                 Search for properties on the go. Available on iOS and Android.
               </p>
             </div>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <Button
                 variant="outline"
-                className="h-auto justify-start rounded-2xl border-slate-600 bg-slate-900 px-4 py-3 text-white hover:bg-slate-700"
+                className="h-auto justify-start rounded-2xl border-slate-600 bg-slate-900 px-4 py-2.5 text-white hover:bg-slate-700"
               >
                 <div className="flex items-center gap-2">
                   <div className="h-5 w-5 rounded-sm bg-white"></div>
@@ -338,7 +338,7 @@ export function ModernFooter() {
               </Button>
               <Button
                 variant="outline"
-                className="h-auto justify-start rounded-2xl border-slate-600 bg-slate-900 px-4 py-3 text-white hover:bg-slate-700"
+                className="h-auto justify-start rounded-2xl border-slate-600 bg-slate-900 px-4 py-2.5 text-white hover:bg-slate-700"
               >
                 <div className="flex items-center gap-2">
                   <div className="h-5 w-5 rounded-sm bg-white"></div>

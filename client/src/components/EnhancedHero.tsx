@@ -53,10 +53,10 @@ export interface EnhancedHeroProps {
 const HERO_CATEGORIES = [
   { id: 'buy', label: 'Buy', mobileLabel: 'Buy', icon: Home },
   { id: 'rental', label: 'Rental', mobileLabel: 'Rent', icon: Key },
-  { id: 'projects', label: 'Developments', mobileLabel: 'Projects', icon: Building2 },
+  { id: 'projects', label: 'Developments', mobileLabel: 'Developments', icon: Building2 },
   { id: 'pg', label: 'Shared Living', mobileLabel: 'Shared', icon: Users },
-  { id: 'plot', label: 'Plot & Land', mobileLabel: 'Plots', icon: MapPinned },
-  { id: 'commercial', label: 'Commercial', mobileLabel: 'Other', icon: Briefcase },
+  { id: 'plot', label: 'Plots & Land', mobileLabel: 'Plots & Land', icon: MapPinned },
+  { id: 'commercial', label: 'Commercial', mobileLabel: 'Commercial', icon: Briefcase },
   { id: 'agents', label: 'Agents', mobileLabel: 'Agents', icon: Users },
 ] as const;
 
@@ -85,6 +85,7 @@ export function EnhancedHero({
   const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
   // computed for backward compatibility in single-select logic
   const selectedLocation = selectedLocations.length === 1 ? selectedLocations[0] : null;
+  const hasActiveSearchInput = searchQuery.trim().length > 0 || selectedLocations.length > 0;
 
   // Filter panel state
   const [showFilters, setShowFilters] = useState(false);
@@ -490,9 +491,9 @@ export function EnhancedHero({
       {/* Grid Pattern Overlay - Dark stroke for light bg */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAyMDYxNyIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlQikiLz48L3N2Zz4=')] opacity-30 mix-blend-multiply"></div>
 
-      <div className="container relative z-10 flex flex-col py-4 md:py-24">
+      <div className="container relative z-10 flex flex-col py-3 md:py-24">
         {/* Hero Title */}
-        <div className="order-3 mx-auto mt-2 mb-3 max-w-4xl text-center sm:order-1 sm:mt-0 sm:mb-6">
+        <div className="mt-1.5 mb-7 max-w-[22rem] text-left sm:mx-auto sm:mt-0 sm:mb-6 sm:max-w-4xl sm:text-center">
           {title ? (
             // Location / Context Title
             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight text-blue-950">
@@ -500,17 +501,19 @@ export function EnhancedHero({
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="mb-2 text-[1.8rem] font-bold leading-[1.06] tracking-tight text-blue-950 sm:mb-4 sm:text-2xl md:text-4xl lg:text-5xl">
-              <span className="block sm:inline">South Africa&apos;s</span>{' '}
-              <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
-                Fastest Growing
+            <h1 className="mb-0 text-[1.4rem] font-bold leading-[1.1] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-2xl sm:tracking-tight md:text-4xl lg:text-5xl">
+              <span className="block">
+                South Africa&apos;s{' '}
+                <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+                  Fastest Growing
+                </span>
               </span>
               <br />
               <span className="block">Real Estate Platform</span>
             </h1>
           )}
 
-          <p className="mx-auto max-w-[19rem] animate-fade-in text-[0.95rem] leading-7 text-slate-600 sm:max-w-2xl sm:text-base md:text-lg md:leading-relaxed">
+          <p className="hidden animate-fade-in text-[0.98rem] leading-7 text-slate-600 sm:mx-auto sm:block sm:max-w-2xl sm:text-base md:text-lg md:leading-relaxed">
             {subtitle || (
               <>
                 Your dream home is just a search away.
@@ -525,8 +528,8 @@ export function EnhancedHero({
         </div>
 
         {/* Categories/Tabs */}
-        <div className="order-1 mb-3 sm:order-2 sm:mb-8">
-          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
+        <div className="mb-4 sm:mb-8">
+          <div className="-mx-4 overflow-x-auto px-4 scrollbar-hide sm:mx-0 sm:overflow-visible sm:px-0">
             <div className="flex min-w-max items-stretch gap-0.5 sm:hidden">
               {HERO_CATEGORIES.map(category => {
                 const Icon = category.icon;
@@ -536,20 +539,20 @@ export function EnhancedHero({
                   <button
                     key={category.id}
                     onClick={() => handleCategoryClick(category.id)}
-                    className={`relative flex min-w-[4rem] flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-1.5 text-[0.61rem] font-semibold transition-all ${
+                    className={`relative flex min-w-[3.7rem] flex-col items-center justify-center gap-0.5 rounded-2xl border px-1.5 py-1.5 text-[0.58rem] font-semibold transition-all ${
                       isActive
                         ? 'border-blue-100 bg-white/95 text-blue-700 shadow-sm'
                         : 'border-transparent bg-transparent text-slate-500'
                     }`}
                   >
                     <span
-                      className={`flex h-8 w-8 items-center justify-center rounded-2xl ${
+                      className={`flex h-7 w-7 items-center justify-center rounded-2xl ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-200/70'
                           : 'bg-white/85 text-slate-500 shadow-sm'
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-3.5 w-3.5" />
                     </span>
                     <span className="leading-tight text-center">{category.mobileLabel}</span>
                     {isActive ? (
@@ -560,7 +563,7 @@ export function EnhancedHero({
               })}
             </div>
 
-            <div className="hidden sm:inline-flex bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-slate-200/50 overflow-x-auto max-w-[95vw] sm:max-w-none scrollbar-hide">
+            <div className="hidden rounded-full border border-slate-200/50 bg-white/90 p-1.5 shadow-lg backdrop-blur-md scrollbar-hide sm:mx-auto sm:inline-flex sm:w-fit sm:max-w-none sm:overflow-visible">
               {HERO_CATEGORIES.map(category => {
                 const Icon = category.icon;
                 const isActive = normalizedActiveTab === category.id;
@@ -587,11 +590,11 @@ export function EnhancedHero({
         </div>
 
         {/* Search Card */}
-        <div className="order-2 mx-auto w-full max-w-5xl sm:order-3">
+        <div className="mx-auto w-full max-w-5xl">
           <Card className="rounded-[1rem] border-0 bg-white/95 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:shadow-2xl">
             <CardContent className="p-2 sm:p-4 md:p-6">
               {/* Main Search Row */}
-              <div className="flex flex-col gap-2.5 md:flex-row sm:gap-4">
+              <div className="flex flex-col gap-2 md:flex-row sm:gap-4">
                 {/* Unified Search Input */}
                 <div className="flex-1 relative group">
                   {/* Search Icon */}
@@ -600,7 +603,7 @@ export function EnhancedHero({
                   <LocationAutosuggest
                     placeholder="Search by city, suburb, or area..."
                     className="w-full"
-                    inputClassName="h-10 w-full rounded-2xl border-2 bg-transparent pl-11 pr-24 text-[15px] transition-colors hover:border-primary/50 focus:border-primary sm:h-14 sm:text-base"
+                    inputClassName="h-10 w-full rounded-2xl border-2 bg-transparent pl-11 pr-20 text-[15px] transition-colors hover:border-primary/50 focus:border-primary sm:h-14 sm:pr-24 sm:text-base"
                     showIcon={false}
                     selectedLocations={selectedLocations}
                     onRemove={index => {
@@ -631,11 +634,23 @@ export function EnhancedHero({
                   />
 
                   {/* Action Buttons (Voice/Location) */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 z-10">
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1.5 z-10">
+                    <Button
+                      onClick={handleSearch}
+                      size="icon"
+                      className={`h-8.5 w-8.5 rounded-xl shadow-sm transition-all sm:hidden ${
+                        hasActiveSearchInput
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                      }`}
+                      title="Search"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:h-10 sm:w-10"
+                      className="hidden h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:inline-flex sm:h-10 sm:w-10"
                       title="Use current location"
                     >
                       <MapPinned className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -654,7 +669,7 @@ export function EnhancedHero({
                 {/* Search Button */}
                 <Button
                   onClick={handleSearch}
-                  className="h-10 min-w-[100px] rounded-2xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:h-14 sm:min-w-[140px] sm:px-8 sm:text-base"
+                  className="hidden h-10 min-w-[100px] rounded-2xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:inline-flex sm:h-14 sm:min-w-[140px] sm:px-8 sm:text-base"
                   size="lg"
                 >
                   {isCountLoading ? (

@@ -118,6 +118,16 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
+function formatRateLabel(value: number): string {
+  if (value <= 0) return 'Data soon';
+  return `${formatMoney(value)}/m2`;
+}
+
+function formatListingLabel(value: number, label: string): string {
+  if (value <= 0) return label;
+  return `${formatCount(value)} ${label}`;
+}
+
 function getCitySlug(cityName: string): string {
   return cityName.toLowerCase().replace(/\s+/g, '-');
 }
@@ -130,7 +140,7 @@ export function TopLocalities({
   const [selectedCity, setSelectedCity] = useState('Cape Town');
 
   const defaultTitle = `Top Suburbs in ${locationName}`;
-  const defaultSubtitle = `Discover ${locationName}${locationName.endsWith('s') ? "'" : "'s"} top suburbs based on demand, listing activity, and market momentum.`;
+  const defaultSubtitle = `Discover ${locationName}${locationName.endsWith('s') ? "'" : "'s"} top suburbs by demand, listing activity, and market momentum.`;
 
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
@@ -207,7 +217,7 @@ export function TopLocalities({
     <div className="py-10 md:py-16">
       <div className="container">
         <div className="mb-6 md:mb-8">
-          <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
@@ -260,11 +270,10 @@ export function TopLocalities({
                                   {locality.name}
                                 </h3>
                                 <div className="flex items-center gap-2 text-xs">
-                                  <div className="flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
+                                  <div className="inline-flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
                                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                    <span className="font-bold text-yellow-700">-</span>
+                                    <span className="font-bold text-yellow-700">Top suburb</span>
                                   </div>
-                                  <span className="text-muted-foreground text-[10px]">Market pulse</span>
                                 </div>
                               </div>
                             </div>
@@ -276,10 +285,7 @@ export function TopLocalities({
                                 Avg. Sale
                               </p>
                               <p className="font-bold text-sm text-gray-900 truncate">
-                                {formatMoney(locality.avgSalePrice)}
-                                <span className="text-[10px] text-muted-foreground font-normal">
-                                  /m2
-                                </span>
+                                {formatRateLabel(locality.avgSalePrice)}
                               </p>
                             </div>
                             <div>
@@ -287,10 +293,7 @@ export function TopLocalities({
                                 Avg. Rent
                               </p>
                               <p className="font-bold text-sm text-gray-900 truncate">
-                                {formatMoney(locality.avgRentalPrice)}
-                                <span className="text-[10px] text-muted-foreground font-normal">
-                                  /m2
-                                </span>
+                                {formatRateLabel(locality.avgRentalPrice)}
                               </p>
                             </div>
                           </div>
@@ -302,7 +305,7 @@ export function TopLocalities({
                             >
                               <div className="min-w-0">
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
-                                  {formatCount(locality.propertiesForSale)} For Sale
+                                  {formatListingLabel(locality.propertiesForSale, 'For Sale homes')}
                                 </p>
                                 <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
                               </div>
@@ -316,7 +319,7 @@ export function TopLocalities({
                             >
                               <div className="min-w-0">
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
-                                  {formatCount(locality.propertiesForRent)} For Rent
+                                  {formatListingLabel(locality.propertiesForRent, 'For Rent homes')}
                                 </p>
                                 <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
                               </div>
