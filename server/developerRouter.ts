@@ -803,6 +803,8 @@ export const developerRouter = router({
         developmentName?: string | null;
         badges?: string[];
       };
+      type ListingFeedItem = FeedItem & { kind: 'listing' };
+      type UnitFeedItem = FeedItem & { kind: 'unit' };
 
       const normalizeDevImage = (images: any): string => {
         if (!images) return '';
@@ -922,7 +924,7 @@ export const developerRouter = router({
           : normalizedType;
       };
 
-      const mapListing = (prop: any): FeedItem => ({
+      const mapListing = (prop: any): ListingFeedItem => ({
         id: String(prop.id),
         kind: 'listing' as const,
         title: buildListingTitle(prop),
@@ -944,7 +946,7 @@ export const developerRouter = router({
           : [],
       });
 
-      const mapUnitListing = (item: any): FeedItem => ({
+      const mapUnitListing = (item: any): UnitFeedItem => ({
         id: String(item.id),
         kind: 'unit' as const,
         title: item.title,

@@ -75,6 +75,7 @@ export interface PropertyCardProps {
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
   id,
+  href,
   title,
   price,
   location,
