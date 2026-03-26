@@ -23,7 +23,7 @@ describe('properties.searchDevelopmentListings contract', () => {
           id: 'dev-10-unit-a',
           unitTypeId: 'unit-a',
           developmentId: 10,
-          title: '2 Bedroom Apartment for Sale in Berea',
+          title: '2 Bedroom Apartment for Sale',
           price: 1200000,
           city: 'Johannesburg',
           suburb: 'Berea',
@@ -35,7 +35,7 @@ describe('properties.searchDevelopmentListings contract', () => {
           bedrooms: 2,
           bathrooms: 2,
           images: [],
-          badges: ['Off-plan', 'Part of Demo Development'],
+          badges: ['Off-plan'],
           listedDate: new Date('2026-03-20T00:00:00.000Z'),
           development: {
             id: 10,

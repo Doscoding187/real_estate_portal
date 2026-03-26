@@ -51,7 +51,7 @@ export function SimpleDevelopmentUnitCard({
   bathrooms,
   unitSize,
   yardSize,
-  badgeLabel = 'New Development',
+  badgeLabel = 'New development',
 }: SimpleDevelopmentUnitCardProps) {
   const locationLabel = suburb ? `${suburb}, ${city}` : city;
   const resolvedImage = withApiBase(image);
@@ -112,25 +112,19 @@ export function SimpleDevelopmentUnitCard({
           />
         )}
 
-        <div className="absolute left-2.5 top-2.5 z-20 flex flex-col gap-1.5">
-          <span className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700 shadow-sm">
+        <div className="absolute left-2.5 top-2.5 z-20">
+          <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-semibold text-slate-700 shadow-sm">
             {badgeLabel}
-          </span>
-          <span className="rounded-full bg-[#2774AE]/95 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm">
-            Part of {developmentName}
           </span>
         </div>
       </div>
 
       <div className="p-4">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2774AE]">
-          Development unit
-        </div>
         <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">
           {formatPrice(priceFrom, priceTo)}
         </div>
 
-        <h3 className="mb-1 line-clamp-2 text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">
+        <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">
           {title}
         </h3>
 

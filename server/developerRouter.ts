@@ -801,6 +801,7 @@ export const developerRouter = router({
         unitSize?: number | null;
         propertyType?: string | null;
         developmentName?: string | null;
+        developmentKey?: string | null;
         badges?: string[];
       };
       type ListingFeedItem = FeedItem & { kind: 'listing' };
@@ -967,6 +968,9 @@ export const developerRouter = router({
         yardSize: Number(item.erfSize || 0) || null,
         propertyType: item.propertyType || null,
         developmentName: String(item.development?.name || '').trim() || null,
+        developmentKey:
+          String(item.development?.id || item.developmentId || item.development?.slug || '').trim() ||
+          null,
         badges: Array.isArray(item.badges)
           ? item.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
           : [],

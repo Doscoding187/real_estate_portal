@@ -109,7 +109,7 @@ describe('DevelopmentDerivedListingService', () => {
       id: 'dev-42-unit-2-bed',
       unitTypeId: 'unit-2-bed',
       developmentId: 42,
-      title: '2 Bed Apartment for Sale in Berea',
+      title: '2 Bed Apartment',
       price: 1195000,
       priceTo: 1395000,
       propertyType: 'apartment',
@@ -134,7 +134,7 @@ describe('DevelopmentDerivedListingService', () => {
       },
     });
     expect(result.items[0].badges).toContain('Off-plan');
-    expect(result.items[0].badges).toContain('Part of The Junction');
+    expect(result.items[0].badges).not.toContain('Part of The Junction');
     expect(result.items[0].image).toBe('https://example.com/unit-primary.jpg');
   });
 });

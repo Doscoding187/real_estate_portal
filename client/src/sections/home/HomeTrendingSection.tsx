@@ -189,7 +189,7 @@ export function HomeTrendingSection({
                         bathrooms={item.bathrooms}
                         unitSize={item.unitSize}
                         yardSize={item.yardSize}
-                        badgeLabel="New Development"
+                        badgeLabel="New development"
                       />
                     ) : (
                       <SimpleDevelopmentCard

@@ -163,7 +163,6 @@ function deriveStageBadge(row: any): string | null {
 function buildListingTitle(row: any, propertyType: Property['propertyType']): string {
   const bedrooms = Number(row.bedrooms || 0);
   const unitName = String(row.unitName || '').trim();
-  const suburb = String(row.suburb || row.city || '').trim();
   const listingType = mapTransactionTypeToListingType(row.transactionType);
   const action = listingType === 'rent' ? 'to Rent' : 'for Sale';
   const propertyLabel =
@@ -178,14 +177,14 @@ function buildListingTitle(row: any, propertyType: Property['propertyType']): st
             : 'Apartment';
 
   if (unitName) {
-    return `${unitName} ${action} in ${suburb}`.trim();
+    return unitName;
   }
 
   if (bedrooms > 0) {
-    return `${bedrooms} Bedroom ${propertyLabel} ${action} in ${suburb}`.trim();
+    return `${bedrooms} Bedroom ${propertyLabel} ${action}`.trim();
   }
 
-  return `${propertyLabel} ${action} in ${suburb}`.trim();
+  return `${propertyLabel} ${action}`.trim();
 }
 
 function buildSort(sortOption: SortOption) {
@@ -361,7 +360,7 @@ export class DevelopmentDerivedListingService {
           erfSize: toNumberOrNull(row.yardSize) ?? undefined,
           image,
           images: image ? [{ url: image, thumbnailUrl: image }] : [],
-          badges: [stageBadge, `Part of ${row.developmentName}`].filter(Boolean) as string[],
+          badges: [stageBadge].filter(Boolean) as string[],
           availableUnits: toNumberOrNull(row.availableUnits) ?? undefined,
           completionDate: row.completionDate || null,
           listedDate: new Date(row.unitCreatedAt || row.developmentCreatedAt || new Date()),
