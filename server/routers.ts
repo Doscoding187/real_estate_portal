@@ -499,6 +499,7 @@ export const appRouter = router({
               city: z.string().optional(),
               province: z.string().optional(),
               suburb: z.array(z.string()).optional(),
+              locations: z.array(z.string()).optional(),
               propertyType: z.string().optional(),
               listingType: z.string().optional(),
               listingSource: z.enum(['manual', 'development']).optional(),
