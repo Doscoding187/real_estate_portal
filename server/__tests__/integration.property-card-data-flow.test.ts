@@ -3,12 +3,13 @@ import { eq } from 'drizzle-orm';
 
 import { getDb } from '../db-connection';
 import { propertySearchService } from '../services/propertySearchService';
-import { agencies, agents, properties, propertyImages, users } from '../../drizzle/schema';
+import { agencies, agents, listingMedia, listings, properties, propertyImages, users } from '../../drizzle/schema';
 
 describe('Property Card Data Flow Integration', () => {
   let createdUserId: number | null = null;
   let createdAgencyId: number | null = null;
   let createdAgentId: number | null = null;
+  let createdListingId: number | null = null;
   let createdPropertyId: number | null = null;
   let skipTests = false;
 
@@ -34,6 +35,12 @@ describe('Property Card Data Flow Integration', () => {
       await db.delete(propertyImages).where(eq(propertyImages.propertyId, createdPropertyId));
       await db.delete(properties).where(eq(properties.id, createdPropertyId));
       createdPropertyId = null;
+    }
+
+    if (createdListingId) {
+      await db.delete(listingMedia).where(eq(listingMedia.listingId, createdListingId));
+      await db.delete(listings).where(eq(listings.id, createdListingId));
+      createdListingId = null;
     }
 
     if (createdAgentId) {
@@ -161,5 +168,127 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched.agent?.name).toBe('Jane Agent');
     expect(matched.agent?.agency).toBe(`Wizard Realty ${suffix}`);
     expect(matched.agent?.image).toBe(profileImage);
+  });
+
+  it('falls back to source listing media when searchable property images are missing', async () => {
+    if (skipTests) return;
+
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const suffix = Date.now();
+    const email = `property-card-fallback-${suffix}@example.com`;
+    const listingImage = `https://cdn.example.com/properties/source-listing-${suffix}.jpg`;
+
+    const userInsert = await db!.insert(users).values({
+      email,
+      name: 'Fallback Owner',
+      role: 'agent',
+      emailVerified: 1,
+    });
+    createdUserId = getInsertId(userInsert);
+
+    const agencyInsert = await db!.insert(agencies).values({
+      name: `Fallback Realty ${suffix}`,
+      slug: `fallback-realty-${suffix}`,
+      isVerified: 1,
+    });
+    createdAgencyId = getInsertId(agencyInsert);
+
+    const agentInsert = await db!.insert(agents).values({
+      userId: createdUserId,
+      agencyId: createdAgencyId,
+      firstName: 'John',
+      lastName: 'Agent',
+      displayName: 'John Agent',
+      phone: '+27110002222',
+      email,
+      whatsapp: '+27110002222',
+      isVerified: 1,
+      isFeatured: 0,
+      status: 'approved',
+    });
+    createdAgentId = getInsertId(agentInsert);
+
+    const listingInsert = await db!.insert(listings).values({
+      ownerId: createdUserId,
+      agentId: createdAgentId,
+      agencyId: createdAgencyId,
+      action: 'sell',
+      propertyType: 'house',
+      title: `Fallback Listing ${suffix}`,
+      description: 'Listing source media should appear on search cards.',
+      askingPrice: '875000.00',
+      propertyDetails: {
+        bedrooms: 2,
+        bathrooms: 1,
+        houseAreaM2: 90,
+      },
+      address: '1 Source Listing Road',
+      latitude: '-26.3000000',
+      longitude: '28.1000000',
+      city: 'Alberton',
+      suburb: 'Sky City',
+      province: 'Gauteng',
+      slug: `fallback-listing-${suffix}`,
+      status: 'published',
+      approvalStatus: 'approved',
+    });
+    createdListingId = getInsertId(listingInsert);
+
+    await db!.insert(listingMedia).values({
+      listingId: createdListingId,
+      mediaType: 'image',
+      originalUrl: listingImage,
+      displayOrder: 0,
+      isPrimary: 1,
+      processingStatus: 'completed',
+    });
+
+    const propertyInsert = await db!.insert(properties).values({
+      title: `Fallback Property ${suffix}`,
+      description: 'Property row is missing image sync and should fall back to listing media.',
+      propertyType: 'house',
+      listingType: 'sale',
+      transactionType: 'sale',
+      price: 875000,
+      bedrooms: 2,
+      bathrooms: 1,
+      area: 90,
+      address: '1 Source Listing Road',
+      city: 'Alberton',
+      suburb: 'Sky City',
+      province: 'Gauteng',
+      latitude: '-26.3000',
+      longitude: '28.1000',
+      amenities: 'Security',
+      status: 'available',
+      featured: 0,
+      views: 0,
+      enquiries: 0,
+      agentId: createdAgentId,
+      ownerId: createdUserId,
+      sourceListingId: createdListingId,
+      propertySettings: JSON.stringify({
+        propertySetting: 'freehold',
+        houseAreaM2: 90,
+        bedrooms: 2,
+        bathrooms: 1,
+      }),
+      mainImage: null,
+    });
+    createdPropertyId = getInsertId(propertyInsert);
+
+    const result = await propertySearchService.searchProperties(
+      { locations: ['alberton'], listingType: 'sale' },
+      'date_desc',
+      1,
+      20,
+    );
+
+    const matched = result.properties.find(p => Number(p.id) === createdPropertyId) as any;
+    expect(matched).toBeTruthy();
+    expect(matched.mainImage).toBe(listingImage);
+    expect(matched.images?.[0]?.url).toBe(listingImage);
   });
 });

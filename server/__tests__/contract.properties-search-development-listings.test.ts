@@ -92,4 +92,28 @@ describe('properties.searchDevelopmentListings contract', () => {
       hasMore: false,
     });
   });
+
+  it('passes locations slug filters through to development-derived search', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await caller.properties.searchDevelopmentListings({
+      locations: ['alberton'],
+      limit: 20,
+      offset: 0,
+      listingType: 'sale',
+    });
+
+    expect(mockSearchListings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locations: ['alberton'],
+      }),
+      'date_desc',
+      1,
+      20,
+    );
+  });
 });

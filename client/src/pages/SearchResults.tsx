@@ -172,6 +172,7 @@ export default function SearchResults({
       city: filters.city,
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+      locations: filters.locations?.map(l => l.slug),
       propertyType: filters.propertyType as any,
       listingType: filters.listingType as any,
       minPrice: filters.minPrice,

@@ -435,6 +435,7 @@ export const appRouter = router({
           province: z.string().optional(),
           city: z.string().optional(),
           suburb: z.array(z.string()).optional(),
+          locations: z.array(z.string()).optional(),
           propertyType: z
             .enum(['house', 'apartment', 'townhouse', 'plot', 'commercial'])
             .optional(),
@@ -459,6 +460,7 @@ export const appRouter = router({
           province: input.province,
           city: input.city,
           suburb: input.suburb,
+          locations: input.locations,
           propertyType: input.propertyType ? [input.propertyType as any] : undefined,
           listingType: input.listingType as any,
           minPrice: input.minPrice,
