@@ -406,15 +406,6 @@ export default function PropertyDetail(props: PropertyDetailProps) {
         )
         .filter(Boolean)
     : [];
-  const isDeveloperListing = contactMode === 'developer';
-  const listingContextLabel =
-    contactMode === 'developer'
-      ? 'New Development'
-      : contactMode === 'agent'
-        ? 'Listed by Agent'
-        : contactMode === 'private'
-          ? 'Private Listing'
-          : null;
   const development = property.development;
   const developmentName = String(development?.name || '').trim();
   const developmentHref = developmentName
@@ -501,56 +492,31 @@ export default function PropertyDetail(props: PropertyDetailProps) {
         calculatedAt: new Date().toISOString(),
       }
     : undefined;
-  const bestContactChannel = whatsappNumber
-    ? 'WhatsApp'
-    : directPhone
-      ? 'Call'
-      : directEmail
-        ? 'Email'
-        : 'Platform Enquiry';
-  const contactSummaryItems = [
-    {
-      key: 'role',
-      label: 'Role',
-      value:
-        contactMode === 'developer'
-          ? 'Development Team'
-          : contactMode === 'private'
-            ? 'Private Seller'
-            : 'Registered Agent',
-    },
-    {
-      key: 'channel',
-      label: 'Best Channel',
-      value: bestContactChannel,
-    },
-    listingContextLabel
-      ? {
-          key: 'listing',
-          label: 'Listing',
-          value: listingContextLabel,
-        }
-      : null,
-    contactIdentity?.agency
-      ? {
-          key: 'agency',
-          label: 'Agency',
-          value: String(contactIdentity.agency),
-        }
-      : developmentName && contactMode === 'developer'
-        ? {
-            key: 'development',
-            label: 'Development',
-            value: developmentName,
-          }
-        : null,
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
+  const contactBadgeLabel =
+    contactMode === 'developer'
+      ? 'New Development'
+      : contactMode === 'agent'
+        ? 'Registered Agent'
+        : contactMode === 'private'
+          ? 'Owner Listed'
+          : null;
   const contactIntro =
     contactMode === 'developer'
-      ? 'Reach the development contact for availability, pricing, and next steps.'
+      ? 'Reach the development contact for pricing, availability, and next steps.'
       : contactMode === 'private'
         ? 'You are contacting the owner directly through Property Listify.'
-        : 'Connect with the registered agent handling this listing.';
+        : 'Connect directly with the agent handling this listing.';
+  const contactSubline =
+    contactMode === 'developer'
+      ? developmentName || 'New development listing'
+      : contactIdentity?.agency
+        ? String(contactIdentity.agency)
+        : 'Available through Property Listify';
+  const contactAvailabilityItems = [
+    whatsappNumber ? 'WhatsApp available' : null,
+    directPhone ? 'Call available' : null,
+    directEmail ? 'Email available' : null,
+  ].filter(Boolean) as string[];
   const hasCoordinates =
     Number.isFinite(Number(property.latitude)) &&
     Number.isFinite(Number(property.longitude)) &&
@@ -727,11 +693,6 @@ export default function PropertyDetail(props: PropertyDetailProps) {
   const handleOpenStandardEnquiry = () => {
     openContactModal();
   };
-  const handleCallContact = () => {
-    if (directPhone) {
-      window.open(`tel:${directPhone}`);
-    }
-  };
   const handleWhatsAppContact = (message?: string) => {
     if (!whatsappNumber) return;
 
@@ -842,25 +803,13 @@ export default function PropertyDetail(props: PropertyDetailProps) {
             <Breadcrumbs items={breadcrumbItems} />
           </div>
 
-          {/* Top Row: Badges */}
+          {/* Top Row: Buyer-facing badges */}
           <div className="flex items-center gap-2 mb-4">
             {property.featured === 1 && (
               <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
                 FEATURED
               </Badge>
             )}
-            {listingContextLabel ? (
-              <Badge
-                variant="secondary"
-                className={
-                  isDeveloperListing
-                    ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
-                }
-              >
-                {listingContextLabel}
-              </Badge>
-            ) : null}
             {propertyBadges.slice(0, 2).map((badge: string) => (
               <Badge
                 key={badge}
@@ -926,14 +875,6 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               >
                 Shortlist
               </Button>
-              {hasPrimaryContactAction && (
-                <Button
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
-                  onClick={openQualification}
-                >
-                  Check If You Qualify
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -941,62 +882,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
 
       <div className="sticky top-16 z-30 hidden border-b border-slate-200 bg-white/95 backdrop-blur lg:block">
         <div className="container py-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Qualify Before You Enquire
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2.5">
-                <span className="text-base font-bold text-slate-900">
-                  {formatCurrency(displayPrice, { compact: false })}
-                </span>
-                <span className="text-xs text-slate-500">
-                  Est. {formatCurrency(displayRepayment, { compact: false })}/Pm
-                </span>
-                {qualificationStatusLabel && (
-                  <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
-                    {qualificationStatusLabel}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                className="h-9 min-w-[200px] bg-orange-500 px-4 text-sm text-white hover:bg-orange-600"
-                onClick={openQualification}
-              >
-                Check If You Qualify
-              </Button>
-              {whatsappNumber && (
-                <Button
-                  variant="outline"
-                  className="h-9 border-green-200 px-3 text-sm text-green-700 hover:bg-green-50"
-                  onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
-                >
-                  WhatsApp
-                </Button>
-              )}
-              {directPhone && (
-                <Button
-                  variant="outline"
-                  className="h-9 border-slate-200 px-3 text-sm text-slate-700 hover:bg-slate-50"
-                  onClick={handleCallContact}
-                >
-                  Call
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                className="h-9 border-slate-200 px-3 text-sm text-slate-700 hover:bg-slate-50"
-                onClick={handleOpenStandardEnquiry}
-              >
-                Send Enquiry
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {sectionNavItems.map(item => (
               <button
                 key={item.id}
@@ -1022,7 +908,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
           </div>
 
           {/* Right Column - Property Info */}
-          <div className="lg:col-span-5 space-y-12">
+          <div className="lg:col-span-5 space-y-8">
             {/* Price Section */}
             <div id="overview">
               <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
@@ -1100,50 +986,6 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                 </div>
               </div>
             )}
-
-            {/* Additional Rooms */}
-            {specs.additionalRooms && specs.additionalRooms.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-slate-400 mb-3">
-                  Additional rooms & Specifications
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {specs.additionalRooms.map(room => (
-                    <Badge
-                      key={room}
-                      variant="secondary"
-                      className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium"
-                    >
-                      {room}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Amenities */}
-            {highlights.length > 0 && (
-              <div>
-                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">
-                  Amenities & Features
-                </h3>
-                <div
-                  className={`grid gap-y-3 gap-x-4 ${
-                    highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
-                  }`}
-                >
-                  {highlights.map((amenity: string, index: number) => {
-                    const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
-                    return (
-                      <div key={index} className="flex items-center gap-3">
-                        <IconComponent className="h-5 w-5 text-orange-500" />
-                        <span className="capitalize text-slate-700 font-medium">{amenity}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1211,72 +1053,206 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               </Card>
             )}
 
-            {/* 2.3 Contact Overview */}
-            {contactMode !== 'unknown' && (
+            {/* 2.3 Additional Rooms */}
+            {specs.additionalRooms && specs.additionalRooms.length > 0 && (
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                    Additional Rooms & Specifications
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {specs.additionalRooms.map(room => (
+                      <Badge
+                        key={room}
+                        variant="secondary"
+                        className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium"
+                      >
+                        {room}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 2.4 Amenities */}
+            {highlights.length > 0 && (
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                    Amenities & Features
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div
+                    className={`grid gap-y-3 gap-x-4 ${
+                      highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
+                    }`}
+                  >
+                    {highlights.map((amenity: string, index: number) => {
+                      const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
+                      return (
+                        <div key={index} className="flex items-center gap-3">
+                          <IconComponent className="h-5 w-5 text-orange-500" />
+                          <span className="capitalize text-slate-700 font-medium">{amenity}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 2.5 Developer Brand Section (when property is linked to a brand profile) */}
+            {(property.developerBrand || property.developerBrandProfile) && (
+              <DeveloperBrandSection
+                brand={
+                  (property.developerBrand || property.developerBrandProfile) as DeveloperBrandData
+                }
+              />
+            )}
+
+            {/* 2.6 Location Decision Support */}
+            <section id="location" className="space-y-6">
+              <NearbyLandmarks
+                property={{
+                  id: property.id,
+                  title: property.title,
+                  latitude: property.latitude,
+                  longitude: property.longitude,
+                }}
+                overviewItems={locationOverviewItems}
+              />
+            </section>
+
+            {/* 2.7 Suburb Reviews & Insights */}
+            <Card id="reviews" className="border-slate-200 shadow-sm">
+              <CardContent className="p-6">
+                <SuburbInsights
+                  suburbId={Number(property.suburbId ?? 0)}
+                  suburbName={property.suburb || property.city || 'Selected area'}
+                  isDevelopment={!!property.developmentId}
+                />
+              </CardContent>
+            </Card>
+
+            {/* 2.8 Locality Guide */}
+            <LocalityGuide
+              suburb={property.suburb || property.city || 'Selected area'}
+              city={property.city || property.suburb || 'Selected area'}
+              province={property.province}
+            />
+          </div>
+
+          {/* RIGHT COLUMN (4 columns) */}
+          <div className="col-span-12 lg:col-span-4">
+            <div className="sticky top-24 space-y-4">
               <div
                 id="contact"
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
               >
-                <div className="mb-6 border-b border-slate-200 pb-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="bg-slate-950 px-5 py-5 text-white">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                    Ready to take the next step?
+                  </p>
+                  <div className="mt-2 text-2xl font-bold">
+                    {formatCurrency(displayPrice, { compact: false })}
+                  </div>
+                  <p className="mt-1 text-sm text-slate-300">
+                    Est. {formatCurrency(displayRepayment, { compact: false })}/Pm
+                  </p>
+                  {qualificationStatusLabel && (
+                    <Badge className="mt-3 border border-orange-300 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                      {qualificationStatusLabel}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="space-y-3 px-5 py-5">
+                  <Button
+                    className="h-11 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
+                    onClick={openQualification}
+                  >
+                    Check If You Qualify
+                  </Button>
+                  {whatsappNumber && (
+                    <Button
+                      variant="outline"
+                      className="h-11 w-full border-green-200 text-green-700 hover:bg-green-50"
+                      onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+                    >
+                      WhatsApp {contactRoleLabel || 'Contact'}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                    onClick={handleOpenStandardEnquiry}
+                  >
+                    Send Enquiry
+                  </Button>
+                  <p className="text-center text-xs leading-relaxed text-slate-500">
+                    Start with qualification, then enquire with your affordability context if you
+                    want a faster response.
+                  </p>
+                </div>
+              </div>
+
+              {contactMode !== 'unknown' && (
+                <Card className="border-slate-200 shadow-sm">
+                  <CardContent className="space-y-5 p-5">
                     <div>
-                      <h3 className="text-fluid-h3 font-bold text-slate-900">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {contactMode === 'developer'
                           ? 'Developer Contact'
                           : contactMode === 'private'
                             ? 'Seller Contact'
-                            : 'Agent Contact'}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-600">{contactIntro}</p>
+                            : 'Listing Agent'}
+                      </p>
                     </div>
-                    {listingContextLabel && (
-                      <Badge className="border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-700 hover:bg-orange-50">
-                        {listingContextLabel}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100">
+                    <div className="flex items-start gap-4">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
                         {contactIdentity?.image ? (
                           <img
                             src={contactIdentity.image}
                             alt={contactIdentity.name}
-                            className="w-full h-full object-cover"
+                            className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
+                          <div className="flex h-full w-full items-center justify-center bg-slate-200 text-xl font-bold text-slate-500">
                             {contactIdentity?.name?.charAt(0) || '?'}
                           </div>
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="text-lg font-bold text-slate-900">
-                          {contactIdentity?.name || 'Listing Contact'}
-                        </h4>
-                        {contactIdentity?.agency && (
-                          <p className="mt-1 text-sm text-slate-500">{contactIdentity.agency}</p>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-bold text-slate-900">
+                            {contactIdentity?.name || 'Listing Contact'}
+                          </h3>
+                          {contactBadgeLabel && (
+                            <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                              {contactBadgeLabel}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mt-1 text-sm font-medium text-slate-600">{contactSubline}</p>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                          {contactIntro}
+                        </p>
                       </div>
                     </div>
 
-                    {contactSummaryItems.length > 0 && (
-                      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        {contactSummaryItems.map(item => (
-                          <div
-                            key={item.key}
-                            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                    {contactAvailabilityItems.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {contactAvailabilityItems.map(item => (
+                          <span
+                            key={item}
+                            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
                           >
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                              {item.label}
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-900">
-                              {item.value}
-                            </p>
-                          </div>
+                            {item}
+                          </span>
                         ))}
                       </div>
                     )}
@@ -1318,13 +1294,13 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                             <Mail className="h-4 w-4" />
                             Email
                           </span>
-                          <span className="font-medium truncate ml-4">{directEmail}</span>
+                          <span className="ml-4 truncate font-medium">{directEmail}</span>
                         </a>
                       )}
                       {developmentHref && contactMode === 'developer' && (
                         <Button
                           variant="outline"
-                          className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
+                          className="h-12 w-full justify-between rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900"
                           onClick={() => setLocation(developmentHref)}
                         >
                           <span className="font-medium text-slate-700">View Development</span>
@@ -1332,142 +1308,40 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                         </Button>
                       )}
                     </div>
-                  </div>
 
-                  <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="space-y-3">
-                      <h4 className="text-lg font-semibold text-slate-900">Take the next step</h4>
-                      <p className="text-sm text-slate-600">
-                        Start with qualification, then send an enquiry with your affordability
-                        context or jump straight into a direct contact channel.
-                      </p>
-                      {qualificationSnapshot && (
-                        <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
-                            Qualification Status
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {qualificationSnapshot.resultTitle}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Your affordability summary can be included with your enquiry.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <Button
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg shadow-sm"
-                        onClick={openQualification}
-                      >
-                        Check If You Qualify
-                      </Button>
-                      {whatsappNumber && (
-                        <Button
-                          variant="outline"
-                          className="w-full h-12 rounded-lg border-green-200 text-green-700 hover:bg-green-50"
-                          onClick={() =>
-                            handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                          }
-                        >
-                          WhatsApp {contactRoleLabel || 'Contact'}
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        className="w-full h-12 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50"
-                        onClick={handleOpenStandardEnquiry}
-                      >
-                        Send Enquiry
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
-            {(property.developerBrand || property.developerBrandProfile) && (
-              <DeveloperBrandSection
-                brand={
-                  (property.developerBrand || property.developerBrandProfile) as DeveloperBrandData
-                }
-              />
-            )}
-
-            {/* 2.5 Location Decision Support */}
-            <section id="location" className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-fluid-h3 font-bold text-slate-900">Why This Area Works</h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Use location context, nearby places, and suburb reviews to judge fit before
-                      you contact the listing owner.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {locationOverviewItems.map(item => (
-                      <div
-                        key={item.key}
-                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600"
-                      >
-                        <span className="mr-1 text-slate-400">{item.label}:</span>
-                        <span className="text-slate-700">{item.value}</span>
+                    {qualificationSnapshot && (
+                      <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
+                          Qualification Status
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {qualificationSnapshot.resultTitle}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Your affordability summary can be carried into your enquiry or WhatsApp
+                          message.
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              <div id="buyability-calculator">
+                <BondCalculator
+                  propertyPrice={displayPrice}
+                  showTransferCosts={true}
+                  compact={true}
+                  ctaLabel="Check If You Qualify"
+                  onCtaClick={openQualification}
+                />
               </div>
 
-              <NearbyLandmarks
-                property={{
-                  id: property.id,
-                  title: property.title,
-                  latitude: property.latitude,
-                  longitude: property.longitude,
-                }}
-              />
-            </section>
-
-            {/* 2.6 Suburb Reviews & Insights */}
-            <Card id="reviews" className="border-slate-200 shadow-sm">
-              <CardContent className="p-6">
-                <SuburbInsights
-                  suburbId={Number(property.suburbId ?? 0)}
-                  suburbName={property.suburb || property.city || 'Selected area'}
-                  isDevelopment={!!property.developmentId}
-                />
-              </CardContent>
-            </Card>
-
-            {/* 2.7 Locality Guide */}
-            <LocalityGuide
-              suburb={property.suburb || property.city || 'Selected area'}
-              city={property.city || property.suburb || 'Selected area'}
-              province={property.province}
-            />
-          </div>
-
-          {/* RIGHT COLUMN (4 columns) */}
-          <div className="col-span-12 lg:col-span-4">
-            {/* Buyability Calculator - Sticky */}
-            <div id="buyability-calculator" className="sticky top-24 space-y-4">
-              <BondCalculator
-                propertyPrice={displayPrice}
-                showTransferCosts={true}
-                ctaLabel="Check If You Qualify"
-                onCtaClick={openQualification}
-              />
-
-              {/* Disclaimer */}
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <p className="text-[11px] leading-relaxed text-amber-900">
                   <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
                   approval, interest rates, and transfer costs may vary based on individual
-                  circumstances and bank policies. Consult with a bond originator or financial
-                  advisor for accurate figures.
+                  circumstances and bank policies.
                 </p>
               </div>
             </div>
@@ -1590,10 +1464,10 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       <PropertyMobileFooter
         agentName={contactIdentity?.name || 'Listing Contact'}
         onQualify={openQualification}
-        onCall={handleCallContact}
+        onEnquire={handleOpenStandardEnquiry}
         onWhatsApp={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
         canQualify={displayPrice > 0}
-        canCall={Boolean(directPhone)}
+        canEnquire={hasPrimaryContactAction}
         canWhatsApp={Boolean(whatsappNumber)}
       />
 
