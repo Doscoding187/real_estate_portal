@@ -106,6 +106,13 @@ interface ContactIdentityLite {
   whatsapp?: string;
   email?: string;
   agency?: string;
+  slug?: string;
+  areasServed?: string[];
+  yearsExperience?: number;
+  rating?: number;
+  reviewCount?: number;
+  activeListingsCount?: number;
+  isVerified?: boolean;
 }
 
 interface PropertyPayload {
@@ -353,18 +360,15 @@ export default function PropertyDetail(props: PropertyDetailProps) {
   const normalizedListerType = String(property.listerType || '')
     .trim()
     .toLowerCase();
-  const hasAgentIdentity = Boolean(agent?.id || agent?.name);
+  const hasAgentIdentity = Boolean(agent?.id || agent?.name || property.agentId);
   const hasDeveloperIdentity = Boolean(developerBrand?.id || developerBrand?.brandName);
-  const contactMode =
-    normalizedListerType === 'private'
-      ? 'private'
-      : normalizedListerType === 'agent' && hasAgentIdentity
-        ? 'agent'
-        : hasDeveloperIdentity
-          ? 'developer'
-          : hasAgentIdentity
-            ? 'agent'
-            : 'unknown';
+  const contactMode = hasAgentIdentity
+    ? 'agent'
+    : hasDeveloperIdentity
+      ? 'developer'
+      : normalizedListerType === 'private'
+        ? 'private'
+        : 'unknown';
   const contactRoleLabel =
     contactMode === 'private'
       ? 'Seller'
@@ -397,6 +401,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               whatsapp: undefined,
               email: undefined,
               agency: undefined,
+              areasServed: [],
             }
           : undefined;
   const propertyBadges = Array.isArray(specs.badges)
@@ -496,7 +501,9 @@ export default function PropertyDetail(props: PropertyDetailProps) {
     contactMode === 'developer'
       ? 'New Development'
       : contactMode === 'agent'
-        ? 'Registered Agent'
+        ? contactIdentity?.isVerified
+          ? 'Verified Agent'
+          : 'Registered Agent'
         : contactMode === 'private'
           ? 'Owner Listed'
           : null;
@@ -506,17 +513,50 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       : contactMode === 'private'
         ? 'You are contacting the owner directly through Property Listify.'
         : 'Connect directly with the agent handling this listing.';
+  const agentAgencyLabel =
+    contactMode === 'agent' ? String(contactIdentity?.agency || '').trim() || 'Independent' : '';
+  const agentPrimaryArea =
+    contactMode === 'agent' && Array.isArray(contactIdentity?.areasServed)
+      ? String(contactIdentity?.areasServed?.[0] || '').trim()
+      : '';
   const contactSubline =
     contactMode === 'developer'
       ? developmentName || 'New development listing'
-      : contactIdentity?.agency
-        ? String(contactIdentity.agency)
-        : 'Available through Property Listify';
+      : contactMode === 'agent'
+        ? [agentAgencyLabel, agentPrimaryArea].filter(Boolean).join(' · ') || 'Independent'
+        : '';
   const contactAvailabilityItems = [
     whatsappNumber ? 'WhatsApp available' : null,
     directPhone ? 'Call available' : null,
     directEmail ? 'Email available' : null,
   ].filter(Boolean) as string[];
+  const agentStats =
+    contactMode === 'agent'
+      ? ([
+          typeof contactIdentity?.activeListingsCount === 'number'
+            ? {
+                key: 'listings',
+                label: 'Listings',
+                value: String(contactIdentity.activeListingsCount),
+              }
+            : null,
+          {
+            key: 'rating',
+            label: 'Rating',
+            value:
+              typeof contactIdentity?.rating === 'number'
+                ? `${contactIdentity.rating.toFixed(1)}`
+                : '5.0',
+          },
+          typeof contactIdentity?.yearsExperience === 'number'
+            ? {
+                key: 'experience',
+                label: 'Experience',
+                value: `${contactIdentity.yearsExperience}yr`,
+              }
+            : null,
+        ].filter(Boolean) as Array<{ key: string; label: string; value: string }>)
+      : [];
   const hasCoordinates =
     Number.isFinite(Number(property.latitude)) &&
     Number.isFinite(Number(property.longitude)) &&
@@ -676,6 +716,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
         }
       : null,
   ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: LucideIcon }>;
+  const heroFeatureSpecItems = featureSpecItems.slice(0, 8);
   const openQualification = () => {
     setIsQualificationOpen(true);
   };
@@ -986,6 +1027,35 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                 </div>
               </div>
             )}
+
+            {heroFeatureSpecItems.length > 0 && (
+              <div id="features">
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">
+                  Property Features & Specifications
+                </h3>
+                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                  {heroFeatureSpecItems.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={item.key}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm"
+                      >
+                        <div className="mb-2 flex items-center gap-2 text-orange-500">
+                          <Icon className="h-4 w-4" />
+                          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                            {item.label}
+                          </p>
+                        </div>
+                        <p className="text-sm font-semibold leading-snug text-slate-900">
+                          {item.value}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1021,33 +1091,91 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               </Card>
             )}
 
-            {/* 2.2 Property Features / Specs Table (Dynamic) */}
-            {featureSpecItems.length > 0 && (
-              <Card id="features" className="border-slate-200 shadow-sm">
+            {/* 2.2 Listing Agent */}
+            {contactMode === 'agent' && contactIdentity && (
+              <Card className="border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Property Features & Specifications
+                    Listing Agent
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {featureSpecItems.map(item => {
-                      const Icon = item.icon;
-                      return (
-                        <div
-                          key={item.key}
-                          className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg"
-                        >
-                          <Icon className="h-5 w-5 text-orange-500 mt-0.5" />
-                          <div>
-                            <p className="text-sm text-slate-500">{item.label}</p>
-                            <p className="font-semibold text-slate-900" title={item.value}>
-                              {item.value}
+                <CardContent className="space-y-5 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                        {contactIdentity.image ? (
+                          <img
+                            src={contactIdentity.image}
+                            alt={contactIdentity.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-orange-100 text-xl font-bold text-orange-600">
+                            {contactIdentity.name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-bold text-slate-900">
+                            {contactIdentity.name || 'Listing Agent'}
+                          </h3>
+                          {contactBadgeLabel && (
+                            <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                              {contactBadgeLabel}
+                            </Badge>
+                          )}
+                        </div>
+                        {contactSubline && (
+                          <p className="mt-1 text-sm font-medium text-slate-600">
+                            {contactSubline}
+                          </p>
+                        )}
+                        <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                          {contactIntro}
+                        </p>
+                      </div>
+                    </div>
+
+                    {agentStats.length > 0 && (
+                      <div className="grid w-full grid-cols-3 gap-2 sm:max-w-[280px]">
+                        {agentStats.map(stat => (
+                          <div
+                            key={stat.key}
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
+                          >
+                            <p className="text-base font-bold text-slate-900">{stat.value}</p>
+                            <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                              {stat.label}
                             </p>
                           </div>
-                        </div>
-                      );
-                    })}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {whatsappNumber && (
+                      <Button
+                        className="h-11 bg-green-500 text-white hover:bg-green-600"
+                        onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        WhatsApp Agent
+                      </Button>
+                    )}
+                    {directPhone && (
+                      <Button
+                        variant="outline"
+                        className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
+                        asChild
+                      >
+                        <a href={`tel:${directPhone}`}>
+                          <Phone className="mr-2 h-4 w-4" />
+                          Call Agent
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1055,7 +1183,10 @@ export default function PropertyDetail(props: PropertyDetailProps) {
 
             {/* 2.3 Additional Rooms */}
             {specs.additionalRooms && specs.additionalRooms.length > 0 && (
-              <Card className="border-slate-200 shadow-sm">
+              <Card
+                id={heroFeatureSpecItems.length === 0 ? 'features' : undefined}
+                className="border-slate-200 shadow-sm"
+              >
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
                     Additional Rooms & Specifications
@@ -1079,7 +1210,15 @@ export default function PropertyDetail(props: PropertyDetailProps) {
 
             {/* 2.4 Amenities */}
             {highlights.length > 0 && (
-              <Card className="border-slate-200 shadow-sm">
+              <Card
+                id={
+                  heroFeatureSpecItems.length === 0 &&
+                  (!specs.additionalRooms || specs.additionalRooms.length === 0)
+                    ? 'features'
+                    : undefined
+                }
+                className="border-slate-200 shadow-sm"
+              >
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
                     Amenities & Features
@@ -1237,12 +1376,32 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                             </Badge>
                           )}
                         </div>
-                        <p className="mt-1 text-sm font-medium text-slate-600">{contactSubline}</p>
+                        {contactSubline && (
+                          <p className="mt-1 text-sm font-medium text-slate-600">
+                            {contactSubline}
+                          </p>
+                        )}
                         <p className="mt-2 text-sm leading-relaxed text-slate-500">
                           {contactIntro}
                         </p>
                       </div>
                     </div>
+
+                    {agentStats.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {agentStats.map(stat => (
+                          <div
+                            key={stat.key}
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
+                          >
+                            <p className="text-base font-bold text-slate-900">{stat.value}</p>
+                            <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                              {stat.label}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {contactAvailabilityItems.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -1268,7 +1427,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                         >
                           <span className="flex items-center gap-2 font-medium">
                             <MessageCircle className="h-4 w-4" />
-                            WhatsApp
+                            WhatsApp Agent
                           </span>
                           <span className="truncate pl-4 font-semibold">{whatsappNumber}</span>
                         </button>
@@ -1280,7 +1439,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                         >
                           <span className="flex items-center gap-2 font-medium">
                             <Phone className="h-4 w-4" />
-                            Call
+                            Call Agent
                           </span>
                           <span className="font-semibold">{directPhone}</span>
                         </a>
