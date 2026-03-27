@@ -183,7 +183,11 @@ export function SuburbInsights({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>I am a...</Label>
-                    <Select value={userType} onValueChange={setUserType} disabled={reviewsDisabled}>
+                    <Select
+                      value={userType}
+                      onValueChange={value => setUserType(value as ReviewUserType)}
+                      disabled={reviewsDisabled}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
@@ -264,10 +268,10 @@ export function SuburbInsights({
                 </Button>
                 <Button
                   onClick={handleSubmitReview}
-                  disabled={submitReviewMutation.isLoading || reviewsDisabled}
+                  disabled={submitReviewMutation.isPending || reviewsDisabled}
                   className="bg-orange-500 hover:bg-orange-600"
                 >
-                  {submitReviewMutation.isLoading ? (
+                  {submitReviewMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...
                     </>

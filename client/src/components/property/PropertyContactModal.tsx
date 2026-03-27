@@ -98,7 +98,7 @@ export function PropertyContactModal({
       });
       onClose();
     },
-    onError: (error: Error) => {
+    onError: error => {
       toast.error('Failed to send inquiry. Please try again.');
       console.error('Lead creation error:', error);
     },
@@ -147,7 +147,7 @@ export function PropertyContactModal({
             <Label htmlFor="inquiryType">Inquiry Type</Label>
             <Select
               value={formData.inquiryType}
-              onValueChange={value => handleChange('inquiryType', value)}
+              onValueChange={value => handleChange('inquiryType', value as InquiryType)}
             >
               <SelectTrigger id="inquiryType">
                 <SelectValue placeholder="Select inquiry type" />
@@ -249,12 +249,12 @@ export function PropertyContactModal({
               variant="outline"
               onClick={onClose}
               className="flex-1"
-              disabled={createLeadMutation.isLoading}
+              disabled={createLeadMutation.isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={createLeadMutation.isLoading}>
-              {createLeadMutation.isLoading ? (
+            <Button type="submit" className="flex-1" disabled={createLeadMutation.isPending}>
+              {createLeadMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Sending...

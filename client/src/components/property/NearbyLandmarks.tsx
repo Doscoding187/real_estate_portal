@@ -8,8 +8,8 @@ interface NearbyLandmarksProps {
   property: {
     id: number;
     title: string;
-    latitude: string | number;
-    longitude: string | number;
+    latitude?: string | number;
+    longitude?: string | number;
   };
 }
 
@@ -62,13 +62,14 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
     longitude !== 0;
 
   const activeTabConfig = TABS.find(t => t.id === activeTab);
+  const activeTabTypes = activeTabConfig ? [...activeTabConfig.types] : [];
 
   const { data: connectedPOIs, isLoading } = trpc.location.getNearbyAmenities.useQuery(
     {
       latitude: latitude || 0,
       longitude: longitude || 0,
       radius: 5000,
-      types: activeTabConfig?.types || [],
+      types: activeTabTypes,
       limit: 5,
     },
     {
@@ -121,8 +122,6 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
               {/* Interactive map overlay */}
               <div className="absolute inset-0">
                 <GooglePropertyMap
-                  center={{ lat: latitude as number, lng: longitude as number }}
-                  zoom={14}
                   minimal={true}
                   className="pointer-events-none"
                   properties={[

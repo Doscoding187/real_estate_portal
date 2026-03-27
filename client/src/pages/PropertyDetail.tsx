@@ -62,8 +62,11 @@ interface PropertyDetailProps {
 }
 
 interface PropertyImageLike {
+  id?: number;
   imageUrl?: string;
   url?: string;
+  isPrimary?: number;
+  displayOrder?: number;
 }
 
 interface PropertySpecs {
@@ -439,15 +442,35 @@ export default function PropertyDetail(props: PropertyDetailProps) {
   const similarListingsHref = `/properties${
     similarListingsQuery.toString() ? `?${similarListingsQuery.toString()}` : ''
   }`;
-  const propertyImages = (Array.isArray(images) ? images : [])
-    .map((image: PropertyImageLike) =>
-      typeof image?.imageUrl === 'string'
+  const propertyImages = (Array.isArray(images) ? images : []).filter(
+    (image): image is PropertyImageLike =>
+      Boolean(
+        (typeof image?.imageUrl === 'string' && image.imageUrl) ||
+        (typeof image?.url === 'string' && image.url),
+      ),
+  );
+  const propertyImageUrls = propertyImages
+    .map(image =>
+      typeof image.imageUrl === 'string'
         ? image.imageUrl
-        : typeof image?.url === 'string'
+        : typeof image.url === 'string'
           ? image.url
           : '',
     )
     .filter(Boolean);
+  const propertyGalleryImages = propertyImages
+    .map((image, index) => ({
+      id: image.id ?? index,
+      imageUrl:
+        typeof image.imageUrl === 'string'
+          ? image.imageUrl
+          : typeof image.url === 'string'
+            ? image.url
+            : '',
+      isPrimary: image.isPrimary,
+      displayOrder: image.displayOrder,
+    }))
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
   const houseSizeM2 = parseStrictNumber(rawPropertyDetails.houseAreaM2);
   const erfSizeM2 = parseStrictNumber(rawPropertyDetails.erfSizeM2);
   const unitSizeM2 = parseStrictNumber(rawPropertyDetails.unitSizeM2);
@@ -742,7 +765,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       name: property.title || 'Property',
       description: seoDescription,
       url: canonicalUrl,
-      images: propertyImages,
+      images: propertyImageUrls,
       address: {
         streetAddress: property.address,
         addressLocality: property.city,
@@ -806,7 +829,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
         canonicalUrl={canonicalUrl}
         title={seoTitle}
         description={seoDescription}
-        image={propertyImages[0]}
+        image={propertyImageUrls[0]}
         structuredData={propertyStructuredData}
       />
       <ListingNavbar />
@@ -994,7 +1017,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
           {/* Left Column - Image Gallery */}
           <div className="lg:col-span-7">
             <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white">
-              <PropertyImageGallery images={images} propertyTitle={property.title} />
+              <PropertyImageGallery images={propertyGalleryImages} propertyTitle={property.title} />
             </div>
           </div>
 
@@ -1048,7 +1071,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                         <div>
                           <p className="text-sm text-slate-400">House Size</p>
                           <p className="font-semibold text-slate-900">
-                            {property.area.toLocaleString()} m²
+                            {(property.area ?? 0).toLocaleString()} m²
                           </p>
                         </div>
                       </div>
@@ -1398,7 +1421,14 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                 </div>
               </div>
 
-              <NearbyLandmarks property={property} />
+              <NearbyLandmarks
+                property={{
+                  id: property.id,
+                  title: property.title,
+                  latitude: property.latitude,
+                  longitude: property.longitude,
+                }}
+              />
             </section>
 
             {/* 2.6 Suburb Reviews & Insights */}
@@ -1406,7 +1436,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               <CardContent className="p-6">
                 <SuburbInsights
                   suburbId={Number(property.suburbId ?? 0)}
-                  suburbName={property.suburb || property.city}
+                  suburbName={property.suburb || property.city || 'Selected area'}
                   isDevelopment={!!property.developmentId}
                 />
               </CardContent>
@@ -1414,8 +1444,8 @@ export default function PropertyDetail(props: PropertyDetailProps) {
 
             {/* 2.7 Locality Guide */}
             <LocalityGuide
-              suburb={property.suburb || property.city}
-              city={property.city}
+              suburb={property.suburb || property.city || 'Selected area'}
+              city={property.city || property.suburb || 'Selected area'}
               province={property.province}
             />
           </div>
