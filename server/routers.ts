@@ -6,8 +6,15 @@ import { systemRouter } from './_core/systemRouter';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import * as db from './db';
 import { getDb } from './db-connection';
-import { developments, developers, developerBrandProfiles, agents, agencies } from '../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import {
+  developments,
+  developers,
+  developerBrandProfiles,
+  agents,
+  agencies,
+  properties,
+} from '../drizzle/schema';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
 import { userRouter } from './userRouter';
@@ -29,6 +36,82 @@ function getUserId(ctx: { user: { id: number } | null }) {
 
 function getUser(ctx: { user: { id: number; role?: string } | null }) {
   return requireUser(ctx);
+}
+
+function parseTextList(value?: string | null) {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+async function getPropertyContactAgent(
+  drizzleDb: Awaited<ReturnType<typeof getDb>>,
+  agentId: number,
+) {
+  if (!drizzleDb || !Number.isFinite(agentId) || agentId <= 0) return null;
+
+  const [agentRow] = await drizzleDb
+    .select({
+      id: agents.id,
+      firstName: agents.firstName,
+      lastName: agents.lastName,
+      displayName: agents.displayName,
+      profileImage: agents.profileImage,
+      phone: agents.phone,
+      whatsapp: agents.whatsapp,
+      email: agents.email,
+      agencyId: agencies.id,
+      agencyName: agencies.name,
+      slug: agents.slug,
+      yearsExperience: agents.yearsExperience,
+      areasServed: agents.areasServed,
+      rating: agents.rating,
+      reviewCount: agents.reviewCount,
+      isVerified: agents.isVerified,
+    })
+    .from(agents)
+    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+    .where(and(eq(agents.id, agentId), eq(agents.status, 'approved')))
+    .limit(1);
+
+  if (!agentRow) return null;
+
+  const [activeListingsResult] = await drizzleDb
+    .select({ count: count() })
+    .from(properties)
+    .where(
+      and(
+        eq(properties.agentId, agentId),
+        inArray(properties.status, ['available', 'published'] as const),
+      ),
+    );
+
+  const name =
+    String(agentRow.displayName || '').trim() ||
+    [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
+
+  return {
+    id: String(agentRow.id),
+    name: name || 'Agent',
+    agency: String(agentRow.agencyName || '').trim(),
+    phone: String(agentRow.phone || '').trim(),
+    whatsapp: String(agentRow.whatsapp || '').trim(),
+    email: String(agentRow.email || '').trim(),
+    image: agentRow.profileImage || undefined,
+    agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
+    slug: String(agentRow.slug || '').trim() || undefined,
+    yearsExperience:
+      typeof agentRow.yearsExperience === 'number' && agentRow.yearsExperience >= 0
+        ? agentRow.yearsExperience
+        : undefined,
+    areasServed: parseTextList(agentRow.areasServed),
+    rating: typeof agentRow.rating === 'number' ? agentRow.rating : undefined,
+    reviewCount: typeof agentRow.reviewCount === 'number' ? agentRow.reviewCount : undefined,
+    activeListingsCount: Number(activeListingsResult?.count || 0),
+    isVerified: Number(agentRow.isVerified || 0) === 1,
+  };
 }
 import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
@@ -369,9 +452,8 @@ export const appRouter = router({
         }),
       )
       .query(async ({ input }) => {
-        const { developmentDerivedListingService } = await import(
-          './services/developmentDerivedListingService'
-        );
+        const { developmentDerivedListingService } =
+          await import('./services/developmentDerivedListingService');
 
         const filters = {
           province: input.province,
@@ -429,9 +511,8 @@ export const appRouter = router({
       .query(async ({ input }) => {
         try {
           const { propertySearchService } = await import('./services/propertySearchService');
-          const { developmentDerivedListingService } = await import(
-            './services/developmentDerivedListingService'
-          );
+          const { developmentDerivedListingService } =
+            await import('./services/developmentDerivedListingService');
           const filters = input.filters || {};
           const normalizedFilters = {
             ...filters,
@@ -482,7 +563,10 @@ export const appRouter = router({
 
           const priceRangeMap = new Map<string, number>();
           [...manualCounts.byPriceRange, ...developmentCounts.byPriceRange].forEach(item => {
-            priceRangeMap.set(item.range, (priceRangeMap.get(item.range) || 0) + Number(item.count || 0));
+            priceRangeMap.set(
+              item.range,
+              (priceRangeMap.get(item.range) || 0) + Number(item.count || 0),
+            );
           });
 
           return {
@@ -490,7 +574,9 @@ export const appRouter = router({
             byType: mergeCountMaps(manualCounts.byType, developmentCounts.byType),
             byBedrooms: mergeCountMaps(manualCounts.byBedrooms, developmentCounts.byBedrooms),
             byLocation: Array.from(locationMap.values())
-              .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name))
+              .sort(
+                (left, right) => right.count - left.count || left.name.localeCompare(right.name),
+              )
               .slice(0, 12),
             byPropertyType: mergeCountMaps(
               manualCounts.byPropertyType,
@@ -576,40 +662,8 @@ export const appRouter = router({
           let developerBrand: any = null;
           let agent: any = null;
 
-          if (drizzleDb && Number.isFinite(resolvedAgentId) && resolvedAgentId > 0) {
-            const [agentRow] = await drizzleDb
-              .select({
-                id: agents.id,
-                firstName: agents.firstName,
-                lastName: agents.lastName,
-                displayName: agents.displayName,
-                profileImage: agents.profileImage,
-                phone: agents.phone,
-                whatsapp: agents.whatsapp,
-                email: agents.email,
-                agencyId: agencies.id,
-                agencyName: agencies.name,
-              })
-              .from(agents)
-              .leftJoin(agencies, eq(agents.agencyId, agencies.id))
-              .where(eq(agents.id, resolvedAgentId))
-              .limit(1);
-
-            if (agentRow) {
-              const name =
-                String(agentRow.displayName || '').trim() ||
-                [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
-              agent = {
-                id: String(agentRow.id),
-                name: name || 'Agent',
-                agency: String(agentRow.agencyName || ''),
-                phone: String(agentRow.phone || ''),
-                whatsapp: String(agentRow.whatsapp || ''),
-                email: String(agentRow.email || ''),
-                image: agentRow.profileImage || undefined,
-                agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
-              };
-            }
+          if (drizzleDb) {
+            agent = await getPropertyContactAgent(drizzleDb, resolvedAgentId);
           }
 
           if (drizzleDb && Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
@@ -784,39 +838,7 @@ export const appRouter = router({
           const resolvedAgentId = Number((property as any).agentId || 0);
 
           if (Number.isFinite(resolvedAgentId) && resolvedAgentId > 0) {
-            const [agentRow] = await drizzleDb
-              .select({
-                id: agents.id,
-                firstName: agents.firstName,
-                lastName: agents.lastName,
-                displayName: agents.displayName,
-                profileImage: agents.profileImage,
-                phone: agents.phone,
-                whatsapp: agents.whatsapp,
-                email: agents.email,
-                agencyId: agencies.id,
-                agencyName: agencies.name,
-              })
-              .from(agents)
-              .leftJoin(agencies, eq(agents.agencyId, agencies.id))
-              .where(eq(agents.id, resolvedAgentId))
-              .limit(1);
-
-            if (agentRow) {
-              const name =
-                String(agentRow.displayName || '').trim() ||
-                [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
-              agent = {
-                id: String(agentRow.id),
-                name: name || 'Agent',
-                agency: String(agentRow.agencyName || ''),
-                phone: String(agentRow.phone || ''),
-                whatsapp: String(agentRow.whatsapp || ''),
-                email: String(agentRow.email || ''),
-                image: agentRow.profileImage || undefined,
-                agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
-              };
-            }
+            agent = await getPropertyContactAgent(drizzleDb, resolvedAgentId);
           }
 
           if (Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
