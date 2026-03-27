@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState } from 'react';
 import { MapPin, School, Heart, Bus, ShoppingBag, Ticket, Footprints, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,13 @@ interface NearbyLandmarksProps {
     latitude: string | number;
     longitude: string | number;
   };
+}
+
+interface NearbyAmenity {
+  id?: string | number;
+  name: string;
+  type?: string | null;
+  distance?: string | null;
 }
 
 const TABS = [
@@ -35,10 +41,12 @@ const TABS = [
     label: 'Entertainment',
     types: ['movie_theater', 'park', 'attraction', 'stadium'],
   },
-];
+] as const;
+
+type LandmarkTabId = (typeof TABS)[number]['id'];
 
 export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
-  const [activeTab, setActiveTab] = useState('Education');
+  const [activeTab, setActiveTab] = useState<LandmarkTabId>('Education');
 
   let latitude =
     typeof property.latitude === 'string' ? parseFloat(property.latitude) : property.latitude;
@@ -78,9 +86,21 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="p-6 pb-0">
-        <h3 className="text-xl font-bold text-slate-900 mb-6">Nearby Landmarks</h3>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Nearby Landmarks</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              See what sits within reach of this address before you enquire.
+            </p>
+          </div>
+          {hasValidCoordinates && (
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              5 km radius
+            </div>
+          )}
+        </div>
 
         {/* Map Preview with Static Fallback */}
         <div className="relative rounded-xl overflow-hidden border border-slate-200 h-[240px] mb-6 group">
@@ -91,9 +111,9 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
                 src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=800x400&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}`}
                 alt="Map location"
                 className="absolute inset-0 w-full h-full object-cover"
-                onError={e => {
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                   // Fallback to a generic map placeholder if static map fails
-                  (e.target as HTMLImageElement).src =
+                  e.currentTarget.src =
                     'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=400&fit=crop';
                 }}
               />
@@ -146,7 +166,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-3 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        <div className="mb-4 flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -175,7 +195,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
       </div>
 
       {/* POI List */}
-      <div className="px-6 min-h-[200px]">
+      <div className="min-h-[200px] px-6">
         {!hasValidCoordinates ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
             <MapPin className="h-8 w-8 text-slate-300 mb-2" />
@@ -187,7 +207,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
           </div>
         ) : connectedPOIs && connectedPOIs.length > 0 ? (
           <div className="space-y-0">
-            {connectedPOIs.map((poi: any, index: number) => (
+            {(connectedPOIs as NearbyAmenity[]).map((poi, index: number) => (
               <div
                 key={poi.id || index}
                 className={`flex items-center justify-between py-4 ${index !== connectedPOIs.length - 1 ? 'border-b border-slate-100' : ''}`}

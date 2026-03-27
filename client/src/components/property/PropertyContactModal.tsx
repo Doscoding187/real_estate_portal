@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Phone, Mail, Calendar, Send, Loader2 } from 'lucide-react';
+import { Phone, Mail, Send, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
@@ -34,6 +33,25 @@ interface PropertyContactModalProps {
   agencyId?: number;
   developerBrandProfileId?: number; // For brand lead routing
   developmentId?: number;
+  initialMessage?: string;
+  affordabilityData?: {
+    monthlyIncome?: number;
+    monthlyExpenses?: number;
+    monthlyDebts?: number;
+    availableDeposit?: number;
+    maxAffordable?: number;
+    calculatedAt?: string;
+  };
+}
+
+type InquiryType = 'general' | 'viewing' | 'offer' | 'financing';
+
+interface ContactFormState {
+  name: string;
+  email: string;
+  phone: string;
+  inquiryType: InquiryType;
+  message: string;
 }
 
 export function PropertyContactModal({
@@ -41,21 +59,32 @@ export function PropertyContactModal({
   onClose,
   propertyId,
   propertyTitle,
-  agentName = 'Property Agent',
+  agentName = 'Listing Contact',
   agentPhone,
   agentEmail,
   agentId,
   agencyId,
   developerBrandProfileId,
   developmentId,
+  initialMessage,
+  affordabilityData,
 }: PropertyContactModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactFormState>({
     name: '',
     email: '',
     phone: '',
     inquiryType: 'general',
-    message: '',
+    message: initialMessage || '',
   });
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setFormData(prev => ({
+      ...prev,
+      message: initialMessage || '',
+    }));
+  }, [initialMessage, isOpen]);
 
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: () => {
@@ -69,7 +98,7 @@ export function PropertyContactModal({
       });
       onClose();
     },
-    onError: error => {
+    onError: (error: Error) => {
       toast.error('Failed to send inquiry. Please try again.');
       console.error('Lead creation error:', error);
     },
@@ -94,10 +123,11 @@ export function PropertyContactModal({
       agencyId,
       developerBrandProfileId, // For brand lead routing
       developmentId,
+      affordabilityData,
     });
   };
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = <K extends keyof ContactFormState>(field: K, value: ContactFormState[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -107,7 +137,7 @@ export function PropertyContactModal({
         <DialogHeader>
           <DialogTitle>Contact {agentName}</DialogTitle>
           <DialogDescription>
-            Interested in {propertyTitle}? Send a message to the agent.
+            Interested in {propertyTitle}? Send a message and we’ll get back to you.
           </DialogDescription>
         </DialogHeader>
 
