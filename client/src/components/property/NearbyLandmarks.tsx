@@ -11,6 +11,7 @@ interface NearbyLandmarksProps {
     latitude?: string | number;
     longitude?: string | number;
   };
+  overviewItems?: Array<{ key: string; label: string; value: string }>;
 }
 
 interface NearbyAmenity {
@@ -45,7 +46,7 @@ const TABS = [
 
 type LandmarkTabId = (typeof TABS)[number]['id'];
 
-export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
+export function NearbyLandmarks({ property, overviewItems = [] }: NearbyLandmarksProps) {
   const [activeTab, setActiveTab] = useState<LandmarkTabId>('Education');
 
   let latitude =
@@ -93,7 +94,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
           <div>
             <h3 className="text-xl font-bold text-slate-900">Nearby Landmarks</h3>
             <p className="mt-1 text-sm text-slate-500">
-              See what sits within reach of this address before you enquire.
+              Use the map and nearby places to judge daily fit before you enquire.
             </p>
           </div>
           {hasValidCoordinates && (
@@ -102,6 +103,20 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
             </div>
           )}
         </div>
+
+        {overviewItems.length > 0 && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {overviewItems.map(item => (
+              <div
+                key={item.key}
+                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600"
+              >
+                <span className="mr-1 text-slate-400">{item.label}:</span>
+                <span className="text-slate-700">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Map Preview with Static Fallback */}
         <div className="relative rounded-xl overflow-hidden border border-slate-200 h-[240px] mb-6 group">

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Calculator, TrendingUp, Home, DollarSign } from 'lucide-react';
+import { Calculator, TrendingUp, Home, DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   calculateBondRepayment,
   calculateTransferCosts,
@@ -51,6 +51,7 @@ export function BondCalculator({
   const [depositPercentage, setDepositPercentage] = useState(0); // Default to 0% for 100% bond
   const [termYears, setTermYears] = useState<BondTerm>(20);
   const [customRate, setCustomRate] = useState<number | null>(null);
+  const [isCompactExpanded, setIsCompactExpanded] = useState(false);
 
   const interestRate = customRate ?? SARB_PRIME_RATE;
 
@@ -75,18 +76,145 @@ export function BondCalculator({
 
   if (compact) {
     return (
-      <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-4 border border-green-200">
-        <div className="flex items-center gap-2 mb-3">
-          <Calculator className="h-5 w-5 text-green-600" />
-          <h4 className="font-semibold text-green-900">Estimated Monthly Repayment</h4>
+      <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
+        <div className="p-4">
+          <button
+            type="button"
+            className="flex w-full items-start justify-between gap-4 text-left"
+            onClick={() => setIsCompactExpanded(current => !current)}
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-emerald-50 p-2">
+                  <Calculator className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Buyability Calculator</p>
+                  <p className="text-xs text-slate-500">
+                    Est. repayment {formatSARandShort(calculation.monthlyRepayment)}/mo
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                    Monthly
+                  </p>
+                  <p className="mt-1 text-base font-bold text-emerald-700">
+                    {formatSARandShort(calculation.monthlyRepayment)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-700">
+                    Income Needed
+                  </p>
+                  <p className="mt-1 text-base font-bold text-orange-700">
+                    {formatSARandShort(requiredGrossIncome)}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                {depositPercentage}% deposit • {termYears} years • {interestRate.toFixed(2)}%
+              </p>
+            </div>
+            <div className="mt-1 text-slate-400">
+              {isCompactExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </div>
+          </button>
+
+          {isCompactExpanded && (
+            <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="rate-compact" className="text-xs text-slate-700">
+                    Interest Rate
+                  </Label>
+                  <span className="text-[11px] font-semibold text-emerald-600">
+                    {interestRate.toFixed(2)}% p.a.
+                  </span>
+                </div>
+                <Input
+                  id="rate-compact"
+                  type="number"
+                  step="0.01"
+                  value={customRate ?? interestRate}
+                  onChange={e => {
+                    const value = parseFloat(e.target.value);
+                    setCustomRate(isNaN(value) ? null : value);
+                  }}
+                  placeholder="Custom rate"
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="deposit-slider-compact" className="text-xs text-slate-700">
+                    Deposit
+                  </Label>
+                  <span className="text-[11px] font-semibold text-slate-600">
+                    {depositPercentage}%
+                  </span>
+                </div>
+                <Slider
+                  id="deposit-slider-compact"
+                  min={0}
+                  max={50}
+                  step={5}
+                  value={[depositPercentage]}
+                  onValueChange={values => setDepositPercentage(values[0] || 0)}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="term-compact" className="text-xs text-slate-700">
+                  Bond Term
+                </Label>
+                <Select
+                  value={termYears.toString()}
+                  onValueChange={value => setTermYears(Number(value) as BondTerm)}
+                >
+                  <SelectTrigger id="term-compact" className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BOND_TERMS.map(term => (
+                      <SelectItem key={term} value={term.toString()}>
+                        {term} years
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {transferCosts && (
+                <div className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                    Transfer Costs
+                  </p>
+                  <p className="mt-1 text-base font-bold text-violet-700">
+                    {formatSARandShort(transferCosts.total)}
+                  </p>
+                </div>
+              )}
+
+              {onCtaClick && (
+                <Button
+                  className="h-10 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
+                  onClick={onCtaClick}
+                >
+                  {ctaLabel}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
-        <div className="text-3xl font-bold text-green-600 mb-2">
-          {formatSARandShort(calculation.monthlyRepayment)}
-        </div>
-        <p className="text-sm text-gray-600">
-          Based on {depositPercentage}% deposit over {termYears} years at {interestRate.toFixed(2)}%
-        </p>
-      </div>
+      </Card>
     );
   }
 

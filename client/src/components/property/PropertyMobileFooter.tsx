@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Phone, MessageCircle } from 'lucide-react';
+import { Calculator, Mail, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PropertyMobileFooterProps {
   agentName: string;
   onQualify?: () => void;
-  onCall?: () => void;
+  onEnquire?: () => void;
   onWhatsApp?: () => void;
   canQualify?: boolean;
-  canCall?: boolean;
+  canEnquire?: boolean;
   canWhatsApp?: boolean;
 }
 
 export function PropertyMobileFooter({
   agentName: _agentName,
   onQualify,
-  onCall,
+  onEnquire,
   onWhatsApp,
   canQualify = true,
-  canCall = true,
+  canEnquire = true,
   canWhatsApp = true,
 }: PropertyMobileFooterProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -69,11 +69,11 @@ export function PropertyMobileFooter({
           <Button
             variant="outline"
             className="border-slate-300 text-slate-700 bg-white"
-            onClick={onCall}
-            disabled={!canCall}
+            onClick={onEnquire}
+            disabled={!canEnquire}
           >
-            <Phone className="h-4 w-4 mr-2" />
-            Call
+            <Mail className="h-4 w-4 mr-2" />
+            Enquire
           </Button>
         </motion.div>
       )}
