@@ -1041,18 +1041,62 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                         key={item.key}
                         className="rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm"
                       >
-                        <div className="mb-2 flex items-center gap-2 text-orange-500">
-                          <Icon className="h-4 w-4" />
-                          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                        <div className="mb-1.5 flex items-center gap-1.5 text-orange-500">
+                          <Icon className="h-3.5 w-3.5 shrink-0" />
+                          <p className="text-[10px] font-medium leading-none text-slate-500 sm:text-[11px]">
                             {item.label}
                           </p>
                         </div>
-                        <p className="text-sm font-semibold leading-snug text-slate-900">
+                        <p className="text-sm font-semibold leading-snug text-slate-900 sm:text-[15px]">
                           {item.value}
                         </p>
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {hasPrimaryContactAction && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-900">Ready for the next step?</p>
+                    <p className="text-xs text-slate-500">
+                      Start with qualification or contact the listing{' '}
+                      {contactRoleLabel?.toLowerCase() || 'contact'} directly.
+                    </p>
+                  </div>
+                  {qualificationStatusLabel && (
+                    <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                      {qualificationStatusLabel}
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  <Button
+                    className="h-11 bg-orange-500 text-white hover:bg-orange-600"
+                    onClick={openQualification}
+                  >
+                    Check If You Qualify
+                  </Button>
+                  {whatsappNumber && (
+                    <Button
+                      variant="outline"
+                      className="h-11 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
+                      onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      WhatsApp {contactRoleLabel || 'Agent'}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
+                    onClick={handleOpenStandardEnquiry}
+                  >
+                    Send Enquiry
+                  </Button>
                 </div>
               </div>
             )}
