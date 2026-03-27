@@ -128,6 +128,17 @@ export function resolveSearchIntent(
     filters.locations = locations;
   }
 
+  if (!geography.province && !geography.city && !geography.suburb && locations.length === 1) {
+    const [locationSlug] = locations;
+    if (PROVINCE_SLUGS.includes(locationSlug.toLowerCase())) {
+      geography.level = 'province';
+      geography.province = locationSlug.toLowerCase();
+    } else {
+      geography.level = 'city';
+      geography.city = locationSlug.toLowerCase();
+    }
+  }
+
   searchParams.forEach((value, key) => {
     // Skip geography keys - they're handled above
     if (key === 'province' || key === 'city' || key === 'suburb') return;
@@ -181,7 +192,24 @@ export function generateIntentUrl(intent: SearchIntent): string {
     if (!value) return;
 
     if (Array.isArray(value)) {
-      value.forEach(v => queryParams.append(key, String(v)));
+      value.forEach(v => {
+        if (key === 'locations') {
+          if (typeof v === 'string' && v.trim()) {
+            queryParams.append(key, v);
+            return;
+          }
+
+          if (v && typeof v === 'object' && 'slug' in v) {
+            const slug = String((v as { slug?: unknown }).slug || '').trim();
+            if (slug) {
+              queryParams.append(key, slug);
+            }
+          }
+          return;
+        }
+
+        queryParams.append(key, String(v));
+      });
     } else {
       queryParams.set(key, String(value));
     }

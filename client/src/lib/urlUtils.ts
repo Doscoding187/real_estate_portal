@@ -100,13 +100,18 @@ export interface SearchFilters {
   maxArea?: number;
   amenities?: string[];
   furnished?: boolean;
-  locations?: {
-    slug: string;
-    type: 'province' | 'city' | 'suburb';
-    citySlug?: string;
-    provinceSlug?: string;
-    id?: string; // locationId for this location
-  }[];
+  locations?: Array<
+    | string
+    | {
+        slug: string;
+        type: 'province' | 'city' | 'suburb';
+        citySlug?: string;
+        provinceSlug?: string;
+        id?: string; // locationId for this location
+        name?: string;
+        fullAddress?: string;
+      }
+  >;
   // Additional filters stored in query params
   [key: string]: unknown;
 }

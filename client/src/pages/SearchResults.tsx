@@ -52,14 +52,25 @@ import {
   generateMetaDescription,
   generatePropertyUrl,
   SearchFilters,
+  unslugify,
 } from '@/lib/urlUtils';
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
+import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 
 export default function SearchResults({
   province: propProvince,
   city: propCity,
   locationId: propLocationId,
 }: { province?: string; city?: string; locationId?: string } = {}) {
+  type NavbarLocation = {
+    name: string;
+    slug: string;
+    type: 'province' | 'city' | 'suburb';
+    provinceSlug?: string;
+    citySlug?: string;
+    fullAddress: string;
+  };
+
   const { isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
 
@@ -100,6 +111,55 @@ export default function SearchResults({
       listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale',
     };
   }, [searchIntent]);
+
+  const normalizedLocationFilters = useMemo<NavbarLocation[]>(
+    () =>
+      (filters.locations ?? [])
+        .reduce<NavbarLocation[]>((acc, location) => {
+          if (typeof location === 'string') {
+            const slug = location.trim();
+            if (!slug) return acc;
+            const type: NavbarLocation['type'] = PROVINCE_SLUGS.includes(slug.toLowerCase())
+              ? 'province'
+              : 'city';
+            acc.push({
+              name: unslugify(slug),
+              slug,
+              type,
+              provinceSlug: type === 'province' ? slug : undefined,
+              citySlug: type === 'city' ? slug : undefined,
+              fullAddress: unslugify(slug),
+            });
+            return acc;
+          }
+
+          if (location && typeof location === 'object' && 'slug' in location) {
+            const slug = String(location.slug || '').trim();
+            if (!slug) return acc;
+            acc.push({
+              name: String((location as any).name || '').trim() || unslugify(slug),
+              slug,
+              type:
+                location.type === 'province' ||
+                location.type === 'city' ||
+                location.type === 'suburb'
+                  ? location.type
+                  : 'city',
+              citySlug: (location as any).citySlug,
+              provinceSlug: (location as any).provinceSlug,
+              fullAddress: String((location as any).fullAddress || '').trim() || unslugify(slug),
+            });
+          }
+
+          return acc;
+        }, []),
+    [filters.locations],
+  );
+
+  const normalizedLocationSlugs = useMemo(
+    () => normalizedLocationFilters.map(location => location.slug),
+    [normalizedLocationFilters],
+  );
 
   // UI State
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -151,7 +211,7 @@ export default function SearchResults({
       city: filters.city, // Explicitly ensure these are passed
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      locations: filters.locations?.map(l => l.slug),
+      locations: normalizedLocationSlugs,
       locationId: filters.locationId, // Pass locationId if backend supports it (optional filter usually)
       propertyType: filters.propertyType as any,
       listingType: filters.listingType as any,
@@ -164,7 +224,7 @@ export default function SearchResults({
       sortOption: backendSortOption,
       includeDevelopments: false,
     }),
-    [backendSortOption, blendFetchLimit, filters],
+    [backendSortOption, blendFetchLimit, filters, normalizedLocationSlugs],
   );
 
   const developmentListingQueryInput = useMemo(
@@ -172,7 +232,7 @@ export default function SearchResults({
       city: filters.city,
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      locations: filters.locations?.map(l => l.slug),
+      locations: normalizedLocationSlugs,
       propertyType: filters.propertyType as any,
       listingType: filters.listingType as any,
       minPrice: filters.minPrice,
@@ -184,7 +244,7 @@ export default function SearchResults({
       offset: 0,
       sortOption: backendSortOption,
     }),
-    [backendSortOption, blendFetchLimit, filters],
+    [backendSortOption, blendFetchLimit, filters, normalizedLocationSlugs],
   );
 
   const { data: propertySearchResults, isLoading: isPropertySearchLoading } =
@@ -202,6 +262,7 @@ export default function SearchResults({
         city: filters.city,
         province: filters.province,
         suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+        locations: normalizedLocationSlugs,
         listingType: filters.listingType,
         listingSource: filters.listingSource,
         propertyType: filters.propertyType,
@@ -527,14 +588,7 @@ export default function SearchResults({
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} />
       <ListingNavbar
-        defaultLocations={(filters.locations ?? []).map(l => ({
-          name: (l as any).name ?? l.slug,
-          slug: l.slug,
-          type: l.type,
-          citySlug: l.citySlug,
-          provinceSlug: l.provinceSlug,
-          fullAddress: (l as any).fullAddress ?? l.slug,
-        }))}
+        defaultLocations={normalizedLocationFilters}
       />
 
       <div className="container pt-24 pb-8">
