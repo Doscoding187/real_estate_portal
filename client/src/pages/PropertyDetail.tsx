@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -19,15 +18,9 @@ import {
   Maximize,
   Heart,
   Share2,
-  Calendar,
-  Eye,
-  ArrowLeft,
   CheckCircle2,
   Home,
   ChevronRight,
-  Phone,
-  Mail,
-  MessageSquare,
   Building2,
   Car,
   Wifi,
@@ -36,32 +29,126 @@ import {
   Shield,
   Zap,
   Droplets,
-  User,
   Square,
-  Calculator,
+  Phone,
+  Mail,
+  MessageCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
-import { generateBreadcrumbs } from '@/lib/urlUtils';
+import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
-import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
-import { GoogleAmenitiesMap } from '@/components/maps/GoogleAmenitiesMap';
 import { BondCalculator } from '@/components/BondCalculator';
-import PropertyCard from '@/components/PropertyCard';
-import { SidebarContactForm } from '@/components/property/SidebarContactForm';
-import { ResponsiveHighlights } from '@/components/ResponsiveHighlights';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
 import { PropertyMobileFooter } from '@/components/property/PropertyMobileFooter';
 import {
+  PropertyQualificationDrawer,
+  PropertyQualificationSnapshot,
+} from '@/components/property/PropertyQualificationDrawer';
+import {
   DeveloperBrandSection,
   DeveloperBrandData,
 } from '@/components/property/DeveloperBrandSection';
+import { MetaControl } from '@/components/seo/MetaControl';
+import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/seo/structuredData';
 
-const amenityIcons: Record<string, any> = {
+interface PropertyDetailProps {
+  propertyId?: number;
+}
+
+interface PropertyImageLike {
+  id?: number;
+  imageUrl?: string;
+  url?: string;
+  isPrimary?: number;
+  displayOrder?: number;
+}
+
+interface PropertySpecs {
+  ownershipType?: string;
+  powerBackup?: string;
+  securityFeatures?: string[];
+  waterSupply?: string;
+  internetAccess?: string;
+  flooring?: string;
+  parkingType?: string;
+  petFriendly?: string;
+  electricitySupply?: string;
+  additionalRooms?: string[];
+  badges?: string[];
+}
+
+interface DeveloperBrandLite {
+  id?: number | string;
+  brandName?: string;
+  logoUrl?: string;
+  publicContactEmail?: string;
+  slug?: string;
+}
+
+interface DevelopmentLite {
+  id?: number | string;
+  name?: string;
+  slug?: string;
+}
+
+interface ContactIdentityLite {
+  id?: number | string;
+  agencyId?: number | string;
+  name?: string;
+  image?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  agency?: string;
+}
+
+interface PropertyPayload {
+  id: number;
+  title: string;
+  description?: string;
+  listingType?: SearchFilters['listingType'] | string;
+  province?: string;
+  city?: string;
+  suburb?: string;
+  address?: string;
+  zipCode?: string;
+  price?: number | string;
+  bedrooms?: number;
+  bathrooms?: number;
+  propertyType?: string;
+  featured?: number;
+  amenities?: string | string[];
+  features?: string | string[];
+  propertySettings?: string | PropertySpecs;
+  propertyDetails?: string | Record<string, unknown>;
+  developerBrand?: DeveloperBrandLite;
+  developerBrandProfile?: DeveloperBrandLite;
+  listerType?: string;
+  development?: DevelopmentLite;
+  developmentId?: number | string;
+  developerBrandProfileId?: number | string;
+  suburbId?: number | string;
+  agentId?: number | string;
+  latitude?: number | string;
+  longitude?: number | string;
+  area?: number;
+  mainImage?: string;
+  agent?: ContactIdentityLite;
+}
+
+interface PropertyDetailResponse {
+  property: PropertyPayload;
+  images?: PropertyImageLike[];
+  agent?: ContactIdentityLite;
+}
+
+const amenityIcons: Record<string, LucideIcon> = {
   parking: Car,
   wifi: Wifi,
   gym: Dumbbell,
@@ -71,7 +158,18 @@ const amenityIcons: Record<string, any> = {
   electricity: Zap,
 };
 
-export default function PropertyDetail(props: { propertyId?: number } & any) {
+const formatLabel = (value?: string | null) =>
+  String(value || '')
+    .replace(/_/g, ' ')
+    .trim()
+    .replace(/\b\w/g, char => char.toUpperCase());
+
+const parseStrictNumber = (value: unknown) => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+export default function PropertyDetail(props: PropertyDetailProps) {
   const { propertyId: propPropertyId } = props;
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
@@ -86,7 +184,11 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isQualificationOpen, setIsQualificationOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [qualificationSnapshot, setQualificationSnapshot] =
+    useState<PropertyQualificationSnapshot | null>(null);
+  const [contactInitialMessage, setContactInitialMessage] = useState('');
 
   const { data, isLoading } = trpc.properties.getById.useQuery(
     { id: propertyId },
@@ -168,8 +270,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     );
   }
 
-  const { property, images } = data as any;
-  const agent = (property as any)?.agent || (data as any)?.agent;
+  const { property, images } = data as PropertyDetailResponse;
+  const agent = property.agent || (data as PropertyDetailResponse).agent;
 
   // Safely parse amenities with error handling
   let amenitiesList: string[] = [];
@@ -203,36 +305,117 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const shouldTruncate = description.length > 300;
   const displayDescription =
     showFullDescription || !shouldTruncate ? description : description.slice(0, 300) + '...';
-
-  // Parse Property Specs
-  interface PropertySpecs {
-    ownershipType?: string;
-    powerBackup?: string;
-    securityFeatures?: string[];
-    waterSupply?: string;
-    internetAccess?: string;
-    flooring?: string;
-    parkingType?: string;
-    petFriendly?: string;
-    electricitySupply?: string;
-    additionalRooms?: string[];
-  }
+  const canonicalPath = buildPropertyUrl(propertyId, property.title);
+  const canonicalUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath;
+  const breadcrumbItems = generateBreadcrumbs({
+    listingType: property.listingType as SearchFilters['listingType'],
+    province: property.province,
+    city: property.city,
+    suburb: property.suburb,
+  });
+  const seoTitle = property.title
+    ? `${property.title} | Property Listify`
+    : 'Property | Property Listify';
+  const seoDescription =
+    description.trim() ||
+    [property.suburb, property.city, property.province]
+      .filter(
+        (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0,
+      )
+      .join(', ');
 
   let specs: PropertySpecs = {};
   try {
-    if ((property as any).propertySettings) {
+    if (property.propertySettings) {
       specs =
-        typeof (property as any).propertySettings === 'string'
-          ? JSON.parse((property as any).propertySettings)
-          : (property as any).propertySettings;
+        typeof property.propertySettings === 'string'
+          ? JSON.parse(property.propertySettings)
+          : property.propertySettings;
     }
   } catch (e) {
     console.error('Failed to parse property settings', e);
   }
 
-  const developerBrand =
-    ((property as any).developerBrand || (property as any).developerBrandProfile) as any;
-  const development = (property as any).development as any;
+  let rawPropertyDetails: Record<string, unknown> = {};
+  try {
+    if (property.propertyDetails) {
+      rawPropertyDetails =
+        typeof property.propertyDetails === 'string'
+          ? JSON.parse(property.propertyDetails)
+          : property.propertyDetails;
+    }
+  } catch (error) {
+    console.error('Failed to parse property details', error);
+  }
+
+  const developerBrand = property.developerBrand || property.developerBrandProfile;
+  const normalizedListerType = String(property.listerType || '')
+    .trim()
+    .toLowerCase();
+  const hasAgentIdentity = Boolean(agent?.id || agent?.name);
+  const hasDeveloperIdentity = Boolean(developerBrand?.id || developerBrand?.brandName);
+  const contactMode =
+    normalizedListerType === 'private'
+      ? 'private'
+      : normalizedListerType === 'agent' && hasAgentIdentity
+        ? 'agent'
+        : hasDeveloperIdentity
+          ? 'developer'
+          : hasAgentIdentity
+            ? 'agent'
+            : 'unknown';
+  const contactRoleLabel =
+    contactMode === 'private'
+      ? 'Seller'
+      : contactMode === 'developer'
+        ? 'Developer'
+        : contactMode === 'agent'
+          ? 'Agent'
+          : null;
+  const contactIdentity =
+    contactMode === 'agent'
+      ? agent
+      : contactMode === 'developer'
+        ? {
+            id: developerBrand?.id,
+            agencyId: undefined,
+            name: String(developerBrand?.brandName || '').trim(),
+            image: developerBrand?.logoUrl,
+            phone: undefined,
+            whatsapp: undefined,
+            email: developerBrand?.publicContactEmail,
+            agency: undefined,
+          }
+        : contactMode === 'private'
+          ? {
+              id: undefined,
+              agencyId: undefined,
+              name: 'Private Seller',
+              image: undefined,
+              phone: undefined,
+              whatsapp: undefined,
+              email: undefined,
+              agency: undefined,
+            }
+          : undefined;
+  const propertyBadges = Array.isArray(specs.badges)
+    ? specs.badges
+        .map(
+          (badge: string) => BADGE_TEMPLATES[badge as keyof typeof BADGE_TEMPLATES]?.label || badge,
+        )
+        .filter(Boolean)
+    : [];
+  const isDeveloperListing = contactMode === 'developer';
+  const listingContextLabel =
+    contactMode === 'developer'
+      ? 'New Development'
+      : contactMode === 'agent'
+        ? 'Listed by Agent'
+        : contactMode === 'private'
+          ? 'Private Listing'
+          : null;
+  const development = property.development;
   const developmentName = String(development?.name || '').trim();
   const developmentHref = developmentName
     ? development?.slug
@@ -241,94 +424,414 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         ? `/development/${development.id}`
         : null
     : null;
-  const listingSource =
-    (property as any).listingSource === 'development'
-      ? 'development'
-      : (property as any).listingSource === 'manual'
-        ? 'manual'
-        : !agent && !!developerBrand
-          ? 'development'
-          : 'manual';
-  const listerType =
-    (property as any).listerType === 'agency' ||
-    (property as any).listerType === 'agent' ||
-    (property as any).listerType === 'private'
-      ? (property as any).listerType
-      : agent
-        ? 'agent'
-        : listingSource === 'manual'
-          ? 'private'
-          : undefined;
-  const isDeveloperListing = listingSource === 'development';
-  const isPrivateListing = listingSource === 'manual' && listerType === 'private';
-  const isRental = String(property.listingType || '').toLowerCase() === 'rent';
-  const contactRoleLabel = isDeveloperListing
-    ? 'Developer'
-    : isPrivateListing
-      ? 'Seller'
-      : 'Agent';
-  const contactSectionTitle = isDeveloperListing
-    ? 'Developer Team'
-    : isPrivateListing
-      ? 'Private Seller'
-      : 'Agent Overview';
-  const contactBadgeLabel = isDeveloperListing
-    ? 'DEVELOPER TEAM'
-    : isPrivateListing
-      ? 'PRIVATE SELLER'
-      : 'PRO AGENT';
-  const contactIdentity =
-    agent ||
-    (isDeveloperListing
-      ? {
-          id: undefined,
-          agencyId: undefined,
-          name: String(developerBrand.brandName || '').trim() || 'Developer Team',
-          image: developerBrand.logoUrl,
-          phone: undefined,
-          whatsapp: undefined,
-          email: developerBrand?.publicContactEmail,
-        }
-      : {
-          id: undefined,
-          agencyId: undefined,
-          name: 'Private Seller',
-          image: undefined,
-          phone: undefined,
-          whatsapp: undefined,
-          email: undefined,
-        });
-  const formatBadgeLabel = (badge: string) =>
-    BADGE_TEMPLATES[badge as keyof typeof BADGE_TEMPLATES]?.label ||
-    badge
-      .split(/[_-\s]+/)
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(' ');
-  const propertyBadges = [
-    ...(Array.isArray((property as any).badges) ? (property as any).badges : []),
-    ...(Array.isArray((specs as any).badges) ? (specs as any).badges : []),
-  ]
-    .map((badge: string) => formatBadgeLabel(String(badge || '').trim()))
-    .filter(Boolean)
-    .filter((badge: string, index: number, list: string[]) => list.indexOf(badge) === index);
-  const listingContextLabel = isDeveloperListing
-    ? 'New Development'
-    : isPrivateListing
-      ? 'Private Listing'
-      : 'Listed by Agent';
-  const priceLabel =
-    Number(property.price) > 0
-      ? isRental
-        ? `${formatCurrency(property.price, { compact: false })}/month`
-        : isDeveloperListing
-          ? `From ${formatCurrency(property.price, { compact: false })}`
-          : formatCurrency(property.price, { compact: false })
-      : 'Price on request';
 
   const similarProperties = (similarPropertiesData ?? []).filter(p => p.id !== propertyId);
+  const similarListingsQuery = new URLSearchParams();
+  if (property.city) {
+    similarListingsQuery.set('city', String(property.city));
+  }
+  if (property.suburb) {
+    similarListingsQuery.set('suburb', String(property.suburb));
+  }
+  if (property.propertyType) {
+    similarListingsQuery.set('propertyType', String(property.propertyType));
+  }
+  if (property.listingType) {
+    similarListingsQuery.set('listingType', String(property.listingType));
+  }
+  const similarListingsHref = `/properties${
+    similarListingsQuery.toString() ? `?${similarListingsQuery.toString()}` : ''
+  }`;
+  const propertyImages = (Array.isArray(images) ? images : []).filter(
+    (image): image is PropertyImageLike =>
+      Boolean(
+        (typeof image?.imageUrl === 'string' && image.imageUrl) ||
+        (typeof image?.url === 'string' && image.url),
+      ),
+  );
+  const propertyImageUrls = propertyImages
+    .map(image =>
+      typeof image.imageUrl === 'string'
+        ? image.imageUrl
+        : typeof image.url === 'string'
+          ? image.url
+          : '',
+    )
+    .filter(Boolean);
+  const propertyGalleryImages = propertyImages
+    .map((image, index) => ({
+      id: image.id ?? index,
+      imageUrl:
+        typeof image.imageUrl === 'string'
+          ? image.imageUrl
+          : typeof image.url === 'string'
+            ? image.url
+            : '',
+      isPrimary: image.isPrimary,
+      displayOrder: image.displayOrder,
+    }))
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+  const houseSizeM2 = parseStrictNumber(rawPropertyDetails.houseAreaM2);
+  const erfSizeM2 = parseStrictNumber(rawPropertyDetails.erfSizeM2);
+  const unitSizeM2 = parseStrictNumber(rawPropertyDetails.unitSizeM2);
+  const parkingLabel = formatLabel(specs.parkingType);
+  const displayPrice = Number(property.price) || 0;
+  const displayRepayment = displayPrice > 0 ? Math.round(displayPrice * 0.0095) : 0;
+  const directPhone = String(contactIdentity?.phone || '').trim();
+  const whatsappNumber = String(contactIdentity?.whatsapp || contactIdentity?.phone || '').trim();
+  const directEmail = String(contactIdentity?.email || '').trim();
+  const hasPrimaryContactAction = Boolean(
+    directPhone || whatsappNumber || directEmail || contactMode !== 'unknown',
+  );
+  const qualificationStatusLabel = qualificationSnapshot
+    ? qualificationSnapshot.resultTone === 'success'
+      ? 'Likely qualifies'
+      : qualificationSnapshot.resultTone === 'warning'
+        ? 'Close fit'
+        : 'Budget gap'
+    : null;
+  const affordabilityPayload = qualificationSnapshot
+    ? {
+        monthlyIncome:
+          qualificationSnapshot.monthlyIncome + qualificationSnapshot.coApplicantIncome,
+        monthlyExpenses: qualificationSnapshot.monthlyExpenses,
+        monthlyDebts: qualificationSnapshot.monthlyDebts,
+        availableDeposit: qualificationSnapshot.availableDeposit,
+        maxAffordable: qualificationSnapshot.maxAffordable,
+        calculatedAt: new Date().toISOString(),
+      }
+    : undefined;
+  const bestContactChannel = whatsappNumber
+    ? 'WhatsApp'
+    : directPhone
+      ? 'Call'
+      : directEmail
+        ? 'Email'
+        : 'Platform Enquiry';
+  const contactSummaryItems = [
+    {
+      key: 'role',
+      label: 'Role',
+      value:
+        contactMode === 'developer'
+          ? 'Development Team'
+          : contactMode === 'private'
+            ? 'Private Seller'
+            : 'Registered Agent',
+    },
+    {
+      key: 'channel',
+      label: 'Best Channel',
+      value: bestContactChannel,
+    },
+    listingContextLabel
+      ? {
+          key: 'listing',
+          label: 'Listing',
+          value: listingContextLabel,
+        }
+      : null,
+    contactIdentity?.agency
+      ? {
+          key: 'agency',
+          label: 'Agency',
+          value: String(contactIdentity.agency),
+        }
+      : developmentName && contactMode === 'developer'
+        ? {
+            key: 'development',
+            label: 'Development',
+            value: developmentName,
+          }
+        : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
+  const contactIntro =
+    contactMode === 'developer'
+      ? 'Reach the development contact for availability, pricing, and next steps.'
+      : contactMode === 'private'
+        ? 'You are contacting the owner directly through Property Listify.'
+        : 'Connect with the registered agent handling this listing.';
+  const hasCoordinates =
+    Number.isFinite(Number(property.latitude)) &&
+    Number.isFinite(Number(property.longitude)) &&
+    Number(property.latitude) !== 0 &&
+    Number(property.longitude) !== 0;
+  const locationOverviewItems = [
+    property.suburb
+      ? {
+          key: 'suburb',
+          label: 'Suburb',
+          value: property.suburb,
+        }
+      : null,
+    property.city
+      ? {
+          key: 'city',
+          label: 'City',
+          value: property.city,
+        }
+      : null,
+    property.province
+      ? {
+          key: 'province',
+          label: 'Province',
+          value: property.province,
+        }
+      : null,
+    {
+      key: 'pin',
+      label: 'Map Pin',
+      value: hasCoordinates ? 'Available' : 'Not Provided',
+    },
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
+  const propertyDetailItems = [
+    property.bedrooms
+      ? {
+          key: 'bedrooms',
+          label: 'Bedrooms',
+          value: `${property.bedrooms} Bedroom${property.bedrooms === 1 ? '' : 's'}`,
+          icon: Bed,
+        }
+      : null,
+    property.bathrooms
+      ? {
+          key: 'bathrooms',
+          label: 'Bathrooms',
+          value: `${property.bathrooms} Bathroom${property.bathrooms === 1 ? '' : 's'}`,
+          icon: Bath,
+        }
+      : null,
+    parkingLabel
+      ? {
+          key: 'parking',
+          label: 'Parking',
+          value: parkingLabel,
+          icon: Car,
+        }
+      : null,
+    houseSizeM2
+      ? {
+          key: 'house-size',
+          label: 'House Size',
+          value: `${houseSizeM2.toLocaleString()} m²`,
+          icon: Maximize,
+        }
+      : unitSizeM2
+        ? {
+            key: 'floor-size',
+            label: 'Floor Size',
+            value: `${unitSizeM2.toLocaleString()} m²`,
+            icon: Maximize,
+          }
+        : null,
+    erfSizeM2
+      ? {
+          key: 'erf-size',
+          label: 'Erf Size',
+          value: `${erfSizeM2.toLocaleString()} m²`,
+          icon: Home,
+        }
+      : null,
+    property.propertyType
+      ? {
+          key: 'property-type',
+          label: 'Property Type',
+          value: formatLabel(property.propertyType),
+          icon: Building2,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: LucideIcon }>;
+  const featureSpecItems = [
+    specs.ownershipType
+      ? {
+          key: 'ownershipType',
+          label: 'Ownership Type',
+          value: formatLabel(specs.ownershipType),
+          icon: Home,
+        }
+      : null,
+    specs.powerBackup
+      ? {
+          key: 'powerBackup',
+          label: 'Power Backup',
+          value: formatLabel(specs.powerBackup),
+          icon: Zap,
+        }
+      : null,
+    specs.securityFeatures && specs.securityFeatures.length > 0
+      ? {
+          key: 'security',
+          label: 'Security',
+          value: specs.securityFeatures.map(feature => formatLabel(feature)).join(', '),
+          icon: Shield,
+        }
+      : null,
+    specs.waterSupply
+      ? {
+          key: 'waterSupply',
+          label: 'Water Supply',
+          value: formatLabel(specs.waterSupply),
+          icon: Droplets,
+        }
+      : null,
+    specs.internetAccess
+      ? {
+          key: 'internetAccess',
+          label: 'Internet',
+          value: formatLabel(specs.internetAccess),
+          icon: Wifi,
+        }
+      : null,
+    specs.flooring
+      ? { key: 'flooring', label: 'Flooring', value: formatLabel(specs.flooring), icon: Building2 }
+      : null,
+    specs.parkingType
+      ? {
+          key: 'parkingType',
+          label: 'Parking Type',
+          value: formatLabel(specs.parkingType),
+          icon: Car,
+        }
+      : null,
+    specs.petFriendly
+      ? {
+          key: 'petFriendly',
+          label: 'Pet Friendly',
+          value: formatLabel(specs.petFriendly),
+          icon: CheckCircle2,
+        }
+      : null,
+    specs.electricitySupply
+      ? {
+          key: 'electricitySupply',
+          label: 'Electricity',
+          value: formatLabel(specs.electricitySupply),
+          icon: Zap,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: LucideIcon }>;
+  const openQualification = () => {
+    setIsQualificationOpen(true);
+  };
+  const openContactModal = ({
+    initialMessage = '',
+    snapshot = null,
+  }: {
+    initialMessage?: string;
+    snapshot?: PropertyQualificationSnapshot | null;
+  } = {}) => {
+    setContactInitialMessage(initialMessage);
+    setQualificationSnapshot(snapshot);
+    setIsContactModalOpen(true);
+  };
+  const handleOpenStandardEnquiry = () => {
+    openContactModal();
+  };
+  const handleCallContact = () => {
+    if (directPhone) {
+      window.open(`tel:${directPhone}`);
+    }
+  };
+  const handleWhatsAppContact = (message?: string) => {
+    if (!whatsappNumber) return;
+
+    const normalizedNumber = whatsappNumber.replace(/[^\d]/g, '');
+    const defaultMessage = `Hi, I'm interested in ${property.title}. Please share more information.`;
+    const targetUrl = `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(
+      message || defaultMessage,
+    )}`;
+
+    window.open(targetUrl, '_blank');
+  };
+  const handleQualificationToEnquiry = (snapshot: PropertyQualificationSnapshot) => {
+    setIsQualificationOpen(false);
+    openContactModal({
+      initialMessage: snapshot.summaryMessage,
+      snapshot,
+    });
+  };
+  const handleQualificationToWhatsApp = (snapshot: PropertyQualificationSnapshot) => {
+    setQualificationSnapshot(snapshot);
+    setIsQualificationOpen(false);
+    handleWhatsAppContact(snapshot.summaryMessage);
+  };
+  const showLegacyPropertyDetails = false;
+  const propertyStructuredData = [
+    buildBreadcrumbStructuredData([
+      ...breadcrumbItems,
+      { label: property.title || 'Property', href: canonicalPath },
+    ]),
+    buildPlaceStructuredData({
+      name: property.title || 'Property',
+      description: seoDescription,
+      url: canonicalUrl,
+      images: propertyImageUrls,
+      address: {
+        streetAddress: property.address,
+        addressLocality: property.city,
+        addressRegion: property.province,
+        postalCode: property.zipCode,
+        addressCountry: 'ZA',
+      },
+      geo: {
+        latitude: property.latitude,
+        longitude: property.longitude,
+      },
+      additionalProperties: [
+        property.propertyType
+          ? { name: 'Property Type', value: String(property.propertyType) }
+          : null,
+        property.listingType ? { name: 'Listing Type', value: String(property.listingType) } : null,
+        Number(property.price) > 0
+          ? { name: 'Price', value: Number(property.price), unitText: 'ZAR' }
+          : null,
+        Number(property.bedrooms) > 0
+          ? { name: 'Bedrooms', value: Number(property.bedrooms) }
+          : null,
+        Number(property.bathrooms) > 0
+          ? { name: 'Bathrooms', value: Number(property.bathrooms) }
+          : null,
+        houseSizeM2 || unitSizeM2
+          ? { name: 'Floor Size', value: houseSizeM2 || unitSizeM2 || 0, unitText: 'm2' }
+          : null,
+        erfSizeM2 ? { name: 'Erf Size', value: erfSizeM2, unitText: 'm2' } : null,
+        specs.ownershipType
+          ? { name: 'Ownership Type', value: String(specs.ownershipType).replace(/_/g, ' ') }
+          : null,
+        specs.parkingType
+          ? { name: 'Parking Type', value: String(specs.parkingType).replace(/_/g, ' ') }
+          : null,
+      ].filter(Boolean) as Array<{ name: string; value: string | number; unitText?: string }>,
+    }),
+  ];
+  const sectionNavItems = [
+    { id: 'overview', label: 'Overview' },
+    {
+      id: 'features',
+      label: 'Features',
+      enabled: featureSpecItems.length > 0 || highlights.length > 0,
+    },
+    { id: 'contact', label: 'Contact', enabled: contactMode !== 'unknown' },
+    { id: 'location', label: 'Location' },
+    { id: 'reviews', label: 'Reviews' },
+    { id: 'buyability-calculator', label: 'Calculator' },
+  ].filter(item => item.enabled !== false);
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <MetaControl
+        canonicalUrl={canonicalUrl}
+        title={seoTitle}
+        description={seoDescription}
+        image={propertyImageUrls[0]}
+        structuredData={propertyStructuredData}
+      />
       <ListingNavbar />
 
       {/* Hero / Header Section */}
@@ -336,14 +839,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         <div className="container py-6">
           {/* Breadcrumbs */}
           <div className="mb-4">
-            <Breadcrumbs
-              items={generateBreadcrumbs({
-                listingType: property.listingType as any,
-                province: property.province,
-                city: property.city,
-                suburb: property.suburb,
-              })}
-            />
+            <Breadcrumbs items={breadcrumbItems} />
           </div>
 
           {/* Top Row: Badges */}
@@ -353,34 +849,27 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 FEATURED
               </Badge>
             )}
-            <Badge
-              variant="secondary"
-              className={
-                isDeveloperListing
-                  ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
-              }
-            >
-              {listingContextLabel}
-            </Badge>
-            {propertyBadges.length > 0 ? (
-              propertyBadges.slice(0, 2).map((badge: string) => (
-                <Badge
-                  key={badge}
-                  variant="secondary"
-                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
-                >
-                  {badge}
-                </Badge>
-              ))
-            ) : (
+            {listingContextLabel ? (
               <Badge
+                variant="secondary"
+                className={
+                  isDeveloperListing
+                    ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
+                }
+              >
+                {listingContextLabel}
+              </Badge>
+            ) : null}
+            {propertyBadges.slice(0, 2).map((badge: string) => (
+              <Badge
+                key={badge}
                 variant="secondary"
                 className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
               >
-                Ready to move
+                {badge}
               </Badge>
-            )}
+            ))}
           </div>
 
           {/* Title Row with Action Buttons */}
@@ -437,13 +926,87 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               >
                 Shortlist
               </Button>
+              {hasPrimaryContactAction && (
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
+                  onClick={openQualification}
+                >
+                  Check If You Qualify
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sticky top-16 z-30 hidden border-b border-slate-200 bg-white/95 backdrop-blur lg:block">
+        <div className="container py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Qualify Before You Enquire
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2.5">
+                <span className="text-base font-bold text-slate-900">
+                  {formatCurrency(displayPrice, { compact: false })}
+                </span>
+                <span className="text-xs text-slate-500">
+                  Est. {formatCurrency(displayRepayment, { compact: false })}/Pm
+                </span>
+                {qualificationStatusLabel && (
+                  <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                    {qualificationStatusLabel}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
               <Button
-                className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
-                onClick={() => setIsContactModalOpen(true)}
+                className="h-9 min-w-[200px] bg-orange-500 px-4 text-sm text-white hover:bg-orange-600"
+                onClick={openQualification}
               >
-                Contact {contactRoleLabel}
+                Check If You Qualify
+              </Button>
+              {whatsappNumber && (
+                <Button
+                  variant="outline"
+                  className="h-9 border-green-200 px-3 text-sm text-green-700 hover:bg-green-50"
+                  onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+                >
+                  WhatsApp
+                </Button>
+              )}
+              {directPhone && (
+                <Button
+                  variant="outline"
+                  className="h-9 border-slate-200 px-3 text-sm text-slate-700 hover:bg-slate-50"
+                  onClick={handleCallContact}
+                >
+                  Call
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="h-9 border-slate-200 px-3 text-sm text-slate-700 hover:bg-slate-50"
+                onClick={handleOpenStandardEnquiry}
+              >
+                Send Enquiry
               </Button>
             </div>
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-2.5">
+            {sectionNavItems.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-orange-200 hover:text-orange-600"
+                onClick={() => scrollToSection(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -454,98 +1017,89 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           {/* Left Column - Image Gallery */}
           <div className="lg:col-span-7">
             <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white">
-              <PropertyImageGallery images={images} propertyTitle={property.title} />
+              <PropertyImageGallery images={propertyGalleryImages} propertyTitle={property.title} />
             </div>
           </div>
 
           {/* Right Column - Property Info */}
           <div className="lg:col-span-5 space-y-12">
             {/* Price Section */}
-            <div>
+            <div id="overview">
               <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
-                {priceLabel}
+                {formatCurrency(displayPrice, { compact: false })}
               </div>
-              {!isRental && Number(property.price) > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-slate-500 font-medium">Estimated Repayment:</span>
-                  <span className="text-slate-900 font-bold">
-                    {formatCurrency(Math.round(property.price * 0.0095), { compact: false })}/Pm
-                  </span>
-                  <button className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1">
-                    Get Pre-Qualified
-                  </button>
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-slate-500 font-medium">Estimated Repayment:</span>
+                <span className="text-slate-900 font-bold">
+                  {formatCurrency(displayRepayment, { compact: false })}/Pm
+                </span>
+                <button
+                  type="button"
+                  className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1"
+                  onClick={openQualification}
+                >
+                  Get Pre-Qualified
+                </button>
+              </div>
             </div>
 
             {/* Property Details */}
-            <div>
-              <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Property Details</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {property.bedrooms && (
-                  <div className="flex items-start gap-3">
-                    <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                      <Bed className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Bedrooms</p>
-                      <p className="font-semibold text-slate-900">{property.bedrooms} Bedrooms</p>
-                    </div>
-                  </div>
-                )}
-                {property.bathrooms && (
-                  <div className="flex items-start gap-3">
-                    <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                      <Bath className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Bathrooms</p>
-                      <p className="font-semibold text-slate-900">{property.bathrooms} Bathrooms</p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Car className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Parking</p>
-                    <p className="font-semibold text-slate-900">Garage</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Maximize className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">House Size</p>
-                    <p className="font-semibold text-slate-900">
-                      {property.area.toLocaleString()} m²
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Home className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Erf Size</p>
-                    <p className="font-semibold text-slate-900">150 m²</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Building2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Property Type</p>
-                    <p className="font-semibold text-slate-900 capitalize">
-                      {property.propertyType}
-                    </p>
-                  </div>
+            {propertyDetailItems.length > 0 && (
+              <div>
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Property Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {propertyDetailItems.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.key} className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">{item.label}</p>
+                          <p className="font-semibold text-slate-900">{item.value}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {showLegacyPropertyDetails && (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Maximize className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">House Size</p>
+                          <p className="font-semibold text-slate-900">
+                            {(property.area ?? 0).toLocaleString()} m²
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Home className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">Erf Size</p>
+                          <p className="font-semibold text-slate-900">150 m²</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Building2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">Property Type</p>
+                          <p className="font-semibold text-slate-900 capitalize">
+                            {property.propertyType}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Additional Rooms */}
             {specs.additionalRooms && specs.additionalRooms.length > 0 && (
@@ -568,10 +1122,16 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             )}
 
             {/* Amenities */}
-            <div>
-              <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Amenities & Features</h3>
-              {highlights.length > 0 ? (
-                <div className="grid grid-cols-3 gap-y-3 gap-x-2">
+            {highlights.length > 0 && (
+              <div>
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">
+                  Amenities & Features
+                </h3>
+                <div
+                  className={`grid gap-y-3 gap-x-4 ${
+                    highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
+                  }`}
+                >
                   {highlights.map((amenity: string, index: number) => {
                     const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                     return (
@@ -582,10 +1142,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     );
                   })}
                 </div>
-              ) : (
-                <p className="text-slate-500 italic">No specific amenities listed.</p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -597,39 +1155,33 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           {/* LEFT COLUMN (8 columns) */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
             {/* 2.1 About This Property */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                  About This Property
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <p className="text-slate-600 leading-relaxed whitespace-pre-line">
-                  {displayDescription}
-                </p>
-                {shouldTruncate && (
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-blue-600 font-medium mt-4"
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                  >
-                    {showFullDescription ? 'Show Less' : 'Read Full Description'}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            {description.trim() && (
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                    About This Property
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                    {displayDescription}
+                  </p>
+                  {shouldTruncate && (
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-blue-600 font-medium mt-4"
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                    >
+                      {showFullDescription ? 'Show Less' : 'Read Full Description'}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* 2.2 Property Features / Specs Table (Dynamic) */}
-            {(specs.ownershipType ||
-              specs.powerBackup ||
-              (specs.securityFeatures && specs.securityFeatures.length > 0) ||
-              specs.waterSupply ||
-              specs.internetAccess ||
-              specs.flooring ||
-              specs.parkingType ||
-              specs.petFriendly ||
-              specs.electricitySupply) && (
-              <Card className="border-slate-200 shadow-sm">
+            {featureSpecItems.length > 0 && (
+              <Card id="features" className="border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
                     Property Features & Specifications
@@ -637,196 +1189,139 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {specs.ownershipType && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Home className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Ownership Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.ownershipType).replace(/_/g, ' ')}
-                          </p>
+                    {featureSpecItems.map(item => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.key}
+                          className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg"
+                        >
+                          <Icon className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">{item.label}</p>
+                            <p className="font-semibold text-slate-900" title={item.value}>
+                              {item.value}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.powerBackup && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Power Backup</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.powerBackup).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.securityFeatures && specs.securityFeatures.length > 0 && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Security</p>
-                          <p
-                            className="font-semibold text-slate-900 capitalize text-ellipsis overflow-hidden whitespace-nowrap"
-                            title={specs.securityFeatures.join(', ').replace(/_/g, ' ')}
-                          >
-                            {specs.securityFeatures.length > 1
-                              ? `${specs.securityFeatures.length} Features`
-                              : String(specs.securityFeatures[0]).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.waterSupply && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Water Supply</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.waterSupply).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.internetAccess && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Internet</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.internetAccess).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.flooring && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Flooring</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.flooring).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.parkingType && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Car className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Parking Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.parkingType).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.petFriendly && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Pet Friendly</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.petFriendly).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.electricitySupply && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Electricity</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.electricitySupply).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                <h3 className="text-fluid-h3 font-bold text-slate-900">{contactSectionTitle}</h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Left Column: Contact Profile Card */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
-                      {contactIdentity?.image ? (
-                        <img
-                          src={contactIdentity.image}
-                          alt={contactIdentity.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
-                          {contactIdentity?.name?.charAt(0) || 'A'}
-                        </div>
-                      )}
-                    </div>
+            {/* 2.3 Contact Overview */}
+            {contactMode !== 'unknown' && (
+              <div
+                id="contact"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm"
+              >
+                <div className="mb-6 border-b border-slate-200 pb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h4 className="text-lg font-bold text-slate-900">
-                        {contactIdentity?.name || `Property ${contactRoleLabel}`}
-                      </h4>
-                      <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
-                        {contactBadgeLabel}
-                      </Badge>
+                      <h3 className="text-fluid-h3 font-bold text-slate-900">
+                        {contactMode === 'developer'
+                          ? 'Developer Contact'
+                          : contactMode === 'private'
+                            ? 'Seller Contact'
+                            : 'Agent Contact'}
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-600">{contactIntro}</p>
                     </div>
+                    {listingContextLabel && (
+                      <Badge className="border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-700 hover:bg-orange-50">
+                        {listingContextLabel}
+                      </Badge>
+                    )}
                   </div>
+                </div>
 
-                  {agent ? (
-                    <>
-                      <div className="flex gap-4 mb-6">
-                        <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                          <div className="flex items-center justify-center gap-2 mb-1">
-                            <div className="text-fluid-h2 font-bold text-orange-500">
-                              {contactIdentity?.experience || 9}
-                            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100">
+                        {contactIdentity?.image ? (
+                          <img
+                            src={contactIdentity.image}
+                            alt={contactIdentity.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
+                            {contactIdentity?.name?.charAt(0) || '?'}
                           </div>
-                          <p className="text-xs text-slate-500 font-medium">years of Experience</p>
-                        </div>
-                        <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                          <div className="flex items-center justify-center gap-2 mb-1">
-                            <div className="text-fluid-h2 font-bold text-orange-500">
-                              {contactIdentity?.totalListings || 54}
-                            </div>
-                          </div>
-                          <p className="text-xs text-slate-500 font-medium">Total Listings</p>
-                        </div>
+                        )}
                       </div>
+                      <div className="min-w-0">
+                        <h4 className="text-lg font-bold text-slate-900">
+                          {contactIdentity?.name || 'Listing Contact'}
+                        </h4>
+                        {contactIdentity?.agency && (
+                          <p className="mt-1 text-sm text-slate-500">{contactIdentity.agency}</p>
+                        )}
+                      </div>
+                    </div>
 
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
-                      >
-                        <span className="font-medium text-slate-700">Current Listings</span>
-                        <div className="flex items-center gap-2">
-                          <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full group-hover:bg-white">
-                            {contactIdentity?.totalListings || 53}
-                          </span>
-                          <ChevronRight className="h-4 w-4 text-slate-400" />
-                        </div>
-                      </Button>
-                    </>
-                  ) : (
+                    {contactSummaryItems.length > 0 && (
+                      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {contactSummaryItems.map(item => (
+                          <div
+                            key={item.key}
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                          >
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                              {item.label}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-900">
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="space-y-3">
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-sm font-medium text-slate-900">
-                          {isDeveloperListing
-                            ? 'Developer-managed enquiry'
-                            : 'Seller-managed enquiry'}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-600">
-                          {isDeveloperListing
-                            ? 'This listing is presented as part of a development. Enquiries go to the developer team.'
-                            : 'This property is listed directly by the seller. Enquiries go to the seller.'}
-                        </p>
-                      </div>
-                      {developmentHref && (
+                      {whatsappNumber && (
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-left text-sm text-green-800 transition hover:bg-green-100"
+                          onClick={() =>
+                            handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
+                          }
+                        >
+                          <span className="flex items-center gap-2 font-medium">
+                            <MessageCircle className="h-4 w-4" />
+                            WhatsApp
+                          </span>
+                          <span className="truncate pl-4 font-semibold">{whatsappNumber}</span>
+                        </button>
+                      )}
+                      {directPhone && (
+                        <a
+                          href={`tel:${directPhone}`}
+                          className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span className="flex items-center gap-2 font-medium">
+                            <Phone className="h-4 w-4" />
+                            Call
+                          </span>
+                          <span className="font-semibold">{directPhone}</span>
+                        </a>
+                      )}
+                      {directEmail && (
+                        <a
+                          href={`mailto:${directEmail}`}
+                          className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span className="flex items-center gap-2 font-medium">
+                            <Mail className="h-4 w-4" />
+                            Email
+                          </span>
+                          <span className="font-medium truncate ml-4">{directEmail}</span>
+                        </a>
+                      )}
+                      {developmentHref && contactMode === 'developer' && (
                         <Button
                           variant="outline"
                           className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
@@ -837,71 +1332,138 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         </Button>
                       )}
                     </div>
-                  )}
-                </div>
-
-                {/* Right Column: Contact Form */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col h-full">
-                  <div className="space-y-4 flex-1">
-                    <div className="space-y-1">
-                      <Input
-                        placeholder="Name"
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Input
-                        type="email"
-                        placeholder="Email ID"
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Input
-                        type="tel"
-                        placeholder="Phone Number"
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-                      />
-                    </div>
                   </div>
 
-                  <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg mt-6 shadow-sm">
-                    Whatsapp {contactRoleLabel}
-                  </Button>
+                  <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-semibold text-slate-900">Take the next step</h4>
+                      <p className="text-sm text-slate-600">
+                        Start with qualification, then send an enquiry with your affordability
+                        context or jump straight into a direct contact channel.
+                      </p>
+                      {qualificationSnapshot && (
+                        <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
+                            Qualification Status
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {qualificationSnapshot.resultTitle}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Your affordability summary can be included with your enquiry.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <Button
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg shadow-sm"
+                        onClick={openQualification}
+                      >
+                        Check If You Qualify
+                      </Button>
+                      {whatsappNumber && (
+                        <Button
+                          variant="outline"
+                          className="w-full h-12 rounded-lg border-green-200 text-green-700 hover:bg-green-50"
+                          onClick={() =>
+                            handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
+                          }
+                        >
+                          WhatsApp {contactRoleLabel || 'Contact'}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        className="w-full h-12 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50"
+                        onClick={handleOpenStandardEnquiry}
+                      >
+                        Send Enquiry
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
-            {developerBrand && <DeveloperBrandSection brand={developerBrand as DeveloperBrandData} />}
+            {(property.developerBrand || property.developerBrandProfile) && (
+              <DeveloperBrandSection
+                brand={
+                  (property.developerBrand || property.developerBrandProfile) as DeveloperBrandData
+                }
+              />
+            )}
 
-            {/* 2.5 Nearby Landmarks */}
-            <NearbyLandmarks property={property} />
+            {/* 2.5 Location Decision Support */}
+            <section id="location" className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-fluid-h3 font-bold text-slate-900">Why This Area Works</h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Use location context, nearby places, and suburb reviews to judge fit before
+                      you contact the listing owner.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {locationOverviewItems.map(item => (
+                      <div
+                        key={item.key}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600"
+                      >
+                        <span className="mr-1 text-slate-400">{item.label}:</span>
+                        <span className="text-slate-700">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-            {/* 2.5 Suburb Reviews & Insights */}
-            <Card className="border-slate-200 shadow-sm">
+              <NearbyLandmarks
+                property={{
+                  id: property.id,
+                  title: property.title,
+                  latitude: property.latitude,
+                  longitude: property.longitude,
+                }}
+              />
+            </section>
+
+            {/* 2.6 Suburb Reviews & Insights */}
+            <Card id="reviews" className="border-slate-200 shadow-sm">
               <CardContent className="p-6">
                 <SuburbInsights
-                  suburbId={Number((property as any).suburbId ?? 0)}
-                  suburbName={property.suburb || property.city}
+                  suburbId={Number(property.suburbId ?? 0)}
+                  suburbName={property.suburb || property.city || 'Selected area'}
                   isDevelopment={!!property.developmentId}
                 />
               </CardContent>
             </Card>
 
-            {/* 2.6 Locality Guide */}
-            <LocalityGuide suburb={property.suburb || property.city} city={property.city} />
+            {/* 2.7 Locality Guide */}
+            <LocalityGuide
+              suburb={property.suburb || property.city || 'Selected area'}
+              city={property.city || property.suburb || 'Selected area'}
+              province={property.province}
+            />
           </div>
 
           {/* RIGHT COLUMN (4 columns) */}
           <div className="col-span-12 lg:col-span-4">
             {/* Buyability Calculator - Sticky */}
-            <div className="sticky top-24 space-y-4">
-              <BondCalculator propertyPrice={property.price} showTransferCosts={true} />
+            <div id="buyability-calculator" className="sticky top-24 space-y-4">
+              <BondCalculator
+                propertyPrice={displayPrice}
+                showTransferCosts={true}
+                ctaLabel="Check If You Qualify"
+                onCtaClick={openQualification}
+              />
 
               {/* Disclaimer */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-xs text-yellow-800">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-[11px] leading-relaxed text-amber-900">
                   <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
                   approval, interest rates, and transfer costs may vary based on individual
                   circumstances and bank policies. Consult with a bond originator or financial
@@ -914,14 +1476,27 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
         {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties Carousel */}
         {similarProperties.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-slate-900">
-                Property Listings in {property.suburb || property.city}
-              </h3>
-              <div className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
-                View All
+          <div className="mt-12 rounded-[28px] border border-slate-200 bg-slate-50 p-6 md:p-8">
+            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Keep Browsing
+                </p>
+                <h3 className="mt-1 text-2xl font-bold text-slate-900">
+                  Still comparing? Explore more in {property.suburb || property.city}
+                </h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  These listings match the same area or property type, so you can compare options
+                  without leaving the marketplace.
+                </p>
               </div>
+              <Button
+                variant="outline"
+                className="w-full border-slate-300 text-slate-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 md:w-auto"
+                onClick={() => setLocation(similarListingsHref)}
+              >
+                View All Matching Listings
+              </Button>
             </div>
 
             {/* Horizontal Scroll Carousel */}
@@ -930,8 +1505,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 {similarProperties.map(prop => (
                   <div
                     key={prop.id}
-                    onClick={() => setLocation(`/property/${prop.id}`)}
-                    className="group cursor-pointer bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all overflow-hidden min-w-[280px] md:min-w-[300px] snap-start"
+                    onClick={() => setLocation(buildPropertyUrl(prop.id, prop.title))}
+                    className="group min-w-[280px] cursor-pointer snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg md:min-w-[320px]"
                   >
                     {/* Image */}
                     <div className="relative h-44 overflow-hidden bg-slate-100">
@@ -940,27 +1515,45 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         alt={prop.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
-                      <div className="absolute top-2 left-2">
-                        <Badge className="bg-white/90 text-slate-700 hover:bg-white backdrop-blur-sm shadow-sm border-0 text-xs py-0 h-5">
+                      <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+                        <Badge className="h-6 border-0 bg-white/90 px-2.5 text-xs text-slate-700 shadow-sm backdrop-blur-sm hover:bg-white">
                           {prop.propertyType}
                         </Badge>
+                        {prop.suburb && (
+                          <Badge className="h-6 border border-white/20 bg-slate-900/75 px-2.5 text-xs text-white backdrop-blur-sm hover:bg-slate-900/75">
+                            {prop.suburb}
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
                     {/* Content */}
-                    <div className="p-3 space-y-2">
+                    <div className="space-y-3 p-4">
                       {/* Price */}
-                      <p className="text-lg font-bold text-[#005ca8]">
-                        R {prop.price.toLocaleString()}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-lg font-bold text-slate-900">
+                            R {prop.price.toLocaleString()}
+                          </p>
+                          {(prop.suburb || prop.city) && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              {prop.suburb || prop.city}
+                              {prop.suburb && prop.city ? `, ${prop.city}` : ''}
+                            </p>
+                          )}
+                        </div>
+                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-700">
+                          Compare
+                        </span>
+                      </div>
 
                       {/* Title */}
-                      <h4 className="font-semibold text-slate-800 line-clamp-1 text-sm">
+                      <h4 className="line-clamp-2 text-sm font-semibold text-slate-800">
                         {prop.title}
                       </h4>
 
                       {/* Property Details */}
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                         {prop.bedrooms && (
                           <div className="flex items-center gap-1">
                             <Bed className="h-3.5 w-3.5" />
@@ -980,6 +1573,10 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                           </div>
                         )}
                       </div>
+
+                      <div className="border-t border-slate-100 pt-3 text-sm font-medium text-slate-700 transition group-hover:text-orange-700">
+                        Open listing
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -991,45 +1588,51 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
       {/* Sticky Mobile Footer */}
       <PropertyMobileFooter
-        agentName={contactIdentity?.name || contactRoleLabel}
-        onCall={
-          contactIdentity?.phone ? () => window.open(`tel:${contactIdentity.phone}`) : undefined
-        }
-        onEmail={() => setIsContactModalOpen(true)}
-        onWhatsApp={
-          contactIdentity?.phone
-            ? () =>
-                window.open(
-                  `https://wa.me/${contactIdentity.phone.replace(/\s+/g, '')}`,
-                  '_blank',
-                )
-            : undefined
-        }
+        agentName={contactIdentity?.name || 'Listing Contact'}
+        onQualify={openQualification}
+        onCall={handleCallContact}
+        onWhatsApp={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+        canQualify={displayPrice > 0}
+        canCall={Boolean(directPhone)}
+        canWhatsApp={Boolean(whatsappNumber)}
       />
 
       {/* Modals */}
+      <PropertyQualificationDrawer
+        open={isQualificationOpen}
+        onOpenChange={setIsQualificationOpen}
+        propertyTitle={property.title}
+        propertyPrice={displayPrice}
+        onProceedToEnquiry={handleQualificationToEnquiry}
+        onProceedToWhatsApp={handleQualificationToWhatsApp}
+      />
+
       <PropertyContactModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
         propertyId={propertyId}
         propertyTitle={property.title}
-        agentName={contactIdentity?.name || `Property ${contactRoleLabel}`}
+        agentName={contactIdentity?.name || 'Listing Contact'}
         agentPhone={contactIdentity?.phone || undefined}
         agentEmail={contactIdentity?.email || undefined}
-        agentId={agent?.id ? Number(agent.id) : property?.agentId ? Number(property.agentId) : undefined}
-        agencyId={
-          contactIdentity?.agencyId ? Number(contactIdentity.agencyId) : undefined
+        agentId={
+          contactIdentity?.id
+            ? Number(contactIdentity.id)
+            : property?.agentId
+              ? Number(property.agentId)
+              : undefined
         }
+        agencyId={contactIdentity?.agencyId ? Number(contactIdentity.agencyId) : undefined}
         developmentId={
-          listingSource === 'development' && property?.developmentId
-            ? Number(property.developmentId)
-            : undefined
+          !agent && property?.developmentId ? Number(property.developmentId) : undefined
         }
         developerBrandProfileId={
-          listingSource === 'development' && (developerBrand?.id || property?.developerBrandProfileId)
-            ? Number(developerBrand?.id || property.developerBrandProfileId)
+          !agent && property?.developerBrandProfileId
+            ? Number(property.developerBrandProfileId)
             : undefined
         }
+        initialMessage={contactInitialMessage}
+        affordabilityData={affordabilityPayload}
       />
 
       <PropertyShareModal

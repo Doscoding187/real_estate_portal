@@ -59,9 +59,6 @@ client/src/components/marketing/wizard/Step4Budget.tsx
 client/src/components/marketing/wizard/Step6Creative.tsx
 client/src/components/partnerships/AddPartnerDialog.tsx
 client/src/components/partnerships/PartnershipManager.tsx
-client/src/components/property/NearbyLandmarks.tsx
-client/src/components/property/PropertyContactModal.tsx
-client/src/components/property/SuburbInsights.tsx
 client/src/components/PropertyCardWithProspect.tsx
 client/src/components/PropertyCategories.tsx
 client/src/components/property-results/QuickFilters.tsx
