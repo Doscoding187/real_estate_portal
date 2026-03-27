@@ -12,6 +12,7 @@ interface DevelopmentDerivedListingFilters {
   province?: string;
   city?: string;
   suburb?: string[];
+  locations?: string[];
   propertyType?: Property['propertyType'][];
   listingType?: Property['listingType'];
   minPrice?: number;
@@ -86,6 +87,31 @@ function slugifyText(value: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function normalizeLocationText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchesLocationSlugs(
+  row: { city?: unknown; suburb?: unknown; province?: unknown },
+  locations?: string[],
+): boolean {
+  if (!locations?.length) return true;
+
+  const haystacks = [row.suburb, row.city, row.province]
+    .map(value => normalizeLocationText(String(value || '')))
+    .filter(Boolean);
+
+  return locations.some(location => {
+    const normalizedLocation = normalizeLocationText(location);
+    if (!normalizedLocation) return false;
+    return haystacks.some(haystack => haystack.includes(normalizedLocation));
+  });
 }
 
 function mapStructuralTypeToPropertyType(
@@ -376,6 +402,10 @@ export class DevelopmentDerivedListingService {
 
     const mapped = rows
       .map(row => {
+        if (!matchesLocationSlugs(row, filters.locations)) {
+          return null;
+        }
+
         const propertyType = mapStructuralTypeToPropertyType(
           row.structuralType,
           row.developmentType,

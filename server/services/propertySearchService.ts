@@ -8,6 +8,7 @@ import { db } from '../db';
 import {
   properties,
   propertyImages,
+  listingMedia,
   developments,
   developers,
   developerBrandProfiles,
@@ -283,6 +284,7 @@ export class PropertySearchService {
         highlights: properties.amenities,
         amenities: properties.amenities,
         mainImage: properties.mainImage,
+        sourceListingId: properties.sourceListingId,
         propertySettings: properties.propertySettings,
         agentDisplayName: agents.displayName,
         agentFirstName: agents.firstName,
@@ -338,6 +340,36 @@ export class PropertySearchService {
       imagesByProperty.get(propId)!.push(img);
     });
 
+    const sourceListingIds: number[] = Array.from(
+      new Set(
+        results
+          .map((prop: any) => Number(prop.sourceListingId || 0))
+          .filter((listingId: number): listingId is number => Number.isFinite(listingId) && listingId > 0),
+      ),
+    );
+    const sourceListingImages =
+      sourceListingIds.length > 0
+        ? await db
+            .select({
+              listingId: listingMedia.listingId,
+              imageUrl: sql<string>`COALESCE(${listingMedia.processedUrl}, ${listingMedia.originalUrl})`,
+              isPrimary: listingMedia.isPrimary,
+              displayOrder: listingMedia.displayOrder,
+            })
+            .from(listingMedia)
+            .where(and(inArray(listingMedia.listingId, sourceListingIds), eq(listingMedia.mediaType, 'image')))
+            .orderBy(desc(listingMedia.isPrimary), asc(listingMedia.displayOrder))
+        : [];
+
+    const imagesBySourceListing = new Map<number, typeof sourceListingImages>();
+    sourceListingImages.forEach((img: any) => {
+      const listingId = Number(img.listingId);
+      if (!imagesBySourceListing.has(listingId)) {
+        imagesBySourceListing.set(listingId, []);
+      }
+      imagesBySourceListing.get(listingId)!.push(img);
+    });
+
     // Transform results to Property type
     const transformedProperties: Property[] = results.map((prop: any) => {
       const details = parseJsonObject(prop.propertySettings);
@@ -389,6 +421,15 @@ export class PropertySearchService {
         url: img.imageUrl,
         thumbnailUrl: img.imageUrl,
       }));
+      if (primaryImage.length === 0 && Number(prop.sourceListingId || 0) > 0) {
+        const sourceImages = (imagesBySourceListing.get(Number(prop.sourceListingId)) || []).map(
+          (img: any) => ({
+            url: img.imageUrl,
+            thumbnailUrl: img.imageUrl,
+          }),
+        );
+        primaryImage.push(...sourceImages);
+      }
       if (primaryImage.length === 0 && prop.mainImage) {
         primaryImage.push({ url: prop.mainImage, thumbnailUrl: prop.mainImage });
       }
