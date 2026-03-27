@@ -894,6 +894,7 @@ export interface DevelopmentDerivedListing {
   id: string;
   unitTypeId: string;
   developmentId: number;
+  rankingScore?: number;
   href?: string;
   title: string;
   price: number;
