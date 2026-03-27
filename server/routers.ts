@@ -13,8 +13,9 @@ import {
   agents,
   agencies,
   properties,
+  users,
 } from '../drizzle/schema';
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, or } from 'drizzle-orm';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
 import { userRouter } from './userRouter';
@@ -48,69 +49,172 @@ function parseTextList(value?: string | null) {
 
 async function getPropertyContactAgent(
   drizzleDb: Awaited<ReturnType<typeof getDb>>,
-  agentId: number,
+  {
+    agentId,
+    ownerUserId,
+  }: {
+    agentId?: number;
+    ownerUserId?: number;
+  },
 ) {
-  if (!drizzleDb || !Number.isFinite(agentId) || agentId <= 0) return null;
+  if (!drizzleDb) return null;
 
-  const [agentRow] = await drizzleDb
+  const normalizedAgentId = Number(agentId || 0);
+  const normalizedOwnerUserId = Number(ownerUserId || 0);
+
+  let agentRow: any = null;
+
+  if (Number.isFinite(normalizedAgentId) && normalizedAgentId > 0) {
+    [agentRow] = await drizzleDb
+      .select({
+        id: agents.id,
+        userId: agents.userId,
+        firstName: agents.firstName,
+        lastName: agents.lastName,
+        displayName: agents.displayName,
+        profileImage: agents.profileImage,
+        phone: agents.phone,
+        whatsapp: agents.whatsapp,
+        email: agents.email,
+        agencyId: agencies.id,
+        agencyName: agencies.name,
+        slug: agents.slug,
+        yearsExperience: agents.yearsExperience,
+        areasServed: agents.areasServed,
+        rating: agents.rating,
+        reviewCount: agents.reviewCount,
+        isVerified: agents.isVerified,
+      })
+      .from(agents)
+      .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+      .where(and(eq(agents.id, normalizedAgentId), eq(agents.status, 'approved')))
+      .limit(1);
+  }
+
+  if (!agentRow && Number.isFinite(normalizedOwnerUserId) && normalizedOwnerUserId > 0) {
+    [agentRow] = await drizzleDb
+      .select({
+        id: agents.id,
+        userId: agents.userId,
+        firstName: agents.firstName,
+        lastName: agents.lastName,
+        displayName: agents.displayName,
+        profileImage: agents.profileImage,
+        phone: agents.phone,
+        whatsapp: agents.whatsapp,
+        email: agents.email,
+        agencyId: agencies.id,
+        agencyName: agencies.name,
+        slug: agents.slug,
+        yearsExperience: agents.yearsExperience,
+        areasServed: agents.areasServed,
+        rating: agents.rating,
+        reviewCount: agents.reviewCount,
+        isVerified: agents.isVerified,
+      })
+      .from(agents)
+      .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+      .where(and(eq(agents.userId, normalizedOwnerUserId), eq(agents.status, 'approved')))
+      .limit(1);
+  }
+
+  if (agentRow) {
+    const linkedUserId = Number(agentRow.userId || normalizedOwnerUserId || 0);
+    const [activeListingsResult] = await drizzleDb
+      .select({ count: count() })
+      .from(properties)
+      .where(
+        and(
+          Number.isFinite(linkedUserId) && linkedUserId > 0
+            ? or(eq(properties.agentId, Number(agentRow.id)), eq(properties.ownerId, linkedUserId))!
+            : eq(properties.agentId, Number(agentRow.id)),
+          inArray(properties.status, ['available', 'published'] as const),
+        ),
+      );
+
+    const name =
+      String(agentRow.displayName || '').trim() ||
+      [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
+
+    return {
+      id: String(agentRow.id),
+      name: name || 'Agent',
+      agency: String(agentRow.agencyName || '').trim(),
+      phone: String(agentRow.phone || '').trim(),
+      whatsapp: String(agentRow.whatsapp || '').trim(),
+      email: String(agentRow.email || '').trim(),
+      image: agentRow.profileImage || undefined,
+      agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
+      slug: String(agentRow.slug || '').trim() || undefined,
+      yearsExperience:
+        typeof agentRow.yearsExperience === 'number' && agentRow.yearsExperience >= 0
+          ? agentRow.yearsExperience
+          : undefined,
+      areasServed: parseTextList(agentRow.areasServed),
+      rating: typeof agentRow.rating === 'number' ? agentRow.rating : undefined,
+      reviewCount: typeof agentRow.reviewCount === 'number' ? agentRow.reviewCount : undefined,
+      activeListingsCount: Number(activeListingsResult?.count || 0),
+      isVerified: Number(agentRow.isVerified || 0) === 1,
+    };
+  }
+
+  if (!(Number.isFinite(normalizedOwnerUserId) && normalizedOwnerUserId > 0)) {
+    return null;
+  }
+
+  const [userRow] = await drizzleDb
     .select({
-      id: agents.id,
-      firstName: agents.firstName,
-      lastName: agents.lastName,
-      displayName: agents.displayName,
-      profileImage: agents.profileImage,
-      phone: agents.phone,
-      whatsapp: agents.whatsapp,
-      email: agents.email,
+      id: users.id,
+      name: users.name,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      phone: users.phone,
+      email: users.email,
+      role: users.role,
       agencyId: agencies.id,
       agencyName: agencies.name,
-      slug: agents.slug,
-      yearsExperience: agents.yearsExperience,
-      areasServed: agents.areasServed,
-      rating: agents.rating,
-      reviewCount: agents.reviewCount,
-      isVerified: agents.isVerified,
     })
-    .from(agents)
-    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
-    .where(and(eq(agents.id, agentId), eq(agents.status, 'approved')))
+    .from(users)
+    .leftJoin(agencies, eq(users.agencyId, agencies.id))
+    .where(eq(users.id, normalizedOwnerUserId))
     .limit(1);
 
-  if (!agentRow) return null;
+  if (!userRow) return null;
 
-  const [activeListingsResult] = await drizzleDb
+  const role = String(userRow.role || '').trim();
+  const isAgentLikeOwner = ['agent', 'agency_admin'].includes(role);
+  if (!isAgentLikeOwner) return null;
+
+  const [ownerListingsResult] = await drizzleDb
     .select({ count: count() })
     .from(properties)
     .where(
       and(
-        eq(properties.agentId, agentId),
+        eq(properties.ownerId, normalizedOwnerUserId),
         inArray(properties.status, ['available', 'published'] as const),
       ),
     );
 
-  const name =
-    String(agentRow.displayName || '').trim() ||
-    [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
+  const ownerName =
+    String(userRow.name || '').trim() ||
+    [userRow.firstName, userRow.lastName].filter(Boolean).join(' ').trim();
 
   return {
-    id: String(agentRow.id),
-    name: name || 'Agent',
-    agency: String(agentRow.agencyName || '').trim(),
-    phone: String(agentRow.phone || '').trim(),
-    whatsapp: String(agentRow.whatsapp || '').trim(),
-    email: String(agentRow.email || '').trim(),
-    image: agentRow.profileImage || undefined,
-    agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
-    slug: String(agentRow.slug || '').trim() || undefined,
-    yearsExperience:
-      typeof agentRow.yearsExperience === 'number' && agentRow.yearsExperience >= 0
-        ? agentRow.yearsExperience
-        : undefined,
-    areasServed: parseTextList(agentRow.areasServed),
-    rating: typeof agentRow.rating === 'number' ? agentRow.rating : undefined,
-    reviewCount: typeof agentRow.reviewCount === 'number' ? agentRow.reviewCount : undefined,
-    activeListingsCount: Number(activeListingsResult?.count || 0),
-    isVerified: Number(agentRow.isVerified || 0) === 1,
+    id: `user-${userRow.id}`,
+    name: ownerName || 'Agent',
+    agency: String(userRow.agencyName || '').trim(),
+    phone: String(userRow.phone || '').trim(),
+    whatsapp: String(userRow.phone || '').trim(),
+    email: String(userRow.email || '').trim(),
+    image: undefined,
+    agencyId: userRow.agencyId ? Number(userRow.agencyId) : undefined,
+    slug: undefined,
+    yearsExperience: undefined,
+    areasServed: [],
+    rating: undefined,
+    reviewCount: undefined,
+    activeListingsCount: Number(ownerListingsResult?.count || 0),
+    isVerified: false,
   };
 }
 import { listingRouter } from './listingRouter';
@@ -666,7 +770,10 @@ export const appRouter = router({
           let agent: any = null;
 
           if (drizzleDb) {
-            agent = await getPropertyContactAgent(drizzleDb, resolvedAgentId);
+            agent = await getPropertyContactAgent(drizzleDb, {
+              agentId: resolvedAgentId,
+              ownerUserId: Number((listing as any).ownerId || 0),
+            });
           }
 
           if (drizzleDb && Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
@@ -840,9 +947,10 @@ export const appRouter = router({
           );
           const resolvedAgentId = Number((property as any).agentId || 0);
 
-          if (Number.isFinite(resolvedAgentId) && resolvedAgentId > 0) {
-            agent = await getPropertyContactAgent(drizzleDb, resolvedAgentId);
-          }
+          agent = await getPropertyContactAgent(drizzleDb, {
+            agentId: resolvedAgentId,
+            ownerUserId: Number((property as any).ownerId || 0),
+          });
 
           if (Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
             const [dev] = await drizzleDb
