@@ -12,8 +12,6 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
-import { getDb } from '../db';
-import { sql } from 'drizzle-orm';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
@@ -203,6 +201,27 @@ class AuthService {
   /**
    * Register a new user with email and password
    */
+  async resendVerificationEmail(email: string): Promise<{ sent: boolean }> {
+    const user = await db.getUserByEmail(email);
+    if (!user || user.emailVerified || !user.email) {
+      return { sent: false };
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    await db.updateUserEmailVerificationToken(user.id, verificationToken);
+
+    await sendVerificationEmail({
+      to: user.email,
+      verificationToken,
+      name: user.name || undefined,
+    });
+
+    return { sent: true };
+  }
+
+  /**
+   * Register a new user with email and password
+   */
   async register(
     email: string,
     password: string,
@@ -210,12 +229,13 @@ class AuthService {
     role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
     agentProfile?: {
       displayName: string;
-      phone: string;
+      phone?: string;
+      phoneNumber?: string;
       bio?: string;
       licenseNumber?: string;
       specializations?: string[];
     },
-  ): Promise<number> {
+  ): Promise<{ userId: number; verificationEmailSent: boolean }> {
     // Check if user already exists
     const existingUser = await db.getUserByEmail(email);
     if (existingUser) {
@@ -240,22 +260,36 @@ class AuthService {
       emailVerificationToken,
     });
 
-    // Store agent profile data for creation after email verification
-    if (role === 'agent' && agentProfile) {
-      const database = await getDb();
-      if (database) {
-        await database.execute(sql`
-          INSERT INTO pending_agent_profiles 
-          (userId, displayName, phone, bio, licenseNumber, specializations)
-          VALUES (
-            ${userId}, 
-            ${agentProfile.displayName}, 
-            ${agentProfile.phone}, 
-            ${agentProfile.bio || null}, 
-            ${agentProfile.licenseNumber || null}, 
-            ${agentProfile.specializations ? agentProfile.specializations.join(',') : null}
-          )
-        `);
+    const normalizedAgentProfile =
+      role === 'agent' && agentProfile
+        ? {
+            displayName: agentProfile.displayName.trim(),
+            phone: agentProfile.phone || agentProfile.phoneNumber,
+            bio: agentProfile.bio,
+            licenseNumber: agentProfile.licenseNumber,
+            specializations: agentProfile.specializations,
+          }
+        : undefined;
+
+    // Create the pending agent profile immediately so registration does not
+    // depend on the optional pending_agent_profiles staging table.
+    if (role === 'agent' && normalizedAgentProfile) {
+      if (!normalizedAgentProfile.displayName || !normalizedAgentProfile.phone) {
+        throw new Error('Agent profile with display name and phone number is required');
+      }
+
+      try {
+        await db.createAgentProfile({
+          userId,
+          displayName: normalizedAgentProfile.displayName,
+          phone: normalizedAgentProfile.phone,
+          bio: normalizedAgentProfile.bio,
+          licenseNumber: normalizedAgentProfile.licenseNumber,
+          specializations: normalizedAgentProfile.specializations,
+        });
+      } catch (error) {
+        await db.deleteUserById(userId);
+        throw error;
       }
     }
 
@@ -266,6 +300,7 @@ class AuthService {
     }
 
     // Send verification email
+    let verificationEmailSent = false;
     try {
       await sendVerificationEmail({
         to: user.email!,
@@ -273,12 +308,12 @@ class AuthService {
         name: user.name || undefined,
       });
       console.log('[Auth] Verification email sent successfully');
+      verificationEmailSent = true;
     } catch (emailError) {
       console.error('[Auth] Failed to send verification email:', emailError);
-      // Don't throw error - allow registration to complete even if email fails
     }
 
-    return userId;
+    return { userId, verificationEmailSent };
   }
 
   /**
@@ -420,35 +455,12 @@ class AuthService {
     // Verify the email
     await db.verifyUserEmail(user.id);
 
-    // If user is an agent, create agent profile from pending data
+    // Agent profiles are created directly during registration.
+    // Verification should not depend on the legacy pending_agent_profiles table.
     if (user.role === 'agent') {
-      const database = await getDb();
-      if (database) {
-        // Get pending agent profile data
-        const [pendingProfile] = await database.execute(sql`
-          SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
-        `);
-
-        if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
-          const profileData = pendingProfile.rows[0] as any;
-
-          // Create agent profile
-          await db.createAgentProfile({
-            userId: user.id,
-            displayName: profileData.displayName,
-            phone: profileData.phone,
-            bio: profileData.bio,
-            licenseNumber: profileData.licenseNumber,
-            specializations: profileData.specializations
-              ? profileData.specializations.split(',')
-              : undefined,
-          });
-
-          // Delete pending profile data
-          await database.execute(sql`
-            DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
-          `);
-        }
+      const existingProfile = await db.getAgentByUserId(user.id);
+      if (!existingProfile) {
+        throw new Error('Agent profile is missing for this account. Please contact support.');
       }
     }
   }

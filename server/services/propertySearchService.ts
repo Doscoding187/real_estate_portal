@@ -5,7 +5,16 @@
  */
 
 import { db } from '../db';
-import { properties, propertyImages, developments, agents, agencies, suburbs } from '../../drizzle/schema';
+import {
+  properties,
+  propertyImages,
+  developments,
+  developers,
+  developerBrandProfiles,
+  agents,
+  agencies,
+  suburbs,
+} from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type { PropertyFilters, SortOption, SearchResults, Property } from '../../shared/types';
@@ -249,6 +258,12 @@ export class PropertySearchService {
         listingType: properties.listingType,
         bedrooms: properties.bedrooms,
         bathrooms: properties.bathrooms,
+        developmentId: properties.developmentId,
+        developmentName: developments.name,
+        developmentSlug: developments.slug,
+        developerId: developments.developerId,
+        developerName: developers.name,
+        developerLogo: developers.logo,
         erfSize: sql<number>`CAST(${properties.area} AS SIGNED)`,
         floorSize: sql<number>`CAST(${properties.area} AS SIGNED)`,
         titleType: sql<'freehold' | 'sectional'>`'freehold'`, // Default until migration
@@ -278,11 +293,21 @@ export class PropertySearchService {
         agentProfileImage: agents.profileImage,
         agencyName: agencies.name,
         agentId: properties.agentId,
+        developerBrandProfileId: sql<number>`COALESCE(${properties.developerBrandProfileId}, ${developments.developerBrandProfileId})`,
+        builderBrandName: developerBrandProfiles.brandName,
+        builderLogoUrl: developerBrandProfiles.logoUrl,
+        builderSlug: developerBrandProfiles.slug,
+        builderPublicContactEmail: developerBrandProfiles.publicContactEmail,
       })
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
+      .leftJoin(developers, eq(developments.developerId, developers.id))
       .leftJoin(agents, eq(properties.agentId, agents.id))
       .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+      .leftJoin(
+        developerBrandProfiles,
+        sql`${developerBrandProfiles.id} = COALESCE(${properties.developerBrandProfileId}, ${developments.developerBrandProfileId})`,
+      )
       .where(and(...conditions))
       .orderBy(orderBy)
       .limit(pageSize)
@@ -372,6 +397,38 @@ export class PropertySearchService {
         String(prop.agentDisplayName || '').trim() ||
         [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim()
       ).trim();
+      const developerName = String(prop.developerName || '').trim();
+      const developerLogo = prop.developerLogo || undefined;
+      const builderName = String(prop.builderBrandName || '').trim() || developerName;
+      const builderLogo = prop.builderLogoUrl || developerLogo;
+
+      const hasAgentIdentity = !!agentName;
+      const storedBadges = Array.isArray(details.badges) ? details.badges : [];
+
+      const developmentId = Number(prop.developmentId || 0);
+      const developmentName =
+        String(prop.developmentName || '').trim() || String(details.developmentName || '').trim();
+      const developmentSlug = String(prop.developmentSlug || '').trim() || undefined;
+      const development =
+        (Number.isFinite(developmentId) && developmentId > 0) || developmentName
+          ? {
+              id: Number.isFinite(developmentId) && developmentId > 0 ? developmentId : null,
+              name: developmentName || null,
+              slug: developmentSlug || null,
+            }
+          : undefined;
+
+      const developerBrandProfileId = Number(prop.developerBrandProfileId || 0);
+      const developerBrand =
+        Number.isFinite(developerBrandProfileId) && developerBrandProfileId > 0
+          ? {
+              id: developerBrandProfileId,
+              brandName: builderName || 'Developer',
+              slug: String(prop.builderSlug || '').trim() || slugifyText(builderName || 'developer'),
+              logoUrl: prop.builderLogoUrl || null,
+              publicContactEmail: String(prop.builderPublicContactEmail || '').trim() || null,
+            }
+          : undefined;
 
       const titleType: Property['titleType'] =
         String(details.propertySetting || details.ownershipType || '').toLowerCase().includes(
@@ -406,15 +463,26 @@ export class PropertySearchService {
         videoCount: Number(prop.videoCount || 0),
         status: this.mapStatus(prop.status),
         listedDate: new Date(prop.listedDate),
-        agent: {
-          id: String(prop.agentId || 0),
-          name: agentName,
-          agency: String(prop.agencyName || ''),
-          phone: String(prop.agentPhone || ''),
-          whatsapp: String(prop.agentWhatsapp || ''),
-          email: String(prop.agentEmail || ''),
-          image: prop.agentProfileImage || undefined,
-        },
+        listingSource: 'manual',
+        listerType: hasAgentIdentity ? (prop.agencyName ? 'agency' : 'agent') : 'private',
+        agent: hasAgentIdentity
+          ? {
+              id: String(prop.agentId || 0),
+              name: agentName,
+              agency: String(prop.agencyName || ''),
+              phone: String(prop.agentPhone || ''),
+              whatsapp: String(prop.agentWhatsapp || ''),
+              email: String(prop.agentEmail || ''),
+              image: prop.agentProfileImage || undefined,
+            }
+          : undefined,
+        developerBrand,
+        development,
+        developmentId: Number.isFinite(developmentId) && developmentId > 0 ? developmentId : undefined,
+        badges: uniqueStrings([
+          ...storedBadges.map((badge: any) => String(badge ?? '').trim()),
+          development?.name ? `Part of ${development.name}` : '',
+        ]),
         latitude: prop.latitude || 0,
         longitude: prop.longitude || 0,
         highlights,

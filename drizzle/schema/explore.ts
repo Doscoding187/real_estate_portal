@@ -103,7 +103,7 @@ export const exploreEngagements = mysqlTable('explore_engagements', {
 export const topics = mysqlTable(
   'topics',
   {
-    id: varchar('id', { length: 36 }).notNull(),
+    id: varchar('id', { length: 36 }).notNull().primaryKey(),
     name: varchar('name', { length: 255 }).notNull(),
     slug: varchar('slug', { length: 255 }).notNull(),
     description: text('description'),
@@ -119,7 +119,7 @@ export const topics = mysqlTable(
 export const contentTopics = mysqlTable(
   'content_topics',
   {
-    id: int('id').autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     contentId: int('content_id').notNull(),
     topicId: varchar('topic_id', { length: 36 }).notNull(),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
@@ -133,7 +133,7 @@ export const contentTopics = mysqlTable(
 export const explorePartners = mysqlTable(
   'explore_partners',
   {
-    id: varchar('id', { length: 36 }).notNull(),
+    id: varchar('id', { length: 36 }).notNull().primaryKey(),
     userId: varchar('user_id', { length: 36 }).notNull(),
     tierId: int('tier_id').notNull(),
     companyName: varchar('company_name', { length: 255 }).notNull(),
@@ -157,7 +157,7 @@ export const explorePartners = mysqlTable(
 export const exploreDiscoveryVideos = mysqlTable(
   'explore_discovery_videos',
   {
-    id: varchar('id', { length: 36 }).notNull(),
+    id: varchar('id', { length: 36 }).notNull().primaryKey(),
     exploreContentId: int('explore_content_id').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -170,7 +170,7 @@ export const exploreDiscoveryVideos = mysqlTable(
 export const exploreFeedSessions = mysqlTable(
   'explore_feed_sessions',
   {
-    id: varchar('id', { length: 36 }).notNull(),
+    id: varchar('id', { length: 36 }).notNull().primaryKey(),
     userId: int('user_id'),
     createdAt: timestamp('created_at').defaultNow(),
   },

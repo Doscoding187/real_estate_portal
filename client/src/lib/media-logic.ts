@@ -24,6 +24,37 @@ export type DevelopmentMedia = {
   videos: VideoMedia[];
 };
 
+const getUniqueImages = (media: DevelopmentMedia): ImageMedia[] => {
+  const seen = new Set<string>();
+  return [media.featuredImage, ...media.images].filter((img): img is ImageMedia => {
+    if (!img?.url || seen.has(img.url)) return false;
+    seen.add(img.url);
+    return true;
+  });
+};
+
+const pickFirstByCategory = (
+  images: ImageMedia[],
+  categories: ImageCategory[],
+  excludedUrls: Set<string> = new Set(),
+): ImageMedia | undefined =>
+  images.find(img => categories.includes(img.category) && !excludedUrls.has(img.url));
+
+const pickFallbackImage = (
+  media: DevelopmentMedia,
+  categoryOrder: ImageCategory[][],
+  excludedUrls: Set<string> = new Set(),
+): ImageMedia | undefined => {
+  const images = getUniqueImages(media);
+
+  for (const categoryGroup of categoryOrder) {
+    const match = pickFirstByCategory(images, categoryGroup, excludedUrls);
+    if (match) return match;
+  }
+
+  return images.find(img => !excludedUrls.has(img.url));
+};
+
 // =============================================================================
 // 1. CARDS / LISTINGS (Marketing Layer)
 // =============================================================================
@@ -37,7 +68,7 @@ export type DevelopmentMedia = {
  * Videos strictly forbidden.
  */
 export function getDevelopmentCardImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return media.featuredImage || media.images[0];
+  return media.featuredImage || getUniqueImages(media)[0];
 }
 
 /**
@@ -56,7 +87,7 @@ export function getDevelopmentHeroMedia(
 
   return {
     type: 'image',
-    image: media.featuredImage || media.images[0],
+    image: media.featuredImage || getUniqueImages(media)[0],
   };
 }
 
@@ -66,10 +97,13 @@ export function getDevelopmentHeroMedia(
  * STRICTLY images only. No videos.
  */
 export function buildDevelopmentGalleryImages(media: DevelopmentMedia): ImageMedia[] {
-  const featured = media.featuredImage ? [media.featuredImage] : [];
+  const uniqueImages = getUniqueImages(media);
+  const featured = media.featuredImage
+    ? uniqueImages.filter(img => img.url === media.featuredImage?.url)
+    : [];
 
   // Exclude featured from the rest to prevent duplication
-  const rest = media.images.filter(
+  const rest = uniqueImages.filter(
     img => !media.featuredImage || img.url !== media.featuredImage.url,
   );
 
@@ -114,19 +148,33 @@ export function getDevelopmentViewGalleryTileImage(
   media: DevelopmentMedia,
 ): ImageMedia | undefined {
   if (media.videos.length > 0) {
-    return media.featuredImage || media.images[0];
+    return media.featuredImage || getUniqueImages(media)[0];
   }
-  const interior = media.images.find(
-    img => img.category === 'interior' || img.category === 'general',
+  const excludedUrls = new Set<string>(media.featuredImage?.url ? [media.featuredImage.url] : []);
+  return (
+    pickFallbackImage(
+      media,
+      [['interior', 'general'], ['amenities'], ['outdoors'], ['photo'], ['render']],
+      excludedUrls,
+    ) ??
+    media.featuredImage ??
+    getUniqueImages(media)[0]
   );
-  return interior ?? media.images[0] ?? media.featuredImage;
 }
 
 /**
  * Amenities Tile
  */
 export function getDevelopmentAmenityTileImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return media.images.find(img => img.category === 'amenities') ?? media.images[0];
+  return (
+    pickFallbackImage(media, [
+      ['amenities'],
+      ['interior', 'general'],
+      ['outdoors'],
+      ['photo'],
+      ['render'],
+    ]) ?? media.featuredImage
+  );
 }
 
 /**
@@ -134,7 +182,13 @@ export function getDevelopmentAmenityTileImage(media: DevelopmentMedia): ImageMe
  */
 export function getDevelopmentOutdoorsTileImage(media: DevelopmentMedia): ImageMedia | undefined {
   return (
-    media.images.find(img => img.category === 'outdoors') ?? media.images[1] ?? media.images[0]
+    pickFallbackImage(media, [
+      ['outdoors'],
+      ['photo'],
+      ['amenities'],
+      ['interior', 'general'],
+      ['render'],
+    ]) ?? media.featuredImage
   );
 }
 

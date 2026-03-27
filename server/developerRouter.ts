@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { router, protectedProcedure, publicProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
+import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
@@ -20,6 +21,17 @@ import { getKPIsWithCache } from './services/kpiService';
 import { seedCleanupService } from './services/seedCleanupService';
 import { capturePublicLead } from './services/publicLeadCaptureService';
 import {
+  assignDeveloperLead,
+  getDeveloperDistributionSettings,
+  getDeveloperFunnelAttention,
+  getDeveloperFunnelKpis,
+  listDeveloperLeads,
+  logDeveloperLeadActivity,
+  setDeveloperDistributionEnabled,
+  setDeveloperLeadNextAction,
+  transitionDeveloperLead,
+} from './services/developerFunnelService';
+import {
   developmentDrafts,
   developments,
   developers,
@@ -27,11 +39,28 @@ import {
   unitTypes,
 } from '../drizzle/schema';
 import { eq, desc, and, or, sql } from 'drizzle-orm';
+import {
+  AssignmentModeSchema,
+  LeadOwnerTypeSchema,
+  LeadStageSchema,
+  SlaStatusSchema,
+} from '../shared/developerFunnel';
 import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
+import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
+
+function assertDeveloperDistributionEnabled() {
+  if (!ENV.distributionNetworkEnabled) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message:
+        'Distribution Network is disabled. Set FEATURE_DISTRIBUTION_NETWORK=true to enable this module.',
+    });
+  }
+}
 
 /**
  * Wizard v2 canonical parking types.
@@ -365,18 +394,45 @@ const EMPTY_DEVELOPER_KPIS = {
 // ===========================================================================
 
 export const developerRouter = router({
-  adminListPendingDevelopers: protectedProcedure.input(z.void()).query(async () => {
-    return { developers: [] as any[], total: 0 };
+  adminListPendingDevelopers: superAdminProcedure.input(z.void()).query(async () => {
+    const developers = await db.listPendingDevelopers();
+    return { developers, total: developers.length };
   }),
 
-  adminListAllDevelopers: protectedProcedure.input(z.void()).query(async () => {
-    return { developers: [] as any[], total: 0 };
+  adminListAllDevelopers: superAdminProcedure.input(z.void()).query(async () => {
+    const developers = await db.listAllDevelopers();
+    return { developers, total: developers.length };
   }),
 
-  adminSetTrusted: protectedProcedure
-    .input(z.object({ developerId: z.number(), isTrusted: z.boolean() }))
-    .mutation(async () => {
+  adminApproveDeveloper: superAdminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await db.approveDeveloper(input.id, requireUser(ctx).id);
       return { ok: true };
+    }),
+
+  adminRejectDeveloper: superAdminProcedure
+    .input(z.object({ id: z.number(), reason: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await db.rejectDeveloper(input.id, requireUser(ctx).id, input.reason);
+      return { ok: true };
+    }),
+
+  adminSetTrusted: superAdminProcedure
+    .input(
+      z
+        .object({ developerId: z.number().optional(), id: z.number().optional(), isTrusted: z.boolean() })
+        .refine(value => typeof value.developerId === 'number' || typeof value.id === 'number', {
+          message: 'developerId or id is required',
+        }),
+    )
+    .mutation(async ({ input }) => {
+      const developerId = input.developerId ?? input.id;
+      await db.setDeveloperTrust(developerId as number, input.isTrusted);
+      return {
+        ok: true,
+        message: input.isTrusted ? 'Developer marked as trusted' : 'Developer trust removed',
+      };
     }),
   getPublicDeveloperBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
@@ -394,6 +450,30 @@ export const developerRouter = router({
     .query(async () => {
       return [] as any[];
     }),
+
+  searchDevelopers: publicProcedure
+    .input(
+      z.object({
+        query: z.string().trim().min(2),
+        limit: z.number().int().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopers(input.query, input.limit);
+    }),
+
+  searchDevelopments: publicProcedure
+    .input(
+      z.object({
+        query: z.string().trim().min(2),
+        developerId: z.number().int().positive().optional(),
+        limit: z.number().int().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopments(input.query, input.developerId, input.limit);
+    }),
+
   createProfile: protectedProcedure
     .input(
       z.object({
@@ -688,7 +768,7 @@ export const developerRouter = router({
         province: z.string().optional(),
         city: z.string().optional(),
         suburb: z.string().optional(),
-        limit: z.number().min(1).max(8).optional(),
+        limit: z.number().min(1).max(10).optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -703,6 +783,28 @@ export const developerRouter = router({
         city?: string;
         suburb?: string;
       };
+      type FeedItem = {
+        id: string;
+        kind: 'development' | 'listing' | 'unit';
+        title: string;
+        city: string;
+        suburb: string;
+        priceFrom: number;
+        priceTo: number;
+        image: string;
+        href: string;
+        listingType?: 'sale' | 'rent';
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        area?: number | null;
+        yardSize?: number | null;
+        unitSize?: number | null;
+        propertyType?: string | null;
+        developmentName?: string | null;
+        badges?: string[];
+      };
+      type ListingFeedItem = FeedItem & { kind: 'listing' };
+      type UnitFeedItem = FeedItem & { kind: 'unit' };
 
       const normalizeDevImage = (images: any): string => {
         if (!images) return '';
@@ -726,77 +828,215 @@ export const developerRouter = router({
         href: `/development/${dev.slug || dev.id}`,
       });
 
-      const mapListing = (prop: any) => ({
+      const listingMediaBaseUrl =
+        ENV.cloudFrontUrl ||
+        (ENV.s3BucketName && ENV.awsRegion
+          ? `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`
+          : '');
+
+      const toPublicListingImageUrl = (value: unknown): string => {
+        if (typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        if (
+          trimmed.startsWith('http://') ||
+          trimmed.startsWith('https://') ||
+          trimmed.startsWith('data:') ||
+          trimmed.startsWith('blob:')
+        ) {
+          return trimmed;
+        }
+        if (!listingMediaBaseUrl) {
+          return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+        }
+        return trimmed.startsWith('/')
+          ? `${listingMediaBaseUrl}${trimmed}`
+          : `${listingMediaBaseUrl}/${trimmed}`;
+      };
+
+      const normalizeListingImage = (prop: any): string => {
+        const firstImage = Array.isArray(prop.images) ? prop.images[0] : undefined;
+        const firstImageUrl =
+          typeof firstImage === 'string'
+            ? firstImage
+            : firstImage?.url ||
+              firstImage?.imageUrl ||
+              firstImage?.thumbnailUrl ||
+              firstImage?.processedUrl ||
+              firstImage?.originalUrl ||
+              firstImage?.fileUrl ||
+              firstImage?.key ||
+              firstImage?.src;
+
+        const primaryMediaUrl = Array.isArray(prop.media)
+          ? prop.media.find((item: any) => item?.isPrimary)?.url ||
+            prop.media.find((item: any) => item?.isPrimary)?.processedUrl ||
+            prop.media.find((item: any) => item?.isPrimary)?.originalUrl ||
+            prop.media.find((item: any) => item?.isPrimary)?.fileUrl
+          : '';
+
+        const fallbackMediaUrl = Array.isArray(prop.media)
+          ? prop.media[0]?.url ||
+            prop.media[0]?.processedUrl ||
+            prop.media[0]?.originalUrl ||
+            prop.media[0]?.fileUrl
+          : '';
+
+        return toPublicListingImageUrl(
+          prop.mainImage ||
+          prop.image ||
+          prop.coverImage ||
+          prop.thumbnailUrl ||
+          prop.imageUrl ||
+          firstImageUrl ||
+          primaryMediaUrl ||
+          fallbackMediaUrl,
+        );
+      };
+
+      const buildListingTitle = (prop: any): string => {
+        const explicitTitle = String(prop.title || '').trim();
+        if (
+          explicitTitle &&
+          explicitTitle.toLowerCase() !== 'property listing' &&
+          explicitTitle.toLowerCase() !== 'untitled property'
+        ) {
+          return explicitTitle;
+        }
+
+        const bedrooms = Number(prop.bedrooms || 0);
+        const propertyType = String(prop.propertyType || 'Property')
+          .replace(/_/g, ' ')
+          .trim();
+        const normalizedType =
+          propertyType.length > 0
+            ? propertyType.charAt(0).toUpperCase() + propertyType.slice(1).toLowerCase()
+            : 'Property';
+
+        if (bedrooms > 0) {
+          return String(prop.listingType || '').toLowerCase() === 'rent'
+            ? `${bedrooms} Bedroom ${normalizedType} to Rent`
+            : `${bedrooms} Bedroom ${normalizedType}`;
+        }
+
+        return String(prop.listingType || '').toLowerCase() === 'rent'
+          ? `${normalizedType} to Rent`
+          : normalizedType;
+      };
+
+      const mapListing = (prop: any): ListingFeedItem => ({
         id: String(prop.id),
         kind: 'listing' as const,
-        title: prop.title || 'Property Listing',
+        title: buildListingTitle(prop),
         city: prop.city || '',
         suburb: prop.suburb || '',
         priceFrom: Number(prop.price || 0),
         priceTo: Number(prop.price || 0),
-        image: Array.isArray(prop.images) && prop.images[0]?.url ? prop.images[0].url : '',
+        image: normalizeListingImage(prop),
         href: `/property/${prop.id}`,
+        listingType: String(prop.listingType || 'sale').toLowerCase() === 'rent' ? 'rent' : 'sale',
+        bedrooms: Number(prop.bedrooms || 0) || null,
+        bathrooms: Number(prop.bathrooms || 0) || null,
+        area: Number(prop.floorSize || prop.area || 0) || null,
+        yardSize: Number(prop.erfSize || prop.yardSize || 0) || null,
+        developmentName:
+          String(prop.development?.name || prop.developmentName || '').trim() || null,
+        badges: Array.isArray(prop.badges)
+          ? prop.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
+          : [],
       });
+
+      const mapUnitListing = (item: any): UnitFeedItem => ({
+        id: String(item.id),
+        kind: 'unit' as const,
+        title: item.title,
+        city: item.city || '',
+        suburb: item.suburb || '',
+        priceFrom: Number(item.price || 0),
+        priceTo: Number(item.priceTo || item.price || 0),
+        image: String(item.image || ''),
+        href:
+          item.href ||
+          (item.development?.slug
+            ? `/development/${item.development.slug}/unit/${item.unitTypeId}`
+            : `/development/${item.developmentId}/unit/${item.unitTypeId}`),
+        listingType: item.listingType === 'rent' ? 'rent' : 'sale',
+        bedrooms: Number(item.bedrooms || 0) || null,
+        bathrooms: Number(item.bathrooms || 0) || null,
+        unitSize: Number(item.floorSize || 0) || null,
+        yardSize: Number(item.erfSize || 0) || null,
+        propertyType: item.propertyType || null,
+        developmentName: String(item.development?.name || '').trim() || null,
+        badges: Array.isArray(item.badges)
+          ? item.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
+          : [],
+      });
+
+      const composeResidentialHomeFeed = async (
+        locationFilter: LocationFilter,
+        listingType: 'sale' | 'rent',
+      ): Promise<{ items: FeedItem[]; source: 'mixed' | 'listings' | 'units' }> => {
+        const { propertySearchService } = await import('./services/propertySearchService');
+        const { developmentDerivedListingService } = await import(
+          './services/developmentDerivedListingService'
+        );
+
+        const poolLimit = Math.max(limit * 2, 12);
+        const [listingResults, developmentUnits] = await Promise.all([
+          propertySearchService.searchProperties(
+            {
+              province: locationFilter.province,
+              city: locationFilter.city,
+              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+              listingType,
+              propertyType:
+                listingType === 'rent'
+                  ? ['house', 'apartment', 'townhouse']
+                  : ['house', 'apartment', 'townhouse', 'plot'],
+            } as any,
+            'date_desc',
+            1,
+            poolLimit,
+          ),
+          developmentDerivedListingService.searchListings(
+            {
+              province: locationFilter.province,
+              city: locationFilter.city,
+              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+              listingType,
+            },
+            'date_desc',
+            1,
+            poolLimit,
+          ),
+        ]);
+
+        const listingItems = (listingResults.properties || []).map(mapListing);
+        const developmentUnitItems = (developmentUnits.items || []).map(mapUnitListing);
+        const { items, source } = composeResidentialHomeFeedItems(
+          listingItems,
+          developmentUnitItems,
+          limit,
+        );
+
+        return {
+          items: items as FeedItem[],
+          source,
+        };
+      };
 
       const fetchTabItems = async (
         locationFilter: LocationFilter,
       ): Promise<{
-        items: Array<{
-          id: string;
-          kind: 'development' | 'listing';
-          title: string;
-          city: string;
-          suburb: string;
-          priceFrom: number;
-          priceTo: number;
-          image: string;
-          href: string;
-        }>;
-        source: 'developments' | 'listings';
+        items: FeedItem[];
+        source: 'developments' | 'listings' | 'units' | 'mixed';
       }> => {
         if (input.tab === 'buy') {
-          const { propertySearchService } = await import('./services/propertySearchService');
-          const residentialListingTypes: Array<'house' | 'apartment' | 'townhouse' | 'plot'> = [
-            'house',
-            'apartment',
-            'townhouse',
-            'plot',
-          ];
-          const result = await propertySearchService.searchProperties(
-            {
-              province: locationFilter.province,
-              city: locationFilter.city,
-              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
-              listingType: 'sale',
-              propertyType: residentialListingTypes,
-            } as any,
-            'date_desc',
-            1,
-            limit,
-          );
-          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
+          return composeResidentialHomeFeed(locationFilter, 'sale');
         }
 
         if (input.tab === 'rent') {
-          const { propertySearchService } = await import('./services/propertySearchService');
-          const residentialListingTypes: Array<'house' | 'apartment' | 'townhouse'> = [
-            'house',
-            'apartment',
-            'townhouse',
-          ];
-          const result = await propertySearchService.searchProperties(
-            {
-              province: locationFilter.province,
-              city: locationFilter.city,
-              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
-              listingType: 'rent',
-              propertyType: residentialListingTypes,
-            } as any,
-            'date_desc',
-            1,
-            limit,
-          );
-          return { items: (result.properties || []).slice(0, limit).map(mapListing), source: 'listings' };
+          return composeResidentialHomeFeed(locationFilter, 'rent');
         }
 
         if (input.tab === 'developments') {
@@ -925,18 +1165,8 @@ export const developerRouter = router({
           ) === idx,
       );
 
-      let items: Array<{
-        id: string;
-        kind: 'development' | 'listing';
-        title: string;
-        city: string;
-        suburb: string;
-        priceFrom: number;
-        priceTo: number;
-        image: string;
-        href: string;
-      }> = [];
-      let source: 'developments' | 'listings' = 'developments';
+      let items: FeedItem[] = [];
+      let source: 'developments' | 'listings' | 'units' | 'mixed' = 'developments';
       let selectedScope: LocationScope = requestedScope;
 
       for (const candidate of dedupedCandidates) {
@@ -992,6 +1222,11 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         developerBrandProfileId: z.number().int().positive().optional(),
+        unitId: z.string().trim().max(36).optional(),
+        unitName: z.string().trim().max(255).optional(),
+        unitPriceFrom: z.number().nonnegative().optional(),
+        unitBedrooms: z.number().int().nonnegative().optional(),
+        unitBathrooms: z.number().nonnegative().optional(),
         name: z.string().min(1),
         email: z.string().email(),
         phone: z.string().optional(),
@@ -1017,6 +1252,11 @@ export const developerRouter = router({
       return await capturePublicLead({
         developmentId: input.developmentId,
         developerBrandProfileId: input.developerBrandProfileId,
+        unitId: input.unitId,
+        unitName: input.unitName,
+        unitPriceFrom: input.unitPriceFrom,
+        unitBedrooms: input.unitBedrooms,
+        unitBathrooms: input.unitBathrooms,
         name: input.name,
         email: input.email,
         phone: input.phone,
@@ -1029,6 +1269,192 @@ export const developerRouter = router({
         utmMedium: input.utmMedium,
         utmCampaign: input.utmCampaign,
         affordabilityData: input.affordabilityData,
+      });
+    }),
+
+  getLeads: protectedProcedure
+    .input(
+      z
+        .object({
+          developmentId: z.number().int().positive().optional(),
+          stage: LeadStageSchema.optional(),
+          owner: LeadOwnerTypeSchema.optional(),
+          source: z.string().trim().max(120).optional(),
+          q: z.string().trim().max(120).optional(),
+          from: z.string().datetime().optional(),
+          to: z.string().datetime().optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+          offset: z.number().int().min(0).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await listDeveloperLeads({
+        developerId: profile.id,
+        developmentId: input?.developmentId,
+        stage: input?.stage,
+        owner: input?.owner,
+        source: input?.source,
+        q: input?.q,
+        from: input?.from,
+        to: input?.to,
+        limit: input?.limit,
+        offset: input?.offset,
+      });
+    }),
+
+  assignLead: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        ownerType: LeadOwnerTypeSchema,
+        ownerId: z.number().int().positive().nullable().optional(),
+        assignmentMode: AssignmentModeSchema.optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await assignDeveloperLead({
+        developerId: profile.id,
+        leadId: input.leadId,
+        ownerType: input.ownerType,
+        ownerId: input.ownerId ?? null,
+        assignmentMode: input.assignmentMode,
+      });
+    }),
+
+  transitionLead: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        toStage: LeadStageSchema,
+        notes: z.string().max(2000).optional(),
+        force: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await transitionDeveloperLead({
+        developerId: profile.id,
+        userId: user.id,
+        leadId: input.leadId,
+        toStage: input.toStage,
+        notes: input.notes,
+        force: input.force,
+      });
+    }),
+
+  logLeadActivity: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        type: z.enum(['note', 'call', 'email', 'meeting', 'status_change', 'whatsapp']),
+        description: z.string().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await logDeveloperLeadActivity({
+        developerId: profile.id,
+        userId: user.id,
+        leadId: input.leadId,
+        type: input.type,
+        description: input.description,
+      });
+    }),
+
+  setLeadNextAction: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        at: z.string().datetime(),
+        type: z.enum(['call', 'email', 'whatsapp', 'schedule_viewing', 'send_brochure', 'other']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await setDeveloperLeadNextAction({
+        developerId: profile.id,
+        userId: user.id,
+        leadId: input.leadId,
+        at: input.at,
+        type: input.type,
+      });
+    }),
+
+  getDistributionSettings: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await getDeveloperDistributionSettings({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+      });
+    }),
+
+  setDistributionEnabled: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        enabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await setDeveloperDistributionEnabled({
+        developerId: profile.id,
+        userId: user.id,
+        developmentId: input.developmentId,
+        enabled: input.enabled,
+      });
+    }),
+
+  getFunnelKPIs: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive().optional(),
+        range: z.enum(['7d', '30d', '90d']).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await getDeveloperFunnelKpis({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        range: input.range ?? '30d',
+      });
+    }),
+
+  getFunnelAttention: protectedProcedure
+    .input(
+      z
+        .object({
+          developmentId: z.number().int().positive().optional(),
+          range: z.enum(['7d', '30d', '90d']).optional(),
+          sla: SlaStatusSchema.optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await getDeveloperFunnelAttention({
+        developerId: profile.id,
+        developmentId: input?.developmentId,
+        range: input?.range ?? '30d',
+        sla: input?.sla,
+        limit: input?.limit,
       });
     }),
 

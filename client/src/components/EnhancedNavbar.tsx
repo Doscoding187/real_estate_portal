@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/navigation-menu';
 import { trpc } from '@/lib/trpc';
 import { generatePropertyUrl } from '@/lib/urlUtils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { LocationSelectionModal } from '@/components/LocationSelectionModal';
@@ -369,23 +369,47 @@ export function EnhancedNavbar() {
     { label: 'Blog', href: '#' },
   ];
 
+  const mobileMenuItems = [
+    { label: 'Buy Property', href: '/property-for-sale', icon: Home },
+    { label: 'Rent Property', href: '/property-to-rent', icon: Key },
+    { label: 'New Developments', href: '/new-developments', icon: Building2 },
+    { label: 'Find Agents', href: '/agents', icon: User },
+    { label: 'Explore', href: '/explore/home', icon: TrendingUp },
+    { label: 'Services', href: '/services', icon: Lightbulb },
+    { label: 'Referrals', href: '/distribution-network', icon: Briefcase },
+  ];
+
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
   return (
-    <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200/50">
-      <div className="w-full px-4 sm:px-6 lg:px-20">
-        <div className="flex items-center justify-between h-14 lg:h-16">
+    <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/92 shadow-sm backdrop-blur-md">
+      <div className="w-full px-3 sm:px-6 lg:px-20">
+        <div className="flex h-13 items-center justify-between sm:h-14 lg:h-16">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="rounded-xl p-2 text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600 lg:hidden"
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer group">
-              <span className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700 transition-colors">
+              <span className="text-base font-bold tracking-tight text-blue-600 transition-colors group-hover:text-blue-700 sm:text-xl lg:text-2xl">
                 Property Listify
               </span>
             </div>
@@ -871,9 +895,9 @@ export function EnhancedNavbar() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 transition-all duration-200 font-semibold"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 font-semibold"
                   >
-                    <Briefcase className="h-4 w-4 mr-2" />
+                    <Briefcase className="mr-2 h-4 w-4" />
                     Referrals
                   </Button>
                 </Link>
@@ -966,7 +990,7 @@ export function EnhancedNavbar() {
           <div className="lg:hidden">
             {user ? (
               <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="text-blue-600">
+                <Button variant="ghost" size="sm" className="h-9 rounded-xl px-2 text-blue-600">
                   <User className="h-5 w-5" />
                 </Button>
               </Link>
@@ -975,7 +999,7 @@ export function EnhancedNavbar() {
                 variant="ghost"
                 size="sm"
                 onClick={() => (window.location.href = getLoginUrl())}
-                className="text-blue-600 font-medium"
+                className="h-9 rounded-xl px-2 text-sm font-medium text-blue-600"
               >
                 Login
               </Button>
@@ -985,73 +1009,80 @@ export function EnhancedNavbar() {
 
         {/* Mobile Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-100 py-4 animate-in slide-in-from-top-2 duration-200">
-            <div className="space-y-1">
-              <Link href="/property-for-sale">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Buy Property
-                </button>
-              </Link>
-              <Link href="/property-to-rent">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Rent Property
-                </button>
-              </Link>
-              <Link href="/new-developments">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  New Developments
-                </button>
-              </Link>
-              <Link href="/agents">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Find Agents
-                </button>
-              </Link>
-              <Link href="/explore/home">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Explore
-                </button>
-              </Link>
-              <Link href="/services">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Services
-                </button>
-              </Link>
-              <Link href="/distribution-network">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Referrals
-                </button>
-              </Link>
-              <div className="pt-2 mt-2 border-t border-gray-100">
+          <div className="animate-in slide-in-from-top-2 border-t border-gray-100 bg-white/95 py-3 duration-200 lg:hidden">
+            <div className="space-y-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              <div className="grid grid-cols-2 gap-2 px-1">
                 <Link href="/advertise">
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
                   >
-                    Advertise with us
+                    <Megaphone className="h-4 w-4" />
+                    Advertise
                   </button>
                 </Link>
+                <Link href="/explore/home">
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Explore
+                  </button>
+                </Link>
+              </div>
+
+              <div className="space-y-1">
+                {mobileMenuItems.map(item => {
+                  const Icon = item.icon;
+
+                  return (
+                    <Link key={item.label} href={item.href}>
+                      <button
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="flex-1">{item.label}</span>
+                        <ChevronDown className="h-4 w-4 -rotate-90 text-slate-400" />
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="mx-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Quick access
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link href="/new-developments">
+                    <span
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="inline-flex rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+                    >
+                      New Developments
+                    </span>
+                  </Link>
+                  <Link href="/agents">
+                    <span
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="inline-flex rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+                    >
+                      Agents
+                    </span>
+                  </Link>
+                  <Link href="/services">
+                    <span
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="inline-flex rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+                    >
+                      Services
+                    </span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

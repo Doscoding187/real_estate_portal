@@ -23,7 +23,7 @@ import { sql } from 'drizzle-orm';
 export const provinces = mysqlTable(
   'provinces',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 100 }).notNull(),
     code: varchar({ length: 10 }).notNull(),
     latitude: varchar({ length: 20 }),
@@ -41,7 +41,7 @@ export const provinces = mysqlTable(
 export const cities = mysqlTable(
   'cities',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     provinceId: int()
       .notNull()
       .references(() => provinces.id, { onDelete: 'cascade' }),
@@ -62,7 +62,7 @@ export const cities = mysqlTable(
 export const suburbs = mysqlTable(
   'suburbs',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     cityId: int()
       .notNull()
       .references(() => cities.id, { onDelete: 'cascade' }),
@@ -80,7 +80,7 @@ export const suburbs = mysqlTable(
 export const locations = mysqlTable(
   'locations',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 200 }).notNull(),
     slug: varchar({ length: 200 }).notNull(),
     type: mysqlEnum(['province', 'city', 'suburb', 'neighborhood']).notNull(),
@@ -106,7 +106,7 @@ export const locations = mysqlTable(
 export const amenities = mysqlTable(
   'amenities',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     locationId: int('location_id')
       .notNull()
       .references(() => locations.id, { onDelete: 'cascade' }),
@@ -126,7 +126,7 @@ export const amenities = mysqlTable(
 );
 
 export const locationSearchCache = mysqlTable('location_search_cache', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   searchQuery: varchar({ length: 255 }).notNull(),
   searchType: mysqlEnum(['province', 'city', 'suburb', 'address', 'all']).notNull(),
   resultsJSON: text().notNull(),

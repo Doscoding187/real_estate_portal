@@ -61,6 +61,7 @@ import { ENV } from './_core/env';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
+import { getInventoryBridgeSchemaCapabilities } from './services/inventoryLinkResolver';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -140,6 +141,43 @@ export const db = new Proxy({} as any, {
     return _db[prop];
   },
 });
+
+type PlatformSettingsColumnMode = 'snake' | 'legacy';
+let cachedPlatformSettingsColumnMode: PlatformSettingsColumnMode | null = null;
+
+async function getPlatformSettingsColumnMode(db: any): Promise<PlatformSettingsColumnMode> {
+  if (cachedPlatformSettingsColumnMode) {
+    return cachedPlatformSettingsColumnMode;
+  }
+
+  try {
+    await db.execute(sql.raw('SELECT `key`, `value` FROM platform_settings LIMIT 1'));
+    cachedPlatformSettingsColumnMode = 'legacy';
+    return cachedPlatformSettingsColumnMode;
+  } catch (error: any) {
+    const message = String(error?.message ?? error?.cause?.message ?? '');
+    if (!message.includes('Unknown column')) {
+      throw error;
+    }
+  }
+
+  try {
+    await db.execute(
+      sql.raw('SELECT `setting_key`, `setting_value` FROM platform_settings LIMIT 1'),
+    );
+    cachedPlatformSettingsColumnMode = 'snake';
+    return cachedPlatformSettingsColumnMode;
+  } catch (error: any) {
+    const message = String(error?.message ?? error?.cause?.message ?? '');
+    if (!message.includes('Unknown column')) {
+      throw error;
+    }
+  }
+
+  throw new Error(
+    'Unsupported platform_settings schema. Expected key/value or setting_key/setting_value.',
+  );
+}
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
@@ -223,16 +261,27 @@ export async function getUserById(id: number): Promise<User | undefined> {
   }
 
   try {
-    const result = await db.select(AUTH_SESSION_USER_COLUMNS).from(users).where(eq(users.id, id)).limit(1);
+    const result = await db
+      .select(AUTH_SESSION_USER_COLUMNS)
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
     return result.length > 0 ? (result[0] as User) : undefined;
   } catch (error) {
     // Fallback to minimal auth-safe shape if session columns drift in legacy environments.
-    console.warn('[Database] getUserById scoped select failed, falling back to minimal auth columns', {
-      userId: id,
-      message: (error as any)?.message || String(error),
-      code: (error as any)?.code || null,
-    });
-    const fallback = await db.select(AUTH_LOGIN_USER_COLUMNS).from(users).where(eq(users.id, id)).limit(1);
+    console.warn(
+      '[Database] getUserById scoped select failed, falling back to minimal auth columns',
+      {
+        userId: id,
+        message: (error as any)?.message || String(error),
+        code: (error as any)?.code || null,
+      },
+    );
+    const fallback = await db
+      .select(AUTH_LOGIN_USER_COLUMNS)
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
     return fallback.length > 0 ? (fallback[0] as User) : undefined;
   }
 }
@@ -280,6 +329,16 @@ export async function createUser(
   });
 
   return Number(result[0].insertId);
+}
+
+/**
+ * Delete a user by ID. Used to clean up partial registration failures.
+ */
+export async function deleteUserById(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(users).where(eq(users.id, userId));
 }
 
 /**
@@ -376,6 +435,24 @@ export async function verifyUserEmail(userId: number): Promise<void> {
     .set({
       emailVerified: 1,
       emailVerificationToken: null,
+    })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Rotate or set a user's email verification token.
+ */
+export async function updateUserEmailVerificationToken(
+  userId: number,
+  token: string,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(users)
+    .set({
+      emailVerificationToken: token,
     })
     .where(eq(users.id, userId));
 }
@@ -1715,38 +1792,95 @@ export async function getPlatformSetting(key: string) {
   const db = await getDb();
   if (!db) return null;
 
-  const result = await db
-    .select()
-    .from(platformSettings)
-    .where(eq(platformSettings.settingKey, key))
-    .limit(1);
-  return result.length > 0 ? result[0] : null;
+  const mode = await getPlatformSettingsColumnMode(db);
+  const keyColumn = mode === 'snake' ? 'setting_key' : 'key';
+  const valueColumn = mode === 'snake' ? 'setting_value' : 'value';
+
+  const result: any = await db.execute(
+    sql.raw(`
+    SELECT
+      id,
+      \`${keyColumn}\` AS settingKey,
+      \`${valueColumn}\` AS settingValue,
+      description,
+      category,
+      isPublic,
+      updatedBy,
+      createdAt,
+      updatedAt
+    FROM platform_settings
+    WHERE \`${keyColumn}\` = ${db.$client.escape(key)}
+    LIMIT 1
+  `),
+  );
+
+  const rows = Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : [];
+  return rows.length > 0 ? rows[0] : null;
 }
 
 export async function setPlatformSetting(key: string, value: any, updatedBy?: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const settingData = {
-    settingKey: key,
-    settingValue: JSON.stringify(value),
-    updatedBy,
-    updatedAt: new Date(),
-  };
+  const mode = await getPlatformSettingsColumnMode(db);
+  const keyColumn = mode === 'snake' ? 'setting_key' : 'key';
+  const valueColumn = mode === 'snake' ? 'setting_value' : 'value';
+  const encodedValue = JSON.stringify(value);
+  const updatedByValue = updatedBy == null ? 'NULL' : String(updatedBy);
+  const categoryColumn = 'category';
+  const isPublicColumn = 'isPublic';
 
-  await db.insert(platformSettings).values(settingData).onDuplicateKeyUpdate({
-    set: settingData,
-  });
+  await db.execute(
+    sql.raw(`
+    INSERT INTO platform_settings (
+      \`${keyColumn}\`,
+      \`${valueColumn}\`,
+      \`${categoryColumn}\`,
+      \`${isPublicColumn}\`,
+      updatedBy,
+      updatedAt
+    ) VALUES (
+      ${db.$client.escape(key)},
+      ${db.$client.escape(encodedValue)},
+      'other',
+      0,
+      ${updatedByValue},
+      CURRENT_TIMESTAMP
+    )
+    ON DUPLICATE KEY UPDATE
+      \`${valueColumn}\` = VALUES(\`${valueColumn}\`),
+      updatedBy = VALUES(updatedBy),
+      updatedAt = CURRENT_TIMESTAMP
+  `),
+  );
 }
 
 export async function getAllPlatformSettings() {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select()
-    .from(platformSettings)
-    .orderBy(platformSettings.category, platformSettings.settingKey);
+  const mode = await getPlatformSettingsColumnMode(db);
+  const keyColumn = mode === 'snake' ? 'setting_key' : 'key';
+  const valueColumn = mode === 'snake' ? 'setting_value' : 'value';
+
+  const result: any = await db.execute(
+    sql.raw(`
+    SELECT
+      id,
+      \`${keyColumn}\` AS settingKey,
+      \`${valueColumn}\` AS settingValue,
+      description,
+      category,
+      isPublic,
+      updatedBy,
+      createdAt,
+      updatedAt
+    FROM platform_settings
+    ORDER BY category, \`${keyColumn}\`
+  `),
+  );
+
+  return Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : [];
 }
 
 // ==================== SUPER ADMIN ANALYTICS ====================
@@ -2365,7 +2499,9 @@ export async function approveListing(listingId: number, reviewedBy: number, note
 
   // 3. Insert into properties table
 
-  const [propertyResult] = await db.insert(properties).values({
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+
+  const propertyInsertValues: any = {
     title: listing.title,
     description: listing.description,
     propertyType: listing.propertyType,
@@ -2398,7 +2534,13 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     ratesAndTaxes: Number(details.ratesTaxes) || null,
     createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-  });
+  };
+
+  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
+    propertyInsertValues.sourceListingId = listingId;
+  }
+
+  const [propertyResult] = await db.insert(properties).values(propertyInsertValues);
 
   const newPropertyId = Number(propertyResult.insertId);
 
@@ -3124,6 +3266,16 @@ export async function listPendingDevelopers() {
     .from(developers)
     .where(eq(developers.status, 'pending'))
     .orderBy(desc(developers.createdAt));
+}
+
+/**
+ * Admin: List all developers (all statuses)
+ */
+export async function listAllDevelopers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(developers).orderBy(desc(developers.createdAt));
 }
 
 /**

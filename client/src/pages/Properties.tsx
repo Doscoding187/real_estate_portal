@@ -5,6 +5,11 @@ import { SearchFilters } from '@/lib/urlUtils';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCardList from '@/components/PropertyCardList';
 import { normalizePropertyForUI } from '@/lib/normalizers';
+import {
+  DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
+  getSavedSearchNotificationDescription,
+  getSavedSearchSuggestedName,
+} from '@/lib/savedSearchUtils';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import { Building2, Loader2, MapPin, LayoutGrid, List, Map as MapIcon } from 'lucide-react';
@@ -21,6 +26,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function Properties() {
   const [location] = useLocation();
@@ -33,6 +40,24 @@ export default function Properties() {
 
   const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
+  const [saveSearchNotificationFrequency, setSaveSearchNotificationFrequency] = useState<
+    'instant' | 'daily' | 'weekly' | 'never'
+  >('weekly');
+  const [saveSearchEmailEnabled, setSaveSearchEmailEnabled] = useState(
+    DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.emailEnabled,
+  );
+  const [saveSearchInAppEnabled, setSaveSearchInAppEnabled] = useState(
+    DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.inAppEnabled,
+  );
+  const suggestedSaveSearchName = getSavedSearchSuggestedName(filters);
+  const saveSearchDescription = getSavedSearchNotificationDescription(
+    filters,
+    saveSearchNotificationFrequency,
+    {
+      emailEnabled: saveSearchEmailEnabled,
+      inAppEnabled: saveSearchInAppEnabled,
+    },
+  );
 
   // Parse URL params on mount
   useEffect(() => {
@@ -79,6 +104,9 @@ export default function Properties() {
       toast.success('Search saved successfully');
       setIsSaveSearchOpen(false);
       setSaveSearchName('');
+      setSaveSearchNotificationFrequency('weekly');
+      setSaveSearchEmailEnabled(DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.emailEnabled);
+      setSaveSearchInAppEnabled(DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.inAppEnabled);
     },
     onError: error => {
       toast.error(error.message);
@@ -120,15 +148,19 @@ export default function Properties() {
       toast.error('Please login to save searches');
       return;
     }
+    setSaveSearchName(current => current.trim() || suggestedSaveSearchName);
     setIsSaveSearchOpen(true);
   };
 
   const confirmSaveSearch = () => {
-    if (!saveSearchName.trim()) return;
+    const resolvedSearchName = saveSearchName.trim() || suggestedSaveSearchName;
+    if (!resolvedSearchName) return;
     saveSearchMutation.mutate({
-      name: saveSearchName,
+      name: resolvedSearchName,
       criteria: filters,
-      notificationFrequency: 'weekly',
+      notificationFrequency: saveSearchNotificationFrequency,
+      emailEnabled: saveSearchEmailEnabled,
+      inAppEnabled: saveSearchInAppEnabled,
     });
   };
 
@@ -275,19 +307,60 @@ export default function Properties() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Search</DialogTitle>
-            <DialogDescription>
-              Save your current search criteria to get notified about new properties.
-            </DialogDescription>
+            <DialogDescription>{saveSearchDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="search-name">Search Name</Label>
               <Input
                 id="search-name"
-                placeholder="e.g. 2 Bed Apartments in Sandton"
+                placeholder={suggestedSaveSearchName}
                 value={saveSearchName}
                 onChange={e => setSaveSearchName(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="search-frequency">Alert Frequency</Label>
+              <Select
+                value={saveSearchNotificationFrequency}
+                onValueChange={value =>
+                  setSaveSearchNotificationFrequency(value as typeof saveSearchNotificationFrequency)
+                }
+              >
+                <SelectTrigger id="search-frequency">
+                  <SelectValue placeholder="Select alert frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instant">Instant</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="never">Never</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="properties-email-alerts">Email alerts</Label>
+                  <p className="text-xs text-slate-500">Send new matches to your inbox.</p>
+                </div>
+                <Switch
+                  id="properties-email-alerts"
+                  checked={saveSearchEmailEnabled}
+                  onCheckedChange={checked => setSaveSearchEmailEnabled(Boolean(checked))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="properties-inapp-alerts">In-app alerts</Label>
+                  <p className="text-xs text-slate-500">Keep updates in your dashboard.</p>
+                </div>
+                <Switch
+                  id="properties-inapp-alerts"
+                  checked={saveSearchInAppEnabled}
+                  onCheckedChange={checked => setSaveSearchInAppEnabled(Boolean(checked))}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -296,7 +369,7 @@ export default function Properties() {
             </Button>
             <Button
               onClick={confirmSaveSearch}
-              disabled={saveSearchMutation.isPending || !saveSearchName.trim()}
+              disabled={saveSearchMutation.isPending}
             >
               {saveSearchMutation.isPending ? 'Saving...' : 'Save Search'}
             </Button>

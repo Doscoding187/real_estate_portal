@@ -28,10 +28,17 @@ export default function DevelopersPage() {
   const [rejectionReason, setRejectionReason] = useState('');
 
   const utils = trpc.useContext();
-  const { data: pendingDevelopers, isLoading: isLoadingPending } =
+  const { data: pendingDevelopersData, isLoading: isLoadingPending } =
     trpc.developer.adminListPendingDevelopers.useQuery();
-  const { data: allDevelopers, isLoading: isLoadingAll } =
+  const { data: allDevelopersData, isLoading: isLoadingAll } =
     trpc.developer.adminListAllDevelopers.useQuery();
+
+  const pendingDevelopers = Array.isArray(pendingDevelopersData)
+    ? pendingDevelopersData
+    : pendingDevelopersData?.developers ?? [];
+  const allDevelopers = Array.isArray(allDevelopersData)
+    ? allDevelopersData
+    : allDevelopersData?.developers ?? [];
 
   const approveMutation = trpc.developer.adminApproveDeveloper.useMutation({
     onSuccess: () => {
@@ -201,7 +208,7 @@ export default function DevelopersPage() {
                         id={`trust-${developer.id}`}
                         checked={!!developer.isTrusted}
                         onCheckedChange={checked =>
-                          setTrustedMutation.mutate({ id: developer.id, isTrusted: checked })
+                          setTrustedMutation.mutate({ developerId: developer.id, isTrusted: checked })
                         }
                         disabled={setTrustedMutation.isLoading}
                         className="scale-75 origin-right"

@@ -14,8 +14,21 @@ import { eq, and, isNotNull } from 'drizzle-orm';
 describe('Location Hierarchy Property Tests', () => {
   let db: Awaited<ReturnType<typeof getDb>> | null = null;
   let skipTests = false;
+  const getInsertId = (insertResult: unknown): number => {
+    const candidate = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+    if (candidate && typeof candidate === 'object' && 'insertId' in candidate) {
+      return Number((candidate as { insertId: number }).insertId);
+    }
+    throw new Error('Unable to read insertId from insert result');
+  };
 
   beforeAll(async () => {
+    // TODO(test-infra): Enable DATABASE_URL=listify_test in CI to run full hierarchy property checks.
+    if (!process.env.DATABASE_URL) {
+      skipTests = true;
+      return;
+    }
+
     // Initialize database connection
     try {
       db = await getDb();
@@ -83,7 +96,7 @@ describe('Location Hierarchy Property Tests', () => {
               longitude: locationData.longitude,
             });
 
-            const parentId = Number(parentResult[0].insertId);
+            const parentId = getInsertId(parentResult);
 
             // Create a child location with the parent_id
             const childResult = await db.insert(locations).values({
@@ -96,7 +109,7 @@ describe('Location Hierarchy Property Tests', () => {
               longitude: locationData.longitude,
             });
 
-            const childId = Number(childResult[0].insertId);
+            const childId = getInsertId(childResult);
 
             try {
               // Verify the child location was created
@@ -205,7 +218,7 @@ describe('Location Hierarchy Property Tests', () => {
             type: 'province',
             parentId: null,
           });
-          const provinceId = Number(provinceResult[0].insertId);
+          const provinceId = getInsertId(provinceResult);
 
           // Create city (parent = province)
           const cityResult = await db.insert(locations).values({
@@ -214,7 +227,7 @@ describe('Location Hierarchy Property Tests', () => {
             type: 'city',
             parentId: provinceId,
           });
-          const cityId = Number(cityResult[0].insertId);
+          const cityId = getInsertId(cityResult);
 
           // Create suburb (parent = city)
           const suburbResult = await db.insert(locations).values({
@@ -223,7 +236,7 @@ describe('Location Hierarchy Property Tests', () => {
             type: 'suburb',
             parentId: cityId,
           });
-          const suburbId = Number(suburbResult[0].insertId);
+          const suburbId = getInsertId(suburbResult);
 
           try {
             // Verify hierarchy

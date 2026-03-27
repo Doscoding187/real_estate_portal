@@ -20,7 +20,6 @@ client/src/components/developer/DeveloperSetupWizard.tsx
 client/src/components/developer/DeveloperSetupWizardEnhanced.tsx
 client/src/components/developer/EnhancedSidebar.tsx
 client/src/components/developer/LeadCaptureForm.tsx
-client/src/components/developer/Overview.tsx
 client/src/components/developer/SettingsPanel.tsx
 client/src/components/development-wizard/DevelopmentWizard.tsx
 client/src/components/development-wizard/phases/DevelopmentTypePhase.tsx
@@ -38,7 +37,6 @@ client/src/components/explore/VideoUploadModal.tsx
 client/src/components/explore-analytics/BoostCampaignManager.tsx
 client/src/components/explore-discovery/AgencyHeader.tsx
 client/src/components/explore-discovery/PersonalizedContentBlock.tsx
-client/src/components/explore-discovery/VirtualizedFeed.tsx
 client/src/components/listing-wizard/ListingWizard.tsx
 client/src/components/listing-wizard/steps/ActionStep.tsx
 client/src/components/listing-wizard/steps/AdditionalInformationStep.tsx

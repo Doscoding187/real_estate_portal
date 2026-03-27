@@ -13,7 +13,9 @@ const getRequestId = (req: Request): string => {
 };
 
 const isDatabaseQueryError = (message: string): boolean =>
-  message.includes('Failed query:') || message.includes('ECONNREFUSED') || message.includes('connect');
+  message.includes('Failed query:') ||
+  message.includes('ECONNREFUSED') ||
+  message.includes('connect');
 
 /**
  * Register authentication routes
@@ -28,6 +30,18 @@ export function registerAuthRoutes(app: Express) {
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
       const { email, password, name, role, agentProfile } = req.body;
+      const normalizedAgentProfile =
+        role === 'agent' && agentProfile
+          ? {
+              ...agentProfile,
+              displayName:
+                typeof agentProfile.displayName === 'string'
+                  ? agentProfile.displayName.trim()
+                  : agentProfile.displayName,
+              phoneNumber: agentProfile.phoneNumber || agentProfile.phone,
+              phone: agentProfile.phone || agentProfile.phoneNumber,
+            }
+          : undefined;
 
       // Validate input
       if (!email || !password) {
@@ -50,7 +64,11 @@ export function registerAuthRoutes(app: Express) {
 
       // Validate agent profile if role is agent
       if (role === 'agent') {
-        if (!agentProfile || !agentProfile.displayName || !agentProfile.phoneNumber) {
+        if (
+          !normalizedAgentProfile ||
+          !normalizedAgentProfile.displayName ||
+          !normalizedAgentProfile.phoneNumber
+        ) {
           return res.status(400).json({
             error:
               'Agent profile with display name and phone number is required for agent registration',
@@ -63,23 +81,26 @@ export function registerAuthRoutes(app: Express) {
       const allowedRoles = ['agent', 'agency_admin', 'property_developer', 'visitor'];
       const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
 
-      const userId = await authService.register(
+      const { verificationEmailSent } = await authService.register(
         email,
         password,
         name,
         requestedRole as any,
-        agentProfile,
+        normalizedAgentProfile,
       );
 
       // Return success message - user must verify email before logging in
       const message =
         role === 'agent'
-          ? 'Registration successful! Please check your email to verify your account. Your agent profile will be created after email verification.'
+          ? 'Registration successful! Please check your email to verify your account. Your agent profile is pending review and will unlock after verification and approval.'
           : 'Registration successful. Please check your email to verify your account.';
 
-      res.status(201).json({
+      res.status(verificationEmailSent ? 201 : 202).json({
         success: true,
-        message,
+        verificationEmailSent,
+        message: verificationEmailSent
+          ? message
+          : 'Account created, but we could not send the verification email right now. Please use resend verification before logging in.',
       });
     } catch (error: any) {
       console.error('[Auth] Registration failed', error);
@@ -190,7 +211,11 @@ export function registerAuthRoutes(app: Express) {
         errorMessage.includes('Invalid email or password') ||
         errorMessage.includes('verify your email')
       ) {
-        return res.status(401).json({ error: errorMessage });
+        return res.status(401).json({
+          error: errorMessage,
+          code: errorMessage.includes('verify your email') ? 'EMAIL_UNVERIFIED' : undefined,
+          email: errorMessage.includes('verify your email') ? normalizedEmail : undefined,
+        });
       }
 
       if (errorMessage.includes('OAuth login')) {
@@ -332,6 +357,33 @@ export function registerAuthRoutes(app: Express) {
         .send(
           `<h1>Email Verification Failed</h1><p>${error.message || 'The verification link is invalid or has expired.'}</p>`,
         );
+    }
+  });
+
+  /**
+   * Resend verification email for unverified accounts.
+   * POST /api/auth/resend-verification
+   * Body: { email: string }
+   */
+  app.post('/api/auth/resend-verification', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'A valid email is required' });
+      }
+
+      await authService.resendVerificationEmail(email);
+
+      res.json({
+        success: true,
+        message: 'If this account exists and is unverified, a verification email has been sent.',
+      });
+    } catch (error: any) {
+      console.error('[Auth] Resend verification failed', error);
+      res.status(503).json({
+        error: 'Verification email could not be sent right now. Please try again later.',
+      });
     }
   });
 }

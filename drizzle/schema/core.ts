@@ -24,7 +24,7 @@ import { agencies } from './agencies';
 export const users = mysqlTable(
   'users',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     openId: varchar({ length: 64 }),
     email: varchar({ length: 320 }),
     passwordHash: varchar({ length: 255 }),
@@ -54,7 +54,7 @@ export const users = mysqlTable(
 );
 
 export const auditLogs = mysqlTable('audit_logs', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -90,7 +90,7 @@ export const managerialAuditLogs = mysqlTable(
 );
 
 export const platformSettings = mysqlTable('platform_settings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   settingKey: varchar('setting_key', { length: 100 }).notNull(),
   settingValue: text('setting_value').notNull(),
   description: text(),
@@ -104,7 +104,7 @@ export const platformSettings = mysqlTable('platform_settings', {
 });
 
 export const notifications = mysqlTable('notifications', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -123,7 +123,7 @@ export const notifications = mysqlTable('notifications', {
 });
 
 export const emailTemplates = mysqlTable('email_templates', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   templateKey: varchar({ length: 100 }).notNull(),
   subject: varchar({ length: 255 }).notNull(),
   htmlContent: text().notNull(),

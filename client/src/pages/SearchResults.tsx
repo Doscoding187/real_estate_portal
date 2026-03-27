@@ -4,11 +4,18 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
+import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBadges';
 import { normalizePropertyForUI } from '@/lib/normalizers';
+import { blendSearchResults, resolveSearchBlendPolicy } from '@/lib/searchBlend';
+import {
+  DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
+  getSavedSearchNotificationDescription,
+  getSavedSearchSuggestedName,
+} from '@/lib/savedSearchUtils';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
-import { Loader2, Building2, Search, MapPin } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,6 +27,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Search components
 import {
@@ -31,8 +40,8 @@ import {
   ViewMode,
   SortOption,
 } from '@/components/search';
+import { SearchResultsEmptyState } from '@/components/search/SearchResultsEmptyState';
 import { SearchFallbackNotice } from '@/components/search/SearchFallbackNotice';
-import { DevelopmentResultCard } from '@/components/property-results/DevelopmentResultCard';
 import { ListingResultCard } from '@/components/property-results/ListingResultCard';
 
 // URL utilities
@@ -99,8 +108,21 @@ export default function SearchResults({
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
+  const [saveSearchNotificationFrequency, setSaveSearchNotificationFrequency] = useState<
+    'instant' | 'daily' | 'weekly' | 'never'
+  >('weekly');
+  const [saveSearchEmailEnabled, setSaveSearchEmailEnabled] = useState(
+    DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.emailEnabled,
+  );
+  const [saveSearchInAppEnabled, setSaveSearchInAppEnabled] = useState(
+    DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.inAppEnabled,
+  );
 
   const limit = 12;
+  const blendFetchLimit = Math.max(limit, (page + 1) * limit);
+  const backendSortOption = sortBy === 'relevance' ? undefined : sortBy;
+  const shouldFetchManualListings = filters.listingSource !== 'development';
+  const shouldFetchDevelopmentListings = filters.listingSource !== 'manual';
 
   // SEO
   useEffect(() => {
@@ -112,9 +134,18 @@ export default function SearchResults({
   }, [filters]);
 
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
+  const suggestedSaveSearchName = useMemo(() => getSavedSearchSuggestedName(filters), [filters]);
+  const saveSearchDescription = useMemo(
+    () =>
+      getSavedSearchNotificationDescription(filters, saveSearchNotificationFrequency, {
+        emailEnabled: saveSearchEmailEnabled,
+        inAppEnabled: saveSearchInAppEnabled,
+      }),
+    [filters, saveSearchEmailEnabled, saveSearchInAppEnabled, saveSearchNotificationFrequency],
+  );
 
   // Build query input for tRPC
-  const queryInput = useMemo(
+  const propertyQueryInput = useMemo(
     () => ({
       ...filters,
       city: filters.city, // Explicitly ensure these are passed
@@ -128,33 +159,70 @@ export default function SearchResults({
       maxPrice: filters.maxPrice,
       minBedrooms: filters.minBedrooms,
       status: 'available' as const,
-      limit,
-      offset: page * limit,
-      includeDevelopments: true,
+      limit: blendFetchLimit,
+      offset: 0,
+      sortOption: backendSortOption,
+      includeDevelopments: false,
     }),
-    [filters, page],
+    [backendSortOption, blendFetchLimit, filters],
   );
 
-  // Fetch properties
-  const { data: searchResults, isLoading } = trpc.properties.search.useQuery(queryInput);
-  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
-    filters: {
+  const developmentListingQueryInput = useMemo(
+    () => ({
       city: filters.city,
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      listingType: filters.listingType,
-      propertyType: filters.propertyType,
+      propertyType: filters.propertyType as any,
+      listingType: filters.listingType as any,
       minPrice: filters.minPrice,
       maxPrice: filters.maxPrice,
       minBedrooms: filters.minBedrooms,
       maxBedrooms: filters.maxBedrooms,
-    },
-  });
+      minBathrooms: filters.minBathrooms,
+      limit: blendFetchLimit,
+      offset: 0,
+      sortOption: backendSortOption,
+    }),
+    [backendSortOption, blendFetchLimit, filters],
+  );
 
-  const properties = (searchResults as any)?.items ?? (searchResults as any)?.properties ?? [];
-  const developmentResults = (searchResults as any)?.developments?.items ?? [];
-  const resultTotal = (searchResults as any)?.total ?? 0;
-  const locationContext = (searchResults as any)?.locationContext;
+  const { data: propertySearchResults, isLoading: isPropertySearchLoading } =
+    trpc.properties.search.useQuery(propertyQueryInput, {
+      enabled: shouldFetchManualListings,
+    });
+  const { data: developmentListingResults, isLoading: isDevelopmentSearchLoading } =
+    trpc.properties.searchDevelopmentListings.useQuery(developmentListingQueryInput, {
+      enabled: shouldFetchDevelopmentListings,
+    });
+  const isLoading = isPropertySearchLoading || isDevelopmentSearchLoading;
+  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery(
+    {
+      filters: {
+        city: filters.city,
+        province: filters.province,
+        suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+        listingType: filters.listingType,
+        listingSource: filters.listingSource,
+        propertyType: filters.propertyType,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        minBedrooms: filters.minBedrooms,
+        maxBedrooms: filters.maxBedrooms,
+      },
+    },
+  );
+
+  const properties =
+    shouldFetchManualListings
+      ? (propertySearchResults as any)?.items ?? (propertySearchResults as any)?.properties ?? []
+      : [];
+  const developmentResults = shouldFetchDevelopmentListings
+    ? (developmentListingResults as any)?.items ?? []
+    : [];
+  const resultTotal =
+    (shouldFetchManualListings ? (propertySearchResults as any)?.total ?? 0 : 0) +
+    (shouldFetchDevelopmentListings ? (developmentListingResults as any)?.total ?? 0 : 0);
+  const locationContext = (propertySearchResults as any)?.locationContext;
 
   // Mutations
   const saveSearchMutation = trpc.savedSearch.create.useMutation({
@@ -162,6 +230,9 @@ export default function SearchResults({
       toast.success('Search saved successfully');
       setIsSaveSearchOpen(false);
       setSaveSearchName('');
+      setSaveSearchNotificationFrequency('weekly');
+      setSaveSearchEmailEnabled(DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.emailEnabled);
+      setSaveSearchInAppEnabled(DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES.inAppEnabled);
     },
     onError: error => toast.error(error.message),
   });
@@ -214,20 +285,41 @@ export default function SearchResults({
     setLocation(generateIntentUrl(updatedIntent));
   };
 
+  const handleListingSourceChange = (source?: SearchFilters['listingSource']) => {
+    const nextFilters = { ...searchIntent.filters };
+    if (source) {
+      nextFilters.listingSource = source;
+    } else {
+      delete nextFilters.listingSource;
+    }
+
+    const updatedIntent: SearchIntent = {
+      ...searchIntent,
+      filters: nextFilters,
+    };
+
+    setLocation(generateIntentUrl(updatedIntent));
+    setPage(0);
+  };
+
   const handleSaveSearch = () => {
     if (!isAuthenticated) {
       toast.error('Please login to save searches');
       return;
     }
+    setSaveSearchName(current => current.trim() || suggestedSaveSearchName);
     setIsSaveSearchOpen(true);
   };
 
   const confirmSaveSearch = () => {
-    if (!saveSearchName.trim()) return;
+    const resolvedSearchName = saveSearchName.trim() || suggestedSaveSearchName;
+    if (!resolvedSearchName) return;
     saveSearchMutation.mutate({
-      name: saveSearchName,
+      name: resolvedSearchName,
       criteria: filters,
-      notificationFrequency: 'weekly',
+      notificationFrequency: saveSearchNotificationFrequency,
+      emailEnabled: saveSearchEmailEnabled,
+      inAppEnabled: saveSearchInAppEnabled,
     });
   };
 
@@ -267,68 +359,168 @@ export default function SearchResults({
     setPage(0);
   };
 
-  // Only show real properties
-  const displayProperties = properties || [];
-
-  // Client-side sort fallback
-  const sortedProperties = useMemo(() => {
-    const propsToUse = displayProperties as any[];
-    if (!propsToUse.length) return [];
-
-    const sorted = [...propsToUse];
-    switch (sortBy) {
-      case 'price_asc':
-        sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
-        break;
-      case 'price_desc':
-        sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-        break;
-      default:
-        break;
-    }
-    return sorted;
-  }, [displayProperties, sortBy]);
-
-  const mixedListResults = useMemo(() => {
-    const propertyItems = sortedProperties.map(property => ({
+  const combinedSearchResults = useMemo(() => {
+    const propertyItems = (properties as any[]).map(property => ({
       kind: 'property' as const,
       value: property,
     }));
-    const developmentItems = (developmentResults as any[]).map(development => ({
+    const derivedDevelopmentItems = (developmentResults as any[]).map(development => ({
       kind: 'development' as const,
       value: development,
     }));
 
-    if (!developmentItems.length) return propertyItems;
-    if (!propertyItems.length) return developmentItems;
+    return blendSearchResults(propertyItems, derivedDevelopmentItems, sortBy, filters);
+  }, [developmentResults, filters, properties, sortBy]);
 
-    const mixed: Array<
-      | { kind: 'property'; value: (typeof propertyItems)[number]['value'] }
-      | { kind: 'development'; value: (typeof developmentItems)[number]['value'] }
-    > = [];
-
-    let p = 0;
-    let d = 0;
-    while (p < propertyItems.length || d < developmentItems.length) {
-      if (d < developmentItems.length) {
-        mixed.push(developmentItems[d]);
-        d += 1;
-      }
-      let inserted = 0;
-      while (p < propertyItems.length && inserted < 3) {
-        mixed.push(propertyItems[p]);
-        p += 1;
-        inserted += 1;
-      }
+  const resolveDevelopmentListingHref = (item: any, normalized: any) => {
+    if (typeof item?.href === 'string' && item.href.trim()) {
+      return item.href;
     }
 
-    return mixed;
-  }, [sortedProperties, developmentResults]);
+    const developmentSlug = normalized?.development?.slug || item?.development?.slug;
+    const developmentId = normalized?.development?.id || item?.development?.id || item?.developmentId;
+    const unitTypeId = item?.unitTypeId;
 
+    if (developmentSlug && unitTypeId) {
+      return `/development/${developmentSlug}/unit/${unitTypeId}`;
+    }
+
+    if (developmentId && unitTypeId) {
+      return `/development/${developmentId}/unit/${unitTypeId}`;
+    }
+
+    if (developmentSlug) return `/development/${developmentSlug}`;
+    if (developmentId) return `/development/${developmentId}`;
+    return `/property/${normalized?.id || item?.id}`;
+  };
+
+  const pagedResults = useMemo(() => {
+    const start = page * limit;
+    return combinedSearchResults.slice(start, start + limit);
+  }, [combinedSearchResults, limit, page]);
+
+  const renderedResults = useMemo(
+    () =>
+      pagedResults
+        .map(item => {
+          const normalized = normalizePropertyForUI(item.value);
+          return normalized ? { ...item, normalized } : null;
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
+    [pagedResults],
+  );
+
+  const mapResults = useMemo(
+    () =>
+      renderedResults
+        .map((item, index) => {
+          const raw = item.value as any;
+          const latitude = parseFloat(String(raw.latitude || ''));
+          const longitude = parseFloat(String(raw.longitude || ''));
+          if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+          const navigationHref =
+            item.kind === 'development'
+              ? resolveDevelopmentListingHref(raw, item.normalized)
+              : `/property/${item.normalized.id}`;
+
+          return {
+            markerId: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(item.normalized.id),
+            href: navigationHref,
+            property: {
+              id: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(item.normalized.id),
+              title: item.normalized.title,
+              price: item.normalized.price,
+              propertyType: item.normalized.propertyType ?? 'unknown',
+              listingType: item.normalized.listingType ?? 'sale',
+              listingSource: (item.normalized as any).listingSource,
+              listerType: (item.normalized as any).listerType,
+              primaryBadge: getPrimaryListingBadge((item.normalized as any).badges),
+              latitude,
+              longitude,
+              mainImage:
+                (item.normalized as any).image ??
+                (item.normalized as any).mainImage ??
+                (item.normalized as any).images?.[0],
+              address: (item.normalized as any).address,
+              city: (item.normalized as any).city,
+              bedrooms: item.normalized.bedrooms,
+              bathrooms: item.normalized.bathrooms,
+              area: item.normalized.area,
+            },
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
+    [limit, page, renderedResults],
+  );
+
+  const displayedResultCount = renderedResults.length;
+  const displayedDevelopmentCount = renderedResults.filter(item => item.kind === 'development').length;
+  const displayedManualCount = renderedResults.length - displayedDevelopmentCount;
+  const manualTotalCount = shouldFetchManualListings
+    ? (propertySearchResults as any)?.total ?? properties.length
+    : 0;
+  const developmentTotalCount = shouldFetchDevelopmentListings
+    ? (developmentListingResults as any)?.total ?? developmentResults.length
+    : 0;
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
+  const blendPolicy = useMemo(() => resolveSearchBlendPolicy(filters, sortBy), [filters, sortBy]);
+  const blendPolicyCopy =
+    !filters.listingSource && displayedDevelopmentCount > 0 && sortBy === 'relevance'
+      ? blendPolicy.copy
+      : undefined;
+  const rangeStart = displayedResultCount > 0 ? page * limit + 1 : 0;
+  const rangeEnd = displayedResultCount > 0 ? page * limit + displayedResultCount : 0;
+  const totalPages = resultCount > 0 ? Math.max(1, Math.ceil(resultCount / limit)) : 0;
+  const resultsSummaryText = useMemo(() => {
+    if (!displayedResultCount || !resultCount) return undefined;
+
+    if (filters.listingSource === 'manual') {
+      return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${manualTotalCount.toLocaleString()} property listings`;
+    }
+
+    if (filters.listingSource === 'development') {
+      return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${developmentTotalCount.toLocaleString()} development listings`;
+    }
+
+    return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${resultCount.toLocaleString()} blended results`;
+  }, [
+    developmentTotalCount,
+    displayedResultCount,
+    filters.listingSource,
+    manualTotalCount,
+    rangeEnd,
+    rangeStart,
+    resultCount,
+  ]);
+  const pageSummaryText = useMemo(() => {
+    if (!displayedResultCount || !totalPages) return undefined;
+
+    if (filters.listingSource === 'manual') {
+      return `Page ${page + 1} of ${totalPages} · Property listings only`;
+    }
+
+    if (filters.listingSource === 'development') {
+      return `Page ${page + 1} of ${totalPages} · New developments only`;
+    }
+
+    const sourceBreakdown =
+      displayedDevelopmentCount > 0
+        ? `${displayedManualCount.toLocaleString()} property listings and ${displayedDevelopmentCount.toLocaleString()} development listings on this page`
+        : `${displayedManualCount.toLocaleString()} property listings on this page`;
+
+    return `Page ${page + 1} of ${totalPages} · ${sourceBreakdown}`;
+  }, [
+    displayedDevelopmentCount,
+    displayedManualCount,
+    displayedResultCount,
+    filters.listingSource,
+    page,
+    totalPages,
+  ]);
   const hasRenderableResults =
-    viewMode === 'list' ? mixedListResults.length > 0 : sortedProperties.length > 0;
+    viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -358,13 +550,19 @@ export default function SearchResults({
               <ResultsHeader
                 filters={filters}
                 resultCount={resultCount}
-                displayedPropertyCount={sortedProperties.length}
-                developmentCount={developmentResults.length}
+                displayedPropertyCount={displayedResultCount}
+                developmentCount={displayedDevelopmentCount}
+                manualTotalCount={manualTotalCount}
+                developmentTotalCount={developmentTotalCount}
+                resultsSummaryText={resultsSummaryText}
+                pageSummaryText={pageSummaryText}
+                blendPolicyCopy={blendPolicyCopy}
                 isLoading={isLoading}
                 viewMode={viewMode}
                 sortBy={sortBy}
                 onViewModeChange={setViewMode}
                 onSortChange={setSortBy}
+                onListingSourceChange={handleListingSourceChange}
                 onOpenFilters={() => setIsMobileFilterOpen(true)}
               />
               <div className="mt-2">
@@ -404,202 +602,165 @@ export default function SearchResults({
                   <>
                     {viewMode === 'list' && (
                       <div className="flex flex-col items-start gap-4">
-                      {mixedListResults.map((item, index) => {
-                        if (item.kind === 'development') {
-                          const development = item.value as any;
+                        {renderedResults.map((item, index) => {
+                          const normalized = item.normalized;
                           return (
-                            <DevelopmentResultCard
-                              key={`dev-${development.id}-${index}`}
-                              id={development.id}
-                              name={development.name}
-                              slug={development.slug}
-                                suburb={development.suburb}
-                                city={development.city}
-                              province={development.province}
-                              status={development.status}
-                              isFeatured={development.isFeatured}
-                              rating={development.rating}
-                              highlights={Array.isArray(development.highlights) ? development.highlights : []}
-                              builderName={development.builderName}
-                              builderLogoUrl={development.builderLogoUrl}
-                              description={development.description ?? null}
-                              configurations={development.configurations}
-                              images={development.images}
-                              />
-                            );
-                          }
-
-                          const normalized = normalizePropertyForUI(item.value);
-                        if (!normalized) return null;
-                        return (
-                          <ListingResultCard
-                            key={`prop-${normalized.id}-${index}`}
-                            data={{
+                            <ListingResultCard
+                              key={`prop-${normalized.id}-${index}`}
+                              data={{
                                 id: normalized.id,
+                                href:
+                                  item.kind === 'development'
+                                    ? resolveDevelopmentListingHref(item.value, normalized)
+                                    : undefined,
                                 title: normalized.title,
                                 location: normalized.location,
                                 price: normalized.price,
                                 image:
-                                  typeof (normalized as any).image === 'string'
-                                    ? (normalized as any).image
-                                    : (normalized as any).mainImage ??
-                                  '/placeholder-property.jpg',
-                              area: normalized.area,
-                              bedrooms: normalized.bedrooms,
-                              bathrooms: normalized.bathrooms,
-                              floor:
-                                typeof (normalized as any).yardSize === 'number' &&
-                                (normalized as any).yardSize > 0
-                                  ? `${(normalized as any).yardSize}m2`
-                                  : '-',
-                              highlights: Array.isArray(normalized.highlights) ? normalized.highlights : [],
-                              description: normalized.description ?? undefined,
-                              postedBy: normalized.agent?.name,
-                              agentAvatarUrl: normalized.agent?.image ?? undefined,
-                            }}
-                          />
-                        );
+                                  typeof normalized.image === 'string'
+                                    ? normalized.image
+                                    : (normalized as any).mainImage ?? '/placeholder-property.jpg',
+                                development: (normalized as any).development,
+                                area: normalized.area,
+                                bedrooms: normalized.bedrooms,
+                                bathrooms: normalized.bathrooms,
+                                floor:
+                                  typeof (normalized as any).yardSize === 'number' &&
+                                  (normalized as any).yardSize > 0
+                                    ? `${(normalized as any).yardSize}m2`
+                                    : '-',
+                                highlights: Array.isArray(normalized.highlights)
+                                  ? normalized.highlights
+                                  : [],
+                                badges: getDisplayListingBadges((normalized as any).badges),
+                                description: normalized.description ?? undefined,
+                                listingSource: (normalized as any).listingSource,
+                                listerType: (normalized as any).listerType,
+                                contactRole:
+                                  (normalized as any).listingSource === 'development'
+                                    ? 'developer'
+                                    : (normalized as any).listerType === 'private'
+                                      ? 'private'
+                                      : 'agent',
+                                postedBy:
+                                  (normalized as any).listingSource === 'development'
+                                    ? (normalized as any).developerBrand?.brandName ||
+                                      'Developer Team'
+                                    : normalized.agent?.name || 'Private Seller',
+                                agentAvatarUrl:
+                                  (normalized as any).listingSource === 'development'
+                                    ? (normalized as any).developerBrand?.logoUrl || undefined
+                                    : normalized.agent?.image || undefined,
+                              }}
+                            />
+                          );
                         })}
                       </div>
                     )}
 
-                  {viewMode === 'grid' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {sortedProperties.map(property => {
-                        const normalized = normalizePropertyForUI(property);
-                        if (!normalized) return null;
-                        const cardProps = {
-                          ...normalized,
-                          image:
-                            (normalized as any).image ??
-                            (normalized as any).mainImage ??
-                            (normalized as any).images?.[0] ??
-                            '/placeholder-property.jpg',
-                        };
-                        return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
-                      })}
-                    </div>
-                  )}
-
-                  {viewMode === 'map' && (
-                    <GooglePropertyMap
-                      properties={sortedProperties
-                        .map(p => {
-                          const normalized = normalizePropertyForUI(p);
-                          if (!normalized) return null;
-                          return {
-                            id: parseInt(normalized.id),
-                            title: normalized.title,
-                            price: normalized.price,
-                            propertyType: normalized.propertyType ?? 'unknown',
-                            listingType: normalized.listingType ?? 'sale',
-                            latitude: parseFloat(p.latitude || '-26.2041'),
-                            longitude: parseFloat(p.longitude || '28.0473'),
-                            mainImage:
+                    {viewMode === 'grid' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {renderedResults.map(item => {
+                          const normalized = item.normalized;
+                          const cardProps = {
+                            ...normalized,
+                            href:
+                              item.kind === 'development'
+                                ? resolveDevelopmentListingHref(item.value, normalized)
+                                : undefined,
+                            development: (normalized as any).development,
+                            developerBrand: (normalized as any).developerBrand,
+                            listingSource: (normalized as any).listingSource,
+                            listerType: (normalized as any).listerType,
+                            image:
                               (normalized as any).image ??
                               (normalized as any).mainImage ??
-                              (normalized as any).images?.[0],
-                            address: (normalized as any).address,
-                            city: (normalized as any).city,
-                            bedrooms: normalized.bedrooms,
-                            bathrooms: normalized.bathrooms,
-                            area: normalized.area,
+                              (normalized as any).images?.[0] ??
+                              '/placeholder-property.jpg',
                           };
-                        })
-                        .filter((p): p is NonNullable<typeof p> => p !== null)}
-                      onPropertySelect={id => {
-                        window.location.href = `/property/${id}`;
-                      }}
-                      onBoundsChange={handleBoundsChange}
-                    />
-                  )}
-
-                  {/* Pagination */}
-                  {resultCount >= limit && (
-                    <div className="flex justify-center items-center gap-4 mt-8">
-                      <Button
-                        variant="outline"
-                        disabled={page === 0}
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                      >
-                        Previous
-                      </Button>
-                      <span className="text-sm text-muted-foreground">Page {page + 1}</span>
-                      <Button
-                        variant="outline"
-                        disabled={resultCount < limit}
-                        onClick={() => setPage(p => p + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
-                  <div className="bg-slate-50 p-4 rounded-full mb-6 relative">
-                    <Building2 className="h-12 w-12 text-slate-300" />
-                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 border border-slate-200">
-                      <Search className="h-4 w-4 text-slate-400" />
-                    </div>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">
-                    No matching properties found
-                  </h3>
-
-                  <p className="text-slate-500 mb-8 max-w-md">
-                    We couldn't find any properties matching your exact criteria in
-                    <span className="font-semibold text-slate-700"> coverage area</span>.
-                  </p>
-
-                  <div className="flex flex-col gap-3 w-full max-w-xs">
-                    {/* Smart Fallback Suggestions */}
-                    {locationContext &&
-                      locationContext.type === 'suburb' &&
-                      locationContext.ids?.cityId && (
-                        <Button
-                          className="w-full bg-blue-600 hover:bg-blue-700 gap-2"
-                          onClick={() => {
-                            // Keep filters, but expand location to City
-                            const newFilters = { ...filters };
-                            delete newFilters.suburb;
-                            newFilters.city = locationContext.hierarchy.city; // Fallback to city name
-                            handleFilterChange(newFilters);
-                          }}
-                        >
-                          <MapPin className="h-4 w-4" />
-                          Search all {locationContext.hierarchy.city}
-                        </Button>
-                      )}
-
-                    {locationContext && locationContext.type === 'city' && (
-                      <Button
-                        variant="secondary"
-                        className="w-full gap-2"
-                        onClick={() => {
-                          // Keep filters, but expand location to Province
-                          const newFilters = { ...filters };
-                          delete newFilters.city;
-                          newFilters.province = locationContext.hierarchy.province;
-                          handleFilterChange(newFilters);
-                        }}
-                      >
-                        <MapPin className="h-4 w-4" />
-                        Search all {locationContext.hierarchy.province}
-                      </Button>
+                          return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
+                        })}
+                      </div>
                     )}
 
-                    <Button variant="outline" className="w-full" onClick={handleClearAllFilters}>
-                      Clear Filters & Broaden Search
-                    </Button>
-                  </div>
-                </div>
-              )}
+                    {viewMode === 'map' && (
+                      <GooglePropertyMap
+                        properties={mapResults.map(item => item.property)}
+                        onPropertySelect={id => {
+                          const target = mapResults.find(item => item.markerId === id);
+                          if (target) {
+                            window.location.href = target.href;
+                          }
+                        }}
+                        onBoundsChange={handleBoundsChange}
+                      />
+                    )}
+
+                    {/* Pagination */}
+                    {resultCount >= limit && (
+                      <div className="mt-8 flex flex-col items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-4">
+                          <Button
+                            variant="outline"
+                            disabled={page === 0}
+                            onClick={() => setPage(p => Math.max(0, p - 1))}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            Page {page + 1} of {Math.max(1, totalPages)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            disabled={(page + 1) * limit >= resultCount}
+                            onClick={() => setPage(p => p + 1)}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                        {pageSummaryText && (
+                          <span className="text-xs text-slate-500">{pageSummaryText}</span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <SearchResultsEmptyState
+                    filters={filters}
+                    locationContext={locationContext as any}
+                    onClearAllFilters={handleClearAllFilters}
+                    onSwitchToSource={handleListingSourceChange}
+                    onBroadenToCity={
+                      locationContext &&
+                      locationContext.type === 'suburb' &&
+                      locationContext.ids?.cityId &&
+                      locationContext.hierarchy?.city
+                        ? () => {
+                            const newFilters = { ...filters };
+                            delete newFilters.suburb;
+                            newFilters.city = locationContext.hierarchy.city;
+                            handleFilterChange(newFilters);
+                          }
+                        : undefined
+                    }
+                    onBroadenToProvince={
+                      locationContext &&
+                      locationContext.type === 'city' &&
+                      locationContext.hierarchy?.province
+                        ? () => {
+                            const newFilters = { ...filters };
+                            delete newFilters.city;
+                            newFilters.province = locationContext.hierarchy.province;
+                            handleFilterChange(newFilters);
+                          }
+                        : undefined
+                    }
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Mobile Sticky Controls (Persistent Bottom Bar) */}
@@ -625,19 +786,60 @@ export default function SearchResults({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Search</DialogTitle>
-            <DialogDescription>
-              Save your current search criteria to get notified about new properties.
-            </DialogDescription>
+            <DialogDescription>{saveSearchDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="search-name">Search Name</Label>
               <Input
                 id="search-name"
-                placeholder="e.g. 2 Bed Apartments in Sandton"
+                placeholder={suggestedSaveSearchName}
                 value={saveSearchName}
                 onChange={e => setSaveSearchName(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="search-frequency">Alert Frequency</Label>
+              <Select
+                value={saveSearchNotificationFrequency}
+                onValueChange={value =>
+                  setSaveSearchNotificationFrequency(value as typeof saveSearchNotificationFrequency)
+                }
+              >
+                <SelectTrigger id="search-frequency">
+                  <SelectValue placeholder="Select alert frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instant">Instant</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="never">Never</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="search-email-alerts">Email alerts</Label>
+                  <p className="text-xs text-slate-500">Send new matches to your inbox.</p>
+                </div>
+                <Switch
+                  id="search-email-alerts"
+                  checked={saveSearchEmailEnabled}
+                  onCheckedChange={checked => setSaveSearchEmailEnabled(Boolean(checked))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="search-inapp-alerts">In-app alerts</Label>
+                  <p className="text-xs text-slate-500">Keep updates in your dashboard.</p>
+                </div>
+                <Switch
+                  id="search-inapp-alerts"
+                  checked={saveSearchInAppEnabled}
+                  onCheckedChange={checked => setSaveSearchInAppEnabled(Boolean(checked))}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -646,7 +848,7 @@ export default function SearchResults({
             </Button>
             <Button
               onClick={confirmSaveSearch}
-              disabled={saveSearchMutation.isPending || !saveSearchName.trim()}
+              disabled={saveSearchMutation.isPending}
             >
               {saveSearchMutation.isPending ? 'Saving...' : 'Save Search'}
             </Button>

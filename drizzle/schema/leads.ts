@@ -25,7 +25,7 @@ import { developments, developerBrandProfiles } from './developments';
 import { agencies, agents } from './agencies';
 
 export const leads = mysqlTable('leads', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
   developmentId: int('developmentId').references(() => developments.id, { onDelete: 'set null' }),
   agencyId: int('agencyId').references(() => agencies.id, { onDelete: 'set null' }),
@@ -34,6 +34,11 @@ export const leads = mysqlTable('leads', {
   email: varchar({ length: 320 }).notNull(),
   phone: varchar({ length: 50 }),
   message: text(),
+  unitId: varchar('unit_id', { length: 36 }),
+  unitName: varchar('unit_name', { length: 255 }),
+  unitPriceFrom: decimal('unit_price_from', { precision: 15, scale: 2 }),
+  unitBedrooms: int('unit_bedrooms'),
+  unitBathrooms: decimal('unit_bathrooms', { precision: 3, scale: 1 }),
   leadType: mysqlEnum('leadType', ['inquiry', 'viewing_request', 'offer', 'callback'])
     .default('inquiry')
     .notNull(),
@@ -100,7 +105,7 @@ export const leads = mysqlTable('leads', {
 });
 
 export const leadActivities = mysqlTable('lead_activities', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   leadId: int()
     .notNull()
     .references(() => leads.id, { onDelete: 'cascade' }),
@@ -111,7 +116,7 @@ export const leadActivities = mysqlTable('lead_activities', {
 });
 
 export const prospects = mysqlTable('prospects', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -123,7 +128,7 @@ export const prospects = mysqlTable('prospects', {
 });
 
 export const prospectFavorites = mysqlTable('prospect_favorites', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   prospectId: int()
     .notNull()
     .references(() => prospects.id, { onDelete: 'cascade' }),
@@ -134,7 +139,7 @@ export const prospectFavorites = mysqlTable('prospect_favorites', {
 });
 
 export const recentlyViewed = mysqlTable('recently_viewed', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -143,7 +148,7 @@ export const recentlyViewed = mysqlTable('recently_viewed', {
 });
 
 export const offers = mysqlTable('offers', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id, { onDelete: 'cascade' }),
@@ -161,10 +166,12 @@ export const offers = mysqlTable('offers', {
 });
 
 export const showings = mysqlTable('showings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id, { onDelete: 'cascade' }),
+  propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
+  leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
   agentId: int()
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
@@ -183,7 +190,7 @@ export const showings = mysqlTable('showings', {
 export const scheduledViewings = mysqlTable(
   'scheduled_viewings',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     propertyId: int('property_id')
       .notNull()
       .references(() => properties.id),
@@ -209,7 +216,7 @@ export const scheduledViewings = mysqlTable(
 export const favorites = mysqlTable(
   'favorites',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -227,7 +234,7 @@ export const favorites = mysqlTable(
 export const savedSearches = mysqlTable(
   'saved_searches',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -248,5 +255,71 @@ export const savedSearches = mysqlTable(
   table => [
     index('idx_saved_searches_user').on(table.userId),
     index('idx_saved_searches_frequency').on(table.notificationFrequency),
+  ],
+);
+
+export const savedSearchDeliveryHistory = mysqlTable(
+  'saved_search_delivery_history',
+  {
+    id: int().autoincrement().primaryKey(),
+    savedSearchId: int('saved_search_id').references(() => savedSearches.id, {
+      onDelete: 'set null',
+    }),
+    userId: int('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    searchName: varchar('search_name', { length: 255 }).notNull(),
+    title: varchar({ length: 255 }).notNull(),
+    content: text().notNull(),
+    listingSource: mysqlEnum('saved_search_listing_source', ['manual', 'development', 'all'])
+      .notNull()
+      .default('all'),
+    notificationFrequency: mysqlEnum('saved_search_delivery_frequency', [
+      'instant',
+      'daily',
+      'weekly',
+      'never',
+    ])
+      .notNull()
+      .default('daily'),
+    totalMatches: int('total_matches').notNull().default(0),
+    newMatchCount: int('new_match_count').notNull().default(0),
+    inAppRequested: tinyint('in_app_requested').notNull().default(0),
+    emailRequested: tinyint('email_requested').notNull().default(0),
+    inAppDelivered: tinyint('in_app_delivered').notNull().default(0),
+    emailDelivered: tinyint('email_delivered').notNull().default(0),
+    status: mysqlEnum('saved_search_delivery_status', [
+      'delivered',
+      'partial',
+      'skipped',
+      'failed',
+    ])
+      .notNull()
+      .default('delivered'),
+    retryState: mysqlEnum('saved_search_delivery_retry_state', [
+      'not_needed',
+      'pending',
+      'retrying',
+      'succeeded',
+      'abandoned',
+    ])
+      .notNull()
+      .default('not_needed'),
+    retryCount: int('retry_count').notNull().default(0),
+    maxRetryCount: int('max_retry_count').notNull().default(3),
+    nextRetryAt: timestamp('next_retry_at', { mode: 'string' }),
+    lastRetryAt: timestamp('last_retry_at', { mode: 'string' }),
+    actionUrl: varchar('action_url', { length: 500 }),
+    previewMatches: json('preview_matches'),
+    error: text(),
+    processedAt: timestamp('processed_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_saved_search_delivery_history_saved_search').on(table.savedSearchId),
+    index('idx_saved_search_delivery_history_user').on(table.userId),
+    index('idx_saved_search_delivery_history_status').on(table.status),
+    index('idx_saved_search_delivery_history_retry_state').on(table.retryState),
+    index('idx_saved_search_delivery_history_next_retry').on(table.nextRetryAt),
+    index('idx_saved_search_delivery_history_processed').on(table.processedAt),
   ],
 );

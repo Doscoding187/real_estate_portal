@@ -27,9 +27,21 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
   let testLocationIds: number[] = [];
   let testPropertyIds: number[] = [];
   let testUserId: number | null = null;
+  const getInsertId = (insertResult: unknown): number => {
+    const candidate = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+    if (candidate && typeof candidate === 'object' && 'insertId' in candidate) {
+      return Number((candidate as { insertId: number }).insertId);
+    }
+    throw new Error('Unable to read insertId from insert result');
+  };
 
   beforeAll(async () => {
     console.log('[SearchIntegration PBT] Setting up test database...');
+    // TODO(test-infra): Wire DATABASE_URL=listify_test in CI to run this suite fully.
+    if (!process.env.DATABASE_URL) {
+      skipTests = true;
+      return;
+    }
 
     // Initialize database connection
     try {
@@ -46,15 +58,15 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
       return;
     }
 
-    const [userResult] = await db.insert(users).values({
+    const userResult = await db.insert(users).values({
       email: `search-integration-${Date.now()}@example.com`,
       role: 'visitor',
       emailVerified: 1,
     });
-    testUserId = Number(userResult.insertId);
+    testUserId = getInsertId(userResult);
 
     // Create test locations with hierarchy
-    const [provinceResult] = await db.insert(locations).values({
+    const provinceResult = await db.insert(locations).values({
       name: 'Test Province',
       slug: 'test-province',
       type: 'province',
@@ -65,10 +77,10 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
       propertyCount: 0,
     });
 
-    const provinceId = Number(provinceResult.insertId);
+    const provinceId = getInsertId(provinceResult);
     testLocationIds.push(provinceId);
 
-    const [cityResult] = await db.insert(locations).values({
+    const cityResult = await db.insert(locations).values({
       name: 'Test City',
       slug: 'test-city',
       type: 'city',
@@ -79,10 +91,10 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
       propertyCount: 0,
     });
 
-    const cityId = Number(cityResult.insertId);
+    const cityId = getInsertId(cityResult);
     testLocationIds.push(cityId);
 
-    const [suburbResult] = await db.insert(locations).values({
+    const suburbResult = await db.insert(locations).values({
       name: 'Test Suburb',
       slug: 'test-suburb',
       type: 'suburb',
@@ -93,12 +105,12 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
       propertyCount: 0,
     });
 
-    const suburbId = Number(suburbResult.insertId);
+    const suburbId = getInsertId(suburbResult);
     testLocationIds.push(suburbId);
 
     // Create test properties linked to the suburb
     for (let i = 0; i < 5; i++) {
-      const [propResult] = await db.insert(properties).values({
+      const propResult = await db.insert(properties).values({
         title: `Test Property ${i}`,
         description: `Test property description ${i}`,
         price: 1000000 + i * 100000,
@@ -122,7 +134,7 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
         ownerId: testUserId!,
       });
 
-      testPropertyIds.push(Number(propResult.insertId));
+      testPropertyIds.push(getInsertId(propResult));
     }
   });
 
@@ -191,7 +203,7 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
             return true;
           }
 
-          const [provResult] = await db.insert(locations).values({
+          const provResult = await db.insert(locations).values({
             name: provinceName,
             slug: provinceSlug,
             type: 'province',
@@ -200,9 +212,9 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
             propertyCount: 0,
           });
 
-          const provId = Number(provResult.insertId);
+          const provId = getInsertId(provResult);
 
-          const [cityResult] = await db.insert(locations).values({
+          const cityResult = await db.insert(locations).values({
             name: cityName,
             slug: citySlug,
             type: 'city',
@@ -211,9 +223,9 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
             propertyCount: 0,
           });
 
-          const cityId = Number(cityResult.insertId);
+          const cityId = getInsertId(cityResult);
 
-          const [suburbResult] = await db.insert(locations).values({
+          const suburbResult = await db.insert(locations).values({
             name: suburbName,
             slug: suburbSlug,
             type: 'suburb',
@@ -222,7 +234,7 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
             propertyCount: 0,
           });
 
-          const suburbId = Number(suburbResult.insertId);
+          const suburbId = getInsertId(suburbResult);
 
           try {
             // Search for the suburb
@@ -285,7 +297,7 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
         const locationName = `Test Location ${Date.now()}`;
         const locationSlug = locationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-        const [result] = await db.insert(locations).values({
+        const result = await db.insert(locations).values({
           name: locationName,
           slug: locationSlug,
           type: 'suburb',
@@ -294,7 +306,7 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
           propertyCount: 0,
         });
 
-        const locationId = Number(result.insertId);
+        const locationId = getInsertId(result);
 
         try {
           // Search for the location
