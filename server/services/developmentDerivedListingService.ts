@@ -126,6 +126,28 @@ function getPrimaryImage(unitBaseMedia: unknown, developmentImages: unknown): st
   return null;
 }
 
+function getMediaSignals(unitBaseMedia: unknown, developmentImages: unknown): {
+  image: string | null;
+  usesDedicatedUnitImage: boolean;
+  unitImageCount: number;
+  developmentImageCount: number;
+} {
+  const baseMedia = parseBaseMedia(unitBaseMedia);
+  const unitGallery = (Array.isArray(baseMedia.gallery) ? baseMedia.gallery : []).filter(
+    (item: any) => item?.url || item?.imageUrl,
+  );
+  const developmentGallery = parseJsonArray(developmentImages).filter(
+    (item: any) => item?.url || item?.imageUrl,
+  );
+
+  return {
+    image: getPrimaryImage(unitBaseMedia, developmentImages),
+    usesDedicatedUnitImage: unitGallery.length > 0,
+    unitImageCount: unitGallery.length,
+    developmentImageCount: developmentGallery.length,
+  };
+}
+
 function deriveStageBadge(row: any): string | null {
   const legacyStatus = String(row.legacyStatus || '').toLowerCase();
   const constructionPhase = String(row.constructionPhase || '').toLowerCase();
@@ -163,7 +185,6 @@ function deriveStageBadge(row: any): string | null {
 function buildListingTitle(row: any, propertyType: Property['propertyType']): string {
   const bedrooms = Number(row.bedrooms || 0);
   const unitName = String(row.unitName || '').trim();
-  const suburb = String(row.suburb || row.city || '').trim();
   const listingType = mapTransactionTypeToListingType(row.transactionType);
   const action = listingType === 'rent' ? 'to Rent' : 'for Sale';
   const propertyLabel =
@@ -178,14 +199,72 @@ function buildListingTitle(row: any, propertyType: Property['propertyType']): st
             : 'Apartment';
 
   if (unitName) {
-    return `${unitName} ${action} in ${suburb}`.trim();
+    return unitName;
   }
 
   if (bedrooms > 0) {
-    return `${bedrooms} Bedroom ${propertyLabel} ${action} in ${suburb}`.trim();
+    return `${bedrooms} Bedroom ${propertyLabel} ${action}`.trim();
   }
 
-  return `${propertyLabel} ${action} in ${suburb}`.trim();
+  return `${propertyLabel} ${action}`.trim();
+}
+
+function getRecencyScore(dateValue: Date): number {
+  const ageInDays = Math.max(0, (Date.now() - dateValue.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (ageInDays <= 14) return 18;
+  if (ageInDays <= 30) return 14;
+  if (ageInDays <= 60) return 10;
+  if (ageInDays <= 120) return 5;
+  return 0;
+}
+
+function computeOrganicRankingScore(input: {
+  listedDate: Date;
+  title: string;
+  price: number;
+  priceTo?: number | null;
+  bedrooms?: number;
+  bathrooms?: number;
+  floorSize?: number | null;
+  availableUnits?: number | null;
+  image?: string | null;
+  usesDedicatedUnitImage: boolean;
+  unitImageCount: number;
+  developmentImageCount: number;
+}): number {
+  let score = 0;
+
+  score += getRecencyScore(input.listedDate);
+
+  if (input.price > 0) score += 12;
+  if (typeof input.priceTo === 'number' && input.priceTo >= input.price && input.price > 0) {
+    score += 2;
+  }
+
+  if (input.usesDedicatedUnitImage) {
+    score += 12;
+  } else if (input.image) {
+    score += 6;
+  }
+
+  if (input.unitImageCount >= 4) {
+    score += 5;
+  } else if (input.unitImageCount >= 2) {
+    score += 3;
+  } else if (input.unitImageCount >= 1) {
+    score += 1;
+  } else if (input.developmentImageCount >= 3) {
+    score += 1;
+  }
+
+  if (input.title.trim().length > 0) score += 3;
+  if ((input.bedrooms || 0) > 0) score += 3;
+  if ((input.bathrooms || 0) > 0) score += 3;
+  if ((input.floorSize || 0) > 0) score += 4;
+  if ((input.availableUnits || 0) > 0) score += 2;
+
+  return score;
 }
 
 function buildSort(sortOption: SortOption) {
@@ -206,6 +285,7 @@ function buildSort(sortOption: SortOption) {
     case 'date_desc':
     default:
       return (a: DevelopmentDerivedListing, b: DevelopmentDerivedListing) =>
+        (b.rankingScore || 0) - (a.rankingScore || 0) ||
         new Date(b.listedDate).getTime() - new Date(a.listedDate).getTime();
   }
 }
@@ -327,18 +407,37 @@ export class DevelopmentDerivedListingService {
         if (filters.maxBedrooms && (bedrooms ?? 0) > filters.maxBedrooms) return null;
         if (filters.minBathrooms && (bathrooms ?? 0) < filters.minBathrooms) return null;
 
-        const image = getPrimaryImage(row.unitBaseMedia, row.developmentImages);
+        const listedDate = new Date(row.unitCreatedAt || row.developmentCreatedAt || new Date());
+        const mediaSignals = getMediaSignals(row.unitBaseMedia, row.developmentImages);
         const stageBadge = deriveStageBadge({
           legacyStatus: row.legacyStatus,
           constructionPhase: row.constructionPhase,
           status: row.developmentStatus,
         });
         const title = buildListingTitle(row, propertyType);
+        const floorSize = toNumberOrNull(row.unitSize) ?? undefined;
+        const erfSize = toNumberOrNull(row.yardSize) ?? undefined;
+        const availableUnits = toNumberOrNull(row.availableUnits) ?? undefined;
+        const rankingScore = computeOrganicRankingScore({
+          listedDate,
+          title,
+          price,
+          priceTo: priceTo ?? undefined,
+          bedrooms,
+          bathrooms,
+          floorSize,
+          availableUnits,
+          image: mediaSignals.image,
+          usesDedicatedUnitImage: mediaSignals.usesDedicatedUnitImage,
+          unitImageCount: mediaSignals.unitImageCount,
+          developmentImageCount: mediaSignals.developmentImageCount,
+        });
 
         return {
           id: `dev-${row.developmentId}-${row.unitTypeId}`,
           unitTypeId: String(row.unitTypeId),
           developmentId: Number(row.developmentId),
+          rankingScore,
           href: row.developmentSlug
             ? `/development/${row.developmentSlug}/unit/${row.unitTypeId}`
             : `/development/${row.developmentId}/unit/${row.unitTypeId}`,
@@ -357,14 +456,14 @@ export class DevelopmentDerivedListingService {
           listingSource: 'development' as const,
           bedrooms,
           bathrooms,
-          floorSize: toNumberOrNull(row.unitSize) ?? undefined,
-          erfSize: toNumberOrNull(row.yardSize) ?? undefined,
-          image,
-          images: image ? [{ url: image, thumbnailUrl: image }] : [],
-          badges: [stageBadge, `Part of ${row.developmentName}`].filter(Boolean) as string[],
-          availableUnits: toNumberOrNull(row.availableUnits) ?? undefined,
+          floorSize,
+          erfSize,
+          image: mediaSignals.image,
+          images: mediaSignals.image ? [{ url: mediaSignals.image, thumbnailUrl: mediaSignals.image }] : [],
+          badges: [stageBadge].filter(Boolean) as string[],
+          availableUnits,
           completionDate: row.completionDate || null,
-          listedDate: new Date(row.unitCreatedAt || row.developmentCreatedAt || new Date()),
+          listedDate,
           latitude: toNumberOrNull(row.latitude) ?? undefined,
           longitude: toNumberOrNull(row.longitude) ?? undefined,
           development: {

@@ -186,7 +186,7 @@ export function LocationTrendingFeedSection({
                         bathrooms={item.bathrooms}
                         unitSize={item.unitSize}
                         yardSize={item.yardSize}
-                        badgeLabel="New Development"
+                        badgeLabel="New development"
                       />
                     ) : (
                       <SimpleDevelopmentCard

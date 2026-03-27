@@ -136,11 +136,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                   }}
                   title={developmentName}
                 >
-                  Part of {developmentName}
+                  {developmentName}
                 </button>
               ) : (
                 <span className="truncate" title={developmentName}>
-                  Part of {developmentName}
+                  {developmentName}
                 </span>
               )}
             </p>

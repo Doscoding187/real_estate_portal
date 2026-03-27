@@ -10,11 +10,12 @@ function makeListings(count: number) {
   }));
 }
 
-function makeUnits(count: number) {
+function makeUnits(count: number, developmentCount: number = count) {
   return Array.from({ length: count }, (_, index) => ({
     id: `unit-${index + 1}`,
     kind: 'unit' as const,
     title: `Unit ${index + 1}`,
+    developmentKey: `development-${(index % developmentCount) + 1}`,
   }));
 }
 
@@ -45,5 +46,16 @@ describe('homeFeedComposition', () => {
     expect(result.source).toBe('units');
     expect(result.items).toHaveLength(10);
     expect(result.items.every(item => item.kind === 'unit')).toBe(true);
+  });
+
+  it('rotates units across developments before repeating the same development', () => {
+    const result = composeResidentialHomeFeedItems(makeListings(0), makeUnits(8, 4), 8);
+
+    expect(result.items.slice(0, 4)).toEqual([
+      expect.objectContaining({ developmentKey: 'development-1' }),
+      expect.objectContaining({ developmentKey: 'development-2' }),
+      expect.objectContaining({ developmentKey: 'development-3' }),
+      expect.objectContaining({ developmentKey: 'development-4' }),
+    ]);
   });
 });

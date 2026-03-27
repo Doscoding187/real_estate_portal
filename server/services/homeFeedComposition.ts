@@ -1,6 +1,40 @@
 export type HomeFeedComposableItem =
   | { kind: 'listing'; id: string }
-  | { kind: 'unit'; id: string };
+  | { kind: 'unit'; id: string; developmentKey?: string | null };
+
+function diversifyUnitsByDevelopment<
+  U extends { kind: 'unit'; id: string; developmentKey?: string | null },
+>(unitItems: U[]): U[] {
+  const groups = new Map<string, U[]>();
+  const groupOrder: string[] = [];
+
+  unitItems.forEach(item => {
+    const rawKey = String(item.developmentKey || '').trim();
+    const key = rawKey || item.id;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+      groupOrder.push(key);
+    }
+    groups.get(key)?.push(item);
+  });
+
+  const diversified: U[] = [];
+  let remaining = true;
+
+  while (remaining) {
+    remaining = false;
+    groupOrder.forEach(key => {
+      const queue = groups.get(key);
+      const nextItem = queue?.shift();
+      if (nextItem) {
+        diversified.push(nextItem);
+        remaining = true;
+      }
+    });
+  }
+
+  return diversified;
+}
 
 export function getBaseHomeUnitCap(limit: number): number {
   return limit >= 10 ? 3 : Math.min(2, Math.max(1, Math.floor(limit / 2)));
@@ -8,16 +42,17 @@ export function getBaseHomeUnitCap(limit: number): number {
 
 export function composeResidentialHomeFeedItems<
   L extends { kind: 'listing'; id: string },
-  U extends { kind: 'unit'; id: string },
+  U extends { kind: 'unit'; id: string; developmentKey?: string | null },
 >(
   listingItems: L[],
   unitItems: U[],
   limit: number,
 ): { items: Array<L | U>; source: 'mixed' | 'listings' | 'units' } {
+  const diversifiedUnits = diversifyUnitsByDevelopment(unitItems);
   const maxUnitItems = getBaseHomeUnitCap(limit);
   const targetListingCount = Math.max(limit - maxUnitItems, 1);
   const selectedListings = listingItems.slice(0, targetListingCount);
-  const selectedUnits = unitItems.slice(0, Math.max(0, limit - selectedListings.length));
+  const selectedUnits = diversifiedUnits.slice(0, Math.max(0, limit - selectedListings.length));
 
   const effectiveUnitCap =
     selectedListings.length >= targetListingCount
@@ -54,8 +89,12 @@ export function composeResidentialHomeFeedItems<
     listingIndex += 1;
   }
 
-  while (composed.length < limit && unitIndex < unitItems.length && unitIndex < effectiveUnitCap) {
-    composed.push(unitItems[unitIndex]);
+  while (
+    composed.length < limit &&
+    unitIndex < diversifiedUnits.length &&
+    unitIndex < effectiveUnitCap
+  ) {
+    composed.push(diversifiedUnits[unitIndex]);
     unitIndex += 1;
   }
 
