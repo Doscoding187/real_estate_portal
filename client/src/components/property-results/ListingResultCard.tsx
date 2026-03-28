@@ -114,7 +114,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     ? `mailto:${contactEmail}?subject=${encodeURIComponent(`Property enquiry: ${data.title}`)}`
     : null;
   const attributeItems = [
-    typeof data.area === 'number' && data.area > 0 ? { icon: House, label: `${data.area} m²` } : null,
+    typeof data.area === 'number' && data.area > 0 ? { icon: House, label: `${data.area} m2` } : null,
     typeof data.bedrooms === 'number' && data.bedrooms > 0
       ? { icon: Bed, label: `${data.bedrooms} Bed` }
       : null,
@@ -122,7 +122,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       ? { icon: Bath, label: `${data.bathrooms} Bath` }
       : null,
     typeof data.yardSize === 'number' && data.yardSize > 0
-      ? { icon: LandPlot, label: `${data.yardSize} m²` }
+      ? { icon: LandPlot, label: `${data.yardSize} m2` }
       : null,
   ].filter(
     (item): item is { icon: typeof House | typeof Bed | typeof Bath | typeof LandPlot; label: string } =>
@@ -135,11 +135,14 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       onClick={() => setLocation(listingHref)}
     >
       <div className="flex flex-col sm:flex-row">
-        <div className="relative h-56 flex-shrink-0 sm:h-auto sm:w-[320px]">
+        <div
+          className="relative w-full flex-shrink-0 overflow-hidden sm:w-[340px]"
+          style={{ aspectRatio: '4 / 3' }}
+        >
           <img
             src={data.image}
             alt={data.title}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-[center_40%]"
             onError={e => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
@@ -148,7 +151,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           />
         </div>
 
-        <div className="min-w-0 flex-1 overflow-hidden p-6 sm:flex sm:min-h-[356px] sm:flex-col">
+        <div className="min-w-0 flex-1 overflow-hidden p-6 sm:flex sm:min-h-[372px] sm:flex-col">
           <div className="space-y-2">
             <h3 className="line-clamp-1 text-[1.05rem] font-semibold text-slate-900">{data.title}</h3>
             <div className="space-y-1.5">
