@@ -28,6 +28,9 @@ interface ImageUrls {
 interface AgentInfo {
   name: string;
   image?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
 }
 
 // Developer Brand Profile info for platform-wide brand visibility
@@ -36,6 +39,8 @@ interface DeveloperBrandInfo {
   brandName: string;
   logoUrl?: string | null;
   slug: string;
+  publicContactEmail?: string | null;
+  phone?: string | null;
 }
 
 interface DevelopmentInfo {
@@ -71,6 +76,9 @@ export interface PropertyCardProps {
   imageCount?: number;
   videoCount?: number;
   highlights?: string[];
+  hideSourceTag?: boolean;
+  hideDevelopmentContext?: boolean;
+  hideImageBadges?: boolean;
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -100,6 +108,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   imageCount = 15,
   videoCount = 2,
   highlights,
+  hideSourceTag = false,
+  hideDevelopmentContext = false,
+  hideImageBadges = false,
 }) => {
   const [, setLocation] = useLocation();
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
@@ -204,49 +215,51 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         )}
 
         {/* Badges - Top Left */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-          {/* Status Badge (Transactional) */}
-          {status && status !== 'Available' && (
-            <Badge
-              className={`border-0 backdrop-blur-md shadow-sm ${
-                status.toLowerCase().includes('sold')
-                  ? 'bg-red-600/90 text-white'
-                  : status.toLowerCase().includes('offer')
-                    ? 'bg-orange-600/90 text-white'
-                    : 'bg-emerald-600/90 text-white'
-              }`}
-            >
-              {status}
-            </Badge>
-          )}
-
-          {/* Property Type Badge */}
-          {propertyType && (
-            <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-900 border-0 shadow-sm font-semibold">
-              {propertyType}
-            </Badge>
-          )}
-
-          {/* Dynamic Badges */}
-          {displayBadges.map((badge, index) => {
-            const lower = badge.toLowerCase();
-            let colorClass = 'bg-blue-600/90 text-white'; // Default Marketing
-
-            if (lower.includes('price') || lower.includes('deal') || lower.includes('reduced')) {
-              colorClass = 'bg-emerald-600/90 text-white'; // Financial
-            } else if (lower.includes('exclusive') || lower.includes('new')) {
-              colorClass = 'bg-indigo-600/90 text-white'; // Marketing/Exclusive
-            } else if (lower.includes('sold') || lower.includes('archived')) {
-              colorClass = 'bg-slate-800/90 text-white'; // Inactive
-            }
-
-            return (
-              <Badge key={index} className={`${colorClass} backdrop-blur-sm border-0 shadow-sm`}>
-                {badge}
+        {!hideImageBadges && (
+          <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+            {/* Status Badge (Transactional) */}
+            {status && status !== 'Available' && (
+              <Badge
+                className={`border-0 backdrop-blur-md shadow-sm ${
+                  status.toLowerCase().includes('sold')
+                    ? 'bg-red-600/90 text-white'
+                    : status.toLowerCase().includes('offer')
+                      ? 'bg-orange-600/90 text-white'
+                      : 'bg-emerald-600/90 text-white'
+                }`}
+              >
+                {status}
               </Badge>
-            );
-          })}
-        </div>
+            )}
+
+            {/* Property Type Badge */}
+            {propertyType && (
+              <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-900 border-0 shadow-sm font-semibold">
+                {propertyType}
+              </Badge>
+            )}
+
+            {/* Dynamic Badges */}
+            {displayBadges.map((badge, index) => {
+              const lower = badge.toLowerCase();
+              let colorClass = 'bg-blue-600/90 text-white';
+
+              if (lower.includes('price') || lower.includes('deal') || lower.includes('reduced')) {
+                colorClass = 'bg-emerald-600/90 text-white';
+              } else if (lower.includes('exclusive') || lower.includes('new')) {
+                colorClass = 'bg-indigo-600/90 text-white';
+              } else if (lower.includes('sold') || lower.includes('archived')) {
+                colorClass = 'bg-slate-800/90 text-white';
+              }
+
+              return (
+                <Badge key={index} className={`${colorClass} backdrop-blur-sm border-0 shadow-sm`}>
+                  {badge}
+                </Badge>
+              );
+            })}
+          </div>
+        )}
 
         {/* Favorite Button */}
         {onFavoriteClick && (
@@ -300,7 +313,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               <span>{location}</span>
             </div>
 
-            {development?.name && (
+            {!hideDevelopmentContext && development?.name && (
               <div className="flex items-center gap-1.5 text-slate-600 text-xs mb-3">
                 <Home className="h-3.5 w-3.5 text-slate-400" />
                 {developmentHref ? (
@@ -323,21 +336,23 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               </div>
             )}
 
-            <div className="mb-3 flex flex-wrap gap-2">
-              {isDevelopmentListing ? (
-                <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">
-                  New Development
-                </Badge>
-              ) : isPrivateListing ? (
-                <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
-                  Private Listing
-                </Badge>
-              ) : (
-                <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
-                  Listed by Agent
-                </Badge>
-              )}
-            </div>
+            {!hideSourceTag && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {isDevelopmentListing ? (
+                  <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">
+                    New Development
+                  </Badge>
+                ) : isPrivateListing ? (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                    Private Listing
+                  </Badge>
+                ) : (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                    Listed by Agent
+                  </Badge>
+                )}
+              </div>
+            )}
 
             <div className="text-xl font-bold text-[#1e1b4b]">{priceLabel}</div>
           </div>
