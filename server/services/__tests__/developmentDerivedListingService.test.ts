@@ -350,4 +350,68 @@ describe('DevelopmentDerivedListingService', () => {
     expect(result.items[0].unitTypeId).toBe('unit-alberton');
     expect(result.items[0].city).toBe('Alberton');
   });
+
+  it('matches lowercase city and province search inputs against title-cased database values', async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      {
+        developmentId: 43,
+        developmentName: 'Sky City',
+        developmentSlug: 'sky-city',
+        developmentStatus: 'selling-fast',
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        city: 'Alberton',
+        suburb: 'Sky City',
+        province: 'Gauteng',
+        completionDate: '2027-05-01 00:00:00',
+        legacyStatus: 'ready',
+        constructionPhase: 'completed',
+        developmentImages: '[{"url":"https://example.com/dev-cover-2.jpg"}]',
+        developmentCreatedAt: '2026-03-20 10:00:00',
+        developerId: 7,
+        developerBrandProfileId: 9,
+        developerName: 'Builder Group',
+        developerLogo: 'https://example.com/developer-logo.jpg',
+        brandName: 'Builder Group',
+        brandSlug: 'builder-group',
+        brandLogoUrl: 'https://example.com/brand-logo.jpg',
+        brandPublicContactEmail: 'sales@builder-group.com',
+        unitTypeId: 'unit-alberton',
+        unitName: 'Sky City Starter Home',
+        structuralType: 'house',
+        bedrooms: 2,
+        bathrooms: 1,
+        unitSize: 52,
+        yardSize: 180,
+        priceFrom: '758000.00',
+        priceTo: '810000.00',
+        basePriceFrom: '758000.00',
+        basePriceTo: '810000.00',
+        monthlyRentFrom: null,
+        monthlyRentTo: null,
+        startingBid: null,
+        auctionStatus: 'scheduled',
+        availableUnits: 4,
+        totalUnits: 10,
+        unitBaseMedia: '{"gallery":[{"url":"https://example.com/unit-alberton.jpg"}]}',
+        unitCreatedAt: '2026-03-22 09:00:00',
+      },
+    ]);
+
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        city: 'alberton',
+        province: 'gauteng',
+        listingType: 'sale',
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].unitTypeId).toBe('unit-alberton');
+    expect(result.items[0].city).toBe('Alberton');
+    expect(result.items[0].province).toBe('Gauteng');
+  });
 });
