@@ -136,7 +136,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     >
       <div className="flex flex-col sm:flex-row">
         <div
-          className="relative w-full flex-shrink-0 overflow-hidden sm:w-[340px]"
+          className="relative w-full flex-shrink-0 overflow-hidden sm:w-[312px]"
           style={{ aspectRatio: '4 / 3' }}
         >
           <img
@@ -151,7 +151,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           />
         </div>
 
-        <div className="min-w-0 flex-1 overflow-hidden p-6 sm:flex sm:min-h-[372px] sm:flex-col">
+        <div className="min-w-0 flex-1 overflow-hidden p-6 sm:flex sm:min-h-[356px] sm:flex-col">
           <div className="space-y-2">
             <h3 className="line-clamp-1 text-[1.05rem] font-semibold text-slate-900">{data.title}</h3>
             <div className="space-y-1.5">
