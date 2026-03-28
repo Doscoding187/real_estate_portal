@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import { developerBrandProfiles, developers, developments, unitTypes } from '../../drizzle/schema';
 import type {
@@ -112,6 +112,19 @@ function matchesLocationSlugs(
     if (!normalizedLocation) return false;
     return haystacks.some(haystack => haystack.includes(normalizedLocation));
   });
+}
+
+function matchesNormalizedField(value: unknown, expected?: string): boolean {
+  if (!expected) return true;
+  return normalizeLocationText(String(value || '')) === normalizeLocationText(expected);
+}
+
+function matchesNormalizedFieldSet(value: unknown, expectedValues?: string[]): boolean {
+  if (!expectedValues?.length) return true;
+  const normalizedValue = normalizeLocationText(String(value || ''));
+  if (!normalizedValue) return false;
+
+  return expectedValues.some(expected => normalizedValue === normalizeLocationText(expected));
 }
 
 function mapStructuralTypeToPropertyType(
@@ -334,10 +347,6 @@ export class DevelopmentDerivedListingService {
       eq(unitTypes.isActive, 1),
     ];
 
-    if (filters.province) conditions.push(eq(developments.province, filters.province));
-    if (filters.city) conditions.push(eq(developments.city, filters.city));
-    if (filters.suburb?.length) conditions.push(inArray(developments.suburb, filters.suburb));
-
     const targetTransactionType =
       filters.listingType === 'rent' ? 'for_rent' : filters.listingType === 'sale' ? 'for_sale' : null;
     if (targetTransactionType) {
@@ -402,6 +411,18 @@ export class DevelopmentDerivedListingService {
 
     const mapped = rows
       .map(row => {
+        if (!matchesNormalizedField(row.province, filters.province)) {
+          return null;
+        }
+
+        if (!matchesNormalizedField(row.city, filters.city)) {
+          return null;
+        }
+
+        if (!matchesNormalizedFieldSet(row.suburb, filters.suburb)) {
+          return null;
+        }
+
         if (!matchesLocationSlugs(row, filters.locations)) {
           return null;
         }
