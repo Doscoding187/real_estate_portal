@@ -746,6 +746,11 @@ export default function PropertyDetail(props: PropertyDetailProps) {
   const handleOpenStandardEnquiry = () => {
     openContactModal();
   };
+  const handleBookAppointment = () => {
+    openContactModal({
+      initialMessage: `Hi, I'd like to book an appointment to view ${property.title}. Please let me know the next available time slot.`,
+    });
+  };
   const handleWhatsAppContact = (message?: string) => {
     if (!whatsappNumber) return;
 
@@ -836,6 +841,14 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       block: 'start',
     });
   };
+  const agentProfileHref =
+    contactMode === 'agent'
+      ? contactIdentity?.slug
+        ? `/agents/${contactIdentity.slug}`
+        : contactIdentity?.id && /^\d+$/.test(String(contactIdentity.id))
+          ? `/agent/profile/${contactIdentity.id}`
+          : null
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -1210,27 +1223,53 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                     )}
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {whatsappNumber && (
+                  <div className="space-y-3">
+                    <div
+                      className={`grid gap-3 ${whatsappNumber ? 'sm:grid-cols-[64px_minmax(0,1fr)]' : 'sm:grid-cols-1'}`}
+                    >
+                      {whatsappNumber && (
+                        <Button
+                          className="h-12 w-full bg-green-500 px-0 text-white hover:bg-green-600"
+                          onClick={() =>
+                            handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
+                          }
+                          aria-label="WhatsApp Agent"
+                        >
+                          <MessageCircle className="h-5 w-5" />
+                        </Button>
+                      )}
                       <Button
-                        className="h-11 bg-green-500 text-white hover:bg-green-600"
-                        onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+                        className="h-12 bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
+                        onClick={handleBookAppointment}
                       >
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        WhatsApp Agent
+                        Book an Appointment
                       </Button>
-                    )}
-                    {directPhone && (
-                      <Button
-                        variant="outline"
-                        className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
-                        asChild
-                      >
-                        <a href={`tel:${directPhone}`}>
-                          <Phone className="mr-2 h-4 w-4" />
-                          Call Agent
-                        </a>
-                      </Button>
+                    </div>
+
+                    {(directPhone || agentProfileHref) && (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {directPhone && (
+                          <Button
+                            variant="outline"
+                            className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
+                            asChild
+                          >
+                            <a href={`tel:${directPhone}`}>
+                              <Phone className="mr-2 h-4 w-4" />
+                              Call Agent
+                            </a>
+                          </Button>
+                        )}
+                        {agentProfileHref && (
+                          <Button
+                            variant="outline"
+                            className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
+                            onClick={() => setLocation(agentProfileHref)}
+                          >
+                            View Agent Profile
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -1472,29 +1511,53 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                           </div>
                         )}
 
-                        <div className="grid gap-3">
-                          {whatsappNumber && (
+                        <div className="space-y-3">
+                          <div
+                            className={`grid gap-3 ${whatsappNumber ? 'grid-cols-[56px_minmax(0,1fr)]' : 'grid-cols-1'}`}
+                          >
+                            {whatsappNumber && (
+                              <Button
+                                className="h-12 w-full bg-green-500 px-0 text-white hover:bg-green-600"
+                                onClick={() =>
+                                  handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
+                                }
+                                aria-label="WhatsApp Agent"
+                              >
+                                <MessageCircle className="h-5 w-5" />
+                              </Button>
+                            )}
                             <Button
-                              className="h-11 w-full bg-green-500 text-white hover:bg-green-600"
-                              onClick={() =>
-                                handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                              }
+                              className="h-12 w-full bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
+                              onClick={handleBookAppointment}
                             >
-                              <MessageCircle className="mr-2 h-4 w-4" />
-                              WhatsApp Agent
+                              Book an Appointment
                             </Button>
-                          )}
-                          {directPhone && (
-                            <Button
-                              variant="outline"
-                              className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                              asChild
-                            >
-                              <a href={`tel:${directPhone}`}>
-                                <Phone className="mr-2 h-4 w-4" />
-                                Call Agent
-                              </a>
-                            </Button>
+                          </div>
+
+                          {(directPhone || agentProfileHref) && (
+                            <div className="grid gap-3">
+                              {directPhone && (
+                                <Button
+                                  variant="outline"
+                                  className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                                  asChild
+                                >
+                                  <a href={`tel:${directPhone}`}>
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    Call Agent
+                                  </a>
+                                </Button>
+                              )}
+                              {agentProfileHref && (
+                                <Button
+                                  variant="outline"
+                                  className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                                  onClick={() => setLocation(agentProfileHref)}
+                                >
+                                  View Agent Profile
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </>
