@@ -375,6 +375,7 @@ export class DevelopmentDerivedListingService {
         developerBrandProfileId: developments.developerBrandProfileId,
         developerName: developers.name,
         developerLogo: developers.logo,
+        developerPhone: developers.phone,
         brandName: developerBrandProfiles.brandName,
         brandSlug: developerBrandProfiles.slug,
         brandLogoUrl: developerBrandProfiles.logoUrl,
@@ -529,6 +530,7 @@ export class DevelopmentDerivedListingService {
             slug: row.brandSlug || null,
             logoUrl: row.brandLogoUrl || row.developerLogo || null,
             publicContactEmail: row.brandPublicContactEmail || null,
+            phone: row.developerPhone || null,
           },
         } satisfies DevelopmentDerivedListing;
       })

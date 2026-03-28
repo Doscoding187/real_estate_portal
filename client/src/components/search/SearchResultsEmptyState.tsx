@@ -33,9 +33,9 @@ function getEmptyStateCopy(filters: SearchFilters) {
   if (filters.listingSource === 'manual') {
     return {
       icon: Home,
-      title: 'No property listings match this search',
+      title: 'No resale properties match this search',
       description:
-        'There are no agent or private property listings matching these filters right now. Try broadening the search or switch to new developments in this area.',
+        'There are no resale properties matching these filters right now. Try broadening the search or switch to new developments in this area.',
       primaryActionLabel: 'Show New Developments',
       primaryActionSource: 'development' as const,
     };
@@ -46,8 +46,8 @@ function getEmptyStateCopy(filters: SearchFilters) {
       icon: Building2,
       title: 'No new developments match this search',
       description:
-        'There are no development unit listings matching these filters right now. Try broadening the search or switch back to individual property listings.',
-      primaryActionLabel: 'Show Property Listings',
+        'There are no new development homes matching these filters right now. Try broadening the search or switch back to resale properties.',
+      primaryActionLabel: 'Show Resale',
       primaryActionSource: 'manual' as const,
     };
   }
@@ -55,8 +55,8 @@ function getEmptyStateCopy(filters: SearchFilters) {
   return {
     icon: Search,
     title: 'No matching properties found',
-    description:
-      'We could not find any property listings or development inventory matching this exact search. Try clearing some filters or broadening the area.',
+      description:
+      'We could not find any properties matching this exact search. Try clearing some filters or broadening the area.',
     primaryActionLabel: 'Clear Filters & Broaden Search',
     primaryActionSource: undefined,
   };

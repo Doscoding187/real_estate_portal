@@ -4,9 +4,9 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
-import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBadges';
+import { getPrimaryListingBadge } from '@/lib/listingBadges';
 import { normalizePropertyForUI } from '@/lib/normalizers';
-import { blendSearchResults, resolveSearchBlendPolicy } from '@/lib/searchBlend';
+import { blendSearchResults } from '@/lib/searchBlend';
 import {
   DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
   getSavedSearchNotificationDescription,
@@ -519,43 +519,9 @@ export default function SearchResults({
   const displayedResultCount = renderedResults.length;
   const displayedDevelopmentCount = renderedResults.filter(item => item.kind === 'development').length;
   const displayedManualCount = renderedResults.length - displayedDevelopmentCount;
-  const manualTotalCount = shouldFetchManualListings
-    ? (propertySearchResults as any)?.total ?? properties.length
-    : 0;
-  const developmentTotalCount = shouldFetchDevelopmentListings
-    ? (developmentListingResults as any)?.total ?? developmentResults.length
-    : 0;
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
-  const blendPolicy = useMemo(() => resolveSearchBlendPolicy(filters, sortBy), [filters, sortBy]);
-  const blendPolicyCopy =
-    !filters.listingSource && displayedDevelopmentCount > 0 && sortBy === 'relevance'
-      ? blendPolicy.copy
-      : undefined;
-  const rangeStart = displayedResultCount > 0 ? page * limit + 1 : 0;
-  const rangeEnd = displayedResultCount > 0 ? page * limit + displayedResultCount : 0;
   const totalPages = resultCount > 0 ? Math.max(1, Math.ceil(resultCount / limit)) : 0;
-  const resultsSummaryText = useMemo(() => {
-    if (!displayedResultCount || !resultCount) return undefined;
-
-    if (filters.listingSource === 'manual') {
-      return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${manualTotalCount.toLocaleString()} property listings`;
-    }
-
-    if (filters.listingSource === 'development') {
-      return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${developmentTotalCount.toLocaleString()} development listings`;
-    }
-
-    return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${resultCount.toLocaleString()} blended results`;
-  }, [
-    developmentTotalCount,
-    displayedResultCount,
-    filters.listingSource,
-    manualTotalCount,
-    rangeEnd,
-    rangeStart,
-    resultCount,
-  ]);
   const pageSummaryText = useMemo(() => {
     if (!displayedResultCount || !totalPages) return undefined;
 
@@ -592,7 +558,7 @@ export default function SearchResults({
       />
 
       <div className="container pt-24 pb-8">
-        <div className="mx-auto w-full max-w-[1180px]">
+        <div className="mx-auto w-full max-w-[1260px]">
           {/* Header Section */}
           <div className="mb-3">
             <div className="mb-2">
@@ -603,21 +569,13 @@ export default function SearchResults({
 
             <div className="border-b border-gray-200 pb-3">
               <ResultsHeader
-                filters={filters}
                 resultCount={resultCount}
-                displayedPropertyCount={displayedResultCount}
-                developmentCount={displayedDevelopmentCount}
-                manualTotalCount={manualTotalCount}
-                developmentTotalCount={developmentTotalCount}
-                resultsSummaryText={resultsSummaryText}
-                pageSummaryText={pageSummaryText}
-                blendPolicyCopy={blendPolicyCopy}
+                displayedCount={displayedResultCount}
                 isLoading={isLoading}
                 viewMode={viewMode}
                 sortBy={sortBy}
                 onViewModeChange={setViewMode}
                 onSortChange={setSortBy}
-                onListingSourceChange={handleListingSourceChange}
                 onOpenFilters={() => setIsMobileFilterOpen(true)}
               />
               <div className="mt-2">
@@ -631,7 +589,7 @@ export default function SearchResults({
           </div>
 
           {/* Content Section */}
-          <div className="grid grid-cols-1 gap-2 px-2 sm:px-3 lg:grid-cols-[292px_minmax(0,760px)] lg:justify-center lg:gap-3 lg:px-0">
+          <div className="grid grid-cols-1 gap-4 px-2 sm:px-3 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:px-0">
             {/* LEFT SIDEBAR - FILTERS */}
             <div className="hidden lg:block">
               <div className="sticky top-24">
@@ -659,6 +617,7 @@ export default function SearchResults({
                       <div className="flex flex-col items-start gap-4">
                         {renderedResults.map((item, index) => {
                           const normalized = item.normalized;
+                          const raw = item.value as any;
                           return (
                             <ListingResultCard
                               key={`prop-${normalized.id}-${index}`}
@@ -677,17 +636,12 @@ export default function SearchResults({
                                     : (normalized as any).mainImage ?? '/placeholder-property.jpg',
                                 development: (normalized as any).development,
                                 area: normalized.area,
+                                yardSize: (normalized as any).yardSize,
                                 bedrooms: normalized.bedrooms,
                                 bathrooms: normalized.bathrooms,
-                                floor:
-                                  typeof (normalized as any).yardSize === 'number' &&
-                                  (normalized as any).yardSize > 0
-                                    ? `${(normalized as any).yardSize}m2`
-                                    : '-',
                                 highlights: Array.isArray(normalized.highlights)
                                   ? normalized.highlights
                                   : [],
-                                badges: getDisplayListingBadges((normalized as any).badges),
                                 description: normalized.description ?? undefined,
                                 listingSource: (normalized as any).listingSource,
                                 listerType: (normalized as any).listerType,
@@ -706,6 +660,18 @@ export default function SearchResults({
                                   (normalized as any).listingSource === 'development'
                                     ? (normalized as any).developerBrand?.logoUrl || undefined
                                     : normalized.agent?.image || undefined,
+                                whatsappNumber:
+                                  (normalized as any).listingSource === 'development'
+                                    ? raw?.developerPhone || raw?.developerBrand?.phone || undefined
+                                    : raw?.agent?.whatsapp || undefined,
+                                phoneNumber:
+                                  (normalized as any).listingSource === 'development'
+                                    ? raw?.developerPhone || raw?.developerBrand?.phone || undefined
+                                    : raw?.agent?.phone || undefined,
+                                contactEmail:
+                                  (normalized as any).listingSource === 'development'
+                                    ? raw?.developerBrand?.publicContactEmail || undefined
+                                    : raw?.agent?.email || undefined,
                               }}
                             />
                           );
@@ -732,6 +698,9 @@ export default function SearchResults({
                               (normalized as any).mainImage ??
                               (normalized as any).images?.[0] ??
                               '/placeholder-property.jpg',
+                            hideSourceTag: true,
+                            hideDevelopmentContext: true,
+                            hideImageBadges: true,
                           };
                           return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
                         })}
