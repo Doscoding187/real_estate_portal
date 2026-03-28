@@ -199,7 +199,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             alt={title}
             aspectRatio="4/3"
             className="h-full w-full"
-            imageClassName="object-cover object-[center_40%] transition-transform duration-500 group-hover:scale-[1.02]"
+            imageClassName="object-cover object-[center_38%] transition-transform duration-500 group-hover:scale-[1.02]"
           />
         ) : (
           <img
@@ -211,7 +211,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               target.onerror = null;
               target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
             }}
-            className="h-full w-full object-cover object-[center_40%] transition-transform duration-500 group-hover:scale-[1.02]"
+            className="h-full w-full object-cover object-[center_38%] transition-transform duration-500 group-hover:scale-[1.02]"
           />
         )}
 

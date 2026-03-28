@@ -136,13 +136,13 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     >
       <div className="flex flex-col sm:flex-row">
         <div
-          className="relative w-full flex-shrink-0 overflow-hidden sm:w-[312px]"
+          className="relative w-full flex-shrink-0 overflow-hidden sm:w-[304px]"
           style={{ aspectRatio: '4 / 3' }}
         >
           <img
             src={data.image}
             alt={data.title}
-            className="h-full w-full object-cover object-[center_40%]"
+            className="h-full w-full object-cover object-[center_38%]"
             onError={e => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
