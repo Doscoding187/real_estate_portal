@@ -280,7 +280,7 @@ describe('Property Card Data Flow Integration', () => {
     createdPropertyId = getInsertId(propertyInsert);
 
     const result = await propertySearchService.searchProperties(
-      { locations: ['alberton'], listingType: 'sale' },
+      { city: 'Alberton', province: 'Gauteng', listingType: 'sale', minPrice: 800000, maxPrice: 900000 },
       'date_desc',
       1,
       20,
@@ -290,5 +290,121 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched).toBeTruthy();
     expect(matched.mainImage).toBe(listingImage);
     expect(matched.images?.[0]?.url).toBe(listingImage);
+  });
+
+  it('falls back to source listing agent identity when searchable property agent fields are missing', async () => {
+    if (skipTests) return;
+
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const suffix = Date.now();
+    const email = `property-card-agent-fallback-${suffix}@example.com`;
+    const profileImage = `https://cdn.example.com/agents/fallback-${suffix}.jpg`;
+
+    const userInsert = await db!.insert(users).values({
+      email,
+      name: 'Fallback Agent Owner',
+      role: 'agent',
+      emailVerified: 1,
+    });
+    createdUserId = getInsertId(userInsert);
+
+    const agencyInsert = await db!.insert(agencies).values({
+      name: `Fallback Agent Realty ${suffix}`,
+      slug: `fallback-agent-realty-${suffix}`,
+      isVerified: 1,
+    });
+    createdAgencyId = getInsertId(agencyInsert);
+
+    const agentInsert = await db!.insert(agents).values({
+      userId: createdUserId,
+      agencyId: createdAgencyId,
+      firstName: 'Ava',
+      lastName: 'Broker',
+      displayName: 'Ava Broker',
+      profileImage,
+      phone: '+27110003333',
+      email,
+      whatsapp: '+27110003333',
+      isVerified: 1,
+      isFeatured: 0,
+      status: 'approved',
+    });
+    createdAgentId = getInsertId(agentInsert);
+
+    const listingInsert = await db!.insert(listings).values({
+      ownerId: createdUserId,
+      agentId: createdAgentId,
+      agencyId: createdAgencyId,
+      action: 'sell',
+      propertyType: 'house',
+      title: `Agent Identity Source ${suffix}`,
+      description: 'Search cards should show the source listing agent identity.',
+      askingPrice: '990000.00',
+      propertyDetails: {
+        bedrooms: 3,
+        bathrooms: 2,
+        houseAreaM2: 120,
+      },
+      address: '2 Identity Source Road',
+      latitude: '-26.3000000',
+      longitude: '28.1000000',
+      city: 'Alberton',
+      suburb: 'Sky City',
+      province: 'Gauteng',
+      slug: `agent-identity-source-${suffix}`,
+      status: 'published',
+      approvalStatus: 'approved',
+    });
+    createdListingId = getInsertId(listingInsert);
+
+    const propertyInsert = await db!.insert(properties).values({
+      title: `Agent Identity Property ${suffix}`,
+      description: 'Property row is missing agent sync and should fall back to the source listing agent.',
+      propertyType: 'house',
+      listingType: 'sale',
+      transactionType: 'sale',
+      price: 990000,
+      bedrooms: 3,
+      bathrooms: 2,
+      area: 120,
+      address: '2 Identity Source Road',
+      city: 'Alberton',
+      suburb: 'Sky City',
+      province: 'Gauteng',
+      latitude: '-26.3000',
+      longitude: '28.1000',
+      amenities: 'Security',
+      status: 'available',
+      featured: 0,
+      views: 0,
+      enquiries: 0,
+      agentId: null,
+      ownerId: createdUserId,
+      sourceListingId: createdListingId,
+      propertySettings: JSON.stringify({
+        propertySetting: 'freehold',
+        houseAreaM2: 120,
+        bedrooms: 3,
+        bathrooms: 2,
+      }),
+      mainImage: null,
+    });
+    createdPropertyId = getInsertId(propertyInsert);
+
+    const result = await propertySearchService.searchProperties(
+      { city: 'Alberton', province: 'Gauteng', listingType: 'sale', minPrice: 900000, maxPrice: 1000000 },
+      'date_desc',
+      1,
+      20,
+    );
+
+    const matched = result.properties.find(p => Number(p.id) === createdPropertyId) as any;
+    expect(matched).toBeTruthy();
+    expect(matched.listerType).toBe('agency');
+    expect(matched.agent?.name).toBe('Ava Broker');
+    expect(matched.agent?.agency).toBe(`Fallback Agent Realty ${suffix}`);
+    expect(matched.agent?.image).toBe(profileImage);
   });
 });
