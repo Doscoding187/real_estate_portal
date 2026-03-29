@@ -109,9 +109,9 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           />
         </div>
 
-        <div className="min-w-0 flex-1 overflow-hidden p-5 pr-6 sm:flex sm:min-h-[300px] sm:flex-col">
+        <div className="min-w-0 flex-1 overflow-hidden p-4 pr-5 sm:flex sm:min-h-[300px] sm:flex-col">
           {isDevelopmentListing && developmentName && (
-            <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
               <Building2 className="h-3.5 w-3.5" />
               {developmentHref ? (
                 <button
@@ -132,13 +132,13 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               )}
             </p>
           )}
-          <h3 className="line-clamp-1 text-lg font-bold text-foreground">{data.title}</h3>
-          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <h3 className="line-clamp-2 text-[17px] font-bold leading-5 text-foreground">{data.title}</h3>
+          <p className="mt-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" />
             {data.location || '-'}
           </p>
           {!isDevelopmentListing && developmentName && (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <House className="h-3.5 w-3.5" />
               {developmentHref ? (
                 <button
@@ -160,31 +160,31 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             </p>
           )}
 
-          <p className="mt-2.5 text-2xl font-bold text-foreground">
+          <p className="mt-2 text-[27px] font-bold leading-none text-foreground">
             {formatPrice(data.price, { from: isDevelopmentListing })}
           </p>
 
-          <div className="mt-4 flex flex-wrap gap-4 pr-2">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 pr-2">
             {typeof data.area === 'number' && data.area > 0 && (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
                 <House className="h-4 w-4" />
                 {`${data.area}m2`}
               </span>
             )}
             {typeof data.bedrooms === 'number' && data.bedrooms > 0 && (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
                 <Bed className="h-4 w-4" />
                 {`${data.bedrooms} Bed`}
               </span>
             )}
             {typeof data.bathrooms === 'number' && data.bathrooms > 0 && (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
                 <Bath className="h-4 w-4" />
                 {`${data.bathrooms} Bath`}
               </span>
             )}
             {data.floor && (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
                 <LandPlot className="h-4 w-4" />
                 {data.floor}
               </span>
@@ -192,7 +192,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           </div>
 
           {Array.isArray(data.highlights) && data.highlights.length > 0 && (
-            <div className="mt-4 pr-3">
+            <div className="mt-3 pr-3">
               <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
                 {data.highlights.slice(0, 3).map((h, index) => (
                   <span
@@ -207,12 +207,12 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           )}
 
           {data.description && (
-            <p className="mt-4 line-clamp-3 pr-3 text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-3 line-clamp-2 pr-3 text-[13px] leading-5 text-muted-foreground">
               {data.description}
             </p>
           )}
 
-          <div className="mt-5 flex flex-col gap-3 pr-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-4 flex flex-col gap-3 pr-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2">
               <Avatar className="h-7 w-7 shrink-0">
                 <AvatarImage src={data.agentAvatarUrl || ''} alt={identityDisplayName} />
