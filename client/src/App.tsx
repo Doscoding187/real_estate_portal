@@ -10,7 +10,6 @@ import { BrandingProvider } from './contexts/BrandingContext';
 import { ComparisonProvider } from './contexts/ComparisonContext';
 import { ComparisonBar } from './components/ComparisonBar';
 import { GuestActivityProvider } from './contexts/GuestActivityContext';
-import { GuestUserBanner } from './components/GuestUserBanner';
 import { useGuestDataMigration } from './hooks/useGuestDataMigration';
 import { useKeyboardMode } from './hooks/useKeyboardMode';
 import { SkipToContent } from './components/ui/SkipToContent';
@@ -753,7 +752,6 @@ function App() {
                 <Toaster />
                 <Router />
                 <ComparisonBar />
-                <GuestUserBanner />
               </TooltipProvider>
             </ComparisonProvider>
           </GuestActivityProvider>

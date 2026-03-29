@@ -34,6 +34,7 @@ import { trpc } from '@/lib/trpc';
 import { apiFetch, ApiError } from '@/lib/api';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { GuestUserBanner } from '@/components/GuestUserBanner';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -296,6 +297,10 @@ export default function Login() {
                 <Home className="h-5 w-5 text-white" />
               </div>
               <h1 className="text-2xl font-bold">Property Listify</h1>
+            </div>
+
+            <div className="mb-6">
+              <GuestUserBanner showAction={false} />
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
