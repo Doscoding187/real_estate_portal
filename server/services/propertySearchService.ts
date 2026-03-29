@@ -9,12 +9,14 @@ import {
   properties,
   propertyImages,
   listingMedia,
+  listings,
   developments,
   developers,
   developerBrandProfiles,
   agents,
   agencies,
   suburbs,
+  users,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
@@ -285,6 +287,7 @@ export class PropertySearchService {
         amenities: properties.amenities,
         mainImage: properties.mainImage,
         sourceListingId: properties.sourceListingId,
+        ownerId: properties.ownerId,
         propertySettings: properties.propertySettings,
         agentDisplayName: agents.displayName,
         agentFirstName: agents.firstName,
@@ -361,6 +364,33 @@ export class PropertySearchService {
             .orderBy(desc(listingMedia.isPrimary), asc(listingMedia.displayOrder))
         : [];
 
+    const sourceListingIdentities =
+      sourceListingIds.length > 0
+        ? await db
+            .select({
+              listingId: listings.id,
+              agentDisplayName: agents.displayName,
+              agentFirstName: agents.firstName,
+              agentLastName: agents.lastName,
+              agentPhone: agents.phone,
+              agentWhatsapp: agents.whatsapp,
+              agentEmail: agents.email,
+              agentProfileImage: agents.profileImage,
+              agencyName: agencies.name,
+              agentId: listings.agentId,
+              ownerName: users.name,
+              ownerFirstName: users.firstName,
+              ownerLastName: users.lastName,
+              ownerPhone: users.phone,
+              ownerEmail: users.email,
+            })
+            .from(listings)
+            .leftJoin(agents, eq(listings.agentId, agents.id))
+            .leftJoin(agencies, eq(listings.agencyId, agencies.id))
+            .leftJoin(users, eq(listings.ownerId, users.id))
+            .where(inArray(listings.id, sourceListingIds))
+        : [];
+
     const imagesBySourceListing = new Map<number, typeof sourceListingImages>();
     sourceListingImages.forEach((img: any) => {
       const listingId = Number(img.listingId);
@@ -368,6 +398,14 @@ export class PropertySearchService {
         imagesBySourceListing.set(listingId, []);
       }
       imagesBySourceListing.get(listingId)!.push(img);
+    });
+
+    const identityBySourceListing = new Map<number, (typeof sourceListingIdentities)[number]>();
+    sourceListingIdentities.forEach((identity: any) => {
+      const listingId = Number(identity.listingId || 0);
+      if (listingId > 0) {
+        identityBySourceListing.set(listingId, identity);
+      }
     });
 
     // Transform results to Property type
@@ -434,9 +472,23 @@ export class PropertySearchService {
         primaryImage.push({ url: prop.mainImage, thumbnailUrl: prop.mainImage });
       }
 
+      const sourceListingIdentity = identityBySourceListing.get(Number(prop.sourceListingId || 0));
+
       const agentName = (
         String(prop.agentDisplayName || '').trim() ||
-        [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim()
+        [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim() ||
+        String(sourceListingIdentity?.agentDisplayName || '').trim() ||
+        [sourceListingIdentity?.agentFirstName, sourceListingIdentity?.agentLastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
+      ).trim();
+      const ownerName = (
+        String(sourceListingIdentity?.ownerName || '').trim() ||
+        [sourceListingIdentity?.ownerFirstName, sourceListingIdentity?.ownerLastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
       ).trim();
       const developerName = String(prop.developerName || '').trim();
       const developerLogo = prop.developerLogo || undefined;
@@ -505,18 +557,31 @@ export class PropertySearchService {
         status: this.mapStatus(prop.status),
         listedDate: new Date(prop.listedDate),
         listingSource: 'manual',
-        listerType: hasAgentIdentity ? (prop.agencyName ? 'agency' : 'agent') : 'private',
+        listerType: hasAgentIdentity
+          ? ((prop.agencyName || sourceListingIdentity?.agencyName) ? 'agency' : 'agent')
+          : 'private',
         agent: hasAgentIdentity
           ? {
-              id: String(prop.agentId || 0),
+              id: String(prop.agentId || sourceListingIdentity?.agentId || 0),
               name: agentName,
-              agency: String(prop.agencyName || ''),
-              phone: String(prop.agentPhone || ''),
-              whatsapp: String(prop.agentWhatsapp || ''),
-              email: String(prop.agentEmail || ''),
-              image: prop.agentProfileImage || undefined,
+              agency: String(prop.agencyName || sourceListingIdentity?.agencyName || ''),
+              phone: String(prop.agentPhone || sourceListingIdentity?.agentPhone || ''),
+              whatsapp: String(prop.agentWhatsapp || sourceListingIdentity?.agentWhatsapp || ''),
+              email: String(prop.agentEmail || sourceListingIdentity?.agentEmail || ''),
+              image:
+                prop.agentProfileImage || sourceListingIdentity?.agentProfileImage || undefined,
             }
-          : undefined,
+          : ownerName
+            ? {
+                id: String(prop.ownerId || 0),
+                name: ownerName,
+                agency: '',
+                phone: String(sourceListingIdentity?.ownerPhone || ''),
+                whatsapp: '',
+                email: String(sourceListingIdentity?.ownerEmail || ''),
+                image: undefined,
+              }
+            : undefined,
         developerBrand,
         development,
         developmentId: Number.isFinite(developmentId) && developmentId > 0 ? developmentId : undefined,
