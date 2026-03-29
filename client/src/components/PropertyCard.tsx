@@ -192,14 +192,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       onClick={() => setLocation(listingHref)}
     >
       {/* Image  Section */}
-      <div className="relative w-full overflow-hidden" style={{ aspectRatio: '4 / 3' }}>
+      <div className="relative w-full h-56 overflow-hidden">
         {isMultiSizeImage ? (
           <OptimizedImageCard
             images={image as ImageUrls}
             alt={title}
-            aspectRatio="4/3"
-            className="h-full w-full"
-            imageClassName="object-cover object-[center_38%] transition-transform duration-500 group-hover:scale-[1.02]"
+            aspectRatio="16/9"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <img
@@ -211,7 +210,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               target.onerror = null;
               target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
             }}
-            className="h-full w-full object-cover object-[center_38%] transition-transform duration-500 group-hover:scale-[1.02]"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         )}
 
