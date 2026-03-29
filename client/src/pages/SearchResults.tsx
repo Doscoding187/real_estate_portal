@@ -4,9 +4,9 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
-import { getDisplayListingBadges, getPrimaryListingBadge } from '@/lib/listingBadges';
+import { getPrimaryListingBadge } from '@/lib/listingBadges';
 import { normalizePropertyForUI } from '@/lib/normalizers';
-import { blendSearchResults, resolveSearchBlendPolicy } from '@/lib/searchBlend';
+import { blendSearchResults } from '@/lib/searchBlend';
 import {
   DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
   getSavedSearchNotificationDescription,
@@ -516,71 +516,9 @@ export default function SearchResults({
     [limit, page, renderedResults],
   );
 
-  const displayedResultCount = renderedResults.length;
-  const displayedDevelopmentCount = renderedResults.filter(item => item.kind === 'development').length;
-  const displayedManualCount = renderedResults.length - displayedDevelopmentCount;
-  const manualTotalCount = shouldFetchManualListings
-    ? (propertySearchResults as any)?.total ?? properties.length
-    : 0;
-  const developmentTotalCount = shouldFetchDevelopmentListings
-    ? (developmentListingResults as any)?.total ?? developmentResults.length
-    : 0;
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
-  const blendPolicy = useMemo(() => resolveSearchBlendPolicy(filters, sortBy), [filters, sortBy]);
-  const blendPolicyCopy =
-    !filters.listingSource && displayedDevelopmentCount > 0 && sortBy === 'relevance'
-      ? blendPolicy.copy
-      : undefined;
-  const rangeStart = displayedResultCount > 0 ? page * limit + 1 : 0;
-  const rangeEnd = displayedResultCount > 0 ? page * limit + displayedResultCount : 0;
   const totalPages = resultCount > 0 ? Math.max(1, Math.ceil(resultCount / limit)) : 0;
-  const resultsSummaryText = useMemo(() => {
-    if (!displayedResultCount || !resultCount) return undefined;
-
-    if (filters.listingSource === 'manual') {
-      return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${manualTotalCount.toLocaleString()} property listings`;
-    }
-
-    if (filters.listingSource === 'development') {
-      return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${developmentTotalCount.toLocaleString()} development listings`;
-    }
-
-    return `Showing ${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} of ${resultCount.toLocaleString()} blended results`;
-  }, [
-    developmentTotalCount,
-    displayedResultCount,
-    filters.listingSource,
-    manualTotalCount,
-    rangeEnd,
-    rangeStart,
-    resultCount,
-  ]);
-  const pageSummaryText = useMemo(() => {
-    if (!displayedResultCount || !totalPages) return undefined;
-
-    if (filters.listingSource === 'manual') {
-      return `Page ${page + 1} of ${totalPages} · Property listings only`;
-    }
-
-    if (filters.listingSource === 'development') {
-      return `Page ${page + 1} of ${totalPages} · New developments only`;
-    }
-
-    const sourceBreakdown =
-      displayedDevelopmentCount > 0
-        ? `${displayedManualCount.toLocaleString()} property listings and ${displayedDevelopmentCount.toLocaleString()} development listings on this page`
-        : `${displayedManualCount.toLocaleString()} property listings on this page`;
-
-    return `Page ${page + 1} of ${totalPages} · ${sourceBreakdown}`;
-  }, [
-    displayedDevelopmentCount,
-    displayedManualCount,
-    displayedResultCount,
-    filters.listingSource,
-    page,
-    totalPages,
-  ]);
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
@@ -603,21 +541,12 @@ export default function SearchResults({
 
             <div className="border-b border-gray-200 pb-3">
               <ResultsHeader
-                filters={filters}
                 resultCount={resultCount}
-                displayedPropertyCount={displayedResultCount}
-                developmentCount={displayedDevelopmentCount}
-                manualTotalCount={manualTotalCount}
-                developmentTotalCount={developmentTotalCount}
-                resultsSummaryText={resultsSummaryText}
-                pageSummaryText={pageSummaryText}
-                blendPolicyCopy={blendPolicyCopy}
                 isLoading={isLoading}
                 viewMode={viewMode}
                 sortBy={sortBy}
                 onViewModeChange={setViewMode}
                 onSortChange={setSortBy}
-                onListingSourceChange={handleListingSourceChange}
                 onOpenFilters={() => setIsMobileFilterOpen(true)}
               />
               <div className="mt-2">
@@ -683,11 +612,10 @@ export default function SearchResults({
                                   typeof (normalized as any).yardSize === 'number' &&
                                   (normalized as any).yardSize > 0
                                     ? `${(normalized as any).yardSize}m2`
-                                    : '-',
+                                    : undefined,
                                 highlights: Array.isArray(normalized.highlights)
                                   ? normalized.highlights
                                   : [],
-                                badges: getDisplayListingBadges((normalized as any).badges),
                                 description: normalized.description ?? undefined,
                                 listingSource: (normalized as any).listingSource,
                                 listerType: (normalized as any).listerType,
@@ -727,6 +655,7 @@ export default function SearchResults({
                             developerBrand: (normalized as any).developerBrand,
                             listingSource: (normalized as any).listingSource,
                             listerType: (normalized as any).listerType,
+                            suppressBadges: true,
                             image:
                               (normalized as any).image ??
                               (normalized as any).mainImage ??
@@ -773,9 +702,6 @@ export default function SearchResults({
                             Next
                           </Button>
                         </div>
-                        {pageSummaryText && (
-                          <span className="text-xs text-slate-500">{pageSummaryText}</span>
-                        )}
                       </div>
                     )}
                   </>

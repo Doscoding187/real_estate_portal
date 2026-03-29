@@ -71,6 +71,7 @@ export interface PropertyCardProps {
   imageCount?: number;
   videoCount?: number;
   highlights?: string[];
+  suppressBadges?: boolean;
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -100,6 +101,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   imageCount = 15,
   videoCount = 2,
   highlights,
+  suppressBadges = false,
 }) => {
   const [, setLocation] = useLocation();
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
@@ -204,7 +206,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         )}
 
         {/* Badges - Top Left */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+        {!suppressBadges && (
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
           {/* Status Badge (Transactional) */}
           {status && status !== 'Available' && (
             <Badge
@@ -246,7 +249,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               </Badge>
             );
           })}
-        </div>
+          </div>
+        )}
 
         {/* Favorite Button */}
         {onFavoriteClick && (
@@ -300,7 +304,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               <span>{location}</span>
             </div>
 
-            {development?.name && (
+            {!suppressBadges && development?.name && (
               <div className="flex items-center gap-1.5 text-slate-600 text-xs mb-3">
                 <Home className="h-3.5 w-3.5 text-slate-400" />
                 {developmentHref ? (
@@ -323,21 +327,23 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               </div>
             )}
 
-            <div className="mb-3 flex flex-wrap gap-2">
-              {isDevelopmentListing ? (
-                <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">
-                  New Development
-                </Badge>
-              ) : isPrivateListing ? (
-                <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
-                  Private Listing
-                </Badge>
-              ) : (
-                <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
-                  Listed by Agent
-                </Badge>
-              )}
-            </div>
+            {!suppressBadges && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {isDevelopmentListing ? (
+                  <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">
+                    New Development
+                  </Badge>
+                ) : isPrivateListing ? (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                    Private Listing
+                  </Badge>
+                ) : (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                    Listed by Agent
+                  </Badge>
+                )}
+              </div>
+            )}
 
             <div className="text-xl font-bold text-[#1e1b4b]">{priceLabel}</div>
           </div>

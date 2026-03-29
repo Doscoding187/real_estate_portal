@@ -41,14 +41,16 @@ const AMENITIES = [
 
 const LISTING_SOURCE_OPTIONS = [
   {
+    value: undefined,
+    label: 'All',
+  },
+  {
     value: 'manual',
-    label: 'Property Listings',
-    description: 'Show agent and private property listings only.',
+    label: 'Resale',
   },
   {
     value: 'development',
-    label: 'New Developments',
-    description: 'Show unit-type inventory from developments only.',
+    label: 'New Development',
   },
 ] as const;
 
@@ -226,33 +228,28 @@ export function SidebarFilters({
             Listing source
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-2 pt-2">
-              <Button
-                variant={!filters.listingSource ? 'default' : 'outline'}
-                className={`w-full justify-start ${
-                  !filters.listingSource
-                    ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-                    : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
-                }`}
-                onClick={() => handleListingSourceChange(undefined)}
-              >
-                All Results
-              </Button>
+            <div className="grid grid-cols-3 gap-1.5 pt-2">
               {LISTING_SOURCE_OPTIONS.map(option => (
                 <Button
-                  key={option.value}
-                  variant={filters.listingSource === option.value ? 'default' : 'outline'}
-                  className={`h-auto w-full justify-start whitespace-normal px-3 py-3 text-left ${
+                  key={option.label}
+                  variant={
+                    option.value === undefined
+                      ? !filters.listingSource
+                        ? 'default'
+                        : 'outline'
+                      : filters.listingSource === option.value
+                        ? 'default'
+                        : 'outline'
+                  }
+                  className={`h-8 w-full whitespace-nowrap rounded-full px-2 text-[10px] font-medium ${
+                    (option.value === undefined && !filters.listingSource) ||
                     filters.listingSource === option.value
                       ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
                       : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
                   }`}
                   onClick={() => handleListingSourceChange(option.value)}
                 >
-                  <span>
-                    <span className="block font-semibold">{option.label}</span>
-                    <span className="mt-1 block text-xs opacity-80">{option.description}</span>
-                  </span>
+                  {option.label}
                 </Button>
               ))}
             </div>
