@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch, ApiError } from '@/lib/api';
-
+import { GuestUserBanner } from '@/components/GuestUserBanner';
 type RegistrationRole = 'visitor' | 'agent' | 'agency_admin' | 'property_developer';
 
 const loginSchema = z.object({
@@ -414,6 +414,10 @@ export default function Login() {
                 <Home className="h-5 w-5 text-white" />
               </div>
               <h1 className="text-2xl font-bold">Property Listify</h1>
+            </div>
+
+            <div className="mb-6">
+              <GuestUserBanner showAction={false} />
             </div>
 
             <Tabs

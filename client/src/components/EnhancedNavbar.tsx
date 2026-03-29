@@ -18,6 +18,9 @@ import {
   Lightbulb,
   Menu,
   X,
+  LayoutDashboard,
+  LogOut,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
@@ -39,7 +42,6 @@ import {
 import { trpc } from '@/lib/trpc';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import { useEffect, useState } from 'react';
-import { Input } from '@/components/ui/input';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { LocationSelectionModal } from '@/components/LocationSelectionModal';
 
@@ -241,10 +243,71 @@ function CityDropdownContent() {
   );
 }
 
+const REFERRER_PRIORITY_EXCLUSIONS = new Set(['super_admin', 'property_developer', 'agency_admin']);
+
+type NavbarUser = {
+  email?: string;
+  firstName?: string;
+  hasManagerIdentity?: boolean;
+  lastName?: string;
+  name?: string;
+  role?: string;
+} | null;
+
+function getDisplayName(user: NavbarUser) {
+  if (!user) return 'Account';
+
+  const composedName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  if (composedName) return composedName;
+  if (user.name) return user.name;
+  if (user.email) return String(user.email).split('@')[0];
+
+  return 'Account';
+}
+
+function getInitials(user: NavbarUser) {
+  const name = getDisplayName(user);
+  const parts = name.split(/\s+/).filter(Boolean).slice(0, 2);
+
+  if (parts.length === 0) return 'A';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return parts
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+function getPrimaryAccountRoute(user: NavbarUser, hasReferrerAccess: boolean) {
+  if (user?.hasManagerIdentity) return '/distribution/manager';
+  if (hasReferrerAccess && !REFERRER_PRIORITY_EXCLUSIONS.has(user?.role)) {
+    return '/referrer/dashboard';
+  }
+
+  switch (user?.role) {
+    case 'super_admin':
+    case 'admin':
+      return '/admin/overview';
+    case 'property_developer':
+      return '/developer/dashboard';
+    case 'agency_admin':
+      return '/agency/dashboard';
+    case 'agent':
+      return '/agent/dashboard';
+    default:
+      return '/user/dashboard';
+  }
+}
+
 export function EnhancedNavbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMarketingPage =
+    location === '/advertise' ||
+    location === '/book-strategy' ||
+    location === '/subscription-plans' ||
+    location.startsWith('/get-started');
 
   // Check if current route is advertise page
   const isAdvertisePage = location === '/advertise';
@@ -253,6 +316,61 @@ export function EnhancedNavbar() {
     propertyType: string;
     listingType: 'sale' | 'rent';
   } | null>(null);
+  const shouldCheckReferrerAccess = Boolean(user && !REFERRER_PRIORITY_EXCLUSIONS.has(user.role));
+  const referrerStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled: shouldCheckReferrerAccess,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
+  const displayName = getDisplayName(user);
+  const accountInitials = getInitials(user);
+  const primaryAccountRoute = getPrimaryAccountRoute(user, hasReferrerAccess);
+  const primaryAccountLabel =
+    primaryAccountRoute === '/referrer/dashboard'
+      ? 'Referral workspace'
+      : user?.role === 'super_admin' || user?.role === 'admin'
+        ? 'Admin overview'
+        : 'Dashboard';
+  const accountItems = user
+    ? [
+        {
+          label: primaryAccountLabel,
+          hint:
+            primaryAccountRoute === '/referrer/dashboard'
+              ? 'Track referrals and deal flow'
+              : 'Open your workspace',
+          href: primaryAccountRoute,
+          icon: LayoutDashboard,
+        },
+        ...(hasReferrerAccess && primaryAccountRoute !== '/referrer/dashboard'
+          ? [
+              {
+                label: 'Referral workspace',
+                hint: 'Manage referrals and commissions',
+                href: '/referrer/dashboard',
+                icon: Briefcase,
+              },
+            ]
+          : []),
+        {
+          label: 'Saved homes',
+          hint: 'Review your favorites',
+          href: '/favorites',
+          icon: Heart,
+        },
+        ...(user.role === 'agent'
+          ? [
+              {
+                label: 'Account settings',
+                hint: 'Manage your profile and preferences',
+                href: '/agent/settings',
+                icon: Settings,
+              },
+            ]
+          : []),
+      ]
+    : [];
 
   // Check if user has a recent search location
   const getLastSearchLocation = () => {
@@ -393,6 +511,16 @@ export function EnhancedNavbar() {
     };
   }, [mobileMenuOpen]);
 
+  const navigateTo = (href: string) => {
+    setMobileMenuOpen(false);
+    setLocation(href);
+  };
+
+  const handleLogout = async () => {
+    setMobileMenuOpen(false);
+    await logout();
+    setLocation('/');
+  };
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/92 shadow-sm backdrop-blur-md">
       <div className="w-full px-3 sm:px-6 lg:px-20">
@@ -926,55 +1054,88 @@ export function EnhancedNavbar() {
               </Button>
             </Link>
 
-            {/* Favorites */}
-            {!!user && (
-              <Link href="/favorites">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-foreground hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <Heart className="h-5 w-5" />
-                </Button>
-              </Link>
-            )}
-
             {/* User Menu */}
-            {user ? (
+            {loading && !isMarketingPage ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="border-slate-200 bg-white text-slate-400"
+              >
+                <span className="h-2 w-2 rounded-full bg-slate-300" />
+                Loading
+              </Button>
+            ) : user && !isMarketingPage ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all font-medium"
+                    className="h-10 rounded-full px-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Open account menu"
                   >
-                    <User className="h-4 w-4 mr-2" />
-                    {user?.name || 'Account'}
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                      {accountInitials}
+                    </span>
+                    <ChevronDown className="ml-1 h-4 w-4 text-slate-400" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem disabled>
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{user?.name}</span>
-                      <span className="text-xs text-muted-foreground">{user?.email}</span>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-64 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl"
+                >
+                  <div className="rounded-[1rem] px-3 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                        {accountInitials}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {displayName}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">{user?.email}</p>
+                      </div>
                     </div>
-                  </DropdownMenuItem>
+                  </div>
+
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/favorites">
-                      <a className="flex items-center gap-2 w-full">
-                        <Heart className="h-4 w-4" />
-                        My Favorites
-                      </a>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => logout()} className="text-destructive">
-                    Logout
-                  </DropdownMenuItem>
+                  <div className="p-1">
+                    {accountItems.map(item => {
+                      const Icon = item.icon;
+
+                      return (
+                        <DropdownMenuItem
+                          key={item.href}
+                          onClick={() => navigateTo(item.href)}
+                          className="group flex items-center gap-3 rounded-xl px-3 py-2.5"
+                        >
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors group-focus:bg-slate-900 group-focus:text-white group-data-[highlighted]:bg-slate-900 group-data-[highlighted]:text-white">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold text-slate-900">
+                              {item.label}
+                            </span>
+                          </span>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="rounded-xl px-3 py-2.5 text-red-600 focus:text-red-700"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                        <LogOut className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1">
+                        <span className="block text-sm font-semibold">Logout</span>
+                      </span>
+                    </DropdownMenuItem>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
+            ) : !user ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -983,28 +1144,11 @@ export function EnhancedNavbar() {
               >
                 Login
               </Button>
-            )}
+            ) : null}
           </div>
 
-          {/* Mobile: Login Button */}
-          <div className="lg:hidden">
-            {user ? (
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="h-9 rounded-xl px-2 text-blue-600">
-                  <User className="h-5 w-5" />
-                </Button>
-              </Link>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => (window.location.href = getLoginUrl())}
-                className="h-9 rounded-xl px-2 text-sm font-medium text-blue-600"
-              >
-                Login
-              </Button>
-            )}
-          </div>
+          <div className="w-9 lg:hidden" />
+          <div className="w-9 lg:hidden" />
         </div>
 
         {/* Mobile Menu Drawer */}
@@ -1083,6 +1227,87 @@ export function EnhancedNavbar() {
                     </span>
                   </Link>
                 </div>
+              </div>
+
+              <div className="mx-1 border-t border-slate-200 px-1 pt-3">
+                {loading ? (
+                  <div className="flex items-center gap-3 py-2">
+                    <div className="h-10 w-10 rounded-full bg-slate-100" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-28 rounded-full bg-slate-100" />
+                      <div className="h-3 w-40 rounded-full bg-slate-100" />
+                    </div>
+                  </div>
+                ) : user ? (
+                  <>
+                    <div className="flex items-center gap-3 px-3 py-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                        {accountInitials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                        <p className="truncate text-sm text-slate-500">{user.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 space-y-1">
+                      {accountItems.map(item => {
+                        const Icon = item.icon;
+
+                        return (
+                          <button
+                            key={item.href}
+                            onClick={() => navigateTo(item.href)}
+                            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-slate-100"
+                          >
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold text-slate-900">
+                                {item.label}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={handleLogout}
+                      className="mt-2 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                        <LogOut className="h-4 w-4" />
+                      </span>
+                      <span className="text-sm font-semibold">Logout</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="px-3 text-sm font-semibold text-slate-900">
+                      Sign in to personalize your account
+                    </p>
+                    <p className="mt-1 px-3 text-sm text-slate-500">
+                      Save homes, track activity, and pick up where you left off.
+                    </p>
+                    <div className="mt-4 grid grid-cols-2 gap-2 px-3">
+                      <Button
+                        onClick={() => (window.location.href = getLoginUrl())}
+                        className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
+                      >
+                        Login
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigateTo('/get-started')}
+                        className="rounded-2xl border-slate-300"
+                      >
+                        Create account
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
