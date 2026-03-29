@@ -1168,109 +1168,194 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                     Listing Agent
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                        {contactIdentity.image ? (
-                          <img
-                            src={contactIdentity.image}
-                            alt={contactIdentity.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-orange-100 text-xl font-bold text-orange-600">
-                            {contactIdentity.name?.charAt(0) || '?'}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-bold text-slate-900">
-                            {contactIdentity.name || 'Listing Agent'}
-                          </h3>
-                          {contactBadgeLabel && (
-                            <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
-                              {contactBadgeLabel}
-                            </Badge>
+                <CardContent className="p-5">
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_320px]">
+                    <div className="space-y-5">
+                      <div className="flex items-start gap-4">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                          {contactIdentity.image ? (
+                            <img
+                              src={contactIdentity.image}
+                              alt={contactIdentity.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-orange-100 text-xl font-bold text-orange-600">
+                              {contactIdentity.name?.charAt(0) || '?'}
+                            </div>
                           )}
                         </div>
-                        {contactSubline && (
-                          <p className="mt-1 text-sm font-medium text-slate-600">
-                            {contactSubline}
+                        <div className="min-w-0">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            {contactBadgeLabel && (
+                              <Badge className="border border-orange-200 bg-orange-50 text-[10px] text-orange-700 hover:bg-orange-50">
+                                {contactBadgeLabel}
+                              </Badge>
+                            )}
+                            <Badge className="border border-amber-200 bg-amber-50 text-[10px] text-amber-700 hover:bg-amber-50">
+                              {typeof contactIdentity.rating === 'number'
+                                ? `${contactIdentity.rating.toFixed(1)}`
+                                : '5.0'}{' '}
+                              Rating
+                            </Badge>
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-900">
+                            {contactIdentity.name || 'Listing Agent'}
+                          </h3>
+                          {contactSubline && (
+                            <p className="mt-1 text-sm font-medium text-slate-600">
+                              {contactSubline}
+                            </p>
+                          )}
+                          <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                            {contactIntro}
                           </p>
-                        )}
-                        <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                          {contactIntro}
-                        </p>
+                        </div>
+                      </div>
+
+                      {agentOverviewPills.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {agentOverviewPills.map(item => (
+                            <span
+                              key={item}
+                              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {agentStats.length > 0 && (
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          {agentStats.map(stat => (
+                            <div
+                              key={stat.key}
+                              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
+                            >
+                              <p className="text-base font-bold text-slate-900">{stat.value}</p>
+                              <p className="mt-1 text-[11px] font-medium text-slate-500">
+                                {stat.label}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-sm text-slate-700">
+                            <span>Active listings</span>
+                            <span className="font-semibold">
+                              {typeof contactIdentity.activeListingsCount === 'number'
+                                ? contactIdentity.activeListingsCount
+                                : agentStats.find(stat => stat.key === 'listings')?.value || '0'}
+                            </span>
+                          </div>
+                          {directPhone && (
+                            <div className="flex items-center justify-between text-sm text-slate-700">
+                              <span>Phone</span>
+                              <span className="font-semibold">{directPhone}</span>
+                            </div>
+                          )}
+                          {directEmail && (
+                            <div className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                              <span>Email</span>
+                              <span className="truncate font-semibold">{directEmail}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {agentStats.length > 0 && (
-                      <div className="grid w-full grid-cols-3 gap-2 sm:max-w-[280px]">
-                        {agentStats.map(stat => (
-                          <div
-                            key={stat.key}
-                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
-                          >
-                            <p className="text-base font-bold text-slate-900">{stat.value}</p>
-                            <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
-                              {stat.label}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Contact Agent</p>
+                          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                            Use the fastest route to connect with the agent handling this listing.
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                          <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+                            Contact Name
+                          </p>
+                          <p className="mt-1 font-semibold text-slate-900">
+                            {contactIdentity.name || 'Listing Agent'}
+                          </p>
+                        </div>
+
+                        {directEmail && (
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+                              Email
+                            </p>
+                            <p className="mt-1 truncate font-semibold text-slate-900">
+                              {directEmail}
                             </p>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        )}
 
-                  <div className="space-y-3">
-                    <div
-                      className={`grid gap-3 ${whatsappNumber ? 'sm:grid-cols-[64px_minmax(0,1fr)]' : 'sm:grid-cols-1'}`}
-                    >
-                      {whatsappNumber && (
+                        {(directPhone || whatsappNumber) && (
+                          <div className="grid gap-3 sm:grid-cols-[92px_minmax(0,1fr)] lg:grid-cols-[92px_minmax(0,1fr)]">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm font-semibold text-slate-700">
+                              +27
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                              <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+                                Phone Number
+                              </p>
+                              <p className="mt-1 font-semibold text-slate-900">
+                                {directPhone || whatsappNumber}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
                         <Button
-                          className="h-12 w-full bg-green-500 px-0 text-white hover:bg-green-600"
-                          onClick={() =>
-                            handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                          }
-                          aria-label="WhatsApp Agent"
+                          className="h-12 w-full bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
+                          onClick={handleBookAppointment}
                         >
-                          <MessageCircle className="h-5 w-5" />
+                          Contact Now
                         </Button>
-                      )}
-                      <Button
-                        className="h-12 bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
-                        onClick={handleBookAppointment}
-                      >
-                        Book an Appointment
-                      </Button>
-                    </div>
 
-                    {(directPhone || agentProfileHref) && (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {directPhone && (
-                          <Button
-                            variant="outline"
-                            className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
-                            asChild
-                          >
-                            <a href={`tel:${directPhone}`}>
-                              <Phone className="mr-2 h-4 w-4" />
-                              Call Agent
-                            </a>
-                          </Button>
-                        )}
-                        {agentProfileHref && (
-                          <Button
-                            variant="outline"
-                            className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
-                            onClick={() => setLocation(agentProfileHref)}
-                          >
-                            View Agent Profile
-                          </Button>
-                        )}
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                          {whatsappNumber && (
+                            <Button
+                              className="h-11 w-full bg-green-500 text-white hover:bg-green-600"
+                              onClick={() =>
+                                handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
+                              }
+                            >
+                              <MessageCircle className="mr-2 h-4 w-4" />
+                              WhatsApp Agent
+                            </Button>
+                          )}
+                          {directPhone && (
+                            <Button
+                              variant="outline"
+                              className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                              asChild
+                            >
+                              <a href={`tel:${directPhone}`}>
+                                <Phone className="mr-2 h-4 w-4" />
+                                Call Agent
+                              </a>
+                            </Button>
+                          )}
+                          {agentProfileHref && (
+                            <Button
+                              variant="outline"
+                              className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                              onClick={() => setLocation(agentProfileHref)}
+                            >
+                              View Agent Profile
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
