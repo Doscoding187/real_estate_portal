@@ -930,7 +930,6 @@ export interface DevelopmentDerivedListing {
     slug?: string | null;
     logoUrl?: string | null;
     publicContactEmail?: string | null;
-    phone?: string | null;
   };
 }
 

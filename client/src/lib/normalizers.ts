@@ -1,49 +1,6 @@
 import type { PropertyCardProps } from '@/components/PropertyCard';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 
-function coerceImageUrl(value: unknown): string | undefined {
-  if (!value) return undefined;
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return undefined;
-    return trimmed.startsWith('http') || trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  }
-
-  if (typeof value === 'object') {
-    const candidate = value as Record<string, unknown>;
-    return coerceImageUrl(
-      candidate.url ||
-        candidate.imageUrl ||
-        candidate.thumbnailUrl ||
-        candidate.originalUrl ||
-        candidate.processedUrl ||
-        candidate.large ||
-        candidate.medium ||
-        candidate.small,
-    );
-  }
-
-  return undefined;
-}
-
-function resolvePrimaryImage(raw: any): string {
-  const arraySources = [raw.images, raw.propertyImages, raw.listingMedia, raw.media].filter(Array.isArray);
-
-  for (const source of arraySources) {
-    const primaryItem =
-      source.find((item: any) => item?.isPrimary) ||
-      source.find((item: any) => item?.type === 'image') ||
-      source[0];
-    const resolved = coerceImageUrl(primaryItem);
-    if (resolved) return resolved;
-  }
-
-  const directImage = coerceImageUrl(raw.image || raw.mainImage || raw.coverImage);
-  if (directImage) return directImage;
-
-  return '/placeholder.jpg';
-}
-
 // Normalizes raw API property objects to the props expected by PropertyCard.
 export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -115,9 +72,6 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
           raw.user?.avatar ||
           raw.agent?.avatar ||
           raw.agent?.profileImage,
-        phone: raw.agent?.phone || raw.user?.phone || undefined,
-        whatsapp: raw.agent?.whatsapp || raw.user?.whatsapp || undefined,
-        email: raw.agent?.email || raw.user?.email || undefined,
       }
     : undefined;
 
@@ -133,8 +87,6 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
           brandName,
           slug,
           logoUrl: (candidate as any).logoUrl ?? (candidate as any).logo ?? null,
-          publicContactEmail: (candidate as any).publicContactEmail ?? null,
-          phone: (candidate as any).phone ?? null,
         };
       }
     }
@@ -148,8 +100,6 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
         brandName: legacyName,
         slug: legacySlug,
         logoUrl: raw.builderLogoUrl ?? null,
-        publicContactEmail: raw.builderPublicContactEmail ?? null,
-        phone: raw.builderPhone ?? raw.developerPhone ?? null,
       };
     }
 
@@ -244,7 +194,20 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     location: raw.location?.city
       ? `${raw.location.suburb ? raw.location.suburb + ', ' : ''}${raw.location.city}`
       : [raw.suburb, raw.city, raw.province].filter(Boolean).join(', ') || raw.address || '-',
-    image: firstImageUrl || resolvePrimaryImage(raw),
+    image: (() => {
+      const img =
+        raw.image ||
+        raw.mainImage ||
+        raw.coverImage ||
+        firstImageUrl ||
+        raw.media?.find((m: any) => m.isPrimary)?.url ||
+        raw.media?.[0]?.url ||
+        '/placeholder.jpg';
+      if (typeof img === 'string' && !img.startsWith('http') && !img.startsWith('/')) {
+        return `/${img}`;
+      }
+      return img;
+    })(),
     description: raw.description || undefined,
     bedrooms: Number(details.bedrooms) || Number(raw.bedrooms) || undefined,
     bathrooms: Number(details.bathrooms) || Number(raw.bathrooms) || undefined,

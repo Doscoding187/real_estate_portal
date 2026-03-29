@@ -13,7 +13,6 @@ interface OptimizedImageProps {
   images: ImageUrls;
   alt: string;
   className?: string;
-  imageClassName?: string;
   priority?: boolean;
 }
 
@@ -25,7 +24,6 @@ export function OptimizedImage({
   images,
   alt,
   className = '',
-  imageClassName = '',
   priority = false,
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +79,6 @@ export function OptimizedImage({
           className={cn(
             'w-full h-full object-cover transition-opacity duration-300',
             isLoading ? 'opacity-0' : 'opacity-100',
-            imageClassName,
           )}
         />
       )}
@@ -97,18 +94,11 @@ export function OptimizedImageCard({
   alt,
   aspectRatio = '16/9',
   className,
-  imageClassName,
   priority,
 }: OptimizedImageProps & { aspectRatio?: string }) {
   return (
     <div className={cn('relative w-full', className)} style={{ aspectRatio }}>
-      <OptimizedImage
-        images={images}
-        alt={alt}
-        className="absolute inset-0"
-        imageClassName={imageClassName}
-        priority={priority}
-      />
+      <OptimizedImage images={images} alt={alt} className="absolute inset-0" priority={priority} />
     </div>
   );
 }
