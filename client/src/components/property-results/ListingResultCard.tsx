@@ -1,8 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MapPin, Bed, Bath, House, LandPlot, Phone, Mail } from 'lucide-react';
+import { MapPin, Bed, Bath, House, LandPlot, Phone, Mail, Building2 } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { getDisplayListingBadges } from '@/lib/listingBadges';
 
 export interface ListingResultCardData {
   id: string;
@@ -21,7 +20,6 @@ export interface ListingResultCardData {
   bathrooms?: number;
   floor?: string;
   highlights?: string[];
-  badges?: string[];
   description?: string;
   listingSource?: 'manual' | 'development';
   listerType?: 'agent' | 'agency' | 'private';
@@ -86,17 +84,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     : null;
   const listingHref =
     data.href || (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
-  const contactLabel = isDevelopmentListing
-    ? 'New Development'
-    : isPrivateListing
-      ? 'Private Listing'
-      : 'Listed by Agent';
   const contactCtaLabel = isDevelopmentListing
     ? 'Contact Developer'
     : isPrivateListing
       ? 'Contact Seller'
       : 'Contact Agent';
-  const displayBadges = getDisplayListingBadges(data.badges, { maxBadges: 2 });
 
   return (
     <div
@@ -104,11 +96,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       onClick={() => setLocation(listingHref)}
     >
       <div className="flex flex-col sm:flex-row">
-        <div className="relative h-52 flex-shrink-0 sm:h-auto sm:w-80">
+        <div className="relative h-[198px] flex-shrink-0 sm:h-auto sm:w-[312px]">
           <img
             src={data.image}
             alt={data.title}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-center"
             onError={e => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
@@ -118,12 +110,34 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         </div>
 
         <div className="min-w-0 flex-1 overflow-hidden p-5 pr-6 sm:flex sm:min-h-[360px] sm:flex-col">
+          {isDevelopmentListing && developmentName && (
+            <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5" />
+              {developmentHref ? (
+                <button
+                  type="button"
+                  className="truncate hover:text-primary transition-colors"
+                  onClick={event => {
+                    event.stopPropagation();
+                    setLocation(developmentHref);
+                  }}
+                  title={developmentName}
+                >
+                  {developmentName}
+                </button>
+              ) : (
+                <span className="truncate" title={developmentName}>
+                  {developmentName}
+                </span>
+              )}
+            </p>
+          )}
           <h3 className="line-clamp-1 text-lg font-bold text-foreground">{data.title}</h3>
           <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" />
             {data.location || '-'}
           </p>
-          {developmentName && (
+          {!isDevelopmentListing && developmentName && (
             <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <House className="h-3.5 w-3.5" />
               {developmentHref ? (
@@ -146,45 +160,35 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             </p>
           )}
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                isDevelopmentListing ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'
-              }`}
-            >
-              {contactLabel}
-            </span>
-            {displayBadges.map(badge => (
-              <span
-                key={badge}
-                className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
-              >
-                {badge}
-              </span>
-            ))}
-          </div>
-
           <p className="mt-2.5 text-2xl font-bold text-foreground">
             {formatPrice(data.price, { from: isDevelopmentListing })}
           </p>
 
           <div className="mt-4 flex flex-wrap gap-4 pr-2">
-            <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-              <House className="h-4 w-4" />
-              {typeof data.area === 'number' && data.area > 0 ? `${data.area}m2` : '-'}
-            </span>
-            <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-              <Bed className="h-4 w-4" />
-              {typeof data.bedrooms === 'number' && data.bedrooms > 0 ? `${data.bedrooms} Bed` : '-'}
-            </span>
-            <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-              <Bath className="h-4 w-4" />
-              {typeof data.bathrooms === 'number' && data.bathrooms > 0 ? `${data.bathrooms} Bath` : '-'}
-            </span>
-            <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-              <LandPlot className="h-4 w-4" />
-              {data.floor || '-'}
-            </span>
+            {typeof data.area === 'number' && data.area > 0 && (
+              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <House className="h-4 w-4" />
+                {`${data.area}m2`}
+              </span>
+            )}
+            {typeof data.bedrooms === 'number' && data.bedrooms > 0 && (
+              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <Bed className="h-4 w-4" />
+                {`${data.bedrooms} Bed`}
+              </span>
+            )}
+            {typeof data.bathrooms === 'number' && data.bathrooms > 0 && (
+              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <Bath className="h-4 w-4" />
+                {`${data.bathrooms} Bath`}
+              </span>
+            )}
+            {data.floor && (
+              <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <LandPlot className="h-4 w-4" />
+                {data.floor}
+              </span>
+            )}
           </div>
 
           {Array.isArray(data.highlights) && data.highlights.length > 0 && (

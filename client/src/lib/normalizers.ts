@@ -45,6 +45,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     Number(details.unitSizeM2) || // Apartment unit size
     Number(details.houseAreaM2) || // House building size
     Number(details.floorAreaM2) || // Commercial floor size
+    Number(raw.floorSize) ||
     Number(raw.area) ||
     undefined;
 
@@ -54,6 +55,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
   const yardSize =
     Number(details.erfSizeM2) || // Erf/Plot size for houses
     Number(details.landSizeM2OrHa) || // Land size
+    Number(raw.erfSize) ||
     Number(raw.yardSize) || // Direct field from backend
     (Number(details.landSizeHa) ? Number(details.landSizeHa) * 10000 : undefined); // Convert hectares to m²
 
