@@ -92,11 +92,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
 
   return (
     <div
-      className="w-full max-w-[760px] cursor-pointer overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md sm:min-h-[360px]"
+      className="w-full max-w-[780px] cursor-pointer overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md sm:min-h-[300px]"
       onClick={() => setLocation(listingHref)}
     >
       <div className="flex flex-col sm:flex-row">
-        <div className="relative h-[198px] flex-shrink-0 sm:h-auto sm:w-[312px]">
+        <div className="relative h-[192px] flex-shrink-0 sm:h-[300px] sm:w-[300px]">
           <img
             src={data.image}
             alt={data.title}
@@ -109,7 +109,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           />
         </div>
 
-        <div className="min-w-0 flex-1 overflow-hidden p-5 pr-6 sm:flex sm:min-h-[360px] sm:flex-col">
+        <div className="min-w-0 flex-1 overflow-hidden p-5 pr-6 sm:flex sm:min-h-[300px] sm:flex-col">
           {isDevelopmentListing && developmentName && (
             <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Building2 className="h-3.5 w-3.5" />
