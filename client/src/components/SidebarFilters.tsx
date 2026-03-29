@@ -40,9 +40,16 @@ const AMENITIES = [
 ];
 
 const LISTING_SOURCE_OPTIONS = [
-  { value: undefined, label: 'All' },
-  { value: 'manual', label: 'Resale' },
-  { value: 'development', label: 'New Developments' },
+  {
+    value: 'manual',
+    label: 'Property Listings',
+    description: 'Show agent and private property listings only.',
+  },
+  {
+    value: 'development',
+    label: 'New Developments',
+    description: 'Show unit-type inventory from developments only.',
+  },
 ] as const;
 
 export function SidebarFilters({
@@ -189,7 +196,7 @@ export function SidebarFilters({
   })();
 
   return (
-    <div className="w-full rounded-xl border border-slate-200 bg-white p-4">
+    <div className="w-full bg-white rounded-lg border border-slate-200 p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-lg text-slate-800">Filters</h3>
         <div className="flex gap-2">
@@ -204,45 +211,54 @@ export function SidebarFilters({
             className="text-blue-600 hover:text-blue-800 h-auto p-0 text-xs font-medium"
             onClick={() => onFilterChange({})}
           >
-            Reset
+            Reset all
           </Button>
-        </div>
-      </div>
-
-      <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-          Listing source
-        </p>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {LISTING_SOURCE_OPTIONS.map(option => {
-            const isActive =
-              option.value === undefined
-                ? !filters.listingSource
-                : filters.listingSource === option.value;
-            return (
-              <Button
-                key={option.label}
-                type="button"
-                variant={isActive ? 'default' : 'outline'}
-                className={`h-10 rounded-full px-3 text-xs font-medium ${
-                  isActive
-                    ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                }`}
-                onClick={() => handleListingSourceChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            );
-          })}
         </div>
       </div>
 
       <Accordion
         type="multiple"
-        defaultValue={['budget', 'locations', 'type', 'bedrooms']}
+        defaultValue={['listing-source', 'budget', 'locations', 'type', 'bedrooms']}
         className="w-full"
       >
+        <AccordionItem value="listing-source">
+          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
+            Listing source
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2 pt-2">
+              <Button
+                variant={!filters.listingSource ? 'default' : 'outline'}
+                className={`w-full justify-start ${
+                  !filters.listingSource
+                    ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                    : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
+                }`}
+                onClick={() => handleListingSourceChange(undefined)}
+              >
+                All Results
+              </Button>
+              {LISTING_SOURCE_OPTIONS.map(option => (
+                <Button
+                  key={option.value}
+                  variant={filters.listingSource === option.value ? 'default' : 'outline'}
+                  className={`h-auto w-full justify-start whitespace-normal px-3 py-3 text-left ${
+                    filters.listingSource === option.value
+                      ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                      : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
+                  }`}
+                  onClick={() => handleListingSourceChange(option.value)}
+                >
+                  <span>
+                    <span className="block font-semibold">{option.label}</span>
+                    <span className="mt-1 block text-xs opacity-80">{option.description}</span>
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
         {/* Budget Filter */}
         <AccordionItem value="budget">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
