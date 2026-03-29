@@ -280,7 +280,7 @@ describe('Property Card Data Flow Integration', () => {
     createdPropertyId = getInsertId(propertyInsert);
 
     const result = await propertySearchService.searchProperties(
-      { locations: ['alberton'], listingType: 'sale' },
+      { city: 'Alberton', province: 'Gauteng', listingType: 'sale', minPrice: 989000, maxPrice: 991000 },
       'date_desc',
       1,
       20,
