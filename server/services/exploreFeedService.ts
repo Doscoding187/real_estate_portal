@@ -18,6 +18,7 @@ export interface FeedOptions {
   seed?: string;
   seenIds?: number[];
   includeAgentContent?: boolean;
+  useCache?: boolean;
 }
 
 export type FeedResult = {
@@ -249,7 +250,7 @@ export class ExploreFeedService {
     return [];
   }
   async getRecommendedFeed(options: FeedOptions): Promise<FeedResult> {
-    const { userId, limit = 20, offset = 0, location, seed, seenIds } = options;
+    const { userId, limit = 20, offset = 0, location, seed, seenIds, useCache: explicitUseCache } = options;
     try {
       const cacheKey = CacheKeys.recommendedFeed(userId, limit, offset);
       const seedNormalized = normalizeSeed(seed);
@@ -257,6 +258,7 @@ export class ExploreFeedService {
       const normalizedSeenIds = normalizeSeenIds(seenIds);
 
       const useCache =
+        explicitUseCache !== false &&
         process.env.NODE_ENV === 'production' &&
         !seedNormalized &&
         normalizedSeenIds.length === 0 &&

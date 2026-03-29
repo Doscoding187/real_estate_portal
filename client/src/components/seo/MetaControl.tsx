@@ -1,12 +1,15 @@
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'wouter';
 
+type StructuredDataValue = Record<string, unknown>;
+
 interface MetaControlProps {
   canonicalUrl?: string; // Explicit canonical URL (e.g., from backend or constructed)
   forceNoIndex?: boolean; // Manual override
   title?: string;
   description?: string;
   image?: string;
+  structuredData?: StructuredDataValue | StructuredDataValue[];
 }
 
 export function MetaControl({
@@ -15,6 +18,7 @@ export function MetaControl({
   title,
   description,
   image,
+  structuredData,
 }: MetaControlProps) {
   const [location] = useLocation();
 
@@ -58,17 +62,34 @@ export function MetaControl({
     : typeof window !== 'undefined'
       ? `${window.location.origin}${location}`
       : '';
+  const structuredDataItems = Array.isArray(structuredData)
+    ? structuredData.filter(Boolean)
+    : structuredData
+      ? [structuredData]
+      : [];
 
   return (
     <Helmet>
       {title && <title>{title}</title>}
       {description && <meta name="description" content={description} />}
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="Property Listify" />
       {title && <meta property="og:title" content={title} />}
       {description && <meta property="og:description" content={description} />}
       {image && <meta property="og:image" content={image} />}
+      {currentCanonical && <meta property="og:url" content={currentCanonical} />}
+      <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
+      {title && <meta name="twitter:title" content={title} />}
+      {description && <meta name="twitter:description" content={description} />}
+      {image && <meta name="twitter:image" content={image} />}
       {isNoIndex && <meta name="robots" content="noindex, follow" />}
       {!isNoIndex && <meta name="robots" content="index, follow" />}
       {currentCanonical && <link rel="canonical" href={currentCanonical} />}
+      {structuredDataItems.map((item, index) => (
+        <script key={index} type="application/ld+json">
+          {JSON.stringify(item)}
+        </script>
+      ))}
     </Helmet>
   );
 }

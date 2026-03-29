@@ -7,6 +7,14 @@ import {
 
 const DISMISS_KEY = 'explore.intent.prompt.dismissed';
 
+function isIntentPromptEnabled(): boolean {
+  const env = import.meta.env as Record<string, unknown>;
+  const raw = String(env.VITE_EXPLORE_INTENT_PROMPT ?? '')
+    .trim()
+    .toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'on';
+}
+
 function readDismissedState(): boolean {
   if (typeof window === 'undefined') return false;
   return window.sessionStorage.getItem(DISMISS_KEY) === '1';
@@ -15,6 +23,7 @@ function readDismissedState(): boolean {
 export function useExploreIntent() {
   const [intent, setIntentState] = useState<ExploreIntent | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const promptEnabled = isIntentPromptEnabled();
 
   useEffect(() => {
     setIntentState(readStoredExploreIntent());
@@ -37,12 +46,16 @@ export function useExploreIntent() {
     setDismissed(true);
   }, []);
 
-  const shouldShowPrompt = useMemo(() => !intent && !dismissed, [dismissed, intent]);
+  const shouldShowPrompt = useMemo(
+    () => promptEnabled && !intent && !dismissed,
+    [dismissed, intent, promptEnabled],
+  );
 
   return {
     intent,
     setIntent,
     shouldShowPrompt,
     dismissPrompt,
+    isSavingIntent: false,
   };
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
@@ -43,9 +43,9 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
     if (e.key === 'Escape') setIsLightboxOpen(false);
   };
 
-  useState(() => {
-    window.addEventListener('keydown', handleKeyDown as any);
-    return () => window.removeEventListener('keydown', handleKeyDown as any);
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   });
 
   if (sortedImages.length === 0) {
@@ -63,7 +63,7 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
         <img
           src={sortedImages[selectedImageIndex].imageUrl}
           alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
-          className="w-full h-[500px] object-cover cursor-pointer transition-transform hover:scale-105"
+          className="w-full h-[320px] md:h-[500px] object-cover cursor-pointer transition-transform hover:scale-105"
           onClick={() => setIsLightboxOpen(true)}
         />
 
@@ -113,7 +113,7 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
 
       {/* Thumbnail Grid */}
       {sortedImages.length > 1 && (
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+        <div className="hidden md:grid grid-cols-6 lg:grid-cols-8 gap-2">
           {sortedImages.slice(0, 8).map((image, index) => (
             <div
               key={image.id}

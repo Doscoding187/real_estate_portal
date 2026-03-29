@@ -1,109 +1,130 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { SA_PRIME_RATE, calculateMonthlyRepayment, formatSARandShort } from '@/lib/bond-calculator';
+import { formatSARandShort } from '@/lib/bond-calculator';
 import { formatPriceCompact } from '@/lib/formatPrice';
-import { Separator } from '@/components/ui/separator';
+import { Calculator, Calendar, TrendingUp } from 'lucide-react';
 
 interface DevelopmentOverviewCardProps {
   priceFrom: number;
   priceTo?: number;
-  constructionStatus?: string; // e.g., "Selling", "Launching Soon"
-  projectStatus?: string; // e.g., "Selling"
+  monthlyRepayment: number;
+  minimumIncome: number;
+  constructionStatus?: string;
   completionDate?: string;
-  progressPercentage?: number;
   salesMetrics?: {
     soldPct: number | null;
     total: number;
     available: number;
+    sold?: number;
   };
 }
 
 export function DevelopmentOverviewCard({
   priceFrom,
   priceTo,
-  constructionStatus = 'Selling',
-  projectStatus,
+  monthlyRepayment,
+  minimumIncome,
+  constructionStatus = 'Now Selling',
   completionDate,
-  progressPercentage = 0,
   salesMetrics,
 }: DevelopmentOverviewCardProps) {
-  // Use salesMetrics if provided, otherwise fall back to progressPercentage
-  const displayProgress = salesMetrics?.soldPct ?? progressPercentage;
-  const showProgress = salesMetrics ? salesMetrics.total > 0 : displayProgress > 0;
-
-  // Calculate estimated monthly repayment based on starting price
-  // Assumptions: 20 years, Prime Interest Rate, 0% Deposit (conservative "from")
-  const monthlyRepayment = calculateMonthlyRepayment(priceFrom, SA_PRIME_RATE, 20);
-
   const priceRange = priceTo
     ? `${formatPriceCompact(priceFrom)} - ${formatPriceCompact(priceTo)}`
     : formatPriceCompact(priceFrom);
+  const soldPct = salesMetrics?.soldPct ?? null;
+  const unitsLeft = salesMetrics?.available ?? 0;
+  const showSalesProgress = typeof soldPct === 'number' && (salesMetrics?.total ?? 0) > 0;
 
   return (
     <Card className="w-full bg-white shadow-sm border-slate-200 h-full">
       <CardContent className="p-6 lg:p-8">
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-          {/* Left Column: Price & Finance */}
-          <div className="flex-1 space-y-3">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <div className="space-y-5">
             <div>
-              <p className="text-slate-500 text-sm font-medium mb-1">Priced From</p>
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
+              <p className="text-slate-500 text-sm font-medium mb-1">Price From</p>
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight">
                 {priceRange}
               </h2>
             </div>
 
-            <div>
-              <p className="text-slate-600 text-sm font-medium">
-                Est. Repayments From:{' '}
-                <span className="text-slate-900 font-bold">
-                  {formatSARandShort(monthlyRepayment)}/pm
-                </span>
-              </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
+                  <Calculator className="h-4 w-4 text-blue-600" />
+                  Est. Repayment
+                </div>
+                <p className="mt-2 text-xl font-bold text-slate-900">
+                  {formatSARandShort(monthlyRepayment)}
+                  <span className="text-sm font-medium text-slate-500"> / month</span>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
+                  <TrendingUp className="h-4 w-4 text-orange-600" />
+                  Qualifying Income
+                </div>
+                <p className="mt-2 text-xl font-bold text-slate-900">
+                  {formatSARandShort(minimumIncome)}
+                  <span className="text-sm font-medium text-slate-500"> / month</span>
+                </p>
+              </div>
             </div>
 
-            <Button
-              variant="link"
-              className="p-0 h-auto text-blue-600 hover:text-blue-700 font-semibold text-sm"
-            >
-              Get Pre-Qualified
-            </Button>
+            <p className="text-xs text-slate-500">
+              Estimated using a 20-year bond term and standard prime lending rate.
+            </p>
           </div>
 
-          {/* Vertical Separator (Desktop only) */}
-          <div className="hidden lg:block w-px bg-slate-100 self-stretch" />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-5">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Calendar className="h-4 w-4 text-orange-500" />
+              <h3 className="font-bold text-base">Development Details</h3>
+            </div>
 
-          {/* Right Column: Project Status */}
-          <div className="flex-1 space-y-6">
-            <h3 className="text-slate-900 font-bold text-base">Project Status</h3>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm">
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-4">
                 <span className="text-slate-500">Status</span>
-                <span className="font-semibold text-slate-900">{constructionStatus}</span>
+                <span className="font-semibold text-slate-900">
+                  {constructionStatus || 'Now Selling'}
+                </span>
               </div>
-
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Expected Completion Date</span>
-                <span className="font-semibold text-orange-500">{completionDate || 'TBA'}</span>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-500">Expected completion</span>
+                <span className="font-semibold text-slate-900">
+                  {completionDate || 'Completion TBC'}
+                </span>
               </div>
-
-              {showProgress ? (
-                <div className="space-y-2 pt-2">
-                  <Progress
-                    value={displayProgress}
-                    className="h-2.5 bg-slate-100"
-                    indicatorClassName="bg-blue-500"
-                  />
-                  <p className="text-slate-600 text-xs font-medium">
-                    {salesMetrics ? `${displayProgress}% sold out` : `${displayProgress}% Complete`}
-                  </p>
+              {salesMetrics && salesMetrics.total > 0 && (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">Units available</span>
+                  <span className="font-semibold text-slate-900">
+                    {unitsLeft} of {salesMetrics.total}
+                  </span>
                 </div>
-              ) : (
-                <p className="text-slate-500 text-xs italic pt-2">Sales data unavailable</p>
               )}
             </div>
+
+            {showSalesProgress ? (
+              <div className="space-y-2">
+                <Progress
+                  value={soldPct ?? 0}
+                  className="h-2.5 bg-slate-200"
+                  indicatorClassName="bg-orange-500"
+                />
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-700">{soldPct}% sold</span>
+                  <span className="text-slate-500">
+                    {unitsLeft > 0 ? `Only ${unitsLeft} left` : 'Sold out'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">
+                Availability updates will appear here once inventory is confirmed.
+              </p>
+            )}
           </div>
         </div>
       </CardContent>

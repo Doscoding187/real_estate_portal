@@ -15,6 +15,7 @@ import { useKeyboardMode } from './hooks/useKeyboardMode';
 import { SkipToContent } from './components/ui/SkipToContent';
 import '@/styles/keyboard-navigation.css';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
@@ -32,6 +33,7 @@ const Favorites = lazy(() => import('./pages/Favorites'));
 const Agents = lazy(() => import('./pages/Agents'));
 const AgentDetail = lazy(() => import('./pages/AgentDetail'));
 const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
+const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const ProvincePage = lazy(() => import('./pages/ProvincePage'));
 const CityPage = lazy(() => import('./pages/CityPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -40,15 +42,15 @@ const Login = lazy(() => import('./pages/Login'));
 const AgencyDashboard = lazy(() => import('./pages/AgencyDashboard'));
 const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
 const AgentListings = lazy(() => import('./pages/agent/AgentListings'));
-const AgentLeadsEnhanced = lazy(() => import('./pages/agent/AgentLeadsEnhanced'));
+const AgentLeads = lazy(() => import('./pages/AgentLeads'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
+const AgentCalendar = lazy(() => import('./pages/AgentCalendar'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
-const ListingOversight = lazy(() => import('./pages/admin/ListingOversight'));
 const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
 const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
@@ -56,7 +58,6 @@ const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
-const ExploreDiscovery = lazy(() => import('./pages/ExploreDiscovery'));
 const ExploreMap = lazy(() => import('./pages/ExploreMap'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
@@ -64,6 +65,7 @@ const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
 const ServicesLocalizedCategoryPage = lazy(
@@ -71,36 +73,18 @@ const ServicesLocalizedCategoryPage = lazy(
 );
 const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
 const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
-const ServiceProviderProfilePage = lazy(() => import('./pages/services/ServiceProviderProfilePage'));
-const ServiceProviderReviewsPage = lazy(() => import('./pages/services/ServiceProviderReviewsPage'));
+const ServiceProviderProfilePage = lazy(
+  () => import('./pages/services/ServiceProviderProfilePage'),
+);
+const ServiceProviderReviewsPage = lazy(
+  () => import('./pages/services/ServiceProviderReviewsPage'),
+);
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
-// Super Admin Dashboard Pages
-const OverviewPage = lazy(() => import('./pages/admin/OverviewPage'));
-const AgenciesPage = lazy(() => import('./pages/admin/AgenciesPage'));
-const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
-const DevelopersPage = lazy(() => import('./pages/admin/DevelopersPage'));
-const PropertiesPage = lazy(() => import('./pages/admin/PropertiesPage'));
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
-const RevenueCenterPage = lazy(() => import('./pages/admin/RevenueCenterPage'));
-const LocationMonetizationPage = lazy(() => import('./pages/admin/LocationMonetizationPage'));
-const SubscriptionManagementPage = lazy(() => import('./pages/admin/SubscriptionManagementPage'));
-const PlanEditor = lazy(() => import('./pages/admin/PlanEditor'));
-const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
-const MarketingCampaignsPage = lazy(() => import('./pages/admin/MarketingCampaignsPage'));
-const CreateCampaignWizard = lazy(() => import('./pages/admin/CreateCampaignWizard'));
-const AgentApprovals = lazy(() => import('./pages/admin/AgentApprovals'));
-const CampaignDetailsPage = lazy(() => import('./pages/admin/CampaignDetailsPage'));
-const CampaignInsights = lazy(() => import('./pages/admin/CampaignInsights'));
-const DevelopmentOversight = lazy(() => import('./pages/admin/DevelopmentOversight'));
-const UnifiedApprovalsPage = lazy(() => import('./pages/admin/UnifiedApprovalsPage'));
-const EcosystemOverviewPage = lazy(() => import('./pages/admin/EcosystemOverviewPage'));
-const PartnerNetworkPage = lazy(() => import('./pages/admin/PartnerNetworkPage'));
-const DistributionNetworkPage = lazy(() => import('./pages/admin/DistributionNetworkPage'));
-const SuperAdminPublisher = lazy(() => import('./pages/admin/publisher/SuperAdminPublisher'));
 
 // Import new role-based dashboards
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
@@ -116,9 +100,10 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
+const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
+const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
-const ExploreComponentDemo = lazy(() => import('./pages/ExploreComponentDemo'));
 const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 
 // Import Developer Dashboard Pages
@@ -141,6 +126,26 @@ const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
+const ManagerDevelopmentOpsPage = lazy(
+  () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
+);
+const ManagerDevelopmentDealsPage = lazy(
+  () => import('./pages/distribution/ManagerDevelopmentDealsPage'),
+);
+const ManagerDealChecklistPage = lazy(
+  () => import('./pages/distribution/ManagerDealChecklistPage'),
+);
+const PartnerSubmitReferralPage = lazy(
+  () => import('./pages/distribution/PartnerSubmitReferralPage'),
+);
+const PartnerMyReferralsPage = lazy(() => import('./pages/distribution/PartnerMyReferralsPage'));
+const PartnerReferralDetailPage = lazy(
+  () => import('./pages/distribution/PartnerReferralDetailPage'),
+);
+const PartnerReferralAcceleratorPage = lazy(
+  () => import('./pages/distribution/PartnerReferralAcceleratorPage'),
+);
+const PartnerDevelopmentsPage = lazy(() => import('./pages/distribution/PartnerDevelopmentsPage'));
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
@@ -253,7 +258,7 @@ function Router() {
           </Route>
           <Route path="/agent/leads">
             <RequireRole role="agent">
-              <AgentLeadsEnhanced />
+              <AgentLeads />
             </RequireRole>
           </Route>
           <Route path="/agent/marketing">
@@ -269,6 +274,11 @@ function Router() {
           <Route path="/agent/analytics">
             <RequireRole role="agent">
               <AgentAnalytics />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/calendar">
+            <RequireRole role="agent">
+              <AgentCalendar />
             </RequireRole>
           </Route>
           <Route path="/agent/productivity">
@@ -301,12 +311,8 @@ function Router() {
               <Redirect to="/referrer/dashboard" />
             </RequireRole>
           </Route>
-          <Route path="/agents/:slug">
-            <Redirect to="/agents" />
-          </Route>
-          <Route path="/a/:slug">
-            <Redirect to="/agents" />
-          </Route>
+          <Route path="/agents/:slug" component={AgentMicrosite} />
+          <Route path="/a/:slug" component={AgentMicrosite} />
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
 
@@ -334,6 +340,8 @@ function Router() {
               return null;
             }}
           />
+          <Route path="/development/:slug/unit/:unitId" component={DevelopmentUnitDetailPage} />
+          <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
           <Route path="/development/:slug" component={DevelopmentDetail} />
 
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
@@ -355,11 +363,12 @@ function Router() {
           <Route path="/explore/upload/video">
             <Redirect to="/explore/upload" />
           </Route>
-          <Route path="/explore/component-demo" component={ExploreComponentDemo} />
           <Route path="/map-preview-demo" component={MapPreviewDemo} />
 
           {/* New Explore Pages */}
-          <Route path="/explore/discovery" component={ExploreDiscovery} />
+          <Route path="/explore/discovery">
+            <Redirect to="/explore/feed" />
+          </Route>
           <Route path="/explore/map" component={ExploreMap} />
 
           {/* Legacy Feed */}
@@ -382,7 +391,10 @@ function Router() {
           <Route path="/services/results/:leadId" component={ServicesResultsPage} />
           <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
           <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
-          <Route path="/services/:category/:city/:province" component={ServicesLocalizedCategoryPage} />
+          <Route
+            path="/services/:category/:city/:province"
+            component={ServicesLocalizedCategoryPage}
+          />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
           <Route path="/pro/dashboard" component={ProDashboardPage} />
@@ -395,6 +407,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/saved-search/manage" component={SavedSearchManagePage} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
           <Route path="/referral-upload/:token">
             <Redirect to="/distribution-network/apply" />
@@ -428,223 +441,41 @@ function Router() {
           <Route path="/subscription-plans" component={SubscriptionPlans} />
 
           {/* Super Admin Dashboard Routes */}
-          <Route
-            path="/admin"
-            component={() => (
-              <SuperAdminDashboard>
-                <OverviewPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/ecosystem"
-            component={() => (
-              <SuperAdminDashboard>
-                <EcosystemOverviewPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          <Route
-            path="/admin/overview"
-            component={() => (
-              <SuperAdminDashboard>
-                <OverviewPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/agencies"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgenciesPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/users"
-            component={() => (
-              <SuperAdminDashboard>
-                <UsersPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/developers"
-            component={() => (
-              <SuperAdminDashboard>
-                <DevelopersPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/properties"
-            component={() => (
-              <SuperAdminDashboard>
-                <PropertiesPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/revenue"
-            component={() => (
-              <SuperAdminDashboard>
-                <RevenueCenterPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/monetization"
-            component={() => (
-              <SuperAdminDashboard>
-                <LocationMonetizationPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/subscriptions"
-            component={() => (
-              <SuperAdminDashboard>
-                <SubscriptionManagementPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/marketing"
-            component={() => (
-              <SuperAdminDashboard>
-                <MarketingCampaignsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/marketing/create"
-            component={() => (
-              <SuperAdminDashboard>
-                <CreateCampaignWizard />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/marketing/:id"
-            component={() => (
-              <SuperAdminDashboard>
-                <CampaignDetailsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/analytics"
-            component={() => (
-              <SuperAdminDashboard>
-                <AnalyticsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Campaign Insights Route */}
-          <Route
-            path="/admin/marketing/campaign/:id"
-            component={() => (
-              <SuperAdminDashboard>
-                <CampaignInsights />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Lovable Integration Hub Route */}
-          <Route
-            path="/admin/lovable-hub"
-            component={() => (
-              <SuperAdminDashboard>
-                <LovableIntegrationHub />
-              </SuperAdminDashboard>
-            )}
-          />
-          {/* Unified Approvals Route */}
-          <Route
-            path="/admin/approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <UnifiedApprovalsPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Listing Approval Queue Route */}
-          <Route
-            path="/admin/listing-approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <ListingOversight />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Agent Approval Queue Route */}
-          <Route
-            path="/admin/agent-approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <AgentApprovals />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Development Approval Queue Route */}
-          <Route
-            path="/admin/development-approvals"
-            component={() => (
-              <SuperAdminDashboard>
-                <DevelopmentOversight />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Partner Network Route */}
-          <Route
-            path="/admin/partners"
-            component={() => (
-              <SuperAdminDashboard>
-                <PartnerNetworkPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Distribution Network Routes */}
-          <Route
-            path="/admin/distribution"
-            component={() => (
-              <SuperAdminDashboard>
-                <DistributionNetworkPage />
-              </SuperAdminDashboard>
-            )}
-          />
-          <Route
-            path="/admin/distribution/:submodule"
-            component={() => (
-              <SuperAdminDashboard>
-                <DistributionNetworkPage />
-              </SuperAdminDashboard>
-            )}
-          />
-
-          {/* Developer Publisher Route */}
-          <Route
-            path="/admin/publisher"
-            component={() => (
-              <SuperAdminDashboard>
-                <SuperAdminPublisher />
-              </SuperAdminDashboard>
-            )}
-          />
+          {ADMIN_DASHBOARD_ROUTES.map(route => (
+            <Route
+              key={route.path}
+              path={route.path}
+              component={() => <SuperAdminDashboard>{route.render()}</SuperAdminDashboard>}
+            />
+          ))}
 
           {/* Other routes that might conflict */}
           <Route path="/dashboard" component={Dashboard} />
 
           <Route path="/agency/dashboard" component={AgencyDashboard} />
-          <Route path="/distribution/manager" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager">
+            <Redirect to="/distribution/manager/developments" />
+          </Route>
+          <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager/developments" component={ManagerDevelopmentOpsPage} />
+          <Route
+            path="/distribution/manager/developments/:developmentId"
+            component={ManagerDevelopmentDealsPage}
+          />
+          <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
+          <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
+          <Route
+            path="/distribution/partner/accelerator"
+            component={PartnerReferralAcceleratorPage}
+          />
+          <Route path="/partner/referrals/accelerator" component={PartnerReferralAcceleratorPage} />
+          <Route path="/distribution/partner/submit" component={PartnerSubmitReferralPage} />
+          <Route path="/distribution/partner/referrals" component={PartnerMyReferralsPage} />
+          <Route
+            path="/distribution/partner/referrals/:dealId"
+            component={PartnerReferralDetailPage}
+          />
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
           <Route path="/referral/apply">
@@ -652,9 +483,6 @@ function Router() {
           </Route>
           <Route path="/agency/subscription" component={AgencySubscriptionPage} />
           <Route path="/agency/onboarding" component={AgencyOnboarding} />
-          <Route path="/admin/subscription-management" component={SubscriptionManagementPage} />
-          <Route path="/admin/plan-editor" component={PlanEditor} />
-          <Route path="/admin/revenue-center" component={RevenueCenterPage} />
           <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
           <Route path="/agency/invite" component={InviteAgents} />
           <Route path="/agency/agents" component={AgentManagement} />

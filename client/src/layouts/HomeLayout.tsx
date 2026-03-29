@@ -4,11 +4,10 @@ import { ModernFooter } from '@/components/ModernFooter';
 
 export function HomeLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-clip bg-background">
       <EnhancedNavbar />
       {children}
       <ModernFooter />
     </div>
   );
 }
-

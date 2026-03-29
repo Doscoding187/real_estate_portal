@@ -39,6 +39,21 @@ const AMENITIES = [
   'Wi-Fi',
 ];
 
+const LISTING_SOURCE_OPTIONS = [
+  {
+    value: undefined,
+    label: 'All',
+  },
+  {
+    value: 'manual',
+    label: 'Resale',
+  },
+  {
+    value: 'development',
+    label: 'New Development',
+  },
+] as const;
+
 export function SidebarFilters({
   filters,
   filterCounts,
@@ -88,6 +103,19 @@ export function SidebarFilters({
     } else {
       onFilterChange({ ...filters, minBedrooms: beds });
     }
+  };
+
+  const handleListingSourceChange = (source: SearchFilters['listingSource'] | undefined) => {
+    if (!source || filters.listingSource === source) {
+      const { listingSource, ...rest } = filters;
+      onFilterChange(rest);
+      return;
+    }
+
+    onFilterChange({
+      ...filters,
+      listingSource: source,
+    });
   };
 
   const handleAmenitiesChange = (value: string, checked: boolean) => {
@@ -192,9 +220,42 @@ export function SidebarFilters({
 
       <Accordion
         type="multiple"
-        defaultValue={['budget', 'locations', 'type', 'bedrooms']}
+        defaultValue={['listing-source', 'budget', 'locations', 'type', 'bedrooms']}
         className="w-full"
       >
+        <AccordionItem value="listing-source">
+          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
+            Listing source
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="grid grid-cols-3 gap-1.5 pt-2">
+              {LISTING_SOURCE_OPTIONS.map(option => (
+                <Button
+                  key={option.label}
+                  variant={
+                    option.value === undefined
+                      ? !filters.listingSource
+                        ? 'default'
+                        : 'outline'
+                      : filters.listingSource === option.value
+                        ? 'default'
+                        : 'outline'
+                  }
+                  className={`h-8 w-full whitespace-nowrap rounded-full px-2 text-[10px] font-medium ${
+                    (option.value === undefined && !filters.listingSource) ||
+                    filters.listingSource === option.value
+                      ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                      : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
+                  }`}
+                  onClick={() => handleListingSourceChange(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
         {/* Budget Filter */}
         <AccordionItem value="budget">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">

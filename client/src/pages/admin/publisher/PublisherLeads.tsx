@@ -100,9 +100,16 @@ const PublisherLeads: React.FC = () => {
                     <TableCell>
                       <div className="text-sm">
                         {lead.developmentId ? (
-                          <Badge variant="secondary" className="font-normal">
-                            Development Inquiry
-                          </Badge>
+                          <div className="flex flex-col items-start gap-1">
+                            <Badge variant="secondary" className="font-normal">
+                              Development Inquiry
+                            </Badge>
+                            {lead.unitName ? (
+                              <span className="text-xs font-medium text-slate-600">
+                                Unit: {lead.unitName}
+                              </span>
+                            ) : null}
+                          </div>
                         ) : (
                           <Badge variant="outline" className="font-normal">
                             Property Inquiry

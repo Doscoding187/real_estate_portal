@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import { FAQSection } from '../FAQSection';
 import { FAQAccordionItem } from '../FAQAccordionItem';
 import fc from 'fast-check';
@@ -80,9 +80,9 @@ const faqArrayArbitrary = fc.array(faqArbitrary, { minLength: 2, maxLength: 10 }
 });
 
 describe('FAQSection - Property 14: FAQ accordion behavior', () => {
-  it('should expand clicked item and collapse all others', async () => {
-    await fc.assert(
-      fc.asyncProperty(faqArrayArbitrary, async faqs => {
+  it('should expand clicked item and collapse all others', () => {
+    fc.assert(
+      fc.property(faqArrayArbitrary, faqs => {
         // Need at least 2 FAQs to test the behavior
         if (faqs.length < 2) return true;
 
@@ -129,9 +129,9 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
     );
   });
 
-  it('should toggle item closed when clicking an already open item', async () => {
-    await fc.assert(
-      fc.asyncProperty(faqArrayArbitrary, async faqs => {
+  it('should toggle item closed when clicking an already open item', () => {
+    fc.assert(
+      fc.property(faqArrayArbitrary, faqs => {
         if (faqs.length < 1) return true;
 
         const { container } = render(<FAQSection faqs={faqs} />);
@@ -161,12 +161,12 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
     );
   });
 
-  it('should maintain only one expanded item at any time', async () => {
-    await fc.assert(
-      fc.asyncProperty(
+  it('should maintain only one expanded item at any time', () => {
+    fc.assert(
+      fc.property(
         faqArrayArbitrary,
         fc.array(fc.integer({ min: 0, max: 9 }), { minLength: 3, maxLength: 10 }),
-        async (faqs, clickSequence) => {
+        (faqs, clickSequence) => {
           if (faqs.length < 2) return true;
 
           const { container } = render(<FAQSection faqs={faqs} />);
@@ -199,9 +199,9 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
     );
   });
 
-  it('should show answer content only when expanded', async () => {
-    await fc.assert(
-      fc.asyncProperty(faqArrayArbitrary, async faqs => {
+  it('should show answer content only when expanded', () => {
+    fc.assert(
+      fc.property(faqArrayArbitrary, faqs => {
         if (faqs.length < 1) return true;
 
         const { container } = render(<FAQSection faqs={faqs} />);
@@ -219,19 +219,12 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         buttons = getButtons();
 
         // First button should be expanded
-        await waitFor(() => {
-          expect(buttons[0].getAttribute('aria-expanded')).toBe('true');
-        });
+        expect(buttons[0].getAttribute('aria-expanded')).toBe('true');
 
         // The answer container should exist in the DOM (even if animating)
         const answerId = buttons[0].getAttribute('aria-controls');
-        // Wait for answer element to appear (AnimatePresence might delay it? No, initial={false} on AnimatePresence?)
-        // Actually AnimatePresence initial={false} means logic is immediate but animation runs.
-        // But render is conditional {isOpen && ...}
-        await waitFor(() => {
-          const answerElement = container.querySelector(`#${answerId}`);
-          expect(answerElement).toBeTruthy();
-        });
+        const answerElement = container.querySelector(`#${answerId}`);
+        expect(answerElement).toBeTruthy();
 
         // Other buttons should still be collapsed
         for (let i = 1; i < buttons.length; i++) {

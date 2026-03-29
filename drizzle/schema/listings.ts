@@ -27,7 +27,7 @@ import { developments, developerBrandProfiles } from './developments';
 export const listings = mysqlTable(
   'listings',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     ownerId: int().notNull(),
     agentId: int(),
     agencyId: int(),
@@ -106,7 +106,7 @@ export const listings = mysqlTable(
 );
 
 export const listingAnalytics = mysqlTable('listing_analytics', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -129,7 +129,7 @@ export const listingAnalytics = mysqlTable('listing_analytics', {
 });
 
 export const listingApprovalQueue = mysqlTable('listing_approval_queue', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -147,7 +147,7 @@ export const listingApprovalQueue = mysqlTable('listing_approval_queue', {
 });
 
 export const listingLeads = mysqlTable('listing_leads', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -189,7 +189,7 @@ export const listingLeads = mysqlTable('listing_leads', {
 });
 
 export const listingMedia = mysqlTable('listing_media', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -216,7 +216,7 @@ export const listingMedia = mysqlTable('listing_media', {
 });
 
 export const listingSettings = mysqlTable('listing_settings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   autoPublishForVerifiedAccounts: int().default(0).notNull(),
   maxImagesPerListing: int().default(30).notNull(),
   maxVideosPerListing: int().default(5).notNull(),
@@ -237,7 +237,7 @@ export const listingSettings = mysqlTable('listing_settings', {
 });
 
 export const listingViewings = mysqlTable('listing_viewings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -263,7 +263,7 @@ export const listingViewings = mysqlTable('listing_viewings', {
 export const properties = mysqlTable(
   'properties',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     title: varchar({ length: 255 }).notNull(),
     description: text().notNull(),
     propertyType: mysqlEnum([
@@ -309,6 +309,7 @@ export const properties = mysqlTable(
     ownerId: int()
       .notNull()
       .references(() => users.id),
+    sourceListingId: int('sourceListingId').references(() => listings.id, { onDelete: 'set null' }),
     propertySettings: text(),
     videoUrl: text(),
     virtualTourUrl: text(),
@@ -337,11 +338,12 @@ export const properties = mysqlTable(
     index('idx_properties_cityId_status').on(table.cityId, table.status),
     index('idx_properties_cityId_area').on(table.cityId, table.area),
     index('idx_properties_location_id').on(table.locationId),
+    index('idx_properties_sourceListingId').on(table.sourceListingId),
   ],
 );
 
 export const propertyImages = mysqlTable('propertyImages', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int()
     .notNull()
     .references(() => properties.id, { onDelete: 'cascade' }),
@@ -352,7 +354,7 @@ export const propertyImages = mysqlTable('propertyImages', {
 });
 
 export const propertySimilarityIndex = mysqlTable('property_similarity_index', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId1: int()
     .notNull()
     .references(() => properties.id, { onDelete: 'cascade' }),

@@ -521,7 +521,6 @@ export function EnhancedNavbar() {
     await logout();
     setLocation('/');
   };
-
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/92 shadow-sm backdrop-blur-md">
       <div className="w-full px-3 sm:px-6 lg:px-20">
@@ -1148,6 +1147,7 @@ export function EnhancedNavbar() {
             ) : null}
           </div>
 
+          <div className="w-9 lg:hidden" />
           <div className="w-9 lg:hidden" />
         </div>
 

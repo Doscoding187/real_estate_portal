@@ -22,9 +22,14 @@ export function LocalityGuide({
   images = [],
 }: LocalityGuideProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const fallbackDescription = `${suburb} is a suburb in ${city}. Explore local amenities, transport links, and lifestyle highlights to understand what makes this area a great place to live.`;
+  const [activeImage, setActiveImage] = useState(() => {
+    const firstValidImage = images.find(
+      image => typeof image === 'string' && image.trim().length > 0,
+    );
+    return firstValidImage || DEFAULT_GUIDE_IMAGE;
+  });
+  const fallbackDescription = `${suburb} is a suburb in ${city}${province ? `, ${province}` : ''}. Explore local amenities, transport links, and lifestyle highlights to understand what makes this area a great place to live.`;
   const resolvedDescription = description?.trim() ? description : fallbackDescription;
-  const resolvedImage = DEFAULT_GUIDE_IMAGE;
 
   return (
     <Card className="border-slate-200 shadow-sm bg-white">
@@ -40,7 +45,7 @@ export function LocalityGuide({
           <Button
             variant="outline"
             size="sm"
-            className="rounded-full border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 hover:border-purple-300 gap-2"
+            className="gap-2 rounded-full border-slate-200 text-slate-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
           >
             <Share2 className="h-4 w-4" />
             Share
@@ -51,9 +56,14 @@ export function LocalityGuide({
         <div className="mb-6">
           <div className="h-[240px] rounded-xl overflow-hidden bg-slate-100 w-full">
             <img
-              src={resolvedImage}
+              src={activeImage}
               alt={`${suburb} locality`}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              onError={() => {
+                if (activeImage !== DEFAULT_GUIDE_IMAGE) {
+                  setActiveImage(DEFAULT_GUIDE_IMAGE);
+                }
+              }}
             />
           </div>
         </div>
@@ -65,7 +75,7 @@ export function LocalityGuide({
           </p>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-purple-700 font-bold text-sm hover:underline focus:outline-none"
+            className="text-sm font-bold text-orange-600 hover:underline focus:outline-none"
           >
             {isExpanded ? 'Read Less' : 'Read More'}
           </button>
