@@ -799,10 +799,25 @@ export const listingRouter = router({
           });
         }
 
+        const currentUser = requireUser(ctx);
+        const agent = await db.getAgentByUserId(currentUser.id);
+        const owner = await db.getUserById(currentUser.id);
+        const whatsappContact =
+          String(agent?.whatsapp || '').trim() ||
+          String(agent?.phone || '').trim() ||
+          String(owner?.phone || '').trim();
+
+        if (!whatsappContact) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'A WhatsApp contact number is required before this listing can go live. Add a WhatsApp-ready number to your profile and try again.',
+          });
+        }
+
         // --- Fast-Track Approval Logic (Phase 5) ---
         // Criteria: Readiness 100%, Quality >= 85, Trusted/Verified Agent
         const quality = calculateListingQualityScore({ ...fullListing, media });
-        const agent = await db.getAgentByUserId(requireUser(ctx).id);
 
         // Check if agent is verified (assuming isVerified is 1 or true)
         const isTrusted = agent?.isVerified === 1;
