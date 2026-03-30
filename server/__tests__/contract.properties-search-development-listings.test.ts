@@ -52,6 +52,45 @@ describe('properties.searchDevelopmentListings contract', () => {
           },
         },
       ],
+      cards: [
+        {
+          kind: 'development',
+          id: 'dev-10-unit-a',
+          href: '/development/demo-development/unit/unit-a',
+          title: '2 Bedroom Apartment for Sale',
+          location: 'Berea, Johannesburg, Gauteng',
+          city: 'Johannesburg',
+          suburb: 'Berea',
+          province: 'Gauteng',
+          price: 1200000,
+          image: 'https://example.com/unit-a.jpg',
+          images: [],
+          propertyType: 'apartment',
+          listingType: 'sale',
+          listingSource: 'development',
+          contactRole: 'developer',
+          identity: {
+            role: 'developer',
+            name: 'Demo Builder',
+          },
+          development: {
+            id: 10,
+            name: 'Demo Development',
+            slug: 'demo-development',
+          },
+          developerBrand: {
+            id: 4,
+            brandName: 'Demo Builder',
+            slug: 'demo-builder',
+            logoUrl: null,
+            publicContactEmail: 'sales@example.com',
+          },
+          highlights: [],
+          badges: ['Off-plan'],
+          listedDate: new Date('2026-03-20T00:00:00.000Z'),
+          developmentId: 10,
+        },
+      ],
       total: 1,
       page: 1,
       pageSize: 20,
@@ -90,6 +129,12 @@ describe('properties.searchDevelopmentListings contract', () => {
       page: 1,
       pageSize: 20,
       hasMore: false,
+    });
+    expect((result as any).cards[0]).toMatchObject({
+      kind: 'development',
+      contactRole: 'developer',
+      identity: { name: 'Demo Builder' },
+      href: '/development/demo-development/unit/unit-a',
     });
   });
 

@@ -5,6 +5,7 @@ import type {
   DevelopmentDerivedListing,
   DevelopmentDerivedListingSearchResults,
   Property,
+  SearchCardResult,
   SortOption,
 } from '../../shared/types';
 
@@ -488,6 +489,63 @@ function buildSort(sortOption: SortOption) {
   }
 }
 
+function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): SearchCardResult {
+  const identityName = String(
+    item.developerBrand?.brandName || item.development?.name || 'Developer',
+  ).trim();
+  const location = [item.suburb, item.city, item.province].filter(Boolean).join(', ');
+  const developerBrandProfileId = Number(item.developerBrand?.id || 0);
+
+  return {
+    kind: 'development',
+    id: item.id,
+    href:
+      (typeof item.href === 'string' && item.href.trim()) ||
+      (item.development?.slug
+        ? `/development/${item.development.slug}/unit/${item.unitTypeId}`
+        : `/development/${item.developmentId}/unit/${item.unitTypeId}`),
+    title: item.title,
+    location,
+    city: item.city,
+    suburb: item.suburb,
+    province: item.province,
+    price: item.price,
+    image: String(item.image || item.images?.[0]?.url || '').trim(),
+    images: Array.isArray(item.images) ? item.images : [],
+    description: item.description || undefined,
+    bedrooms: item.bedrooms,
+    bathrooms: item.bathrooms,
+    area: item.floorSize,
+    yardSize: item.erfSize,
+    propertyType: item.propertyType,
+    listingType: item.listingType,
+    listingSource: 'development',
+    contactRole: 'developer',
+    identity: {
+      role: 'developer',
+      name: identityName,
+      avatarUrl: item.developerBrand?.logoUrl || null,
+      phone: item.developerBrand?.publicContactPhone || null,
+      whatsapp: item.developerBrand?.publicContactPhone || null,
+      email: item.developerBrand?.publicContactEmail || null,
+      developerBrandProfileId:
+        Number.isFinite(developerBrandProfileId) && developerBrandProfileId > 0
+          ? developerBrandProfileId
+          : undefined,
+    },
+    development: item.development,
+    developerBrand: item.developerBrand,
+    highlights: Array.isArray(item.highlights) ? item.highlights : [],
+    badges: Array.isArray(item.badges) ? item.badges : [],
+    imageCount: Array.isArray(item.images) ? item.images.length : 0,
+    transactionType: item.transactionType,
+    listedDate: item.listedDate instanceof Date ? item.listedDate : new Date(item.listedDate),
+    latitude: item.latitude,
+    longitude: item.longitude,
+    developmentId: item.developmentId,
+  };
+}
+
 export class DevelopmentDerivedListingService {
   async searchListings(
     filters: DevelopmentDerivedListingFilters,
@@ -497,7 +555,7 @@ export class DevelopmentDerivedListingService {
   ): Promise<DevelopmentDerivedListingSearchResults> {
     const db = await getDb();
     if (!db) {
-      return { items: [], total: 0, page, pageSize, hasMore: false };
+      return { items: [], cards: [], total: 0, page, pageSize, hasMore: false };
     }
 
     const conditions = [
@@ -722,6 +780,7 @@ export class DevelopmentDerivedListingService {
 
     return {
       items,
+      cards: items.map(buildDevelopmentSearchCardResult),
       total,
       page,
       pageSize,

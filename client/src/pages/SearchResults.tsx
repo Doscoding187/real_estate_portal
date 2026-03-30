@@ -5,7 +5,7 @@ import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getPrimaryListingBadge } from '@/lib/listingBadges';
-import { normalizePropertyForUI } from '@/lib/normalizers';
+import { searchCardResultToPropertyCardProps } from '@/lib/normalizers';
 import { blendSearchResults } from '@/lib/searchBlend';
 import {
   DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
@@ -56,6 +56,7 @@ import {
 } from '@/lib/urlUtils';
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
+import type { SearchCardResult } from '@/../../shared/types';
 
 export default function SearchResults({
   province: propProvince,
@@ -274,13 +275,10 @@ export default function SearchResults({
     },
   );
 
-  const properties =
-    shouldFetchManualListings
-      ? (propertySearchResults as any)?.items ?? (propertySearchResults as any)?.properties ?? []
-      : [];
-  const developmentResults = shouldFetchDevelopmentListings
-    ? (developmentListingResults as any)?.items ?? []
-    : [];
+  const propertyCards: SearchCardResult[] =
+    shouldFetchManualListings ? ((propertySearchResults as any)?.cards ?? []) : [];
+  const developmentCards: SearchCardResult[] =
+    shouldFetchDevelopmentListings ? ((developmentListingResults as any)?.cards ?? []) : [];
   const resultTotal =
     (shouldFetchManualListings ? (propertySearchResults as any)?.total ?? 0 : 0) +
     (shouldFetchDevelopmentListings ? (developmentListingResults as any)?.total ?? 0 : 0);
@@ -422,93 +420,54 @@ export default function SearchResults({
   };
 
   const combinedSearchResults = useMemo(() => {
-    const propertyItems = (properties as any[]).map(property => ({
+    const propertyItems = propertyCards.map(property => ({
       kind: 'property' as const,
       value: property,
     }));
-    const derivedDevelopmentItems = (developmentResults as any[]).map(development => ({
+    const derivedDevelopmentItems = developmentCards.map(development => ({
       kind: 'development' as const,
       value: development,
     }));
 
     return blendSearchResults(propertyItems, derivedDevelopmentItems, sortBy, filters);
-  }, [developmentResults, filters, properties, sortBy]);
-
-  const resolveDevelopmentListingHref = (item: any, normalized: any) => {
-    if (typeof item?.href === 'string' && item.href.trim()) {
-      return item.href;
-    }
-
-    const developmentSlug = normalized?.development?.slug || item?.development?.slug;
-    const developmentId = normalized?.development?.id || item?.development?.id || item?.developmentId;
-    const unitTypeId = item?.unitTypeId;
-
-    if (developmentSlug && unitTypeId) {
-      return `/development/${developmentSlug}/unit/${unitTypeId}`;
-    }
-
-    if (developmentId && unitTypeId) {
-      return `/development/${developmentId}/unit/${unitTypeId}`;
-    }
-
-    if (developmentSlug) return `/development/${developmentSlug}`;
-    if (developmentId) return `/development/${developmentId}`;
-    return `/property/${normalized?.id || item?.id}`;
-  };
+  }, [developmentCards, filters, propertyCards, sortBy]);
 
   const pagedResults = useMemo(() => {
     const start = page * limit;
     return combinedSearchResults.slice(start, start + limit);
   }, [combinedSearchResults, limit, page]);
 
-  const renderedResults = useMemo(
-    () =>
-      pagedResults
-        .map(item => {
-          const normalized = normalizePropertyForUI(item.value);
-          return normalized ? { ...item, normalized } : null;
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null),
-    [pagedResults],
-  );
+  const renderedResults = pagedResults;
 
   const mapResults = useMemo(
     () =>
       renderedResults
         .map((item, index) => {
-          const raw = item.value as any;
-          const latitude = parseFloat(String(raw.latitude || ''));
-          const longitude = parseFloat(String(raw.longitude || ''));
+          const card = item.value as SearchCardResult;
+          const latitude = parseFloat(String(card.latitude || ''));
+          const longitude = parseFloat(String(card.longitude || ''));
           if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
-          const navigationHref =
-            item.kind === 'development'
-              ? resolveDevelopmentListingHref(raw, item.normalized)
-              : `/property/${item.normalized.id}`;
-
           return {
-            markerId: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(item.normalized.id),
-            href: navigationHref,
+            markerId: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
+            href: card.href,
             property: {
-              id: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(item.normalized.id),
-              title: item.normalized.title,
-              price: item.normalized.price,
-              propertyType: item.normalized.propertyType ?? 'unknown',
-              listingType: item.normalized.listingType ?? 'sale',
-              listingSource: (item.normalized as any).listingSource,
-              listerType: (item.normalized as any).listerType,
-              primaryBadge: getPrimaryListingBadge((item.normalized as any).badges),
+              id: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
+              title: card.title,
+              price: card.price,
+              propertyType: card.propertyType ?? 'unknown',
+              listingType: card.listingType ?? 'sale',
+              listingSource: card.listingSource,
+              listerType: card.listerType,
+              primaryBadge: getPrimaryListingBadge(card.badges),
               latitude,
               longitude,
-              mainImage:
-                (item.normalized as any).image ??
-                (item.normalized as any).mainImage ??
-                (item.normalized as any).images?.[0],
-              address: (item.normalized as any).address,
-              city: (item.normalized as any).city,
-              bedrooms: item.normalized.bedrooms,
-              bathrooms: item.normalized.bathrooms,
-              area: item.normalized.area,
+              mainImage: card.image || card.images?.[0]?.url,
+              address: card.address || card.location || '',
+              city: card.city,
+              bedrooms: card.bedrooms,
+              bathrooms: card.bathrooms,
+              area: card.area,
             },
           };
         })
@@ -587,116 +546,40 @@ export default function SearchResults({
                     {viewMode === 'list' && (
                       <div className="flex flex-col items-start gap-4">
                         {renderedResults.map((item, index) => {
-                          const normalized = item.normalized;
-                          const raw = item.value as any;
-                          const normalizedAgent = (normalized as any).agent;
-                          const normalizedDeveloperBrand = (normalized as any).developerBrand;
+                          const card = item.value as SearchCardResult;
                           return (
                             <ListingResultCard
-                              key={`prop-${normalized.id}-${index}`}
+                              key={`prop-${card.id}-${index}`}
                               data={{
-                                id: normalized.id,
-                                href:
-                                  item.kind === 'development'
-                                    ? resolveDevelopmentListingHref(item.value, normalized)
-                                    : undefined,
-                                title: normalized.title,
-                                location: normalized.location,
-                                price: normalized.price,
-                                image:
-                                  typeof normalized.image === 'string'
-                                    ? normalized.image
-                                    : (normalized as any).mainImage ?? '/placeholder-property.jpg',
-                                development: (normalized as any).development,
-                                area: normalized.area,
-                                bedrooms: normalized.bedrooms,
-                                bathrooms: normalized.bathrooms,
+                                id: card.id,
+                                href: card.href,
+                                title: card.title,
+                                location: card.location,
+                                price: card.price,
+                                image: card.image || '/placeholder-property.jpg',
+                                development: card.development,
+                                area: card.area,
+                                bedrooms: card.bedrooms,
+                                bathrooms: card.bathrooms,
                                 floor:
-                                  typeof (normalized as any).yardSize === 'number' &&
-                                  (normalized as any).yardSize > 0
-                                    ? `${(normalized as any).yardSize}m2`
+                                  typeof card.yardSize === 'number' && card.yardSize > 0
+                                    ? `${card.yardSize}m2`
                                     : undefined,
-                                highlights: Array.isArray(normalized.highlights)
-                                  ? normalized.highlights
-                                  : [],
-                                description: normalized.description ?? undefined,
-                                listingSource: (normalized as any).listingSource,
-                                listerType: (normalized as any).listerType,
-                                contactRole:
-                                  (normalized as any).listingSource === 'development'
-                                    ? 'developer'
-                                    : (normalized as any).listerType === 'private'
-                                      ? 'private'
-                                      : 'agent',
-                                propertyId:
-                                  (normalized as any).listingSource === 'development'
-                                    ? undefined
-                                    : Number.isFinite(Number(normalized.id))
-                                      ? Number(normalized.id)
-                                      : undefined,
-                                agentId:
-                                  (normalized as any).listingSource === 'development'
-                                    ? undefined
-                                    : normalizedAgent?.id
-                                      ? Number(normalizedAgent.id)
-                                      : raw.agentId
-                                        ? Number(raw.agentId)
-                                        : undefined,
-                                agencyId:
-                                  (normalized as any).listingSource === 'development'
-                                    ? undefined
-                                    : normalizedAgent?.agencyId
-                                      ? Number(normalizedAgent.agencyId)
-                                      : raw.agencyId
-                                        ? Number(raw.agencyId)
-                                        : undefined,
-                                developerBrandProfileId:
-                                  (normalized as any).listingSource === 'development'
-                                    ? normalizedDeveloperBrand?.id
-                                      ? Number(normalizedDeveloperBrand.id)
-                                      : raw.developerBrandProfileId
-                                        ? Number(raw.developerBrandProfileId)
-                                        : undefined
-                                    : raw.developerBrandProfileId
-                                      ? Number(raw.developerBrandProfileId)
-                                      : undefined,
-                                developmentId:
-                                  (normalized as any).development?.id
-                                    ? Number((normalized as any).development.id)
-                                    : raw.developmentId
-                                      ? Number(raw.developmentId)
-                                      : undefined,
-                                postedBy:
-                                  (normalized as any).listingSource === 'development'
-                                    ? (normalized as any).developerBrand?.brandName ||
-                                      'Developer Team'
-                                    : normalized.agent?.name || 'Private Seller',
-                                agentAvatarUrl:
-                                  (normalized as any).listingSource === 'development'
-                                    ? (normalized as any).developerBrand?.logoUrl || undefined
-                                    : normalized.agent?.image || undefined,
-                                contactPhone:
-                                  (normalized as any).listingSource === 'development'
-                                    ? normalizedDeveloperBrand?.publicContactPhone ||
-                                      raw.developerBrand?.publicContactPhone ||
-                                      undefined
-                                    : normalizedAgent?.phone || raw.agent?.phone || undefined,
-                                contactWhatsapp:
-                                  (normalized as any).listingSource === 'development'
-                                    ? normalizedDeveloperBrand?.publicContactPhone ||
-                                      raw.developerBrand?.publicContactPhone ||
-                                      undefined
-                                    : normalizedAgent?.whatsapp ||
-                                      normalizedAgent?.phone ||
-                                      raw.agent?.whatsapp ||
-                                      raw.agent?.phone ||
-                                      undefined,
-                                contactEmail:
-                                  (normalized as any).listingSource === 'development'
-                                    ? normalizedDeveloperBrand?.publicContactEmail ||
-                                      raw.developerBrand?.publicContactEmail ||
-                                      undefined
-                                    : normalizedAgent?.email || raw.agent?.email || undefined,
+                                highlights: card.highlights,
+                                description: card.description,
+                                listingSource: card.listingSource,
+                                listerType: card.listerType,
+                                contactRole: card.contactRole,
+                                propertyId: card.propertyId,
+                                agentId: card.identity.agentId,
+                                agencyId: card.identity.agencyId,
+                                developerBrandProfileId: card.identity.developerBrandProfileId,
+                                developmentId: card.developmentId,
+                                postedBy: card.identity.name,
+                                agentAvatarUrl: card.identity.avatarUrl || undefined,
+                                contactPhone: card.identity.phone || undefined,
+                                contactWhatsapp: card.identity.whatsapp || undefined,
+                                contactEmail: card.identity.email || undefined,
                               }}
                             />
                           );
@@ -707,25 +590,9 @@ export default function SearchResults({
                     {viewMode === 'grid' && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                         {renderedResults.map(item => {
-                          const normalized = item.normalized;
-                          const cardProps = {
-                            ...normalized,
-                            href:
-                              item.kind === 'development'
-                                ? resolveDevelopmentListingHref(item.value, normalized)
-                                : undefined,
-                            development: (normalized as any).development,
-                            developerBrand: (normalized as any).developerBrand,
-                            listingSource: (normalized as any).listingSource,
-                            listerType: (normalized as any).listerType,
-                            suppressBadges: true,
-                            image:
-                              (normalized as any).image ??
-                              (normalized as any).mainImage ??
-                              (normalized as any).images?.[0] ??
-                              '/placeholder-property.jpg',
-                          };
-                          return <PropertyCard key={normalized.id} {...(cardProps as any)} />;
+                          const card = item.value as SearchCardResult;
+                          const cardProps = searchCardResultToPropertyCardProps(card);
+                          return <PropertyCard key={card.id} {...cardProps} />;
                         })}
                       </div>
                     )}
