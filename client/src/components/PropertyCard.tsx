@@ -26,7 +26,13 @@ interface ImageUrls {
 }
 
 interface AgentInfo {
+  id?: string;
   name: string;
+  agencyId?: string;
+  agency?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
   image?: string;
 }
 
@@ -36,6 +42,8 @@ interface DeveloperBrandInfo {
   brandName: string;
   logoUrl?: string | null;
   slug: string;
+  publicContactEmail?: string | null;
+  publicContactPhone?: string | null;
 }
 
 interface DevelopmentInfo {

@@ -910,6 +910,8 @@ export interface DevelopmentDerivedListing {
   bathrooms?: number;
   floorSize?: number;
   erfSize?: number;
+  description?: string;
+  highlights?: string[];
   image?: string | null;
   images?: ImageUrls[];
   badges?: string[];
@@ -930,6 +932,7 @@ export interface DevelopmentDerivedListing {
     slug?: string | null;
     logoUrl?: string | null;
     publicContactEmail?: string | null;
+    publicContactPhone?: string | null;
   };
 }
 

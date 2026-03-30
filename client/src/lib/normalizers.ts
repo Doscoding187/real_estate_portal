@@ -67,7 +67,13 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
   )?.trim();
   const agent = derivedAgentName
     ? {
+        id: String(raw.user?.id || raw.agent?.id || '').trim() || undefined,
         name: derivedAgentName,
+        agencyId: String(raw.agent?.agencyId || '').trim() || undefined,
+        agency: raw.agent?.agency || raw.agent?.agencyName || undefined,
+        phone: raw.user?.phone || raw.agent?.phone || undefined,
+        whatsapp: raw.agent?.whatsapp || undefined,
+        email: raw.user?.email || raw.agent?.email || undefined,
         image:
           raw.user?.image ||
           raw.agent?.image ||
@@ -89,6 +95,8 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
           brandName,
           slug,
           logoUrl: (candidate as any).logoUrl ?? (candidate as any).logo ?? null,
+          publicContactEmail: (candidate as any).publicContactEmail ?? null,
+          publicContactPhone: (candidate as any).publicContactPhone ?? null,
         };
       }
     }
@@ -102,6 +110,8 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
         brandName: legacyName,
         slug: legacySlug,
         logoUrl: raw.builderLogoUrl ?? null,
+        publicContactEmail: raw.builderPublicContactEmail ?? null,
+        publicContactPhone: raw.builderPublicContactPhone ?? null,
       };
     }
 

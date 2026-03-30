@@ -24,16 +24,24 @@ import { toast } from 'sonner';
 interface PropertyContactModalProps {
   isOpen: boolean;
   onClose: () => void;
-  propertyId: number;
+  propertyId?: number;
   propertyTitle: string;
   agentName?: string;
   agentPhone?: string;
   agentEmail?: string;
   agentId?: number;
   agencyId?: number;
-  developerBrandProfileId?: number; // For brand lead routing
+  developerBrandProfileId?: number;
   developmentId?: number;
   initialMessage?: string;
+  source?: string;
+  submitLabel?: string;
+  successMessage?: string;
+  successAction?: {
+    type: 'whatsapp';
+    phone: string;
+    message?: string;
+  };
   affordabilityData?: {
     monthlyIncome?: number;
     monthlyExpenses?: number;
@@ -67,6 +75,10 @@ export function PropertyContactModal({
   developerBrandProfileId,
   developmentId,
   initialMessage,
+  source = 'property_search',
+  submitLabel = 'Send Inquiry',
+  successMessage = 'Your inquiry has been sent successfully!',
+  successAction,
   affordabilityData,
 }: PropertyContactModalProps) {
   const [formData, setFormData] = useState<ContactFormState>({
@@ -76,6 +88,19 @@ export function PropertyContactModal({
     inquiryType: 'general',
     message: initialMessage || '',
   });
+
+  const buildWhatsAppUrl = (phone: string, message?: string) => {
+    const digits = phone.replace(/[^\d+]/g, '');
+    if (!digits) return null;
+
+    const params = new URLSearchParams();
+    if (message?.trim()) {
+      params.set('text', message.trim());
+    }
+
+    const query = params.toString();
+    return `https://wa.me/${digits.replace(/^\+/, '')}${query ? `?${query}` : ''}`;
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -88,7 +113,15 @@ export function PropertyContactModal({
 
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: () => {
-      toast.success('Your inquiry has been sent successfully!');
+      toast.success(successMessage);
+
+      if (successAction?.type === 'whatsapp') {
+        const whatsappUrl = buildWhatsAppUrl(successAction.phone, successAction.message);
+        if (whatsappUrl) {
+          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        }
+      }
+
       setFormData({
         name: '',
         email: '',
@@ -118,10 +151,10 @@ export function PropertyContactModal({
       email: formData.email,
       phone: formData.phone,
       message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
-      source: 'property_detail',
+      source,
       agentId,
       agencyId,
-      developerBrandProfileId, // For brand lead routing
+      developerBrandProfileId,
       developmentId,
       affordabilityData,
     });
@@ -132,17 +165,16 @@ export function PropertyContactModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Contact {agentName}</DialogTitle>
           <DialogDescription>
-            Interested in {propertyTitle}? Send a message and we’ll get back to you.
+            Interested in {propertyTitle}? Send a message and we'll get back to you.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Inquiry Type */}
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="inquiryType">Inquiry Type</Label>
             <Select
@@ -161,7 +193,6 @@ export function PropertyContactModal({
             </Select>
           </div>
 
-          {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">
               Your Name <span className="text-destructive">*</span>
@@ -175,7 +206,6 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email">
               Email Address <span className="text-destructive">*</span>
@@ -190,7 +220,6 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Phone */}
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
             <Input
@@ -202,7 +231,6 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Message */}
           <div className="space-y-2">
             <Label htmlFor="message">
               Message <span className="text-destructive">*</span>
@@ -217,9 +245,8 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Agent Contact Info */}
           {(agentPhone || agentEmail) && (
-            <div className="bg-muted p-4 rounded-lg space-y-2">
+            <div className="space-y-2 rounded-lg bg-muted p-4">
               <p className="text-sm font-medium">Direct Contact</p>
               {agentPhone && (
                 <a
@@ -242,7 +269,6 @@ export function PropertyContactModal({
             </div>
           )}
 
-          {/* Submit Button */}
           <div className="flex gap-2 pt-4">
             <Button
               type="button"
@@ -256,13 +282,13 @@ export function PropertyContactModal({
             <Button type="submit" className="flex-1" disabled={createLeadMutation.isPending}>
               {createLeadMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send Inquiry
+                  <Send className="mr-2 h-4 w-4" />
+                  {submitLabel}
                 </>
               )}
             </Button>

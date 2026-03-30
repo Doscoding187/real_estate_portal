@@ -50,6 +50,33 @@ function parseJsonArray(value: unknown): any[] {
   return [];
 }
 
+function parseJsonStringArray(value: unknown): string[] {
+  const normalized = parseJsonArray(value);
+  if (normalized.length > 0) {
+    return normalized
+      .flatMap(item => {
+        if (typeof item === 'string') return [item];
+        if (item && typeof item === 'object') {
+          return [item.label, item.name, item.title, item.value]
+            .filter(candidate => typeof candidate === 'string' && candidate.trim().length > 0)
+            .map(candidate => String(candidate));
+        }
+        return [];
+      })
+      .map(item => String(item || '').trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 function parseBaseMedia(value: unknown): Record<string, any> {
   if (!value) return {};
   if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -78,6 +105,25 @@ function toNumberOrNull(value: unknown): number | null {
 
 function toNumberOrZero(value: unknown): number {
   return toNumberOrNull(value) ?? 0;
+}
+
+function toSentenceCaseLabel(value: string): string {
+  return value
+    .split(/[_-\s]+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function uniqueLabels(values: string[]): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+        .map(toSentenceCaseLabel),
+    ),
+  );
 }
 
 function slugifyText(value: string): string {
@@ -219,6 +265,30 @@ function deriveStageBadge(row: any): string | null {
   }
 
   return null;
+}
+
+function deriveListingDescription(row: any): string | undefined {
+  const candidates = [
+    row.unitDescription,
+    row.unitConfigDescription,
+    row.developmentDescription,
+    row.developmentTagline,
+  ]
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+
+  return candidates[0] || undefined;
+}
+
+function deriveListingHighlights(row: any): string[] {
+  return uniqueLabels([
+    ...parseJsonStringArray(row.unitAmenities),
+    ...parseJsonStringArray(row.unitFeatures),
+    ...parseJsonStringArray(row.unitBaseFeatures),
+    ...parseJsonStringArray(row.developmentHighlights),
+    ...parseJsonStringArray(row.developmentFeatures),
+    ...parseJsonStringArray(row.developmentAmenities),
+  ]).slice(0, 6);
 }
 
 function buildListingTitle(row: any, propertyType: Property['propertyType']): string {
@@ -364,6 +434,11 @@ export class DevelopmentDerivedListingService {
         city: developments.city,
         suburb: developments.suburb,
         province: developments.province,
+        developmentDescription: developments.description,
+        developmentTagline: developments.tagline,
+        developmentAmenities: developments.amenities,
+        developmentHighlights: developments.highlights,
+        developmentFeatures: developments.features,
         latitude: developments.latitude,
         longitude: developments.longitude,
         completionDate: developments.completionDate,
@@ -375,12 +450,18 @@ export class DevelopmentDerivedListingService {
         developerBrandProfileId: developments.developerBrandProfileId,
         developerName: developers.name,
         developerLogo: developers.logo,
+        developerPhone: developers.phone,
         brandName: developerBrandProfiles.brandName,
         brandSlug: developerBrandProfiles.slug,
         brandLogoUrl: developerBrandProfiles.logoUrl,
         brandPublicContactEmail: developerBrandProfiles.publicContactEmail,
         unitTypeId: unitTypes.id,
         unitName: unitTypes.name,
+        unitDescription: unitTypes.description,
+        unitConfigDescription: unitTypes.configDescription,
+        unitAmenities: unitTypes.amenities,
+        unitFeatures: unitTypes.features,
+        unitBaseFeatures: unitTypes.baseFeatures,
         structuralType: unitTypes.structuralType,
         bedrooms: unitTypes.bedrooms,
         bathrooms: unitTypes.bathrooms,
@@ -465,6 +546,8 @@ export class DevelopmentDerivedListingService {
           constructionPhase: row.constructionPhase,
           status: row.developmentStatus,
         });
+        const description = deriveListingDescription(row);
+        const highlights = deriveListingHighlights(row);
         const title = buildListingTitle(row, propertyType);
         const floorSize = toNumberOrNull(row.unitSize) ?? undefined;
         const erfSize = toNumberOrNull(row.yardSize) ?? undefined;
@@ -509,6 +592,8 @@ export class DevelopmentDerivedListingService {
           bathrooms,
           floorSize,
           erfSize,
+          description,
+          highlights,
           image: mediaSignals.image,
           images: mediaSignals.image ? [{ url: mediaSignals.image, thumbnailUrl: mediaSignals.image }] : [],
           badges: [stageBadge].filter(Boolean) as string[],
@@ -529,6 +614,7 @@ export class DevelopmentDerivedListingService {
             slug: row.brandSlug || null,
             logoUrl: row.brandLogoUrl || row.developerLogo || null,
             publicContactEmail: row.brandPublicContactEmail || null,
+            publicContactPhone: row.developerPhone || null,
           },
         } satisfies DevelopmentDerivedListing;
       })
