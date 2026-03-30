@@ -77,6 +77,28 @@ function parseJsonStringArray(value: unknown): string[] {
   return [];
 }
 
+function parseJsonObject(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value !== 'string') return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === 'string') {
+      const parsedTwice = JSON.parse(parsed);
+      return parsedTwice && typeof parsedTwice === 'object' && !Array.isArray(parsedTwice)
+        ? parsedTwice
+        : {};
+    }
+
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, any>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 function parseBaseMedia(value: unknown): Record<string, any> {
   if (!value) return {};
   if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -280,13 +302,80 @@ function deriveListingDescription(row: any): string | undefined {
   return candidates[0] || undefined;
 }
 
+function flattenFeatureCollections(value: unknown): string[] {
+  const parsed = parseJsonObject(value);
+
+  return Object.values(parsed).flatMap(entry => {
+    if (Array.isArray(entry)) {
+      return entry
+        .map(item => String(item || '').trim())
+        .filter(Boolean);
+    }
+
+    if (entry && typeof entry === 'object') {
+      return Object.entries(entry)
+        .filter(([, enabled]) => Boolean(enabled))
+        .map(([label]) => label);
+    }
+
+    return [];
+  });
+}
+
+function extractBuiltInFeatureLabels(value: unknown): string[] {
+  const parsed = parseJsonObject(value);
+  const builtInFeatures = parsed.builtInFeatures;
+  const electrical = parsed.electrical;
+  const finishes = parsed.finishes;
+
+  const labels: string[] = [];
+
+  if (builtInFeatures && typeof builtInFeatures === 'object') {
+    labels.push(
+      ...Object.entries(builtInFeatures)
+        .filter(([, enabled]) => Boolean(enabled))
+        .map(([label]) => label),
+    );
+  }
+
+  if (electrical && typeof electrical === 'object') {
+    labels.push(
+      ...Object.entries(electrical)
+        .filter(([, enabled]) => Boolean(enabled))
+        .map(([label]) => label),
+    );
+  }
+
+  if (finishes && typeof finishes === 'object') {
+    labels.push(
+      ...Object.entries(finishes)
+        .filter(([, enabled]) => Boolean(enabled))
+        .map(([label]) => label),
+    );
+  }
+
+  return labels;
+}
+
 function deriveListingHighlights(row: any): string[] {
-  return uniqueLabels([
+  const unitSpecific = uniqueLabels([
+    ...extractBuiltInFeatureLabels(row.unitSpecifications),
+    ...flattenFeatureCollections(row.unitFeatures),
     ...parseJsonStringArray(row.unitAmenities),
-    ...parseJsonStringArray(row.unitFeatures),
     ...parseJsonStringArray(row.unitBaseFeatures),
+    ...(row.unitParkingType ? [String(row.unitParkingType)] : []),
+    ...(Number(row.unitParkingBays || 0) > 0 ? [`${row.unitParkingBays} Parking Bays`] : []),
+    ...(Number(row.unitIsFurnished || 0) === 1 ? ['Furnished'] : []),
+    ...(Number(row.unitTransferCostsIncluded || 0) === 1 ? ['Transfer Costs Included'] : []),
+  ]);
+
+  if (unitSpecific.length > 0) {
+    return unitSpecific.slice(0, 6);
+  }
+
+  return uniqueLabels([
     ...parseJsonStringArray(row.developmentHighlights),
-    ...parseJsonStringArray(row.developmentFeatures),
+    ...flattenFeatureCollections(row.developmentFeatures),
     ...parseJsonStringArray(row.developmentAmenities),
   ]).slice(0, 6);
 }
@@ -459,9 +548,14 @@ export class DevelopmentDerivedListingService {
         unitName: unitTypes.name,
         unitDescription: unitTypes.description,
         unitConfigDescription: unitTypes.configDescription,
+        unitSpecifications: unitTypes.specifications,
         unitAmenities: unitTypes.amenities,
         unitFeatures: unitTypes.features,
         unitBaseFeatures: unitTypes.baseFeatures,
+        unitParkingType: unitTypes.parkingType,
+        unitParkingBays: unitTypes.parkingBays,
+        unitIsFurnished: unitTypes.isFurnished,
+        unitTransferCostsIncluded: unitTypes.transferCostsIncluded,
         structuralType: unitTypes.structuralType,
         bedrooms: unitTypes.bedrooms,
         bathrooms: unitTypes.bathrooms,
