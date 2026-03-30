@@ -137,6 +137,16 @@ describe('DevelopmentDerivedListingService', () => {
     expect(result.items[0].badges).toContain('Off-plan');
     expect(result.items[0].badges).not.toContain('Part of The Junction');
     expect(result.items[0].image).toBe('https://example.com/unit-primary.jpg');
+    expect(result.cards?.[0]).toMatchObject({
+      kind: 'development',
+      href: '/development/the-junction/unit/unit-2-bed',
+      contactRole: 'developer',
+      identity: {
+        name: 'Builder Group',
+        avatarUrl: 'https://example.com/brand-logo.jpg',
+      },
+      image: 'https://example.com/unit-primary.jpg',
+    });
   });
 
   it('prefers richer unit content when applying organic date-desc ranking', async () => {

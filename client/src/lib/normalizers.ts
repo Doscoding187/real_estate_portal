@@ -1,5 +1,6 @@
 import type { PropertyCardProps } from '@/components/PropertyCard';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
+import type { SearchCardResult } from '@/../../shared/types';
 
 // Normalizes raw API property objects to the props expected by PropertyCard.
 export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
@@ -270,5 +271,64 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
       }
       return undefined;
     })(),
+  };
+}
+
+export function searchCardResultToPropertyCardProps(card: SearchCardResult): PropertyCardProps {
+  const developerBrand =
+    card.developerBrand &&
+    typeof card.developerBrand.id === 'number' &&
+    card.developerBrand.id > 0 &&
+    card.developerBrand.slug
+      ? {
+          id: card.developerBrand.id,
+          brandName: card.developerBrand.brandName,
+          slug: card.developerBrand.slug,
+          logoUrl: card.developerBrand.logoUrl ?? null,
+          publicContactEmail: card.developerBrand.publicContactEmail ?? null,
+          publicContactPhone: card.developerBrand.publicContactPhone ?? null,
+        }
+      : undefined;
+
+  return {
+    id: card.id,
+    href: card.href,
+    title: card.title,
+    price: card.price,
+    location: card.location,
+    image: card.image || card.images?.[0]?.url || '/placeholder-property.jpg',
+    description: card.description,
+    bedrooms: card.bedrooms,
+    bathrooms: card.bathrooms,
+    area: card.area,
+    yardSize: card.yardSize,
+    propertyType: card.propertyType
+      ? card.propertyType.charAt(0).toUpperCase() + card.propertyType.slice(1).replace('_', ' ')
+      : undefined,
+    listingType: card.listingType,
+    listingSource: card.listingSource,
+    listerType: card.listerType,
+    status: undefined,
+    transactionType: card.transactionType,
+    agent:
+      card.contactRole !== 'developer' && card.identity.name
+        ? {
+            id: card.identity.agentId ? String(card.identity.agentId) : undefined,
+            name: card.identity.name,
+            agencyId: card.identity.agencyId ? String(card.identity.agencyId) : undefined,
+            agency: undefined,
+            phone: card.identity.phone || undefined,
+            whatsapp: card.identity.whatsapp || undefined,
+            email: card.identity.email || undefined,
+            image: card.identity.avatarUrl || undefined,
+          }
+        : undefined,
+    developerBrand,
+    development: card.development,
+    badges: card.badges,
+    imageCount: card.imageCount,
+    videoCount: card.videoCount,
+    highlights: card.highlights,
+    suppressBadges: true,
   };
 }

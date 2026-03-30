@@ -168,6 +168,18 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched.agent?.name).toBe('Jane Agent');
     expect(matched.agent?.agency).toBe(`Wizard Realty ${suffix}`);
     expect(matched.agent?.image).toBe(profileImage);
+    const matchedCard = result.cards?.find(card => Number(card.propertyId) === createdPropertyId);
+    expect(matchedCard).toBeTruthy();
+    expect(matchedCard).toMatchObject({
+      kind: 'property',
+      href: `/property/${createdPropertyId}`,
+      contactRole: 'agent',
+      identity: {
+        name: 'Jane Agent',
+        avatarUrl: profileImage,
+      },
+      image: listingImage,
+    });
   });
 
   it('falls back to source listing media when searchable property images are missing', async () => {
@@ -290,6 +302,9 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched).toBeTruthy();
     expect(matched.mainImage).toBe(listingImage);
     expect(matched.images?.[0]?.url).toBe(listingImage);
+    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.image).toBe(
+      listingImage,
+    );
   });
 
   it('falls back to source listing agent identity when searchable property agent fields are missing', async () => {
@@ -406,5 +421,8 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched.agent?.name).toBe('Ava Broker');
     expect(matched.agent?.agency).toBe(`Fallback Agent Realty ${suffix}`);
     expect(matched.agent?.image).toBe(profileImage);
+    expect(
+      result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.identity.name,
+    ).toBe('Ava Broker');
   });
 });

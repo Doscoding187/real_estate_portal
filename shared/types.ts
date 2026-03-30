@@ -851,6 +851,7 @@ export type ViewMode = 'list' | 'grid' | 'map';
 // Search results
 export interface SearchResults {
   properties: Property[];
+  cards?: SearchCardResult[];
   total: number;
   page: number;
   pageSize: number;
@@ -938,10 +939,76 @@ export interface DevelopmentDerivedListing {
 
 export interface DevelopmentDerivedListingSearchResults {
   items: DevelopmentDerivedListing[];
+  cards?: SearchCardResult[];
   total: number;
   page: number;
   pageSize: number;
   hasMore: boolean;
+}
+
+export interface SearchCardDevelopmentRef {
+  id?: number | string | null;
+  name?: string | null;
+  slug?: string | null;
+}
+
+export interface SearchCardDeveloperBrandRef {
+  id?: number | null;
+  brandName: string;
+  slug?: string | null;
+  logoUrl?: string | null;
+  publicContactEmail?: string | null;
+  publicContactPhone?: string | null;
+}
+
+export interface SearchCardIdentity {
+  role: 'agent' | 'developer' | 'private';
+  name: string;
+  avatarUrl?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  agentId?: number;
+  agencyId?: number;
+  developerBrandProfileId?: number;
+}
+
+export interface SearchCardResult {
+  kind: 'property' | 'development';
+  id: string;
+  href: string;
+  title: string;
+  location: string;
+  address?: string;
+  city: string;
+  suburb: string;
+  province: string;
+  price: number;
+  image: string;
+  images: ImageUrls[];
+  description?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  yardSize?: number;
+  propertyType: Property['propertyType'];
+  listingType: Property['listingType'];
+  listingSource: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
+  contactRole: SearchCardIdentity['role'];
+  identity: SearchCardIdentity;
+  development?: SearchCardDevelopmentRef;
+  developerBrand?: SearchCardDeveloperBrandRef;
+  highlights: string[];
+  badges?: string[];
+  imageCount?: number;
+  videoCount?: number;
+  transactionType?: string;
+  listedDate: Date;
+  latitude?: number;
+  longitude?: number;
+  propertyId?: number;
+  developmentId?: number;
 }
 
 // Saved search

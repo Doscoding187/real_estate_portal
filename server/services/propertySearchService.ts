@@ -20,7 +20,13 @@ import {
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
-import type { PropertyFilters, SortOption, SearchResults, Property } from '../../shared/types';
+import type {
+  PropertyFilters,
+  SortOption,
+  SearchResults,
+  Property,
+  SearchCardResult,
+} from '../../shared/types';
 import { locationResolver, ResolvedLocation } from './locationResolverService';
 
 // Cache key prefix for property searches
@@ -115,6 +121,86 @@ function deriveLoadSheddingSolutions(details: Record<string, any>): LoadShedding
   return Array.from(solutions);
 }
 
+function buildPropertySearchCardResult(property: any): SearchCardResult {
+  const development = property.development
+    ? {
+        id: property.development.id ?? null,
+        name: property.development.name ?? null,
+        slug: property.development.slug ?? null,
+      }
+    : undefined;
+  const developerBrand = property.developerBrand
+    ? {
+        id: property.developerBrand.id ?? null,
+        brandName: property.developerBrand.brandName,
+        slug: property.developerBrand.slug ?? null,
+        logoUrl: property.developerBrand.logoUrl ?? null,
+        publicContactEmail: property.developerBrand.publicContactEmail ?? null,
+        publicContactPhone: property.developerBrand.publicContactPhone ?? null,
+      }
+    : undefined;
+
+  const isPrivate = property.listerType === 'private' || !property.agent?.name;
+  const identityName = isPrivate ? property.agent?.name || 'Private Seller' : property.agent?.name;
+  const identityRole: SearchCardResult['contactRole'] = isPrivate ? 'private' : 'agent';
+  const location = [property.suburb, property.city, property.province].filter(Boolean).join(', ');
+  const image = String(property.mainImage || property.images?.[0]?.url || '').trim();
+  const propertyId = Number(property.id || 0);
+  const agentId = Number(property.agent?.id || 0);
+  const agencyId = Number(property.agent?.agencyId || 0);
+
+  return {
+    kind: 'property',
+    id: String(property.id),
+    href: `/property/${property.id}`,
+    title: String(property.title || '').trim(),
+    location,
+    address: property.address || undefined,
+    city: String(property.city || '').trim(),
+    suburb: String(property.suburb || property.city || '').trim(),
+    province: String(property.province || '').trim(),
+    price: Number(property.price || 0),
+    image,
+    images: Array.isArray(property.images) ? property.images : [],
+    description: property.description || undefined,
+    bedrooms: property.bedrooms || undefined,
+    bathrooms: property.bathrooms || undefined,
+    area: property.floorSize || property.area || undefined,
+    yardSize: property.erfSize || property.yardSize || undefined,
+    propertyType: property.propertyType,
+    listingType: property.listingType,
+    listingSource: 'manual',
+    listerType: property.listerType,
+    contactRole: identityRole,
+    identity: {
+      role: identityRole,
+      name: identityName,
+      avatarUrl: property.agent?.image || null,
+      phone: property.agent?.phone || null,
+      whatsapp: property.agent?.whatsapp || property.agent?.phone || null,
+      email: property.agent?.email || null,
+      agentId: Number.isFinite(agentId) && agentId > 0 ? agentId : undefined,
+      agencyId: Number.isFinite(agencyId) && agencyId > 0 ? agencyId : undefined,
+    },
+    development,
+    developerBrand,
+    highlights: Array.isArray(property.highlights) ? property.highlights : [],
+    badges: Array.isArray(property.badges) ? property.badges : [],
+    imageCount: Array.isArray(property.images) ? property.images.length : 0,
+    videoCount: Number(property.videoCount || 0),
+    transactionType: property.transactionType || property.listingType,
+    listedDate:
+      property.listedDate instanceof Date ? property.listedDate : new Date(property.listedDate || 0),
+    latitude: Number.isFinite(Number(property.latitude)) ? Number(property.latitude) : undefined,
+    longitude: Number.isFinite(Number(property.longitude)) ? Number(property.longitude) : undefined,
+    propertyId: Number.isFinite(propertyId) && propertyId > 0 ? propertyId : undefined,
+    developmentId:
+      Number.isFinite(Number(property.developmentId)) && Number(property.developmentId) > 0
+        ? Number(property.developmentId)
+        : undefined,
+  };
+}
+
 export class PropertySearchService {
   /**
    * Search properties with filters, sorting, and pagination
@@ -141,6 +227,15 @@ export class PropertySearchService {
               ? p.listedDate
               : p?.listedDate
                 ? new Date(p.listedDate)
+                : new Date(0),
+        })),
+        cards: (cached.cards || []).map((card: any) => ({
+          ...card,
+          listedDate:
+            card?.listedDate instanceof Date
+              ? card.listedDate
+              : card?.listedDate
+                ? new Date(card.listedDate)
                 : new Date(0),
         })),
       };
@@ -635,6 +730,7 @@ export class PropertySearchService {
 
     const searchResults: SearchResults = {
       properties: transformedProperties,
+      cards: transformedProperties.map(buildPropertySearchCardResult),
       total,
       page,
       pageSize,
