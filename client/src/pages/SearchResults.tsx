@@ -588,6 +588,9 @@ export default function SearchResults({
                       <div className="flex flex-col items-start gap-4">
                         {renderedResults.map((item, index) => {
                           const normalized = item.normalized;
+                          const raw = item.value as any;
+                          const normalizedAgent = (normalized as any).agent;
+                          const normalizedDeveloperBrand = (normalized as any).developerBrand;
                           return (
                             <ListingResultCard
                               key={`prop-${normalized.id}-${index}`}
@@ -625,6 +628,44 @@ export default function SearchResults({
                                     : (normalized as any).listerType === 'private'
                                       ? 'private'
                                       : 'agent',
+                                propertyId:
+                                  (normalized as any).listingSource === 'development'
+                                    ? undefined
+                                    : Number.isFinite(Number(normalized.id))
+                                      ? Number(normalized.id)
+                                      : undefined,
+                                agentId:
+                                  (normalized as any).listingSource === 'development'
+                                    ? undefined
+                                    : normalizedAgent?.id
+                                      ? Number(normalizedAgent.id)
+                                      : raw.agentId
+                                        ? Number(raw.agentId)
+                                        : undefined,
+                                agencyId:
+                                  (normalized as any).listingSource === 'development'
+                                    ? undefined
+                                    : normalizedAgent?.agencyId
+                                      ? Number(normalizedAgent.agencyId)
+                                      : raw.agencyId
+                                        ? Number(raw.agencyId)
+                                        : undefined,
+                                developerBrandProfileId:
+                                  (normalized as any).listingSource === 'development'
+                                    ? normalizedDeveloperBrand?.id
+                                      ? Number(normalizedDeveloperBrand.id)
+                                      : raw.developerBrandProfileId
+                                        ? Number(raw.developerBrandProfileId)
+                                        : undefined
+                                    : raw.developerBrandProfileId
+                                      ? Number(raw.developerBrandProfileId)
+                                      : undefined,
+                                developmentId:
+                                  (normalized as any).development?.id
+                                    ? Number((normalized as any).development.id)
+                                    : raw.developmentId
+                                      ? Number(raw.developmentId)
+                                      : undefined,
                                 postedBy:
                                   (normalized as any).listingSource === 'development'
                                     ? (normalized as any).developerBrand?.brandName ||
@@ -634,6 +675,28 @@ export default function SearchResults({
                                   (normalized as any).listingSource === 'development'
                                     ? (normalized as any).developerBrand?.logoUrl || undefined
                                     : normalized.agent?.image || undefined,
+                                contactPhone:
+                                  (normalized as any).listingSource === 'development'
+                                    ? normalizedDeveloperBrand?.publicContactPhone ||
+                                      raw.developerBrand?.publicContactPhone ||
+                                      undefined
+                                    : normalizedAgent?.phone || raw.agent?.phone || undefined,
+                                contactWhatsapp:
+                                  (normalized as any).listingSource === 'development'
+                                    ? normalizedDeveloperBrand?.publicContactPhone ||
+                                      raw.developerBrand?.publicContactPhone ||
+                                      undefined
+                                    : normalizedAgent?.whatsapp ||
+                                      normalizedAgent?.phone ||
+                                      raw.agent?.whatsapp ||
+                                      raw.agent?.phone ||
+                                      undefined,
+                                contactEmail:
+                                  (normalized as any).listingSource === 'development'
+                                    ? normalizedDeveloperBrand?.publicContactEmail ||
+                                      raw.developerBrand?.publicContactEmail ||
+                                      undefined
+                                    : normalizedAgent?.email || raw.agent?.email || undefined,
                               }}
                             />
                           );
