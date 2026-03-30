@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MapPin, Bed, Bath, House, LandPlot, Mail, Building2, MessageCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { withApiBase } from '@/lib/mediaUtils';
 
 export interface ListingResultCardData {
   id: string;
@@ -102,6 +103,8 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       : 'Contact Agent';
   const whatsappTarget = String(data.contactWhatsapp || data.contactPhone || '').trim();
   const emailTarget = String(data.contactEmail || '').trim();
+  const resolvedImage = withApiBase(data.image) || '/placeholder-property.jpg';
+  const resolvedAvatar = withApiBase(data.agentAvatarUrl);
   const modalTitle = isDevelopmentListing
     ? developmentName || data.title
     : data.title;
@@ -117,7 +120,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         <div className="flex flex-col sm:flex-row">
           <div className="relative h-[192px] flex-shrink-0 sm:h-[300px] sm:w-[300px]">
             <img
-              src={data.image || '/placeholder-property.jpg'}
+              src={resolvedImage}
               alt={data.title}
               className="h-full w-full object-cover object-center"
               onError={e => {
@@ -235,7 +238,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               <div className="flex min-w-0 items-center gap-2">
                 <Avatar className="h-7 w-7 shrink-0 border border-slate-200 bg-white">
                   <AvatarImage
-                    src={data.agentAvatarUrl || ''}
+                    src={resolvedAvatar || ''}
                     alt={identityDisplayName}
                     className={isDevelopmentListing ? 'object-contain p-0.5' : 'object-cover'}
                   />
