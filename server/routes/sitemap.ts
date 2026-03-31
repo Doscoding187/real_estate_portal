@@ -18,9 +18,10 @@ const router = Router();
 const XML_CONTENT_TYPE = 'application/xml; charset=utf-8';
 const TEXT_CONTENT_TYPE = 'text/plain; charset=utf-8';
 const SITEMAP_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=3600';
+const CANONICAL_PUBLIC_ORIGIN = 'https://www.propertylistifysa.co.za';
 const LIVE_PROPERTY_STATUSES = ['available', 'published'] as const;
 const AREA_LISTING_TYPES = ['sale', 'rent'] as const;
-const DEFAULT_PUBLIC_SITE_URL = 'https://www.propertylistifysa.co.za';
+const DEFAULT_PUBLIC_SITE_URL = CANONICAL_PUBLIC_ORIGIN;
 
 type SitemapUrlEntry = {
   loc: string;
@@ -71,8 +72,7 @@ function resolveBaseUrl(req: Request): string {
   const host = forwardedHost || req.get('host') || '';
 
   if (host && !isLocalHost(host) && isPublicSiteHost(host)) {
-    const protocol = forwardedProto || req.protocol || 'https';
-    return `${protocol}://${host}`.replace(/\/+$/, '');
+    return CANONICAL_PUBLIC_ORIGIN;
   }
 
   return fallbackBaseUrl;
@@ -164,7 +164,6 @@ function listingTypeToPathPrefix(listingType: string): '/property-for-sale' | '/
 }
 
 router.get('/robots.txt', (_req, res) => {
-  const baseUrl = resolveBaseUrl(_req);
   const robots = [
     'User-agent: *',
     'Allow: /',
@@ -173,7 +172,7 @@ router.get('/robots.txt', (_req, res) => {
     'Disallow: /api/',
     'Disallow: /auth/',
     '',
-    `Sitemap: ${toAbsoluteUrl('/sitemap.xml', baseUrl)}`,
+    `Sitemap: ${CANONICAL_PUBLIC_ORIGIN}/sitemap.xml`,
     '',
     'Crawl-delay: 1',
   ].join('\n');

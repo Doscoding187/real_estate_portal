@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>https://propertylistifysa.co.za/sitemap-listings.xml</loc>
+    <loc>https://www.propertylistifysa.co.za/sitemap-listings.xml</loc>
   </sitemap>
   <sitemap>
-    <loc>https://propertylistifysa.co.za/sitemap-areas.xml</loc>
+    <loc>https://www.propertylistifysa.co.za/sitemap-areas.xml</loc>
   </sitemap>
   <sitemap>
-    <loc>https://propertylistifysa.co.za/sitemap-developments.xml</loc>
+    <loc>https://www.propertylistifysa.co.za/sitemap-developments.xml</loc>
   </sitemap>
   <sitemap>
-    <loc>https://propertylistifysa.co.za/sitemap-static.xml</loc>
+    <loc>https://www.propertylistifysa.co.za/sitemap-static.xml</loc>
   </sitemap>
 </sitemapindex>
