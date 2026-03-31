@@ -5,6 +5,6 @@ Disallow: /dashboard
 Disallow: /api/
 Disallow: /auth/
 
-Sitemap: https://propertylistifysa.co.za/sitemap.xml
+Sitemap: https://www.propertylistifysa.co.za/sitemap.xml
 
 Crawl-delay: 1

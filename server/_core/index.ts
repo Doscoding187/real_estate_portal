@@ -157,6 +157,20 @@ async function startServer() {
     next();
   });
 
+  // Force WWW redirect for the main production domain.
+  app.use((req, res, next) => {
+    const forwardedHost = String(req.headers['x-forwarded-host'] || '')
+      .split(',')[0]
+      .trim();
+    const host = (forwardedHost || req.get('host') || '').split(':')[0];
+
+    if (host === 'propertylistifysa.co.za') {
+      return res.redirect(301, `https://www.propertylistifysa.co.za${req.originalUrl}`);
+    }
+
+    next();
+  });
+
   app.use(domainRoutingMiddleware);
   app.use(customDomainMiddleware);
 
