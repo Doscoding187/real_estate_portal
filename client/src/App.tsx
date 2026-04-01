@@ -10,7 +10,6 @@ import { BrandingProvider } from './contexts/BrandingContext';
 import { ComparisonProvider } from './contexts/ComparisonContext';
 import { ComparisonBar } from './components/ComparisonBar';
 import { GuestActivityProvider } from './contexts/GuestActivityContext';
-import { GuestUserBanner } from './components/GuestUserBanner';
 import { useGuestDataMigration } from './hooks/useGuestDataMigration';
 import { useKeyboardMode } from './hooks/useKeyboardMode';
 import { SkipToContent } from './components/ui/SkipToContent';
@@ -59,7 +58,6 @@ const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
-const ExploreDiscovery = lazy(() => import('./pages/ExploreDiscovery'));
 const ExploreMap = lazy(() => import('./pages/ExploreMap'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
@@ -67,6 +65,7 @@ const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
 const ServicesLocalizedCategoryPage = lazy(
@@ -105,7 +104,6 @@ const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDeta
 const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
-const ExploreComponentDemo = lazy(() => import('./pages/ExploreComponentDemo'));
 const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 
 // Import Developer Dashboard Pages
@@ -365,11 +363,12 @@ function Router() {
           <Route path="/explore/upload/video">
             <Redirect to="/explore/upload" />
           </Route>
-          <Route path="/explore/component-demo" component={ExploreComponentDemo} />
           <Route path="/map-preview-demo" component={MapPreviewDemo} />
 
           {/* New Explore Pages */}
-          <Route path="/explore/discovery" component={ExploreDiscovery} />
+          <Route path="/explore/discovery">
+            <Redirect to="/explore/feed" />
+          </Route>
           <Route path="/explore/map" component={ExploreMap} />
 
           {/* Legacy Feed */}
@@ -423,6 +422,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/saved-search/manage" component={SavedSearchManagePage} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
           <Route path="/referral-upload/:token">
             <Redirect to="/distribution-network/apply" />
@@ -595,7 +595,6 @@ function App() {
                 <Toaster />
                 <Router />
                 <ComparisonBar />
-                <GuestUserBanner />
               </TooltipProvider>
             </ComparisonProvider>
           </GuestActivityProvider>

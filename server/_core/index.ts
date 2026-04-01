@@ -22,6 +22,8 @@ import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter'
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
+import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
+import sitemapRouter from '../routes/sitemap';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -156,9 +158,24 @@ async function startServer() {
     next();
   });
 
+  // Force WWW redirect for the main production domain.
+  app.use((req, res, next) => {
+    const forwardedHost = String(req.headers['x-forwarded-host'] || '')
+      .split(',')[0]
+      .trim();
+    const host = (forwardedHost || req.get('host') || '').split(':')[0];
+
+    if (host === 'propertylistifysa.co.za') {
+      return res.redirect(301, `https://www.propertylistifysa.co.za${req.originalUrl}`);
+    }
+
+    next();
+  });
+
   app.use(domainRoutingMiddleware);
   app.use(customDomainMiddleware);
 
+  app.use('/', sitemapRouter);
   registerAuthRoutes(app);
   registerHealthEndpoint(app);
   registerVersionEndpoint(app);
@@ -222,6 +239,9 @@ async function startServer() {
 
   console.log('[Server] Optional routers loaded');
 
+  const savedSearchSchedulerStatus = await savedSearchDeliveryScheduler.start();
+  console.log('[SavedSearchScheduler] Startup status', savedSearchSchedulerStatus);
+
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Using Vite development server');
     await setupVite(app, server);
@@ -248,12 +268,14 @@ startServer().catch(console.error);
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...');
+  await savedSearchDeliveryScheduler.stop();
   await shutdownCache();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down...');
+  await savedSearchDeliveryScheduler.stop();
   await shutdownCache();
   process.exit(0);
 });

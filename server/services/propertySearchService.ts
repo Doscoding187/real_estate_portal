@@ -5,10 +5,28 @@
  */
 
 import { db } from '../db';
-import { properties, propertyImages, developments, agents, agencies, suburbs } from '../../drizzle/schema';
+import {
+  properties,
+  propertyImages,
+  listingMedia,
+  listings,
+  developments,
+  developers,
+  developerBrandProfiles,
+  agents,
+  agencies,
+  suburbs,
+  users,
+} from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
-import type { PropertyFilters, SortOption, SearchResults, Property } from '../../shared/types';
+import type {
+  PropertyFilters,
+  SortOption,
+  SearchResults,
+  Property,
+  SearchCardResult,
+} from '../../shared/types';
 import { locationResolver, ResolvedLocation } from './locationResolverService';
 
 // Cache key prefix for property searches
@@ -103,6 +121,86 @@ function deriveLoadSheddingSolutions(details: Record<string, any>): LoadShedding
   return Array.from(solutions);
 }
 
+function buildPropertySearchCardResult(property: any): SearchCardResult {
+  const development = property.development
+    ? {
+        id: property.development.id ?? null,
+        name: property.development.name ?? null,
+        slug: property.development.slug ?? null,
+      }
+    : undefined;
+  const developerBrand = property.developerBrand
+    ? {
+        id: property.developerBrand.id ?? null,
+        brandName: property.developerBrand.brandName,
+        slug: property.developerBrand.slug ?? null,
+        logoUrl: property.developerBrand.logoUrl ?? null,
+        publicContactEmail: property.developerBrand.publicContactEmail ?? null,
+        publicContactPhone: property.developerBrand.publicContactPhone ?? null,
+      }
+    : undefined;
+
+  const isPrivate = property.listerType === 'private' || !property.agent?.name;
+  const identityName = isPrivate ? property.agent?.name || 'Private Seller' : property.agent?.name;
+  const identityRole: SearchCardResult['contactRole'] = isPrivate ? 'private' : 'agent';
+  const location = [property.suburb, property.city, property.province].filter(Boolean).join(', ');
+  const image = String(property.mainImage || property.images?.[0]?.url || '').trim();
+  const propertyId = Number(property.id || 0);
+  const agentId = Number(property.agent?.id || 0);
+  const agencyId = Number(property.agent?.agencyId || 0);
+
+  return {
+    kind: 'property',
+    id: String(property.id),
+    href: `/property/${property.id}`,
+    title: String(property.title || '').trim(),
+    location,
+    address: property.address || undefined,
+    city: String(property.city || '').trim(),
+    suburb: String(property.suburb || property.city || '').trim(),
+    province: String(property.province || '').trim(),
+    price: Number(property.price || 0),
+    image,
+    images: Array.isArray(property.images) ? property.images : [],
+    description: property.description || undefined,
+    bedrooms: property.bedrooms || undefined,
+    bathrooms: property.bathrooms || undefined,
+    area: property.floorSize || property.area || undefined,
+    yardSize: property.erfSize || property.yardSize || undefined,
+    propertyType: property.propertyType,
+    listingType: property.listingType,
+    listingSource: 'manual',
+    listerType: property.listerType,
+    contactRole: identityRole,
+    identity: {
+      role: identityRole,
+      name: identityName,
+      avatarUrl: property.agent?.image || null,
+      phone: property.agent?.phone || null,
+      whatsapp: property.agent?.whatsapp || property.agent?.phone || null,
+      email: property.agent?.email || null,
+      agentId: Number.isFinite(agentId) && agentId > 0 ? agentId : undefined,
+      agencyId: Number.isFinite(agencyId) && agencyId > 0 ? agencyId : undefined,
+    },
+    development,
+    developerBrand,
+    highlights: Array.isArray(property.highlights) ? property.highlights : [],
+    badges: Array.isArray(property.badges) ? property.badges : [],
+    imageCount: Array.isArray(property.images) ? property.images.length : 0,
+    videoCount: Number(property.videoCount || 0),
+    transactionType: property.transactionType || property.listingType,
+    listedDate:
+      property.listedDate instanceof Date ? property.listedDate : new Date(property.listedDate || 0),
+    latitude: Number.isFinite(Number(property.latitude)) ? Number(property.latitude) : undefined,
+    longitude: Number.isFinite(Number(property.longitude)) ? Number(property.longitude) : undefined,
+    propertyId: Number.isFinite(propertyId) && propertyId > 0 ? propertyId : undefined,
+    developmentId:
+      Number.isFinite(Number(property.developmentId)) && Number(property.developmentId) > 0
+        ? Number(property.developmentId)
+        : undefined,
+  };
+}
+
 export class PropertySearchService {
   /**
    * Search properties with filters, sorting, and pagination
@@ -129,6 +227,15 @@ export class PropertySearchService {
               ? p.listedDate
               : p?.listedDate
                 ? new Date(p.listedDate)
+                : new Date(0),
+        })),
+        cards: (cached.cards || []).map((card: any) => ({
+          ...card,
+          listedDate:
+            card?.listedDate instanceof Date
+              ? card.listedDate
+              : card?.listedDate
+                ? new Date(card.listedDate)
                 : new Date(0),
         })),
       };
@@ -249,6 +356,12 @@ export class PropertySearchService {
         listingType: properties.listingType,
         bedrooms: properties.bedrooms,
         bathrooms: properties.bathrooms,
+        developmentId: properties.developmentId,
+        developmentName: developments.name,
+        developmentSlug: developments.slug,
+        developerId: developments.developerId,
+        developerName: developers.name,
+        developerLogo: developers.logo,
         erfSize: sql<number>`CAST(${properties.area} AS SIGNED)`,
         floorSize: sql<number>`CAST(${properties.area} AS SIGNED)`,
         titleType: sql<'freehold' | 'sectional'>`'freehold'`, // Default until migration
@@ -268,6 +381,8 @@ export class PropertySearchService {
         highlights: properties.amenities,
         amenities: properties.amenities,
         mainImage: properties.mainImage,
+        sourceListingId: properties.sourceListingId,
+        ownerId: properties.ownerId,
         propertySettings: properties.propertySettings,
         agentDisplayName: agents.displayName,
         agentFirstName: agents.firstName,
@@ -278,11 +393,21 @@ export class PropertySearchService {
         agentProfileImage: agents.profileImage,
         agencyName: agencies.name,
         agentId: properties.agentId,
+        developerBrandProfileId: sql<number>`COALESCE(${properties.developerBrandProfileId}, ${developments.developerBrandProfileId})`,
+        builderBrandName: developerBrandProfiles.brandName,
+        builderLogoUrl: developerBrandProfiles.logoUrl,
+        builderSlug: developerBrandProfiles.slug,
+        builderPublicContactEmail: developerBrandProfiles.publicContactEmail,
       })
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
+      .leftJoin(developers, eq(developments.developerId, developers.id))
       .leftJoin(agents, eq(properties.agentId, agents.id))
       .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+      .leftJoin(
+        developerBrandProfiles,
+        sql`${developerBrandProfiles.id} = COALESCE(${properties.developerBrandProfileId}, ${developments.developerBrandProfileId})`,
+      )
       .where(and(...conditions))
       .orderBy(orderBy)
       .limit(pageSize)
@@ -311,6 +436,71 @@ export class PropertySearchService {
         imagesByProperty.set(propId, []);
       }
       imagesByProperty.get(propId)!.push(img);
+    });
+
+    const sourceListingIds: number[] = Array.from(
+      new Set(
+        results
+          .map((prop: any) => Number(prop.sourceListingId || 0))
+          .filter((listingId: number): listingId is number => Number.isFinite(listingId) && listingId > 0),
+      ),
+    );
+    const sourceListingImages =
+      sourceListingIds.length > 0
+        ? await db
+            .select({
+              listingId: listingMedia.listingId,
+              imageUrl: sql<string>`COALESCE(${listingMedia.processedUrl}, ${listingMedia.originalUrl})`,
+              isPrimary: listingMedia.isPrimary,
+              displayOrder: listingMedia.displayOrder,
+            })
+            .from(listingMedia)
+            .where(and(inArray(listingMedia.listingId, sourceListingIds), eq(listingMedia.mediaType, 'image')))
+            .orderBy(desc(listingMedia.isPrimary), asc(listingMedia.displayOrder))
+        : [];
+
+    const sourceListingIdentities =
+      sourceListingIds.length > 0
+        ? await db
+            .select({
+              listingId: listings.id,
+              agentDisplayName: agents.displayName,
+              agentFirstName: agents.firstName,
+              agentLastName: agents.lastName,
+              agentPhone: agents.phone,
+              agentWhatsapp: agents.whatsapp,
+              agentEmail: agents.email,
+              agentProfileImage: agents.profileImage,
+              agencyName: agencies.name,
+              agentId: listings.agentId,
+              ownerName: users.name,
+              ownerFirstName: users.firstName,
+              ownerLastName: users.lastName,
+              ownerPhone: users.phone,
+              ownerEmail: users.email,
+            })
+            .from(listings)
+            .leftJoin(agents, eq(listings.agentId, agents.id))
+            .leftJoin(agencies, eq(listings.agencyId, agencies.id))
+            .leftJoin(users, eq(listings.ownerId, users.id))
+            .where(inArray(listings.id, sourceListingIds))
+        : [];
+
+    const imagesBySourceListing = new Map<number, typeof sourceListingImages>();
+    sourceListingImages.forEach((img: any) => {
+      const listingId = Number(img.listingId);
+      if (!imagesBySourceListing.has(listingId)) {
+        imagesBySourceListing.set(listingId, []);
+      }
+      imagesBySourceListing.get(listingId)!.push(img);
+    });
+
+    const identityBySourceListing = new Map<number, (typeof sourceListingIdentities)[number]>();
+    sourceListingIdentities.forEach((identity: any) => {
+      const listingId = Number(identity.listingId || 0);
+      if (listingId > 0) {
+        identityBySourceListing.set(listingId, identity);
+      }
     });
 
     // Transform results to Property type
@@ -364,14 +554,69 @@ export class PropertySearchService {
         url: img.imageUrl,
         thumbnailUrl: img.imageUrl,
       }));
+      if (primaryImage.length === 0 && Number(prop.sourceListingId || 0) > 0) {
+        const sourceImages = (imagesBySourceListing.get(Number(prop.sourceListingId)) || []).map(
+          (img: any) => ({
+            url: img.imageUrl,
+            thumbnailUrl: img.imageUrl,
+          }),
+        );
+        primaryImage.push(...sourceImages);
+      }
       if (primaryImage.length === 0 && prop.mainImage) {
         primaryImage.push({ url: prop.mainImage, thumbnailUrl: prop.mainImage });
       }
 
+      const sourceListingIdentity = identityBySourceListing.get(Number(prop.sourceListingId || 0));
+
       const agentName = (
         String(prop.agentDisplayName || '').trim() ||
-        [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim()
+        [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim() ||
+        String(sourceListingIdentity?.agentDisplayName || '').trim() ||
+        [sourceListingIdentity?.agentFirstName, sourceListingIdentity?.agentLastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
       ).trim();
+      const ownerName = (
+        String(sourceListingIdentity?.ownerName || '').trim() ||
+        [sourceListingIdentity?.ownerFirstName, sourceListingIdentity?.ownerLastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
+      ).trim();
+      const developerName = String(prop.developerName || '').trim();
+      const developerLogo = prop.developerLogo || undefined;
+      const builderName = String(prop.builderBrandName || '').trim() || developerName;
+      const builderLogo = prop.builderLogoUrl || developerLogo;
+
+      const hasAgentIdentity = !!agentName;
+      const storedBadges = Array.isArray(details.badges) ? details.badges : [];
+
+      const developmentId = Number(prop.developmentId || 0);
+      const developmentName =
+        String(prop.developmentName || '').trim() || String(details.developmentName || '').trim();
+      const developmentSlug = String(prop.developmentSlug || '').trim() || undefined;
+      const development =
+        (Number.isFinite(developmentId) && developmentId > 0) || developmentName
+          ? {
+              id: Number.isFinite(developmentId) && developmentId > 0 ? developmentId : null,
+              name: developmentName || null,
+              slug: developmentSlug || null,
+            }
+          : undefined;
+
+      const developerBrandProfileId = Number(prop.developerBrandProfileId || 0);
+      const developerBrand =
+        Number.isFinite(developerBrandProfileId) && developerBrandProfileId > 0
+          ? {
+              id: developerBrandProfileId,
+              brandName: builderName || 'Developer',
+              slug: String(prop.builderSlug || '').trim() || slugifyText(builderName || 'developer'),
+              logoUrl: prop.builderLogoUrl || null,
+              publicContactEmail: String(prop.builderPublicContactEmail || '').trim() || null,
+            }
+          : undefined;
 
       const titleType: Property['titleType'] =
         String(details.propertySetting || details.ownershipType || '').toLowerCase().includes(
@@ -406,15 +651,39 @@ export class PropertySearchService {
         videoCount: Number(prop.videoCount || 0),
         status: this.mapStatus(prop.status),
         listedDate: new Date(prop.listedDate),
-        agent: {
-          id: String(prop.agentId || 0),
-          name: agentName,
-          agency: String(prop.agencyName || ''),
-          phone: String(prop.agentPhone || ''),
-          whatsapp: String(prop.agentWhatsapp || ''),
-          email: String(prop.agentEmail || ''),
-          image: prop.agentProfileImage || undefined,
-        },
+        listingSource: 'manual',
+        listerType: hasAgentIdentity
+          ? ((prop.agencyName || sourceListingIdentity?.agencyName) ? 'agency' : 'agent')
+          : 'private',
+        agent: hasAgentIdentity
+          ? {
+              id: String(prop.agentId || sourceListingIdentity?.agentId || 0),
+              name: agentName,
+              agency: String(prop.agencyName || sourceListingIdentity?.agencyName || ''),
+              phone: String(prop.agentPhone || sourceListingIdentity?.agentPhone || ''),
+              whatsapp: String(prop.agentWhatsapp || sourceListingIdentity?.agentWhatsapp || ''),
+              email: String(prop.agentEmail || sourceListingIdentity?.agentEmail || ''),
+              image:
+                prop.agentProfileImage || sourceListingIdentity?.agentProfileImage || undefined,
+            }
+          : ownerName
+            ? {
+                id: String(prop.ownerId || 0),
+                name: ownerName,
+                agency: '',
+                phone: String(sourceListingIdentity?.ownerPhone || ''),
+                whatsapp: '',
+                email: String(sourceListingIdentity?.ownerEmail || ''),
+                image: undefined,
+              }
+            : undefined,
+        developerBrand,
+        development,
+        developmentId: Number.isFinite(developmentId) && developmentId > 0 ? developmentId : undefined,
+        badges: uniqueStrings([
+          ...storedBadges.map((badge: any) => String(badge ?? '').trim()),
+          development?.name ? `Part of ${development.name}` : '',
+        ]),
         latitude: prop.latitude || 0,
         longitude: prop.longitude || 0,
         highlights,
@@ -461,6 +730,7 @@ export class PropertySearchService {
 
     const searchResults: SearchResults = {
       properties: transformedProperties,
+      cards: transformedProperties.map(buildPropertySearchCardResult),
       total,
       page,
       pageSize,

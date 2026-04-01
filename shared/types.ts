@@ -498,10 +498,14 @@ export interface BulkCreateUnitsInput {
 export type InteractionType =
   | 'impression'
   | 'view'
+  | 'complete'
+  | 'like'
   | 'skip'
   | 'save'
   | 'share'
+  | 'click_cta'
   | 'contact'
+  | 'comment'
   | 'whatsapp'
   | 'book_viewing';
 
@@ -735,6 +739,8 @@ export interface Property {
   province: string;
   propertyType: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
   listingType: 'sale' | 'rent';
+  listingSource?: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
   bedrooms?: number;
   bathrooms?: number;
   erfSize?: number; // in m²
@@ -845,6 +851,7 @@ export type ViewMode = 'list' | 'grid' | 'map';
 // Search results
 export interface SearchResults {
   properties: Property[];
+  cards?: SearchCardResult[];
   total: number;
   page: number;
   pageSize: number;
@@ -884,16 +891,138 @@ export interface SearchResults {
   };
 }
 
+export interface DevelopmentDerivedListing {
+  id: string;
+  unitTypeId: string;
+  developmentId: number;
+  rankingScore?: number;
+  href?: string;
+  title: string;
+  price: number;
+  priceTo?: number;
+  city: string;
+  suburb: string;
+  province: string;
+  propertyType: Property['propertyType'];
+  listingType: Property['listingType'];
+  transactionType: 'for_sale' | 'for_rent' | 'auction';
+  listingSource: 'development';
+  bedrooms?: number;
+  bathrooms?: number;
+  floorSize?: number;
+  erfSize?: number;
+  description?: string;
+  highlights?: string[];
+  image?: string | null;
+  images?: ImageUrls[];
+  badges?: string[];
+  availableUnits?: number;
+  completionDate?: string | null;
+  listedDate: Date;
+  latitude?: number;
+  longitude?: number;
+  development: {
+    id: number;
+    name: string;
+    slug?: string | null;
+    status?: string | null;
+  };
+  developerBrand: {
+    id?: number | null;
+    brandName: string;
+    slug?: string | null;
+    logoUrl?: string | null;
+    publicContactEmail?: string | null;
+    publicContactPhone?: string | null;
+  };
+}
+
+export interface DevelopmentDerivedListingSearchResults {
+  items: DevelopmentDerivedListing[];
+  cards?: SearchCardResult[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface SearchCardDevelopmentRef {
+  id?: number | string | null;
+  name?: string | null;
+  slug?: string | null;
+}
+
+export interface SearchCardDeveloperBrandRef {
+  id?: number | null;
+  brandName: string;
+  slug?: string | null;
+  logoUrl?: string | null;
+  publicContactEmail?: string | null;
+  publicContactPhone?: string | null;
+}
+
+export interface SearchCardIdentity {
+  role: 'agent' | 'developer' | 'private';
+  name: string;
+  avatarUrl?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  agentId?: number;
+  agencyId?: number;
+  developerBrandProfileId?: number;
+}
+
+export interface SearchCardResult {
+  kind: 'property' | 'development';
+  id: string;
+  href: string;
+  title: string;
+  location: string;
+  address?: string;
+  city: string;
+  suburb: string;
+  province: string;
+  price: number;
+  image: string;
+  images: ImageUrls[];
+  description?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  yardSize?: number;
+  propertyType: Property['propertyType'];
+  listingType: Property['listingType'];
+  listingSource: 'manual' | 'development';
+  listerType?: 'agent' | 'agency' | 'private';
+  contactRole: SearchCardIdentity['role'];
+  identity: SearchCardIdentity;
+  development?: SearchCardDevelopmentRef;
+  developerBrand?: SearchCardDeveloperBrandRef;
+  highlights: string[];
+  badges?: string[];
+  imageCount?: number;
+  videoCount?: number;
+  transactionType?: string;
+  listedDate: Date;
+  latitude?: number;
+  longitude?: number;
+  propertyId?: number;
+  developmentId?: number;
+}
+
 // Saved search
 export interface SavedSearch {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   name: string;
-  filters: PropertyFilters;
-  notificationMethod: 'email' | 'whatsapp' | 'both' | 'none';
-  notificationFrequency: 'instant' | 'daily' | 'weekly';
-  createdAt: Date;
-  lastNotified?: Date;
+  criteria: Record<string, unknown>;
+  notificationFrequency: 'instant' | 'daily' | 'weekly' | 'never';
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastNotifiedAt?: string | null;
 }
 
 // Quick filter presets for SA market

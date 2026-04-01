@@ -9,6 +9,8 @@
 
 import { useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
+import { getFeedItems } from '@/lib/exploreFeed';
+import { isExploreMockMode } from '@/lib/exploreMockMode';
 
 export interface TrendingVideo {
   id: number;
@@ -139,59 +141,63 @@ const placeholderTrendingVideos: TrendingVideo[] = [
 
 export function useTrendingVideos(options: UseTrendingVideosOptions = {}): UseTrendingVideosReturn {
   const { categoryId, limit = 12 } = options;
+  const useMockData = isExploreMockMode();
+  const discoveryCategoryMap = [
+    undefined,
+    'property',
+    'service',
+    'insight',
+    'insight',
+    'service',
+  ] as const;
+  const category = categoryId !== undefined ? discoveryCategoryMap[categoryId] : undefined;
 
   // Fetch trending videos from API
-  const feedQuery = trpc.explore.getFeed.useQuery({
-    feedType: 'recommended',
-    limit: limit,
-    offset: 0,
+  const feedQuery = trpc.discovery.getFeed.useQuery({
+    mode: 'home',
+    contentType: 'video',
+    category,
+    limit,
+  }, {
+    enabled: !useMockData,
   });
 
   // Process and filter videos
   const videos = useMemo(() => {
-    const feedData = feedQuery.data;
+    if (useMockData) {
+      let placeholders = [...placeholderTrendingVideos];
 
-    // Check if we have valid data
-    if (Array.isArray(feedData) && feedData.length > 0) {
-      // Filter to only video content
-      let videoItems = feedData.filter((item: any) => item.contentType === 'video');
-
-      // Apply category filter if provided
       if (categoryId) {
-        videoItems = videoItems.filter((item: any) => item.categoryId === categoryId);
+        placeholders = placeholders.slice(0, Math.max(3, Math.floor(placeholders.length / 2)));
       }
 
-      // Map to TrendingVideo format
+      return placeholders.slice(0, limit);
+    }
+
+    const videoItems = getFeedItems(feedQuery.data);
+
+    if (videoItems.length > 0) {
       return videoItems.slice(0, limit).map((item: any) => ({
         id: item.id,
         title: item.title || 'Property Video',
         thumbnailUrl: item.thumbnailUrl || item.imageUrl || '',
-        videoUrl: item.videoUrl,
-        duration: item.duration || 30,
-        views: item.views || 0,
-        saves: item.saves || 0,
-        creatorName: item.creatorName || 'Agent',
-        creatorAvatar: item.creatorAvatar,
-        categoryId: item.categoryId,
+        videoUrl: item.mediaUrl,
+        duration: item.durationSec || item.duration || 30,
+        views: item.views || item.viewCount || item.stats?.views || 0,
+        saves: item.saves || item.saveCount || item.stats?.saves || 0,
+        creatorName: item.creatorName || item.actor?.displayName || 'Agent',
+        creatorAvatar: item.creatorAvatar || item.actor?.avatarUrl,
+        categoryId: categoryId,
         propertyId: item.propertyId,
         createdAt: item.createdAt,
       }));
     }
 
-    // Fall back to placeholder data
-    let placeholders = [...placeholderTrendingVideos];
-
-    // Simulate category filtering on placeholders
-    if (categoryId) {
-      // For demo, just return fewer items to simulate filtering
-      placeholders = placeholders.slice(0, Math.max(3, Math.floor(placeholders.length / 2)));
-    }
-
-    return placeholders.slice(0, limit);
-  }, [feedQuery.data, categoryId, limit]);
+    return [];
+  }, [feedQuery.data, categoryId, limit, useMockData]);
 
   // Determine if empty (no videos after filtering)
-  const isEmpty = !feedQuery.isLoading && videos.length === 0;
+  const isEmpty = !feedQuery.isLoading && !feedQuery.error && videos.length === 0;
 
   return {
     videos,

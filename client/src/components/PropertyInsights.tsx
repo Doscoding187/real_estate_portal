@@ -3,7 +3,7 @@ import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Map, BarChart3, Activity, TrendingUp, ArrowRight, Building2, MapPin } from 'lucide-react';
+import { Map, BarChart3, Activity, TrendingUp, Building2, MapPin } from 'lucide-react';
 
 type Level = 'national' | 'province' | 'city';
 
@@ -97,7 +97,7 @@ function InsightCard({
   return (
     <div
       className={cn(
-        'flex-none w-[230px] sm:w-[245px] lg:w-auto rounded-xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm',
+        'flex-none w-[80vw] max-w-[17rem] sm:w-[245px] lg:w-auto rounded-xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm',
         t.bg,
         t.border,
         className,
@@ -217,10 +217,11 @@ export function PropertyInsights({
   }, [topChildren]);
 
   const totalBucketCount = priceBuckets.reduce((acc, curr) => acc + curr.count, 0) || 1;
+  const compactTopChildren = topChildren.slice(0, 4);
 
   if (insightsQuery.isLoading) {
     return (
-      <div className="py-16 bg-white">
+      <div className="py-10 md:py-16 bg-white">
         <div className="container">
           <div className="h-64 bg-slate-50 rounded-xl animate-pulse w-full" />
         </div>
@@ -228,25 +229,29 @@ export function PropertyInsights({
     );
   }
 
-    return (
-    <div className="py-16 bg-white">
+  return (
+    <div className="py-10 md:py-16 bg-white">
       <div className="container">
-        <div className="w-full space-y-8">
+        <div className="w-full space-y-6 md:space-y-8">
           {/* Header */}
           <div>
-            <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
               Property Price Insights in{' '}
               {effectiveLevel === 'national' ? 'South Africa' : contextLabel || 'this market'}
             </h2>
             <p className="text-slate-500 mt-2 max-w-3xl leading-relaxed text-xs md:text-sm">
-              Get accurate property price insights with city-wise trends, median rates, and
-              micro-market comparisons. Make smarter investment choices backed by real-time data.
+              Track pricing trends, median rates, and local demand signals to make smarter
+              property decisions.
             </p>
           </div>
 
-          <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full space-y-8">
+          <Tabs
+            value={activeTabId}
+            onValueChange={setActiveTabId}
+            className="w-full space-y-6 md:space-y-8"
+          >
             {/* Left Aligned Tabs to match Header Alignment standard */}
-            <div className="flex justify-start overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex justify-start overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
               <TabsList className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
                 {displayTabs.map(tab => (
                   <TabsTrigger
@@ -266,9 +271,9 @@ export function PropertyInsights({
             {/* Content Row */}
             <TabsContent
               value={activeTabId}
-              className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-500"
+              className="relative mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-500"
             >
-              <div className="flex overflow-x-auto pb-6 gap-3 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide lg:grid lg:grid-cols-4 lg:gap-3 lg:overflow-visible lg:items-stretch">
+              <div className="flex overflow-x-auto pb-4 md:pb-6 gap-3 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide lg:grid lg:grid-cols-4 lg:gap-3 lg:overflow-visible lg:items-stretch">
                 {/* 1. AVERAGE PRICE MAP (Blue) */}
                 <InsightCard
                   title="Average Price Map"
@@ -293,7 +298,9 @@ export function PropertyInsights({
                     {/* Map Decoration */}
                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-400 to-transparent" />
                     <MapPin className="w-8 h-8 text-blue-500 mb-1.5 group-hover:scale-110 transition-transform" />
-                    <span className="text-[11px] font-bold text-blue-600">Interactive Map View</span>
+                    <span className="text-[11px] font-bold text-blue-600">
+                      Interactive Map View
+                    </span>
                   </div>
 
                   <div className="mt-4">
@@ -335,7 +342,12 @@ export function PropertyInsights({
                     {priceBuckets.map((bucket, idx) => {
                       const percent = (bucket.count / totalBucketCount) * 100;
                       return (
-                        <div key={idx} className="flex items-center gap-1.5 text-[11px]">
+                        <div
+                          key={idx}
+                          className={`items-center gap-1.5 text-[11px] ${
+                            idx > 3 ? 'hidden sm:flex' : 'flex'
+                          }`}
+                        >
                           <span className="w-14 text-slate-500 shrink-0 text-[10px]">
                             {bucket.label}
                           </span>
@@ -398,7 +410,7 @@ export function PropertyInsights({
                       </span>
                     </div>
 
-                    <div className="bg-white p-2.5 rounded-lg border border-emerald-100 flex items-center justify-between shadow-sm">
+                    <div className="hidden sm:flex bg-white p-2.5 rounded-lg border border-emerald-100 items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
                         <div className="bg-emerald-100 p-1 rounded text-emerald-600">
                           <Building2 size={13} />
@@ -426,7 +438,7 @@ export function PropertyInsights({
 
                   <div className="flex-1 bg-white rounded-lg border border-purple-100 overflow-hidden shadow-sm">
                     <div className="divide-y divide-purple-50">
-                      {topChildren.slice(0, 5).map(child => (
+                      {compactTopChildren.map(child => (
                         <div
                           key={child.id}
                           className="p-2.5 flex items-center justify-between hover:bg-purple-50/50 transition-colors cursor-pointer"
@@ -440,16 +452,19 @@ export function PropertyInsights({
                           <span className="font-bold text-xs text-purple-900">
                             {formatMoneyZAR(child.medianPrice)}
                           </span>
-                          <span className="text-[11px] font-medium text-slate-500">{child.name}</span>
+                          <span className="text-[11px] font-medium text-slate-500">
+                            {child.name}
+                          </span>
                         </div>
                       ))}
-                      {topChildren.length === 0 && (
+                      {compactTopChildren.length === 0 && (
                         <div className="p-4 text-center text-xs text-slate-400">-</div>
                       )}
                     </div>
                   </div>
                 </InsightCard>
               </div>
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/90 to-transparent lg:hidden" />
             </TabsContent>
           </Tabs>
         </div>
@@ -457,10 +472,3 @@ export function PropertyInsights({
     </div>
   );
 }
-
-
-
-
-
-
-
