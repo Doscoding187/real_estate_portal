@@ -1,5 +1,5 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { UNAUTHED_ERR_MSG } from '@shared/const';
+import { UNAUTHED_ERR_MSG } from '../../../shared/const';
 import { TRPCClientError } from '@trpc/client';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
