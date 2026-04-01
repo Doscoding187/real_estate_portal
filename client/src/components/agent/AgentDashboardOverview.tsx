@@ -1,10 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { apiFetch } from '@/lib/api';
 import {
   ArrowRight,
   Bell,
@@ -16,7 +17,9 @@ import {
   CircleDollarSign,
   FileText,
   Home,
+  Lock,
   MapPin,
+  Sparkles,
   ShieldAlert,
 } from 'lucide-react';
 
@@ -70,6 +73,41 @@ type NotificationItem = {
   title: string;
   content: string;
   createdAt: string | Date;
+};
+
+type AgentDashboardEntitlements = {
+  trialExpired: boolean;
+  canPublishListings: boolean;
+  canReceiveLeads: boolean;
+  canAppearInDirectory: boolean;
+  trialStatusDetail: {
+    status: 'active' | 'expired' | 'none';
+    trialEndsAt: string | null;
+    daysRemaining: number | null;
+  };
+  featureFlags: {
+    maxActiveListings: number;
+    hasAiInsights: boolean;
+    hasAreaIntelligence: boolean;
+    hasCommissionTracking: boolean;
+    hasRevenueDashboard: boolean;
+    hasTeamDashboard: boolean;
+    hasRecruitmentFunnel: boolean;
+    hasBenchmarking: boolean;
+    hasPriorityExposure: boolean;
+  };
+};
+
+type AgentDashboardOnboardingStatus = {
+  packageSelected: boolean;
+  onboardingStep: number;
+  onboardingComplete: boolean;
+  fullFeaturesUnlocked: boolean;
+  subscriptionTier: string;
+  subscriptionStatus: string;
+  profileCompletionScore: number;
+  profileCompletionFlags: string[];
+  entitlements: AgentDashboardEntitlements;
 };
 
 const PIPELINE_CONFIG: Array<{
@@ -341,12 +379,50 @@ function CardShell({ className, children }: { className?: string; children: Reac
   );
 }
 
+function formatSetupFlag(flag: string): string {
+  return flag
+    .replace(/^missing_/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function FeatureLockOverlay({
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[15px] bg-white/88 p-6 backdrop-blur-[2px]">
+      <div className="max-w-md text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
+          <Lock className="h-5 w-5" />
+        </div>
+        <h3 className="mt-4 text-lg font-semibold tracking-[-0.03em] text-slate-950">{title}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+        <Button className="mt-5 rounded-full px-5" onClick={onAction}>
+          {actionLabel}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function AgentDashboardOverview() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  );
+  const [onboardingStatus, setOnboardingStatus] = useState<AgentDashboardOnboardingStatus | null>(
+    null,
   );
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
@@ -366,9 +442,28 @@ export function AgentDashboardOverview() {
     { retry: false },
   );
 
-  const { data: onboarding } = trpc.agent.getMyProfileOnboarding.useQuery(undefined, {
-    retry: false,
-  });
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOnboardingStatus = async () => {
+      try {
+        const result = await apiFetch<AgentDashboardOnboardingStatus>('/agent/onboarding-status');
+        if (!cancelled) {
+          setOnboardingStatus(result);
+        }
+      } catch {
+        if (!cancelled) {
+          setOnboardingStatus(null);
+        }
+      }
+    };
+
+    void loadOnboardingStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const calendarRange = useMemo(() => {
     return {
@@ -516,9 +611,28 @@ export function AgentDashboardOverview() {
 
   const additionalPipelineLeadCount = Math.max(activeLeads - pipelineLeadPreview.length, 0);
 
-  const profileCompletionScore = onboarding?.agent?.profileCompletionScore ?? 0;
-  const profileSetupFlags = onboarding?.agent?.profileCompletionFlags ?? [];
+  const entitlements = onboardingStatus?.entitlements;
+  const profileCompletionScore = onboardingStatus?.profileCompletionScore ?? 0;
+  const profileSetupFlags = onboardingStatus?.profileCompletionFlags ?? [];
   const setupItemsRemaining = profileSetupFlags.length;
+  const subscriptionTier = onboardingStatus?.subscriptionTier ?? 'free';
+  const trialDaysRemaining = entitlements?.trialStatusDetail?.daysRemaining;
+  const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
+  const needsProfileCompletion = !fullFeaturesUnlocked;
+  const hasRevenueDashboard = entitlements?.featureFlags?.hasRevenueDashboard ?? false;
+  const hasAreaIntelligence = entitlements?.featureFlags?.hasAreaIntelligence ?? false;
+  const hasCommissionTracking = entitlements?.featureFlags?.hasCommissionTracking ?? false;
+  const canPublishListings = entitlements?.canPublishListings ?? false;
+  const trialExpired = entitlements?.trialExpired ?? false;
+  const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
+  const lockedCapabilities = [
+    !hasRevenueDashboard ? 'Revenue dashboard' : null,
+    !hasAreaIntelligence ? 'Area intelligence' : null,
+    !hasCommissionTracking ? 'Commission tracking' : null,
+    !canPublishListings ? 'Listing publishing' : null,
+  ].filter((value): value is string => Boolean(value));
+  const showFeatureBanner =
+    Boolean(onboardingStatus) && (needsProfileCompletion || lockedCapabilities.length > 0);
 
   const commissionGoal = useMemo(() => {
     const pending = stats?.commissionsPending ?? 0;
@@ -591,6 +705,76 @@ export function AgentDashboardOverview() {
   return (
     <div className="min-h-screen bg-[#f7f6f3]">
       <main className="mx-auto flex max-w-[1700px] flex-col gap-5 px-4 py-5 md:px-7 md:py-7 xl:px-7 xl:pb-10">
+        {showFeatureBanner ? (
+          <CardShell className="overflow-hidden border-transparent bg-gradient-to-r from-slate-950 via-slate-900 to-[#0f4c81] text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] lg:px-7">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/72">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Guided mode active
+                </div>
+                <h2 className="mt-4 text-[24px] font-semibold tracking-[-0.04em] text-white">
+                  {needsProfileCompletion
+                    ? 'You have dashboard access, but full Agent OS is still locked behind setup.'
+                    : 'Your dashboard is live, but a few premium capabilities are still gated.'}
+                </h2>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-white/72">
+                  {needsProfileCompletion
+                    ? `Profile completion is at ${profileCompletionScore}%. Reach the next setup threshold to unlock publishing, stronger visibility, and the full operating surface.`
+                    : `Your ${formatStatus(subscriptionTier)} tier is active${trialDaysRemaining != null ? ` with ${trialDaysRemaining} day${trialDaysRemaining === 1 ? '' : 's'} left in trial.` : '.'} Finish the remaining access steps to open the full dashboard.`}
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {setupPriorityFlags.map(flag => (
+                    <Badge
+                      key={flag}
+                      variant="outline"
+                      className="rounded-full border-white/14 bg-white/8 px-3 py-1 text-[11px] font-medium text-white/78"
+                    >
+                      Add {flag}
+                    </Badge>
+                  ))}
+                  {lockedCapabilities.map(capability => (
+                    <Badge
+                      key={capability}
+                      variant="outline"
+                      className="rounded-full border-amber-300/22 bg-amber-400/10 px-3 py-1 text-[11px] font-medium text-amber-100"
+                    >
+                      {capability} locked
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[20px] border border-white/12 bg-white/8 p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/52">
+                  Recommended next step
+                </p>
+                <p className="mt-2 text-lg font-semibold text-white">
+                  {needsProfileCompletion ? 'Finish your profile setup' : 'Review your plan access'}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-white/68">
+                  {needsProfileCompletion
+                    ? 'Complete the remaining setup items to unlock publishing, directory visibility, and the full dashboard.'
+                    : trialExpired
+                      ? 'Your trial access has expired. Review package access to restore the locked modules.'
+                      : 'A few premium modules are still behind your current package entitlements.'}
+                </p>
+                <Button
+                  type="button"
+                  onClick={() =>
+                    setLocation(needsProfileCompletion ? '/agent/setup' : '/agent/settings')
+                  }
+                  className="mt-5 rounded-full bg-white text-slate-950 hover:bg-white/92"
+                >
+                  {needsProfileCompletion ? 'Continue setup' : 'Review access'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardShell>
+        ) : null}
+
         <section className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <CardShell className="overflow-hidden border-transparent bg-gradient-to-br from-[var(--primary)] via-[var(--primary)] to-[#0b4b81] text-white shadow-[0_14px_42px_rgba(0,92,168,0.26)]">
             <div className="relative flex h-full flex-col justify-between gap-6 px-7 pb-6 pt-7">
@@ -697,7 +881,7 @@ export function AgentDashboardOverview() {
                 className="relative z-10 inline-flex h-auto w-fit items-center gap-2 rounded-full border border-white/18 bg-white/14 px-4 py-2 text-[12.5px] font-medium text-white shadow-none backdrop-blur-sm hover:bg-white/22"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                {onboarding?.entitlements?.canPublishListings ? 'Review profile' : 'Finish setup'}
+                {canPublishListings ? 'Review profile' : 'Finish setup'}
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-semibold text-[var(--primary)]">
                   {setupItemsRemaining}
                 </span>
@@ -725,6 +909,31 @@ export function AgentDashboardOverview() {
                 <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
+
+            {!fullFeaturesUnlocked || !hasRevenueDashboard ? (
+              <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">Advanced insights are still partially locked.</p>
+                    <p className="mt-1 text-sm text-amber-800">
+                      {!fullFeaturesUnlocked
+                        ? 'Complete the remaining profile steps to unlock the full reporting layer and revenue view.'
+                        : 'Your current access does not include the full revenue dashboard yet.'}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setLocation(!fullFeaturesUnlocked ? '/agent/setup' : '/agent/settings')
+                    }
+                    className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                  >
+                    {!fullFeaturesUnlocked ? 'Finish setup' : 'Review plan'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-4 grid grid-cols-[minmax(0,1fr)_60px_80px] items-center gap-2 border-b border-slate-200 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               <span>Metric</span>
@@ -788,7 +997,7 @@ export function AgentDashboardOverview() {
 
         <section className="grid gap-[18px] xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-[18px]">
-            <CardShell className="px-[22px] py-5">
+            <CardShell className="relative px-[22px] py-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--primary)]">
@@ -1016,6 +1225,23 @@ export function AgentDashboardOverview() {
                   </p>
                 </div>
               )}
+
+              {!canPublishListings ? (
+                <FeatureLockOverlay
+                  title="Listing publishing is still locked"
+                  description={
+                    profileCompletionScore < 70
+                      ? 'Reach 70% profile completion to publish listings, unlock stronger visibility, and open your full inventory workflow.'
+                      : trialExpired
+                        ? 'Your trial access has expired. Review your package to restore publishing access.'
+                        : 'Your current access does not include listing publishing yet.'
+                  }
+                  actionLabel={profileCompletionScore < 70 ? 'Finish setup' : 'Review access'}
+                  onAction={() =>
+                    setLocation(profileCompletionScore < 70 ? '/agent/setup' : '/agent/settings')
+                  }
+                />
+              ) : null}
             </CardShell>
           </div>
 

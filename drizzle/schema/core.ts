@@ -48,6 +48,24 @@ export const users = mysqlTable(
     trialStatus: mysqlEnum(['active', 'expired']).default('active').notNull(),
     trialStartedAt: timestamp({ mode: 'string' }),
     trialEndsAt: timestamp({ mode: 'string' }),
+    onboardingComplete: tinyint('onboarding_complete').default(0).notNull(),
+    onboardingStep: int('onboarding_step').default(0).notNull(),
+    subscriptionTier: mysqlEnum('subscription_tier', [
+      'free',
+      'starter',
+      'professional',
+      'elite',
+    ])
+      .default('free')
+      .notNull(),
+    subscriptionStatus: mysqlEnum('subscription_status', [
+      'trial',
+      'active',
+      'expired',
+      'cancelled',
+    ])
+      .default('trial')
+      .notNull(),
     agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
     isSubaccount: int().default(0).notNull(),
     createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),

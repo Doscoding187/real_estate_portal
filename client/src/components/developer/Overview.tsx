@@ -30,7 +30,8 @@ import {
   PhoneCall,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
 
 type Range = '7d' | '30d' | '90d';
 
@@ -53,6 +54,7 @@ function formatMinutes(mins?: number): string {
 
 export default function Overview() {
   const { user } = useAuth();
+  const { status: onboardingStatus, isLoading: onboardingLoading } = useDeveloperOnboardingStatus();
   const utils = trpc.useUtils();
   const [location, setLocation] = useLocation();
   const [range, setRange] = useState<Range>('30d');
@@ -65,13 +67,17 @@ export default function Overview() {
     data: developerProfile,
     isLoading: profileLoading,
     error: profileError,
-  } = trpc.developer.getProfile.useQuery(undefined, { retry: false });
+  } = trpc.developer.getProfile.useQuery(undefined, {
+    retry: false,
+    enabled: isSuperAdmin || Boolean(onboardingStatus?.hasProfile),
+  });
 
   const {
     data: developments = [],
     isLoading: developmentsLoading,
     error: developmentsError,
   } = trpc.developer.getDevelopments.useQuery(undefined, {
+    enabled: isSuperAdmin || Boolean(onboardingStatus?.dashboardUnlocked),
     refetchOnWindowFocus: false,
   });
 
@@ -279,7 +285,7 @@ export default function Overview() {
     return best;
   }, [stageCounts]);
 
-  if (profileLoading || developmentsLoading) {
+  if (onboardingLoading || profileLoading || developmentsLoading) {
     return (
       <div className="space-y-6">
         <div className="h-24 bg-slate-100 rounded-2xl animate-pulse" />
@@ -306,12 +312,16 @@ export default function Overview() {
     );
   }
 
-  if (!developerProfile) {
+  if (!developerProfile && !isSuperAdmin) {
     return (
       <Card className="card">
         <CardContent className="py-12 text-center space-y-3">
           <Building2 className="w-10 h-10 mx-auto text-blue-600" />
           <h3 className="text-lg font-semibold">Complete your developer profile</h3>
+          <p className="text-sm text-slate-600">
+            Set up your company profile first, then return here to launch developments and manage
+            your workspace.
+          </p>
           <Button onClick={() => (window.location.href = '/developer/setup')}>Go to Setup</Button>
         </CardContent>
       </Card>
@@ -324,11 +334,17 @@ export default function Overview() {
         <CardContent className="py-12 text-center space-y-3">
           <h3 className="text-lg font-semibold">Profile under review</h3>
           <p className="text-slate-600 text-sm">
-            Your profile is currently being verified by the admin team.
+            Your company profile has been submitted and is currently being verified by the admin
+            team. You can review your details now while approval is in progress.
           </p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Refresh Status
-          </Button>
+          <div className="flex items-center justify-center gap-2">
+            <Button onClick={() => (window.location.href = '/developer/setup')}>
+              Review Profile
+            </Button>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Refresh Status
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -760,4 +776,3 @@ export default function Overview() {
     </div>
   );
 }
-

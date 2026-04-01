@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
@@ -7,23 +8,39 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { applySeo } from '@/lib/seo';
 import { ProNavigation } from '@/components/services/ProNavigation';
+import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 
 const STATUS_OPTIONS = ['new', 'accepted', 'quoted', 'won', 'lost', 'expired'] as const;
 
 export default function ProDashboardPage() {
   useAuth({ redirectOnUnauthenticated: true });
+  const [, setLocation] = useLocation();
+  const { status, isLoading: statusLoading } = useServiceProviderOnboardingStatus();
 
   useEffect(() => {
     applySeo({
       title: 'Provider Dashboard | Services Pro',
       description: 'Manage service leads, track pipeline, and monitor provider performance.',
-      canonicalPath: '/pro/dashboard',
+      canonicalPath: '/service/dashboard',
       noindex: true,
     });
   }, []);
 
-  const dashboardQuery = trpc.servicesEngine.myProviderDashboard.useQuery({ days: 30 });
-  const leadsQuery = trpc.servicesEngine.myProviderLeads.useQuery({ limit: 50 });
+  useEffect(() => {
+    if (statusLoading) return;
+    if (!status?.hasProviderIdentity && window.location.pathname !== '/service/profile') {
+      setLocation('/service/profile');
+    }
+  }, [setLocation, status?.hasProviderIdentity, statusLoading]);
+
+  const dashboardQuery = trpc.servicesEngine.myProviderDashboard.useQuery(
+    { days: 30 },
+    { enabled: Boolean(status?.dashboardUnlocked) },
+  );
+  const leadsQuery = trpc.servicesEngine.myProviderLeads.useQuery(
+    { limit: 50 },
+    { enabled: Boolean(status?.dashboardUnlocked) },
+  );
   const updateLead = trpc.servicesEngine.updateMyLeadStatus.useMutation({
     onSuccess: async () => {
       toast.success('Lead updated');
@@ -36,6 +53,14 @@ export default function ProDashboardPage() {
   const dashboard = dashboardQuery.data;
   const leads = leadsQuery.data || [];
 
+  if (statusLoading) {
+    return (
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6">
+        <p className="text-sm text-slate-500">Preparing your partner workspace...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6">
       <header>
@@ -47,6 +72,34 @@ export default function ProDashboardPage() {
         </h1>
       </header>
       <ProNavigation />
+
+      {!status?.fullFeaturesUnlocked && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader>
+            <CardTitle className="text-lg">Complete your partner setup</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1 text-sm text-amber-900">
+              <p>
+                Finish your public profile, add your services, and define your coverage areas to
+                unlock the full partner workspace.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">
+                  {status?.profileConfigured ? 'Profile saved' : 'Profile needed'}
+                </Badge>
+                <Badge variant="outline">
+                  {status?.servicesConfigured ? 'Services added' : 'Services needed'}
+                </Badge>
+                <Badge variant="outline">
+                  {status?.locationsConfigured ? 'Locations added' : 'Locations needed'}
+                </Badge>
+              </div>
+            </div>
+            <Button onClick={() => setLocation('/service/profile')}>Finish setup</Button>
+          </CardContent>
+        </Card>
+      )}
 
       <section className="grid gap-3 md:grid-cols-4">
         <Card>

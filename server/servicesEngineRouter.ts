@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
 import { servicesEngineService } from './services/servicesEngineService';
+import { getDb } from './db';
+import { users } from '../drizzle/schema';
+import { eq } from 'drizzle-orm';
 
 const serviceCategorySchema = z.enum([
   'home_improvement',
@@ -75,6 +78,81 @@ function requireProviderRole(role: string | null | undefined) {
 }
 
 export const servicesEngineRouter = router({
+  myOnboardingStatus: protectedProcedure.query(async ({ ctx }) => {
+    const user = requireUser(ctx);
+    requireProviderRole(user.role);
+
+    const provider = await servicesEngineService.getProviderByUserId(user.id);
+    const profile = provider?.id
+      ? await servicesEngineService.getMyProviderProfile(user.id)
+      : null;
+
+    const hasProviderIdentity = Boolean(provider?.id);
+    const profileConfigured = Boolean(
+      profile &&
+        String(profile.headline || '').trim() &&
+        String(profile.bio || '').trim() &&
+        (String(profile.contactEmail || '').trim() || String(profile.contactPhone || '').trim()),
+    );
+    const servicesConfigured = Boolean(profile && (profile.services || []).length > 0);
+    const locationsConfigured = Boolean(profile && (profile.locations || []).length > 0);
+
+    let onboardingStep = 0;
+    if (hasProviderIdentity) onboardingStep = 1;
+    if (profileConfigured) onboardingStep = 2;
+    if (servicesConfigured) onboardingStep = 3;
+    if (locationsConfigured) onboardingStep = 4;
+
+    const dashboardUnlocked = hasProviderIdentity;
+    const fullFeaturesUnlocked =
+      hasProviderIdentity && profileConfigured && servicesConfigured && locationsConfigured;
+    const recommendedNextStep = !hasProviderIdentity
+      ? '/service/profile'
+      : !profileConfigured
+        ? '/service/profile'
+        : !servicesConfigured
+          ? '/service/profile'
+          : !locationsConfigured
+            ? '/service/profile'
+            : '/service/dashboard';
+
+    const db = await getDb();
+    if (
+      db &&
+      (Number(user.onboardingStep || 0) !== onboardingStep ||
+        Number(user.onboardingComplete || 0) !== (fullFeaturesUnlocked ? 1 : 0))
+    ) {
+      await db
+        .update(users)
+        .set({
+          onboardingStep,
+          onboardingComplete: fullFeaturesUnlocked ? 1 : 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+    }
+
+    return {
+      hasProviderIdentity,
+      profileConfigured,
+      servicesConfigured,
+      locationsConfigured,
+      onboardingStep,
+      dashboardUnlocked,
+      fullFeaturesUnlocked,
+      recommendedNextStep,
+      provider: profile
+        ? {
+            providerId: profile.providerId,
+            companyName: profile.companyName,
+            verificationStatus: profile.verificationStatus,
+            subscriptionTier: profile.subscriptionTier,
+            subscriptionStatus: profile.subscriptionStatus,
+          }
+        : null,
+    };
+  }),
+
   leads: router({
     logEvent: protectedProcedure
       .input(

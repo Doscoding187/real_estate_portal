@@ -52,6 +52,8 @@ export function Navbar() {
         return '/agency/dashboard';
       case 'agent':
         return '/agent/dashboard';
+      case 'service_provider':
+        return '/service/dashboard';
       default:
         return '/dashboard';
     }
@@ -60,7 +62,14 @@ export function Navbar() {
   const dashboardRoute = getDashboardRoute(user?.role, hasReferrerAccess);
   const showDashboardLink =
     user?.role &&
-    ['admin', 'super_admin', 'property_developer', 'agency_admin', 'agent'].includes(user.role);
+    [
+      'admin',
+      'super_admin',
+      'property_developer',
+      'agency_admin',
+      'agent',
+      'service_provider',
+    ].includes(user.role);
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },

@@ -32,7 +32,7 @@ export default function RegistrationSuccess({ role = 'developer' }: Registration
     agency: {
       title: 'Agency Registration Complete!',
       subtitle: 'Welcome to the platform!',
-      dashboardRoute: '/agency-dashboard',
+      dashboardRoute: '/agency/dashboard',
       dashboardLabel: 'Go to Agency Dashboard',
       gradient: 'from-green-600 to-emerald-600',
       nextSteps: [

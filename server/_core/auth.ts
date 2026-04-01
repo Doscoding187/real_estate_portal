@@ -360,11 +360,6 @@ class AuthService {
     if (normalizedUser.role === 'agent') {
       const agentProfile = await db.getAgentByUserId(normalizedUser.id);
       if (agentProfile) {
-        if (agentProfile.status === 'pending') {
-          throw new Error(
-            'Your agent application is pending review. You will be notified once approved.',
-          );
-        }
         if (agentProfile.status === 'rejected') {
           const reason = agentProfile.rejectionReason || 'No reason provided';
           throw new Error(`Your agent application was rejected. Reason: ${reason}`);
@@ -450,7 +445,7 @@ class AuthService {
   /**
    * Verify email address using a token
    */
-  async verifyEmail(token: string): Promise<void> {
+  async verifyEmail(token: string): Promise<User> {
     const user = await db.getUserByEmailVerificationToken(token);
 
     if (!user) {
@@ -468,6 +463,13 @@ class AuthService {
         throw new Error('Agent profile is missing for this account. Please contact support.');
       }
     }
+
+    return {
+      ...user,
+      emailVerified: 1,
+      emailVerificationToken: null,
+      role: normalizeAuthRole(user.role),
+    } as User;
   }
 }
 

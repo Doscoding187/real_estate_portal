@@ -4,6 +4,12 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { AgentDashboardOverview } from '@/components/agent/AgentDashboardOverview';
+import { apiFetch } from '@/lib/api';
+
+type AgentOnboardingGuard = {
+  packageSelected: boolean;
+  dashboardUnlocked: boolean;
+};
 
 export default function AgentDashboard() {
   const [, setLocation] = useLocation();
@@ -22,6 +28,38 @@ export default function AgentDashboard() {
       setLocation('/agent/setup');
     }
   }, [error, setLocation]);
+
+  useEffect(() => {
+    if (loading || !isAuthenticated || user?.role !== 'agent') return;
+
+    let cancelled = false;
+
+    const checkOnboarding = async () => {
+      try {
+        const onboarding = await apiFetch<AgentOnboardingGuard>('/agent/onboarding-status');
+        if (cancelled) return;
+
+        if (!onboarding.packageSelected) {
+          setLocation('/agent/select-package');
+          return;
+        }
+
+        if (!onboarding.dashboardUnlocked) {
+          setLocation('/agent/setup');
+        }
+      } catch {
+        if (!cancelled) {
+          setLocation('/agent/select-package');
+        }
+      }
+    };
+
+    void checkOnboarding();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, loading, setLocation, user?.role]);
 
   // Show loading spinner while auth is being checked
   if (loading || isLoadingProfile) {

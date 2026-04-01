@@ -21,7 +21,7 @@ const getRoleHomePath = (currentRole?: string | null) => {
     case 'agent':
       return '/agent/dashboard';
     case 'service_provider':
-      return '/pro/profile';
+      return '/service/dashboard';
     case 'visitor':
       return '/user/dashboard';
     default:

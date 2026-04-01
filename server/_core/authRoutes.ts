@@ -7,6 +7,8 @@ import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { distributionIdentities } from '../../drizzle/schema';
 
+const VERIFIED_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 const getRequestId = (req: Request): string => {
   const requestId = (req as any).requestId;
   return typeof requestId === 'string' && requestId.trim().length > 0 ? requestId : 'unknown';
@@ -16,6 +18,23 @@ const isDatabaseQueryError = (message: string): boolean =>
   message.includes('Failed query:') ||
   message.includes('ECONNREFUSED') ||
   message.includes('connect');
+
+const getPostVerificationPath = (role: string | null | undefined): string => {
+  switch (role) {
+    case 'super_admin':
+      return '/admin/overview?verified=true';
+    case 'agent':
+      return '/agent/select-package?verified=true';
+    case 'agency_admin':
+      return '/agency/setup?verified=true';
+    case 'property_developer':
+      return '/developer/setup?verified=true';
+    case 'service_provider':
+      return '/service/profile?verified=true';
+    default:
+      return '/user/dashboard?verified=true';
+  }
+};
 
 /**
  * Register authentication routes
@@ -359,10 +378,21 @@ export function registerAuthRoutes(app: Express) {
           );
       }
 
-      await authService.verifyEmail(token);
+      const user = await authService.verifyEmail(token);
+      const sessionToken = await authService.createSessionToken(
+        user.id,
+        user.email || '',
+        user.name || user.email || 'User',
+        { expiresInMs: VERIFIED_SESSION_MAX_AGE_MS },
+      );
 
-      // Redirect to the login page with a success message
-      res.redirect(`${ENV.appUrl}/login?verified=true`);
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, {
+        ...cookieOptions,
+        maxAge: VERIFIED_SESSION_MAX_AGE_MS,
+      });
+
+      res.redirect(`${ENV.appUrl}${getPostVerificationPath(user.role)}`);
     } catch (error: any) {
       console.error('[Auth] Email verification failed', error);
       res
