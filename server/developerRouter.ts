@@ -36,6 +36,7 @@ import {
   developments,
   developers,
   developerBrandProfiles,
+  users,
   unitTypes,
 } from '../drizzle/schema';
 import { eq, desc, and, or, sql } from 'drizzle-orm';
@@ -394,6 +395,133 @@ const EMPTY_DEVELOPER_KPIS = {
 // ===========================================================================
 
 export const developerRouter = router({
+  getOnboardingStatus: protectedProcedure.query(async ({ ctx }) => {
+    const user = requireUser(ctx);
+
+    if (user.role !== 'property_developer' && user.role !== 'super_admin') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Developer onboarding is only available to property developers.',
+      });
+    }
+
+    if (user.role === 'super_admin') {
+      return {
+        hasProfile: true,
+        profileSubmitted: true,
+        profileApproved: true,
+        profileRejected: false,
+        profileStatus: 'approved' as const,
+        onboardingStep: 4,
+        dashboardUnlocked: true,
+        fullFeaturesUnlocked: true,
+        recommendedNextStep: '/developer/dashboard',
+        developmentsCount: 0,
+        profile: null,
+      };
+    }
+
+    const dbConn = await db.getDb();
+    if (!dbConn) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Database unavailable',
+      });
+    }
+
+    const profile = await getDeveloperByUserId(user.id);
+
+    if (!profile) {
+      if (Number(user.onboardingStep || 0) !== 0 || Number(user.onboardingComplete || 0) !== 0) {
+        await dbConn
+          .update(users)
+          .set({
+            onboardingStep: 0,
+            onboardingComplete: 0,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, user.id));
+      }
+
+      return {
+        hasProfile: false,
+        profileSubmitted: false,
+        profileApproved: false,
+        profileRejected: false,
+        profileStatus: 'missing' as const,
+        onboardingStep: 0,
+        dashboardUnlocked: false,
+        fullFeaturesUnlocked: false,
+        recommendedNextStep: '/developer/setup',
+        developmentsCount: 0,
+        profile: null,
+      };
+    }
+
+    const [{ count: developmentsCountRaw }] = await dbConn
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(developments)
+      .where(eq(developments.developerId, profile.id));
+
+    const developmentsCount = Number(developmentsCountRaw || 0);
+    const profileStatus = profile.status;
+    const profileSubmitted = true;
+    const profileApproved = profileStatus === 'approved';
+    const profileRejected = profileStatus === 'rejected';
+
+    let onboardingStep = 1;
+    if (profileStatus === 'pending') onboardingStep = 2;
+    if (profileApproved) onboardingStep = 3;
+    if (profileApproved && developmentsCount > 0) onboardingStep = 4;
+
+    const dashboardUnlocked = !profileRejected;
+    const fullFeaturesUnlocked = profileApproved && developmentsCount > 0;
+    const recommendedNextStep = profileRejected
+      ? '/developer/setup'
+      : !profileApproved
+        ? '/developer/dashboard'
+        : developmentsCount > 0
+          ? '/developer/dashboard'
+          : '/developer/create-development';
+
+    if (
+      Number(user.onboardingStep || 0) !== onboardingStep ||
+      Number(user.onboardingComplete || 0) !== (fullFeaturesUnlocked ? 1 : 0)
+    ) {
+      await dbConn
+        .update(users)
+        .set({
+          onboardingStep,
+          onboardingComplete: fullFeaturesUnlocked ? 1 : 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+    }
+
+    return {
+      hasProfile: true,
+      profileSubmitted,
+      profileApproved,
+      profileRejected,
+      profileStatus,
+      onboardingStep,
+      dashboardUnlocked,
+      fullFeaturesUnlocked,
+      recommendedNextStep,
+      developmentsCount,
+      profile: {
+        id: profile.id,
+        name: profile.name,
+        status: profile.status,
+        city: profile.city ?? null,
+        province: profile.province ?? null,
+        developerBrandProfileId: profile.developerBrandProfileId ?? null,
+      },
+    };
+  }),
+
   adminListPendingDevelopers: superAdminProcedure.input(z.void()).query(async () => {
     const developers = await db.listPendingDevelopers();
     return { developers, total: developers.length };

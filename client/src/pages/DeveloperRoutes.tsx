@@ -1,7 +1,8 @@
 import { Route, Switch, Redirect, Link } from 'wouter';
 import { DeveloperLayout } from '@/components/developer/DeveloperLayout';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
+import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
 
 // Import content components
 import Overview from '@/components/developer/Overview';
@@ -33,6 +34,23 @@ function PlaceholderContent({ title }: { title: string }) {
 import { lazy, Suspense } from 'react';
 const MyDrafts = lazy(() => import('@/pages/developer/MyDrafts'));
 
+const getRoleHomePath = (role?: string | null) => {
+  switch (role) {
+    case 'super_admin':
+      return '/admin/overview';
+    case 'agency_admin':
+      return '/agency/dashboard';
+    case 'agent':
+      return '/agent/dashboard';
+    case 'service_provider':
+      return '/service/dashboard';
+    case 'visitor':
+      return '/user/dashboard';
+    default:
+      return '/login';
+  }
+};
+
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center h-64">
@@ -42,10 +60,29 @@ function LoadingSpinner() {
 }
 
 export default function DeveloperRoutes() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const { context: publisherContext } = usePublisherContext();
+  const { status, isLoading: statusLoading } = useDeveloperOnboardingStatus();
   const isSuperAdmin = user?.role === 'super_admin';
+  const isDeveloper = user?.role === 'property_developer';
   const hasPublisherContext = !!publisherContext?.brandProfileId;
+  const pathname =
+    typeof window !== 'undefined' ? window.location.pathname : '/developer/dashboard';
+
+  if (authLoading || (isDeveloper && statusLoading)) {
+    return (
+      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-slate-500">Preparing your developer workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user && !isDeveloper && !isSuperAdmin) {
+    return <Redirect to={getRoleHomePath(user.role)} />;
+  }
 
   if (isSuperAdmin && !hasPublisherContext) {
     return (
@@ -63,6 +100,19 @@ export default function DeveloperRoutes() {
         </div>
       </div>
     );
+  }
+
+  if (isDeveloper && (!status?.hasProfile || status.profileRejected)) {
+    return <Redirect to="/developer/setup" />;
+  }
+
+  if (
+    isDeveloper &&
+    status?.profileStatus === 'pending' &&
+    pathname !== '/developer' &&
+    pathname !== '/developer/dashboard'
+  ) {
+    return <Redirect to="/developer/dashboard" />;
   }
 
   return (

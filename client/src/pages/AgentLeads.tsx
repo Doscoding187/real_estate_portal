@@ -1,19 +1,23 @@
 import { useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { LeadPipeline } from '@/components/agent/LeadPipeline';
+import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 
 export default function AgentLeads() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
+    requireDashboardUnlocked: true,
+  });
   const propertyId = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    const searchParams = new URLSearchParams(window.location.search);
+    const [, search = ''] = location.split('?');
+    const searchParams = new URLSearchParams(search);
     const value = searchParams.get('propertyId');
     const parsed = value ? Number(value) : NaN;
     return Number.isFinite(parsed) ? parsed : undefined;
   }, [location]);
+
+  const leadsLocked = !statusLoading && !status?.entitlements?.canReceiveLeads;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -33,7 +37,24 @@ export default function AgentLeads() {
 
       {/* Main Content */}
       <main className="p-6">
-        <LeadPipeline propertyId={propertyId} />
+        {statusLoading ? (
+          <AgentFeatureLockedState
+            title="Preparing your lead workspace"
+            description="We are confirming your onboarding and lead access before loading your pipeline."
+            actionLabel="Loading"
+            onAction={() => {}}
+            isLoading
+          />
+        ) : leadsLocked ? (
+          <AgentFeatureLockedState
+            title="Lead management unlocks after contact setup"
+            description="Add the remaining core profile details, especially your contact information, to start receiving and managing leads."
+            actionLabel="Finish setup"
+            onAction={() => setLocation('/agent/setup')}
+          />
+        ) : (
+          <LeadPipeline propertyId={propertyId} />
+        )}
       </main>
     </div>
   );

@@ -24,6 +24,7 @@ import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import sitemapRouter from '../routes/sitemap';
+import agentOnboardingRouter from '../routes/agentOnboarding';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -177,6 +178,7 @@ async function startServer() {
 
   app.use('/', sitemapRouter);
   registerAuthRoutes(app);
+  app.use('/api/agent', agentOnboardingRouter);
   registerHealthEndpoint(app);
   registerVersionEndpoint(app);
 

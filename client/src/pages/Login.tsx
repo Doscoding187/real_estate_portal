@@ -303,10 +303,10 @@ export default function Login() {
         if (role === 'super_admin') redirectPath = '/admin/overview';
         else if (role === 'property_developer') redirectPath = '/developer/dashboard';
         else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
-        else if (role === 'service_provider') redirectPath = '/pro/profile';
+        else if (role === 'service_provider') redirectPath = '/service/dashboard';
         else if (result.user?.hasManagerIdentity) redirectPath = '/distribution/manager';
         else if (result.user?.hasReferrerIdentity) redirectPath = '/referrer/dashboard';
-        else if (role === 'agent') redirectPath = '/agent/dashboard';
+        else if (role === 'agent') redirectPath = '/agent/select-package';
       }
 
       await new Promise(resolve => setTimeout(resolve, 250));

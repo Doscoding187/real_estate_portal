@@ -60,6 +60,137 @@ const agencyFiltersSchema = z.object({
 });
 
 export const agencyRouter = router({
+  getOnboardingStatus: agencyAdminProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+
+    const user = requireUser(ctx);
+    const emptyState = {
+      hasAgency: false,
+      profileConfigured: false,
+      brandingConfigured: false,
+      billingActivated: false,
+      teamReady: false,
+      onboardingStep: 0,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/agency/setup',
+      teamMembersCount: 0,
+      invitationsCount: 0,
+      agency: null as null | {
+        id: number;
+        name: string;
+        slug: string;
+        subscriptionStatus: string;
+        subscriptionPlan: string;
+        city: string | null;
+        province: string | null;
+      },
+    };
+
+    if (!user.agencyId) {
+      return emptyState;
+    }
+
+    const [agency] = await db
+      .select()
+      .from(agencies)
+      .where(eq(agencies.id, user.agencyId))
+      .limit(1);
+
+    if (!agency) {
+      return emptyState;
+    }
+
+    const [branding] = await db
+      .select({
+        companyName: agencyBranding.companyName,
+        primaryColor: agencyBranding.primaryColor,
+        secondaryColor: agencyBranding.secondaryColor,
+      })
+      .from(agencyBranding)
+      .where(eq(agencyBranding.agencyId, user.agencyId))
+      .limit(1);
+
+    const teamMembers = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.agencyId, user.agencyId), eq(users.isSubaccount, 1)));
+
+    const pendingInvitations = await db
+      .select({ id: invitations.id })
+      .from(invitations)
+      .where(and(eq(invitations.agencyId, user.agencyId), eq(invitations.status, 'pending')));
+
+    const profileConfigured = Boolean(
+      agency.name && agency.email && agency.city && agency.province,
+    );
+    const brandingConfigured = Boolean(
+      branding?.companyName && branding?.primaryColor && branding?.secondaryColor,
+    );
+    const billingActivated = ['active', 'trial', 'trialing'].includes(
+      String(agency.subscriptionStatus || '').toLowerCase(),
+    );
+    const teamReady = teamMembers.length > 0 || pendingInvitations.length > 0;
+
+    let onboardingStep = 0;
+    if (profileConfigured) onboardingStep = 1;
+    if (brandingConfigured) onboardingStep = 2;
+    if (billingActivated) onboardingStep = 3;
+    if (teamReady) onboardingStep = 4;
+
+    const dashboardUnlocked = profileConfigured;
+    const fullFeaturesUnlocked = profileConfigured && brandingConfigured && billingActivated;
+    const recommendedNextStep = !profileConfigured
+      ? '/agency/setup'
+      : !brandingConfigured
+        ? '/agency/setup'
+        : !billingActivated
+          ? '/agency/subscription'
+          : !teamReady
+            ? '/agency/invite'
+            : '/agency/dashboard';
+
+    if (
+      Number(user.onboardingStep || 0) !== onboardingStep ||
+      Number(user.onboardingComplete || 0) !== (fullFeaturesUnlocked ? 1 : 0)
+    ) {
+      await db
+        .update(users)
+        .set({
+          onboardingStep,
+          onboardingComplete: fullFeaturesUnlocked ? 1 : 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+    }
+
+    return {
+      hasAgency: true,
+      profileConfigured,
+      brandingConfigured,
+      billingActivated,
+      teamReady,
+      onboardingStep,
+      dashboardUnlocked,
+      fullFeaturesUnlocked,
+      recommendedNextStep,
+      teamMembersCount: teamMembers.length,
+      invitationsCount: pendingInvitations.length,
+      agency: {
+        id: agency.id,
+        name: agency.name,
+        slug: agency.slug,
+        subscriptionStatus: agency.subscriptionStatus,
+        subscriptionPlan: agency.subscriptionPlan,
+        city: agency.city,
+        province: agency.province,
+      },
+    };
+  }),
+
   /**
    * Create agency during onboarding (authenticated users only)
    */

@@ -294,6 +294,8 @@ function getPrimaryAccountRoute(user: NavbarUser, hasReferrerAccess: boolean) {
       return '/agency/dashboard';
     case 'agent':
       return '/agent/dashboard';
+    case 'service_provider':
+      return '/service/dashboard';
     default:
       return '/user/dashboard';
   }

@@ -1,6 +1,12 @@
+import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { ShowingsCalendar } from '@/components/agent/ShowingsCalendar';
 
 export default function AgentCalendar() {
+  const { isLoading: statusLoading } = useAgentOnboardingStatus({
+    requireDashboardUnlocked: true,
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -17,7 +23,17 @@ export default function AgentCalendar() {
 
       {/* Main Content */}
       <main className="p-6">
-        <ShowingsCalendar />
+        {statusLoading ? (
+          <AgentFeatureLockedState
+            title="Preparing your calendar workspace"
+            description="We are confirming your onboarding access before loading showings and appointment scheduling."
+            actionLabel="Loading"
+            onAction={() => {}}
+            isLoading
+          />
+        ) : (
+          <ShowingsCalendar />
+        )}
       </main>
     </div>
   );

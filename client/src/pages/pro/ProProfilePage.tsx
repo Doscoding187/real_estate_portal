@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { trpc } from '@/lib/trpc';
 import { SERVICE_CATEGORIES, type ServiceCategory } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
 import { ProNavigation } from '@/components/services/ProNavigation';
+import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 
 function linesToServices(text: string) {
   return text
@@ -46,12 +48,15 @@ function linesToLocations(text: string) {
 
 export default function ProProfilePage() {
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
+  const [, setLocation] = useLocation();
+  const { status, isLoading: statusLoading, refetch: refetchStatus } =
+    useServiceProviderOnboardingStatus();
 
   useEffect(() => {
     applySeo({
       title: 'Provider Profile Setup | Services Pro',
       description: 'Configure your provider profile, services, locations, and directory details.',
-      canonicalPath: '/pro/profile',
+      canonicalPath: '/service/profile',
       noindex: true,
     });
   }, []);
@@ -62,19 +67,29 @@ export default function ProProfilePage() {
     onSuccess: () => {
       toast.success('Partner profile created');
       myProfileQuery.refetch();
+      refetchStatus();
     },
     onError: error => toast.error(error.message || 'Could not create partner profile'),
   });
   const saveProfile = trpc.servicesEngine.upsertProviderProfile.useMutation({
-    onSuccess: () => toast.success('Profile updated'),
+    onSuccess: () => {
+      toast.success('Profile updated');
+      refetchStatus();
+    },
     onError: error => toast.error(error.message || 'Could not save profile'),
   });
   const replaceServices = trpc.servicesEngine.replaceProviderServices.useMutation({
-    onSuccess: () => toast.success('Services updated'),
+    onSuccess: () => {
+      toast.success('Services updated');
+      refetchStatus();
+    },
     onError: error => toast.error(error.message || 'Could not update services'),
   });
   const replaceLocations = trpc.servicesEngine.replaceProviderLocations.useMutation({
-    onSuccess: () => toast.success('Service locations updated'),
+    onSuccess: () => {
+      toast.success('Service locations updated');
+      refetchStatus();
+    },
     onError: error => toast.error(error.message || 'Could not update locations'),
   });
 
@@ -122,7 +137,9 @@ export default function ProProfilePage() {
   useEffect(() => {
     if (authLoading || myProfileQuery.isLoading || myProfileQuery.isFetching) return;
     if (user?.role !== 'service_provider') return;
-    if (profile || registerIdentity.isPending || autoBootstrapAttempted) return;
+    if (statusLoading) return;
+    if (profile || status?.hasProviderIdentity || registerIdentity.isPending || autoBootstrapAttempted)
+      return;
 
     setAutoBootstrapAttempted(true);
     setCompanyName(current => current || bootstrapCompanyName);
@@ -135,6 +152,8 @@ export default function ProProfilePage() {
     myProfileQuery.isLoading,
     profile,
     registerIdentity,
+    status?.hasProviderIdentity,
+    statusLoading,
     user?.role,
   ]);
 
@@ -152,6 +171,14 @@ export default function ProProfilePage() {
     ],
   );
 
+  if (statusLoading) {
+    return (
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6">
+        <p className="text-sm text-slate-500">Preparing your partner setup...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6">
       <header>
@@ -163,6 +190,41 @@ export default function ProProfilePage() {
         </h1>
       </header>
       <ProNavigation />
+
+      <Card className="border-slate-200">
+        <CardHeader>
+          <CardTitle>Setup progress</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-slate-700">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border px-3 py-1">
+              {status?.hasProviderIdentity ? 'Identity created' : 'Create identity'}
+            </span>
+            <span className="rounded-full border px-3 py-1">
+              {status?.profileConfigured ? 'Public profile saved' : 'Complete public profile'}
+            </span>
+            <span className="rounded-full border px-3 py-1">
+              {status?.servicesConfigured ? 'Services added' : 'Add services'}
+            </span>
+            <span className="rounded-full border px-3 py-1">
+              {status?.locationsConfigured ? 'Coverage added' : 'Add service areas'}
+            </span>
+          </div>
+          {status?.fullFeaturesUnlocked ? (
+            <div className="flex items-center justify-between gap-3">
+              <p>Your partner profile is complete. Dashboard and Explore are fully unlocked.</p>
+              <Button variant="outline" onClick={() => setLocation('/service/dashboard')}>
+                Go to dashboard
+              </Button>
+            </div>
+          ) : (
+            <p>
+              Complete the checklist below to unlock your full partner workspace and Explore
+              publishing.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {!profile && (
         <Card>

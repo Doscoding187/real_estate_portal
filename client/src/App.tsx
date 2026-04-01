@@ -51,6 +51,7 @@ const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
+const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
 const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
 const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
@@ -60,7 +61,6 @@ const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
 const ExploreMap = lazy(() => import('./pages/ExploreMap'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
-const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
 const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -103,6 +103,9 @@ const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
 const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
 const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
+const DeveloperSetupWizardEnhanced = lazy(
+  () => import('./components/developer/DeveloperSetupWizardEnhanced'),
+);
 
 const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 
@@ -225,6 +228,15 @@ function Router() {
           {/* All /developer/* routes are handled by DeveloperRoutes         */}
           {/* ============================================================== */}
 
+          <Route path="/developer/setup">
+            <RequireRole role="property_developer">
+              <DeveloperSetupWizardEnhanced />
+            </RequireRole>
+          </Route>
+          <Route path="/developer/success">
+            <Redirect to="/developer/dashboard?setup=complete" />
+          </Route>
+
           {/* We use a wildcard to let DeveloperRoutes handle sub-routing */}
           <Route path="/developer/:rest*" component={DeveloperRoutes} />
 
@@ -296,6 +308,11 @@ function Router() {
               <AgentSettings />
             </RequireRole>
           </Route>
+          <Route path="/agent/select-package">
+            <RequireRole role="agent">
+              <AgentPackageSelection />
+            </RequireRole>
+          </Route>
           <Route path="/agent/setup">
             <RequireRole role="agent">
               <AgentSetup />
@@ -346,7 +363,11 @@ function Router() {
 
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
 
-          <Route path="/agency/setup" component={AgencySetupWizard} />
+          <Route path="/agency/setup">
+            <RequireRole role="agency_admin">
+              <AgencySetupWizard />
+            </RequireRole>
+          </Route>
           <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />
           <Route path="/agent/success" component={() => <RegistrationSuccess role="agent" />} />
 
@@ -385,20 +406,32 @@ function Router() {
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
           <Route path="/referrer/dashboard" component={ReferrerDashboard} />
-          <Route path="/pro/dashboard">
+          <Route path="/service/dashboard">
             <RequireRole role="service_provider">
               <ProDashboardPage />
             </RequireRole>
           </Route>
-          <Route path="/pro/profile">
+          <Route path="/service/profile">
             <RequireRole role="service_provider">
               <ProProfilePage />
             </RequireRole>
           </Route>
-          <Route path="/pro/explore">
+          <Route path="/service/explore">
             <RequireRole role="service_provider">
               <ProExplorePage />
             </RequireRole>
+          </Route>
+          <Route path="/service">
+            <Redirect to="/service/dashboard" />
+          </Route>
+          <Route path="/pro/dashboard">
+            <Redirect to="/service/dashboard" />
+          </Route>
+          <Route path="/pro/profile">
+            <Redirect to="/service/profile" />
+          </Route>
+          <Route path="/pro/explore">
+            <Redirect to="/service/explore" />
           </Route>
 
           {/* Services marketplace routes */}
@@ -412,9 +445,6 @@ function Router() {
           />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
-          <Route path="/pro/dashboard" component={ProDashboardPage} />
-          <Route path="/pro/profile" component={ProProfilePage} />
-          <Route path="/pro/explore" component={ProExplorePage} />
 
           <Route path="/compare" component={CompareProperties} />
 
@@ -467,7 +497,11 @@ function Router() {
           {/* Other routes that might conflict */}
           <Route path="/dashboard" component={Dashboard} />
 
-          <Route path="/agency/dashboard" component={AgencyDashboard} />
+          <Route path="/agency/dashboard">
+            <RequireRole role="agency_admin">
+              <AgencyDashboard />
+            </RequireRole>
+          </Route>
           <Route path="/distribution/manager">
             <Redirect to="/distribution/manager/developments" />
           </Route>
@@ -496,11 +530,25 @@ function Router() {
           <Route path="/referral/apply">
             <Redirect to="/distribution-network/apply" />
           </Route>
-          <Route path="/agency/subscription" component={AgencySubscriptionPage} />
-          <Route path="/agency/onboarding" component={AgencyOnboarding} />
+          <Route path="/agency/subscription">
+            <RequireRole role="agency_admin">
+              <AgencySubscriptionPage />
+            </RequireRole>
+          </Route>
+          <Route path="/agency/onboarding">
+            <Redirect to="/agency/setup" />
+          </Route>
           <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
-          <Route path="/agency/invite" component={InviteAgents} />
-          <Route path="/agency/agents" component={AgentManagement} />
+          <Route path="/agency/invite">
+            <RequireRole role="agency_admin">
+              <InviteAgents />
+            </RequireRole>
+          </Route>
+          <Route path="/agency/agents">
+            <RequireRole role="agency_admin">
+              <AgentManagement />
+            </RequireRole>
+          </Route>
 
           {/* NOTE: Developer routes are defined in section 2A above */}
 

@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
-import { Building2, Phone, Briefcase, FileText, Save, Check } from 'lucide-react';
+import { Building2, Phone, FileText, Save, Check } from 'lucide-react';
 
 // Gradient Components
 import { GradientButton } from '@/components/ui/GradientButton';
@@ -282,9 +282,9 @@ export default function AgencySetupWizard() {
         planId: 1, // Default to free plan
       });
 
-      toast.success('Agency registered successfully!');
+      toast.success('Agency setup saved. Continue in your dashboard.');
       localStorage.removeItem('agency-registration-draft');
-      setLocation('/agency/success');
+      setLocation('/agency/dashboard?setup=complete');
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Failed to register agency');
