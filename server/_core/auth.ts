@@ -175,7 +175,12 @@ class AuthService {
     email: string,
     password: string,
     name?: string,
-    role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
+    role:
+      | 'visitor'
+      | 'agent'
+      | 'agency_admin'
+      | 'property_developer'
+      | 'service_provider' = 'visitor',
     agentProfile?: {
       displayName: string;
       phone: string;

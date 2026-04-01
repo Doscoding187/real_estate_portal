@@ -32,7 +32,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
       if (!passwordStrengthRegex.test(password)) {
         return res.status(400).json({
           error:
@@ -52,22 +52,24 @@ export function registerAuthRoutes(app: Express) {
 
       // Register user (sends verification email)
       // Allow specific roles if requested, otherwise default to 'visitor'
-      const allowedRoles = ['agent', 'agency_admin', 'property_developer', 'visitor'];
+      const allowedRoles = [
+        'agent',
+        'agency_admin',
+        'property_developer',
+        'service_provider',
+        'visitor',
+      ];
       const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
 
-      const userId = await authService.register(
-        email,
-        password,
-        name,
-        requestedRole as any,
-        agentProfile,
-      );
+      await authService.register(email, password, name, requestedRole as any, agentProfile);
 
       // Return success message - user must verify email before logging in
       const message =
         role === 'agent'
           ? 'Registration successful! Please check your email to verify your account. Your agent profile will be created after email verification.'
-          : 'Registration successful. Please check your email to verify your account.';
+          : role === 'service_provider'
+            ? 'Registration successful! Please verify your email, then complete your partner profile.'
+            : 'Registration successful. Please check your email to verify your account.';
 
       res.status(201).json({
         success: true,
@@ -109,24 +111,28 @@ export function registerAuthRoutes(app: Express) {
       console.log('✅ Auth service returned user:', user.email);
 
       let hasReferrerIdentity = false;
+      let hasManagerIdentity = false;
       try {
         const db = await getDb();
         if (db) {
-          const [identity] = await db
-            .select({ id: distributionIdentities.id })
+          const identityRows = await db
+            .select({
+              id: distributionIdentities.id,
+              identityType: distributionIdentities.identityType,
+            })
             .from(distributionIdentities)
             .where(
-              and(
-                eq(distributionIdentities.userId, user.id),
-                eq(distributionIdentities.identityType, 'referrer'),
-                eq(distributionIdentities.active, 1),
-              ),
-            )
-            .limit(1);
-          hasReferrerIdentity = Boolean(identity?.id);
+              and(eq(distributionIdentities.userId, user.id), eq(distributionIdentities.active, 1)),
+            );
+          hasReferrerIdentity = identityRows.some(
+            row => Boolean(row.id) && row.identityType === 'referrer',
+          );
+          hasManagerIdentity = identityRows.some(
+            row => Boolean(row.id) && row.identityType === 'manager',
+          );
         }
       } catch (identityError) {
-        console.warn('[Auth] Referrer identity lookup failed (non-fatal):', identityError);
+        console.warn('[Auth] Distribution identity lookup failed (non-fatal):', identityError);
       }
 
       // Feature 4: "Remember Me" Functionality
@@ -152,6 +158,7 @@ export function registerAuthRoutes(app: Express) {
           name: user.name,
           role: user.role,
           hasReferrerIdentity,
+          hasManagerIdentity,
         },
       });
     } catch (error: any) {
@@ -256,7 +263,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
       if (!passwordStrengthRegex.test(newPassword)) {
         return res.status(400).json({
           error:

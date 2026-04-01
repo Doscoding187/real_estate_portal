@@ -72,6 +72,9 @@ const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
+const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
+const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 // Super Admin Dashboard Pages
@@ -307,6 +310,21 @@ function Router() {
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
           <Route path="/referrer/dashboard" component={ReferrerDashboard} />
+          <Route path="/pro/dashboard">
+            <RequireRole role="service_provider">
+              <ProDashboardPage />
+            </RequireRole>
+          </Route>
+          <Route path="/pro/profile">
+            <RequireRole role="service_provider">
+              <ProProfilePage />
+            </RequireRole>
+          </Route>
+          <Route path="/pro/explore">
+            <RequireRole role="service_provider">
+              <ProExplorePage />
+            </RequireRole>
+          </Route>
 
           <Route path="/compare" component={CompareProperties} />
 
