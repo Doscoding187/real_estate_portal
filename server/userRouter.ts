@@ -15,7 +15,14 @@ import { logAudit } from './_core/auditLog';
 const userFiltersSchema = z.object({
   search: z.string().optional(),
   role: z
-    .enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin'])
+    .enum([
+      'visitor',
+      'agent',
+      'agency_admin',
+      'property_developer',
+      'service_provider',
+      'super_admin',
+    ])
     .optional(),
   agencyId: z.number().optional(),
   limit: z.number().min(1).max(100).default(20),
@@ -24,7 +31,14 @@ const userFiltersSchema = z.object({
 
 const updateUserRoleSchema = z.object({
   userId: z.number(),
-  role: z.enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin']),
+  role: z.enum([
+    'visitor',
+    'agent',
+    'agency_admin',
+    'property_developer',
+    'service_provider',
+    'super_admin',
+  ]),
 });
 
 const assignToAgencySchema = z.object({
@@ -275,6 +289,8 @@ export const userRouter = router({
         super_admin: allUsers.filter((u: any) => u.role === 'super_admin').length,
         agency_admin: allUsers.filter((u: any) => u.role === 'agency_admin').length,
         agent: allUsers.filter((u: any) => u.role === 'agent').length,
+        property_developer: allUsers.filter((u: any) => u.role === 'property_developer').length,
+        service_provider: allUsers.filter((u: any) => u.role === 'service_provider').length,
         visitor: allUsers.filter((u: any) => u.role === 'visitor').length,
       },
       withAgency: allUsers.filter((u: any) => u.agencyId !== null).length,

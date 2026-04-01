@@ -71,13 +71,14 @@ export const SERVICE_CATEGORIES: ServiceCategoryMeta[] = [
   },
 ];
 
-export const CATEGORY_BY_VALUE: Record<ServiceCategory, ServiceCategoryMeta> = SERVICE_CATEGORIES.reduce(
-  (acc, category) => {
-    acc[category.value] = category;
-    return acc;
-  },
-  {} as Record<ServiceCategory, ServiceCategoryMeta>,
-);
+export const CATEGORY_BY_VALUE: Record<ServiceCategory, ServiceCategoryMeta> =
+  SERVICE_CATEGORIES.reduce(
+    (acc, category) => {
+      acc[category.value] = category;
+      return acc;
+    },
+    {} as Record<ServiceCategory, ServiceCategoryMeta>,
+  );
 
 export const TRUST_STEPS = [
   {
@@ -95,12 +96,32 @@ export const TRUST_STEPS = [
 ];
 
 export const POPULAR_PROJECTS = [
-  { title: 'Interior repaint', typicalFrom: 'R4 500', category: 'home_improvement' as ServiceCategory },
-  { title: 'Electrical COC', typicalFrom: 'R1 900', category: 'inspection_compliance' as ServiceCategory },
-  { title: 'Conveyancing support', typicalFrom: 'R8 000', category: 'finance_legal' as ServiceCategory },
+  {
+    title: 'Interior repaint',
+    typicalFrom: 'R4 500',
+    category: 'home_improvement' as ServiceCategory,
+  },
+  {
+    title: 'Electrical COC',
+    typicalFrom: 'R1 900',
+    category: 'inspection_compliance' as ServiceCategory,
+  },
+  {
+    title: 'Conveyancing support',
+    typicalFrom: 'R8 000',
+    category: 'finance_legal' as ServiceCategory,
+  },
   { title: 'Move a 2-bedroom home', typicalFrom: 'R3 200', category: 'moving' as ServiceCategory },
-  { title: 'Home insurance quote', typicalFrom: 'Custom', category: 'insurance' as ServiceCategory },
-  { title: 'Listing photo package', typicalFrom: 'R2 500', category: 'media_marketing' as ServiceCategory },
+  {
+    title: 'Home insurance quote',
+    typicalFrom: 'Custom',
+    category: 'insurance' as ServiceCategory,
+  },
+  {
+    title: 'Listing photo package',
+    typicalFrom: 'R2 500',
+    category: 'media_marketing' as ServiceCategory,
+  },
 ];
 
 export const COST_GUIDES = [

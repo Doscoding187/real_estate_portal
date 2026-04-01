@@ -4,34 +4,36 @@ import { TRPCClientError } from '@trpc/client';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
+const normalizeRole = (value?: string | null) => {
+  if (value === 'user') return 'visitor';
+  if (value === 'admin') return 'super_admin';
+  return value;
+};
+
+const getRoleHomePath = (currentRole?: string | null) => {
+  switch (normalizeRole(currentRole)) {
+    case 'super_admin':
+      return '/admin/overview';
+    case 'property_developer':
+      return '/developer/dashboard';
+    case 'agency_admin':
+      return '/agency/dashboard';
+    case 'agent':
+      return '/agent/dashboard';
+    case 'service_provider':
+      return '/pro/profile';
+    case 'visitor':
+      return '/user/dashboard';
+    default:
+      return '/dashboard';
+  }
+};
+
 export const RequireRole = ({ role, children }: { role: string; children: React.ReactNode }) => {
   const { isAuthenticated, user, loading, error } = useAuth();
   const [, setLocation] = useLocation();
-  const normalizeRole = (value?: string | null) => {
-    if (value === 'user') return 'visitor';
-    if (value === 'admin') return 'super_admin';
-    return value;
-  };
   const requiredRole = normalizeRole(role);
   const actualRole = normalizeRole(user?.role);
-
-  const getRoleHomePath = (currentRole?: string | null) => {
-    switch (normalizeRole(currentRole)) {
-      case 'super_admin':
-        return '/admin/overview';
-      case 'property_developer':
-        return '/developer/dashboard';
-      case 'agency_admin':
-        return '/agency/dashboard';
-      case 'agent':
-        return '/agent/dashboard';
-      case 'visitor':
-        return '/user/dashboard';
-      default:
-        return '/dashboard';
-    }
-  };
-
   const isUnauthorizedError =
     error instanceof TRPCClientError &&
     (error.data?.code === 'UNAUTHORIZED' || error.message === UNAUTHED_ERR_MSG);

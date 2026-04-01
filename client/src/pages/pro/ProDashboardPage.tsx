@@ -39,8 +39,12 @@ export default function ProDashboardPage() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Provider Dashboard</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Lead inbox and performance</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Provider Dashboard
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+          Lead inbox and performance
+        </h1>
       </header>
       <ProNavigation />
 
@@ -55,19 +59,25 @@ export default function ProDashboardPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Active pipeline</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">{dashboard?.activePipeline || 0}</CardContent>
+          <CardContent className="text-2xl font-semibold">
+            {dashboard?.activePipeline || 0}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Conversion rate</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">{dashboard?.conversionRate || 0}%</CardContent>
+          <CardContent className="text-2xl font-semibold">
+            {dashboard?.conversionRate || 0}%
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Pending moderation</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">{dashboard?.pendingModeration || 0}</CardContent>
+          <CardContent className="text-2xl font-semibold">
+            {dashboard?.pendingModeration || 0}
+          </CardContent>
         </Card>
       </section>
 
@@ -88,7 +98,9 @@ export default function ProDashboardPage() {
                       {lead.sourceSurface} · {lead.intentStage}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {[lead.geoSuburb, lead.geoCity, lead.geoProvince].filter(Boolean).join(', ') || 'No location'}
+                      {[lead.geoSuburb, lead.geoCity, lead.geoProvince]
+                        .filter(Boolean)
+                        .join(', ') || 'No location'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -115,7 +127,9 @@ export default function ProDashboardPage() {
               </article>
             ))}
             {leads.length === 0 && (
-              <p className="text-sm text-slate-600">No provider leads yet. Complete your profile to attract matches.</p>
+              <p className="text-sm text-slate-600">
+                No provider leads yet. Complete your profile to attract matches.
+              </p>
             )}
             <div className="pt-2">
               <Button variant="outline" onClick={() => leadsQuery.refetch()}>

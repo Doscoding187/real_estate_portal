@@ -45,7 +45,7 @@ function linesToLocations(text: string) {
 }
 
 export default function ProProfilePage() {
-  useAuth({ redirectOnUnauthenticated: true });
+  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
 
   useEffect(() => {
     applySeo({
@@ -60,10 +60,10 @@ export default function ProProfilePage() {
 
   const registerIdentity = trpc.servicesEngine.registerProviderIdentity.useMutation({
     onSuccess: () => {
-      toast.success('Provider identity created');
+      toast.success('Partner profile created');
       myProfileQuery.refetch();
     },
-    onError: error => toast.error(error.message || 'Could not create provider identity'),
+    onError: error => toast.error(error.message || 'Could not create partner profile'),
   });
   const saveProfile = trpc.servicesEngine.upsertProviderProfile.useMutation({
     onSuccess: () => toast.success('Profile updated'),
@@ -87,6 +87,17 @@ export default function ProProfilePage() {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [servicesText, setServicesText] = useState('');
   const [locationsText, setLocationsText] = useState('');
+  const [autoBootstrapAttempted, setAutoBootstrapAttempted] = useState(false);
+
+  const bootstrapCompanyName = useMemo(() => {
+    const explicitName = String(user?.name || '').trim();
+    if (explicitName) return explicitName;
+    const emailPrefix = String(user?.email || '')
+      .split('@')[0]
+      ?.replace(/[._-]+/g, ' ')
+      .trim();
+    return emailPrefix || 'Partner profile';
+  }, [user?.email, user?.name]);
 
   useEffect(() => {
     if (!profile) return;
@@ -108,39 +119,67 @@ export default function ProProfilePage() {
     );
   }, [profile]);
 
+  useEffect(() => {
+    if (authLoading || myProfileQuery.isLoading || myProfileQuery.isFetching) return;
+    if (user?.role !== 'service_provider') return;
+    if (profile || registerIdentity.isPending || autoBootstrapAttempted) return;
+
+    setAutoBootstrapAttempted(true);
+    setCompanyName(current => current || bootstrapCompanyName);
+    registerIdentity.mutate({ companyName: bootstrapCompanyName });
+  }, [
+    authLoading,
+    autoBootstrapAttempted,
+    bootstrapCompanyName,
+    myProfileQuery.isFetching,
+    myProfileQuery.isLoading,
+    profile,
+    registerIdentity,
+    user?.role,
+  ]);
+
   const saving = useMemo(
     () =>
       registerIdentity.isPending ||
       saveProfile.isPending ||
       replaceServices.isPending ||
       replaceLocations.isPending,
-    [registerIdentity.isPending, saveProfile.isPending, replaceServices.isPending, replaceLocations.isPending],
+    [
+      registerIdentity.isPending,
+      saveProfile.isPending,
+      replaceServices.isPending,
+      replaceLocations.isPending,
+    ],
   );
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Provider Setup</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Directory and profile configuration</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Partner Setup
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+          Directory and partner profile configuration
+        </h1>
       </header>
       <ProNavigation />
 
       {!profile && (
         <Card>
           <CardHeader>
-            <CardTitle>Create provider identity</CardTitle>
+            <CardTitle>Create partner profile</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Input
               value={companyName}
               onChange={event => setCompanyName(event.target.value)}
-              placeholder="Company name"
+              placeholder="Business or trading name"
             />
             <Button
               disabled={!companyName.trim() || registerIdentity.isPending}
               onClick={() => registerIdentity.mutate({ companyName: companyName.trim() })}
             >
-              {registerIdentity.isPending ? 'Creating...' : 'Create profile'}
+              {registerIdentity.isPending ? 'Creating...' : 'Create partner profile'}
             </Button>
           </CardContent>
         </Card>
@@ -158,7 +197,11 @@ export default function ProProfilePage() {
                 onChange={event => setHeadline(event.target.value)}
                 placeholder="Headline"
               />
-              <Textarea value={bio} onChange={event => setBio(event.target.value)} placeholder="Bio" />
+              <Textarea
+                value={bio}
+                onChange={event => setBio(event.target.value)}
+                placeholder="Bio"
+              />
               <div className="grid gap-3 md:grid-cols-3">
                 <Input
                   value={contactEmail}
@@ -225,14 +268,18 @@ export default function ProProfilePage() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   disabled={saving}
-                  onClick={() => replaceServices.mutate({ services: linesToServices(servicesText) as any })}
+                  onClick={() =>
+                    replaceServices.mutate({ services: linesToServices(servicesText) as any })
+                  }
                 >
                   Save services
                 </Button>
                 <Button
                   variant="outline"
                   disabled={saving}
-                  onClick={() => replaceLocations.mutate({ locations: linesToLocations(locationsText) as any })}
+                  onClick={() =>
+                    replaceLocations.mutate({ locations: linesToLocations(locationsText) as any })
+                  }
                 >
                   Save locations
                 </Button>
