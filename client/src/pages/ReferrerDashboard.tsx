@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Building2, Search, MapPin, Home, Banknote, Loader2 } from 'lucide-react';
 import { calculateAffordablePrice, calculateMonthlyRepayment } from '@/lib/bond-calculator';
 import { toast } from 'sonner';
+import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
 
 const PRIME_RATE = 11.75;
 const BOND_TERM_YEARS = 20;
@@ -498,6 +499,7 @@ export default function ReferrerDashboard() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
+                        <PayoutRulesDisclosure developmentId={Number(selectedDevelopment?.developmentId || 0)} />
                         <Input
                           placeholder="Prospect full name"
                           value={prospectName}

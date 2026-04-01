@@ -73,7 +73,10 @@ function resolveOwner(input: {
 }
 
 function logLeadEvent(
-  event: 'honeypot_trigger' | 'rate_limit_trigger' | 'lead_accepted',
+  event:
+    | 'honeypot_trigger'
+    | 'rate_limit_trigger'
+    | 'lead_accepted',
   payload: Record<string, unknown>,
 ) {
   console.info(`[LeadCapture] ${JSON.stringify({ event, ...payload })}`);

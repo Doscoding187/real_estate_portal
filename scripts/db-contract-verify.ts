@@ -12,7 +12,7 @@
 
 import mysql from 'mysql2/promise';
 import { config } from 'dotenv';
-import { readdir, readFile } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 
 config();
@@ -66,8 +66,8 @@ const REQUIRED_COLUMNS = {
     { name: 'name', type: 'varchar' },
     { name: 'bedrooms', type: 'int' },
     { name: 'bathrooms', type: 'decimal' },
-    { name: 'parking_type', type: 'varchar' },
-    { name: 'parking_bays', type: 'int' },
+    { name: 'parking_type', type: 'varchar' }, // snake_case in DB
+    { name: 'parking_bays', type: 'int' }, // snake_case in DB
     { name: 'ownership_type', type: 'enum' }, // snake_case in DB
     { name: 'structural_type', type: 'enum' }, // snake_case in DB
     { name: 'base_price_from', type: 'decimal' }, // snake_case in DB

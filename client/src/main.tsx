@@ -16,6 +16,49 @@ import { queryClient } from './lib/queryClient';
 import './index.css';
 import './styles/reduced-motion.css';
 
+declare const __BUILD_GIT_SHA__: string;
+declare const __BUILD_TIME__: string;
+
+const STALE_CHUNK_RELOAD_KEY = 'plsa:stale-chunk-reload-at';
+const STALE_CHUNK_RELOAD_WINDOW_MS = 15000;
+
+function shouldHandleStaleChunkError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : typeof (error as any)?.message === 'string'
+          ? (error as any).message
+          : '';
+
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('failed to fetch dynamically imported module') ||
+    normalized.includes('importing a module script failed') ||
+    normalized.includes('unable to preload css')
+  );
+}
+
+function reloadOnceForStaleChunk(reason: unknown) {
+  if (typeof window === 'undefined') return false;
+  if (!shouldHandleStaleChunkError(reason)) return false;
+
+  const lastReloadAt = Number(sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) || '0');
+  const now = Date.now();
+
+  if (Number.isFinite(lastReloadAt) && now - lastReloadAt < STALE_CHUNK_RELOAD_WINDOW_MS) {
+    sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY);
+    console.error('[ChunkRecovery] Reload already attempted recently; leaving error visible.', reason);
+    return false;
+  }
+
+  sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, String(now));
+  console.warn('[ChunkRecovery] Reloading once after stale lazy-chunk failure.');
+  window.location.reload();
+  return true;
+}
+
 // Run critical environment checks before React boots
 validateEnvironmentConfig();
 
@@ -54,9 +97,24 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-// Build marker to confirm which code is running in production
-console.log('[BUILD_MARKER] main.tsx 2026-01-31 B (Reverted AuthProvider)');
+// Build marker to confirm exactly which frontend build is running in production
+console.log(`[BUILD_MARKER] main.tsx sha=${__BUILD_GIT_SHA__} builtAt=${__BUILD_TIME__}`);
 console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', event => {
+    const preloadEvent = event as Event & { payload?: unknown };
+    if (reloadOnceForStaleChunk(preloadEvent.payload)) {
+      preloadEvent.preventDefault();
+    }
+  });
+
+  window.addEventListener('unhandledrejection', event => {
+    if (reloadOnceForStaleChunk(event.reason)) {
+      event.preventDefault();
+    }
+  });
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 const TRPC_URL = new URL(
@@ -67,6 +125,13 @@ const TRPC_URL = new URL(
   .replace(/\/api\/api\//, '/api/');
 
 console.log('[tRPC] URL =', TRPC_URL);
+
+function createClientRequestId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 const links = [
   // Debug link to log tRPC paths
@@ -99,11 +164,34 @@ const links = [
       return headers;
     },
     async fetch(input, init) {
-      // Execute fetch with credentials
-      const res = await globalThis.fetch(input, {
-        ...(init ?? {}),
-        credentials: 'include',
-      });
+      const requestId = createClientRequestId();
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      const headers = new Headers(init?.headers ?? undefined);
+      headers.set('x-request-id', requestId);
+
+      let res: Response;
+      try {
+        res = await globalThis.fetch(input, {
+          ...(init ?? {}),
+          headers,
+          credentials: 'include',
+        });
+      } catch (error) {
+        const networkError = new Error(
+          [
+            'Network request failed before the API returned a response.',
+            `Request ID: ${requestId}`,
+            `URL: ${url}`,
+            '',
+            'Most likely causes:',
+            '- API gateway / upstream failure',
+            '- Backend process crash or restart',
+            '- Temporary network interruption',
+          ].join('\n'),
+        );
+        (networkError as Error & { cause?: unknown }).cause = error;
+        throw networkError;
+      }
 
       // Defensive: Validate response is JSON before tRPC tries to parse it
       // This prevents misleading "Unexpected end of JSON input" errors when:
@@ -123,12 +211,11 @@ const links = [
           // Ignore - body might already be consumed
         }
 
-        const url = typeof input === 'string' ? input : (input as Request).url;
-
         // Throw clear error instead of letting tRPC crash on JSON parse
         throw new Error(
           [
             `Backend returned non-JSON response (status ${res.status}).`,
+            `Request ID: ${requestId}`,
             `URL: ${url}`,
             `Content-Type: ${contentType || '(missing)'}`,
             snippet ? `Body: ${snippet}` : 'Body: (empty)',

@@ -180,7 +180,11 @@ export function SuburbInsights({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>I am a...</Label>
-                    <Select value={userType} onValueChange={setUserType} disabled={reviewsDisabled}>
+                    <Select
+                      value={userType}
+                      onValueChange={setUserType}
+                      disabled={reviewsDisabled}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>

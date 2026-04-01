@@ -110,7 +110,13 @@ export const prefersReducedMotion = (): boolean => {
  */
 export const withReducedMotion = <T extends Record<string, any>>(
   animation: T,
-): T | { initial: {}; animate: {}; exit: {} } => {
+):
+  | T
+  | {
+      initial: Record<string, never>;
+      animate: Record<string, never>;
+      exit: Record<string, never>;
+    } => {
   if (prefersReducedMotion()) {
     return {
       initial: {},

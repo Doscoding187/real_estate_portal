@@ -1,6 +1,13 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
+if (process.env.CI === 'true') {
+  console.log = () => undefined;
+  console.info = () => undefined;
+  console.warn = () => undefined;
+  console.error = () => undefined;
+}
+
 if (typeof window !== 'undefined') {
   if (typeof window.matchMedia !== 'function') {
     Object.defineProperty(window, 'matchMedia', {

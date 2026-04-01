@@ -58,16 +58,14 @@ const registerSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Invalid email address'),
+    phoneNumber: z.string().optional(),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/\d/, 'Password must contain at least one number')
-      .regex(
-        /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/,
-        'Password must contain at least one special character',
-      ),
+      .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
     confirmPassword: z.string(),
     role: z
       .enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'service_provider'])
@@ -76,6 +74,10 @@ const registerSchema = z
   .refine(data => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
+  })
+  .refine(data => data.role !== 'agent' || Boolean(data.phoneNumber?.trim()), {
+    message: 'Phone number is required for agent registration',
+    path: ['phoneNumber'],
   });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -201,6 +203,7 @@ const roles: RoleCard[] = [
 const registerDefaults: RegisterFormData = {
   name: '',
   email: '',
+  phoneNumber: '',
   password: '',
   confirmPassword: '',
   role: 'visitor',
@@ -358,6 +361,13 @@ export default function Login() {
           email: data.email,
           password: data.password,
           role: data.role,
+          agentProfile:
+            data.role === 'agent'
+              ? {
+                  displayName: data.name.trim(),
+                  phoneNumber: String(data.phoneNumber || '').trim(),
+                }
+              : undefined,
         }),
       });
 
@@ -566,6 +576,17 @@ export default function Login() {
                     className={cn(inputBase, selectedRole.focusRing)}
                   />
                 </Field>
+
+                {selectedRole.role === 'agent' ? (
+                  <Field label="Phone number" error={registerErrors.phoneNumber?.message}>
+                    <Input
+                      type="tel"
+                      {...registerForm.register('phoneNumber')}
+                      placeholder="+27 00 000 0000"
+                      className={cn(inputBase, selectedRole.focusRing)}
+                    />
+                  </Field>
+                ) : null}
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Password" error={registerErrors.password?.message}>

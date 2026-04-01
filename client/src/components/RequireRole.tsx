@@ -4,7 +4,11 @@ import { TRPCClientError } from '@trpc/client';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
-const normalizeRole = (value?: string | null) => (value === 'user' ? 'visitor' : value);
+const normalizeRole = (value?: string | null) => {
+  if (value === 'user') return 'visitor';
+  if (value === 'admin') return 'super_admin';
+  return value;
+};
 
 const getRoleHomePath = (currentRole?: string | null) => {
   switch (normalizeRole(currentRole)) {
@@ -30,7 +34,6 @@ export const RequireRole = ({ role, children }: { role: string; children: React.
   const [, setLocation] = useLocation();
   const requiredRole = normalizeRole(role);
   const actualRole = normalizeRole(user?.role);
-
   const isUnauthorizedError =
     error instanceof TRPCClientError &&
     (error.data?.code === 'UNAUTHORIZED' || error.message === UNAUTHED_ERR_MSG);

@@ -589,7 +589,13 @@ export const locationAnalyticsService = {
           AND searched_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
       `);
 
-      const row = result.rows[0] as any;
+      const rows = Array.isArray((result as any)?.rows)
+        ? (result as any).rows
+        : Array.isArray(result)
+          ? (Array.isArray((result as any)[0]) ? (result as any)[0] : (result as any))
+          : [];
+
+      const row = rows[0] as any;
 
       if (!row || row.total_searches === 0) {
         return 0;
@@ -672,7 +678,13 @@ export const locationAnalyticsService = {
         LIMIT ${limit}
       `);
 
-      return result.rows.map((row: any) => ({
+      const rows = Array.isArray((result as any)?.rows)
+        ? (result as any).rows
+        : Array.isArray(result)
+          ? (Array.isArray((result as any)[0]) ? (result as any)[0] : (result as any))
+          : [];
+
+      return rows.map((row: any) => ({
         id: row.id,
         name: row.name,
         slug: row.slug,

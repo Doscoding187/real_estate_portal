@@ -279,7 +279,12 @@ export const propertyResultsRouter = router({
           const search = await db
             .select()
             .from(savedSearches)
-            .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, getUserId(ctx))))
+            .where(
+              and(
+                eq(savedSearches.id, input.id),
+                eq(savedSearches.userId, getUserId(ctx)),
+              ),
+            )
             .limit(1);
 
           if (search.length === 0) {

@@ -38,9 +38,10 @@ const PublisherContent: React.FC = () => {
   const utils = trpc.useUtils();
 
   // Fetch lead count for badge
+  const selectedBrandId = selectedBrand?.id;
   const { data: leads } = trpc.superAdminPublisher.getBrandLeads.useQuery(
-    { brandProfileId: selectedBrand?.id!, limit: 100 },
-    { enabled: !!selectedBrand?.id },
+    { brandProfileId: selectedBrandId ?? 0, limit: 100 },
+    { enabled: !!selectedBrandId },
   );
 
   const deleteMutation = trpc.superAdminPublisher.deleteBrandProfile.useMutation({

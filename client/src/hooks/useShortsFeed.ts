@@ -2,11 +2,13 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { PropertyShort, FeedType } from '@/../../shared/types';
 import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
+import type { ExploreIntent } from '@/lib/exploreIntent';
 
 interface UseShortsFeedOptions {
   feedType: FeedType;
   feedId?: number;
   category?: string;
+  intent?: ExploreIntent | null;
   limit?: number;
 }
 
@@ -18,7 +20,13 @@ interface ShortsFeedState {
   error: string | null;
 }
 
-export function useShortsFeed({ feedType, feedId, category, limit = 20 }: UseShortsFeedOptions) {
+export function useShortsFeed({
+  feedType,
+  feedId,
+  category,
+  intent: _intent,
+  limit = 20,
+}: UseShortsFeedOptions) {
   const [state, setState] = useState<ShortsFeedState>({
     cards: [],
     currentIndex: 0,
@@ -124,6 +132,11 @@ export function useShortsFeed({ feedType, feedId, category, limit = 20 }: UseSho
               name: 'John Smith Properties',
               phone: '+27 82 123 4567',
               whatsapp: '+27821234567',
+              actorType: 'agent',
+              verificationStatus: 'verified',
+              trustBand: 'high',
+              momentumLabel: 'stable',
+              lowReports: true,
             },
           }));
           const hasMore = offset < 15; // Simulate having 20 total cards
@@ -215,6 +228,8 @@ export function useShortsFeed({ feedType, feedId, category, limit = 20 }: UseSho
     fetchFeed(true);
   }, [fetchFeed]);
 
+  const noopInteraction = useCallback((_contentId: number, ..._args: unknown[]) => undefined, []);
+
   // Get current card
   const currentCard = state.cards[state.currentIndex] || null;
 
@@ -232,6 +247,14 @@ export function useShortsFeed({ feedType, feedId, category, limit = 20 }: UseSho
     goToPrevious,
     goToIndex,
     refresh,
+    recordImpression: noopInteraction,
+    recordViewStart: noopInteraction,
+    recordViewProgress: noopInteraction,
+    recordViewComplete: noopInteraction,
+    recordLike: noopInteraction,
+    recordSave: noopInteraction,
+    recordShare: noopInteraction,
+    recordNotInterested: noopInteraction,
     isFirstCard: state.currentIndex === 0,
     isLastCard: state.currentIndex === state.cards.length - 1,
   };
