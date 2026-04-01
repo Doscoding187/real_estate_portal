@@ -386,6 +386,21 @@ function Router() {
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
           <Route path="/referrer/dashboard" component={ReferrerDashboard} />
+          <Route path="/pro/dashboard">
+            <RequireRole role="service_provider">
+              <ProDashboardPage />
+            </RequireRole>
+          </Route>
+          <Route path="/pro/profile">
+            <RequireRole role="service_provider">
+              <ProProfilePage />
+            </RequireRole>
+          </Route>
+          <Route path="/pro/explore">
+            <RequireRole role="service_provider">
+              <ProExplorePage />
+            </RequireRole>
+          </Route>
 
           {/* Services marketplace routes */}
           <Route path="/services/request/:category" component={ServicesRequestPage} />

@@ -34,7 +34,14 @@ export const users = mysqlTable(
     phone: varchar({ length: 30 }),
     loginMethod: varchar({ length: 64 }),
     emailVerified: int().default(0).notNull(),
-    role: mysqlEnum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin'])
+    role: mysqlEnum([
+      'visitor',
+      'agent',
+      'agency_admin',
+      'property_developer',
+      'service_provider',
+      'super_admin',
+    ])
       .default('visitor')
       .notNull(),
     plan: mysqlEnum(['trial', 'paid']).default('trial').notNull(),

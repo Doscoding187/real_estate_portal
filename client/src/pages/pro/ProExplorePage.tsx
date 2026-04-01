@@ -24,7 +24,8 @@ export default function ProExplorePage() {
   useEffect(() => {
     applySeo({
       title: 'Explore Publishing | Services Pro',
-      description: 'Submit provider videos, track moderation, and manage explore publishing status.',
+      description:
+        'Submit provider videos, track moderation, and manage explore publishing status.',
       canonicalPath: '/pro/explore',
       noindex: true,
     });
@@ -32,7 +33,8 @@ export default function ProExplorePage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [vertical, setVertical] = useState<(typeof VERTICAL_OPTIONS)[number]['value']>('walkthroughs');
+  const [vertical, setVertical] =
+    useState<(typeof VERTICAL_OPTIONS)[number]['value']>('walkthroughs');
 
   const videosQuery = trpc.servicesEngine.myExploreVideos.useQuery({ limit: 50 });
   const submitVideo = trpc.servicesEngine.submitExploreVideo.useMutation({
@@ -50,8 +52,12 @@ export default function ProExplorePage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Explore Publishing</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Submit and track creator videos</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Explore Publishing
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+          Submit and track creator videos
+        </h1>
       </header>
       <ProNavigation />
 
@@ -60,7 +66,11 @@ export default function ProExplorePage() {
           <CardTitle>Submit new video</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input value={title} onChange={event => setTitle(event.target.value)} placeholder="Video title" />
+          <Input
+            value={title}
+            onChange={event => setTitle(event.target.value)}
+            placeholder="Video title"
+          />
           <Textarea
             value={description}
             onChange={event => setDescription(event.target.value)}
@@ -110,7 +120,9 @@ export default function ProExplorePage() {
               </div>
             </article>
           ))}
-          {videos.length === 0 && <p className="text-sm text-slate-600">No videos submitted yet.</p>}
+          {videos.length === 0 && (
+            <p className="text-sm text-slate-600">No videos submitted yet.</p>
+          )}
         </CardContent>
       </Card>
     </main>
