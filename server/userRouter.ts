@@ -53,6 +53,11 @@ const sellerPlanningInputsSchema = z.object({
   goal: z.enum(['upgrade', 'downsize', 'sell_investment', 'test_market', 'relocating']).optional(),
   timeline: z.enum(['0_30_days', '1_3_months', '3_6_months', '6_months_plus']).optional(),
   readiness: z.enum(['needs_work', 'good_condition', 'launch_ready']).optional(),
+  propertyType: z.enum(['apartment', 'house', 'townhouse', 'vacant_land', 'commercial']).optional(),
+  bedroomProfile: z.enum(['studio_1', '2', '3', '4_plus']).optional(),
+  occupancy: z.enum(['owner_occupied', 'vacant', 'tenant_occupied']).optional(),
+  pricingPriority: z.enum(['maximize_price', 'balanced', 'sell_quickly']).optional(),
+  estimatedValueBand: z.enum(['under_1m', '1m_2m', '2m_3m', '3m_5m', '5m_plus']).optional(),
 });
 
 const consumerDashboardPreferencesSchema = z.object({
