@@ -26,6 +26,8 @@ export type LeadWizardSubmit = {
 type LeadRequestWizardProps = {
   defaultCategory: ServiceCategory;
   defaultLocation?: string;
+  defaultIntentStage?: IntentStage;
+  defaultSourceSurface?: SourceSurface;
   submitting?: boolean;
   onSubmit: (payload: LeadWizardSubmit) => void;
 };
@@ -44,14 +46,16 @@ const STAGE_OPTIONS: Array<{ value: IntentStage; label: string }> = [
 export function LeadRequestWizard({
   defaultCategory,
   defaultLocation = '',
+  defaultIntentStage = 'general',
+  defaultSourceSurface = 'journey_injection',
   submitting = false,
   onSubmit,
 }: LeadRequestWizardProps) {
   const [step, setStep] = useState(1);
   const [category, setCategory] = useState<ServiceCategory>(defaultCategory);
   const [location, setLocation] = useState(defaultLocation);
-  const [intentStage, setIntentStage] = useState<IntentStage>('general');
-  const [sourceSurface, setSourceSurface] = useState<SourceSurface>('journey_injection');
+  const [intentStage, setIntentStage] = useState<IntentStage>(defaultIntentStage);
+  const [sourceSurface, setSourceSurface] = useState<SourceSurface>(defaultSourceSurface);
   const [notes, setNotes] = useState('');
   const [propertyId, setPropertyId] = useState('');
   const [listingId, setListingId] = useState('');
@@ -75,7 +79,9 @@ export function LeadRequestWizard({
         {step === 1 && (
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Category</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Category
+              </span>
               <select
                 value={category}
                 onChange={event => setCategory(event.target.value as ServiceCategory)}
@@ -89,7 +95,9 @@ export function LeadRequestWizard({
               </select>
             </label>
             <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Location</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Location
+              </span>
               <Input
                 value={location}
                 onChange={event => setLocation(event.target.value)}
@@ -169,7 +177,11 @@ export function LeadRequestWizard({
         )}
 
         <div className="flex items-center justify-between">
-          <Button variant="outline" disabled={step === 1 || submitting} onClick={() => setStep(step - 1)}>
+          <Button
+            variant="outline"
+            disabled={step === 1 || submitting}
+            onClick={() => setStep(step - 1)}
+          >
             Back
           </Button>
           {step < 3 ? (
