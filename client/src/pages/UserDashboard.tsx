@@ -59,10 +59,20 @@ type DashboardIntent = 'buyer' | 'seller' | 'both';
 type SellerGoal = 'upgrade' | 'downsize' | 'sell_investment' | 'test_market' | 'relocating';
 type SellerTimeline = '0_30_days' | '1_3_months' | '3_6_months' | '6_months_plus';
 type SellerReadinessLevel = 'needs_work' | 'good_condition' | 'launch_ready';
+type SellerPropertyType = 'apartment' | 'house' | 'townhouse' | 'vacant_land' | 'commercial';
+type SellerBedroomProfile = 'studio_1' | '2' | '3' | '4_plus';
+type SellerOccupancy = 'owner_occupied' | 'vacant' | 'tenant_occupied';
+type SellerPricingPriority = 'maximize_price' | 'balanced' | 'sell_quickly';
+type SellerEstimatedValueBand = 'under_1m' | '1m_2m' | '2m_3m' | '3m_5m' | '5m_plus';
 type SellerPlanningInputs = {
   goal?: SellerGoal;
   timeline?: SellerTimeline;
   readiness?: SellerReadinessLevel;
+  propertyType?: SellerPropertyType;
+  bedroomProfile?: SellerBedroomProfile;
+  occupancy?: SellerOccupancy;
+  pricingPriority?: SellerPricingPriority;
+  estimatedValueBand?: SellerEstimatedValueBand;
 };
 type RawCriteria = Record<string, unknown>;
 type ProspectRecord = {
@@ -160,6 +170,47 @@ type HeatmapEntry = {
   growthInsight: string;
 };
 
+const ESTIMATED_VALUE_BAND_MIDPOINTS: Record<SellerEstimatedValueBand, number> = {
+  under_1m: 850000,
+  '1m_2m': 1500000,
+  '2m_3m': 2500000,
+  '3m_5m': 4000000,
+  '5m_plus': 6500000,
+};
+
+const SELLER_SELECT_LABELS = {
+  propertyType: {
+    apartment: 'Apartment',
+    house: 'House',
+    townhouse: 'Townhouse',
+    vacant_land: 'Vacant land',
+    commercial: 'Commercial',
+  } satisfies Record<SellerPropertyType, string>,
+  bedroomProfile: {
+    studio_1: 'Studio / 1 bed',
+    '2': '2 bedrooms',
+    '3': '3 bedrooms',
+    '4_plus': '4+ bedrooms',
+  } satisfies Record<SellerBedroomProfile, string>,
+  occupancy: {
+    owner_occupied: 'Owner occupied',
+    vacant: 'Vacant',
+    tenant_occupied: 'Tenant occupied',
+  } satisfies Record<SellerOccupancy, string>,
+  pricingPriority: {
+    maximize_price: 'Maximize price',
+    balanced: 'Balanced outcome',
+    sell_quickly: 'Sell quickly',
+  } satisfies Record<SellerPricingPriority, string>,
+  estimatedValueBand: {
+    under_1m: 'Under R1M',
+    '1m_2m': 'R1M - R2M',
+    '2m_3m': 'R2M - R3M',
+    '3m_5m': 'R3M - R5M',
+    '5m_plus': 'R5M+',
+  } satisfies Record<SellerEstimatedValueBand, string>,
+};
+
 const DASHBOARD_INTENT_KEY = 'consumer_dashboard_intent';
 const DASHBOARD_LAST_VISIT_KEY = 'consumer_dashboard_last_visit';
 
@@ -244,6 +295,10 @@ function makeWatchKey(suburb?: string, city?: string, province?: string) {
   return [normalizeText(suburb), normalizeText(city), normalizeText(province)]
     .filter(Boolean)
     .join('|');
+}
+
+function blendNumbers(primary: number, secondary: number, primaryWeight: number) {
+  return primary * primaryWeight + secondary * (1 - primaryWeight);
 }
 
 function getPropertyLocationParts(raw?: Record<string, unknown> | null) {
@@ -749,6 +804,36 @@ export default function UserDashboard() {
     };
   }, [favorites.length, savedSearches, watchAreas, watchMarket]);
 
+  const sellerProfileSummary = useMemo(() => {
+    const entries = [
+      sellerPlanning.propertyType
+        ? SELLER_SELECT_LABELS.propertyType[sellerPlanning.propertyType]
+        : null,
+      sellerPlanning.bedroomProfile
+        ? SELLER_SELECT_LABELS.bedroomProfile[sellerPlanning.bedroomProfile]
+        : null,
+      sellerPlanning.occupancy ? SELLER_SELECT_LABELS.occupancy[sellerPlanning.occupancy] : null,
+      sellerPlanning.pricingPriority
+        ? SELLER_SELECT_LABELS.pricingPriority[sellerPlanning.pricingPriority]
+        : null,
+      sellerPlanning.estimatedValueBand
+        ? SELLER_SELECT_LABELS.estimatedValueBand[sellerPlanning.estimatedValueBand]
+        : null,
+    ].filter(Boolean) as string[];
+
+    return {
+      labels: entries,
+      completed: entries.length,
+      total: 5,
+    };
+  }, [
+    sellerPlanning.bedroomProfile,
+    sellerPlanning.estimatedValueBand,
+    sellerPlanning.occupancy,
+    sellerPlanning.pricingPriority,
+    sellerPlanning.propertyType,
+  ]);
+
   const sellerStrategy = useMemo(() => {
     const activeMarkets = watchMarket
       .filter(item => item.market)
@@ -840,6 +925,44 @@ export default function UserDashboard() {
     }
 
     const anchor = activeMarkets[0];
+    const localAnchor = blendNumbers(anchor.medianPrice, anchor.averagePrice, 0.6);
+    const explicitValueMidpoint = sellerPlanning.estimatedValueBand
+      ? ESTIMATED_VALUE_BAND_MIDPOINTS[sellerPlanning.estimatedValueBand]
+      : null;
+    let calibratedAnchor =
+      explicitValueMidpoint && explicitValueMidpoint > 0
+        ? blendNumbers(localAnchor, explicitValueMidpoint, 0.68)
+        : localAnchor;
+
+    const propertyTypeMultiplier: Record<SellerPropertyType, number> = {
+      apartment: 0.94,
+      house: 1.05,
+      townhouse: 0.99,
+      vacant_land: 0.8,
+      commercial: 1.08,
+    };
+    const bedroomMultiplier: Record<SellerBedroomProfile, number> = {
+      studio_1: 0.9,
+      '2': 0.98,
+      '3': 1.05,
+      '4_plus': 1.12,
+    };
+    const readinessMultiplier: Record<SellerReadinessLevel, number> = {
+      needs_work: 0.95,
+      good_condition: 1,
+      launch_ready: 1.03,
+    };
+
+    if (sellerPlanning.propertyType) {
+      calibratedAnchor *= propertyTypeMultiplier[sellerPlanning.propertyType];
+    }
+    if (sellerPlanning.bedroomProfile) {
+      calibratedAnchor *= bedroomMultiplier[sellerPlanning.bedroomProfile];
+    }
+    if (sellerPlanning.readiness) {
+      calibratedAnchor *= readinessMultiplier[sellerPlanning.readiness];
+    }
+
     const lowMultiplier =
       sellerStrategy.marketTemperature === 'Demand-forward market'
         ? 0.99
@@ -853,8 +976,8 @@ export default function UserDashboard() {
           ? 1.0
           : 1.02;
 
-    const benchmarkLow = roundToNearest(anchor.medianPrice * lowMultiplier, 25000);
-    const benchmarkHigh = roundToNearest(anchor.averagePrice * highMultiplier, 25000);
+    let benchmarkLow = roundToNearest(calibratedAnchor * lowMultiplier, 25000);
+    let benchmarkHigh = roundToNearest(calibratedAnchor * highMultiplier, 25000);
 
     let pricingPosture = 'Price close to the market median';
     let rationale =
@@ -863,6 +986,10 @@ export default function UserDashboard() {
       'Run valuation prep before finalizing a list price.',
       'Prepare media once the pricing brief is aligned with current supply.',
     ];
+    let confidenceLabel = 'Pattern read';
+    let confidenceDetail =
+      'This range is driven mainly by your strongest watched market. Add more home-profile detail to make the guidance more personal.';
+    let anchorSource = 'Local market movement';
 
     if (sellerStrategy.marketTemperature === 'Demand-forward market') {
       pricingPosture = 'Lead at the upper end of the local band';
@@ -880,6 +1007,18 @@ export default function UserDashboard() {
         'Use inspection and compliance work to remove buyer objections before launch.',
         'Benchmark against active competing stock instead of older peak pricing.',
       ];
+    }
+
+    if (sellerPlanning.pricingPriority === 'maximize_price') {
+      pricingPosture = 'Bias toward the upper half of the band';
+      benchmarkHigh = roundToNearest(benchmarkHigh * 1.02, 25000);
+      rationale =
+        'You are optimizing for price, so the strategy should protect launch quality and keep enough room for negotiation without sacrificing your ceiling too early.';
+    } else if (sellerPlanning.pricingPriority === 'sell_quickly') {
+      pricingPosture = 'Enter with a sharper, faster-moving price';
+      benchmarkLow = roundToNearest(benchmarkLow * 0.98, 25000);
+      rationale =
+        'Because speed matters more here, the band should reduce friction and encourage early buyer activity instead of testing the very top of the range.';
     }
 
     if (sellerPlanning.goal === 'test_market') {
@@ -900,6 +1039,41 @@ export default function UserDashboard() {
       ].slice(0, 3);
     }
 
+    if (sellerPlanning.occupancy === 'tenant_occupied') {
+      nextSteps = [
+        'Align tenant timing, notice periods, and access windows before booking media or valuation visits.',
+        ...nextSteps,
+      ].slice(0, 3);
+    } else if (sellerPlanning.occupancy === 'vacant') {
+      nextSteps = [
+        'Use the vacant window to tighten staging, repairs, and launch photography before the market sees the listing.',
+        ...nextSteps,
+      ].slice(0, 3);
+    }
+
+    const confidencePoints =
+      activeMarkets.length +
+      (sellerPlanning.estimatedValueBand ? 1 : 0) +
+      (sellerPlanning.propertyType ? 1 : 0) +
+      (sellerPlanning.bedroomProfile ? 1 : 0) +
+      (sellerPlanning.occupancy ? 1 : 0);
+
+    if (confidencePoints >= 6) {
+      confidenceLabel = 'High confidence';
+      confidenceDetail =
+        'You have enough market and home-profile detail for a sharper estimate frame. Use this to brief valuation and launch partners, not as a formal appraisal.';
+      anchorSource = explicitValueMidpoint
+        ? 'Blended local market + homeowner estimate'
+        : 'Multi-signal local market blend';
+    } else if (confidencePoints >= 4) {
+      confidenceLabel = 'Medium confidence';
+      confidenceDetail =
+        'The range is directionally useful now, but it will improve once you add either your value band or more detail about the home itself.';
+      anchorSource = explicitValueMidpoint
+        ? 'Local market adjusted by your estimate band'
+        : 'Local market benchmark';
+    }
+
     return {
       area: anchor.label,
       benchmarkLow,
@@ -907,9 +1081,18 @@ export default function UserDashboard() {
       pricingPosture,
       rationale,
       nextSteps,
+      confidenceLabel,
+      confidenceDetail,
+      anchorSource,
+      calibratedAnchor: roundToNearest(calibratedAnchor, 25000),
     };
   }, [
+    sellerPlanning.bedroomProfile,
+    sellerPlanning.estimatedValueBand,
     sellerPlanning.goal,
+    sellerPlanning.occupancy,
+    sellerPlanning.pricingPriority,
+    sellerPlanning.propertyType,
     sellerPlanning.readiness,
     sellerStrategy.marketTemperature,
     watchMarket,
@@ -1416,73 +1599,207 @@ export default function UserDashboard() {
                       </Button>
                     </div>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                      <Select
-                        value={sellerPlanning.goal}
-                        onValueChange={value =>
-                          setSellerPlanning(current => ({
-                            ...current,
-                            goal: value as SellerGoal,
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Selling goal" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="upgrade">Upgrade</SelectItem>
-                          <SelectItem value="downsize">Downsize</SelectItem>
-                          <SelectItem value="sell_investment">Sell investment</SelectItem>
-                          <SelectItem value="test_market">Test market</SelectItem>
-                          <SelectItem value="relocating">Relocating</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Timing and launch context
+                        </p>
+                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                          <Select
+                            value={sellerPlanning.goal}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                goal: value as SellerGoal,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Selling goal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="upgrade">Upgrade</SelectItem>
+                              <SelectItem value="downsize">Downsize</SelectItem>
+                              <SelectItem value="sell_investment">Sell investment</SelectItem>
+                              <SelectItem value="test_market">Test market</SelectItem>
+                              <SelectItem value="relocating">Relocating</SelectItem>
+                            </SelectContent>
+                          </Select>
 
-                      <Select
-                        value={sellerPlanning.timeline}
-                        onValueChange={value =>
-                          setSellerPlanning(current => ({
-                            ...current,
-                            timeline: value as SellerTimeline,
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Timeline" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0_30_days">0-30 days</SelectItem>
-                          <SelectItem value="1_3_months">1-3 months</SelectItem>
-                          <SelectItem value="3_6_months">3-6 months</SelectItem>
-                          <SelectItem value="6_months_plus">6+ months</SelectItem>
-                        </SelectContent>
-                      </Select>
+                          <Select
+                            value={sellerPlanning.timeline}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                timeline: value as SellerTimeline,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Timeline" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0_30_days">0-30 days</SelectItem>
+                              <SelectItem value="1_3_months">1-3 months</SelectItem>
+                              <SelectItem value="3_6_months">3-6 months</SelectItem>
+                              <SelectItem value="6_months_plus">6+ months</SelectItem>
+                            </SelectContent>
+                          </Select>
 
-                      <Select
-                        value={sellerPlanning.readiness}
-                        onValueChange={value =>
-                          setSellerPlanning(current => ({
-                            ...current,
-                            readiness: value as SellerReadinessLevel,
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Home readiness" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="needs_work">Needs work</SelectItem>
-                          <SelectItem value="good_condition">Good condition</SelectItem>
-                          <SelectItem value="launch_ready">Launch ready</SelectItem>
-                        </SelectContent>
-                      </Select>
+                          <Select
+                            value={sellerPlanning.readiness}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                readiness: value as SellerReadinessLevel,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Home readiness" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="needs_work">Needs work</SelectItem>
+                              <SelectItem value="good_condition">Good condition</SelectItem>
+                              <SelectItem value="launch_ready">Launch ready</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Homeowner profile
+                        </p>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                          <Select
+                            value={sellerPlanning.propertyType}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                propertyType: value as SellerPropertyType,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Property type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="apartment">Apartment</SelectItem>
+                              <SelectItem value="house">House</SelectItem>
+                              <SelectItem value="townhouse">Townhouse</SelectItem>
+                              <SelectItem value="vacant_land">Vacant land</SelectItem>
+                              <SelectItem value="commercial">Commercial</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={sellerPlanning.bedroomProfile}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                bedroomProfile: value as SellerBedroomProfile,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Bedrooms" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="studio_1">Studio / 1 bed</SelectItem>
+                              <SelectItem value="2">2 bedrooms</SelectItem>
+                              <SelectItem value="3">3 bedrooms</SelectItem>
+                              <SelectItem value="4_plus">4+ bedrooms</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={sellerPlanning.occupancy}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                occupancy: value as SellerOccupancy,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Occupancy" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="owner_occupied">Owner occupied</SelectItem>
+                              <SelectItem value="vacant">Vacant</SelectItem>
+                              <SelectItem value="tenant_occupied">Tenant occupied</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={sellerPlanning.pricingPriority}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                pricingPriority: value as SellerPricingPriority,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Pricing priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="maximize_price">Maximize price</SelectItem>
+                              <SelectItem value="balanced">Balanced outcome</SelectItem>
+                              <SelectItem value="sell_quickly">Sell quickly</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={sellerPlanning.estimatedValueBand}
+                            onValueChange={value =>
+                              setSellerPlanning(current => ({
+                                ...current,
+                                estimatedValueBand: value as SellerEstimatedValueBand,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Your estimate" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="under_1m">Under R1M</SelectItem>
+                              <SelectItem value="1m_2m">R1M - R2M</SelectItem>
+                              <SelectItem value="2m_3m">R2M - R3M</SelectItem>
+                              <SelectItem value="3m_5m">R3M - R5M</SelectItem>
+                              <SelectItem value="5m_plus">R5M+</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
 
-                    <p className="mt-3 text-xs text-slate-500">
-                      {consumerDashboardState?.updatedAt
-                        ? `Last saved ${formatDashboardDate(consumerDashboardState.updatedAt)}`
-                        : 'Your saved intent and seller plan travel with your account.'}
-                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {sellerProfileSummary.labels.length > 0 ? (
+                        sellerProfileSummary.labels.map(label => (
+                          <Badge key={label} variant="secondary">
+                            {label}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-500">
+                          Add homeowner profile details to tighten the valuation guidance.
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                      <span>
+                        Homeowner profile saved: {sellerProfileSummary.completed}/
+                        {sellerProfileSummary.total}
+                      </span>
+                      <span>
+                        {consumerDashboardState?.updatedAt
+                          ? `Last saved ${formatDashboardDate(consumerDashboardState.updatedAt)}`
+                          : 'Your saved intent and seller plan travel with your account.'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -1502,6 +1819,47 @@ export default function UserDashboard() {
                       <Badge variant="outline" className="border-blue-200 text-blue-800">
                         {sellerValuationGuide.pricingPosture}
                       </Badge>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Estimate confidence
+                        </p>
+                        <p className="mt-2 text-base font-semibold text-slate-900">
+                          {sellerValuationGuide.confidenceLabel}
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          {sellerValuationGuide.confidenceDetail}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Anchor source
+                        </p>
+                        <p className="mt-2 text-base font-semibold text-slate-900">
+                          {sellerValuationGuide.anchorSource}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-600">
+                          Calibrated anchor{' '}
+                          {formatCompactRand(sellerValuationGuide.calibratedAnchor)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Profile lift
+                        </p>
+                        <p className="mt-2 text-base font-semibold text-slate-900">
+                          {sellerProfileSummary.completed >= 4
+                            ? 'Personalized frame'
+                            : 'Still market-led'}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-600">
+                          {sellerProfileSummary.completed >= 4
+                            ? 'Your home profile is now influencing the estimate more directly.'
+                            : 'Add more homeowner detail so the estimate depends less on raw locality averages.'}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2">
