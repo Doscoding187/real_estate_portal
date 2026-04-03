@@ -1,7 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { discoveryRankingService } from '../discoveryRankingService';
 
 describe('discoveryRankingService', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('prefers stronger query matches and fresher engagement', () => {
     const ranked = discoveryRankingService.rankItems(
       [
