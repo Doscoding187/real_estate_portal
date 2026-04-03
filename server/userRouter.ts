@@ -86,6 +86,9 @@ export const userRouter = router({
     if (!db) {
       throw new Error('Database not available');
     }
+    if (!ctx.user) {
+      throw new Error('Unauthorized');
+    }
 
     const userId = Number(ctx.user.id);
     let [state] = await db
@@ -137,6 +140,9 @@ export const userRouter = router({
       const db = await getDb();
       if (!db) {
         throw new Error('Database not available');
+      }
+      if (!ctx.user) {
+        throw new Error('Unauthorized');
       }
 
       const userId = Number(ctx.user.id);

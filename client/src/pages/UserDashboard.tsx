@@ -65,9 +65,53 @@ type SellerPlanningInputs = {
   readiness?: SellerReadinessLevel;
 };
 type RawCriteria = Record<string, unknown>;
+type ProspectRecord = {
+  income?: number | null;
+  incomeRange?: string | null;
+  employmentStatus?: string | null;
+  combinedIncome?: number | null;
+  monthlyExpenses?: number | null;
+  monthlyDebts?: number | null;
+  dependents?: number | null;
+  savingsDeposit?: number | null;
+  creditScore?: number | null;
+  hasCreditConsent?: number | null;
+};
+type ProspectProgressRecord = {
+  progress?: number | null;
+};
+type BuyabilityResultsRecord = {
+  affordabilityMin?: number | null;
+  affordabilityMax?: number | null;
+  monthlyPaymentCapacity?: number | null;
+  buyabilityScore?: string | null;
+};
+type LegacyProspectProcedures = {
+  getProspect: {
+    useQuery: (
+      input: { sessionId: string },
+      options: { enabled: boolean },
+    ) => { data: ProspectRecord | null | undefined };
+  };
+  getProspectProgress: {
+    useQuery: (
+      input: { sessionId: string },
+      options: { enabled: boolean },
+    ) => { data: ProspectProgressRecord | null | undefined };
+  };
+  calculateBuyability: {
+    useQuery: (
+      input: unknown,
+      options: { enabled: boolean },
+    ) => { data: BuyabilityResultsRecord | null | undefined };
+  };
+};
 type FavoriteCard = ReturnType<typeof normalizePropertyForUI> & {
   savedAt?: string | null;
   property?: Record<string, unknown>;
+  suburb?: string;
+  city?: string;
+  province?: string;
 };
 type WatchArea = {
   key: string;
@@ -202,6 +246,33 @@ function makeWatchKey(suburb?: string, city?: string, province?: string) {
     .join('|');
 }
 
+function getPropertyLocationParts(raw?: Record<string, unknown> | null) {
+  if (!raw) {
+    return {
+      suburb: undefined,
+      city: undefined,
+      province: undefined,
+    };
+  }
+
+  const location =
+    raw.location && typeof raw.location === 'object' && !Array.isArray(raw.location)
+      ? (raw.location as Record<string, unknown>)
+      : undefined;
+
+  const suburb =
+    (typeof raw.suburb === 'string' ? raw.suburb : undefined) ||
+    (typeof location?.suburb === 'string' ? location.suburb : undefined);
+  const city =
+    (typeof raw.city === 'string' ? raw.city : undefined) ||
+    (typeof location?.city === 'string' ? location.city : undefined);
+  const province =
+    (typeof raw.province === 'string' ? raw.province : undefined) ||
+    (typeof location?.province === 'string' ? location.province : undefined);
+
+  return { suburb, city, province };
+}
+
 function aggregateMarketPulse(
   label: string,
   href: string,
@@ -290,6 +361,7 @@ export default function UserDashboard() {
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
   const sessionId = useProspectSessionId();
   const utils = trpc.useUtils();
+  const prospectApi = (trpc as unknown as { prospects: LegacyProspectProcedures }).prospects;
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [intent, setIntent] = useState<DashboardIntent>(() => {
     if (typeof window === 'undefined') return 'buyer';
@@ -344,11 +416,11 @@ export default function UserDashboard() {
     { status: 'available', limit: 120 },
     { enabled: isAuthenticated },
   );
-  const { data: prospect } = trpc.prospects.getProspect.useQuery(
+  const { data: prospect } = prospectApi.getProspect.useQuery(
     { sessionId },
     { enabled: isAuthenticated && !!sessionId },
   );
-  const { data: prospectProgress } = trpc.prospects.getProspectProgress.useQuery(
+  const { data: prospectProgress } = prospectApi.getProspectProgress.useQuery(
     { sessionId },
     { enabled: isAuthenticated && !!sessionId },
   );
@@ -420,21 +492,22 @@ export default function UserDashboard() {
     };
   }, [prospect]);
 
-  const { data: buyabilityResults } = trpc.prospects.calculateBuyability.useQuery(
-    buyabilityInput as never,
-    { enabled: Boolean(buyabilityInput) },
-  );
+  const { data: buyabilityResults } = prospectApi.calculateBuyability.useQuery(buyabilityInput, {
+    enabled: Boolean(buyabilityInput),
+  });
 
   const favorites = useMemo(
     () =>
       (favoritesRaw || [])
         .map((entry: { createdAt?: string; property?: Record<string, unknown> }) => {
           const normalized = normalizePropertyForUI(entry.property);
+          const locationParts = getPropertyLocationParts(entry.property);
           return normalized
             ? ({
                 ...normalized,
                 savedAt: entry.createdAt,
                 property: entry.property,
+                ...locationParts,
               } as FavoriteCard)
             : null;
         })
@@ -1683,15 +1756,17 @@ export default function UserDashboard() {
                           variant="link"
                           className="mt-2 h-auto p-0 text-current"
                           onClick={() => {
-                            if (change.href.startsWith('#')) {
-                              const tabId = change.href.replace('#', '');
+                            const href = change.href;
+                            if (!href) return;
+                            if (href.startsWith('#')) {
+                              const tabId = href.replace('#', '');
                               const trigger = document.querySelector<HTMLElement>(
                                 `[data-state][value="${tabId}"]`,
                               );
                               trigger?.click();
                               return;
                             }
-                            setLocation(change.href);
+                            setLocation(href);
                           }}
                         >
                           {change.cta}
@@ -1940,6 +2015,7 @@ export default function UserDashboard() {
                   {comparisonItems.map(item => {
                     const property = normalizePropertyForUI(item);
                     if (!property) return null;
+                    const locationParts = getPropertyLocationParts(item as Record<string, unknown>);
 
                     return (
                       <Card key={item.id} className="border-white/60 bg-white/90">
@@ -1948,8 +2024,9 @@ export default function UserDashboard() {
                             <div>
                               <p className="font-semibold text-slate-900">{property.title}</p>
                               <p className="text-sm text-slate-500">
-                                {[property.city, property.province].filter(Boolean).join(', ') ||
-                                  'South Africa'}
+                                {[locationParts.city, locationParts.province]
+                                  .filter(Boolean)
+                                  .join(', ') || 'South Africa'}
                               </p>
                             </div>
                             <Button
