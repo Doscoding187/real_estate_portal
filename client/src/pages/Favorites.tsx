@@ -14,14 +14,14 @@ export default function Favorites() {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
 
-  const { data: favorites, isLoading } = trpc.favorites.list.useQuery(undefined, {
+  const { data: favorites, isLoading } = trpc.properties.getFavorites.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
-  const removeFavoriteMutation = trpc.favorites.remove.useMutation({
+  const removeFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
     onSuccess: () => {
       toast.success('Removed from favorites');
-      utils.favorites.list.invalidate();
+      utils.properties.getFavorites.invalidate();
     },
     onError: () => {
       toast.error('Failed to remove from favorites');

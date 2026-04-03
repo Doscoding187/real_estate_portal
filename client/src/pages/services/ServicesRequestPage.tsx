@@ -9,6 +9,8 @@ import { trpc } from '@/lib/trpc';
 import {
   formatCategoryLabel,
   serviceCategoryFromSlug,
+  type IntentStage,
+  type SourceSurface,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
@@ -23,13 +25,16 @@ export default function ServicesRequestPage() {
   const auth = useAuth();
 
   const categoryParam = String(params?.category || '').trim();
-  const category = serviceCategoryFromSlug(categoryParam) || ('home_improvement' as ServiceCategory);
+  const category =
+    serviceCategoryFromSlug(categoryParam) || ('home_improvement' as ServiceCategory);
 
-  const query = useMemo(currentQuery, []);
+  const query = useMemo(() => currentQuery(), []);
   const defaultLocation = [query.get('suburb'), query.get('city'), query.get('province')]
     .filter(Boolean)
     .join(', ');
   const providerId = query.get('providerId') || undefined;
+  const defaultIntentStage = (query.get('intentStage') || 'general') as IntentStage;
+  const defaultSourceSurface = (query.get('sourceSurface') || 'journey_injection') as SourceSurface;
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
@@ -78,7 +83,9 @@ export default function ServicesRequestPage() {
               We need your account to track provider matches and quote responses.
             </p>
             <div className="flex items-center gap-2">
-              <Link href={`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}>
+              <Link
+                href={`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+              >
                 <Button>Go to login</Button>
               </Link>
               <Link href={`/services/${category}`}>
@@ -94,7 +101,9 @@ export default function ServicesRequestPage() {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Request Matching</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Request Matching
+        </p>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Get matched for {formatCategoryLabel(category)}
         </h1>
@@ -106,6 +115,8 @@ export default function ServicesRequestPage() {
       <LeadRequestWizard
         defaultCategory={category}
         defaultLocation={defaultLocation}
+        defaultIntentStage={defaultIntentStage}
+        defaultSourceSurface={defaultSourceSurface}
         submitting={createLead.isPending}
         onSubmit={payload => {
           createLead.mutate({

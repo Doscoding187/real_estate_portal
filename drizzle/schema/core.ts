@@ -172,6 +172,8 @@ export const userOnboardingState = mysqlTable('user_onboarding_state', {
   saveCount: int('save_count').default(0),
   partnerEngagementCount: int('partner_engagement_count').default(0),
   featuresUnlocked: json('features_unlocked'),
+  consumerDashboardPreferences: json('consumer_dashboard_preferences'),
+  sellerPlanningInputs: json('seller_planning_inputs'),
   createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
 });
