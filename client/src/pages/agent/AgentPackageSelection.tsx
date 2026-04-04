@@ -698,22 +698,6 @@ export default function AgentPackageSelection() {
             <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </section>
-
-        <section className="mt-6 rounded-[28px] border border-slate-200 bg-white/80 px-6 py-5 text-sm leading-6 text-slate-600 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="max-w-3xl">
-              <p className="font-semibold text-slate-900">Why this layout is different</p>
-              <p className="mt-1">
-                This page is part of onboarding, not checkout. It helps the agent choose the right
-                launch tier now, then complete profile setup before they manage billing in the main
-                product.
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
-              Step 2 of 4
-            </div>
-          </div>
-        </section>
       </main>
     </div>
   );
