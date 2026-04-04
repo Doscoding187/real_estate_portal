@@ -9,9 +9,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, CheckCircle2, Upload } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
+import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 
 const TOTAL_STEPS = 5;
+
+type LocationOption = {
+  id: number;
+  name: string;
+  type: 'province' | 'city' | 'suburb';
+  provinceName?: string;
+  cityName?: string;
+};
 
 function splitCsv(value: string) {
   return value
@@ -24,6 +33,18 @@ function joinCsv(values: string[] = []) {
   return values.join(', ');
 }
 
+function formatCoverageLabel(location: LocationOption) {
+  if (location.type === 'suburb') {
+    return [location.name, location.cityName, location.provinceName].filter(Boolean).join(', ');
+  }
+
+  if (location.type === 'city') {
+    return [location.name, location.provinceName].filter(Boolean).join(', ');
+  }
+
+  return location.name;
+}
+
 export function AgentSetupWizard() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -34,12 +55,13 @@ export function AgentSetupWizard() {
   const [profileImagePreviewUrl, setProfileImagePreviewUrl] = useState('');
   const [selectedProfileImageName, setSelectedProfileImageName] = useState('');
   const [isDragOverProfileImage, setIsDragOverProfileImage] = useState(false);
+  const [areaSearch, setAreaSearch] = useState('');
+  const [selectedCoverageAreas, setSelectedCoverageAreas] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     displayName: '',
     phone: '',
     whatsapp: '',
     profileImage: '',
-    areasServed: '',
     focus: 'both',
     specializations: '',
     propertyTypes: '',
@@ -89,7 +111,6 @@ export function AgentSetupWizard() {
       phone: agent.phone || prev.phone,
       whatsapp: agent.whatsapp || prev.whatsapp,
       profileImage: agent.profileImage || prev.profileImage,
-      areasServed: joinCsv(agent.areasServed || []),
       focus: agent.focus || prev.focus,
       specializations: joinCsv(agent.specializations || []),
       propertyTypes: joinCsv(agent.propertyTypes || []),
@@ -107,6 +128,7 @@ export function AgentSetupWizard() {
       twitter: agent.socialLinks?.twitter || prev.twitter,
       slug: agent.slug || prev.slug,
     }));
+    setSelectedCoverageAreas(agent.areasServed || []);
   }, [profileQuery.data]);
 
   useEffect(() => {
@@ -132,7 +154,7 @@ export function AgentSetupWizard() {
     phone: formData.phone.trim(),
     whatsapp: formData.whatsapp.trim() || undefined,
     profileImage: formData.profileImage.trim() || undefined,
-    areasServed: splitCsv(formData.areasServed),
+    areasServed: selectedCoverageAreas,
     focus: formData.focus,
     specializations: splitCsv(formData.specializations),
     propertyTypes: splitCsv(formData.propertyTypes),
@@ -149,6 +171,18 @@ export function AgentSetupWizard() {
     },
     slug: formData.slug.trim() || undefined,
   });
+
+  const addCoverageArea = (location: LocationOption) => {
+    const nextLabel = formatCoverageLabel(location);
+    setSelectedCoverageAreas(prev =>
+      prev.includes(nextLabel) ? prev : [...prev, nextLabel].slice(0, 20),
+    );
+    setAreaSearch('');
+  };
+
+  const removeCoverageArea = (label: string) => {
+    setSelectedCoverageAreas(prev => prev.filter(item => item !== label));
+  };
 
   const openProfileImagePicker = () => {
     if (isUploadingProfileImage) return;
@@ -398,12 +432,43 @@ export function AgentSetupWizard() {
             <div className="space-y-4">
               <div>
                 <Label>Service Areas</Label>
-                <Input
-                  value={formData.areasServed}
-                  onChange={e => setFormData(prev => ({ ...prev, areasServed: e.target.value }))}
-                  placeholder="Sandton, Rosebank, Midrand"
-                />
-                <p className="mt-1 text-xs text-slate-500">Comma-separated suburbs or cities.</p>
+                <div className="mt-2 space-y-3">
+                  <LocationAutocomplete
+                    value={areaSearch}
+                    onValueChange={setAreaSearch}
+                    onLocationSelect={location => addCoverageArea(location as LocationOption)}
+                    placeholder="Search suburb, city, or province"
+                    type="all"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Select exact coverage areas so Rosebank, Johannesburg is not confused with
+                    similarly named places elsewhere.
+                  </p>
+                  {selectedCoverageAreas.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCoverageAreas.map(area => (
+                        <span
+                          key={area}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
+                        >
+                          {area}
+                          <button
+                            type="button"
+                            onClick={() => removeCoverageArea(area)}
+                            className="rounded-full text-slate-400 transition hover:text-slate-700"
+                            aria-label={`Remove ${area}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                      No service areas selected yet.
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <Label>Languages</Label>
@@ -457,10 +522,16 @@ export function AgentSetupWizard() {
                 <Label>Bio</Label>
                 <Textarea
                   value={formData.bio}
-                  onChange={e => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                  onChange={e =>
+                    setFormData(prev => ({ ...prev, bio: e.target.value.slice(0, 1000) }))
+                  }
                   placeholder="Tell clients about your experience and what you specialize in."
                   rows={5}
+                  maxLength={1000}
                 />
+                <div className="text-right text-xs text-slate-500">
+                  {formData.bio.length}/1000 characters
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
