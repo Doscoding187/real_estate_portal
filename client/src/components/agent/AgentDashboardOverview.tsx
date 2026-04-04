@@ -21,6 +21,7 @@ import {
   MapPin,
   Sparkles,
   ShieldAlert,
+  X,
 } from 'lucide-react';
 
 type PipelineStage = 'new' | 'contacted' | 'viewing' | 'offer' | 'closed';
@@ -109,6 +110,12 @@ type AgentDashboardOnboardingStatus = {
   profileCompletionFlags: string[];
   entitlements: AgentDashboardEntitlements;
 };
+
+type DashboardGuidanceMode = 'setup' | 'access';
+
+const GUIDANCE_STORAGE_KEY = 'agent-dashboard-guidance-dismissed';
+const SETUP_GUIDANCE_SNOOZE_MS = 24 * 60 * 60 * 1000;
+const ACCESS_GUIDANCE_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const PIPELINE_CONFIG: Array<{
   key: PipelineStage;
@@ -414,6 +421,12 @@ function FeatureLockOverlay({
   );
 }
 
+function getGuidanceSnoozeMs(mode: DashboardGuidanceMode | null) {
+  if (mode === 'setup') return SETUP_GUIDANCE_SNOOZE_MS;
+  if (mode === 'access') return ACCESS_GUIDANCE_SNOOZE_MS;
+  return 0;
+}
+
 export function AgentDashboardOverview() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -424,6 +437,10 @@ export function AgentDashboardOverview() {
   const [onboardingStatus, setOnboardingStatus] = useState<AgentDashboardOnboardingStatus | null>(
     null,
   );
+  const [dismissedGuidance, setDismissedGuidance] = useState<{
+    signature: string;
+    dismissedAt: number;
+  } | null>(null);
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
     undefined,
@@ -631,8 +648,52 @@ export function AgentDashboardOverview() {
     !hasCommissionTracking ? 'Commission tracking' : null,
     !canPublishListings ? 'Listing publishing' : null,
   ].filter((value): value is string => Boolean(value));
-  const showFeatureBanner =
-    Boolean(onboardingStatus) && (needsProfileCompletion || lockedCapabilities.length > 0);
+  const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion
+    ? 'setup'
+    : lockedCapabilities.length > 0
+      ? 'access'
+      : null;
+  const guidanceSignature = JSON.stringify({
+    mode: guidanceMode,
+    onboardingStep: onboardingStatus?.onboardingStep ?? 0,
+    subscriptionTier,
+    subscriptionStatus: onboardingStatus?.subscriptionStatus ?? 'trial',
+    profileCompletionScore,
+    lockedCapabilities,
+  });
+  const guidanceSnoozeMs = getGuidanceSnoozeMs(guidanceMode);
+  const guidanceDismissed =
+    guidanceMode != null &&
+    dismissedGuidance?.signature === guidanceSignature &&
+    Date.now() - dismissedGuidance.dismissedAt < guidanceSnoozeMs;
+  const showFeatureBanner = Boolean(onboardingStatus) && guidanceMode != null && !guidanceDismissed;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(GUIDANCE_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { signature?: string; dismissedAt?: number };
+      if (typeof parsed?.signature === 'string' && typeof parsed?.dismissedAt === 'number') {
+        setDismissedGuidance({
+          signature: parsed.signature,
+          dismissedAt: parsed.dismissedAt,
+        });
+      }
+    } catch {
+      // Ignore corrupt local state and fall back to visible guidance.
+    }
+  }, []);
+
+  const dismissGuidance = () => {
+    if (typeof window === 'undefined' || !guidanceMode) return;
+    const next = {
+      signature: guidanceSignature,
+      dismissedAt: Date.now(),
+    };
+    setDismissedGuidance(next);
+    window.localStorage.setItem(GUIDANCE_STORAGE_KEY, JSON.stringify(next));
+  };
 
   const commissionGoal = useMemo(() => {
     const pending = stats?.commissionsPending ?? 0;
@@ -709,19 +770,31 @@ export function AgentDashboardOverview() {
           <CardShell className="overflow-hidden border-transparent bg-gradient-to-r from-slate-950 via-slate-900 to-[#0f4c81] text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
             <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] lg:px-7">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/72">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Guided mode active
+                <div className="flex items-start justify-between gap-4">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/72">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Guided mode active
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={dismissGuidance}
+                    className="h-8 w-8 rounded-full border border-white/10 bg-white/6 text-white/72 hover:bg-white/12 hover:text-white"
+                    aria-label="Dismiss dashboard guidance"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
                 <h2 className="mt-4 text-[24px] font-semibold tracking-[-0.04em] text-white">
                   {needsProfileCompletion
                     ? 'You have dashboard access, but full Agent OS is still locked behind setup.'
-                    : 'Your dashboard is live, but a few premium capabilities are still gated.'}
+                    : 'Your dashboard is live, and a few advanced tools are not active in this workspace yet.'}
                 </h2>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-white/72">
                   {needsProfileCompletion
                     ? `Profile completion is at ${profileCompletionScore}%. Reach the next setup threshold to unlock publishing, stronger visibility, and the full operating surface.`
-                    : `Your ${formatStatus(subscriptionTier)} tier is active${trialDaysRemaining != null ? ` with ${trialDaysRemaining} day${trialDaysRemaining === 1 ? '' : 's'} left in trial.` : '.'} Finish the remaining access steps to open the full dashboard.`}
+                    : `Your ${formatStatus(subscriptionTier)} tier is active${trialDaysRemaining != null ? ` with ${trialDaysRemaining} day${trialDaysRemaining === 1 ? '' : 's'} left in trial.` : '.'} You can keep working with your current tools, and review additional access when needed.`}
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-2">
@@ -751,14 +824,14 @@ export function AgentDashboardOverview() {
                   Recommended next step
                 </p>
                 <p className="mt-2 text-lg font-semibold text-white">
-                  {needsProfileCompletion ? 'Finish your profile setup' : 'Review your plan access'}
+                  {needsProfileCompletion ? 'Finish your profile setup' : 'See your current access'}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-white/68">
                   {needsProfileCompletion
                     ? 'Complete the remaining setup items to unlock publishing, directory visibility, and the full dashboard.'
                     : trialExpired
-                      ? 'Your trial access has expired. Review package access to restore the locked modules.'
-                      : 'A few premium modules are still behind your current package entitlements.'}
+                      ? 'Your trial access has expired. Review your access state to restore the locked modules.'
+                      : 'A few advanced modules are not active yet. Review your access only when you are ready.'}
                 </p>
                 <Button
                   type="button"
@@ -767,7 +840,7 @@ export function AgentDashboardOverview() {
                   }
                   className="mt-5 rounded-full bg-white text-slate-950 hover:bg-white/92"
                 >
-                  {needsProfileCompletion ? 'Continue setup' : 'Review access'}
+                  {needsProfileCompletion ? 'Continue setup' : 'Access overview'}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -910,7 +983,7 @@ export function AgentDashboardOverview() {
               </Button>
             </div>
 
-            {!fullFeaturesUnlocked || !hasRevenueDashboard ? (
+            {!showFeatureBanner && (!fullFeaturesUnlocked || !hasRevenueDashboard) ? (
               <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <div className="flex items-start justify-between gap-3">
                   <div>
