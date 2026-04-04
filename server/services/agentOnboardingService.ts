@@ -5,7 +5,11 @@ import {
   calculateAgentProfileCompletion,
   getAgentEntitlementsForUserId,
 } from './agentEntitlementService';
-import { getPlanByName, setSubscriptionPlanForOwner } from './planAccessService';
+import {
+  getPlanAccessProjectionForUserId,
+  getPlanByName,
+  setSubscriptionPlanForOwner,
+} from './planAccessService';
 import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
 
 export const AGENT_ONBOARDING_TIER_VALUES = ['free', 'starter', 'professional', 'elite'] as const;
@@ -67,6 +71,14 @@ async function resolvePlanForTier(tier: AgentOnboardingTier) {
   }
 
   return null;
+}
+
+function isPlanAlignedWithTier(
+  tier: AgentOnboardingTier,
+  planName: string | null | undefined,
+): boolean {
+  if (!planName) return false;
+  return (AGENT_PLAN_NAME_CANDIDATES[tier] || []).includes(planName);
 }
 
 function buildOnboardingState(
@@ -158,6 +170,43 @@ export class AgentOnboardingService {
           onboardingComplete: onboardingState.onboardingComplete ? 1 : 0,
         })
         .where(eq(users.id, userId));
+    }
+
+    if (onboardingState.packageSelected) {
+      const selectedTier = user.subscriptionTier as AgentOnboardingTier;
+      const selectedPlan = await resolvePlanForTier(selectedTier);
+      if (selectedPlan) {
+        const currentProjection = await getPlanAccessProjectionForUserId(userId);
+        const currentPlanName = currentProjection?.currentPlan?.name || null;
+
+        if (!isPlanAlignedWithTier(selectedTier, currentPlanName)) {
+          const effectiveStatus =
+            user.subscriptionStatus === 'active' ||
+            user.subscriptionStatus === 'expired' ||
+            user.subscriptionStatus === 'cancelled'
+              ? user.subscriptionStatus
+              : 'trial';
+          const billingAnchor =
+            effectiveStatus === 'trial'
+              ? user.trialEndsAt || nowAsDbTimestamp()
+              : nowAsDbTimestamp();
+
+          await setSubscriptionPlanForOwner({
+            ownerType: 'agent',
+            ownerId: userId,
+            planId: selectedPlan.id,
+            status: effectiveStatus,
+            trialEndsAt: effectiveStatus === 'trial' ? user.trialEndsAt || null : null,
+            billingCycleAnchor: billingAnchor,
+            metadata: {
+              source: 'agent_onboarding_status_sync',
+              selected_package_tier: selectedTier,
+              selected_plan_name: selectedPlan.name,
+            },
+            actorUserId: userId,
+          });
+        }
+      }
     }
 
     const entitlements = await getAgentEntitlementsForUserId(userId);
