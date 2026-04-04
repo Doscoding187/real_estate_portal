@@ -14,7 +14,12 @@ export const AGENT_ONBOARDING_STATUS_VALUES = ['trial', 'active', 'expired', 'ca
 export type AgentOnboardingTier = (typeof AGENT_ONBOARDING_TIER_VALUES)[number];
 export type AgentOnboardingStatus = (typeof AGENT_ONBOARDING_STATUS_VALUES)[number];
 
-const AGENT_STARTER_PLAN_NAME = 'agent_starter';
+const AGENT_PLAN_NAME_CANDIDATES: Record<AgentOnboardingTier, string[]> = {
+  free: ['agent_free', 'free'],
+  starter: ['agent_starter', 'starter', 'agent_free', 'free'],
+  professional: ['agent_professional', 'professional', 'agent_pro', 'pro'],
+  elite: ['agent_elite', 'elite'],
+};
 const AGENT_TRIAL_DAYS = 90;
 
 function slugify(value: string): string {
@@ -49,6 +54,19 @@ function parseJsonRecord(value: string | null | undefined): Record<string, strin
     // no-op
   }
   return {};
+}
+
+async function resolvePlanForTier(tier: AgentOnboardingTier) {
+  const planNames = AGENT_PLAN_NAME_CANDIDATES[tier] || [];
+
+  for (const planName of planNames) {
+    const plan = await getPlanByName(planName);
+    if (plan) {
+      return plan;
+    }
+  }
+
+  return null;
 }
 
 function buildOnboardingState(
@@ -190,18 +208,19 @@ export class AgentOnboardingService {
       })
       .where(eq(users.id, userId));
 
-    const starterPlan = await getPlanByName(AGENT_STARTER_PLAN_NAME);
-    if (starterPlan) {
+    const selectedPlan = await resolvePlanForTier(tier);
+    if (selectedPlan) {
       await setSubscriptionPlanForOwner({
         ownerType: 'agent',
         ownerId: userId,
-        planId: starterPlan.id,
+        planId: selectedPlan.id,
         status: 'trial',
         trialEndsAt: trialEndsAtValue,
         billingCycleAnchor: trialEndsAtValue,
         metadata: {
           source: 'agent_select_package',
           selected_package_tier: tier,
+          selected_plan_name: selectedPlan.name,
         },
         actorUserId: userId,
       });
