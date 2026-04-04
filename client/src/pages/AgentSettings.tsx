@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,8 +26,6 @@ import {
   Save,
   Camera,
   Loader2,
-  ArrowUpRight,
-  ArrowDownRight,
   Clock,
   X,
 } from 'lucide-react';
@@ -35,13 +34,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import type { SubscriptionPlan, UserSubscription } from '@shared/subscription-types';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
-
-type SubscriptionSnapshotView = {
-  subscription: UserSubscription;
-  plan: SubscriptionPlan | null;
-};
 
 type LocationOption = {
   id: number;
@@ -52,6 +45,17 @@ type LocationOption = {
 };
 
 const AGENT_BIO_MAX_LENGTH = 1000;
+
+function splitCsv(value: string) {
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function joinCsv(values: string[] = []) {
+  return values.join(', ');
+}
 
 function formatCoverageLabel(location: LocationOption) {
   if (location.type === 'suburb') {
@@ -65,9 +69,39 @@ function formatCoverageLabel(location: LocationOption) {
   return location.name;
 }
 
+const AGENT_TIER_LABELS: Record<string, string> = {
+  free: 'Free Trial',
+  starter: 'Starter',
+  professional: 'Professional',
+  elite: 'Elite',
+};
+
+const AGENT_TIER_DESCRIPTIONS: Record<string, string> = {
+  free: 'Trial access while you finish onboarding and publish your profile.',
+  starter: 'Launch tier for early traction, profile visibility, and core lead handling.',
+  professional: 'Growth tier with stronger intelligence, reporting, and publishing capacity.',
+  elite: 'Top tier for scale, priority exposure, and full operational access.',
+};
+
+function formatSubscriptionStatus(status: string | null | undefined) {
+  switch (status) {
+    case 'trial':
+      return 'Trial active';
+    case 'active':
+      return 'Active subscription';
+    case 'expired':
+      return 'Expired';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return 'Not configured';
+  }
+}
+
 export default function AgentSettings() {
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const { isLoading: statusLoading } = useAgentOnboardingStatus({
+  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
   const [activeTab, setActiveTab] = useState('profile');
@@ -83,7 +117,20 @@ export default function AgentSettings() {
     displayName: user?.name || '',
     email: user?.email || '',
     phone: '',
+    whatsapp: '',
+    focus: 'both',
+    specializations: '',
+    propertyTypes: '',
     bio: '',
+    licenseNumber: '',
+    yearsExperience: '0',
+    languages: '',
+    website: '',
+    facebook: '',
+    instagram: '',
+    linkedin: '',
+    twitter: '',
+    slug: '',
     profileImage: '',
     areasServed: [] as string[],
   });
@@ -113,36 +160,6 @@ export default function AgentSettings() {
   });
   const presignUploadMutation = trpc.upload.presign.useMutation();
 
-  const subscriptionSnapshotQuery = trpc.subscription.getMySubscription.useQuery(undefined, {
-    enabled: isAgent && activeTab === 'billing',
-    refetchOnWindowFocus: false,
-  });
-  const plansQuery = trpc.subscription.getPlans.useQuery(
-    { category: 'agent' },
-    {
-      enabled: isAgent && activeTab === 'billing',
-      refetchOnWindowFocus: false,
-    },
-  );
-  const upgradePlanMutation = trpc.subscription.upgrade.useMutation({
-    onSuccess: () => {
-      toast.success('Plan upgraded successfully');
-      void subscriptionSnapshotQuery.refetch();
-    },
-    onError: error => {
-      toast.error(error.message || 'Could not upgrade plan');
-    },
-  });
-  const downgradePlanMutation = trpc.subscription.downgrade.useMutation({
-    onSuccess: () => {
-      toast.success('Plan downgrade scheduled');
-      void subscriptionSnapshotQuery.refetch();
-    },
-    onError: error => {
-      toast.error(error.message || 'Could not downgrade plan');
-    },
-  });
-
   useEffect(() => {
     const agent = profileQuery.data?.agent;
     if (!agent) return;
@@ -151,7 +168,21 @@ export default function AgentSettings() {
       displayName: agent.displayName || user?.name || '',
       email: user?.email || '',
       phone: agent.phone || '',
+      whatsapp: agent.whatsapp || '',
+      focus: agent.focus || 'both',
+      specializations: joinCsv(agent.specializations || []),
+      propertyTypes: joinCsv(agent.propertyTypes || []),
       bio: agent.bio || '',
+      licenseNumber: agent.licenseNumber || '',
+      yearsExperience:
+        typeof agent.yearsExperience === 'number' ? String(agent.yearsExperience) : '0',
+      languages: joinCsv(agent.languages || []),
+      website: agent.socialLinks?.website || '',
+      facebook: agent.socialLinks?.facebook || '',
+      instagram: agent.socialLinks?.instagram || '',
+      linkedin: agent.socialLinks?.linkedin || '',
+      twitter: agent.socialLinks?.twitter || '',
+      slug: agent.slug || '',
       profileImage: agent.profileImage || '',
       areasServed: agent.areasServed || [],
     });
@@ -161,7 +192,27 @@ export default function AgentSettings() {
     saveProfileMutation.mutate({
       displayName: profileData.displayName.trim(),
       phone: profileData.phone.trim(),
+      whatsapp: profileData.whatsapp.trim() || undefined,
+      focus:
+        profileData.focus === 'sales' ||
+        profileData.focus === 'rentals' ||
+        profileData.focus === 'both'
+          ? profileData.focus
+          : undefined,
+      specializations: splitCsv(profileData.specializations),
+      propertyTypes: splitCsv(profileData.propertyTypes),
       bio: profileData.bio.trim() || undefined,
+      licenseNumber: profileData.licenseNumber.trim() || undefined,
+      yearsExperience: Number(profileData.yearsExperience || 0),
+      languages: splitCsv(profileData.languages),
+      socialLinks: {
+        website: profileData.website.trim(),
+        facebook: profileData.facebook.trim(),
+        instagram: profileData.instagram.trim(),
+        linkedin: profileData.linkedin.trim(),
+        twitter: profileData.twitter.trim(),
+      },
+      slug: profileData.slug.trim() || undefined,
       profileImage: profileData.profileImage || undefined,
       areasServed: profileData.areasServed,
     });
@@ -170,69 +221,31 @@ export default function AgentSettings() {
   const handleSaveNotifications = () => {
     toast.success('Notification preferences saved');
   };
-
-  const snapshot = (subscriptionSnapshotQuery.data as SubscriptionSnapshotView | null) ?? null;
-  const currentPlan = snapshot?.plan ?? null;
-  const currentSubscription = snapshot?.subscription ?? null;
-  const planCatalog = ((plansQuery.data as SubscriptionPlan[] | undefined) ?? []).filter(
-    plan => plan.category === 'agent',
-  );
-  const activeListingCount = 0;
-  const currentPlanMaxActiveListings = Number(currentPlan?.limits?.listings ?? -1);
-
-  const resolvePlanMaxActiveListings = (plan: SubscriptionPlan): number => {
-    const rawValue = plan?.limits?.listings;
-    return typeof rawValue === 'number' ? rawValue : -1;
-  };
-
-  const handleChangePlan = (targetPlan: SubscriptionPlan) => {
-    const targetPlanId = targetPlan?.plan_id;
-    if (!currentPlan || !targetPlanId || currentPlan.plan_id === targetPlanId) return;
-    const targetPriceMonthly = Number(targetPlan?.price_zar || 0);
-    const currentPrice = Number(currentPlan.price_zar || 0);
-    const action = targetPriceMonthly >= currentPrice ? 'upgrade' : 'downgrade';
-
-    if (action === 'downgrade') {
-      const targetMaxActiveListings = resolvePlanMaxActiveListings(targetPlan);
-      let warningMessage =
-        'Downgrading may reduce your feature access. You can continue and upgrade again anytime.';
-      if (Number.isFinite(targetMaxActiveListings) && targetMaxActiveListings >= 0) {
-        const overLimitCount = Math.max(0, activeListingCount - targetMaxActiveListings);
-        if (overLimitCount > 0) {
-          warningMessage = `You currently have ${activeListingCount} active listings. ${targetPlan.display_name} allows ${targetMaxActiveListings}. ${overLimitCount} listing${overLimitCount === 1 ? '' : 's'} will be moved to draft (not deleted). Continue?`;
-        } else {
-          warningMessage = `${targetPlan.display_name} allows ${targetMaxActiveListings} active listings. Continue downgrade?`;
-        }
-      }
-
-      if (!window.confirm(warningMessage)) {
-        return;
-      }
-    }
-
-    if (action === 'upgrade') {
-      upgradePlanMutation.mutate({ new_plan_id: targetPlanId, immediate: true });
-      return;
-    }
-
-    downgradePlanMutation.mutate({ new_plan_id: targetPlanId, immediate: false });
-  };
-
-  const trialEndsAt = currentSubscription?.trial_ends_at
-    ? new Date(currentSubscription.trial_ends_at)
-    : null;
-  const trialDaysRemaining =
-    currentSubscription?.status === 'trial_active' && trialEndsAt
-      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const currentTierKey = status?.subscriptionTier || 'starter';
+  const currentTierLabel = AGENT_TIER_LABELS[currentTierKey] || 'Selected tier';
+  const currentTierDescription =
+    AGENT_TIER_DESCRIPTIONS[currentTierKey] ||
+    'Your current onboarding tier controls the features available in Agent OS.';
+  const trialEndsAt = status?.entitlements?.trialStatusDetail?.trialEndsAt
+    ? new Date(status.entitlements.trialStatusDetail.trialEndsAt)
+    : status?.trialEndsAt
+      ? new Date(status.trialEndsAt)
       : null;
+  const trialDaysRemaining = status?.entitlements?.trialStatusDetail?.daysRemaining ?? null;
   const trialBadgeText =
-    currentSubscription?.status === 'trial_active'
+    status?.entitlements?.trialStatusDetail?.status === 'active'
       ? `${trialDaysRemaining ?? 0} day${trialDaysRemaining === 1 ? '' : 's'} left`
-      : currentSubscription?.status === 'trial_expired'
+      : status?.entitlements?.trialStatusDetail?.status === 'expired'
         ? 'Trial expired'
-        : currentSubscription
-          ? 'Paid plan'
-          : 'No trial';
+        : formatSubscriptionStatus(status?.subscriptionStatus);
+  const featureFlags = status?.entitlements?.featureFlags;
+  const currentPlanMaxActiveListings = featureFlags?.maxActiveListings ?? 0;
+  const listingLimitLabel =
+    currentPlanMaxActiveListings === -1
+      ? 'Unlimited'
+      : currentPlanMaxActiveListings > 0
+        ? String(currentPlanMaxActiveListings)
+        : 'Not available yet';
 
   return (
     <AgentAppShell>
@@ -437,6 +450,19 @@ export default function AgentSettings() {
                           placeholder="+27 12 345 6789"
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="whatsapp">WhatsApp</Label>
+                        <Input
+                          id="whatsapp"
+                          type="tel"
+                          value={profileData.whatsapp}
+                          onChange={e =>
+                            setProfileData({ ...profileData, whatsapp: e.target.value })
+                          }
+                          placeholder="+27 82 000 0000"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -492,6 +518,65 @@ export default function AgentSettings() {
                       )}
                     </div>
 
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="focus">Market Focus</Label>
+                        <select
+                          id="focus"
+                          className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                          value={profileData.focus}
+                          onChange={e =>
+                            setProfileData({
+                              ...profileData,
+                              focus: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="both">Sales and Rentals</option>
+                          <option value="sales">Sales only</option>
+                          <option value="rentals">Rentals only</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="languages">Languages</Label>
+                        <Input
+                          id="languages"
+                          value={profileData.languages}
+                          onChange={e =>
+                            setProfileData({ ...profileData, languages: e.target.value })
+                          }
+                          placeholder="English, Zulu"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="specializations">Specializations</Label>
+                        <Input
+                          id="specializations"
+                          value={profileData.specializations}
+                          onChange={e =>
+                            setProfileData({ ...profileData, specializations: e.target.value })
+                          }
+                          placeholder="Residential sales, Luxury, First-time buyers"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="property-types">Property Types</Label>
+                        <Input
+                          id="property-types"
+                          value={profileData.propertyTypes}
+                          onChange={e =>
+                            setProfileData({ ...profileData, propertyTypes: e.target.value })
+                          }
+                          placeholder="Apartment, House, Commercial"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="bio">Bio</Label>
                       <Textarea
@@ -512,6 +597,116 @@ export default function AgentSettings() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="license-number">License Number</Label>
+                        <Input
+                          id="license-number"
+                          value={profileData.licenseNumber}
+                          onChange={e =>
+                            setProfileData({ ...profileData, licenseNumber: e.target.value })
+                          }
+                          placeholder="FFC / license number"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="years-experience">Years Experience</Label>
+                        <Input
+                          id="years-experience"
+                          type="number"
+                          min={0}
+                          max={80}
+                          value={profileData.yearsExperience}
+                          onChange={e =>
+                            setProfileData({ ...profileData, yearsExperience: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="profile-slug">Public Profile Slug</Label>
+                        <Input
+                          id="profile-slug"
+                          value={profileData.slug}
+                          onChange={e => setProfileData({ ...profileData, slug: e.target.value })}
+                          placeholder="jane-doe"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 rounded-[16px] border border-slate-200/70 bg-[#fbfaf7] p-5">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">Public Links</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Keep your public profile and social channels aligned with the setup
+                          wizard.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="website">Website</Label>
+                          <Input
+                            id="website"
+                            value={profileData.website}
+                            onChange={e =>
+                              setProfileData({ ...profileData, website: e.target.value })
+                            }
+                            placeholder="https://yourwebsite.com"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="linkedin">LinkedIn</Label>
+                          <Input
+                            id="linkedin"
+                            value={profileData.linkedin}
+                            onChange={e =>
+                              setProfileData({ ...profileData, linkedin: e.target.value })
+                            }
+                            placeholder="https://linkedin.com/in/yourprofile"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="facebook">Facebook</Label>
+                          <Input
+                            id="facebook"
+                            value={profileData.facebook}
+                            onChange={e =>
+                              setProfileData({ ...profileData, facebook: e.target.value })
+                            }
+                            placeholder="https://facebook.com/yourpage"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="instagram">Instagram</Label>
+                          <Input
+                            id="instagram"
+                            value={profileData.instagram}
+                            onChange={e =>
+                              setProfileData({ ...profileData, instagram: e.target.value })
+                            }
+                            placeholder="https://instagram.com/yourhandle"
+                          />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="twitter">X / Twitter</Label>
+                          <Input
+                            id="twitter"
+                            value={profileData.twitter}
+                            onChange={e =>
+                              setProfileData({ ...profileData, twitter: e.target.value })
+                            }
+                            placeholder="https://x.com/yourhandle"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                       <Button
                         variant="outline"
@@ -522,7 +717,23 @@ export default function AgentSettings() {
                             displayName: agent.displayName || user?.name || '',
                             email: user?.email || '',
                             phone: agent.phone || '',
+                            whatsapp: agent.whatsapp || '',
+                            focus: agent.focus || 'both',
+                            specializations: joinCsv(agent.specializations || []),
+                            propertyTypes: joinCsv(agent.propertyTypes || []),
                             bio: agent.bio || '',
+                            licenseNumber: agent.licenseNumber || '',
+                            yearsExperience:
+                              typeof agent.yearsExperience === 'number'
+                                ? String(agent.yearsExperience)
+                                : '0',
+                            languages: joinCsv(agent.languages || []),
+                            website: agent.socialLinks?.website || '',
+                            facebook: agent.socialLinks?.facebook || '',
+                            instagram: agent.socialLinks?.instagram || '',
+                            linkedin: agent.socialLinks?.linkedin || '',
+                            twitter: agent.socialLinks?.twitter || '',
+                            slug: agent.slug || '',
                             profileImage: agent.profileImage || '',
                             areasServed: agent.areasServed || [],
                           });
@@ -750,37 +961,21 @@ export default function AgentSettings() {
                         <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-40" />
                         <p className="font-medium">Billing is available for agent accounts only</p>
                       </div>
-                    ) : subscriptionSnapshotQuery.error || plansQuery.error ? (
-                      <div className="text-center py-12 text-gray-500">
-                        <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                        <p className="font-medium">
-                          Billing is not configured in this environment yet
-                        </p>
-                        <p className="mt-2 text-sm text-gray-400">
-                          Your agent profile is still active. Plan and wallet controls will appear
-                          here once the subscription tables are live.
-                        </p>
-                      </div>
-                    ) : subscriptionSnapshotQuery.isLoading ? (
+                    ) : statusLoading ? (
                       <div className="flex items-center justify-center py-12 text-gray-500 gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Loading your billing profile...
-                      </div>
-                    ) : !currentPlan ? (
-                      <div className="text-center py-12 text-gray-400">
-                        <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                        <p className="font-medium">No active plan found</p>
                       </div>
                     ) : (
                       <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className={cn(agentPageStyles.mutedPanel, 'p-4')}>
-                            <div className="text-sm text-gray-500">Current Plan</div>
+                            <div className="text-sm text-gray-500">Current Access</div>
                             <div className="text-xl font-semibold text-gray-900 mt-1">
-                              {currentPlan.display_name}
+                              {currentTierLabel}
                             </div>
                             <div className="text-sm text-gray-500 mt-1">
-                              R{Number(currentPlan.price_zar || 0) / 100}/month
+                              {currentTierDescription}
                             </div>
                           </div>
                           <div className={cn(agentPageStyles.mutedPanel, 'p-4')}>
@@ -796,121 +991,69 @@ export default function AgentSettings() {
                                 Ends {trialEndsAt.toLocaleDateString()}
                               </div>
                             ) : null}
+                            <div className="text-sm text-gray-500 mt-1">
+                              {formatSubscriptionStatus(status?.subscriptionStatus)}
+                            </div>
                           </div>
                           <div className={cn(agentPageStyles.mutedPanel, 'p-4')}>
                             <div className="text-sm text-gray-500">Feature Access</div>
                             <div className="text-sm text-gray-800 mt-2 space-y-1">
                               <div>
                                 Active listing limit:{' '}
-                                <span className="font-medium">
-                                  {currentPlanMaxActiveListings === -1
-                                    ? 'Unlimited'
-                                    : currentPlanMaxActiveListings}
-                                </span>
+                                <span className="font-medium">{listingLimitLabel}</span>
                               </div>
                               <div>
-                                Active listings now:{' '}
-                                <span className="font-medium">{activeListingCount}</span>
+                                Priority exposure:{' '}
+                                <span className="font-medium">
+                                  {featureFlags?.hasPriorityExposure ? 'Enabled' : 'Standard'}
+                                </span>
                               </div>
                               <div>
                                 AI insights:{' '}
                                 <span className="font-medium">
-                                  {currentPlan?.permissions?.analytics_level
-                                    ? 'Enabled'
-                                    : 'Disabled'}
+                                  {featureFlags?.hasAiInsights ? 'Enabled' : 'Disabled'}
                                 </span>
                               </div>
                               <div>
                                 Revenue dashboard:{' '}
                                 <span className="font-medium">
-                                  {currentPlan?.permissions?.analytics_level === 'advanced'
-                                    ? 'Enabled'
-                                    : 'Disabled'}
+                                  {featureFlags?.hasRevenueDashboard ? 'Enabled' : 'Disabled'}
                                 </span>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        <div>
-                          <h3 className="font-semibold text-gray-900 mb-3">Change Plan</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {planCatalog.map(plan => {
-                              const isCurrent = plan.plan_id === currentPlan.plan_id;
-                              const targetPrice = Number(plan.price_zar || 0);
-                              const isUpgrade = targetPrice >= Number(currentPlan.price_zar || 0);
-                              return (
-                                <div
-                                  key={plan.id}
-                                  className={cn(
-                                    'rounded-[15px] border p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_0_0_1px_rgba(15,23,42,0.04)]',
-                                    isCurrent
-                                      ? 'border-blue-500 ring-2 ring-blue-100'
-                                      : 'border-gray-200',
-                                  )}
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <div className="font-semibold text-gray-900">
-                                        {plan.display_name}
-                                      </div>
-                                      <div className="text-sm text-gray-500 mt-1">
-                                        R{targetPrice / 100}/month
-                                      </div>
-                                    </div>
-                                    {isCurrent ? (
-                                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                                        Current
-                                      </span>
-                                    ) : null}
-                                  </div>
-
-                                  <div className="mt-3 text-xs text-gray-500 min-h-[32px]">
-                                    {plan.description || 'Subscription tier'}
-                                  </div>
-                                  {resolvePlanMaxActiveListings(plan) >= 0 ? (
-                                    <div className="mt-2 text-xs text-gray-600">
-                                      Active listing limit: {resolvePlanMaxActiveListings(plan)}
-                                    </div>
-                                  ) : (
-                                    <div className="mt-2 text-xs text-gray-600">
-                                      Active listing limit: Unlimited
-                                    </div>
-                                  )}
-
-                                  <Button
-                                    className="mt-4 w-full"
-                                    variant={isCurrent ? 'outline' : 'default'}
-                                    disabled={
-                                      isCurrent ||
-                                      upgradePlanMutation.isPending ||
-                                      downgradePlanMutation.isPending
-                                    }
-                                    onClick={() => handleChangePlan(plan)}
-                                  >
-                                    {upgradePlanMutation.isPending ||
-                                    downgradePlanMutation.isPending ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Updating...
-                                      </>
-                                    ) : isCurrent ? (
-                                      'Current Plan'
-                                    ) : isUpgrade ? (
-                                      <>
-                                        <ArrowUpRight className="h-4 w-4 mr-2" />
-                                        Upgrade
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ArrowDownRight className="h-4 w-4 mr-2" />
-                                        Downgrade
-                                      </>
-                                    )}
-                                  </Button>
-                                </div>
-                              );
-                            })}
+                        <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+                          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div className="space-y-2">
+                              <h3 className="font-semibold text-gray-900">Billing setup status</h3>
+                              <p className="max-w-2xl text-sm leading-6 text-gray-600">
+                                Your onboarding tier is saved and your current entitlements are
+                                active. Self-serve billing actions like card management, invoices,
+                                and live plan switching will appear here once the billing
+                                infrastructure is connected in production.
+                              </p>
+                              <div className="flex flex-wrap gap-2 pt-1 text-xs text-slate-600">
+                                <span className="rounded-full bg-slate-100 px-3 py-1">
+                                  Selected tier: {currentTierLabel}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-3 py-1">
+                                  Status: {formatSubscriptionStatus(status?.subscriptionStatus)}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-3 py-1">
+                                  Listings: {listingLimitLabel}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 md:min-w-[220px]">
+                              <Button onClick={() => setLocation('/agent/select-package')}>
+                                Review launch tiers
+                              </Button>
+                              <Button variant="outline" onClick={() => setActiveTab('profile')}>
+                                Update profile access
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
