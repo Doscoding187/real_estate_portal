@@ -25,6 +25,7 @@ import { requireUser } from './_core/requireUser';
 import { slugify } from './_core/utils/slug';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import { agentOnboardingService } from './services/agentOnboardingService';
 import {
   getAgentInventorySchedulingOptions,
   getInventoryBridgeSchemaCapabilities,
@@ -95,6 +96,19 @@ function splitDisplayName(displayName: string) {
   return {
     firstName: firstName || trimmed,
     lastName: rest.join(' '),
+  };
+}
+
+function toAgentOnboardingResponse(agentRecord: typeof agents.$inferSelect | null) {
+  if (!agentRecord) return null;
+
+  return {
+    ...agentRecord,
+    specializations: parseTextList(agentRecord.specialization),
+    propertyTypes: parseTextList(agentRecord.propertyTypes),
+    areasServed: parseTextList(agentRecord.areasServed),
+    languages: parseTextList(agentRecord.languages),
+    socialLinks: parseSocialLinks(agentRecord.socialLinks),
   };
 }
 
@@ -857,21 +871,10 @@ export const agentRouter = router({
 
     const [agentRecord] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
 
-    if (!agentRecord) {
-      throw new Error('Agent profile not found');
-    }
-
     const entitlements = await getAgentEntitlementsForUserId(userId);
 
     return {
-      agent: {
-        ...agentRecord,
-        specializations: parseTextList(agentRecord.specialization),
-        propertyTypes: parseTextList(agentRecord.propertyTypes),
-        areasServed: parseTextList(agentRecord.areasServed),
-        languages: parseTextList(agentRecord.languages),
-        socialLinks: parseSocialLinks(agentRecord.socialLinks),
-      },
+      agent: toAgentOnboardingResponse(agentRecord || null),
       entitlements,
     };
   }),
@@ -904,59 +907,13 @@ export const agentRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
       const userId = requireUser(ctx).id;
+      const db = await getDb();
+      const result = await agentOnboardingService.saveProfile(userId, input);
+      const agentId = result.profile?.id;
+      const entitlements = result.entitlements;
 
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, userId))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      const { firstName, lastName } = splitDisplayName(input.displayName);
-      const socialLinks = Object.fromEntries(
-        Object.entries(input.socialLinks || {}).filter(([, value]) => Boolean(value?.trim())),
-      );
-
-      await db
-        .update(agents)
-        .set({
-          firstName,
-          lastName,
-          displayName: input.displayName.trim(),
-          phone: input.phone.trim(),
-          whatsapp: input.whatsapp?.trim() || null,
-          profileImage: input.profileImage?.trim() || null,
-          areasServed: stringifyTextList(input.areasServed),
-          focus: input.focus || null,
-          specialization: stringifyTextList(input.specializations),
-          propertyTypes: stringifyTextList(input.propertyTypes),
-          bio: input.bio?.trim() || null,
-          licenseNumber: input.licenseNumber?.trim() || null,
-          yearsExperience: input.yearsExperience ?? null,
-          languages: stringifyTextList(input.languages),
-          socialLinks: Object.keys(socialLinks).length ? JSON.stringify(socialLinks) : null,
-          slug: input.slug?.trim() || null,
-          updatedAt: nowAsDbTimestamp(),
-        })
-        .where(eq(agents.id, agentRecord.id));
-
-      const entitlements = await getAgentEntitlementsForUserId(userId);
-      const [updatedAgent] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.id, agentRecord.id))
-        .limit(1);
-
-      if (!updatedAgent || !entitlements) {
-        throw new Error('Failed to refresh agent profile');
-      }
-
-      if (entitlements.profileCompletionScore >= 70) {
+      if (agentId && entitlements && entitlements.profileCompletionScore >= 70) {
         const [existingCompletionEvent] = await db
           .select({ id: analyticsEvents.id })
           .from(analyticsEvents)
@@ -973,7 +930,7 @@ export const agentRouter = router({
             userId,
             eventType: 'agent_profile_completed',
             eventData: {
-              agentId: updatedAgent.id,
+              agentId,
               profileCompletionScore: entitlements.profileCompletionScore,
               profileCompletionFlags: entitlements.profileCompletionFlags,
             },
@@ -984,16 +941,9 @@ export const agentRouter = router({
       }
 
       return {
-        success: true,
-        agent: {
-          ...updatedAgent,
-          specializations: parseTextList(updatedAgent.specialization),
-          propertyTypes: parseTextList(updatedAgent.propertyTypes),
-          areasServed: parseTextList(updatedAgent.areasServed),
-          languages: parseTextList(updatedAgent.languages),
-          socialLinks: parseSocialLinks(updatedAgent.socialLinks),
-        },
-        entitlements,
+        success: result.success,
+        agent: result.profile,
+        entitlements: result.entitlements,
       };
     }),
 

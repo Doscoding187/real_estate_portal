@@ -5,9 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { APP_TITLE } from '@/const';
 import { apiFetch, ApiError } from '@/lib/api';
-import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import type { SubscriptionPlan } from '@shared/subscription-types';
 import {
   ArrowRight,
   Briefcase,
@@ -61,13 +59,6 @@ type TierBlueprint = {
   features: string[];
   fallbackMonthlyCents: number;
   tone: PlanTone;
-};
-
-type TierPresentation = TierBlueprint & {
-  monthlyCents: number;
-  annualMonthlyCents: number;
-  annualTotalCents: number;
-  backendFeatures: string[];
 };
 
 const ANNUAL_DISCOUNT = 0.2;
@@ -178,52 +169,11 @@ function formatTrialEndDate(value: string | null) {
   });
 }
 
-function resolveTierFromPlan(plan: SubscriptionPlan): Exclude<AgentTier, 'free'> | null {
-  const haystack = `${plan.plan_id} ${plan.name} ${plan.display_name}`.toLowerCase();
-  if (haystack.includes('elite') || haystack.includes('enterprise')) return 'elite';
-  if (
-    haystack.includes('professional') ||
-    haystack.includes('growth') ||
-    haystack.includes('pro')
-  ) {
-    return 'professional';
-  }
-  if (haystack.includes('starter')) return 'starter';
-  return null;
-}
-
-function buildTierPresentation(plans: SubscriptionPlan[] | undefined): TierPresentation[] {
-  const lookup = new Map<Exclude<AgentTier, 'free'>, SubscriptionPlan>();
-
-  for (const plan of plans ?? []) {
-    const tier = resolveTierFromPlan(plan);
-    if (!tier) continue;
-    if (!lookup.has(tier)) {
-      lookup.set(tier, plan);
-    }
-  }
-
-  return tierBlueprints.map(blueprint => {
-    const plan = lookup.get(blueprint.tier);
-    const monthlyCents = Number(plan?.price_zar || blueprint.fallbackMonthlyCents);
-    const annualMonthlyCents = Math.round(monthlyCents * (1 - ANNUAL_DISCOUNT));
-
-    return {
-      ...blueprint,
-      monthlyCents,
-      annualMonthlyCents,
-      annualTotalCents: annualMonthlyCents * 12,
-      backendFeatures: plan?.features?.slice(0, 4) ?? [],
-    };
-  });
-}
-
 export default function AgentPackageSelection() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
-  const plansQuery = trpc.subscription.getPlans.useQuery({ category: 'agent' });
 
   const [selectedTier, setSelectedTier] = useState<Exclude<AgentTier, 'free'>>('elite');
   const [billingCadence, setBillingCadence] = useState<BillingCadence>('monthly');
@@ -232,8 +182,19 @@ export default function AgentPackageSelection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const tierCards = useMemo(
-    () => buildTierPresentation((plansQuery.data as SubscriptionPlan[] | undefined) ?? undefined),
-    [plansQuery.data],
+    () =>
+      tierBlueprints.map(blueprint => {
+        const monthlyCents = blueprint.fallbackMonthlyCents;
+        const annualMonthlyCents = Math.round(monthlyCents * (1 - ANNUAL_DISCOUNT));
+
+        return {
+          ...blueprint,
+          monthlyCents,
+          annualMonthlyCents,
+          annualTotalCents: annualMonthlyCents * 12,
+        };
+      }),
+    [],
   );
   const selectedCard = tierCards.find(card => card.tier === selectedTier) ?? tierCards[2];
   const selectedPrice =
@@ -473,8 +434,7 @@ export default function AgentPackageSelection() {
               const price =
                 billingCadence === 'annual' ? card.annualMonthlyCents : card.monthlyCents;
               const annualSavings = card.monthlyCents * 12 - card.annualTotalCents;
-              const features =
-                card.backendFeatures.length > 0 ? card.backendFeatures : card.features;
+              const features = card.features;
               const Icon = card.Icon;
 
               return (
