@@ -35,6 +35,8 @@ export type AgentOnboardingStatus = {
   recommendedNextStep: string;
   subscriptionTier: string;
   subscriptionStatus: string;
+  trialStartedAt?: string | null;
+  trialEndsAt?: string | null;
   profileCompletionScore: number;
   profileCompletionFlags: string[];
   entitlements: AgentEntitlementsSnapshot;
