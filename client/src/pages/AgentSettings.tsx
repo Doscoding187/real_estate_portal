@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
@@ -27,6 +28,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -34,11 +36,34 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import type { SubscriptionPlan, UserSubscription } from '@shared/subscription-types';
+import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 
 type SubscriptionSnapshotView = {
   subscription: UserSubscription;
   plan: SubscriptionPlan | null;
 };
+
+type LocationOption = {
+  id: number;
+  name: string;
+  type: 'province' | 'city' | 'suburb';
+  provinceName?: string;
+  cityName?: string;
+};
+
+const AGENT_BIO_MAX_LENGTH = 1000;
+
+function formatCoverageLabel(location: LocationOption) {
+  if (location.type === 'suburb') {
+    return [location.name, location.cityName, location.provinceName].filter(Boolean).join(', ');
+  }
+
+  if (location.type === 'city') {
+    return [location.name, location.provinceName].filter(Boolean).join(', ');
+  }
+
+  return location.name;
+}
 
 export default function AgentSettings() {
   const { user } = useAuth();
@@ -48,14 +73,19 @@ export default function AgentSettings() {
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const isAgent = user?.role === 'agent';
+  const profileImageInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
+  const [selectedProfileImageName, setSelectedProfileImageName] = useState('');
+  const [areaSearch, setAreaSearch] = useState('');
 
   // Form states
   const [profileData, setProfileData] = useState({
-    name: user?.name || '',
+    displayName: user?.name || '',
     email: user?.email || '',
     phone: '',
     bio: '',
-    location: '',
+    profileImage: '',
+    areasServed: [] as string[],
   });
 
   const [notifications, setNotifications] = useState({
@@ -68,14 +98,29 @@ export default function AgentSettings() {
     smsShowings: true,
   });
 
-  const subscriptionSnapshotQuery = trpc.subscription.getMySubscription.useQuery(undefined, {
+  const profileQuery = trpc.agent.getMyProfileOnboarding.useQuery(undefined, {
     enabled: isAgent,
+    refetchOnWindowFocus: false,
+  });
+  const saveProfileMutation = trpc.agent.updateMyProfileOnboarding.useMutation({
+    onSuccess: () => {
+      toast.success('Profile updated successfully');
+      void profileQuery.refetch();
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to update profile');
+    },
+  });
+  const presignUploadMutation = trpc.upload.presign.useMutation();
+
+  const subscriptionSnapshotQuery = trpc.subscription.getMySubscription.useQuery(undefined, {
+    enabled: isAgent && activeTab === 'billing',
     refetchOnWindowFocus: false,
   });
   const plansQuery = trpc.subscription.getPlans.useQuery(
     { category: 'agent' },
     {
-      enabled: isAgent,
+      enabled: isAgent && activeTab === 'billing',
       refetchOnWindowFocus: false,
     },
   );
@@ -98,8 +143,28 @@ export default function AgentSettings() {
     },
   });
 
+  useEffect(() => {
+    const agent = profileQuery.data?.agent;
+    if (!agent) return;
+
+    setProfileData({
+      displayName: agent.displayName || user?.name || '',
+      email: user?.email || '',
+      phone: agent.phone || '',
+      bio: agent.bio || '',
+      profileImage: agent.profileImage || '',
+      areasServed: agent.areasServed || [],
+    });
+  }, [profileQuery.data, user?.email, user?.name]);
+
   const handleSaveProfile = () => {
-    toast.success('Profile updated successfully');
+    saveProfileMutation.mutate({
+      displayName: profileData.displayName.trim(),
+      phone: profileData.phone.trim(),
+      bio: profileData.bio.trim() || undefined,
+      profileImage: profileData.profileImage || undefined,
+      areasServed: profileData.areasServed,
+    });
   };
 
   const handleSaveNotifications = () => {
@@ -229,12 +294,84 @@ export default function AgentSettings() {
                     {/* Profile Photo */}
                     <div className="flex items-center gap-6">
                       <div className="relative">
-                        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#5a9bd6] to-[var(--primary)] shadow-[0_10px_28px_rgba(0,92,168,0.24)]">
-                          <span className="text-2xl font-semibold text-white">
-                            {user?.name?.charAt(0) || 'A'}
-                          </span>
-                        </div>
-                        <button className="absolute bottom-0 right-0 rounded-full border border-slate-200 bg-white p-2 shadow-[0_1px_3px_rgba(15,23,42,0.08)] transition-all hover:border-[color:color-mix(in_oklab,var(--primary)_24%,white)] hover:text-[var(--primary)]">
+                        {profileData.profileImage ? (
+                          <img
+                            src={profileData.profileImage}
+                            alt="Agent profile"
+                            className="h-24 w-24 rounded-full object-cover shadow-[0_10px_28px_rgba(0,92,168,0.18)]"
+                          />
+                        ) : (
+                          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#5a9bd6] to-[var(--primary)] shadow-[0_10px_28px_rgba(0,92,168,0.24)]">
+                            <span className="text-2xl font-semibold text-white">
+                              {(profileData.displayName || user?.name)?.charAt(0) || 'A'}
+                            </span>
+                          </div>
+                        )}
+                        <input
+                          ref={profileImageInputRef}
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          className="hidden"
+                          onChange={async event => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file) return;
+                            const allowedTypes = [
+                              'image/jpeg',
+                              'image/jpg',
+                              'image/png',
+                              'image/webp',
+                            ];
+                            if (!allowedTypes.includes(file.type)) {
+                              toast.error('Invalid image type. Upload JPG, PNG, or WebP.');
+                              return;
+                            }
+                            if (file.size > 10 * 1024 * 1024) {
+                              toast.error('Image is too large. Maximum size is 10MB.');
+                              return;
+                            }
+
+                            setIsUploadingProfileImage(true);
+                            setSelectedProfileImageName(file.name);
+                            const loadingToastId = toast.loading('Uploading profile photo...');
+
+                            try {
+                              const { url, publicUrl } = await presignUploadMutation.mutateAsync({
+                                filename: file.name,
+                                contentType: file.type,
+                              });
+                              const uploadResponse = await fetch(url, {
+                                method: 'PUT',
+                                body: file,
+                                headers: { 'Content-Type': file.type },
+                              });
+
+                              if (!uploadResponse.ok) {
+                                throw new Error(
+                                  `Profile image upload failed (${uploadResponse.status})`,
+                                );
+                              }
+
+                              setProfileData(prev => ({ ...prev, profileImage: publicUrl }));
+                              toast.success('Profile photo uploaded.', { id: loadingToastId });
+                            } catch (error) {
+                              toast.error(
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Failed to upload profile photo.',
+                                { id: loadingToastId },
+                              );
+                            } finally {
+                              setIsUploadingProfileImage(false);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => profileImageInputRef.current?.click()}
+                          disabled={isUploadingProfileImage}
+                          className="absolute bottom-0 right-0 rounded-full border border-slate-200 bg-white p-2 shadow-[0_1px_3px_rgba(15,23,42,0.08)] transition-all hover:border-[color:color-mix(in_oklab,var(--primary)_24%,white)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
                           <Camera className="h-4 w-4 text-gray-600" />
                         </button>
                       </div>
@@ -247,21 +384,35 @@ export default function AgentSettings() {
                           variant="outline"
                           size="sm"
                           className={cn(agentPageStyles.ghostButton, 'mt-3')}
+                          onClick={() => profileImageInputRef.current?.click()}
+                          disabled={isUploadingProfileImage}
                         >
-                          Change Photo
+                          {isUploadingProfileImage ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            'Change Photo'
+                          )}
                         </Button>
+                        {selectedProfileImageName ? (
+                          <p className="mt-2 text-xs text-gray-500">{selectedProfileImageName}</p>
+                        ) : null}
                       </div>
                     </div>
 
                     {/* Form Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="display-name">Display Name</Label>
                         <Input
-                          id="name"
-                          value={profileData.name}
-                          onChange={e => setProfileData({ ...profileData, name: e.target.value })}
-                          placeholder="Enter your full name"
+                          id="display-name"
+                          value={profileData.displayName}
+                          onChange={e =>
+                            setProfileData({ ...profileData, displayName: e.target.value })
+                          }
+                          placeholder="Enter your public display name"
                         />
                       </div>
 
@@ -271,7 +422,7 @@ export default function AgentSettings() {
                           id="email"
                           type="email"
                           value={profileData.email}
-                          onChange={e => setProfileData({ ...profileData, email: e.target.value })}
+                          disabled
                           placeholder="your.email@example.com"
                         />
                       </div>
@@ -286,36 +437,107 @@ export default function AgentSettings() {
                           placeholder="+27 12 345 6789"
                         />
                       </div>
+                    </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
-                        <Input
-                          id="location"
-                          value={profileData.location}
-                          onChange={e =>
-                            setProfileData({ ...profileData, location: e.target.value })
-                          }
-                          placeholder="City, Province"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label>Service Areas</Label>
+                      <LocationAutocomplete
+                        value={areaSearch}
+                        onValueChange={setAreaSearch}
+                        onLocationSelect={location => {
+                          const nextLabel = formatCoverageLabel(location as LocationOption);
+                          setProfileData(prev => ({
+                            ...prev,
+                            areasServed: prev.areasServed.includes(nextLabel)
+                              ? prev.areasServed
+                              : [...prev.areasServed, nextLabel].slice(0, 20),
+                          }));
+                          setAreaSearch('');
+                        }}
+                        placeholder="Search suburb, city, or province"
+                        type="all"
+                      />
+                      <p className="text-xs text-slate-500">
+                        Select the exact places you cover so identical suburb names do not get mixed
+                        up.
+                      </p>
+                      {profileData.areasServed.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {profileData.areasServed.map(area => (
+                            <span
+                              key={area}
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
+                            >
+                              {area}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setProfileData(prev => ({
+                                    ...prev,
+                                    areasServed: prev.areasServed.filter(item => item !== area),
+                                  }))
+                                }
+                                className="rounded-full text-slate-400 transition hover:text-slate-700"
+                                aria-label={`Remove ${area}`}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-[12px] border border-dashed border-slate-200 bg-[#fbfaf7] p-4 text-sm text-slate-500">
+                          No service areas selected yet.
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="bio">Bio</Label>
-                      <textarea
+                      <Textarea
                         id="bio"
                         value={profileData.bio}
-                        onChange={e => setProfileData({ ...profileData, bio: e.target.value })}
+                        onChange={e =>
+                          setProfileData({
+                            ...profileData,
+                            bio: e.target.value.slice(0, AGENT_BIO_MAX_LENGTH),
+                          })
+                        }
                         placeholder="Tell clients about yourself and your expertise..."
-                        className="min-h-[120px] w-full rounded-[12px] border border-slate-200 bg-[#fbfaf7] px-4 py-3 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_oklab,var(--primary)_12%,white)]"
+                        className="min-h-[120px]"
+                        maxLength={AGENT_BIO_MAX_LENGTH}
                       />
+                      <div className="text-right text-xs text-slate-500">
+                        {profileData.bio.length}/{AGENT_BIO_MAX_LENGTH} characters
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-                      <Button variant="outline">Cancel</Button>
-                      <Button onClick={handleSaveProfile}>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const agent = profileQuery.data?.agent;
+                          if (!agent) return;
+                          setProfileData({
+                            displayName: agent.displayName || user?.name || '',
+                            email: user?.email || '',
+                            phone: agent.phone || '',
+                            bio: agent.bio || '',
+                            profileImage: agent.profileImage || '',
+                            areasServed: agent.areasServed || [],
+                          });
+                          setAreaSearch('');
+                          setSelectedProfileImageName('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveProfile}
+                        disabled={saveProfileMutation.isPending || isUploadingProfileImage}
+                      >
                         <Save className="h-4 w-4 mr-2" />
-                        Save Changes
+                        {saveProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </div>
                   </CardContent>
@@ -527,6 +749,17 @@ export default function AgentSettings() {
                       <div className="text-center py-12 text-gray-400">
                         <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-40" />
                         <p className="font-medium">Billing is available for agent accounts only</p>
+                      </div>
+                    ) : subscriptionSnapshotQuery.error || plansQuery.error ? (
+                      <div className="text-center py-12 text-gray-500">
+                        <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                        <p className="font-medium">
+                          Billing is not configured in this environment yet
+                        </p>
+                        <p className="mt-2 text-sm text-gray-400">
+                          Your agent profile is still active. Plan and wallet controls will appear
+                          here once the subscription tables are live.
+                        </p>
                       </div>
                     ) : subscriptionSnapshotQuery.isLoading ? (
                       <div className="flex items-center justify-center py-12 text-gray-500 gap-2">
