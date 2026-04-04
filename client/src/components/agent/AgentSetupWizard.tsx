@@ -31,6 +31,9 @@ export function AgentSetupWizard() {
   const profileImageInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(1);
   const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
+  const [profileImagePreviewUrl, setProfileImagePreviewUrl] = useState('');
+  const [selectedProfileImageName, setSelectedProfileImageName] = useState('');
+  const [isDragOverProfileImage, setIsDragOverProfileImage] = useState(false);
   const [formData, setFormData] = useState({
     displayName: '',
     phone: '',
@@ -106,11 +109,20 @@ export function AgentSetupWizard() {
     }));
   }, [profileQuery.data]);
 
+  useEffect(() => {
+    return () => {
+      if (profileImagePreviewUrl && profileImagePreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImagePreviewUrl);
+      }
+    };
+  }, [profileImagePreviewUrl]);
+
   const currentScore =
     saveProfileMutation.data?.entitlements?.profileCompletionScore ||
     profileQuery.data?.entitlements?.profileCompletionScore ||
     profileQuery.data?.agent?.profileCompletionScore ||
     0;
+  const activeProfileImagePreview = profileImagePreviewUrl || formData.profileImage.trim();
 
   const canContinue =
     step !== 1 || (formData.displayName.trim().length >= 2 && formData.phone.trim().length >= 7);
@@ -143,9 +155,16 @@ export function AgentSetupWizard() {
     profileImageInputRef.current?.click();
   };
 
-  const handleProfileImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
+  const replaceProfileImagePreview = (nextPreviewUrl: string) => {
+    setProfileImagePreviewUrl(prev => {
+      if (prev && prev.startsWith('blob:')) {
+        URL.revokeObjectURL(prev);
+      }
+      return nextPreviewUrl;
+    });
+  };
+
+  const uploadProfileImageFile = async (file: File) => {
     if (!file) return;
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -161,6 +180,8 @@ export function AgentSetupWizard() {
       return;
     }
 
+    replaceProfileImagePreview(URL.createObjectURL(file));
+    setSelectedProfileImageName(file.name);
     setIsUploadingProfileImage(true);
     const loadingToastId = toast.loading('Uploading profile photo...');
 
@@ -191,6 +212,13 @@ export function AgentSetupWizard() {
     } finally {
       setIsUploadingProfileImage(false);
     }
+  };
+
+  const handleProfileImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    await uploadProfileImageFile(file);
   };
 
   const handleSaveStep = async (nextStep?: number) => {
@@ -283,8 +311,27 @@ export function AgentSetupWizard() {
                 <button
                   type="button"
                   onClick={openProfileImagePicker}
+                  onDragOver={event => {
+                    event.preventDefault();
+                    if (!isUploadingProfileImage) {
+                      setIsDragOverProfileImage(true);
+                    }
+                  }}
+                  onDragLeave={() => setIsDragOverProfileImage(false)}
+                  onDrop={event => {
+                    event.preventDefault();
+                    setIsDragOverProfileImage(false);
+                    if (isUploadingProfileImage) return;
+                    const file = event.dataTransfer.files?.[0];
+                    if (!file) return;
+                    void uploadProfileImageFile(file);
+                  }}
                   disabled={isUploadingProfileImage}
-                  className="mt-2 w-full rounded-md border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`mt-2 w-full rounded-xl border-2 border-dashed px-4 py-6 text-center transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                    isDragOverProfileImage
+                      ? 'border-[var(--primary)] bg-blue-50'
+                      : 'border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100'
+                  }`}
                 >
                   <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-700">
                     <Upload className="h-5 w-5" />
@@ -292,18 +339,57 @@ export function AgentSetupWizard() {
                   <p className="text-sm font-medium text-slate-800">
                     {isUploadingProfileImage
                       ? 'Uploading profile photo...'
-                      : 'Click to upload profile photo'}
+                      : 'Drop a profile photo here or click to browse'}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">JPG, PNG, or WebP (max 10MB)</p>
+                  <p className="mt-1 text-xs text-slate-500">JPG, PNG, or WebP up to 10MB</p>
+                  {selectedProfileImageName ? (
+                    <p className="mt-3 text-xs font-medium text-slate-700">
+                      Selected file: {selectedProfileImageName}
+                    </p>
+                  ) : null}
                 </button>
-              </div>
-              <div>
-                <Label>Profile Photo URL (optional)</Label>
-                <Input
-                  value={formData.profileImage}
-                  onChange={e => setFormData(prev => ({ ...prev, profileImage: e.target.value }))}
-                  placeholder="https://..."
-                />
+
+                {activeProfileImagePreview ? (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={activeProfileImagePreview}
+                        alt="Profile preview"
+                        className="h-20 w-20 rounded-2xl object-cover border border-slate-200"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-900">Photo preview</p>
+                        <p className="mt-1 truncate text-xs text-slate-500">
+                          {selectedProfileImageName || 'Current profile photo'}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={openProfileImagePicker}
+                            disabled={isUploadingProfileImage}
+                          >
+                            Change photo
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              replaceProfileImagePreview('');
+                              setSelectedProfileImageName('');
+                              setFormData(prev => ({ ...prev, profileImage: '' }));
+                            }}
+                            disabled={isUploadingProfileImage}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           )}
