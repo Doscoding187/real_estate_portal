@@ -46,6 +46,17 @@ type LocationOption = {
 
 const AGENT_BIO_MAX_LENGTH = 1000;
 
+function splitCsv(value: string) {
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function joinCsv(values: string[] = []) {
+  return values.join(', ');
+}
+
 function formatCoverageLabel(location: LocationOption) {
   if (location.type === 'suburb') {
     return [location.name, location.cityName, location.provinceName].filter(Boolean).join(', ');
@@ -106,7 +117,20 @@ export default function AgentSettings() {
     displayName: user?.name || '',
     email: user?.email || '',
     phone: '',
+    whatsapp: '',
+    focus: 'both',
+    specializations: '',
+    propertyTypes: '',
     bio: '',
+    licenseNumber: '',
+    yearsExperience: '0',
+    languages: '',
+    website: '',
+    facebook: '',
+    instagram: '',
+    linkedin: '',
+    twitter: '',
+    slug: '',
     profileImage: '',
     areasServed: [] as string[],
   });
@@ -144,7 +168,21 @@ export default function AgentSettings() {
       displayName: agent.displayName || user?.name || '',
       email: user?.email || '',
       phone: agent.phone || '',
+      whatsapp: agent.whatsapp || '',
+      focus: agent.focus || 'both',
+      specializations: joinCsv(agent.specializations || []),
+      propertyTypes: joinCsv(agent.propertyTypes || []),
       bio: agent.bio || '',
+      licenseNumber: agent.licenseNumber || '',
+      yearsExperience:
+        typeof agent.yearsExperience === 'number' ? String(agent.yearsExperience) : '0',
+      languages: joinCsv(agent.languages || []),
+      website: agent.socialLinks?.website || '',
+      facebook: agent.socialLinks?.facebook || '',
+      instagram: agent.socialLinks?.instagram || '',
+      linkedin: agent.socialLinks?.linkedin || '',
+      twitter: agent.socialLinks?.twitter || '',
+      slug: agent.slug || '',
       profileImage: agent.profileImage || '',
       areasServed: agent.areasServed || [],
     });
@@ -154,7 +192,27 @@ export default function AgentSettings() {
     saveProfileMutation.mutate({
       displayName: profileData.displayName.trim(),
       phone: profileData.phone.trim(),
+      whatsapp: profileData.whatsapp.trim() || undefined,
+      focus:
+        profileData.focus === 'sales' ||
+        profileData.focus === 'rentals' ||
+        profileData.focus === 'both'
+          ? profileData.focus
+          : undefined,
+      specializations: splitCsv(profileData.specializations),
+      propertyTypes: splitCsv(profileData.propertyTypes),
       bio: profileData.bio.trim() || undefined,
+      licenseNumber: profileData.licenseNumber.trim() || undefined,
+      yearsExperience: Number(profileData.yearsExperience || 0),
+      languages: splitCsv(profileData.languages),
+      socialLinks: {
+        website: profileData.website.trim(),
+        facebook: profileData.facebook.trim(),
+        instagram: profileData.instagram.trim(),
+        linkedin: profileData.linkedin.trim(),
+        twitter: profileData.twitter.trim(),
+      },
+      slug: profileData.slug.trim() || undefined,
       profileImage: profileData.profileImage || undefined,
       areasServed: profileData.areasServed,
     });
@@ -392,6 +450,19 @@ export default function AgentSettings() {
                           placeholder="+27 12 345 6789"
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="whatsapp">WhatsApp</Label>
+                        <Input
+                          id="whatsapp"
+                          type="tel"
+                          value={profileData.whatsapp}
+                          onChange={e =>
+                            setProfileData({ ...profileData, whatsapp: e.target.value })
+                          }
+                          placeholder="+27 82 000 0000"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -447,6 +518,65 @@ export default function AgentSettings() {
                       )}
                     </div>
 
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="focus">Market Focus</Label>
+                        <select
+                          id="focus"
+                          className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                          value={profileData.focus}
+                          onChange={e =>
+                            setProfileData({
+                              ...profileData,
+                              focus: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="both">Sales and Rentals</option>
+                          <option value="sales">Sales only</option>
+                          <option value="rentals">Rentals only</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="languages">Languages</Label>
+                        <Input
+                          id="languages"
+                          value={profileData.languages}
+                          onChange={e =>
+                            setProfileData({ ...profileData, languages: e.target.value })
+                          }
+                          placeholder="English, Zulu"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="specializations">Specializations</Label>
+                        <Input
+                          id="specializations"
+                          value={profileData.specializations}
+                          onChange={e =>
+                            setProfileData({ ...profileData, specializations: e.target.value })
+                          }
+                          placeholder="Residential sales, Luxury, First-time buyers"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="property-types">Property Types</Label>
+                        <Input
+                          id="property-types"
+                          value={profileData.propertyTypes}
+                          onChange={e =>
+                            setProfileData({ ...profileData, propertyTypes: e.target.value })
+                          }
+                          placeholder="Apartment, House, Commercial"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="bio">Bio</Label>
                       <Textarea
@@ -467,6 +597,116 @@ export default function AgentSettings() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="license-number">License Number</Label>
+                        <Input
+                          id="license-number"
+                          value={profileData.licenseNumber}
+                          onChange={e =>
+                            setProfileData({ ...profileData, licenseNumber: e.target.value })
+                          }
+                          placeholder="FFC / license number"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="years-experience">Years Experience</Label>
+                        <Input
+                          id="years-experience"
+                          type="number"
+                          min={0}
+                          max={80}
+                          value={profileData.yearsExperience}
+                          onChange={e =>
+                            setProfileData({ ...profileData, yearsExperience: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="profile-slug">Public Profile Slug</Label>
+                        <Input
+                          id="profile-slug"
+                          value={profileData.slug}
+                          onChange={e => setProfileData({ ...profileData, slug: e.target.value })}
+                          placeholder="jane-doe"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 rounded-[16px] border border-slate-200/70 bg-[#fbfaf7] p-5">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">Public Links</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Keep your public profile and social channels aligned with the setup
+                          wizard.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="website">Website</Label>
+                          <Input
+                            id="website"
+                            value={profileData.website}
+                            onChange={e =>
+                              setProfileData({ ...profileData, website: e.target.value })
+                            }
+                            placeholder="https://yourwebsite.com"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="linkedin">LinkedIn</Label>
+                          <Input
+                            id="linkedin"
+                            value={profileData.linkedin}
+                            onChange={e =>
+                              setProfileData({ ...profileData, linkedin: e.target.value })
+                            }
+                            placeholder="https://linkedin.com/in/yourprofile"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="facebook">Facebook</Label>
+                          <Input
+                            id="facebook"
+                            value={profileData.facebook}
+                            onChange={e =>
+                              setProfileData({ ...profileData, facebook: e.target.value })
+                            }
+                            placeholder="https://facebook.com/yourpage"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="instagram">Instagram</Label>
+                          <Input
+                            id="instagram"
+                            value={profileData.instagram}
+                            onChange={e =>
+                              setProfileData({ ...profileData, instagram: e.target.value })
+                            }
+                            placeholder="https://instagram.com/yourhandle"
+                          />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="twitter">X / Twitter</Label>
+                          <Input
+                            id="twitter"
+                            value={profileData.twitter}
+                            onChange={e =>
+                              setProfileData({ ...profileData, twitter: e.target.value })
+                            }
+                            placeholder="https://x.com/yourhandle"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                       <Button
                         variant="outline"
@@ -477,7 +717,23 @@ export default function AgentSettings() {
                             displayName: agent.displayName || user?.name || '',
                             email: user?.email || '',
                             phone: agent.phone || '',
+                            whatsapp: agent.whatsapp || '',
+                            focus: agent.focus || 'both',
+                            specializations: joinCsv(agent.specializations || []),
+                            propertyTypes: joinCsv(agent.propertyTypes || []),
                             bio: agent.bio || '',
+                            licenseNumber: agent.licenseNumber || '',
+                            yearsExperience:
+                              typeof agent.yearsExperience === 'number'
+                                ? String(agent.yearsExperience)
+                                : '0',
+                            languages: joinCsv(agent.languages || []),
+                            website: agent.socialLinks?.website || '',
+                            facebook: agent.socialLinks?.facebook || '',
+                            instagram: agent.socialLinks?.instagram || '',
+                            linkedin: agent.socialLinks?.linkedin || '',
+                            twitter: agent.socialLinks?.twitter || '',
+                            slug: agent.slug || '',
                             profileImage: agent.profileImage || '',
                             areasServed: agent.areasServed || [],
                           });
