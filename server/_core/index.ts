@@ -1,11 +1,3 @@
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Load .env first
-dotenv.config();
-// Load .env.local (overrides .env) - critical for secrets
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
-
 import { sql } from 'drizzle-orm';
 import express from 'express';
 import cors from 'cors';
@@ -17,6 +9,7 @@ import { registerAuthRoutes } from './authRoutes';
 import { appRouter } from '../routers';
 import { createContext } from './context';
 import { serveStatic, setupVite } from './vite';
+import { resolveTrustProxySetting } from './runtimeBootstrap';
 import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
@@ -72,6 +65,12 @@ async function startServer() {
 
   const app = express();
   const server = createServer(app);
+  const trustProxySetting = resolveTrustProxySetting();
+
+  if (trustProxySetting !== false) {
+    app.set('trust proxy', trustProxySetting);
+    console.log('[Server] trust proxy enabled:', trustProxySetting);
+  }
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
