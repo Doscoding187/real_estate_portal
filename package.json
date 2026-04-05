@@ -17,7 +17,7 @@
     "build:frontend": "vite build",
     "build:backend": "echo 'Backend build not required; run with tsx directly'",
     "build:railway": "pnpm build:backend",
-    "start": "cross-env NODE_ENV=production tsx server/_core/start.ts",
+    "start": "tsx server/_core/start.ts",
     "check": "tsc -p tsconfig.check.json --noEmit",
     "lint": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
@@ -42,6 +42,7 @@
     "migration:sql": "cross-env NODE_ENV=production tsx server/migrations/runSqlMigrations.ts",
     "db:migrate": "pnpm migration:sql && pnpm migration:serverless:production",
     "start:server": "tsx server/_core/start.ts",
+    "start:staging": "cross-env NODE_ENV=staging tsx server/_core/start.ts",
     "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "start:prod": "pnpm db:migrate && cross-env NODE_ENV=production tsx server/_core/start.ts"
   },
