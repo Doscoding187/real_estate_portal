@@ -128,6 +128,20 @@ function formatFocusLabel(value: string | null | undefined) {
   }
 }
 
+function formatStatus(value: string | null | undefined) {
+  if (!value) return 'Unknown';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function formatListingStatusLabel(value: string | null | undefined) {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'available' || normalized === 'published' || normalized === 'active') {
+    return 'Live';
+  }
+
+  return formatStatus(value);
+}
+
 function normalizeExternalUrl(value: string | undefined) {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -709,7 +723,7 @@ export default function AgentMarketingHub() {
                                 {listing.title || 'Untitled listing'}
                               </h3>
                               <Badge className="bg-slate-100 text-slate-700">
-                                {String(listing.status || 'draft')}
+                                {formatListingStatusLabel(listing.status)}
                               </Badge>
                             </div>
                             <p className="mt-2 text-sm text-slate-500">

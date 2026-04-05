@@ -1,11 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm';
-import {
-  agencies,
-  plans,
-  planEntitlements,
-  subscriptions,
-  users,
-} from '../../drizzle/schema';
+import { agencies, plans, planEntitlements, subscriptions, users } from '../../drizzle/schema';
 import { getDb } from '../db';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
@@ -118,22 +112,73 @@ function buildLegacyProjectionForUser(user: UserRow): PlanAccessProjection {
         ? 0
         : null;
 
-  const hasPaidPlan = user.plan === 'paid';
-  const maxActiveListings = hasPaidPlan || trialStatus === 'active' ? 25 : 0;
+  const selectedTier = String(user.subscriptionTier || '').toLowerCase();
+  const hasFallbackAccess =
+    user.plan === 'paid' ||
+    trialStatus === 'active' ||
+    user.subscriptionStatus === 'active' ||
+    user.subscriptionStatus === 'trial';
+
+  let fallbackEntitlements: EntitlementMap = {
+    ...DEFAULT_FEATURE_ENTITLEMENTS,
+  };
+
+  if (hasFallbackAccess) {
+    switch (selectedTier) {
+      case 'elite':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: 999,
+          has_ai_insights: true,
+          has_area_intelligence: true,
+          has_commission_tracking: true,
+          has_revenue_dashboard: true,
+          has_priority_exposure: true,
+          has_benchmarking: true,
+        };
+        break;
+      case 'professional':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: 40,
+          has_ai_insights: true,
+          has_commission_tracking: true,
+          has_revenue_dashboard: true,
+          has_priority_exposure: true,
+        };
+        break;
+      case 'starter':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: 20,
+        };
+        break;
+      case 'free':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+        };
+        break;
+      default: {
+        const hasPaidPlan = user.plan === 'paid';
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: hasPaidPlan || trialStatus === 'active' ? 25 : 0,
+          has_ai_insights: hasPaidPlan,
+          has_area_intelligence: hasPaidPlan,
+          has_commission_tracking: hasPaidPlan || trialStatus === 'active',
+          has_revenue_dashboard: hasPaidPlan,
+          has_priority_exposure: hasPaidPlan,
+        };
+      }
+    }
+  }
 
   return {
     ownerType,
     ownerId,
     currentPlan: null,
     subscription: null,
-    entitlements: {
-      ...DEFAULT_FEATURE_ENTITLEMENTS,
-      max_active_listings: maxActiveListings,
-      has_ai_insights: hasPaidPlan,
-      has_area_intelligence: hasPaidPlan,
-      has_commission_tracking: hasPaidPlan || trialStatus === 'active',
-      has_revenue_dashboard: hasPaidPlan,
-    },
+    entitlements: fallbackEntitlements,
     trialStatus,
     trialEndsAt: normalizedTrialEnd,
     trialDaysRemaining,
@@ -258,7 +303,11 @@ async function getStarterPlan(db: DbHandle, ownerType: SubscriptionOwnerType) {
   if (!db) throw new Error('Database not available');
 
   if (ownerType === 'agent') {
-    const [named] = await db.select().from(plans).where(eq(plans.name, DEFAULT_AGENT_PLAN)).limit(1);
+    const [named] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.name, DEFAULT_AGENT_PLAN))
+      .limit(1);
     if (named) return named;
 
     const [segmentFallback] = await db
@@ -303,7 +352,8 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
     .toISOString()
     .slice(0, 19)
     .replace('T', ' ');
-  const trialEndsAt = ownerType === 'agent' ? user.trialEndsAt || fallbackTrialEnd : fallbackTrialEnd;
+  const trialEndsAt =
+    ownerType === 'agent' ? user.trialEndsAt || fallbackTrialEnd : fallbackTrialEnd;
   const status: SubscriptionStatus =
     ownerType === 'agent' && user.plan === 'paid'
       ? 'active'
@@ -404,7 +454,9 @@ export async function getPlanCatalog(segment?: PlanSegment): Promise<PlanCatalog
     })),
   );
 
-  const entitlementByPlanId = new Map(entitlements.map(entry => [entry.planId, entry.entitlements]));
+  const entitlementByPlanId = new Map(
+    entitlements.map(entry => [entry.planId, entry.entitlements]),
+  );
 
   return snapshots.map(plan => ({
     ...plan,
@@ -426,7 +478,9 @@ export async function getPlanByName(name: string): Promise<PlanSnapshot | null> 
   return row ? toPlanSnapshot(row) : null;
 }
 
-export async function getPlanAccessProjectionForUserId(userId: number): Promise<PlanAccessProjection | null> {
+export async function getPlanAccessProjectionForUserId(
+  userId: number,
+): Promise<PlanAccessProjection | null> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -451,7 +505,11 @@ export async function getPlanAccessProjectionForUserId(userId: number): Promise<
 
     let planRow: typeof plans.$inferSelect | null = null;
     if (subscriptionRow?.planId) {
-      const [selectedPlan] = await db.select().from(plans).where(eq(plans.id, subscriptionRow.planId)).limit(1);
+      const [selectedPlan] = await db
+        .select()
+        .from(plans)
+        .where(eq(plans.id, subscriptionRow.planId))
+        .limit(1);
       planRow = selectedPlan || null;
     }
 
@@ -529,7 +587,9 @@ export async function setSubscriptionPlanForOwner(input: {
   const nowTs = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const trialDays = Math.max(0, Number(planRow.trialDays || 0));
   const computedTrialEnd =
-    trialDays > 0 ? new Date(Date.now() + trialDays * MS_PER_DAY).toISOString().slice(0, 19).replace('T', ' ') : null;
+    trialDays > 0
+      ? new Date(Date.now() + trialDays * MS_PER_DAY).toISOString().slice(0, 19).replace('T', ' ')
+      : null;
 
   const nextStatus = input.status || 'active';
   const trialEndsAt = input.trialEndsAt ?? (nextStatus === 'trial' ? computedTrialEnd : null);
@@ -563,24 +623,35 @@ export async function setSubscriptionPlanForOwner(input: {
   const [row] = await db
     .select()
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)))
+    .where(
+      and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)),
+    )
     .limit(1);
 
   return row ? toSubscriptionSnapshot(row) : null;
 }
 
-export async function initializeAgentStarterTrial(userId: number): Promise<SubscriptionSnapshot | null> {
+export async function initializeAgentStarterTrial(
+  userId: number,
+): Promise<SubscriptionSnapshot | null> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
 
-  const [planRow] = await db.select().from(plans).where(eq(plans.name, DEFAULT_AGENT_PLAN)).limit(1);
+  const [planRow] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.name, DEFAULT_AGENT_PLAN))
+    .limit(1);
   if (!planRow) return null;
 
   const trialDays = Math.max(1, Number(planRow.trialDays || 30));
-  const trialEnd = new Date(Date.now() + trialDays * MS_PER_DAY).toISOString().slice(0, 19).replace('T', ' ');
+  const trialEnd = new Date(Date.now() + trialDays * MS_PER_DAY)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
 
   return await setSubscriptionPlanForOwner({
     ownerType: 'agent',
@@ -603,7 +674,11 @@ export async function getAgencyOwnerIdForUser(userId: number): Promise<number | 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user?.agencyId) return null;
 
-  const [agency] = await db.select({ id: agencies.id }).from(agencies).where(eq(agencies.id, user.agencyId)).limit(1);
+  const [agency] = await db
+    .select({ id: agencies.id })
+    .from(agencies)
+    .where(eq(agencies.id, user.agencyId))
+    .limit(1);
   return agency ? Number(agency.id) : null;
 }
 
