@@ -128,6 +128,11 @@ function formatFocusLabel(value: string | null | undefined) {
   }
 }
 
+function formatStatus(value: string | null | undefined) {
+  if (!value) return 'Unknown';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+}
+
 function formatListingStatusLabel(value: string | null | undefined) {
   const normalized = String(value || '').toLowerCase();
   if (normalized === 'available' || normalized === 'published' || normalized === 'active') {
