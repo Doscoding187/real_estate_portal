@@ -60,10 +60,32 @@ export type PlanAccessProjection = {
 type DbHandle = Awaited<ReturnType<typeof getDb>>;
 type SubscriptionRow = typeof subscriptions.$inferSelect;
 type UserRow = typeof users.$inferSelect;
+type AgentTier = 'free' | 'starter' | 'professional' | 'elite';
 
 const DEFAULT_AGENT_PLAN = 'agent_starter';
 const DEFAULT_AGENCY_PLAN = 'agency_growth';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function normalizeAgentTier(value: string | null | undefined): AgentTier | null {
+  const normalized = String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+
+  if (!normalized) return null;
+
+  if (normalized === 'free') return 'free';
+  if (normalized === 'starter') return 'starter';
+  if (normalized === 'professional') return 'professional';
+  if (normalized === 'elite') return 'elite';
+
+  if (normalized === 'growth') return 'professional';
+  if (normalized === 'pro') return 'professional';
+  if (normalized === 'launch') return 'starter';
+  if (normalized === 'dominance') return 'elite';
+
+  return null;
+}
 
 function isPricingGovernanceSchemaError(error: unknown): boolean {
   const code = String((error as any)?.code ?? '');
@@ -112,7 +134,7 @@ function buildLegacyProjectionForUser(user: UserRow): PlanAccessProjection {
         ? 0
         : null;
 
-  const selectedTier = String(user.subscriptionTier || '').toLowerCase();
+  const selectedTier = normalizeAgentTier(user.subscriptionTier);
   const hasFallbackAccess =
     user.plan === 'paid' ||
     trialStatus === 'active' ||
@@ -694,3 +716,5 @@ export function toSubscriptionTableStatus(
   }
   return 'active';
 }
+
+
