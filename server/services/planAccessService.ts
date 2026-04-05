@@ -60,6 +60,7 @@ export type PlanAccessProjection = {
 type DbHandle = Awaited<ReturnType<typeof getDb>>;
 type SubscriptionRow = typeof subscriptions.$inferSelect;
 type UserRow = typeof users.$inferSelect;
+type AgentTier = 'free' | 'starter' | 'professional' | 'elite';
 
 const DEFAULT_AGENT_PLAN = 'agent_starter';
 const DEFAULT_AGENCY_PLAN = 'agency_growth';
@@ -715,3 +716,5 @@ export function toSubscriptionTableStatus(
   }
   return 'active';
 }
+
+
