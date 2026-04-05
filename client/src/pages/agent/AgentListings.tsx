@@ -16,7 +16,14 @@ import { calculateListingReadiness } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
 type ListingTab = 'active' | 'pending' | 'draft' | 'sold' | 'archived';
-type PropertyStatusFilter = 'available' | 'published' | 'pending' | 'draft' | 'sold' | 'archived';
+type PropertyStatusFilter =
+  | 'active'
+  | 'available'
+  | 'published'
+  | 'pending'
+  | 'draft'
+  | 'sold'
+  | 'archived';
 type ListingStatusFilter = 'pending_review' | 'draft';
 
 export default function AgentListings() {
@@ -32,7 +39,7 @@ export default function AgentListings() {
   const getPropertyStatusForTab = (tab: ListingTab): PropertyStatusFilter => {
     switch (tab) {
       case 'active':
-        return 'published';
+        return 'active';
       case 'pending':
         return 'pending';
       case 'draft':
@@ -42,7 +49,7 @@ export default function AgentListings() {
       case 'archived':
         return 'archived';
       default:
-        return 'published';
+        return 'active';
     }
   };
 

@@ -56,6 +56,7 @@ type ListingItem = {
   views: number;
   enquiries: number;
   primaryImage?: string | null;
+  createdAt?: string | Date;
   updatedAt?: string | Date;
 };
 
@@ -455,7 +456,7 @@ export function AgentDashboardOverview() {
   );
 
   const { data: listingsData } = trpc.agent.getMyListings.useQuery(
-    { status: 'all', limit: 24 },
+    { status: 'active', limit: 24 },
     { retry: false },
   );
 
@@ -543,11 +544,7 @@ export function AgentDashboardOverview() {
     [pipeline],
   );
 
-  const listings = useMemo(() => (listingsData || []) as ListingItem[], [listingsData]);
-  const activeListings = useMemo(
-    () => listings.filter(listing => !['archived', 'draft'].includes(listing.status)),
-    [listings],
-  );
+  const activeListings = useMemo(() => (listingsData || []) as ListingItem[], [listingsData]);
 
   const listingsById = useMemo(
     () => new Map(activeListings.map(listing => [listing.id, listing])),
@@ -1225,7 +1222,7 @@ export function AgentDashboardOverview() {
                     </thead>
                     <tbody>
                       {listingsTableRows.map(listing => {
-                        const updatedDate = toDate(listing.updatedAt);
+                        const listedDate = toDate(listing.createdAt ?? listing.updatedAt);
 
                         return (
                           <tr
@@ -1275,8 +1272,8 @@ export function AgentDashboardOverview() {
                               </Badge>
                             </td>
                             <td className="py-3 text-[12px] text-slate-500">
-                              {updatedDate
-                                ? updatedDate.toLocaleDateString('en-ZA', {
+                              {listedDate
+                                ? listedDate.toLocaleDateString('en-ZA', {
                                     day: 'numeric',
                                     month: 'short',
                                   })

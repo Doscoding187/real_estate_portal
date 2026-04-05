@@ -45,6 +45,7 @@ const NOTIFICATION_TYPES = [
   'system_alert',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 
 function buildAgentPublicSlug(agent: {
   id: number;
@@ -78,6 +79,24 @@ function stringifyTextList(values?: string[]) {
     .map(item => item.trim())
     .filter(Boolean)
     .join(', ');
+}
+
+function buildAgentInventoryConditions(userId: number, agentId: number | null, status?: string) {
+  const conditions: SQL[] = [
+    agentId
+      ? or(eq(properties.agentId, agentId), eq(properties.ownerId, userId))!
+      : eq(properties.ownerId, userId),
+  ];
+
+  if (status && status !== 'all') {
+    if (status === 'active') {
+      conditions.push(inArray(properties.status, [...LIVE_AGENT_LISTING_STATUSES]));
+    } else {
+      conditions.push(eq(properties.status, status as any));
+    }
+  }
+
+  return conditions;
 }
 
 function parseSocialLinks(value?: string | null) {
@@ -225,26 +244,15 @@ export const agentRouter = router({
     }> => {
       try {
         const db = await getDb();
+        const userId = requireUser(ctx).id;
 
         // Get agent record from user
         const [agentRecord] = await db
           .select()
           .from(agents)
-          .where(eq(agents.userId, ctx.user.id))
+          .where(eq(agents.userId, userId))
           .limit(1);
-
-        if (!agentRecord) {
-          // Return empty stats if no agent profile found
-          return {
-            activeListings: 0,
-            newLeadsThisWeek: 0,
-            showingsToday: 0,
-            offersInProgress: 0,
-            commissionsPending: 0,
-          };
-        }
-
-        const agentId = agentRecord.id;
+        const agentId = agentRecord?.id ?? null;
         // Date calculations
         const todayDate = new Date();
         todayDate.setHours(0, 0, 0, 0);
@@ -259,38 +267,41 @@ export const agentRouter = router({
         const [activeListingsResult] = await db
           .select({ count: count() })
           .from(properties)
-          .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
+          .where(and(...buildAgentInventoryConditions(userId, agentId, 'active')));
 
-        // New leads this week
-        const [newLeadsResult] = await db
-          .select({ count: count() })
-          .from(leads)
-          .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
+        let newLeadsResult: { count: number } | undefined;
+        let showingsTodayResult: { count: number } | undefined;
+        let offersInProgressResult: { count: number } | undefined;
+        let pendingCommissionsResult: { total: number | null } | undefined;
 
-        // Showings today
-        const [showingsTodayResult] = await db
-          .select({ count: count() })
-          .from(showings)
-          .where(
-            and(
-              eq(showings.agentId, agentId),
-              gte(showings.scheduledTime, today),
-              lte(showings.scheduledTime, tomorrow),
-            ),
-          );
+        if (agentId) {
+          [newLeadsResult] = await db
+            .select({ count: count() })
+            .from(leads)
+            .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
 
-        // Offers in progress
-        const [offersInProgressResult] = await db
-          .select({ count: count() })
-          .from(offers)
-          .innerJoin(listings, eq(offers.listingId, listings.id))
-          .where(and(eq(listings.agentId, agentId), eq(offers.status, 'pending')));
+          [showingsTodayResult] = await db
+            .select({ count: count() })
+            .from(showings)
+            .where(
+              and(
+                eq(showings.agentId, agentId),
+                gte(showings.scheduledTime, today),
+                lte(showings.scheduledTime, tomorrow),
+              ),
+            );
 
-        // Pending commissions sum
-        const [pendingCommissionsResult] = await db
-          .select({ total: sql<number>`SUM(${commissions.amount})` })
-          .from(commissions)
-          .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+          [offersInProgressResult] = await db
+            .select({ count: count() })
+            .from(offers)
+            .innerJoin(listings, eq(offers.listingId, listings.id))
+            .where(and(eq(listings.agentId, agentId), eq(offers.status, 'pending')));
+
+          [pendingCommissionsResult] = await db
+            .select({ total: sql<number>`SUM(${commissions.amount})` })
+            .from(commissions)
+            .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+        }
 
         return {
           activeListings: activeListingsResult?.count || 0,
@@ -649,21 +660,11 @@ export const agentRouter = router({
         .limit(1);
 
       // Build conditions - use agentId if profile exists, otherwise use ownerId
-      const conditions: SQL[] = [];
-
-      if (agentRecord) {
-        // User has agent profile - query by agentId OR ownerId
-        conditions.push(
-          or(eq(properties.agentId, agentRecord.id), eq(properties.ownerId, user.id))!,
-        );
-      } else {
-        // No agent profile - query by ownerId only
-        conditions.push(eq(properties.ownerId, user.id));
-      }
-
-      if (input.status && input.status !== 'all') {
-        conditions.push(eq(properties.status, input.status as any));
-      }
+      const conditions = buildAgentInventoryConditions(
+        user.id,
+        agentRecord?.id ?? null,
+        input.status,
+      );
 
       const listings = await db
         .select()
