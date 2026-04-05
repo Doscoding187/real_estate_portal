@@ -73,7 +73,7 @@ function parseFlags(value: unknown): string[] {
   return [];
 }
 
-function normalizeTrialStatus(user: (typeof users.$inferSelect) | null): 'active' | 'expired' {
+function normalizeTrialStatus(user: typeof users.$inferSelect | null): 'active' | 'expired' {
   if (!user) return 'expired';
 
   const now = Date.now();
@@ -91,22 +91,73 @@ function buildFallbackPlanAccess(user: typeof users.$inferSelect): PlanAccessPro
   const ownerId = ownerType === 'agency' ? Number(user.agencyId) : Number(user.id);
   const trialStatus = normalizeTrialStatus(user);
   const trialEndsAt = user.trialEndsAt || null;
-  const hasPaidPlan = user.plan === 'paid';
-  const maxActiveListings = hasPaidPlan || trialStatus === 'active' ? 25 : 0;
+  const selectedTier = String(user.subscriptionTier || '').toLowerCase();
+  const hasFallbackAccess =
+    user.plan === 'paid' ||
+    trialStatus === 'active' ||
+    user.subscriptionStatus === 'active' ||
+    user.subscriptionStatus === 'trial';
+
+  let fallbackEntitlements: EntitlementMap = {
+    ...DEFAULT_FEATURE_ENTITLEMENTS,
+  };
+
+  if (hasFallbackAccess) {
+    switch (selectedTier) {
+      case 'elite':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: 999,
+          has_ai_insights: true,
+          has_area_intelligence: true,
+          has_commission_tracking: true,
+          has_revenue_dashboard: true,
+          has_priority_exposure: true,
+          has_benchmarking: true,
+        };
+        break;
+      case 'professional':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: 40,
+          has_ai_insights: true,
+          has_commission_tracking: true,
+          has_revenue_dashboard: true,
+          has_priority_exposure: true,
+        };
+        break;
+      case 'starter':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: 20,
+        };
+        break;
+      case 'free':
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+        };
+        break;
+      default: {
+        const hasPaidPlan = user.plan === 'paid';
+        fallbackEntitlements = {
+          ...DEFAULT_FEATURE_ENTITLEMENTS,
+          max_active_listings: hasPaidPlan || trialStatus === 'active' ? 25 : 0,
+          has_ai_insights: hasPaidPlan,
+          has_area_intelligence: hasPaidPlan,
+          has_commission_tracking: hasPaidPlan || trialStatus === 'active',
+          has_revenue_dashboard: hasPaidPlan,
+          has_priority_exposure: hasPaidPlan,
+        };
+      }
+    }
+  }
 
   return {
     ownerType,
     ownerId,
     currentPlan: null,
     subscription: null,
-    entitlements: {
-      ...DEFAULT_FEATURE_ENTITLEMENTS,
-      max_active_listings: maxActiveListings,
-      has_ai_insights: hasPaidPlan,
-      has_area_intelligence: hasPaidPlan,
-      has_commission_tracking: hasPaidPlan || trialStatus === 'active',
-      has_revenue_dashboard: hasPaidPlan,
-    },
+    entitlements: fallbackEntitlements,
     trialStatus,
     trialEndsAt,
     trialDaysRemaining: null,
@@ -114,7 +165,7 @@ function buildFallbackPlanAccess(user: typeof users.$inferSelect): PlanAccessPro
 }
 
 export function calculateAgentProfileCompletion(
-  agent: (typeof agents.$inferSelect) | null,
+  agent: typeof agents.$inferSelect | null,
 ): ProfileCompletionResult {
   if (!agent) {
     return {
@@ -152,7 +203,9 @@ export function calculateAgentProfileCompletion(
   };
 }
 
-export async function getAgentEntitlementsForUserId(userId: number): Promise<AgentEntitlements | null> {
+export async function getAgentEntitlementsForUserId(
+  userId: number,
+): Promise<AgentEntitlements | null> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -244,12 +297,14 @@ export async function getAgentEntitlementsForUserId(userId: number): Promise<Age
     'has_priority_exposure',
   );
   const planMode: 'trial' | 'paid' =
-    effectivePlanAccess.subscription?.status === 'trial' || (!hasActivePaidPlan && user.plan !== 'paid')
+    effectivePlanAccess.subscription?.status === 'trial' ||
+    (!hasActivePaidPlan && user.plan !== 'paid')
       ? 'trial'
       : 'paid';
 
   const canPublishByPlan = maxActiveListings !== 0;
-  const canPublishListings = emailVerified && !trialExpired && profileCompletionScore >= 70 && canPublishByPlan;
+  const canPublishListings =
+    emailVerified && !trialExpired && profileCompletionScore >= 70 && canPublishByPlan;
   const canReceiveLeads = emailVerified && !trialExpired && hasValue(agent?.phone);
   const canAppearInDirectory =
     profileCompletionScore >= 80 &&
