@@ -52,31 +52,25 @@ interface CommissionTrackerProps {
   className?: string;
 }
 
+type CommissionStatusFilter = 'all' | 'pending' | 'approved' | 'paid' | 'cancelled';
+
 export function CommissionTracker({ className }: CommissionTrackerProps) {
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<CommissionStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: commissions, isLoading } = trpc.agent.getMyCommissions.useQuery({
-    status: statusFilter || undefined,
+    status: statusFilter === 'all' ? undefined : statusFilter,
   });
 
-  const exportCSVMutation = trpc.agent.exportCommissionsCSV.useMutation({
-    onSuccess: data => {
-      const blob = new Blob([data.content], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = data.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      toast.success('Commission report exported successfully');
+  const exportCSVQuery = trpc.agent.exportCommissionsCSV.useQuery(
+    {
+      status: statusFilter === 'all' ? undefined : statusFilter,
     },
-    onError: error => {
-      toast.error(error.message || 'Failed to export commission report');
+    {
+      enabled: false,
+      retry: false,
     },
-  });
+  );
 
   const calculateSummary = (commissionList: Commission[]): CommissionSummary => {
     return commissionList.reduce(
@@ -118,10 +112,22 @@ export function CommissionTracker({ className }: CommissionTrackerProps) {
 
   const summary = calculateSummary(commissions || []);
 
-  const handleExport = () => {
-    exportCSVMutation.mutate({
-      status: statusFilter || undefined,
-    });
+  const handleExport = async () => {
+    const result = await exportCSVQuery.refetch();
+    if (result.data) {
+      const blob = new Blob([result.data.content], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success('Commission report exported successfully');
+    } else if (result.error) {
+      toast.error(result.error.message || 'Failed to export commission report');
+    }
   };
 
   return (
@@ -132,9 +138,9 @@ export function CommissionTracker({ className }: CommissionTrackerProps) {
           <DollarSign className="h-6 w-6 text-primary" />
           <h2 className="text-2xl font-bold">Commission Tracker</h2>
         </div>
-        <Button onClick={handleExport} disabled={exportCSVMutation.isPending}>
+        <Button onClick={handleExport} disabled={exportCSVQuery.isFetching}>
           <Download className="h-4 w-4 mr-2" />
-          {exportCSVMutation.isPending ? 'Exporting...' : 'Export CSV'}
+          {exportCSVQuery.isFetching ? 'Exporting...' : 'Export CSV'}
         </Button>
       </div>
 
@@ -237,10 +243,10 @@ export function CommissionTracker({ className }: CommissionTrackerProps) {
 
             <select
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={e => setStatusFilter(e.target.value as CommissionStatusFilter)}
               className="px-3 py-2 border rounded text-sm"
             >
-              <option value="">All Statuses</option>
+              <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="paid">Paid</option>

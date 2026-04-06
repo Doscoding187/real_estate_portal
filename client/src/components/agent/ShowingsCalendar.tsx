@@ -26,6 +26,14 @@ import {
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
+interface ShowingProperty {
+  id: number;
+  title: string;
+  address: string;
+  city: string;
+  inventoryModel?: string | null;
+}
+
 interface Showing {
   id: number;
   listingId: number;
@@ -34,12 +42,7 @@ interface Showing {
   durationMinutes?: number;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
-  property?: {
-    id: number;
-    title: string;
-    address: string;
-    city: string;
-  } | null;
+  property?: ShowingProperty | null;
   client?: {
     name: string;
     email: string;
@@ -217,11 +220,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
   const renderMonthView = () => {
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     const startOfCalendar = new Date(startOfMonth);
     startOfCalendar.setDate(startOfCalendar.getDate() - startOfCalendar.getDay());
 
-    const days = [];
+    const days: Array<React.ReactElement> = [];
     const today = new Date();
 
     for (let i = 0; i < 42; i++) {
@@ -345,7 +347,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
           </div>
           <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+            onChange={e => setStatusFilter(e.target.value as Showing['status'] | '')}
             className="px-3 py-1 border rounded text-sm"
           >
             <option value="">All Statuses</option>
@@ -483,7 +485,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 <option value="">Select listing</option>
                 {resolvedListings.length > 0 ? (
                   <optgroup label="Resolved inventory">
-                    {resolvedListings.map((listing: any) => (
+                    {resolvedListings.map((listing: ShowingProperty) => (
                       <option key={listing.id} value={listing.id}>
                         {listing.title} {listing.city ? `- ${listing.city}` : ''}
                       </option>
@@ -492,7 +494,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 ) : null}
                 {legacyListings.length > 0 ? (
                   <optgroup label="Legacy fallback">
-                    {legacyListings.map((listing: any) => (
+                    {legacyListings.map((listing: ShowingProperty) => (
                       <option key={listing.id} value={listing.id}>
                         {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
                       </option>
@@ -579,8 +581,8 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 }
 
 interface ShowingCardProps {
-  showing: any;
-  onStatusUpdate: (showingId: number, status: string) => void;
+  showing: Showing;
+  onStatusUpdate: (showingId: number, status: Showing['status']) => void;
   isUpdating: boolean;
 }
 
