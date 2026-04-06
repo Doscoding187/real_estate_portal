@@ -273,8 +273,14 @@ async function startServer() {
 
   try {
     const { startKpiRollupScheduler } = await import('../services/kpiRollupService');
-    startKpiRollupScheduler();
-    console.log('[KPI Rollup] Scheduler started (daily at 02:00 UTC, plus startup backfill)');
+    const started = startKpiRollupScheduler();
+    if (started) {
+      console.log('[KPI Rollup] Scheduler started (daily at 02:00 UTC, plus startup backfill)');
+    } else {
+      console.log(
+        '[KPI Rollup] Scheduler disabled for this environment. Set KPI_ROLLUP_SCHEDULER_ENABLED=true to opt in.',
+      );
+    }
   } catch (error: any) {
     console.warn('[KPI Rollup] Scheduler not started:', error?.message || error);
   }
