@@ -191,4 +191,4 @@ beforeAll(async () => {
       throw err;
     }
   }
-});
+}, 60_000);

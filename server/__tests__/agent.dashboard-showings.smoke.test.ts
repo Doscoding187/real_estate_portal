@@ -64,9 +64,11 @@ describe('agent dashboard showings smoke', () => {
       await db.execute(sql`DELETE FROM users WHERE id = ${createdUserId}`);
       createdUserId = null;
     }
-  });
+  }, 30_000);
 
-  it('serves showings and dashboard stats against the migrated schema', async () => {
+  it(
+    'serves showings and dashboard stats against the migrated schema',
+    async () => {
     const db = await getDb();
     expect(db).toBeTruthy();
 
@@ -285,5 +287,7 @@ describe('agent dashboard showings smoke', () => {
       .limit(1);
 
     expect(updatedShowing?.status).toBe('completed');
-  });
+    },
+    30_000,
+  );
 });

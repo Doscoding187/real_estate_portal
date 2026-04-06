@@ -158,6 +158,38 @@ type RawAgentShowingRow = {
   updatedAt?: string | Date | null;
 };
 
+type AgentShowingProperty = {
+  id: number;
+  listingId?: number | null;
+  propertyId?: number | null;
+  inventoryModel?: string;
+  title: string;
+  address?: string | null;
+  city?: string | null;
+};
+
+type AgentShowingClient = {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+};
+
+type AgentShowingRecord = {
+  id: number;
+  listingId: number | null;
+  propertyId: number | null;
+  leadId: number | null;
+  agentId: number | null;
+  scheduledAt: string | Date | null;
+  scheduledTime: string | Date | null;
+  status: AgentShowingStatus;
+  notes: string | null;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
+  property: AgentShowingProperty | null;
+  client: AgentShowingClient | null;
+};
+
 function normalizeDbRows(result: any): Array<Record<string, unknown>> {
   if (Array.isArray(result)) {
     if (result.length > 0 && Array.isArray(result[0])) {
@@ -204,7 +236,10 @@ function getShowingsNotesColumn(details: ShowingsSchemaDetails) {
   return details.notesColumn ? sql.identifier('notes') : sql.identifier('feedback');
 }
 
-function normalizeAgentShowingRow(row: RawAgentShowingRow, variant: ShowingsSchemaVariant) {
+function normalizeAgentShowingRow(
+  row: RawAgentShowingRow,
+  variant: ShowingsSchemaVariant,
+): AgentShowingRecord {
   const listingIdRaw = row.listingId ?? row.propertyId ?? null;
   const scheduledAt = row.scheduledAt ?? row.scheduledTime ?? null;
 
@@ -290,7 +325,7 @@ async function listAgentShowings(params: {
   endDate?: string;
   status?: 'all' | AgentShowingStatus;
   details: ShowingsSchemaDetails;
-}) {
+}): Promise<AgentShowingRecord[]> {
   const variant = getShowingsSchemaVariant(params.details);
   if (variant === 'missing') return [];
 
