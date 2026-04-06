@@ -71,6 +71,17 @@ function getRangeForDate(dateKey: string): { startTs: string; endTs: string } {
   return { startTs, endTs };
 }
 
+export function isKpiRollupSchedulerEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const override = String(env.KPI_ROLLUP_SCHEDULER_ENABLED ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (override === 'true') return true;
+  if (override === 'false') return false;
+
+  return env.NODE_ENV !== 'staging';
+}
+
 function roleUserCondition(role: MetricRole) {
   if (role === 'agent') return sql`u.role IN ('agent', 'agency_admin')`;
   if (role === 'developer') return sql`u.role = 'property_developer'`;
@@ -957,8 +968,12 @@ export async function getKpiReconciliation(targetDate?: string | Date) {
   };
 }
 
-export function startKpiRollupScheduler() {
-  if (schedulerHandle) return;
+export function startKpiRollupScheduler(): boolean {
+  if (!isKpiRollupSchedulerEnabled()) {
+    return false;
+  }
+
+  if (schedulerHandle) return true;
 
   const runScheduled = async () => {
     const now = new Date();
@@ -1003,4 +1018,6 @@ export function startKpiRollupScheduler() {
       console.error('[KPI Rollup] Startup rollup failed:', error);
     }
   }, 10_000);
+
+  return true;
 }
