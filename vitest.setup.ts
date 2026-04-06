@@ -50,30 +50,6 @@ beforeAll(async () => {
               return Number(row?.c ?? 0);
             };
 
-            const hasRequiredExploreSchema = async () => {
-              const hasActorColumn = await queryCount(`
-                SELECT COUNT(*) AS c
-                FROM information_schema.columns
-                WHERE table_schema = DATABASE()
-                  AND table_name = 'explore_content'
-                  AND column_name = 'actor_id'
-              `);
-              const hasInteractionEvents = await queryCount(`
-                SELECT COUNT(*) AS c
-                FROM information_schema.tables
-                WHERE table_schema = DATABASE()
-                  AND table_name = 'interaction_events'
-              `);
-              const hasEconomicActors = await queryCount(`
-                SELECT COUNT(*) AS c
-                FROM information_schema.tables
-                WHERE table_schema = DATABASE()
-                  AND table_name = 'economic_actors'
-              `);
-
-              return hasActorColumn > 0 && hasInteractionEvents > 0 && hasEconomicActors > 0;
-            };
-
             const hasCanonicalShowingsSchema = async () => {
               const [statusRows] = await connection.query<Array<Record<string, unknown>>>(
                 `
@@ -155,8 +131,7 @@ beforeAll(async () => {
                 throw new Error('Could not acquire migration lock for test DB setup');
               }
 
-              const readyBefore =
-                (await hasRequiredExploreSchema()) && (await hasCanonicalShowingsSchema());
+              const readyBefore = await hasCanonicalShowingsSchema();
               if (!readyBefore) {
                 const { runSqlMigrations } = await import('./server/migrations/runSqlMigrations');
                 await runSqlMigrations({
@@ -164,10 +139,11 @@ beforeAll(async () => {
                 });
               }
 
-              const readyAfter =
-                (await hasRequiredExploreSchema()) && (await hasCanonicalShowingsSchema());
+              const readyAfter = await hasCanonicalShowingsSchema();
               if (!readyAfter) {
-                throw new Error('Required test schema is still missing after running migrations');
+                throw new Error(
+                  'Canonical showings schema is still missing after running SQL migrations',
+                );
               }
 
               console.log('[Test Setup] SQL migrations ensured for test DB');
