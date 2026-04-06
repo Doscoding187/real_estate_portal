@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,11 +21,18 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Search,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+
+interface ShowingProperty {
+  id: number;
+  title: string;
+  address: string;
+  city: string;
+  inventoryModel?: string | null;
+}
 
 interface Showing {
   id: number;
@@ -36,12 +42,7 @@ interface Showing {
   durationMinutes?: number;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
-  property?: {
-    id: number;
-    title: string;
-    address: string;
-    city: string;
-  } | null;
+  property?: ShowingProperty | null;
   client?: {
     name: string;
     email: string;
@@ -66,7 +67,9 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''>('');
+  const [statusFilter, setStatusFilter] = useState<
+    'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''
+  >('');
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     listingId: '',
@@ -106,14 +109,18 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   };
 
   // Fetch showings for the current date range
-  const { data: showings, isLoading } = trpc.agent.getMyShowings.useQuery({
+  const {
+    data: showings = [],
+    isLoading,
+    error: showingsError,
+  } = trpc.agent.getMyShowings.useQuery({
     startDate: getDateRange().start,
     endDate: getDateRange().end,
     status: statusFilter || undefined,
   });
   const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
-  const resolvedListings = availableListings.filter((listing: any) => listing.isResolved);
-  const legacyListings = availableListings.filter((listing: any) => !listing.isResolved);
+  const resolvedListings = availableListings.filter(listing => listing.isResolved);
+  const legacyListings = availableListings.filter(listing => !listing.isResolved);
 
   // Update showing status mutation
   const updateShowingStatusMutation = trpc.agent.updateShowingStatus.useMutation({
@@ -178,25 +185,23 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   };
 
   const getShowingsForDate = (date: Date) => {
-    if (!showings) return [];
-
     const dateStr = date.toISOString().split('T')[0];
-    return showings.filter((showing: any) => {
+    return showings.filter(showing => {
       const showingDate = new Date(showing.scheduledAt).toISOString().split('T')[0];
       return showingDate === dateStr;
     });
   };
 
-  const filteredShowings =
-    showings?.filter((showing: any) => {
-      if (
-        searchQuery &&
-        !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-        return false;
-      return true;
-    }) || [];
+  const filteredShowings = showings.filter(showing => {
+    if (
+      searchQuery &&
+      !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -215,11 +220,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
   const renderMonthView = () => {
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     const startOfCalendar = new Date(startOfMonth);
     startOfCalendar.setDate(startOfCalendar.getDate() - startOfCalendar.getDay());
 
-    const days = [];
+    const days: Array<React.ReactElement> = [];
     const today = new Date();
 
     for (let i = 0; i < 42; i++) {
@@ -243,7 +247,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
             {date.getDate()}
           </div>
           <div className="space-y-1">
-            {dayShowings.slice(0, 3).map((showing: any) => (
+            {dayShowings.slice(0, 3).map(showing => (
               <div
                 key={showing.id}
                 className={`text-xs p-1 rounded truncate border ${getStatusColor(showing.status)}`}
@@ -303,7 +307,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {dayShowings.map((showing: any) => (
+            {dayShowings.map(showing => (
               <ShowingCard
                 key={showing.id}
                 showing={showing}
@@ -343,7 +347,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
           </div>
           <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+            onChange={e => setStatusFilter(e.target.value as Showing['status'] | '')}
             className="px-3 py-1 border rounded text-sm"
           >
             <option value="">All Statuses</option>
@@ -396,7 +400,13 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
       </Card>
 
       {/* Calendar Grid or List View */}
-      {isLoading ? (
+      {showingsError ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Unable to load showings right now. Please refresh to retry.
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             Loading showings...
@@ -417,7 +427,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {filteredShowings.map((showing: any) => (
+                  {filteredShowings.map(showing => (
                     <ShowingCard
                       key={showing.id}
                       showing={showing}
@@ -463,7 +473,8 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               ) : null}
               {resolvedListings.length > 0 && legacyListings.length > 0 ? (
                 <p className="text-xs text-amber-700">
-                  Legacy listing options are fallback only until inventory bridging is fully backfilled.
+                  Legacy listing options are fallback only until inventory bridging is fully
+                  backfilled.
                 </p>
               ) : null}
               <select
@@ -474,7 +485,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 <option value="">Select listing</option>
                 {resolvedListings.length > 0 ? (
                   <optgroup label="Resolved inventory">
-                    {resolvedListings.map((listing: any) => (
+                    {resolvedListings.map((listing: ShowingProperty) => (
                       <option key={listing.id} value={listing.id}>
                         {listing.title} {listing.city ? `- ${listing.city}` : ''}
                       </option>
@@ -483,7 +494,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 ) : null}
                 {legacyListings.length > 0 ? (
                   <optgroup label="Legacy fallback">
-                    {legacyListings.map((listing: any) => (
+                    {legacyListings.map((listing: ShowingProperty) => (
                       <option key={listing.id} value={listing.id}>
                         {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
                       </option>
@@ -498,9 +509,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 <label className="text-sm font-medium">Visitor name</label>
                 <Input
                   value={bookingForm.visitorName}
-                  onChange={e =>
-                    setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))
-                  }
+                  onChange={e => setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))}
                   placeholder="Prospective buyer"
                 />
               </div>
@@ -572,8 +581,8 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 }
 
 interface ShowingCardProps {
-  showing: any;
-  onStatusUpdate: (showingId: number, status: string) => void;
+  showing: Showing;
+  onStatusUpdate: (showingId: number, status: Showing['status']) => void;
   isUpdating: boolean;
 }
 
@@ -601,9 +610,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                   </div>
                 )}
                 {showing.property?.inventoryModel === 'legacy_listing' ? (
-                  <div className="text-amber-700 text-xs font-medium">
-                    Legacy listing fallback
-                  </div>
+                  <div className="text-amber-700 text-xs font-medium">Legacy listing fallback</div>
                 ) : null}
               </div>
 

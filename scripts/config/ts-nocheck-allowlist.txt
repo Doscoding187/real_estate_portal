@@ -6,10 +6,7 @@ client/src/components/admin/publisher/EnhancedProvinceDevDashboard.tsx
 client/src/components/admin/publisher/LinkSubscriberDialog.tsx
 client/src/components/advertise/PreviewCarousel.tsx
 client/src/components/agent/AgentSetupWizard.tsx
-client/src/components/agent/ClientProfileModal.tsx
-client/src/components/agent/CommissionTracker.tsx
 client/src/components/agent/LeadPipeline.tsx
-client/src/components/agent/ShowingsCalendar.tsx
 client/src/components/analytics/PropertyPriceHeatmap.tsx
 client/src/components/developer/ActivityFeed.tsx
 client/src/components/developer/AffordabilityCalculatorWidget.tsx
