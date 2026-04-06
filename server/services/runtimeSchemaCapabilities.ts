@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
+import { isShowingsSchemaReady, type ShowingsSchemaDetails } from './showingsSchemaCompatibility';
 
 export type RuntimeSchemaCapabilities = {
   checkedAt: string;
@@ -48,13 +49,7 @@ export type RuntimeSchemaCapabilities = {
     momentumScoreColumn: boolean;
   };
   showingsReady: boolean;
-  showingsDetails: {
-    table: boolean;
-    listingIdColumn: boolean;
-    agentIdColumn: boolean;
-    scheduledTimeColumn: boolean;
-    statusColumn: boolean;
-  };
+  showingsDetails: ShowingsSchemaDetails;
 };
 
 export type DistributionSchemaOperation =
@@ -430,9 +425,25 @@ export async function getRuntimeSchemaCapabilities(
 
   const showingsTable = await tableExists('showings');
   const listingIdColumn = showingsTable ? await columnExists('showings', 'listingId') : false;
+  const propertyIdColumn = showingsTable ? await columnExists('showings', 'propertyId') : false;
+  const leadIdColumn = showingsTable ? await columnExists('showings', 'leadId') : false;
   const agentIdColumn = showingsTable ? await columnExists('showings', 'agentId') : false;
   const scheduledTimeColumn = showingsTable ? await columnExists('showings', 'scheduledTime') : false;
+  const scheduledAtColumn = showingsTable ? await columnExists('showings', 'scheduledAt') : false;
   const statusColumn = showingsTable ? await columnExists('showings', 'status') : false;
+  const notesColumn = showingsTable ? await columnExists('showings', 'notes') : false;
+
+  const showingsDetails: ShowingsSchemaDetails = {
+    table: showingsTable,
+    listingIdColumn,
+    propertyIdColumn,
+    leadIdColumn,
+    agentIdColumn,
+    scheduledTimeColumn,
+    scheduledAtColumn,
+    statusColumn,
+    notesColumn,
+  };
 
   const value: RuntimeSchemaCapabilities = {
     checkedAt: new Date().toISOString(),
@@ -518,14 +529,8 @@ export async function getRuntimeSchemaCapabilities(
       subscriptionTierColumn,
       momentumScoreColumn,
     },
-    showingsReady: showingsTable && listingIdColumn && agentIdColumn && scheduledTimeColumn && statusColumn,
-    showingsDetails: {
-      table: showingsTable,
-      listingIdColumn,
-      agentIdColumn,
-      scheduledTimeColumn,
-      statusColumn,
-    },
+    showingsReady: isShowingsSchemaReady(showingsDetails),
+    showingsDetails,
   };
 
   cachedCapabilities = {

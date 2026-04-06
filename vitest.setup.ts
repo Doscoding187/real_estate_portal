@@ -1,13 +1,6 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 
-if (process.env.CI === 'true') {
-  console.log = () => undefined;
-  console.info = () => undefined;
-  console.warn = () => undefined;
-  console.error = () => undefined;
-}
-
 // Load .env.test when NODE_ENV=test
 if (process.env.NODE_ENV === 'test') {
   config({ path: resolve(process.cwd(), '.env.test'), override: true });
@@ -19,12 +12,176 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 import { beforeAll } from 'vitest';
+import mysql from 'mysql2/promise';
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __TEST_SQL_MIGRATIONS_READY__: Promise<void> | undefined;
+}
+
+function readRowValue<T = unknown>(
+  row: Record<string, unknown> | undefined,
+  key: string,
+): T | undefined {
+  if (!row) return undefined;
+  return (row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()]) as T | undefined;
+}
 
 // Global setup for all tests
 beforeAll(async () => {
+  if (process.env.SKIP_DB_INIT === '1') {
+    console.log('[Test Setup] SKIP_DB_INIT=1; skipping database initialization');
+    return;
+  }
+
   // Ensure database is initialized for tests using the proxy
   if (process.env.NODE_ENV === 'test') {
     try {
+      if (process.env.DATABASE_URL) {
+        if (!globalThis.__TEST_SQL_MIGRATIONS_READY__) {
+          globalThis.__TEST_SQL_MIGRATIONS_READY__ = (async () => {
+            const lockName = 'vitest_sql_migrations_lock_v1';
+            const connection = await mysql.createConnection(process.env.DATABASE_URL!);
+            let acquiredLock = false;
+
+            const queryCount = async (query: string) => {
+              const [rows] = await connection.query(query);
+              const row = Array.isArray(rows) ? (rows[0] as any) : undefined;
+              return Number(row?.c ?? 0);
+            };
+
+            const hasRequiredExploreSchema = async () => {
+              const hasActorColumn = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'explore_content'
+                  AND column_name = 'actor_id'
+              `);
+              const hasInteractionEvents = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'interaction_events'
+              `);
+              const hasEconomicActors = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'economic_actors'
+              `);
+
+              return hasActorColumn > 0 && hasInteractionEvents > 0 && hasEconomicActors > 0;
+            };
+
+            const hasCanonicalShowingsSchema = async () => {
+              const [statusRows] = await connection.query<Array<Record<string, unknown>>>(
+                `
+                  SELECT column_type
+                  FROM information_schema.columns
+                  WHERE table_schema = DATABASE()
+                    AND table_name = 'showings'
+                    AND column_name = 'status'
+                `,
+              );
+
+              const requiredColumnCount = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'showings'
+                  AND column_name IN (
+                    'listingId',
+                    'propertyId',
+                    'leadId',
+                    'agentId',
+                    'visitorId',
+                    'visitorName',
+                    'scheduledAt',
+                    'durationMinutes',
+                    'status',
+                    'notes',
+                    'feedback'
+                  )
+              `);
+              const hasScheduledTime = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'showings'
+                  AND column_name = 'scheduledTime'
+              `);
+              const hasAgentScheduledIndex = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'showings'
+                  AND index_name = 'idx_showings_agent_scheduled_at'
+              `);
+              const hasListingIndex = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'showings'
+                  AND index_name = 'idx_showings_listing'
+              `);
+              const hasPropertyIndex = await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'showings'
+                  AND index_name = 'idx_showings_property'
+              `);
+
+              const statusType = String(readRowValue(statusRows[0], 'column_type') ?? '');
+
+              return (
+                requiredColumnCount === 11 &&
+                hasScheduledTime === 0 &&
+                hasAgentScheduledIndex > 0 &&
+                hasListingIndex > 0 &&
+                hasPropertyIndex > 0 &&
+                statusType.includes("'no_show'")
+              );
+            };
+
+            try {
+              const [lockRows] = await connection.query(
+                `SELECT GET_LOCK('${lockName}', 180) AS lock_acquired`,
+              );
+              acquiredLock = Number((lockRows as any)?.[0]?.lock_acquired ?? 0) === 1;
+
+              if (!acquiredLock) {
+                throw new Error('Could not acquire migration lock for test DB setup');
+              }
+
+              const readyBefore =
+                (await hasRequiredExploreSchema()) && (await hasCanonicalShowingsSchema());
+              if (!readyBefore) {
+                const { runSqlMigrations } = await import('./server/migrations/runSqlMigrations');
+                await runSqlMigrations({
+                  filePattern: /^\d+_.*\.sql$/,
+                });
+              }
+
+              const readyAfter =
+                (await hasRequiredExploreSchema()) && (await hasCanonicalShowingsSchema());
+              if (!readyAfter) {
+                throw new Error('Required test schema is still missing after running migrations');
+              }
+
+              console.log('[Test Setup] SQL migrations ensured for test DB');
+            } finally {
+              if (acquiredLock) {
+                await connection.query(`DO RELEASE_LOCK('${lockName}')`);
+              }
+              await connection.end();
+            }
+          })();
+        }
+        await globalThis.__TEST_SQL_MIGRATIONS_READY__;
+      }
+
       // Dynamic import to ensure env vars are loaded first
       const { getDb } = await import('./server/db-connection');
       await getDb();

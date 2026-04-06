@@ -1042,6 +1042,10 @@ export const scheduledViewingsRelations = relations(scheduledViewings, ({ one })
 }));
 
 export const showingsRelations = relations(showings, ({ one }) => ({
+  listing: one(listings, {
+    fields: [showings.listingId],
+    references: [listings.id],
+  }),
   property: one(properties, {
     fields: [showings.propertyId],
     references: [properties.id],
