@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,6 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Search,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
@@ -62,11 +62,14 @@ const VIEW_MODES = [
 type ViewMode = (typeof VIEW_MODES)[number]['id'];
 
 export function ShowingsCalendar({ className }: CalendarViewProps) {
+  const [, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''>('');
+  const [statusFilter, setStatusFilter] = useState<
+    'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''
+  >('');
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     listingId: '',
@@ -106,7 +109,11 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   };
 
   // Fetch showings for the current date range
-  const { data: showings, isLoading } = trpc.agent.getMyShowings.useQuery({
+  const {
+    data: showings = [],
+    isLoading,
+    error: showingsError,
+  } = trpc.agent.getMyShowings.useQuery({
     startDate: getDateRange().start,
     endDate: getDateRange().end,
     status: statusFilter || undefined,
@@ -177,26 +184,33 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     setIsBookingOpen(true);
   };
 
-  const getShowingsForDate = (date: Date) => {
-    if (!showings) return [];
+  const resolvedShowings = showings.filter(showing => {
+    const scheduledAt = showing.scheduledAt || showing.scheduledTime;
+    if (!scheduledAt) return false;
+    const date = new Date(scheduledAt);
+    return !Number.isNaN(date.getTime());
+  });
 
+  const getShowingsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return showings.filter((showing: any) => {
-      const showingDate = new Date(showing.scheduledAt).toISOString().split('T')[0];
+    return resolvedShowings.filter((showing: any) => {
+      const scheduledAt = showing.scheduledAt || showing.scheduledTime;
+      if (!scheduledAt) return false;
+      const showingDate = new Date(scheduledAt).toISOString().split('T')[0];
       return showingDate === dateStr;
     });
   };
 
-  const filteredShowings =
-    showings?.filter((showing: any) => {
-      if (
-        searchQuery &&
-        !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-        return false;
-      return true;
-    }) || [];
+  const filteredShowings = resolvedShowings.filter((showing: any) => {
+    if (
+      searchQuery &&
+      !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -396,7 +410,26 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
       </Card>
 
       {/* Calendar Grid or List View */}
-      {isLoading ? (
+      {showingsError ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            <div className="space-y-3">
+              <p>
+                {showingsError.message?.includes('Agent profile not found')
+                  ? 'Complete your agent profile to unlock the calendar.'
+                  : 'Unable to load showings right now.'}
+              </p>
+              {showingsError.message?.includes('Agent profile not found') ? (
+                <Button onClick={() => setLocation('/agent/setup')}>Finish setup</Button>
+              ) : (
+                <Button variant="outline" onClick={() => utils.agent.getMyShowings.invalidate()}>
+                  Retry
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             Loading showings...
@@ -463,7 +496,8 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               ) : null}
               {resolvedListings.length > 0 && legacyListings.length > 0 ? (
                 <p className="text-xs text-amber-700">
-                  Legacy listing options are fallback only until inventory bridging is fully backfilled.
+                  Legacy listing options are fallback only until inventory bridging is fully
+                  backfilled.
                 </p>
               ) : null}
               <select
@@ -498,9 +532,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 <label className="text-sm font-medium">Visitor name</label>
                 <Input
                   value={bookingForm.visitorName}
-                  onChange={e =>
-                    setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))
-                  }
+                  onChange={e => setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))}
                   placeholder="Prospective buyer"
                 />
               </div>
@@ -601,9 +633,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                   </div>
                 )}
                 {showing.property?.inventoryModel === 'legacy_listing' ? (
-                  <div className="text-amber-700 text-xs font-medium">
-                    Legacy listing fallback
-                  </div>
+                  <div className="text-amber-700 text-xs font-medium">Legacy listing fallback</div>
                 ) : null}
               </div>
 
