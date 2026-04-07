@@ -9,8 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, MapPin, Home, Building, Key, Building2, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Home, Building, Key, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { generatePropertyUrl, slugify } from '@/lib/urlUtils';
 
 interface SearchFormData {
   location: string;
@@ -47,27 +48,13 @@ export function ModernHeroSection() {
   };
 
   const handleSearch = () => {
-    // Construct search URL based on form data
-    const params = new URLSearchParams();
-
-    if (formData.location) {
-      params.set('location', formData.location);
-    }
-
-    if (formData.propertyType !== 'all') {
-      params.set('propertyType', formData.propertyType);
-    }
-
-    if (formData.priceMin) {
-      params.set('priceMin', formData.priceMin);
-    }
-
-    if (formData.priceMax) {
-      params.set('priceMax', formData.priceMax);
-    }
-
-    const baseUrl = formData.listingType === 'buy' ? '/property-for-sale' : '/property-to-rent';
-    const searchUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+    const searchUrl = generatePropertyUrl({
+      listingType: formData.listingType === 'buy' ? 'sale' : 'rent',
+      ...(formData.location ? { city: slugify(formData.location) } : {}),
+      ...(formData.propertyType !== 'all' ? { propertyType: formData.propertyType } : {}),
+      ...(formData.priceMin ? { minPrice: Number(formData.priceMin) } : {}),
+      ...(formData.priceMax ? { maxPrice: Number(formData.priceMax) } : {}),
+    });
 
     setLocation(searchUrl);
   };

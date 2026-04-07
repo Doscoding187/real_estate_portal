@@ -103,12 +103,20 @@ export default function CityPage({
     provinceSlug,
     citySlug,
   });
+  const cityId = (data as any)?.city?.id;
 
   // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
-    locationSlug: `${provinceSlug}/${citySlug}`,
-    fallbacks: [provinceSlug],
-  });
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery(
+    {
+      locationSlug: `${provinceSlug}/${citySlug}`,
+      fallbacks: [provinceSlug],
+      locationType: 'city',
+      locationId: cityId,
+    },
+    {
+      enabled: Boolean(cityId),
+    },
+  );
 
   if (isLoading) {
     return <CityPageSkeleton />;
@@ -244,7 +252,12 @@ export default function CityPage({
         topLocalities={topLocalities}
         topLocalitiesShowcase={
           topLocalities && topLocalities.length > 0 ? (
-            <LocationTopLocalities localities={topLocalities} locationName={city.name} />
+            <LocationTopLocalities
+              localities={topLocalities}
+              locationName={city.name}
+              provinceSlug={provinceSlug}
+              citySlug={citySlug}
+            />
           ) : undefined
         }
         highDemandDevelopments={
@@ -266,7 +279,8 @@ export default function CityPage({
               name: suburb.name,
               province: city.name,
               slug: suburb.slug,
-              provinceSlug: `${provinceSlug}/${citySlug}`,
+              provinceSlug: provinceSlug,
+              citySlug: citySlug,
               propertyCount: suburb.listingCount
                 ? `${suburb.listingCount.toLocaleString()}+ Properties`
                 : undefined,

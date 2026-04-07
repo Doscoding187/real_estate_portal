@@ -43,6 +43,7 @@ const AgencyDashboard = lazy(() => import('./pages/AgencyDashboard'));
 const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
 const AgentListings = lazy(() => import('./pages/agent/AgentListings'));
 const AgentLeadsEnhanced = lazy(() => import('./pages/agent/AgentLeadsEnhanced'));
+const AgentReferrals = lazy(() => import('./pages/agent/AgentReferrals'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
@@ -50,6 +51,7 @@ const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
+const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const AgencyList = lazy(() => import('./pages/admin/AgencyList'));
 const CreateAgency = lazy(() => import('./pages/admin/CreateAgency'));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
@@ -60,18 +62,35 @@ const PlatformSettings = lazy(() => import('./pages/admin/PlatformSettings'));
 const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
 const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
-const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
+const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
+const ExploreSandbox = lazy(() => import('./pages/ExploreSandbox'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
-const ExploreDiscovery = lazy(() => import('./pages/ExploreDiscovery'));
-const ExploreMap = lazy(() => import('./pages/ExploreMap'));
+const ExplorePublicVideoPage = lazy(() => import('./pages/ExplorePublicVideoPage'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
 const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ReferralUpload = lazy(() => import('./pages/ReferralUpload'));
+const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
+const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
+const ServicesLocalizedCategoryPage = lazy(
+  () => import('./pages/services/ServicesLocalizedCategoryPage'),
+);
+const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
+const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
+const ServiceProviderProfilePage = lazy(
+  () => import('./pages/services/ServiceProviderProfilePage'),
+);
+const ServiceProviderReviewsPage = lazy(
+  () => import('./pages/services/ServiceProviderReviewsPage'),
+);
+const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
+const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
+const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 // Super Admin Dashboard Pages
@@ -112,6 +131,7 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
+const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
 // DeveloperSetupWizard (unused in routes?) - keeping imported if it was used, but checking usage...
 // It was imported but not used in the Route list in the original file! I will comment it out or lazy load it if I see it.
 // Ah, checking original file... L98 imported it. L230 uses CreateDevelopment.
@@ -140,17 +160,29 @@ const DeveloperBrandProfilePage = lazy(() => import('./pages/DeveloperBrandProfi
 // Import Comparison Page
 const CompareProperties = lazy(() => import('./pages/CompareProperties'));
 const AdvertiseWithUs = lazy(() => import('./pages/AdvertiseWithUs'));
+const GetStarted = lazy(() => import('./pages/GetStarted'));
+const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
+const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
+const ReferrerDevelopmentsPage = lazy(() => import('./pages/referrer/ReferrerDevelopmentsPage'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
+const DistributionNetworkPublicPage = lazy(
+  () => import('./pages/distribution/DistributionNetworkPublicPage'),
+);
+const DistributionReferralApplyPage = lazy(
+  () => import('./pages/distribution/DistributionReferralApplyPage'),
+);
+const isExploreSandboxEnabled =
+  import.meta.env.DEV || (import.meta.env as any).VITE_ENABLE_EXPLORE_SANDBOX === 'true';
 
-// Import SearchResults page for SEO-friendly URLs
+// Import the canonical property search results surface
 const SearchResults = lazy(() => import('./pages/SearchResults'));
 const SuburbPage = lazy(() => import('./pages/SuburbPage'));
 
@@ -196,6 +228,7 @@ function Router() {
           {/* ============================================================== */}
           <Route path="/property-for-sale" component={SearchResults} />
           <Route path="/property-to-rent" component={SearchResults} />
+          <Route path="/property-auction" component={SearchResults} />
 
           {/* ============================================================== */}
           {/* 2. CANONICAL SEO PAGES (Path-Based Discovery)                  */}
@@ -205,14 +238,17 @@ function Router() {
           {/* Suburb Pages: /property-for-sale/gauteng/johannesburg/sandton */}
           <Route path="/property-for-sale/:province/:city/:suburb" component={SuburbPage} />
           <Route path="/property-to-rent/:province/:city/:suburb" component={SuburbPage} />
+          <Route path="/property-auction/:province/:city/:suburb" component={SuburbPage} />
 
           {/* City Pages: /property-for-sale/gauteng/johannesburg */}
           <Route path="/property-for-sale/:province/:city" component={CityPage} />
           <Route path="/property-to-rent/:province/:city" component={CityPage} />
+          <Route path="/property-auction/:province/:city" component={CityPage} />
 
           {/* Province Pages: /property-for-sale/gauteng */}
           <Route path="/property-for-sale/:province" component={ProvincePage} />
           <Route path="/property-to-rent/:province" component={ProvincePage} />
+          <Route path="/property-auction/:province" component={ProvincePage} />
 
           {/* ============================================================== */}
           {/* 2A. DEVELOPER DASHBOARD ROUTES                                 */}
@@ -228,28 +264,80 @@ function Router() {
           <Route path="/developer/:slug" component={DeveloperBrandProfilePage} />
 
           {/* ============================================================== */}
-          {/* 3. LEGACY / P24-STYLE ROUTES (Lower Priority)                  */}
+          {/* 3. QUERY / DETAIL ENTRY ROUTES (Lower Priority)                */}
           {/* ============================================================== */}
 
           {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
           <Route path="/admin/review/:id" component={AdminPropertyReview} />
 
-          {/* Legacy properties route (query params) */}
+          {/* Canonical query entry point for property search */}
           <Route path="/properties" component={SearchResults} />
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
-          <Route path="/agent/dashboard" component={AgentDashboard} />
-          <Route path="/agent/listings" component={AgentListings} />
-          <Route path="/agent/leads" component={AgentLeadsEnhanced} />
-          <Route path="/agent/marketing" component={AgentMarketingHub} />
-          <Route path="/agent/earnings" component={AgentEarnings} />
-          <Route path="/agent/analytics" component={AgentAnalytics} />
-          <Route path="/agent/productivity" component={AgentProductivity} />
-          <Route path="/agent/training" component={AgentTrainingSupport} />
-          <Route path="/agent/settings" component={AgentSettings} />
-          <Route path="/agent/setup" component={AgentSetup} />
+          <Route path="/agent/dashboard">
+            <RequireRole role="agent">
+              <AgentDashboard />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/listings">
+            <RequireRole role="agent">
+              <AgentListings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/leads">
+            <RequireRole role="agent">
+              <AgentLeadsEnhanced />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/referrals">
+            <RequireRole role="agent">
+              <AgentReferrals />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/marketing">
+            <RequireRole role="agent">
+              <AgentMarketingHub />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/earnings">
+            <RequireRole role="agent">
+              <AgentEarnings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/analytics">
+            <RequireRole role="agent">
+              <AgentAnalytics />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/productivity">
+            <RequireRole role="agent">
+              <AgentProductivity />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/training">
+            <RequireRole role="agent">
+              <AgentTrainingSupport />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/settings">
+            <RequireRole role="agent">
+              <AgentSettings />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/setup">
+            <RequireRole role="agent">
+              <AgentSetup />
+            </RequireRole>
+          </Route>
+          <Route path="/onboarding/agent-profile">
+            <RequireRole role="agent">
+              <AgentSetup />
+            </RequireRole>
+          </Route>
+          <Route path="/agents/:slug" component={AgentMicrosite} />
+          <Route path="/a/:slug" component={AgentMicrosite} />
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
 
@@ -258,7 +346,7 @@ function Router() {
           <Route path="/city/:slug" component={OldLegacyCityRedirect} />
           {/* Very Old Format: /suburb/johannesburg/sandton */}
           <Route path="/suburb/:city/:suburb">
-            {params => <LegacySuburbRedirect params={{ ...params, province: 'gauteng' }} />}
+            {params => <LegacySuburbRedirect params={params} />}
           </Route>
 
           {/* Route Handlers / Wizards */}
@@ -277,6 +365,7 @@ function Router() {
               return null;
             }}
           />
+          <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
           <Route path="/development/:slug" component={DevelopmentDetail} />
 
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
@@ -287,17 +376,24 @@ function Router() {
 
           {/* Explore routes */}
           <Route path="/explore/home" component={ExploreHome} />
-          <Route path="/explore/shorts" component={ExploreShorts} />
+          {isExploreSandboxEnabled && <Route path="/explore/sandbox" component={ExploreSandbox} />}
           <Route path="/explore/upload" component={ExploreUpload} />
+          <Route path="/explore/create">
+            <Redirect to="/explore/upload" />
+          </Route>
+          <Route path="/explore/publish">
+            <Redirect to="/explore/upload" />
+          </Route>
+          <Route path="/explore/upload/video">
+            <Redirect to="/explore/upload" />
+          </Route>
           <Route path="/explore/component-demo" component={ExploreComponentDemo} />
           <Route path="/map-preview-demo" component={MapPreviewDemo} />
 
-          {/* New Explore Pages */}
-          <Route path="/explore/discovery" component={ExploreDiscovery} />
-          <Route path="/explore/map" component={ExploreMap} />
-
-          {/* Legacy Feed */}
+          {/* Unified Explore Feed + Public Video Page */}
           <Route path="/explore/feed" component={ExploreFeed} />
+          <Route path="/explore/shorts" component={ExploreShorts} />
+          <Route path="/explore/@:handle/:slug" component={ExplorePublicVideoPage} />
 
           {/* Explore Entry Rule (MUST be after the specific routes) */}
           <Route path="/explore">
@@ -307,6 +403,36 @@ function Router() {
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
           <Route path="/referrer/dashboard" component={ReferrerDashboard} />
+          <Route path="/referrer/developments" component={ReferrerDevelopmentsPage} />
+
+          {/* Services marketplace routes */}
+          <Route path="/services/request/:category" component={ServicesRequestPage} />
+          <Route path="/services/results/:journeyId" component={ServicesResultsPage} />
+          <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
+          <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
+          <Route
+            path="/services/:category/:city/:province"
+            component={ServicesLocalizedCategoryPage}
+          />
+          <Route path="/services/:category" component={ServicesCategoryPage} />
+          <Route path="/services" component={ServicesHomePage} />
+
+          {/* Provider routes */}
+          <Route path="/pro/dashboard">
+            <RequireRole role="service_provider">
+              <ProDashboardPage />
+            </RequireRole>
+          </Route>
+          <Route path="/pro/profile">
+            <RequireRole role="service_provider">
+              <ProProfilePage />
+            </RequireRole>
+          </Route>
+          <Route path="/pro/explore">
+            <RequireRole role="service_provider">
+              <ProExplorePage />
+            </RequireRole>
+          </Route>
 
           <Route path="/compare" component={CompareProperties} />
 
@@ -315,6 +441,17 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
+          <Route path="/referral-upload/:token" component={ReferralUpload} />
+          <Route path="/get-started/referral">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
+          <Route path="/get-started/referrer">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
+          <Route path="/get-started/:role/confirmation" component={GetStartedRole} />
+          <Route path="/get-started/:role" component={GetStartedRole} />
+          <Route path="/get-started" component={GetStarted} />
+          <Route path="/book-strategy" component={BookStrategy} />
           <Route path="/role-selection" component={RoleSelection} />
           <Route path="/advertise" component={AdvertiseWithUs} />
           <Route
@@ -534,8 +671,24 @@ function Router() {
               </SuperAdminDashboard>
             )}
           />
+          <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
+          <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
+          <Route path="/referral/apply">
+            <Redirect to="/distribution-network/apply" />
+          </Route>
+          <Route path="/admin/distribution-network">
+            <Redirect to="/admin/distribution" />
+          </Route>
 
           {/* Developer Publisher Route */}
+          <Route
+            path="/admin/publisher/create-development"
+            component={() => (
+              <SuperAdminDashboard>
+                <CreateDevelopment />
+              </SuperAdminDashboard>
+            )}
+          />
           <Route
             path="/admin/publisher"
             component={() => (
@@ -564,7 +717,7 @@ function Router() {
 
           {/* User Dashboard Route */}
           <Route path="/user/dashboard">
-            <RequireRole role="user">
+            <RequireRole role="visitor">
               <UserDashboard />
             </RequireRole>
           </Route>
@@ -619,11 +772,11 @@ function Router() {
           <Route path={'/404'} component={NotFound} />
 
           {/* CATCH-ALL ROUTES & LEGACY REDIRECTS - MUST BE LAST */}
-          {/* Redirect /:province/:city/:suburb -> /property-for-sale/:province/:city/:suburb */}
+          {/* Redirect legacy location shortcuts to canonical property search results */}
           <Route path="/:province/:city/:suburb" component={LegacySuburbRedirect} />
-          {/* Redirect /:province/:city -> /property-for-sale/:province/:city */}
+          {/* Redirect legacy province/city shortcuts to canonical property search results */}
           <Route path="/:province/:city" component={LegacyCityRedirect} />
-          {/* Redirect /:province -> /property-for-sale/:province */}
+          {/* Redirect legacy province shortcuts to canonical property search results */}
           <Route path="/:province" component={LegacyProvinceRedirect} />
 
           {/* Final fallback route */}

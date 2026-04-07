@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,15 +7,14 @@ import {
   MapPin,
   TrendingUp,
   Building2,
-  Home,
   School,
   ShoppingBag,
   Star,
   ArrowRight,
-  Users,
   Train,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { generatePropertyUrl, slugify } from '@/lib/urlUtils';
 
 interface LocationData {
   id: string;
@@ -180,9 +179,16 @@ export function LocationRecommendations() {
         );
 
   const handleLocationClick = (location: LocationData) => {
-    const provinceSlug = location.province.toLowerCase().replace(/\s+/g, '-');
-    const suburbSlug = location.name.toLowerCase().replace(/\s+/g, '-');
-    setLocation(`/property-for-sale/${provinceSlug}/${suburbSlug}`);
+    const provinceSlug = slugify(location.province);
+    const suburbSlug = slugify(location.name);
+
+    setLocation(
+      generatePropertyUrl({
+        listingType: 'sale',
+        province: provinceSlug,
+        suburb: suburbSlug,
+      }),
+    );
   };
 
   const formatPrice = (price: number) => {
@@ -194,7 +200,7 @@ export function LocationRecommendations() {
     return `${sign}${change}%`;
   };
 
-  const AmenityIcon = ({ type, count }: { type: string; count: number }) => {
+  const AmenityIcon = ({ type }: { type: string; count: number }) => {
     switch (type) {
       case 'schools':
         return <School className="w-4 h-4" />;

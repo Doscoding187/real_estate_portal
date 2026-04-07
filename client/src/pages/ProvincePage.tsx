@@ -52,12 +52,20 @@ export default function ProvincePage({ params }: { params: { province: string } 
   const { data, isLoading, error } = trpc.locationPages.getProvinceData.useQuery({
     provinceSlug,
   });
+  const provinceId = (data as any)?.province?.id;
 
   // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
-    locationSlug: provinceSlug,
-    fallbacks: [],
-  });
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery(
+    {
+      locationSlug: provinceSlug,
+      fallbacks: [],
+      locationType: 'province',
+      locationId: provinceId,
+    },
+    {
+      enabled: Boolean(provinceId),
+    },
+  );
 
   if (isLoading) {
     return <ProvincePageSkeleton />;
@@ -170,7 +178,11 @@ export default function ProvincePage({ params }: { params: { province: string } 
         }
         topLocalitiesShowcase={
           topLocalities && topLocalities.length > 0 ? (
-            <LocationTopLocalities localities={topLocalities} locationName={province.name} />
+            <LocationTopLocalities
+              localities={topLocalities}
+              locationName={province.name}
+              provinceSlug={provinceSlug}
+            />
           ) : undefined
         }
         exploreMore={

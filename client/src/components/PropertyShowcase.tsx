@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { trpc } from '@/lib/trpc';
+import { buildPropertyUrl, generatePropertyUrl, slugify } from '@/lib/urlUtils';
 
 interface PropertyCardProps {
   id: string;
@@ -46,7 +46,7 @@ export function PropertyCard({
   id,
   title,
   price,
-  location,
+  location: _location,
   suburb,
   city,
   province,
@@ -80,34 +80,20 @@ export function PropertyCard({
     return `R ${price.toLocaleString()}`;
   };
 
-  const getPropertyTypeIcon = (type: string) => {
+  const renderPropertyTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'apartment':
-      case 'flat':
-        return Building2;
       case 'house':
       case 'villa':
-        return Home;
+        return <Home className="w-4 h-4 text-blue-600" />;
+      case 'apartment':
+      case 'flat':
       default:
-        return Building2;
+        return <Building2 className="w-4 h-4 text-blue-600" />;
     }
   };
 
-  const PropertyTypeIcon = getPropertyTypeIcon(propertyType);
-
   const handleCardClick = () => {
-    const baseUrl = listingType === 'sale' ? '/property-for-sale' : '/property-to-rent';
-    const provinceSlug = province.toLowerCase().replace(/\s+/g, '-');
-    const citySlug = city.toLowerCase().replace(/\s+/g, '-');
-    const suburbSlug = suburb?.toLowerCase().replace(/\s+/g, '-');
-
-    let url = `${baseUrl}/${provinceSlug}/${citySlug}`;
-    if (suburbSlug) {
-      url += `/${suburbSlug}`;
-    }
-    url += `/${id}`;
-
-    setLocation(url);
+    setLocation(buildPropertyUrl(id, title));
   };
 
   return (
@@ -171,7 +157,7 @@ export function PropertyCard({
           {/* Property Type Icon */}
           <div className="absolute bottom-3 left-3">
             <div className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center">
-              <PropertyTypeIcon className="w-4 h-4 text-blue-600" />
+              {renderPropertyTypeIcon(propertyType)}
             </div>
           </div>
         </div>
@@ -404,18 +390,11 @@ export function PropertyShowcase({
   ].slice(0, limit);
 
   const handleViewAll = () => {
-    const baseUrl = listingType === 'sale' ? '/property-for-sale' : '/property-to-rent';
-    const params = new URLSearchParams();
-
-    if (propertyType && propertyType !== 'all') {
-      params.set('propertyType', propertyType);
-    }
-
-    if (location) {
-      params.set('location', location);
-    }
-
-    const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+    const url = generatePropertyUrl({
+      listingType,
+      ...(propertyType && propertyType !== 'all' ? { propertyType } : {}),
+      ...(location ? { city: slugify(location) } : {}),
+    });
     setLocation(url);
   };
 

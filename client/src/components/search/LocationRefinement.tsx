@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { MapPin, ArrowRight } from 'lucide-react';
 import { SearchResults } from '@shared/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { generatePropertyUrl, slugify } from '@/lib/urlUtils';
 
 interface LocationRefinementProps {
   context?: SearchResults['locationContext'];
 }
 
 export function LocationRefinement({ context }: LocationRefinementProps) {
-  const [_, setLocation] = useLocation();
-
   // If no context, or we are at country level, show nothing
   if (!context || !context.ids) return null;
 
@@ -34,12 +33,30 @@ export function LocationRefinement({ context }: LocationRefinementProps) {
   return null;
 }
 
+function getSearchContext(location: string) {
+  const [pathname, queryString = ''] = location.split('?');
+  const searchParams = new URLSearchParams(queryString);
+  const segments = pathname.split('/').filter(Boolean);
+  const provinceFromPath = segments.length >= 2 ? segments[1] : undefined;
+
+  return {
+    listingType: pathname.includes('property-to-rent')
+      ? 'rent'
+      : pathname.includes('property-auction')
+        ? 'auction'
+        : 'sale',
+    province: searchParams.get('province') || provinceFromPath,
+    city: searchParams.get('city') || undefined,
+  } as const;
+}
+
 function RefineProvince({ context }: { context: NonNullable<SearchResults['locationContext']> }) {
   const { data: cities, isLoading } = trpc.location.getLocationHierarchy.useQuery({
     depth: 'city',
     provinceId: context.ids?.provinceId,
   });
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const searchContext = getSearchContext(location);
 
   // Sort by Metro status first, then name - MUST be before early returns!
   const sortedCities = useMemo(() => {
@@ -70,7 +87,11 @@ function RefineProvince({ context }: { context: NonNullable<SearchResults['locat
             className="justify-between h-8 px-2 text-sm font-normal text-slate-600 hover:text-blue-600 hover:bg-blue-50"
             onClick={() =>
               setLocation(
-                `/property-for-sale?city=${city.slug || city.name.toLowerCase().replace(/ /g, '-')}`,
+                generatePropertyUrl({
+                  listingType: searchContext.listingType,
+                  province: searchContext.province || context.slug,
+                  city: city.slug || slugify(city.name),
+                }),
               )
             }
           >
@@ -87,7 +108,8 @@ function RefineCity({ context }: { context: NonNullable<SearchResults['locationC
     depth: 'suburb',
     cityId: context.ids?.cityId,
   });
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const searchContext = getSearchContext(location);
 
   if (isLoading) return <RefinementSkeleton />;
   if (!suburbs || suburbs.length === 0) return null;
@@ -110,7 +132,12 @@ function RefineCity({ context }: { context: NonNullable<SearchResults['locationC
             className="justify-between h-8 px-2 text-sm font-normal text-slate-600 hover:text-blue-600 hover:bg-blue-50"
             onClick={() =>
               setLocation(
-                `/property-for-sale?suburb=${suburb.slug || suburb.name.toLowerCase().replace(/ /g, '-')}`,
+                generatePropertyUrl({
+                  listingType: searchContext.listingType,
+                  ...(searchContext.province ? { province: searchContext.province } : {}),
+                  city: searchContext.city || context.slug,
+                  suburb: suburb.slug || slugify(suburb.name),
+                }),
               )
             }
           >
@@ -130,7 +157,8 @@ function RefineSuburb({ context }: { context: NonNullable<SearchResults['locatio
     depth: 'suburb',
     cityId: context.ids?.cityId,
   });
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const searchContext = getSearchContext(location);
 
   if (isLoading) return <RefinementSkeleton />;
   if (!suburbs || suburbs.length === 0) return null;
@@ -159,7 +187,12 @@ function RefineSuburb({ context }: { context: NonNullable<SearchResults['locatio
             className="justify-start h-8 px-2 text-sm font-normal text-slate-600 hover:text-blue-600 hover:bg-blue-50"
             onClick={() =>
               setLocation(
-                `/property-for-sale?suburb=${suburb.slug || suburb.name.toLowerCase().replace(/ /g, '-')}`,
+                generatePropertyUrl({
+                  listingType: searchContext.listingType,
+                  ...(searchContext.province ? { province: searchContext.province } : {}),
+                  city: searchContext.city || slugify(context.hierarchy.city || ''),
+                  suburb: suburb.slug || slugify(suburb.name),
+                }),
               )
             }
           >

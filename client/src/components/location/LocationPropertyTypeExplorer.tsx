@@ -9,6 +9,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 export interface PropertyTypeStats {
   type: string;
@@ -42,27 +43,34 @@ const CATEGORIES_CONFIG: Record<string, CategoryConfig> = {
   villa: { icon: Castle, title: 'Villas', gradient: 'from-cyan-500 to-blue-500' },
 };
 
+function getLocationFilters(locationSlug?: string) {
+  if (!locationSlug) return {};
+
+  const [province, city, suburb] = locationSlug.split('/').filter(Boolean);
+
+  return {
+    ...(province ? { province } : {}),
+    ...(city ? { city } : {}),
+    ...(suburb ? { suburb } : {}),
+  };
+}
+
 export function LocationPropertyTypeExplorer({
   propertyTypes,
   locationName,
   locationSlug,
-  placeId,
+  placeId: _placeId,
 }: PropertyTypeExplorerProps) {
   const [, navigate] = useLocation();
 
-  /* Updated Routing Logic for 2025 Architecture */
   const handleTypeClick = (type: string) => {
-    // Determine base path via prop or default to '/property-for-sale'
-    // If locationSlug exists, use it. Otherwise fall back to generic search?
-    // Assumption: locationSlug is passed as 'province/city/suburb' or similar canonical path
-
-    // Construct new URL: /property-for-sale/{locationSlug}?propertyType={type}
-    if (locationSlug) {
-      navigate(`/property-for-sale/${locationSlug}?propertyType=${type}`);
-    } else {
-      // Fallback for location-less usage (rare in this component)
-      navigate(`/property-for-sale/search?propertyType=${type}`);
-    }
+    navigate(
+      generatePropertyUrl({
+        listingType: 'sale',
+        propertyType: type,
+        ...getLocationFilters(locationSlug),
+      }),
+    );
   };
 
   // Filter out types with zero listings and map to config
