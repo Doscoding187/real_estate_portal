@@ -28,6 +28,14 @@ import {
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
+interface ShowingProperty {
+  id?: number | null;
+  title?: string | null;
+  address?: string | null;
+  city?: string | null;
+  inventoryModel?: string | null;
+}
+
 interface Showing {
   id: number;
   listingId: number | null;
@@ -36,13 +44,7 @@ interface Showing {
   durationMinutes?: number | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
-  property?: {
-    id?: number | null;
-    title?: string | null;
-    address?: string | null;
-    city?: string | null;
-    inventoryModel?: string | null;
-  } | null;
+  property?: ShowingProperty | null;
   client?: {
     name?: string | null;
     email?: string | null;
