@@ -22,7 +22,6 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Search,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
@@ -92,7 +91,9 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''>('');
+  const [statusFilter, setStatusFilter] = useState<
+    'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''
+  >('');
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     listingId: '',
@@ -132,14 +133,18 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   };
 
   // Fetch showings for the current date range
-  const { data: showings, isLoading } = trpc.agent.getMyShowings.useQuery({
+  const {
+    data: showings = [],
+    isLoading,
+    error: showingsError,
+  } = trpc.agent.getMyShowings.useQuery({
     startDate: getDateRange().start,
     endDate: getDateRange().end,
     status: statusFilter || undefined,
   });
   const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
-  const resolvedListings = availableListings.filter((listing: any) => listing.isResolved);
-  const legacyListings = availableListings.filter((listing: any) => !listing.isResolved);
+  const resolvedListings = availableListings.filter(listing => listing.isResolved);
+  const legacyListings = availableListings.filter(listing => !listing.isResolved);
 
   // Update showing status mutation
   const updateShowingStatusMutation = trpc.agent.updateShowingStatus.useMutation({
@@ -204,8 +209,6 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   };
 
   const getShowingsForDate = (date: Date) => {
-    if (!showings) return [];
-
     const dateStr = date.toISOString().split('T')[0];
     return showings.filter((showing: Showing) => {
       const scheduledDate = getShowingScheduledDate(showing);
@@ -244,7 +247,6 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
   const renderMonthView = () => {
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     const startOfCalendar = new Date(startOfMonth);
     startOfCalendar.setDate(startOfCalendar.getDate() - startOfCalendar.getDay());
 
@@ -424,7 +426,13 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
       </Card>
 
       {/* Calendar Grid or List View */}
-      {isLoading ? (
+      {showingsError ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Unable to load showings right now. Please refresh to retry.
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             Loading showings...
@@ -491,7 +499,8 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               ) : null}
               {resolvedListings.length > 0 && legacyListings.length > 0 ? (
                 <p className="text-xs text-amber-700">
-                  Legacy listing options are fallback only until inventory bridging is fully backfilled.
+                  Legacy listing options are fallback only until inventory bridging is fully
+                  backfilled.
                 </p>
               ) : null}
               <select
@@ -502,8 +511,11 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 <option value="">Select listing</option>
                 {resolvedListings.length > 0 ? (
                   <optgroup label="Resolved inventory">
-                    {resolvedListings.map((listing: any) => (
-                      <option key={listing.id} value={listing.id}>
+                    {resolvedListings.map((listing: ShowingProperty, index: number) => (
+                      <option
+                        key={listing.id ?? `resolved-${index}`}
+                        value={String(listing.id ?? '')}
+                      >
                         {listing.title} {listing.city ? `- ${listing.city}` : ''}
                       </option>
                     ))}
@@ -511,8 +523,8 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 ) : null}
                 {legacyListings.length > 0 ? (
                   <optgroup label="Legacy fallback">
-                    {legacyListings.map((listing: any) => (
-                      <option key={listing.id} value={listing.id}>
+                    {legacyListings.map((listing: ShowingProperty, index: number) => (
+                      <option key={listing.id ?? `legacy-${index}`} value={String(listing.id ?? '')}>
                         {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
                       </option>
                     ))}
@@ -526,9 +538,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 <label className="text-sm font-medium">Visitor name</label>
                 <Input
                   value={bookingForm.visitorName}
-                  onChange={e =>
-                    setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))
-                  }
+                  onChange={e => setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))}
                   placeholder="Prospective buyer"
                 />
               </div>
@@ -629,9 +639,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                   </div>
                 )}
                 {showing.property?.inventoryModel === 'legacy_listing' ? (
-                  <div className="text-amber-700 text-xs font-medium">
-                    Legacy listing fallback
-                  </div>
+                  <div className="text-amber-700 text-xs font-medium">Legacy listing fallback</div>
                 ) : null}
               </div>
 
