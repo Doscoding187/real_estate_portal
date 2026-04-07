@@ -20,18 +20,30 @@ import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-
 import type { SQL } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
-import { nowAsDbTimestamp } from './utils/dbTypeUtils';
+import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 import { requireUser } from './_core/requireUser';
 import { slugify } from './_core/utils/slug';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { agentOnboardingService } from './services/agentOnboardingService';
 import {
+  getRuntimeSchemaCapabilities,
+  warnSchemaCapabilityOnce,
+} from './services/runtimeSchemaCapabilities';
+import {
   getAgentInventorySchedulingOptions,
   getInventoryBridgeSchemaCapabilities,
   resolvePropertiesForListings,
   resolvePropertyForListing,
 } from './services/inventoryLinkResolver';
+import {
+  getShowingsSchemaVariant,
+  mapAgentShowingStatusToStorage,
+  mapStorageShowingStatusToAgent,
+  type AgentShowingStatus,
+  type ShowingsSchemaDetails,
+  type ShowingsSchemaVariant,
+} from './services/showingsSchemaCompatibility';
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -45,6 +57,7 @@ const NOTIFICATION_TYPES = [
   'system_alert',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 
 function buildAgentPublicSlug(agent: {
   id: number;
@@ -80,6 +93,24 @@ function stringifyTextList(values?: string[]) {
     .join(', ');
 }
 
+function buildAgentInventoryConditions(userId: number, agentId: number | null, status?: string) {
+  const conditions: SQL[] = [
+    agentId
+      ? or(eq(properties.agentId, agentId), eq(properties.ownerId, userId))!
+      : eq(properties.ownerId, userId),
+  ];
+
+  if (status && status !== 'all') {
+    if (status === 'active') {
+      conditions.push(inArray(properties.status, [...LIVE_AGENT_LISTING_STATUSES]));
+    } else {
+      conditions.push(eq(properties.status, status as any));
+    }
+  }
+
+  return conditions;
+}
+
 function parseSocialLinks(value?: string | null) {
   if (!value) return {};
   try {
@@ -110,6 +141,233 @@ function toAgentOnboardingResponse(agentRecord: typeof agents.$inferSelect | nul
     languages: parseTextList(agentRecord.languages),
     socialLinks: parseSocialLinks(agentRecord.socialLinks),
   };
+}
+
+type RawAgentShowingRow = {
+  id: number | string;
+  listingId?: number | string | null;
+  propertyId?: number | string | null;
+  leadId?: number | string | null;
+  agentId?: number | string | null;
+  scheduledTime?: string | Date | null;
+  scheduledAt?: string | Date | null;
+  status?: string | null;
+  notes?: string | null;
+  feedback?: string | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+};
+
+type AgentShowingProperty = {
+  id: number;
+  listingId?: number | null;
+  propertyId?: number | null;
+  inventoryModel?: string;
+  title: string;
+  address?: string | null;
+  city?: string | null;
+};
+
+type AgentShowingClient = {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+};
+
+type AgentShowingRecord = {
+  id: number;
+  listingId: number | null;
+  propertyId: number | null;
+  leadId: number | null;
+  agentId: number | null;
+  scheduledAt: string | Date | null;
+  scheduledTime: string | Date | null;
+  status: AgentShowingStatus;
+  notes: string | null;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
+  property: AgentShowingProperty | null;
+  client: AgentShowingClient | null;
+};
+
+function normalizeDbRows(result: any): Array<Record<string, unknown>> {
+  if (Array.isArray(result)) {
+    if (result.length > 0 && Array.isArray(result[0])) {
+      return result[0] as Array<Record<string, unknown>>;
+    }
+    if (result.length > 0 && typeof result[0] === 'object') {
+      return result as Array<Record<string, unknown>>;
+    }
+  }
+  if (result && Array.isArray(result.rows)) {
+    return result.rows as Array<Record<string, unknown>>;
+  }
+  return [];
+}
+
+function readCountValue(result: any): number {
+  const row = normalizeDbRows(result)[0] || {};
+  const value =
+    row.count_value ??
+    row.count ??
+    row.COUNT ??
+    row['COUNT(*)'] ??
+    row['COUNT(1)'] ??
+    Object.values(row)[0];
+  const countValue = Number(value ?? 0);
+  return Number.isFinite(countValue) ? countValue : 0;
+}
+
+function getShowingsDateColumn(variant: ShowingsSchemaVariant) {
+  return sql.identifier(variant === 'current' ? 'scheduledTime' : 'scheduledAt');
+}
+
+function getShowingsIdColumn(details: ShowingsSchemaDetails, variant: ShowingsSchemaVariant) {
+  if (variant === 'current' || (variant === 'hybrid' && details.listingIdColumn)) {
+    return sql.identifier('listingId');
+  }
+  if (details.propertyIdColumn) {
+    return sql.identifier('propertyId');
+  }
+  return sql`NULL`;
+}
+
+function getShowingsNotesColumn(details: ShowingsSchemaDetails) {
+  return details.notesColumn ? sql.identifier('notes') : sql.identifier('feedback');
+}
+
+function normalizeAgentShowingRow(
+  row: RawAgentShowingRow,
+  variant: ShowingsSchemaVariant,
+): AgentShowingRecord {
+  const listingIdRaw = row.listingId ?? row.propertyId ?? null;
+  const scheduledAt = row.scheduledAt ?? row.scheduledTime ?? null;
+
+  return {
+    id: Number(row.id),
+    listingId: listingIdRaw === null ? null : Number(listingIdRaw),
+    propertyId: row.propertyId == null ? null : Number(row.propertyId),
+    leadId: row.leadId == null ? null : Number(row.leadId),
+    agentId: row.agentId == null ? null : Number(row.agentId),
+    scheduledAt,
+    scheduledTime: scheduledAt,
+    status: mapStorageShowingStatusToAgent(row.status, variant),
+    notes: row.notes ?? row.feedback ?? null,
+    createdAt: row.createdAt ?? null,
+    updatedAt: row.updatedAt ?? null,
+    property: null,
+    client: null,
+  };
+}
+
+async function countAgentShowingsInRange(params: {
+  db: any;
+  agentId: number;
+  startIso: string;
+  endIso: string;
+  details: ShowingsSchemaDetails;
+}) {
+  const variant = getShowingsSchemaVariant(params.details);
+  if (variant === 'missing') return 0;
+
+  const scheduledColumn = getShowingsDateColumn(variant);
+  const result = await params.db.execute(sql`
+    SELECT COUNT(*) AS count_value
+    FROM showings
+    WHERE agentId = ${params.agentId}
+      AND ${scheduledColumn} >= ${params.startIso}
+      AND ${scheduledColumn} <= ${params.endIso}
+  `);
+
+  return readCountValue(result);
+}
+
+async function countAgentPendingOffers(params: { db: any; agentId: number }) {
+  const strategies = [
+    sql`
+      SELECT COUNT(*) AS count_value
+      FROM offers
+      WHERE agentId = ${params.agentId}
+        AND status = ${'pending'}
+    `,
+    sql`
+      SELECT COUNT(*) AS count_value
+      FROM offers
+      WHERE assigned_agent_id = ${params.agentId}
+        AND status = ${'pending'}
+    `,
+    sql`
+      SELECT COUNT(*) AS count_value
+      FROM offers
+      INNER JOIN listings ON offers.listingId = listings.id
+      WHERE listings.agentId = ${params.agentId}
+        AND offers.status = ${'pending'}
+    `,
+  ];
+
+  let lastError: unknown;
+  for (const statement of strategies) {
+    try {
+      const result = await params.db.execute(statement);
+      return readCountValue(result);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function listAgentShowings(params: {
+  db: any;
+  agentId: number;
+  startDate?: string;
+  endDate?: string;
+  status?: 'all' | AgentShowingStatus;
+  details: ShowingsSchemaDetails;
+}): Promise<AgentShowingRecord[]> {
+  const variant = getShowingsSchemaVariant(params.details);
+  if (variant === 'missing') return [];
+
+  const scheduledColumn = getShowingsDateColumn(variant);
+  const listingColumn = getShowingsIdColumn(params.details, variant);
+  const leadColumn = params.details.leadIdColumn ? sql.identifier('leadId') : sql`NULL`;
+  const notesColumn = getShowingsNotesColumn(params.details);
+  const startCondition = params.startDate
+    ? sql` AND ${scheduledColumn} >= ${new Date(params.startDate).toISOString()}`
+    : sql``;
+  const endCondition = params.endDate
+    ? sql` AND ${scheduledColumn} <= ${new Date(params.endDate).toISOString()}`
+    : sql``;
+  const statusValue =
+    params.status && params.status !== 'all'
+      ? mapAgentShowingStatusToStorage(params.status, variant)
+      : null;
+  const statusCondition = statusValue ? sql` AND status = ${statusValue}` : sql``;
+
+  const result = await params.db.execute(sql`
+    SELECT
+      id,
+      ${listingColumn} AS listingId,
+      ${params.details.propertyIdColumn ? sql.identifier('propertyId') : sql`NULL`} AS propertyId,
+      ${leadColumn} AS leadId,
+      agentId,
+      ${scheduledColumn} AS scheduledAt,
+      status,
+      ${notesColumn} AS notes,
+      createdAt,
+      updatedAt
+    FROM showings
+    WHERE agentId = ${params.agentId}
+    ${startCondition}
+    ${endCondition}
+    ${statusCondition}
+    ORDER BY ${scheduledColumn}
+  `);
+
+  return normalizeDbRows(result).map(row =>
+    normalizeAgentShowingRow(row as RawAgentShowingRow, variant),
+  );
 }
 
 /**
@@ -225,26 +483,16 @@ export const agentRouter = router({
     }> => {
       try {
         const db = await getDb();
+        const capabilities = await getRuntimeSchemaCapabilities();
+        const userId = requireUser(ctx).id;
 
         // Get agent record from user
         const [agentRecord] = await db
           .select()
           .from(agents)
-          .where(eq(agents.userId, ctx.user.id))
+          .where(eq(agents.userId, userId))
           .limit(1);
-
-        if (!agentRecord) {
-          // Return empty stats if no agent profile found
-          return {
-            activeListings: 0,
-            newLeadsThisWeek: 0,
-            showingsToday: 0,
-            offersInProgress: 0,
-            commissionsPending: 0,
-          };
-        }
-
-        const agentId = agentRecord.id;
+        const agentId = agentRecord?.id ?? null;
         // Date calculations
         const todayDate = new Date();
         todayDate.setHours(0, 0, 0, 0);
@@ -259,44 +507,45 @@ export const agentRouter = router({
         const [activeListingsResult] = await db
           .select({ count: count() })
           .from(properties)
-          .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
+          .where(and(...buildAgentInventoryConditions(userId, agentId, 'active')));
 
-        // New leads this week
-        const [newLeadsResult] = await db
-          .select({ count: count() })
-          .from(leads)
-          .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
+        let newLeadsResult: { count: number } | undefined;
+        let pendingCommissionsResult: { total: number | null } | undefined;
+        let showingsTodayCount = 0;
+        let offersInProgressCount = 0;
 
-        // Showings today
-        const [showingsTodayResult] = await db
-          .select({ count: count() })
-          .from(showings)
-          .where(
-            and(
-              eq(showings.agentId, agentId),
-              gte(showings.scheduledTime, today),
-              lte(showings.scheduledTime, tomorrow),
-            ),
-          );
+        if (agentId) {
+          [newLeadsResult] = await db
+            .select({ count: count() })
+            .from(leads)
+            .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
 
-        // Offers in progress
-        const [offersInProgressResult] = await db
-          .select({ count: count() })
-          .from(offers)
-          .innerJoin(listings, eq(offers.listingId, listings.id))
-          .where(and(eq(listings.agentId, agentId), eq(offers.status, 'pending')));
+          showingsTodayCount = capabilities.showingsReady
+            ? await countAgentShowingsInRange({
+                db,
+                agentId,
+                startIso: today,
+                endIso: tomorrow,
+                details: capabilities.showingsDetails,
+              })
+            : 0;
 
-        // Pending commissions sum
-        const [pendingCommissionsResult] = await db
-          .select({ total: sql<number>`SUM(${commissions.amount})` })
-          .from(commissions)
-          .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+          offersInProgressCount = await countAgentPendingOffers({
+            db,
+            agentId,
+          });
+
+          [pendingCommissionsResult] = await db
+            .select({ total: sql<number>`SUM(${commissions.amount})` })
+            .from(commissions)
+            .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+        }
 
         return {
           activeListings: activeListingsResult?.count || 0,
           newLeadsThisWeek: newLeadsResult?.count || 0,
-          showingsToday: showingsTodayResult?.count || 0,
-          offersInProgress: offersInProgressResult?.count || 0,
+          showingsToday: showingsTodayCount,
+          offersInProgress: offersInProgressCount,
           commissionsPending: Number(pendingCommissionsResult?.total || 0),
         };
       } catch (error) {
@@ -649,21 +898,11 @@ export const agentRouter = router({
         .limit(1);
 
       // Build conditions - use agentId if profile exists, otherwise use ownerId
-      const conditions: SQL[] = [];
-
-      if (agentRecord) {
-        // User has agent profile - query by agentId OR ownerId
-        conditions.push(
-          or(eq(properties.agentId, agentRecord.id), eq(properties.ownerId, user.id))!,
-        );
-      } else {
-        // No agent profile - query by ownerId only
-        conditions.push(eq(properties.ownerId, user.id));
-      }
-
-      if (input.status && input.status !== 'all') {
-        conditions.push(eq(properties.status, input.status as any));
-      }
+      const conditions = buildAgentInventoryConditions(
+        user.id,
+        agentRecord?.id ?? null,
+        input.status,
+      );
 
       const listings = await db
         .select()
@@ -1316,113 +1555,40 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
+      try {
+        const db = await getDb();
+        const capabilities = await getRuntimeSchemaCapabilities();
+        if (!capabilities.showingsReady) {
+          warnSchemaCapabilityOnce(
+            'agent-getMyShowings-schema-not-ready',
+            '[agent.getMyShowings] Showings schema not ready. Returning empty showings.',
+            capabilities.showingsDetails,
+          );
+          return [];
+        }
 
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, requireUser(ctx).id))
+          .limit(1);
 
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
+        if (!agentRecord) {
+          return [];
+        }
+
+        return await listAgentShowings({
+          db,
+          agentId: agentRecord.id,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          status: input.status,
+          details: capabilities.showingsDetails,
+        });
+      } catch (error) {
+        console.warn('[agent.getMyShowings] Returning empty showings due to error:', error);
+        return [];
       }
-
-      // Build conditions
-      const conditions: SQL[] = [eq(showings.agentId, agentRecord.id)];
-
-      if (input.startDate) {
-        conditions.push(gte(showings.scheduledTime, `${input.startDate}T00:00:00.000Z`));
-      }
-      if (input.endDate) {
-        conditions.push(lte(showings.scheduledTime, `${input.endDate}T23:59:59.999Z`));
-      }
-      if (input.status && input.status !== 'all') {
-        conditions.push(eq(showings.status, input.status as any));
-      }
-
-      const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-
-      // Fetch showings with listing and visitor details
-      const showingsList = inventoryBridgeCapabilities.showingsPropertyIdColumn
-        ? await db
-            .select({
-              showing: showings,
-              listing: listings,
-              propertyRecord: properties,
-              visitor: users,
-            })
-            .from(showings)
-            .leftJoin(listings, eq(showings.listingId, listings.id))
-            .leftJoin(properties, eq(showings.propertyId, properties.id))
-            .leftJoin(users, eq(showings.visitorId, users.id))
-            .where(and(...conditions))
-            .orderBy(showings.scheduledTime)
-        : await db
-            .select({
-              showing: showings,
-              listing: listings,
-              propertyRecord: sql<any>`NULL`,
-              visitor: users,
-            })
-            .from(showings)
-            .leftJoin(listings, eq(showings.listingId, listings.id))
-            .leftJoin(users, eq(showings.visitorId, users.id))
-            .where(and(...conditions))
-            .orderBy(showings.scheduledTime);
-
-      const resolvedInventoryMap = await resolvePropertiesForListings(
-        db,
-        showingsList
-          .filter(({ listing, propertyRecord }) => !!listing && !propertyRecord)
-          .map(({ listing }) => ({
-            id: listing!.id,
-            ownerId: listing!.ownerId,
-            agentId: listing!.agentId ?? null,
-            title: listing!.title,
-            address: listing!.address,
-            city: listing!.city,
-            province: listing!.province,
-            status: listing!.status,
-          })),
-      );
-
-      return showingsList.map(({ showing, listing, propertyRecord, visitor }) => ({
-        propertyId:
-          propertyRecord?.id ??
-          (listing ? (resolvedInventoryMap.get(listing.id)?.propertyId ?? null) : null),
-        id: showing.id,
-        listingId: showing.listingId,
-        scheduledAt: showing.scheduledTime,
-        scheduledTime: showing.scheduledTime,
-        durationMinutes: showing.durationMinutes,
-        status: showing.status,
-        notes: showing.feedback,
-        property: listing
-          ? {
-              id:
-                propertyRecord?.id ??
-                resolvedInventoryMap.get(listing.id)?.propertyId ??
-                listing.id,
-              listingId: listing.id,
-              propertyId:
-                propertyRecord?.id ?? resolvedInventoryMap.get(listing.id)?.propertyId ?? null,
-              inventoryModel:
-                propertyRecord != null
-                  ? 'property'
-                  : (resolvedInventoryMap.get(listing.id)?.inventoryModel ?? 'legacy_listing'),
-              title: propertyRecord?.title || listing.title,
-              address: propertyRecord?.address || listing.address,
-              city: propertyRecord?.city || listing.city,
-            }
-          : null,
-        client: {
-          name: showing.visitorName || visitor?.name || 'Prospective buyer',
-          email: visitor?.email || null,
-          phone: visitor?.phone || null,
-        },
-      }));
     }),
 
   bookShowing: agentProcedure
@@ -1524,27 +1690,74 @@ export const agentRouter = router({
         }
       }
 
-      const showingInsertValues: any = {
-        listingId: input.listingId,
-        agentId: agentRecord.id,
-        visitorName: input.visitorName,
-        scheduledTime: new Date(input.scheduledAt).toISOString(),
-        durationMinutes: input.durationMinutes ?? 30,
-        status: 'scheduled',
-        feedback: input.notes || null,
-      };
-
-      const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-      if (inventoryBridgeCapabilities.showingsPropertyIdColumn) {
-        showingInsertValues.propertyId = resolvedInventory.propertyId;
-      }
-      if (inventoryBridgeCapabilities.showingsLeadIdColumn) {
-        showingInsertValues.leadId = leadRecord?.id ?? null;
+      const capabilities = await getRuntimeSchemaCapabilities();
+      const variant = getShowingsSchemaVariant(capabilities.showingsDetails);
+      if (variant === 'missing') {
+        throw new Error('Showings schema not ready');
       }
 
-      const [result] = await db.insert(showings).values(showingInsertValues);
+      const showingColumns = [
+        sql.identifier('listingId'),
+        sql.identifier('agentId'),
+        sql.identifier('visitorName'),
+        getShowingsDateColumn(variant),
+        sql.identifier('durationMinutes'),
+        sql.identifier('status'),
+      ];
+      const showingValues = [
+        sql`${input.listingId}`,
+        sql`${agentRecord.id}`,
+        sql`${input.visitorName}`,
+        sql`${toDbTimestampRequired(input.scheduledAt)}`,
+        sql`${input.durationMinutes ?? 30}`,
+        sql`${mapAgentShowingStatusToStorage('scheduled', variant)}`,
+      ];
 
-      const showingId = Number(result.insertId);
+      if (capabilities.showingsDetails.propertyIdColumn) {
+        showingColumns.push(sql.identifier('propertyId'));
+        showingValues.push(sql`${resolvedInventory.propertyId}`);
+      }
+
+      if (capabilities.showingsDetails.leadIdColumn) {
+        showingColumns.push(sql.identifier('leadId'));
+        showingValues.push(sql`${leadRecord?.id ?? null}`);
+      }
+
+      if (capabilities.showingsDetails.notesColumn) {
+        showingColumns.push(sql.identifier('notes'));
+        showingValues.push(sql`${input.notes || null}`);
+      } else {
+        showingColumns.push(sql.identifier('feedback'));
+        showingValues.push(sql`${input.notes || null}`);
+      }
+
+      const insertResult =
+        typeof (db as { execute?: unknown }).execute === 'function'
+          ? await db.execute(sql`
+              INSERT INTO showings (${sql.join(showingColumns, sql`, `)})
+              VALUES (${sql.join(showingValues, sql`, `)})
+            `)
+          : await db.insert(showings).values({
+              listingId: input.listingId,
+              propertyId: capabilities.showingsDetails.propertyIdColumn
+                ? resolvedInventory.propertyId
+                : undefined,
+              leadId: capabilities.showingsDetails.leadIdColumn ? (leadRecord?.id ?? null) : undefined,
+              agentId: agentRecord.id,
+              visitorName: input.visitorName,
+              scheduledAt: toDbTimestampRequired(input.scheduledAt),
+              durationMinutes: input.durationMinutes ?? 30,
+              status: mapAgentShowingStatusToStorage('scheduled', variant),
+              notes: capabilities.showingsDetails.notesColumn ? (input.notes || null) : undefined,
+              feedback: capabilities.showingsDetails.notesColumn ? undefined : (input.notes || null),
+            } as any);
+
+      const insertRows = Array.isArray(insertResult) ? insertResult : [insertResult];
+      const showingId = Number(
+        (insertRows[0] as any)?.insertId ??
+          (insertRows[0] as any)?.lastInsertRowid ??
+          (insertResult as any)?.insertId,
+      );
 
       if (leadRecord) {
         const persistedLead = leadRecord;
@@ -1606,6 +1819,7 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
+      const capabilities = await getRuntimeSchemaCapabilities();
 
       // Get agent record
       const [agentRecord] = await db
@@ -1618,17 +1832,26 @@ export const agentRouter = router({
         throw new Error('Agent profile not found');
       }
 
-      // Update showing
-      const result = await db
-        .update(showings)
-        .set({
-          status: input.status,
-          feedback: input.notes,
-          updatedAt: nowAsDbTimestamp(),
-        })
-        .where(and(eq(showings.id, input.showingId), eq(showings.agentId, agentRecord.id)));
+      const variant = getShowingsSchemaVariant(capabilities.showingsDetails);
+      if (variant === 'missing') {
+        throw new Error('Showings schema not ready');
+      }
 
-      const affectedRows = Number((result as any)?.[0]?.affectedRows || 0);
+      const nextStatus = mapAgentShowingStatusToStorage(input.status, variant);
+      const notesAssignment = capabilities.showingsDetails.notesColumn
+        ? sql`, notes = ${input.notes ?? null}`
+        : sql`, feedback = ${input.notes ?? null}`;
+      const result = await db.execute(sql`
+        UPDATE showings
+        SET status = ${nextStatus},
+            updatedAt = ${nowAsDbTimestamp()}
+            ${notesAssignment}
+        WHERE id = ${input.showingId} AND agentId = ${agentRecord.id}
+      `);
+
+      const affectedRows = Number(
+        (result as any)?.affectedRows ?? (result as any)?.[0]?.affectedRows ?? 0,
+      );
       if (affectedRows === 0) {
         throw new Error('Showing not found or unauthorized');
       }

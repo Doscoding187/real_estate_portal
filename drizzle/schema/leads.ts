@@ -165,27 +165,34 @@ export const offers = mysqlTable('offers', {
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export const showings = mysqlTable('showings', {
-  id: int().autoincrement().primaryKey(),
-  listingId: int()
-    .notNull()
-    .references(() => listings.id, { onDelete: 'cascade' }),
-  propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
-  leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
-  agentId: int()
-    .notNull()
-    .references(() => agents.id, { onDelete: 'cascade' }),
-  visitorId: int().references(() => users.id, { onDelete: 'set null' }),
-  visitorName: varchar({ length: 150 }),
-  scheduledTime: timestamp({ mode: 'string' }).notNull(),
-  durationMinutes: int().default(30).notNull(),
-  status: mysqlEnum(['scheduled', 'completed', 'cancelled', 'no_show'])
-    .default('scheduled')
-    .notNull(),
-  feedback: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+export const showings = mysqlTable(
+  'showings',
+  {
+    id: int().autoincrement().primaryKey(),
+    listingId: int('listingId').references(() => listings.id, { onDelete: 'set null' }),
+    propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
+    leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
+    agentId: int()
+      .notNull()
+      .references(() => agents.id, { onDelete: 'set null' }),
+    scheduledAt: timestamp({ mode: 'string' }).notNull(),
+    status: mysqlEnum(['requested', 'confirmed', 'completed', 'cancelled', 'no_show'])
+      .default('requested')
+      .notNull(),
+    visitorId: int().references(() => users.id, { onDelete: 'set null' }),
+    visitorName: varchar({ length: 150 }),
+    durationMinutes: int().default(30).notNull(),
+    notes: text(),
+    feedback: text(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index('idx_showings_agent_scheduled_at').on(table.agentId, table.scheduledAt),
+    index('idx_showings_listing').on(table.listingId),
+    index('idx_showings_property').on(table.propertyId),
+  ],
+);
 
 export const scheduledViewings = mysqlTable(
   'scheduled_viewings',

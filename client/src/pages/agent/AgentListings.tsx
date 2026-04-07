@@ -16,7 +16,6 @@ import { calculateListingReadiness } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
 type ListingTab = 'active' | 'pending' | 'draft' | 'sold' | 'archived';
-type PropertyStatusFilter = 'available' | 'published' | 'pending' | 'draft' | 'sold' | 'archived';
 type ListingStatusFilter = 'pending_review' | 'draft';
 
 export default function AgentListings() {
@@ -29,33 +28,31 @@ export default function AgentListings() {
   const [activeTab, setActiveTab] = useState<ListingTab>('active');
 
   // Map tabs to status for API
-  const getPropertyStatusForTab = (tab: ListingTab): PropertyStatusFilter => {
-    switch (tab) {
-      case 'active':
-        return 'published';
-      case 'pending':
-        return 'pending';
-      case 'draft':
-        return 'draft';
-      case 'sold':
-        return 'sold';
-      case 'archived':
-        return 'archived';
-      default:
-        return 'published';
-    }
-  };
-
   const getListingStatusForTab = (tab: ListingTab): ListingStatusFilter => {
     return tab === 'pending' ? 'pending_review' : 'draft';
   };
 
   const isDraftOrPending = activeTab === 'draft' || activeTab === 'pending';
 
+  const isListingInTab = (status: string | null | undefined, tab: ListingTab) => {
+    const normalized = String(status || '').toLowerCase();
+
+    switch (tab) {
+      case 'active':
+        return ['available', 'published', 'active'].includes(normalized);
+      case 'sold':
+        return normalized === 'sold';
+      case 'archived':
+        return normalized === 'archived';
+      default:
+        return true;
+    }
+  };
+
   // Fetch agent listings (for Active, Sold, Archived)
   const { data: agentListings, isLoading: isLoadingAgent } = trpc.agent.getMyListings.useQuery(
     {
-      status: getPropertyStatusForTab(activeTab),
+      status: 'all',
       limit: 50,
     },
     {
@@ -168,7 +165,9 @@ export default function AgentListings() {
   // Normalize data
   const listings = isDraftOrPending
     ? draftListings?.map(normalizeDraftListing)
-    : agentListings?.map(normalizeAgentListing);
+    : agentListings
+        ?.filter(listing => isListingInTab(listing.status, activeTab))
+        .map(normalizeAgentListing);
 
   const filteredListings = listings?.filter(
     listing =>

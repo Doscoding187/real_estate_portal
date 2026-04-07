@@ -8,7 +8,10 @@ import {
 import {
   getPlanAccessProjectionForUserId,
   getPlanByName,
+  getPlanCatalog,
   setSubscriptionPlanForOwner,
+  type PlanSnapshot,
+  type SubscriptionStatus,
 } from './planAccessService';
 import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
 
@@ -17,14 +20,13 @@ export const AGENT_ONBOARDING_STATUS_VALUES = ['trial', 'active', 'expired', 'ca
 
 export type AgentOnboardingTier = (typeof AGENT_ONBOARDING_TIER_VALUES)[number];
 export type AgentOnboardingStatus = (typeof AGENT_ONBOARDING_STATUS_VALUES)[number];
-
-const AGENT_PLAN_NAME_CANDIDATES: Record<AgentOnboardingTier, string[]> = {
-  free: ['agent_free', 'free'],
-  starter: ['agent_starter', 'starter', 'agent_free', 'free'],
-  professional: ['agent_professional', 'professional', 'agent_pro', 'pro'],
-  elite: ['agent_elite', 'elite'],
-};
 const AGENT_TRIAL_DAYS = 90;
+const AGENT_PLAN_NAME_CANDIDATES: Record<AgentOnboardingTier, string[]> = {
+  free: ['agent_free'],
+  starter: ['agent_starter', 'agent_launch', 'agent_growth'],
+  professional: ['agent_professional', 'agent_pro'],
+  elite: ['agent_elite'],
+};
 
 function slugify(value: string): string {
   return value
@@ -60,25 +62,122 @@ function parseJsonRecord(value: string | null | undefined): Record<string, strin
   return {};
 }
 
-async function resolvePlanForTier(tier: AgentOnboardingTier) {
-  const planNames = AGENT_PLAN_NAME_CANDIDATES[tier] || [];
-
-  for (const planName of planNames) {
-    const plan = await getPlanByName(planName);
-    if (plan) {
-      return plan;
-    }
-  }
-
-  return null;
+function normalizePlanLabel(value: string | null | undefined) {
+  return (value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }
 
-function isPlanAlignedWithTier(
-  tier: AgentOnboardingTier,
-  planName: string | null | undefined,
-): boolean {
-  if (!planName) return false;
-  return (AGENT_PLAN_NAME_CANDIDATES[tier] || []).includes(planName);
+function isFreeAgentPlan(plan: Pick<PlanSnapshot, 'name' | 'displayName' | 'priceMonthly'>) {
+  const normalizedName = normalizePlanLabel(plan.name);
+  const normalizedDisplayName = normalizePlanLabel(plan.displayName);
+  return (
+    Number(plan.priceMonthly || 0) === 0 ||
+    normalizedName.includes('free') ||
+    normalizedDisplayName.includes('free')
+  );
+}
+
+async function resolveAgentPlanForTier(tier: AgentOnboardingTier): Promise<PlanSnapshot | null> {
+  try {
+    for (const candidate of AGENT_PLAN_NAME_CANDIDATES[tier]) {
+      const plan = await getPlanByName(candidate);
+      if (plan) return plan;
+    }
+
+    const catalog = await getPlanCatalog('agent');
+    if (!catalog.length) return null;
+
+    const normalizedNeedles = AGENT_PLAN_NAME_CANDIDATES[tier]
+      .flatMap(candidate => [candidate, candidate.replace(/^agent_/, '')])
+      .map(normalizePlanLabel);
+
+    const nameMatched = catalog.find(plan => {
+      const haystacks = [normalizePlanLabel(plan.name), normalizePlanLabel(plan.displayName)];
+      return haystacks.some(haystack =>
+        normalizedNeedles.some(needle => needle.length > 0 && haystack.includes(needle)),
+      );
+    });
+    if (nameMatched) return nameMatched;
+
+    const sortedAgentPlans = [...catalog].sort((left, right) => {
+      const leftPrice = Number(left.priceMonthly || 0);
+      const rightPrice = Number(right.priceMonthly || 0);
+      if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+      return left.name.localeCompare(right.name);
+    });
+
+    const freePlan = sortedAgentPlans.find(isFreeAgentPlan) || null;
+    const paidPlans = sortedAgentPlans.filter(plan => !isFreeAgentPlan(plan));
+
+    switch (tier) {
+      case 'free':
+        return freePlan || sortedAgentPlans[0] || null;
+      case 'starter':
+        return paidPlans[0] || freePlan || sortedAgentPlans[0] || null;
+      case 'professional':
+        return (
+          paidPlans[Math.max(0, Math.min(1, paidPlans.length - 1))] ||
+          paidPlans[0] ||
+          freePlan ||
+          sortedAgentPlans[0] ||
+          null
+        );
+      case 'elite':
+        return paidPlans[paidPlans.length - 1] || freePlan || sortedAgentPlans[0] || null;
+      default:
+        return null;
+    }
+  } catch (error) {
+    console.warn('[AgentOnboarding] Failed to resolve agent plan for tier.', {
+      tier,
+      message: (error as Error)?.message,
+    });
+    return null;
+  }
+}
+
+function toSubscriptionStatus(value: string | null | undefined): SubscriptionStatus {
+  if (value === 'trial' || value === 'active' || value === 'expired' || value === 'cancelled') {
+    return value;
+  }
+  return 'trial';
+}
+
+async function maybeSyncSubscriptionPlanForTier(user: typeof users.$inferSelect) {
+  const selectedTier = user.subscriptionTier as AgentOnboardingTier | null;
+  if (!selectedTier) return;
+
+  const resolvedPlan = await resolveAgentPlanForTier(selectedTier);
+  if (!resolvedPlan) return;
+
+  const projection = await getPlanAccessProjectionForUserId(user.id);
+  if (projection?.currentPlan?.id === resolvedPlan.id) return;
+
+  const selectedPackage =
+    Boolean(user.trialStartedAt) ||
+    user.plan === 'paid' ||
+    user.subscriptionStatus === 'active' ||
+    user.subscriptionStatus === 'expired' ||
+    user.subscriptionStatus === 'cancelled';
+
+  if (!selectedPackage) return;
+
+  await setSubscriptionPlanForOwner({
+    ownerType: 'agent',
+    ownerId: user.id,
+    planId: resolvedPlan.id,
+    status: toSubscriptionStatus(user.subscriptionStatus),
+    trialEndsAt: user.trialEndsAt || null,
+    billingCycleAnchor: user.trialEndsAt || null,
+    metadata: {
+      source: 'agent_onboarding_sync',
+      selected_package_tier: selectedTier,
+      resolved_plan_name: resolvedPlan.name,
+    },
+    actorUserId: user.id,
+  });
 }
 
 function buildOnboardingState(
@@ -156,6 +255,8 @@ export class AgentOnboardingService {
     if (!user) throw new Error('User not found');
     if (user.role !== 'agent') throw new Error('Agent onboarding is only available to agents');
 
+    await maybeSyncSubscriptionPlanForTier(user);
+
     const [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
     const onboardingState = buildOnboardingState(user, agent || null);
 
@@ -170,43 +271,6 @@ export class AgentOnboardingService {
           onboardingComplete: onboardingState.onboardingComplete ? 1 : 0,
         })
         .where(eq(users.id, userId));
-    }
-
-    if (onboardingState.packageSelected) {
-      const selectedTier = user.subscriptionTier as AgentOnboardingTier;
-      const selectedPlan = await resolvePlanForTier(selectedTier);
-      if (selectedPlan) {
-        const currentProjection = await getPlanAccessProjectionForUserId(userId);
-        const currentPlanName = currentProjection?.currentPlan?.name || null;
-
-        if (!isPlanAlignedWithTier(selectedTier, currentPlanName)) {
-          const effectiveStatus =
-            user.subscriptionStatus === 'active' ||
-            user.subscriptionStatus === 'expired' ||
-            user.subscriptionStatus === 'cancelled'
-              ? user.subscriptionStatus
-              : 'trial';
-          const billingAnchor =
-            effectiveStatus === 'trial'
-              ? user.trialEndsAt || nowAsDbTimestamp()
-              : nowAsDbTimestamp();
-
-          await setSubscriptionPlanForOwner({
-            ownerType: 'agent',
-            ownerId: userId,
-            planId: selectedPlan.id,
-            status: effectiveStatus,
-            trialEndsAt: effectiveStatus === 'trial' ? user.trialEndsAt || null : null,
-            billingCycleAnchor: billingAnchor,
-            metadata: {
-              source: 'agent_onboarding_status_sync',
-              selected_package_tier: selectedTier,
-              selected_plan_name: selectedPlan.name,
-            },
-            actorUserId: userId,
-          });
-        }
-      }
     }
 
     const entitlements = await getAgentEntitlementsForUserId(userId);
@@ -257,7 +321,7 @@ export class AgentOnboardingService {
       })
       .where(eq(users.id, userId));
 
-    const selectedPlan = await resolvePlanForTier(tier);
+    const selectedPlan = await resolveAgentPlanForTier(tier);
     if (selectedPlan) {
       await setSubscriptionPlanForOwner({
         ownerType: 'agent',
@@ -269,7 +333,7 @@ export class AgentOnboardingService {
         metadata: {
           source: 'agent_select_package',
           selected_package_tier: tier,
-          selected_plan_name: selectedPlan.name,
+          resolved_plan_name: selectedPlan.name,
         },
         actorUserId: userId,
       });

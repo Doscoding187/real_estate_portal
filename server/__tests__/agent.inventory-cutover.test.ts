@@ -181,7 +181,8 @@ describe('agent inventory cutover', () => {
         listingId: 55,
         agentId: 7,
         visitorName: 'Buyer Example',
-        status: 'scheduled',
+        scheduledAt: '2026-03-12T10:00:00.000Z',
+        status: 'confirmed',
       }),
     );
   });
