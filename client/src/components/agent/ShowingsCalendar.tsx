@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,26 +28,26 @@ import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
 interface ShowingProperty {
-  id: number;
-  title: string;
-  address: string;
-  city: string;
+  id?: number | null;
+  title?: string | null;
+  address?: string | null;
+  city?: string | null;
   inventoryModel?: string | null;
 }
 
 interface Showing {
   id: number;
-  listingId: number;
-  scheduledAt: string;
-  scheduledTime?: string;
-  durationMinutes?: number;
+  listingId: number | null;
+  scheduledAt: string | Date | null;
+  scheduledTime?: string | Date | null;
+  durationMinutes?: number | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
   property?: ShowingProperty | null;
   client?: {
-    name: string;
-    email: string;
-    phone: string;
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
   } | null;
 }
 
@@ -61,6 +62,29 @@ const VIEW_MODES = [
 ] as const;
 
 type ViewMode = (typeof VIEW_MODES)[number]['id'];
+
+function getShowingScheduledDate(showing: Showing): Date | null {
+  const value = showing.scheduledTime ?? showing.scheduledAt;
+  if (!value) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatShowingTime(showing: Showing) {
+  const date = getShowingScheduledDate(showing);
+  if (!date) return 'Scheduling pending';
+
+  return date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatShowingDateTime(showing: Showing) {
+  const date = getShowingScheduledDate(showing);
+  return date ? date.toLocaleString() : 'Scheduling pending';
+}
 
 export function ShowingsCalendar({ className }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -186,22 +210,25 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
   const getShowingsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return showings.filter(showing => {
-      const showingDate = new Date(showing.scheduledAt).toISOString().split('T')[0];
+    return showings.filter((showing: Showing) => {
+      const scheduledDate = getShowingScheduledDate(showing);
+      if (!scheduledDate) return false;
+
+      const showingDate = scheduledDate.toISOString().split('T')[0];
       return showingDate === dateStr;
     });
   };
 
-  const filteredShowings = showings.filter(showing => {
-    if (
-      searchQuery &&
-      !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const filteredShowings =
+    showings?.filter((showing: Showing) => {
+      if (
+        searchQuery &&
+        !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+        return false;
+      return true;
+    }) || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -223,7 +250,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     const startOfCalendar = new Date(startOfMonth);
     startOfCalendar.setDate(startOfCalendar.getDate() - startOfCalendar.getDay());
 
-    const days: Array<React.ReactElement> = [];
+    const days: ReactNode[] = [];
     const today = new Date();
 
     for (let i = 0; i < 42; i++) {
@@ -247,18 +274,13 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
             {date.getDate()}
           </div>
           <div className="space-y-1">
-            {dayShowings.slice(0, 3).map(showing => (
+            {dayShowings.slice(0, 3).map((showing: Showing) => (
               <div
                 key={showing.id}
                 className={`text-xs p-1 rounded truncate border ${getStatusColor(showing.status)}`}
-                title={`${showing.property?.title || 'Property'} - ${new Date(showing.scheduledAt).toLocaleTimeString()}`}
+                title={`${showing.property?.title || 'Property'} - ${formatShowingTime(showing)}`}
               >
-                <div className="font-medium">
-                  {new Date(showing.scheduledAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
+                <div className="font-medium">{formatShowingTime(showing)}</div>
                 <div className="truncate">{showing.property?.title || 'Property'}</div>
               </div>
             ))}
@@ -307,7 +329,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {dayShowings.map(showing => (
+            {dayShowings.map((showing: Showing) => (
               <ShowingCard
                 key={showing.id}
                 showing={showing}
@@ -347,7 +369,11 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
           </div>
           <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as Showing['status'] | '')}
+            onChange={e =>
+              setStatusFilter(
+                e.target.value as '' | 'cancelled' | 'completed' | 'scheduled' | 'no_show',
+              )
+            }
             className="px-3 py-1 border rounded text-sm"
           >
             <option value="">All Statuses</option>
@@ -427,7 +453,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {filteredShowings.map(showing => (
+                  {filteredShowings.map((showing: Showing) => (
                     <ShowingCard
                       key={showing.id}
                       showing={showing}
@@ -485,8 +511,11 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 <option value="">Select listing</option>
                 {resolvedListings.length > 0 ? (
                   <optgroup label="Resolved inventory">
-                    {resolvedListings.map((listing: ShowingProperty) => (
-                      <option key={listing.id} value={listing.id}>
+                    {resolvedListings.map((listing: ShowingProperty, index: number) => (
+                      <option
+                        key={listing.id ?? `resolved-${index}`}
+                        value={String(listing.id ?? '')}
+                      >
                         {listing.title} {listing.city ? `- ${listing.city}` : ''}
                       </option>
                     ))}
@@ -494,8 +523,8 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 ) : null}
                 {legacyListings.length > 0 ? (
                   <optgroup label="Legacy fallback">
-                    {legacyListings.map((listing: ShowingProperty) => (
-                      <option key={listing.id} value={listing.id}>
+                    {legacyListings.map((listing: ShowingProperty, index: number) => (
+                      <option key={listing.id ?? `legacy-${index}`} value={String(listing.id ?? '')}>
                         {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
                       </option>
                     ))}
@@ -601,7 +630,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  {new Date(showing.scheduledAt).toLocaleString()}
+                  {formatShowingDateTime(showing)}
                 </div>
                 {showing.property && (
                   <div className="flex items-center gap-2">

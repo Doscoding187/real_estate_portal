@@ -244,7 +244,7 @@ async function shouldSkipStatementForMissingPrereq(
   return null;
 }
 
-async function runSqlMigrations() {
+export async function runSqlMigrations(options?: { filePattern?: RegExp }) {
   const migrationsDir = __dirname;
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -258,8 +258,10 @@ async function runSqlMigrations() {
   try {
     console.log('Running SQL migrations...');
 
+    const filePattern = options?.filePattern ?? /\.sql$/;
     const sqlFiles = readdirSync(migrationsDir)
       .filter(file => file.endsWith('.sql'))
+      .filter(file => filePattern.test(file))
       .sort();
 
     if (sqlFiles.length === 0) {
