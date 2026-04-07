@@ -3,6 +3,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { CITY_PROVINCE_MAP } from '../lib/locationUtils';
 import { Button } from '@/components/ui/button';
+import { generatePropertyUrl, slugify } from '@/lib/urlUtils';
 
 interface PropertyType {
   type: string;
@@ -143,6 +144,27 @@ export function DiscoverProperties({
   }, [emblaApi]);
 
   const filteredProperties = propertyTypes.filter(p => p.listingType === listingType);
+  const citySlug = slugify(selectedCity);
+  const provinceSlug = CITY_PROVINCE_MAP[citySlug];
+
+  const propertyTypeMap: Record<string, string | undefined> = {
+    Houses: 'house',
+    Apartments: 'apartment',
+    Townhouses: 'townhouse',
+    'Office Spaces': 'commercial',
+    Shops: 'commercial',
+    Penthouses: 'apartment',
+    Studios: 'apartment',
+  };
+
+  const buildPropertySearchUrl = (nextListingType: 'sale' | 'rent', nextPropertyType?: string) =>
+    generatePropertyUrl({
+      listingType: nextListingType,
+      propertyType: nextPropertyType,
+      city: citySlug,
+      province: provinceSlug,
+    });
+
   const mobileSectionCopy: Record<
     'sale' | 'rent' | 'developments',
     { title: string; description: string; href: string; cta: string }
@@ -150,13 +172,13 @@ export function DiscoverProperties({
     sale: {
       title: 'Properties for Sale',
       description: `Explore apartments, houses, and townhomes for sale in ${selectedCity}.`,
-      href: '/properties?action=sale',
+      href: buildPropertySearchUrl('sale'),
       cta: 'View Sale Listings',
     },
     rent: {
       title: 'Properties for Rent',
       description: `Browse apartments, cottages, and flexible rentals now available in ${selectedCity}.`,
-      href: '/properties?action=rent',
+      href: buildPropertySearchUrl('rent'),
       cta: 'View Rental Listings',
     },
     developments: {
@@ -208,28 +230,8 @@ export function DiscoverProperties({
       const filter = typeMap[propertyType] || '';
       window.location.assign(`/developments${filter ? `?type=${filter}` : ''}`);
     } else {
-      // For sale/rent, navigate to properties page with filters
-      // Use helper to construct hierarchical URL if possible
-      const action = listingType === 'sale' ? 'sale' : 'rent';
-      const citySlug = selectedCity.toLowerCase().replace(/\s+/g, '-');
-
-      // Use shared map to lookup province
-      const provinceSlug = CITY_PROVINCE_MAP[citySlug];
-
-      let url = '';
-      if (provinceSlug) {
-        url = `/${provinceSlug}/${citySlug}?listingType=${action}`;
-      } else {
-        url = `/properties?city=${selectedCity}&listingType=${action}`;
-      }
-
-      if (propertyType && propertyType !== 'All') {
-        // Map display names to url values if needed, otherwise slugify
-        const typeSlug = propertyType.toLowerCase().replace(/\s+/g, '-');
-        url += `&propertyType=${typeSlug}`;
-      }
-
-      window.location.assign(url);
+      const mappedPropertyType = propertyTypeMap[propertyType];
+      window.location.assign(buildPropertySearchUrl(listingType, mappedPropertyType));
     }
   };
 
@@ -237,7 +239,9 @@ export function DiscoverProperties({
     <div className="py-10 md:py-16 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
         <div className="mb-6 md:mb-8">
-          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+            {displayTitle}
+          </h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
@@ -339,7 +343,7 @@ export function DiscoverProperties({
                       Explore apartments, houses, and townhomes for sale in {selectedCity}.
                     </p>
                     <a
-                      href="/properties?action=sale"
+                      href={buildPropertySearchUrl('sale')}
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Sale Listings
@@ -379,7 +383,7 @@ export function DiscoverProperties({
                       {selectedCity}.
                     </p>
                     <a
-                      href="/properties?action=rent"
+                      href={buildPropertySearchUrl('rent')}
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Rental Listings

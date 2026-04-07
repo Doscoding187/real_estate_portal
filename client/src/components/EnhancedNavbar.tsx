@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,9 +44,19 @@ import { useEffect, useState } from 'react';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { LocationSelectionModal } from '@/components/LocationSelectionModal';
 
+function buildPropertySearchHref(filters: {
+  listingType: 'sale' | 'rent' | 'auction';
+  propertyType?: string;
+  province?: string;
+  city?: string;
+  suburb?: string;
+}) {
+  return generatePropertyUrl(filters);
+}
+
 // City dropdown content component
 function CityDropdownContent() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const searchQuery = '';
   const [hoveredCity, setHoveredCity] = useState('Johannesburg');
 
   const topCities = [
@@ -198,7 +207,11 @@ function CityDropdownContent() {
           {filteredCities.map(city => (
             <Link
               key={city.slug}
-              href={`/property-for-sale/${city.provinceSlug}/${city.slug}`}
+              href={buildPropertySearchHref({
+                listingType: 'sale',
+                province: city.provinceSlug,
+                city: city.slug,
+              })}
               onMouseEnter={() => setHoveredCity(city.name)}
             >
               <div className="flex flex-col items-center gap-2 p-3 hover:bg-blue-50 rounded-lg transition-all group cursor-pointer">
@@ -228,7 +241,12 @@ function CityDropdownContent() {
               return (
                 <Link
                   key={index}
-                  href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}
+                  href={buildPropertySearchHref({
+                    listingType: 'sale',
+                    province: provinceSlug,
+                    city: citySlug,
+                    suburb: suburb.toLowerCase().replace(/\s+/g, '-'),
+                  })}
                 >
                   <span className="text-sm text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
                     {suburb}
@@ -294,6 +312,8 @@ function getPrimaryAccountRoute(user: NavbarUser, hasReferrerAccess: boolean) {
       return '/agency/dashboard';
     case 'agent':
       return '/agent/dashboard';
+    case 'service_provider':
+      return '/pro/profile';
     default:
       return '/user/dashboard';
   }
@@ -431,54 +451,6 @@ export function EnhancedNavbar() {
 
   // ...
 
-  const buyOptions = [
-    { label: 'Buy Properties', href: '/property-for-sale' },
-    { label: 'New Developments', href: '/new-developments' },
-    {
-      label: 'Luxury Homes',
-      href: '/property-for-sale?propertyType=villa',
-    },
-    {
-      label: 'Apartments',
-      href: '/property-for-sale?propertyType=apartment',
-    },
-    {
-      label: 'Houses',
-      href: '/property-for-sale?propertyType=house',
-    },
-  ];
-
-  const rentOptions = [
-    { label: 'Rent Properties', href: '/property-to-rent' },
-    {
-      label: 'Apartments for Rent',
-      href: '/property-to-rent?propertyType=apartment',
-    },
-    {
-      label: 'Houses for Rent',
-      href: '/property-to-rent?propertyType=house',
-    },
-    {
-      label: 'Commercial Spaces',
-      href: '/property-to-rent?propertyType=commercial',
-    },
-  ];
-
-  const servicesOptions = [
-    { label: 'Home Loans', href: '#' },
-    { label: 'Property Valuation', href: '#' },
-    { label: 'Legal Services', href: '#' },
-    { label: 'Home Insurance', href: '#' },
-    { label: 'Interior Design', href: '#' },
-  ];
-
-  const sellersOptions = [
-    { label: 'Agents', href: '/agents' },
-    { label: 'Agencies', href: '/agencies' },
-    { label: 'Developers', href: '/developer' },
-    { label: 'Property Owner (For sale by owner)', href: '/advertise' },
-  ];
-
   const insightsOptions = [
     { label: 'Market Trends', href: '#' },
     { label: 'Property Insights', href: '#' },
@@ -488,8 +460,8 @@ export function EnhancedNavbar() {
   ];
 
   const mobileMenuItems = [
-    { label: 'Buy Property', href: '/property-for-sale', icon: Home },
-    { label: 'Rent Property', href: '/property-to-rent', icon: Key },
+    { label: 'Buy Property', href: buildPropertySearchHref({ listingType: 'sale' }), icon: Home },
+    { label: 'Rent Property', href: buildPropertySearchHref({ listingType: 'rent' }), icon: Key },
     { label: 'New Developments', href: '/new-developments', icon: Building2 },
     { label: 'Find Agents', href: '/agents', icon: User },
     { label: 'Explore', href: '/explore/home', icon: TrendingUp },
@@ -521,6 +493,7 @@ export function EnhancedNavbar() {
     await logout();
     setLocation('/');
   };
+
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/92 shadow-sm backdrop-blur-md">
       <div className="w-full px-3 sm:px-6 lg:px-20">
@@ -785,21 +758,39 @@ export function EnhancedNavbar() {
                         </h4>
                         <ul className="space-y-2 text-sm">
                           <li>
-                            <Link href="/property-to-rent/gauteng/johannesburg">
+                            <Link
+                              href={buildPropertySearchHref({
+                                listingType: 'rent',
+                                province: 'gauteng',
+                                city: 'johannesburg',
+                              })}
+                            >
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
                                 Rent in Johannesburg
                               </span>
                             </Link>
                           </li>
                           <li>
-                            <Link href="/property-to-rent/western-cape/cape-town">
+                            <Link
+                              href={buildPropertySearchHref({
+                                listingType: 'rent',
+                                province: 'western-cape',
+                                city: 'cape-town',
+                              })}
+                            >
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
                                 Rent in Cape Town
                               </span>
                             </Link>
                           </li>
                           <li>
-                            <Link href="/property-to-rent/kwazulu-natal/durban">
+                            <Link
+                              href={buildPropertySearchHref({
+                                listingType: 'rent',
+                                province: 'kwazulu-natal',
+                                city: 'durban',
+                              })}
+                            >
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
                                 Rent in Durban
                               </span>
@@ -1148,7 +1139,6 @@ export function EnhancedNavbar() {
           </div>
 
           <div className="w-9 lg:hidden" />
-          <div className="w-9 lg:hidden" />
         </div>
 
         {/* Mobile Menu Drawer */}
@@ -1245,7 +1235,9 @@ export function EnhancedNavbar() {
                         {accountInitials}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {displayName}
+                        </p>
                         <p className="truncate text-sm text-slate-500">{user.email}</p>
                       </div>
                     </div>

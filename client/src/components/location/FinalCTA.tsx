@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 interface FinalCTAProps {
   locationName: string;
@@ -9,9 +10,14 @@ interface FinalCTAProps {
 }
 
 export function FinalCTA({ locationName, provinceSlug, citySlug, suburbSlug }: FinalCTAProps) {
-  // Construct links
-  const baseSearchUrl = `/properties/sale`; // Default search logic
-  // TODO: Add refined query params later if needed
+  const buildLocationSearchUrl = (listingType: 'sale' | 'rent', propertyType?: string) =>
+    generatePropertyUrl({
+      listingType,
+      propertyType,
+      province: provinceSlug,
+      city: citySlug,
+      suburb: suburbSlug,
+    });
 
   return (
     <div className="py-20 bg-primary-900 text-white text-center">
@@ -24,9 +30,7 @@ export function FinalCTA({ locationName, provinceSlug, citySlug, suburbSlug }: F
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href={`/properties/sale?property_type=house&location=${suburbSlug || citySlug || provinceSlug}`}
-          >
+          <Link href={buildLocationSearchUrl('sale', 'house')}>
             <Button
               size="lg"
               className="bg-white text-primary-900 hover:bg-slate-100 text-lg px-8 h-14"
@@ -34,9 +38,7 @@ export function FinalCTA({ locationName, provinceSlug, citySlug, suburbSlug }: F
               Search Houses
             </Button>
           </Link>
-          <Link
-            href={`/properties/sale?property_type=apartment&location=${suburbSlug || citySlug || provinceSlug}`}
-          >
+          <Link href={buildLocationSearchUrl('sale', 'apartment')}>
             <Button
               size="lg"
               variant="outline"
@@ -45,7 +47,7 @@ export function FinalCTA({ locationName, provinceSlug, citySlug, suburbSlug }: F
               Search Apartments
             </Button>
           </Link>
-          <Link href={`/properties/rent?location=${suburbSlug || citySlug || provinceSlug}`}>
+          <Link href={buildLocationSearchUrl('rent')}>
             <Button size="lg" variant="ghost" className="text-white hover:bg-white/10 text-lg h-14">
               Browse Rentals
             </Button>

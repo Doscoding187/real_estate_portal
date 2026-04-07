@@ -1,19 +1,6 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import {
-  Building2,
-  Home as HomeIcon,
-  Building,
-  Warehouse,
-  MapPin,
-  Tractor,
-  Search,
-  Filter,
-  BedDouble,
-  Wallet,
-  Star,
-} from 'lucide-react';
+import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { Button } from '@/components/ui/button';
@@ -27,24 +14,32 @@ import {
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
+import { generatePropertyUrl, type SearchFilters } from '@/lib/urlUtils';
+import type { LocationNode } from '@/types/location';
 
 export interface PropertyCategoriesProps {
   preselectedLocation?: {
+    id?: string;
     name: string;
     slug: string;
     provinceSlug: string; // Required for canonical URLs
+    citySlug?: string;
     type: 'city' | 'suburb' | 'province';
   };
 }
 
+type SelectedCategory = { title: string; type: string };
+type SelectedLocation = Pick<
+  LocationNode,
+  'id' | 'name' | 'slug' | 'type' | 'provinceSlug' | 'citySlug'
+>;
+
 export function PropertyCategories({ preselectedLocation }: PropertyCategoriesProps) {
   const [, setLocation] = useLocation();
-  const [selectedCategory, setSelectedCategory] = useState<{ title: string; type: string } | null>(
-    null,
-  );
+  const [selectedCategory, setSelectedCategory] = useState<SelectedCategory | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
-  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
 
   // Filter State
   const [minPrice, setMinPrice] = useState<string>('');
@@ -58,7 +53,7 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
       filters: preselectedLocation
         ? (() => {
             // Build filter based on location type
-            let builtFilters: any = {};
+            let builtFilters: SearchFilters = {};
             if (preselectedLocation.type === 'province') {
               builtFilters = {
                 province: preselectedLocation.slug,
@@ -142,9 +137,12 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
     // If we have a preselected location, pre-fill it and skip to step 2 (filters)
     if (preselectedLocation) {
       setSelectedLocation({
+        id: preselectedLocation.id || preselectedLocation.slug,
         name: preselectedLocation.name,
         slug: preselectedLocation.slug,
+        type: preselectedLocation.type,
         provinceSlug: preselectedLocation.provinceSlug,
+        citySlug: preselectedLocation.citySlug,
       });
       setStep(2); // Go directly to filters
     } else {
@@ -156,7 +154,7 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
     setIsDialogOpen(true);
   };
 
-  const handleLocationSelect = (loc: any) => {
+  const handleLocationSelect = (loc: LocationNode) => {
     setSelectedLocation(loc);
     setStep(2);
   };
@@ -171,42 +169,38 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
     if (!selectedCategory || !selectedLocation) return;
 
     setIsDialogOpen(false);
+    const nextFilters: SearchFilters = {
+      listingType: 'sale',
+      propertyType: selectedCategory.type,
+      view: 'list',
+    };
 
-    let url = '';
-
-    // Base Route
-    if (selectedLocation.slug && selectedLocation.provinceSlug) {
-      url = `/property-for-sale/${selectedLocation.provinceSlug}/${selectedLocation.slug}`;
+    if (selectedLocation.type === 'province') {
+      nextFilters.province = selectedLocation.slug;
+    } else if (selectedLocation.type === 'city') {
+      nextFilters.province = selectedLocation.provinceSlug;
+      nextFilters.city = selectedLocation.slug;
+    } else if (selectedLocation.type === 'suburb') {
+      nextFilters.province = selectedLocation.provinceSlug;
+      nextFilters.city = selectedLocation.citySlug;
+      nextFilters.suburb = selectedLocation.slug;
     } else if (selectedLocation.slug) {
-      url = `/property-for-sale/${selectedLocation.slug}`;
-    } else {
-      url = `/properties`; // Fallback
+      nextFilters.city = selectedLocation.slug;
+      nextFilters.province = selectedLocation.provinceSlug;
     }
 
-    const params = new URLSearchParams();
+    if (minPrice) nextFilters.minPrice = Number(minPrice);
+    if (maxPrice) nextFilters.maxPrice = Number(maxPrice);
+    if (bedrooms) nextFilters.minBedrooms = Number(bedrooms);
 
-    // Core Params
-    params.set('propertyType', selectedCategory.type);
-    params.set('view', 'list');
-
-    // Filters
-    if (minPrice) params.set('minPrice', minPrice);
-    if (maxPrice) params.set('maxPrice', maxPrice);
-    if (bedrooms) params.set('minBedrooms', bedrooms);
-
-    // Location Name fallback if no slug
-    if (!selectedLocation.slug) params.set('location', selectedLocation.name);
-
-    // Features / Amenities
     if (features.length > 0) {
-      params.set('amenities', features.join(','));
-      // Special handling for "Luxury" if we want to enforce price
+      nextFilters.amenities = features;
       if (features.includes('luxury') && !minPrice) {
-        params.set('minPrice', '5000000');
+        nextFilters.minPrice = 5000000;
       }
     }
 
-    setLocation(`${url}?${params.toString()}`);
+    setLocation(generatePropertyUrl(nextFilters));
   };
 
   const priceOptions = [

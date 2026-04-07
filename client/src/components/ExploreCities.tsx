@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { MapPin, ChevronRight, ChevronDown, Building } from 'lucide-react';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 interface City {
   name: string;
   province: string;
   slug: string;
   provinceSlug: string;
+  citySlug?: string;
   image?: string;
   propertyCount?: string;
   featured?: boolean;
@@ -33,6 +35,12 @@ export function ExploreCities({
   initialLimit = 12,
 }: ExploreCitiesProps = {}) {
   const [visibleCount, setVisibleCount] = useState(initialLimit);
+  const listingType = basePath.includes('to-rent')
+    ? 'rent'
+    : basePath.includes('auction')
+      ? 'auction'
+      : 'sale';
+  const extraFilters = Object.fromEntries(new URLSearchParams(queryParams).entries());
 
   const cities: City[] = [
     // Gauteng
@@ -191,6 +199,11 @@ export function ExploreCities({
   const displayTitle = title || 'Explore Real Estate in Popular Cities';
   const displayDescription =
     description || "Browse properties in South Africa's most sought-after locations.";
+  const viewAllHref = generatePropertyUrl({
+    listingType,
+    ...(provinceSlug ? { province: provinceSlug } : {}),
+    ...extraFilters,
+  });
 
   return (
     <section className="bg-white py-8 md:py-16">
@@ -198,11 +211,15 @@ export function ExploreCities({
         {/* Section Header */}
         <div className="mb-5 flex flex-col gap-2.5 text-left md:mb-10 md:flex-row md:items-end md:justify-between md:gap-4">
           <div className="max-w-3xl">
-            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
-            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">{displayDescription}</p>
+            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+              {displayTitle}
+            </h2>
+            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">
+              {displayDescription}
+            </p>
           </div>
 
-          <Link href="/property-for-sale">
+          <Link href={viewAllHref}>
             <Button
               variant="ghost"
               className="group h-9 justify-start rounded-full border border-slate-200 px-3.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:justify-center md:rounded-md md:border-0 md:px-0 md:text-sm"
@@ -220,10 +237,14 @@ export function ExploreCities({
             {displayedCities.map(city => (
               <Link
                 key={city.slug}
-                href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(
-                  /\/\//g,
-                  '/',
-                )}
+                href={generatePropertyUrl({
+                  listingType,
+                  province: city.provinceSlug,
+                  ...(city.citySlug
+                    ? { city: city.citySlug, suburb: city.slug }
+                    : { city: city.slug }),
+                  ...extraFilters,
+                })}
                 className="w-[75vw] max-w-[236px] flex-none snap-start sm:w-auto"
               >
                 <div className="group h-full cursor-pointer">

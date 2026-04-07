@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Star, ArrowRight, MapPin } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 const cities = [
   'Cape Town',
@@ -173,7 +174,8 @@ export function TopLocalities({
   );
 
   const localities = useMemo(() => {
-    const rows = ((data as any)?.topLocalities || []) as Array<any>;
+    const rows = ((data as { topLocalities?: Array<Record<string, unknown>> } | undefined)
+      ?.topLocalities || []) as Array<Record<string, unknown>>;
     const live = rows.slice(0, 5).map(locality => {
       const avgSalePrice = toNumber(locality.avgSalePrice ?? locality.avgPrice);
       const avgRentalPrice = toNumber(locality.avgRentalPrice);
@@ -217,7 +219,9 @@ export function TopLocalities({
     <div className="py-10 md:py-16">
       <div className="container">
         <div className="mb-6 md:mb-8">
-          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+            {displayTitle}
+          </h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
@@ -251,7 +255,18 @@ export function TopLocalities({
             <div className="overflow-hidden rounded-xl" ref={emblaRef}>
               <div className="flex gap-4 md:gap-6">
                 {compactLocalities.map((locality, idx) => {
-                  const localityUrl = `/${provinceSlug}/${citySlug}/${locality.slug}`;
+                  const saleUrl = generatePropertyUrl({
+                    listingType: 'sale',
+                    province: provinceSlug,
+                    city: citySlug,
+                    suburb: locality.slug,
+                  });
+                  const rentUrl = generatePropertyUrl({
+                    listingType: 'rent',
+                    province: provinceSlug,
+                    city: citySlug,
+                    suburb: locality.slug,
+                  });
 
                   return (
                     <div
@@ -260,7 +275,7 @@ export function TopLocalities({
                     >
                       <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group h-full">
                         <CardContent className="p-3.5 sm:p-4">
-                          <Link href={localityUrl}>
+                          <Link href={saleUrl}>
                             <div className="flex items-center gap-3 mb-3 cursor-pointer">
                               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
                                 <MapPin className="h-5 w-5 text-white" />
@@ -300,28 +315,32 @@ export function TopLocalities({
 
                           <div className="space-y-2">
                             <Link
-                              href={`${localityUrl}?listingType=sale`}
+                              href={saleUrl}
                               className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
                             >
                               <div className="min-w-0">
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                   {formatListingLabel(locality.propertiesForSale, 'For Sale homes')}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  in {locality.name}
+                                </p>
                               </div>
                               <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
                                 <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
                               </div>
                             </Link>
                             <Link
-                              href={`${localityUrl}?listingType=rent`}
+                              href={rentUrl}
                               className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
                             >
                               <div className="min-w-0">
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                   {formatListingLabel(locality.propertiesForRent, 'For Rent homes')}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  in {locality.name}
+                                </p>
                               </div>
                               <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
                                 <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
@@ -358,7 +377,11 @@ export function TopLocalities({
 
         <div className="mt-8 text-center md:text-left">
           <Link
-            href={`/${provinceSlug}/${citySlug}`}
+            href={generatePropertyUrl({
+              listingType: 'sale',
+              province: provinceSlug,
+              city: citySlug,
+            })}
             className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium outline-none text-white rounded-md gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
           >
             Explore All in {selectedCity}

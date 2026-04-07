@@ -12,7 +12,6 @@ import {
   MapPin,
   Building2,
   Home,
-  Key,
   TrendingUp,
   Users,
   Calculator,
@@ -24,6 +23,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useState } from 'react';
+import { generatePropertyUrl, slugify } from '@/lib/urlUtils';
 
 export function ModernFooter() {
   const [email, setEmail] = useState('');
@@ -40,16 +40,29 @@ export function ModernFooter() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const buildPropertySearchHref = (listingType: 'sale' | 'rent', propertyType?: string) =>
+    generatePropertyUrl({
+      listingType,
+      ...(propertyType ? { propertyType } : {}),
+    });
+
+  const buildCityHref = (province: string, city: string) =>
+    generatePropertyUrl({
+      listingType: 'sale',
+      province: slugify(province),
+      city: slugify(city),
+    });
+
   const footerSections = [
     {
       title: 'Property',
       icon: Home,
       links: [
-        { label: 'Houses for Sale', href: '/property-for-sale?propertyType=house' },
-        { label: 'Apartments for Sale', href: '/property-for-sale?propertyType=apartment' },
-        { label: 'Townhouses for Sale', href: '/property-for-sale?propertyType=townhouse' },
-        { label: 'Houses to Rent', href: '/property-to-rent?propertyType=house' },
-        { label: 'Apartments to Rent', href: '/property-to-rent?propertyType=apartment' },
+        { label: 'Houses for Sale', href: buildPropertySearchHref('sale', 'house') },
+        { label: 'Apartments for Sale', href: buildPropertySearchHref('sale', 'apartment') },
+        { label: 'Townhouses for Sale', href: buildPropertySearchHref('sale', 'townhouse') },
+        { label: 'Houses to Rent', href: buildPropertySearchHref('rent', 'house') },
+        { label: 'Apartments to Rent', href: buildPropertySearchHref('rent', 'apartment') },
         { label: 'New Developments', href: '/new-developments' },
       ],
     },
@@ -154,7 +167,10 @@ export function ModernFooter() {
               inbox.
             </p>
 
-            <form onSubmit={handleSubscribe} className="mx-auto flex max-w-md flex-col gap-2.5 sm:flex-row">
+            <form
+              onSubmit={handleSubscribe}
+              className="mx-auto flex max-w-md flex-col gap-2.5 sm:flex-row"
+            >
               <Input
                 type="email"
                 placeholder="Enter your email address"
@@ -251,10 +267,7 @@ export function ModernFooter() {
           </h4>
           <div className="scrollbar-hide -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible md:px-0 lg:grid-cols-6">
             {popularCities.map((city, index) => (
-              <Link
-                key={index}
-                href={`/property-for-sale/${city.province.toLowerCase().replace(/\s+/g, '-')}/${city.name.toLowerCase().replace(/\s+/g, '-')}`}
-              >
+              <Link key={index} href={buildCityHref(city.province, city.name)}>
                 <a className="inline-flex min-w-max rounded-full border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-300 transition-colors hover:border-blue-500/50 hover:text-blue-400 md:min-w-0 md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-0">
                   {city.name}
                 </a>
@@ -318,7 +331,9 @@ export function ModernFooter() {
         <div className="mt-8 rounded-[1.5rem] bg-slate-800 p-4 md:mt-12 md:p-6">
           <div className="flex flex-col items-center gap-5 lg:flex-row lg:gap-6">
             <div className="flex-1 text-center lg:text-left">
-              <h4 className="mb-2 text-lg font-bold text-white md:text-xl">Get the Property Listify App</h4>
+              <h4 className="mb-2 text-lg font-bold text-white md:text-xl">
+                Get the Property Listify App
+              </h4>
               <p className="text-sm text-slate-300 md:text-base">
                 Search for properties on the go. Available on iOS and Android.
               </p>

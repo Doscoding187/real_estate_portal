@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, Search, ChevronDown } from 'lucide-react';
+import { MapPin, Search } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useLocation } from 'wouter';
-import { cn } from '@/lib/utils';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 // Simplified property types for the quick search
 const PROPERTY_TYPES = [
@@ -29,41 +29,36 @@ interface SearchStageProps {
   totalListings?: number;
 }
 
+function getLocationFilters(locationSlug: string) {
+  const [province, city, suburb] = locationSlug.split('/').filter(Boolean);
+
+  return {
+    ...(province ? { province } : {}),
+    ...(city ? { city } : {}),
+    ...(suburb ? { suburb } : {}),
+  };
+}
+
 export function SearchStage({ locationName, locationSlug, totalListings }: SearchStageProps) {
   const [activeTab, setActiveTab] = useState('buy');
   const [propertyType, setPropertyType] = useState('all');
   const [_, setLocation] = useLocation();
 
   const handleSearch = () => {
-    // 2025 Architecture: Search Input => Transaction Intent (SRP)
-    // Route to Canonical SRP: /property-for-sale/{locationSlug}
-
-    // Base Path
-    let targetPath = `/property-for-sale/${locationSlug}`;
-    const params = new URLSearchParams();
-
-    // Map Tabs/Type to Query Params
-    if (activeTab === 'rent') {
-      targetPath = `/property-to-rent/${locationSlug}`;
-    }
-    // 'buy' is default /property-for-sale
-
-    if (propertyType !== 'all') {
-      params.append('propertyType', propertyType);
-    }
-
-    // Future: Handle 'new_development' tab -> /new-developments
     if (activeTab === 'new_development') {
-      targetPath = `/new-developments`;
-      // We might need a city/province filter for devs?
-      // for now just route root
+      setLocation('/new-developments');
+      return;
     }
 
-    // Force Transaction Mode
-    params.append('view', 'list');
-
-    const queryString = params.toString();
-    setLocation(`${targetPath}${queryString ? `?${queryString}` : ''}`);
+    setLocation(
+      generatePropertyUrl({
+        listingType: activeTab === 'rent' ? 'rent' : 'sale',
+        ...(activeTab === 'commercial' ? { propertyType: 'commercial' } : {}),
+        ...(propertyType !== 'all' ? { propertyType } : {}),
+        ...getLocationFilters(locationSlug),
+        view: 'list',
+      }),
+    );
   };
 
   return (

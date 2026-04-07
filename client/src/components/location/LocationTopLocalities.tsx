@@ -1,12 +1,14 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Link } from 'wouter';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, Star, ArrowRight, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { generatePropertyUrl, slugify } from '@/lib/urlUtils';
 
 export interface Locality {
   name: string;
+  slug?: string;
   rating: number;
   reviews: number;
   avgSalePrice: number;
@@ -18,9 +20,16 @@ export interface Locality {
 interface LocationTopLocalitiesProps {
   localities: Locality[];
   locationName: string;
+  provinceSlug: string;
+  citySlug?: string;
 }
 
-export function LocationTopLocalities({ localities, locationName }: LocationTopLocalitiesProps) {
+export function LocationTopLocalities({
+  localities,
+  locationName,
+  provinceSlug,
+  citySlug,
+}: LocationTopLocalitiesProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     slidesToScroll: 1,
@@ -53,10 +62,31 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
           <div className="overflow-hidden rounded-xl" ref={emblaRef}>
             <div className="flex gap-6">
               {localities.map((locality, idx) => {
-                // Basic slug generation (should ideally come from backend or be more robust)
-                const localitySlug = locality.name.toLowerCase().replace(/\s+/g, '-');
-                // Construct generic URL - assuming simple structure or passed in prop
-                const localityUrl = `/${locationName.toLowerCase().replace(/\s+/g, '-')}/${localitySlug}`;
+                const localitySlug = locality.slug || slugify(locality.name);
+                const saleUrl = citySlug
+                  ? generatePropertyUrl({
+                      listingType: 'sale',
+                      province: provinceSlug,
+                      city: citySlug,
+                      suburb: localitySlug,
+                    })
+                  : generatePropertyUrl({
+                      listingType: 'sale',
+                      province: provinceSlug,
+                      city: localitySlug,
+                    });
+                const rentUrl = citySlug
+                  ? generatePropertyUrl({
+                      listingType: 'rent',
+                      province: provinceSlug,
+                      city: citySlug,
+                      suburb: localitySlug,
+                    })
+                  : generatePropertyUrl({
+                      listingType: 'rent',
+                      province: provinceSlug,
+                      city: localitySlug,
+                    });
 
                 return (
                   <div
@@ -66,7 +96,7 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                     <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group h-full">
                       <CardContent className="p-6">
                         {/* Header with map and locality name */}
-                        <Link href={localityUrl}>
+                        <Link href={saleUrl}>
                           <div className="flex items-start gap-4 mb-6 cursor-pointer">
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
                               <MapPin className="h-8 w-8 text-white" />
@@ -115,7 +145,7 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                         {/* Property Links */}
                         <div className="space-y-3">
                           <Link
-                            href={`${localityUrl}?listingType=sale`}
+                            href={saleUrl}
                             className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
                           >
                             <div>
@@ -129,7 +159,7 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                             </div>
                           </Link>
                           <Link
-                            href={`${localityUrl}?listingType=rent`}
+                            href={rentUrl}
                             className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
                           >
                             <div>
@@ -175,7 +205,18 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
         {/* View All */}
         <div className="mt-8 text-center md:text-left">
           <Link
-            href={`/properties/for-sale/property/${locationName.toLowerCase().replace(/\s+/g, '-')}`}
+            href={
+              citySlug
+                ? generatePropertyUrl({
+                    listingType: 'sale',
+                    province: provinceSlug,
+                    city: citySlug,
+                  })
+                : generatePropertyUrl({
+                    listingType: 'sale',
+                    province: provinceSlug,
+                  })
+            }
             className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 hover:underline transition-colors"
           >
             View all localities in {locationName}

@@ -34,6 +34,7 @@ import SearchResults from './SearchResults';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 export default function SuburbPage({
   params,
@@ -79,12 +80,20 @@ export default function SuburbPage({
     citySlug,
     suburbSlug,
   });
+  const suburbId = (data as any)?.suburb?.id;
 
   // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
-    locationSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
-    fallbacks: [`${provinceSlug}/${citySlug}`, provinceSlug],
-  });
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery(
+    {
+      locationSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
+      fallbacks: [`${provinceSlug}/${citySlug}`, provinceSlug],
+      locationType: 'suburb',
+      locationId: suburbId,
+    },
+    {
+      enabled: Boolean(suburbId),
+    },
+  );
 
   if (isLoading) {
     return <SuburbPageSkeleton />;
@@ -203,7 +212,8 @@ export default function SuburbPage({
                 name: loc.name,
                 province: suburb.name,
                 slug: loc.slug,
-                provinceSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
+                provinceSlug: provinceSlug,
+                citySlug: citySlug,
                 propertyCount: loc.listingCount
                   ? `${loc.listingCount.toLocaleString()}+ Properties`
                   : undefined,
@@ -236,7 +246,13 @@ export default function SuburbPage({
                     </p>
                   </div>
                   <Link
-                    href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}
+                    href={generatePropertyUrl({
+                      listingType: 'sale',
+                      province: provinceSlug,
+                      city: citySlug,
+                      suburb: suburbSlug,
+                      view: 'list',
+                    })}
                   >
                     <Button variant="outline" className="hidden md:flex gap-2">
                       View all properties <ArrowRight className="h-4 w-4" />
@@ -254,7 +270,13 @@ export default function SuburbPage({
 
                 <div className="mt-8 text-center md:hidden">
                   <Link
-                    href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}
+                    href={generatePropertyUrl({
+                      listingType: 'sale',
+                      province: provinceSlug,
+                      city: citySlug,
+                      suburb: suburbSlug,
+                      view: 'list',
+                    })}
                   >
                     <Button variant="outline" className="w-full gap-2">
                       View all properties <ArrowRight className="h-4 w-4" />

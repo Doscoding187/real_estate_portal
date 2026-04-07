@@ -156,7 +156,7 @@ const DistributionReferralApplyPage = lazy(
   () => import('./pages/distribution/DistributionReferralApplyPage'),
 );
 
-// Import SearchResults page for SEO-friendly URLs
+// Import the canonical property search results surface
 const SearchResults = lazy(() => import('./pages/SearchResults'));
 const SuburbPage = lazy(() => import('./pages/SuburbPage'));
 
@@ -202,6 +202,7 @@ function Router() {
           {/* ============================================================== */}
           <Route path="/property-for-sale" component={SearchResults} />
           <Route path="/property-to-rent" component={SearchResults} />
+          <Route path="/property-auction" component={SearchResults} />
 
           {/* ============================================================== */}
           {/* 2. CANONICAL SEO PAGES (Path-Based Discovery)                  */}
@@ -211,14 +212,17 @@ function Router() {
           {/* Suburb Pages: /property-for-sale/gauteng/johannesburg/sandton */}
           <Route path="/property-for-sale/:province/:city/:suburb" component={SuburbPage} />
           <Route path="/property-to-rent/:province/:city/:suburb" component={SuburbPage} />
+          <Route path="/property-auction/:province/:city/:suburb" component={SuburbPage} />
 
           {/* City Pages: /property-for-sale/gauteng/johannesburg */}
           <Route path="/property-for-sale/:province/:city" component={CityPage} />
           <Route path="/property-to-rent/:province/:city" component={CityPage} />
+          <Route path="/property-auction/:province/:city" component={CityPage} />
 
           {/* Province Pages: /property-for-sale/gauteng */}
           <Route path="/property-for-sale/:province" component={ProvincePage} />
           <Route path="/property-to-rent/:province" component={ProvincePage} />
+          <Route path="/property-auction/:province" component={ProvincePage} />
 
           {/* ============================================================== */}
           {/* 2A. DEVELOPER DASHBOARD ROUTES                                 */}
@@ -241,7 +245,7 @@ function Router() {
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
           <Route path="/admin/review/:id" component={AdminPropertyReview} />
 
-          {/* Legacy properties route (query params) */}
+          {/* Canonical query entry point for property search */}
           <Route path="/properties" component={SearchResults} />
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/favorites" component={Favorites} />
@@ -321,7 +325,7 @@ function Router() {
           <Route path="/city/:slug" component={OldLegacyCityRedirect} />
           {/* Very Old Format: /suburb/johannesburg/sandton */}
           <Route path="/suburb/:city/:suburb">
-            {params => <LegacySuburbRedirect params={{ ...params, province: 'gauteng' }} />}
+            {params => <LegacySuburbRedirect params={params} />}
           </Route>
 
           {/* Route Handlers / Wizards */}
@@ -561,11 +565,11 @@ function Router() {
           <Route path={'/404'} component={NotFound} />
 
           {/* CATCH-ALL ROUTES & LEGACY REDIRECTS - MUST BE LAST */}
-          {/* Redirect /:province/:city/:suburb -> /property-for-sale/:province/:city/:suburb */}
+          {/* Redirect legacy location shortcuts to canonical property search results */}
           <Route path="/:province/:city/:suburb" component={LegacySuburbRedirect} />
-          {/* Redirect /:province/:city -> /property-for-sale/:province/:city */}
+          {/* Redirect legacy province/city shortcuts to canonical property search results */}
           <Route path="/:province/:city" component={LegacyCityRedirect} />
-          {/* Redirect /:province -> /property-for-sale/:province */}
+          {/* Redirect legacy province shortcuts to canonical property search results */}
           <Route path="/:province" component={LegacyProvinceRedirect} />
 
           {/* Final fallback route */}
