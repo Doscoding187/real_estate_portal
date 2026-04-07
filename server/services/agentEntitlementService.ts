@@ -62,15 +62,15 @@ function normalizeAgentTier(value: string | null | undefined): AgentTier | null 
 
   if (!normalized) return null;
 
-  if (normalized === 'free') return 'free';
-  if (normalized === 'starter') return 'starter';
-  if (normalized === 'professional') return 'professional';
-  if (normalized === 'elite') return 'elite';
+  if (normalized === 'free' || normalized === 'agentfree') return 'free';
+  if (normalized === 'starter' || normalized === 'agentstarter') return 'starter';
+  if (normalized === 'professional' || normalized === 'agentprofessional') return 'professional';
+  if (normalized === 'elite' || normalized === 'agentelite') return 'elite';
 
-  if (normalized === 'growth') return 'professional';
-  if (normalized === 'pro') return 'professional';
-  if (normalized === 'launch') return 'starter';
-  if (normalized === 'dominance') return 'elite';
+  if (normalized === 'growth' || normalized === 'agentgrowth') return 'professional';
+  if (normalized === 'pro' || normalized === 'agentpro') return 'professional';
+  if (normalized === 'launch' || normalized === 'agentlaunch') return 'starter';
+  if (normalized === 'dominance' || normalized === 'agentdominance') return 'elite';
 
   return null;
 }

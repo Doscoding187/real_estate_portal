@@ -213,6 +213,11 @@ function formatStatus(value: string | null | undefined): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function isActiveListingStatus(value: string | null | undefined): boolean {
+  const normalized = String(value || '').toLowerCase();
+  return ['available', 'published', 'active'].includes(normalized);
+}
+
 function formatPropertyType(value: string | null | undefined): string {
   if (!value) return 'Property';
   return formatStatus(value);
@@ -456,7 +461,7 @@ export function AgentDashboardOverview() {
   );
 
   const { data: listingsData } = trpc.agent.getMyListings.useQuery(
-    { status: 'active', limit: 24 },
+    { status: 'all', limit: 24 },
     { retry: false },
   );
 
@@ -544,7 +549,13 @@ export function AgentDashboardOverview() {
     [pipeline],
   );
 
-  const activeListings = useMemo(() => (listingsData || []) as ListingItem[], [listingsData]);
+  const activeListings = useMemo(
+    () =>
+      ((listingsData || []) as ListingItem[]).filter(listing =>
+        isActiveListingStatus(listing.status),
+      ),
+    [listingsData],
+  );
 
   const listingsById = useMemo(
     () => new Map(activeListings.map(listing => [listing.id, listing])),

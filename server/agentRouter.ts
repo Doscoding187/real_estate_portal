@@ -1742,14 +1742,16 @@ export const agentRouter = router({
               propertyId: capabilities.showingsDetails.propertyIdColumn
                 ? resolvedInventory.propertyId
                 : undefined,
-              leadId: capabilities.showingsDetails.leadIdColumn ? (leadRecord?.id ?? null) : undefined,
+              leadId: capabilities.showingsDetails.leadIdColumn
+                ? (leadRecord?.id ?? null)
+                : undefined,
               agentId: agentRecord.id,
               visitorName: input.visitorName,
               scheduledAt: toDbTimestampRequired(input.scheduledAt),
               durationMinutes: input.durationMinutes ?? 30,
               status: mapAgentShowingStatusToStorage('scheduled', variant),
-              notes: capabilities.showingsDetails.notesColumn ? (input.notes || null) : undefined,
-              feedback: capabilities.showingsDetails.notesColumn ? undefined : (input.notes || null),
+              notes: capabilities.showingsDetails.notesColumn ? input.notes || null : undefined,
+              feedback: capabilities.showingsDetails.notesColumn ? undefined : input.notes || null,
             } as any);
 
       const insertRows = Array.isArray(insertResult) ? insertResult : [insertResult];
