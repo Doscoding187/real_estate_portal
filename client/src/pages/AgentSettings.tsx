@@ -999,7 +999,7 @@ export default function AgentSettings() {
                             <div className="text-sm text-gray-500">Feature Access</div>
                             <div className="text-sm text-gray-800 mt-2 space-y-1">
                               <div>
-                                Active listing limit:{' '}
+                                Featured placement allowance:{' '}
                                 <span className="font-medium">{listingLimitLabel}</span>
                               </div>
                               <div>
@@ -1042,7 +1042,7 @@ export default function AgentSettings() {
                                   Status: {formatSubscriptionStatus(status?.subscriptionStatus)}
                                 </span>
                                 <span className="rounded-full bg-slate-100 px-3 py-1">
-                                  Listings: {listingLimitLabel}
+                                  Placement allowance: {listingLimitLabel}
                                 </span>
                               </div>
                             </div>

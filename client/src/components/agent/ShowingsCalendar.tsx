@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,6 +87,7 @@ function formatShowingDateTime(showing: Showing) {
 }
 
 export function ShowingsCalendar({ className }: CalendarViewProps) {
+  const [, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -208,27 +209,28 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     setIsBookingOpen(true);
   };
 
+  const resolvedShowings = showings.filter(showing => Boolean(getShowingScheduledDate(showing)));
+
   const getShowingsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return showings.filter((showing: Showing) => {
+    return resolvedShowings.filter((showing: Showing) => {
       const scheduledDate = getShowingScheduledDate(showing);
       if (!scheduledDate) return false;
-
       const showingDate = scheduledDate.toISOString().split('T')[0];
       return showingDate === dateStr;
     });
   };
 
-  const filteredShowings =
-    showings?.filter((showing: Showing) => {
-      if (
-        searchQuery &&
-        !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-        return false;
-      return true;
-    }) || [];
+  const filteredShowings = resolvedShowings.filter((showing: Showing) => {
+    if (
+      searchQuery &&
+      !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -429,7 +431,20 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
       {showingsError ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
-            Unable to load showings right now. Please refresh to retry.
+            <div className="space-y-3">
+              <p>
+                {showingsError.message?.includes('Agent profile not found')
+                  ? 'Complete your agent profile to unlock the calendar.'
+                  : 'Unable to load showings right now.'}
+              </p>
+              {showingsError.message?.includes('Agent profile not found') ? (
+                <Button onClick={() => setLocation('/agent/setup')}>Finish setup</Button>
+              ) : (
+                <Button variant="outline" onClick={() => utils.agent.getMyShowings.invalidate()}>
+                  Retry
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : isLoading ? (
@@ -524,7 +539,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                 {legacyListings.length > 0 ? (
                   <optgroup label="Legacy fallback">
                     {legacyListings.map((listing: ShowingProperty, index: number) => (
-                      <option key={listing.id ?? `legacy-${index}`} value={String(listing.id ?? '')}>
+                      <option
+                        key={listing.id ?? `legacy-${index}`}
+                        value={String(listing.id ?? '')}
+                      >
                         {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
                       </option>
                     ))}

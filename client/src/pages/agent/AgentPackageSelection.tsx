@@ -72,7 +72,7 @@ const tierBlueprints: TierBlueprint[] = [
     description:
       'A disciplined launch for agents building presence, consistency, and early lead flow.',
     leadRange: '10-15 property leads / month',
-    listings: 'Up to 20 active listings',
+    listings: 'Featured placement on up to 20 listings',
     tokenCount: 20,
     cta: 'Select Starter',
     Icon: Briefcase,
@@ -101,7 +101,7 @@ const tierBlueprints: TierBlueprint[] = [
     description:
       'For agents who want stronger lead momentum, cleaner operating systems, and better market presence.',
     leadRange: '30-50 property leads / month',
-    listings: 'Up to 40 active listings',
+    listings: 'Featured placement on up to 40 listings',
     tokenCount: 60,
     cta: 'Select Professional',
     Icon: Rocket,
@@ -129,7 +129,7 @@ const tierBlueprints: TierBlueprint[] = [
     description:
       'The strongest launch lane for agents who want maximum visibility, premium tools, and room to scale fast.',
     leadRange: '80-120+ property leads / month',
-    listings: 'Unlimited active listings',
+    listings: 'Unlimited featured placement',
     tokenCount: 150,
     cta: 'Select Elite',
     badge: '90-day trial',
@@ -530,7 +530,7 @@ export default function AgentPackageSelection() {
 
                     <div className="mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Growth tokens / month
+                        Visibility tokens / month
                       </span>
                       <span
                         className={cn(
@@ -541,6 +541,10 @@ export default function AgentPackageSelection() {
                         {card.tokenCount}
                       </span>
                     </div>
+
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                      Tokens support boosts, premium exposure, and launch actions inside Agent OS.
+                    </p>
 
                     <div className="mt-6">
                       <span
@@ -612,7 +616,7 @@ export default function AgentPackageSelection() {
 
                 <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/6 px-4 py-2">
                   <Sparkles className="h-4 w-4 text-amber-300" />
-                  <span className="text-sm text-white/70">Growth tokens</span>
+                  <span className="text-sm text-white/70">Visibility tokens</span>
                   <span className="font-mono text-sm font-medium text-amber-300">
                     {selectedCard.tokenCount} / month
                   </span>

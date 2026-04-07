@@ -20,7 +20,6 @@ export const AGENT_ONBOARDING_STATUS_VALUES = ['trial', 'active', 'expired', 'ca
 
 export type AgentOnboardingTier = (typeof AGENT_ONBOARDING_TIER_VALUES)[number];
 export type AgentOnboardingStatus = (typeof AGENT_ONBOARDING_STATUS_VALUES)[number];
-
 const AGENT_TRIAL_DAYS = 90;
 const AGENT_PLAN_NAME_CANDIDATES: Record<AgentOnboardingTier, string[]> = {
   free: ['agent_free'],
