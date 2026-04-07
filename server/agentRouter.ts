@@ -1731,10 +1731,26 @@ export const agentRouter = router({
         showingValues.push(sql`${input.notes || null}`);
       }
 
-      const insertResult = await db.execute(sql`
-        INSERT INTO showings (${sql.join(showingColumns, sql`, `)})
-        VALUES (${sql.join(showingValues, sql`, `)})
-      `);
+      const insertResult =
+        typeof (db as { execute?: unknown }).execute === 'function'
+          ? await db.execute(sql`
+              INSERT INTO showings (${sql.join(showingColumns, sql`, `)})
+              VALUES (${sql.join(showingValues, sql`, `)})
+            `)
+          : await db.insert(showings).values({
+              listingId: input.listingId,
+              propertyId: capabilities.showingsDetails.propertyIdColumn
+                ? resolvedInventory.propertyId
+                : undefined,
+              leadId: capabilities.showingsDetails.leadIdColumn ? (leadRecord?.id ?? null) : undefined,
+              agentId: agentRecord.id,
+              visitorName: input.visitorName,
+              scheduledAt: toDbTimestampRequired(input.scheduledAt),
+              durationMinutes: input.durationMinutes ?? 30,
+              status: mapAgentShowingStatusToStorage('scheduled', variant),
+              notes: capabilities.showingsDetails.notesColumn ? (input.notes || null) : undefined,
+              feedback: capabilities.showingsDetails.notesColumn ? undefined : (input.notes || null),
+            } as any);
 
       const insertRows = Array.isArray(insertResult) ? insertResult : [insertResult];
       const showingId = Number(

@@ -22,6 +22,20 @@ describe('agent dashboard showings smoke', () => {
     return value.toISOString().slice(0, 19).replace('T', ' ');
   }
 
+  async function getLeadColumnSet() {
+    const db = await getDb();
+    const [rows] = await db!.execute(sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name = 'leads'
+    `);
+
+    return new Set(
+      (Array.isArray(rows) ? rows : []).map((row: any) => String(row.column_name ?? row.COLUMN_NAME)),
+    );
+  }
+
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
@@ -160,30 +174,44 @@ describe('agent dashboard showings smoke', () => {
     `);
     createdPropertyId = Number((propertyInsert as any).insertId);
 
+    const leadColumns = await getLeadColumnSet();
+    const leadInsertColumns = [
+      sql.identifier('propertyId'),
+      sql.identifier('agentId'),
+      sql.identifier('name'),
+      sql.identifier('email'),
+      sql.identifier('phone'),
+      sql.identifier('message'),
+      sql.identifier('status'),
+    ];
+    const leadInsertValues = [
+      sql`${createdPropertyId}`,
+      sql`${createdAgentId}`,
+      sql`${buyerName}`,
+      sql`${buyerEmail}`,
+      sql`${'+27112223333'}`,
+      sql`${'Interested in viewing this property'}`,
+      sql`${'new'}`,
+    ];
+
+    if (leadColumns.has('owner_type')) {
+      leadInsertColumns.push(sql.identifier('owner_type'));
+      leadInsertValues.push(sql`${'agent'}`);
+    }
+
+    if (leadColumns.has('visibility_scope')) {
+      leadInsertColumns.push(sql.identifier('visibility_scope'));
+      leadInsertValues.push(sql`${'private'}`);
+    }
+
+    if (leadColumns.has('governance_mode')) {
+      leadInsertColumns.push(sql.identifier('governance_mode'));
+      leadInsertValues.push(sql`${'solo'}`);
+    }
+
     const [leadInsert] = await db!.execute(sql`
-      INSERT INTO leads (
-        propertyId,
-        agentId,
-        owner_type,
-        visibility_scope,
-        governance_mode,
-        name,
-        email,
-        phone,
-        message,
-        status
-      ) VALUES (
-        ${createdPropertyId},
-        ${createdAgentId},
-        ${'agent'},
-        ${'private'},
-        ${'solo'},
-        ${buyerName},
-        ${buyerEmail},
-        ${'+27112223333'},
-        ${'Interested in viewing this property'},
-        ${'new'}
-      )
+      INSERT INTO leads (${sql.join(leadInsertColumns, sql`, `)})
+      VALUES (${sql.join(leadInsertValues, sql`, `)})
     `);
     createdLeadId = Number((leadInsert as any).insertId);
 
