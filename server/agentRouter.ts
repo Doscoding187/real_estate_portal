@@ -57,7 +57,7 @@ const NOTIFICATION_TYPES = [
   'system_alert',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
-const LIVE_AGENT_LISTING_STATUSES = ['available', 'published', 'active'] as const;
+const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 
 function buildAgentPublicSlug(agent: {
   id: number;
