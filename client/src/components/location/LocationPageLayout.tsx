@@ -56,6 +56,26 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   seoContent,
   exploreMore,
 }) => {
+  const [location] = useLocation();
+  const isRent = location.startsWith('/property-to-rent');
+  const rootLabel = isRent ? 'For Rent' : 'For Sale';
+  const rootPath = isRent ? '/property-to-rent' : '/property-for-sale';
+
+  const parts = locationSlug.split('/').filter(Boolean);
+  const breadcrumbItems = [
+    { label: 'Home', href: '/' },
+    { label: rootLabel, href: rootPath },
+  ];
+
+  let currentPath = rootPath;
+  parts.forEach(part => {
+    currentPath += `/${part}`;
+    breadcrumbItems.push({
+      label: unslugify(part),
+      href: currentPath,
+    });
+  });
+
   return (
     <div className="min-h-screen bg-slate-50 w-full pt-16">
       <Helmet>
@@ -71,31 +91,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
       {/* Breadcrumbs Bar */}
       <div className="bg-white border-b border-slate-200">
         <div className="container mx-auto px-4 py-3">
-          {(() => {
-            const [location] = useLocation();
-            const isRent = location.startsWith('/property-to-rent');
-            const rootLabel = isRent ? 'For Rent' : 'For Sale';
-            const rootPath = isRent ? '/property-to-rent' : '/property-for-sale';
-
-            // Parse slugs from locationSlug prop (expected format: province/city/suburb or province/city or province)
-            const parts = locationSlug.split('/').filter(Boolean);
-            const items = [
-              { label: 'Home', href: '/' },
-              { label: rootLabel, href: rootPath },
-            ];
-
-            let currentPath = rootPath;
-            parts.forEach((part, index) => {
-              currentPath += `/${part}`;
-              // Last item is current page, so href '#' or actual path
-              items.push({
-                label: unslugify(part),
-                href: currentPath,
-              });
-            });
-
-            return <Breadcrumbs items={items} />;
-          })()}
+          <Breadcrumbs items={breadcrumbItems} />
         </div>
       </div>
 

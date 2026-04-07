@@ -28,7 +28,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasIdentity);
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
 
   // Multi-location state
   const [selectedLocations, setSelectedLocations] = useState<

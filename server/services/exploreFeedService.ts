@@ -18,6 +18,7 @@ export interface FeedOptions {
   seed?: string;
   seenIds?: number[];
   includeAgentContent?: boolean;
+  useCache?: boolean;
 }
 
 export type FeedResult = {
@@ -100,6 +101,26 @@ function notInIdsExpr(column: any, ids: number[]) {
 
 function makeEmptyFeedDebugTag() {
   return `ExploreEmptyFeed:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+}
+
+function safeErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function buildEmptyFeed(
+  feedType: FeedType,
+  offset: number,
+  metadata: Record<string, any> = {},
+): FeedResult {
+  return {
+    items: [],
+    shorts: [],
+    feedType,
+    hasMore: false,
+    offset,
+    metadata,
+  };
 }
 
 async function logRecommendedEmptyDiagnostics(params: {
@@ -229,215 +250,229 @@ export class ExploreFeedService {
     return [];
   }
   async getRecommendedFeed(options: FeedOptions): Promise<FeedResult> {
-    const { userId, limit = 20, offset = 0, location, seed, seenIds } = options;
+    const { userId, limit = 20, offset = 0, location, seed, seenIds, useCache: explicitUseCache } = options;
+    try {
+      const cacheKey = CacheKeys.recommendedFeed(userId, limit, offset);
+      const seedNormalized = normalizeSeed(seed);
+      const jitter = seededJitterExpr(seedNormalized);
+      const normalizedSeenIds = normalizeSeenIds(seenIds);
 
-    const cacheKey = CacheKeys.recommendedFeed(userId, limit, offset);
-    const seedNormalized = normalizeSeed(seed);
-    const jitter = seededJitterExpr(seedNormalized);
-    const normalizedSeenIds = normalizeSeenIds(seenIds);
+      const useCache =
+        explicitUseCache !== false &&
+        process.env.NODE_ENV === 'production' &&
+        !seedNormalized &&
+        normalizedSeenIds.length === 0 &&
+        !location;
 
-    const useCache =
-      process.env.NODE_ENV === 'production' &&
-      !seedNormalized &&
-      normalizedSeenIds.length === 0 &&
-      !location;
+      if (useCache) {
+        const cached = await cache.get<FeedResult>(cacheKey);
+        if (cached) return cached;
+      }
 
-    if (useCache) {
-      const cached = await cache.get<FeedResult>(cacheKey);
-      if (cached) return cached;
-    }
+      const debugTag = process.env.NODE_ENV !== 'production' ? makeEmptyFeedDebugTag() : null;
 
-    const debugTag = process.env.NODE_ENV !== 'production' ? makeEmptyFeedDebugTag() : null;
+      const baseWhere: any[] = [
+        eq(exploreContent.contentType, 'video'),
+        eq(exploreContent.isActive, 1),
+      ];
 
-    const baseWhere: any[] = [
-      eq(exploreContent.contentType, 'video'),
-      eq(exploreContent.isActive, 1),
-    ];
+      const commonBase: any[] = [...baseWhere, hasPlayableMedia];
 
-    const commonBase: any[] = [...baseWhere, hasPlayableMedia];
+      // Seen filter
+      const notInSeen = notInIdsExpr(exploreContent.id, normalizedSeenIds);
+      if (notInSeen) commonBase.push(notInSeen);
 
-    // Seen filter
-    const notInSeen = notInIdsExpr(exploreContent.id, normalizedSeenIds);
-    if (notInSeen) commonBase.push(notInSeen);
+      const takeFeatured = Math.min(2, limit);
+      const takeNearYou = location ? Math.min(2, Math.max(0, limit - takeFeatured)) : 0;
+      const takeNew = Math.min(2, Math.max(0, limit - takeFeatured - takeNearYou));
+      const takeRanked = Math.max(0, limit - takeFeatured - takeNearYou - takeNew);
 
-    const takeFeatured = Math.min(2, limit);
-    const takeNearYou = location ? Math.min(2, Math.max(0, limit - takeFeatured)) : 0;
-    const takeNew = Math.min(2, Math.max(0, limit - takeFeatured - takeNearYou));
-    const takeRanked = Math.max(0, limit - takeFeatured - takeNearYou - takeNew);
+      const featuredWhere = [...commonBase, eq(exploreContent.isFeatured, 1)];
 
-    const featuredWhere = [...commonBase, eq(exploreContent.isFeatured, 1)];
-
-    const featuredRows = takeFeatured
-      ? await db
-          .select()
-          .from(exploreContent)
-          .where(and(...featuredWhere))
-          .orderBy(desc(exploreContent.createdAt))
-          .limit(takeFeatured)
-      : [];
-
-    // Near You
-    const nearYouWhere: any[] = [...commonBase];
-
-    if (featuredRows.length > 0) {
-      nearYouWhere.push(
-        sql`${exploreContent.id} NOT IN (${sql.join(
-          featuredRows.map(r => sql`${r.id}`),
-          sql`,`,
-        )})`,
-      );
-    }
-
-    if (location) {
-      nearYouWhere.push(
-        sql`(
-          COALESCE(${listings.city}, '') = ${location}
-          OR COALESCE(${listings.suburb}, '') = ${location}
-          OR COALESCE(${listings.province}, '') = ${location}
-        )`,
-      );
-    }
-
-    const nearYouRows =
-      takeNearYou && location
+      const featuredRows = takeFeatured
         ? await db
-            .select({ content: exploreContent })
+            .select()
             .from(exploreContent)
-            .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
-            .where(and(...nearYouWhere))
+            .where(and(...featuredWhere))
             .orderBy(desc(exploreContent.createdAt))
-            .limit(takeNearYou)
+            .limit(takeFeatured)
         : [];
 
-    // New (last 24h)
-    const newWhere: any[] = [
-      ...commonBase,
-      sql`TIMESTAMPDIFF(HOUR, ${exploreContent.createdAt}, NOW()) < 24`,
-    ];
+      // Near You
+      const nearYouWhere: any[] = [...commonBase];
 
-    if (featuredRows.length > 0) {
-      newWhere.push(
-        sql`${exploreContent.id} NOT IN (${sql.join(
-          featuredRows.map(r => sql`${r.id}`),
-          sql`,`,
-        )})`,
+      if (featuredRows.length > 0) {
+        nearYouWhere.push(
+          sql`${exploreContent.id} NOT IN (${sql.join(
+            featuredRows.map(r => sql`${r.id}`),
+            sql`,`,
+          )})`,
+        );
+      }
+
+      if (location) {
+        nearYouWhere.push(
+          sql`(
+            COALESCE(${listings.city}, '') = ${location}
+            OR COALESCE(${listings.suburb}, '') = ${location}
+            OR COALESCE(${listings.province}, '') = ${location}
+          )`,
+        );
+      }
+
+      const nearYouRows =
+        takeNearYou && location
+          ? await db
+              .select({ content: exploreContent })
+              .from(exploreContent)
+              .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
+              .where(and(...nearYouWhere))
+              .orderBy(desc(exploreContent.createdAt))
+              .limit(takeNearYou)
+          : [];
+
+      // New (last 24h)
+      const newWhere: any[] = [
+        ...commonBase,
+        sql`TIMESTAMPDIFF(HOUR, ${exploreContent.createdAt}, NOW()) < 24`,
+      ];
+
+      if (featuredRows.length > 0) {
+        newWhere.push(
+          sql`${exploreContent.id} NOT IN (${sql.join(
+            featuredRows.map(r => sql`${r.id}`),
+            sql`,`,
+          )})`,
+        );
+      }
+
+      const newRows = takeNew
+        ? await db
+            .select()
+            .from(exploreContent)
+            .where(and(...newWhere))
+            .orderBy(desc(exploreContent.createdAt))
+            .limit(takeNew)
+        : [];
+
+      // Exclude IDs already taken
+      const excludeIds = Array.from(
+        new Set<number>([
+          ...featuredRows.map(r => r.id).filter(Boolean),
+          ...nearYouRows.map(r => r.content?.id).filter(Boolean),
+          ...newRows.map(r => r.id).filter(Boolean),
+        ]),
       );
-    }
 
-    const newRows = takeNew
-      ? await db
-          .select()
-          .from(exploreContent)
-          .where(and(...newWhere))
-          .orderBy(desc(exploreContent.createdAt))
-          .limit(takeNew)
-      : [];
+      const notInExclude = notInIdsExpr(exploreContent.id, excludeIds);
 
-    // Exclude IDs already taken
-    const excludeIds = Array.from(
-      new Set<number>([
-        ...featuredRows.map(r => r.id).filter(Boolean),
-        ...nearYouRows.map(r => r.content?.id).filter(Boolean),
-        ...newRows.map(r => r.id).filter(Boolean),
-      ]),
-    );
+      const rankedWhere: any[] = [...commonBase];
+      if (notInExclude) rankedWhere.push(notInExclude);
 
-    const notInExclude = notInIdsExpr(exploreContent.id, excludeIds);
+      const rankedRows = takeRanked
+        ? await db
+            .select()
+            .from(exploreContent)
+            .where(and(...rankedWhere))
+            .orderBy(
+              desc(exploreContent.isFeatured),
+              sql`(
+                (
+                  COALESCE(${exploreContent.engagementScore}, 0)
+                  + (COALESCE(${exploreContent.viewCount}, 0) * 0.25)
+                  + CASE
+                      WHEN TIMESTAMPDIFF(HOUR, ${exploreContent.createdAt}, NOW()) < 24 THEN 2
+                      ELSE 0
+                    END
+                )
+                * (1 / (1 + (TIMESTAMPDIFF(HOUR, ${exploreContent.createdAt}, NOW()) / 48)))
+                + ${jitter}
+              ) DESC`,
+              desc(exploreContent.createdAt),
+              desc(exploreContent.id),
+            )
+            .limit(takeRanked)
+            .offset(offset)
+        : [];
 
-    const rankedWhere: any[] = [...commonBase];
-    if (notInExclude) rankedWhere.push(notInExclude);
+      const merged = [
+        ...featuredRows.map(r => ({ ...r, _reason: 'featured' })),
+        ...nearYouRows.map(r => ({ ...r.content, _reason: 'near_you' })),
+        ...newRows.map(r => ({ ...r, _reason: 'new' })),
+        ...rankedRows.map(r => ({ ...r, _reason: 'ranked' })),
+      ];
 
-    const rankedRows = takeRanked
-      ? await db
-          .select()
-          .from(exploreContent)
-          .where(and(...rankedWhere))
-          .orderBy(
-            desc(exploreContent.isFeatured),
-            sql`(
-              (
-                COALESCE(${exploreContent.engagementScore}, 0)
-                + (COALESCE(${exploreContent.viewCount}, 0) * 0.25)
-                + CASE
-                    WHEN TIMESTAMPDIFF(HOUR, ${exploreContent.createdAt}, NOW()) < 24 THEN 2
-                    ELSE 0
-                  END
-              )
-              * (1 / (1 + (TIMESTAMPDIFF(HOUR, ${exploreContent.createdAt}, NOW()) / 48)))
-              + ${jitter}
-            ) DESC`,
-            desc(exploreContent.createdAt),
-            desc(exploreContent.id),
-          )
-          .limit(takeRanked)
-          .offset(offset)
-      : [];
+      // Final de-dupe
+      const seen = new Set<number>();
+      const items = merged
+        .filter(v => v?.id && !seen.has(v.id) && (seen.add(v.id), true))
+        .map(transformShort)
+        .slice(0, limit);
 
-    const merged = [
-      ...featuredRows.map(r => ({ ...r, _reason: 'featured' })),
-      ...nearYouRows.map(r => ({ ...r.content, _reason: 'near_you' })),
-      ...newRows.map(r => ({ ...r, _reason: 'new' })),
-      ...rankedRows.map(r => ({ ...r, _reason: 'ranked' })),
-    ];
+      /* ------------------ DEV DIAGNOSTICS ------------------ */
+      if (process.env.NODE_ENV !== 'production' && items.length === 0) {
+        console.warn('[Explore] EMPTY RECOMMENDED FEED DEBUG', {
+          tag: debugTag,
+          takeFeatured,
+          takeNearYou,
+          takeNew,
+          takeRanked,
+          counts: {
+            featured: featuredRows.length,
+            nearYou: nearYouRows.length,
+            new: newRows.length,
+            ranked: rankedRows.length,
+            returned: items.length,
+          },
+          limit,
+          offset,
+          seed,
+          location,
+          excludeIdsCount: excludeIds.length,
+        });
 
-    // Final de-dupe
-    const seen = new Set<number>();
-    const items = merged
-      .filter(v => v?.id && !seen.has(v.id) && (seen.add(v.id), true))
-      .map(transformShort)
-      .slice(0, limit);
+        await logRecommendedEmptyDiagnostics({
+          tag: debugTag ?? 'n/a',
+          location,
+          seed: seedNormalized,
+          limit,
+          offset,
+          baseWhere,
+          commonWhere: commonBase,
+          featuredWhere,
+          newWhere,
+          rankedWhere,
+        });
+      }
 
-    /* ------------------ DEV DIAGNOSTICS ------------------ */
-    if (process.env.NODE_ENV !== 'production' && items.length === 0) {
-      console.warn('[Explore] EMPTY RECOMMENDED FEED DEBUG', {
-        tag: debugTag,
-        takeFeatured,
-        takeNearYou,
-        takeNew,
-        takeRanked,
-        counts: {
-          featured: featuredRows.length,
-          nearYou: nearYouRows.length,
-          new: newRows.length,
-          ranked: rankedRows.length,
-          returned: items.length,
+      const result: FeedResult = {
+        items,
+        shorts: items,
+        feedType: 'recommended',
+        hasMore: takeRanked > 0 && rankedRows.length === takeRanked,
+        offset: offset + rankedRows.length,
+        metadata: {
+          personalized: false,
+          ...(process.env.NODE_ENV !== 'production' ? { debug: true } : {}),
         },
-        limit,
-        offset,
-        seed,
-        location,
-        excludeIdsCount: excludeIds.length,
-      });
+      };
 
-      await logRecommendedEmptyDiagnostics({
-        tag: debugTag ?? 'n/a',
-        location,
-        seed: seedNormalized,
+      if (useCache) await cache.set(cacheKey, result, CacheTTL.FEED);
+
+      return result;
+    } catch (error) {
+      console.error('[ExploreFeedService] recommended feed query failed; serving empty fallback', {
+        message: safeErrorMessage(error),
         limit,
         offset,
-        baseWhere,
-        commonWhere: commonBase,
-        featuredWhere,
-        newWhere,
-        rankedWhere,
+        location: location ?? null,
+      });
+      return buildEmptyFeed('recommended', offset, {
+        personalized: false,
+        degraded: true,
+        fallbackReason: 'query_error',
       });
     }
-
-    const result: FeedResult = {
-      items,
-      shorts: items,
-      feedType: 'recommended',
-      hasMore: takeRanked > 0 && rankedRows.length === takeRanked,
-      offset: offset + rankedRows.length,
-      metadata: {
-        personalized: false,
-        ...(process.env.NODE_ENV !== 'production' ? { debug: true } : {}),
-      },
-    };
-
-    if (useCache) await cache.set(cacheKey, result, CacheTTL.FEED);
-
-    return result;
   }
 
   // ────────────────────────────────────────────────
@@ -447,49 +482,62 @@ export class ExploreFeedService {
   async getAreaFeed({ location, limit = 20, offset = 0 }: FeedOptions): Promise<FeedResult> {
     if (!location) throw new Error('Location required');
     const loc = location.toLowerCase();
+    try {
+      const rows = await db
+        .select({ content: exploreContent })
+        .from(exploreContent)
+        .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
+        .leftJoin(developments, eq(exploreContent.referenceId, developments.id))
+        .where(
+          and(
+            eq(exploreContent.contentType, 'video'),
+            eq(exploreContent.isActive, 1),
+            hasPlayableMedia,
+            sql`(
+              LOWER(COALESCE(${listings.city}, '')) LIKE ${`%${loc}%`}
+              OR LOWER(COALESCE(${listings.suburb}, '')) LIKE ${`%${loc}%`}
+              OR LOWER(COALESCE(${listings.province}, '')) LIKE ${`%${loc}%`}
+              OR LOWER(COALESCE(${developments.city}, '')) LIKE ${`%${loc}%`}
+              OR LOWER(COALESCE(${developments.province}, '')) LIKE ${`%${loc}%`}
+            )`,
+          ),
+        )
+        .orderBy(desc(exploreContent.createdAt))
+        .limit(limit)
+        .offset(offset);
 
-    const rows = await db
-      .select({ content: exploreContent })
-      .from(exploreContent)
-      .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
-      .leftJoin(developments, eq(exploreContent.referenceId, developments.id))
-      .where(
-        and(
-          eq(exploreContent.contentType, 'video'),
-          eq(exploreContent.isActive, 1),
-          hasPlayableMedia,
-          sql`(
-            LOWER(COALESCE(${listings.city}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${listings.suburb}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${listings.province}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${developments.city}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${developments.province}, '')) LIKE ${`%${loc}%`}
-          )`,
-        ),
-      )
-      .orderBy(desc(exploreContent.createdAt))
-      .limit(limit)
-      .offset(offset);
+      const items = rows.map(r => transformShort(r.content));
 
-    const items = rows.map(r => transformShort(r.content));
+      if (process.env.NODE_ENV !== 'production' && items.length === 0) {
+        console.warn('[Explore] EMPTY AREA FEED DEBUG', {
+          location,
+          limit,
+          offset,
+          returned: items.length,
+        });
+      }
 
-    if (process.env.NODE_ENV !== 'production' && items.length === 0) {
-      console.warn('[Explore] EMPTY AREA FEED DEBUG', {
+      return {
+        items,
+        shorts: items,
+        feedType: 'area',
+        hasMore: rows.length === limit,
+        offset: offset + rows.length,
+        metadata: { location },
+      };
+    } catch (error) {
+      console.error('[ExploreFeedService] area feed query failed; serving empty fallback', {
+        message: safeErrorMessage(error),
         location,
         limit,
         offset,
-        returned: items.length,
+      });
+      return buildEmptyFeed('area', offset, {
+        location,
+        degraded: true,
+        fallbackReason: 'query_error',
       });
     }
-
-    return {
-      items,
-      shorts: items,
-      feedType: 'area',
-      hasMore: rows.length === limit,
-      offset: offset + rows.length,
-      metadata: { location },
-    };
   }
 
   async getAgentFeed({ agentId, limit = 20, offset = 0 }: FeedOptions): Promise<FeedResult> {

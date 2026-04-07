@@ -240,14 +240,6 @@ export default function CityPage({
             }}
           />
         }
-        priceInsights={
-          <PropertyInsights
-            level="city"
-            parentId={city.id}
-            contextLabel={city.name}
-            fallbackTabs={(suburbs || []).map((s: any) => ({ id: s.id, name: s.name }))}
-          />
-        }
         // Section 7: Top Localities / Market Insights
         topLocalities={topLocalities}
         topLocalitiesShowcase={

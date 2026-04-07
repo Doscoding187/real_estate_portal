@@ -1,5 +1,6 @@
 CREATE TABLE `activities` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`developer_id` int NOT NULL,
 	`activity_type` varchar(50) NOT NULL,
 	`title` varchar(255) NOT NULL,
@@ -8,13 +9,12 @@ CREATE TABLE `activities` (
 	`related_entity_type` enum('development','unit','lead','campaign','team_member'),
 	`related_entity_id` int,
 	`user_id` int,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `activities_id` PRIMARY KEY(`id`)
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agencies` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(255) NOT NULL,
 	`slug` varchar(255) NOT NULL,
 	`description` text,
@@ -30,13 +30,12 @@ CREATE TABLE `agencies` (
 	`subscriptionExpiry` timestamp,
 	`isVerified` int NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agencies_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agency_branding` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agencyId` int NOT NULL,
 	`primaryColor` varchar(7),
 	`secondaryColor` varchar(7),
@@ -55,13 +54,12 @@ CREATE TABLE `agency_branding` (
 	`socialLinks` text,
 	`isEnabled` int NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agency_branding_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agency_join_requests` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agencyId` int NOT NULL,
 	`userId` int NOT NULL,
 	`status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
@@ -69,13 +67,12 @@ CREATE TABLE `agency_join_requests` (
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`reviewedBy` int,
-	`reviewedAt` timestamp,
-
-	CONSTRAINT `agency_join_requests_id` PRIMARY KEY(`id`)
+	`reviewedAt` timestamp
 );
 --> statement-breakpoint
 CREATE TABLE `agency_subscriptions` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agencyId` int NOT NULL,
 	`planId` int,
 	`stripeSubscriptionId` varchar(100),
@@ -90,26 +87,24 @@ CREATE TABLE `agency_subscriptions` (
 	`endedAt` timestamp,
 	`metadata` text,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agency_subscriptions_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agent_coverage_areas` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agentId` int NOT NULL,
 	`areaName` varchar(255) NOT NULL,
 	`areaType` enum('province','city','suburb','custom_polygon') NOT NULL,
 	`areaData` text NOT NULL,
 	`isActive` int NOT NULL DEFAULT 1,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agent_coverage_areas_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agent_knowledge` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`topic` varchar(200) NOT NULL,
 	`content` text NOT NULL,
 	`category` varchar(100),
@@ -118,26 +113,24 @@ CREATE TABLE `agent_knowledge` (
 	`is_active` int NOT NULL DEFAULT 1,
 	`created_by` int,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agent_knowledge_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agent_memory` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`session_id` varchar(100) NOT NULL,
 	`conversation_id` varchar(100),
 	`user_id` int,
 	`user_input` text NOT NULL,
 	`agent_response` text NOT NULL,
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agent_memory_id` PRIMARY KEY(`id`)
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agent_tasks` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`task_id` varchar(100) NOT NULL,
 	`session_id` varchar(100),
 	`user_id` int,
@@ -150,13 +143,12 @@ CREATE TABLE `agent_tasks` (
 	`started_at` timestamp,
 	`completed_at` timestamp,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agent_tasks_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `agents` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int,
 	`agencyId` int,
 	`firstName` varchar(100) NOT NULL,
@@ -183,13 +175,12 @@ CREATE TABLE `agents` (
 	`approvedBy` int,
 	`approvedAt` timestamp,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `agents_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `amenities` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`location_id` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`type` varchar(100) NOT NULL,
@@ -198,13 +189,12 @@ CREATE TABLE `amenities` (
 	`longitude` varchar(50),
 	`distance` decimal(10,2),
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `amenities_id` PRIMARY KEY(`id`)
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `analytics_aggregations` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`aggregationType` enum('daily','weekly','monthly') NOT NULL,
 	`aggregationDate` varchar(10) NOT NULL,
 	`suburbId` int,
@@ -227,13 +217,12 @@ CREATE TABLE `analytics_aggregations` (
 	`soldProperties` int,
 	`rentedProperties` int,
 	`avgDaysOnMarket` int,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `analytics_aggregations_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `audit_logs` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int NOT NULL,
 	`action` varchar(100) NOT NULL,
 	`targetType` varchar(50),
@@ -241,13 +230,12 @@ CREATE TABLE `audit_logs` (
 	`metadata` text,
 	`ipAddress` varchar(45),
 	`userAgent` text,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `audit_logs_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `billing_transactions` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` int NOT NULL,
 	`subscription_id` int,
 	`transaction_type` enum('subscription_create','subscription_renew','upgrade','downgrade','addon_purchase','refund','failed_payment','trial_conversion') NOT NULL,
@@ -260,13 +248,12 @@ CREATE TABLE `billing_transactions` (
 	`description` text,
 	`metadata` json,
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `billing_transactions_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `boost_campaigns` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`partner_id` varchar(36) NOT NULL,
 	`content_id` varchar(36) NOT NULL,
 	`topic_id` varchar(36) NOT NULL,
@@ -278,22 +265,19 @@ CREATE TABLE `boost_campaigns` (
 	`impressions` int DEFAULT 0,
 	`clicks` int DEFAULT 0,
 	`cost_per_impression` decimal(6,4) DEFAULT '0.10',
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `boost_campaigns_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `boost_credits` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` int NOT NULL,
 	`total_credits` int DEFAULT 0,
 	`used_credits` int DEFAULT 0,
 	`reset_at` timestamp,
 	`expires_at` timestamp,
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `boost_credits_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `bundle_partners` (
@@ -307,6 +291,7 @@ CREATE TABLE `bundle_partners` (
 --> statement-breakpoint
 CREATE TABLE `cities` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`provinceId` int NOT NULL,
 	`name` varchar(150) NOT NULL,
 	`latitude` varchar(20),
@@ -317,13 +302,12 @@ CREATE TABLE `cities` (
 	`slug` varchar(100),
 	`place_id` varchar(255),
 	`seo_title` varchar(255),
-	`seo_description` text,
-
-	CONSTRAINT `cities_id` PRIMARY KEY(`id`)
+	`seo_description` text
 );
 --> statement-breakpoint
 CREATE TABLE `city_price_analytics` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`cityId` int NOT NULL,
 	`provinceId` int NOT NULL,
 	`currentAvgPrice` int,
@@ -340,13 +324,12 @@ CREATE TABLE `city_price_analytics` (
 	`luxurySegmentPercent` int,
 	`midRangePercent` int,
 	`affordablePercent` int,
-	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `city_price_analytics_id` PRIMARY KEY(`id`)
+	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `commissions` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agentId` int NOT NULL,
 	`propertyId` int,
 	`leadId` int,
@@ -358,13 +341,12 @@ CREATE TABLE `commissions` (
 	`payoutDate` timestamp,
 	`paymentReference` varchar(100),
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `commissions_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `content_approval_queue` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`content_id` varchar(36) NOT NULL,
 	`partner_id` varchar(36) NOT NULL,
 	`status` enum('pending','approved','rejected','revision_requested') DEFAULT 'pending',
@@ -372,9 +354,7 @@ CREATE TABLE `content_approval_queue` (
 	`reviewed_at` timestamp,
 	`reviewer_id` varchar(36),
 	`feedback` text,
-	`auto_approval_eligible` tinyint DEFAULT 0,
-
-	CONSTRAINT `content_approval_queue_id` PRIMARY KEY(`id`)
+	`auto_approval_eligible` tinyint DEFAULT 0
 );
 --> statement-breakpoint
 CREATE TABLE `content_quality_scores` (
@@ -396,6 +376,7 @@ CREATE TABLE `content_topics` (
 --> statement-breakpoint
 CREATE TABLE `coupons` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`code` varchar(50) NOT NULL,
 	`stripeCouponId` varchar(100),
 	`name` varchar(100),
@@ -409,13 +390,12 @@ CREATE TABLE `coupons` (
 	`isActive` int NOT NULL DEFAULT 1,
 	`appliesToPlans` text,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `coupons_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `developer_brand_profiles` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`brand_name` varchar(255) NOT NULL,
 	`slug` varchar(255) NOT NULL,
 	`logo_url` text,
@@ -443,13 +423,12 @@ CREATE TABLE `developer_brand_profiles` (
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`identity_type` enum('developer','marketing_agency','hybrid') NOT NULL DEFAULT 'developer',
-	`seed_batch_id` varchar(36),
-
-	CONSTRAINT `developer_brand_profiles_id` PRIMARY KEY(`id`)
+	`seed_batch_id` varchar(36)
 );
 --> statement-breakpoint
 CREATE TABLE `developer_notifications` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`developer_id` int NOT NULL,
 	`user_id` int,
 	`title` varchar(255) NOT NULL,
@@ -459,13 +438,12 @@ CREATE TABLE `developer_notifications` (
 	`read` tinyint NOT NULL DEFAULT 0,
 	`action_url` varchar(500),
 	`metadata` json,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `developer_notifications_id` PRIMARY KEY(`id`)
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `developer_subscription_limits` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`subscription_id` int NOT NULL,
 	`max_developments` int NOT NULL DEFAULT 1,
 	`max_leads_per_month` int NOT NULL DEFAULT 50,
@@ -475,26 +453,24 @@ CREATE TABLE `developer_subscription_limits` (
 	`advanced_analytics_enabled` tinyint NOT NULL DEFAULT 0,
 	`bond_integration_enabled` tinyint NOT NULL DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `developer_subscription_limits_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `developer_subscription_usage` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`subscription_id` int NOT NULL,
 	`developments_count` int NOT NULL DEFAULT 0,
 	`leads_this_month` int NOT NULL DEFAULT 0,
 	`team_members_count` int NOT NULL DEFAULT 0,
 	`last_reset_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `developer_subscription_usage_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `developer_subscriptions` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`developer_id` int NOT NULL,
 	`plan_id` int,
 	`tier` enum('free_trial','basic','premium') NOT NULL DEFAULT 'free_trial',
@@ -505,13 +481,12 @@ CREATE TABLE `developer_subscriptions` (
 	`stripe_subscription_id` varchar(100),
 	`stripe_customer_id` varchar(100),
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `developer_subscriptions_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `developers` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(255) NOT NULL,
 	`description` text,
 	`logo` text,
@@ -545,13 +520,12 @@ CREATE TABLE `developers` (
 	`kpiCache` json,
 	`lastKpiCalculation` timestamp,
 	`slug` varchar(255),
-	`is_trusted` tinyint NOT NULL DEFAULT 0,
-
-	CONSTRAINT `developers_id` PRIMARY KEY(`id`)
+	`is_trusted` tinyint NOT NULL DEFAULT 0
 );
 --> statement-breakpoint
 CREATE TABLE `development_approval_queue` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`development_id` int NOT NULL,
 	`submitted_by` int NOT NULL,
 	`status` enum('pending','reviewing','approved','rejected') NOT NULL DEFAULT 'pending',
@@ -561,13 +535,12 @@ CREATE TABLE `development_approval_queue` (
 	`compliance_checks` json,
 	`submitted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`reviewed_at` timestamp,
-	`reviewed_by` int,
-
-	CONSTRAINT `development_approval_queue_id` PRIMARY KEY(`id`)
+	`reviewed_by` int
 );
 --> statement-breakpoint
 CREATE TABLE `development_drafts` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`developerId` int,
 	`draftName` varchar(255),
 	`draftData` json NOT NULL,
@@ -575,13 +548,12 @@ CREATE TABLE `development_drafts` (
 	`currentStep` int NOT NULL DEFAULT 0,
 	`lastModified` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`developer_brand_profile_id` int,
-
-	CONSTRAINT `development_drafts_id` PRIMARY KEY(`id`)
+	`developer_brand_profile_id` int
 );
 --> statement-breakpoint
 CREATE TABLE `development_lead_routes` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`development_id` int NOT NULL,
 	`source_type` enum('developer_profile','agency_profile','development_page','campaign') NOT NULL,
 	`source_brand_profile_id` int,
@@ -589,13 +561,12 @@ CREATE TABLE `development_lead_routes` (
 	`fallback_brand_profile_id` int,
 	`priority` int NOT NULL DEFAULT 0,
 	`is_active` tinyint NOT NULL DEFAULT 1,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `development_lead_routes_id` PRIMARY KEY(`id`)
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `development_phases` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`development_id` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`phase_number` int NOT NULL,
@@ -614,13 +585,12 @@ CREATE TABLE `development_phases` (
 	`finishing_differences` json,
 	`phase_highlights` json,
 	`latitude` decimal(10,7),
-	`longitude` decimal(10,7),
-
-	CONSTRAINT `development_phases_id` PRIMARY KEY(`id`)
+	`longitude` decimal(10,7)
 );
 --> statement-breakpoint
 CREATE TABLE `development_units` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`development_id` int NOT NULL,
 	`phase_id` int,
 	`unit_number` varchar(100) NOT NULL,
@@ -638,13 +608,12 @@ CREATE TABLE `development_units` (
 	`reserved_by` int,
 	`sold_at` timestamp,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `development_units_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `developments` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`developer_id` int,
 	`name` varchar(255) NOT NULL,
 	`description` text,
@@ -719,13 +688,12 @@ CREATE TABLE `developments` (
 	`auction_start_date` datetime,
 	`auction_end_date` datetime,
 	`starting_bid_from` decimal(15,2),
-	`reserve_price_from` decimal(15,2),
-
-	CONSTRAINT `developments_id` PRIMARY KEY(`id`)
+	`reserve_price_from` decimal(15,2)
 );
 --> statement-breakpoint
 CREATE TABLE `email_templates` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`templateKey` varchar(100) NOT NULL,
 	`subject` varchar(255) NOT NULL,
 	`htmlContent` text NOT NULL,
@@ -733,23 +701,21 @@ CREATE TABLE `email_templates` (
 	`agencyId` int,
 	`isActive` int NOT NULL DEFAULT 1,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `email_templates_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `exploreComments` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
 	`comment` text NOT NULL,
-	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `exploreComments_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `explore_content` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`content_type` varchar(50) NOT NULL,
 	`reference_id` int NOT NULL,
 	`creator_id` int,
@@ -771,22 +737,20 @@ CREATE TABLE `explore_content` (
 	`is_active` tinyint DEFAULT 1,
 	`is_featured` tinyint DEFAULT 0,
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `explore_content_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `exploreFollows` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`followerId` int NOT NULL,
 	`followingId` int NOT NULL,
-	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `exploreFollows_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `explore_highlight_tags` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`tag_key` varchar(50) NOT NULL,
 	`label` varchar(100) NOT NULL,
 	`icon` varchar(50),
@@ -794,13 +758,12 @@ CREATE TABLE `explore_highlight_tags` (
 	`category` varchar(50),
 	`display_order` int NOT NULL DEFAULT 0,
 	`is_active` tinyint NOT NULL DEFAULT 1,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `explore_highlight_tags_id` PRIMARY KEY(`id`)
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `explore_interactions` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`short_id` int NOT NULL,
 	`user_id` int,
 	`session_id` varchar(255) NOT NULL,
@@ -812,22 +775,20 @@ CREATE TABLE `explore_interactions` (
 	`device_type` enum('mobile','tablet','desktop') NOT NULL,
 	`user_agent` text,
 	`ip_address` varchar(45),
-	`metadata` json,
-
-	CONSTRAINT `explore_interactions_id` PRIMARY KEY(`id`)
+	`metadata` json
 );
 --> statement-breakpoint
 CREATE TABLE `exploreLikes` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
-	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `exploreLikes_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `explore_partners` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` varchar(36) NOT NULL,
 	`tier_id` int NOT NULL,
 	`company_name` varchar(255) NOT NULL,
@@ -838,13 +799,12 @@ CREATE TABLE `explore_partners` (
 	`service_locations` json,
 	`approved_content_count` int DEFAULT 0,
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `explore_partners_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `explore_shorts` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`listing_id` int,
 	`development_id` int,
 	`agent_id` int,
@@ -874,13 +834,12 @@ CREATE TABLE `explore_shorts` (
 	`is_featured` tinyint NOT NULL DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`published_at` timestamp,
-
-	CONSTRAINT `explore_shorts_id` PRIMARY KEY(`id`)
+	`published_at` timestamp
 );
 --> statement-breakpoint
 CREATE TABLE `explore_user_preferences` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` int NOT NULL,
 	`preferred_locations` json,
 	`budget_min` int,
@@ -890,22 +849,20 @@ CREATE TABLE `explore_user_preferences` (
 	`saved_properties` json,
 	`inferred_preferences` json,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `explore_user_preferences_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `exploreVideoViews` (
 	`id` varchar(191) NOT NULL,
+	PRIMARY KEY (`id`),
 	`videoId` varchar(191) NOT NULL,
 	`userId` int NOT NULL,
-	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `exploreVideoViews_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `exploreVideos` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agentId` int,
 	`propertyId` int,
 	`developmentId` int,
@@ -920,18 +877,15 @@ CREATE TABLE `exploreVideos` (
 	`isPublished` int NOT NULL DEFAULT 1,
 	`isFeatured` int NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `exploreVideos_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `favorites` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int NOT NULL,
 	`propertyId` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `favorites_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `founding_partners` (
@@ -947,6 +901,7 @@ CREATE TABLE `founding_partners` (
 --> statement-breakpoint
 CREATE TABLE `hero_campaigns` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`location_type` enum('province','city','suburb') NOT NULL,
 	`target_slug` varchar(255) NOT NULL,
 	`image_url` varchar(1024) NOT NULL,
@@ -955,13 +910,12 @@ CREATE TABLE `hero_campaigns` (
 	`start_date` timestamp,
 	`end_date` timestamp,
 	`is_active` tinyint NOT NULL DEFAULT 1,
-	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `hero_campaigns_id` PRIMARY KEY(`id`)
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `invitations` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agencyId` int NOT NULL,
 	`invitedBy` int NOT NULL,
 	`email` varchar(320) NOT NULL,
@@ -972,13 +926,12 @@ CREATE TABLE `invitations` (
 	`acceptedAt` timestamp,
 	`acceptedBy` int,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `invitations_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `invites` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agencyId` int NOT NULL,
 	`email` varchar(255) NOT NULL,
 	`token` varchar(255) NOT NULL,
@@ -987,13 +940,12 @@ CREATE TABLE `invites` (
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`used` int NOT NULL,
 	`usedAt` timestamp,
-	`usedBy` int,
-
-	CONSTRAINT `invites_id` PRIMARY KEY(`id`)
+	`usedBy` int
 );
 --> statement-breakpoint
 CREATE TABLE `invoices` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agencyId` int NOT NULL,
 	`subscriptionId` int,
 	`stripeInvoiceId` varchar(100),
@@ -1012,36 +964,33 @@ CREATE TABLE `invoices` (
 	`dueDate` timestamp,
 	`metadata` text,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `invoices_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `launch_content_quotas` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`content_type` varchar(50) NOT NULL,
 	`required_count` int NOT NULL,
 	`current_count` int DEFAULT 0,
-	`last_updated` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `launch_content_quotas_id` PRIMARY KEY(`id`)
+	`last_updated` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `launch_metrics` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`metric_date` date NOT NULL,
 	`topic_engagement_rate` decimal(5,2),
 	`partner_content_watch_rate` decimal(5,2),
 	`save_share_rate` decimal(5,2),
 	`weekly_visits_per_user` decimal(5,2),
 	`algorithm_confidence_score` decimal(5,2),
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `launch_metrics_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `launch_phases` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`phase` enum('pre_launch','launch_period','ramp_up','ecosystem_maturity') NOT NULL,
 	`start_date` date NOT NULL,
 	`end_date` date,
@@ -1049,25 +998,23 @@ CREATE TABLE `launch_phases` (
 	`algorithm_weight` decimal(3,2) DEFAULT '0.00',
 	`editorial_weight` decimal(3,2) DEFAULT '1.00',
 	`is_active` tinyint DEFAULT 0,
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `launch_phases_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `lead_activities` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`leadId` int NOT NULL,
 	`agentId` int,
 	`activityType` enum('call','email','meeting','note','status_change','viewing_scheduled','offer_sent') NOT NULL,
 	`description` text,
 	`metadata` text,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `lead_activities_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `leads` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`propertyId` int,
 	`developmentId` int,
 	`agencyId` int,
@@ -1099,13 +1046,12 @@ CREATE TABLE `leads` (
 	`lost_reason` text,
 	`developer_brand_profile_id` int,
 	`brand_lead_status` enum('captured','delivered_unsubscribed','delivered_subscriber','claimed') DEFAULT 'captured',
-	`lead_delivery_method` enum('email','crm_export','manual','none') DEFAULT 'email',
-
-	CONSTRAINT `leads_id` PRIMARY KEY(`id`)
+	`lead_delivery_method` enum('email','crm_export','manual','none') DEFAULT 'email'
 );
 --> statement-breakpoint
 CREATE TABLE `listing_analytics` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`listingId` int NOT NULL,
 	`totalViews` int NOT NULL DEFAULT 0,
 	`uniqueVisitors` int NOT NULL DEFAULT 0,
@@ -1122,13 +1068,12 @@ CREATE TABLE `listing_analytics` (
 	`conversionRate` decimal(5,2),
 	`leadConversionRate` decimal(5,2),
 	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `listing_analytics_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `listing_approval_queue` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`listingId` int NOT NULL,
 	`submittedBy` int NOT NULL,
 	`submittedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1140,13 +1085,12 @@ CREATE TABLE `listing_approval_queue` (
 	`rejectionReason` text,
 	`complianceChecks` json,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `listing_approval_queue_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `listing_leads` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`listingId` int NOT NULL,
 	`name` varchar(200) NOT NULL,
 	`email` varchar(320),
@@ -1165,13 +1109,12 @@ CREATE TABLE `listing_leads` (
 	`crmSyncedAt` timestamp,
 	`crmId` varchar(255),
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `listing_leads_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `listing_media` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`listingId` int NOT NULL,
 	`mediaType` enum('image','video','floorplan','pdf') NOT NULL,
 	`originalUrl` text NOT NULL,
@@ -1192,13 +1135,12 @@ CREATE TABLE `listing_media` (
 	`processingError` text,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`uploadedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`processedAt` timestamp,
-
-	CONSTRAINT `listing_media_id` PRIMARY KEY(`id`)
+	`processedAt` timestamp
 );
 --> statement-breakpoint
 CREATE TABLE `listing_settings` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`autoPublishForVerifiedAccounts` int NOT NULL DEFAULT 0,
 	`maxImagesPerListing` int NOT NULL DEFAULT 30,
 	`maxVideosPerListing` int NOT NULL DEFAULT 5,
@@ -1215,13 +1157,12 @@ CREATE TABLE `listing_settings` (
 	`newListingNotificationsEnabled` int NOT NULL DEFAULT 1,
 	`leadNotificationsEnabled` int NOT NULL DEFAULT 1,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`updatedBy` int,
-
-	CONSTRAINT `listing_settings_id` PRIMARY KEY(`id`)
+	`updatedBy` int
 );
 --> statement-breakpoint
 CREATE TABLE `listing_viewings` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`listingId` int NOT NULL,
 	`leadId` int,
 	`scheduledDate` timestamp NOT NULL,
@@ -1237,13 +1178,12 @@ CREATE TABLE `listing_viewings` (
 	`reminderSent` int DEFAULT 0,
 	`confirmationSent` int DEFAULT 0,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `listing_viewings_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `listings` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`ownerId` int NOT NULL,
 	`agentId` int,
 	`agencyId` int,
@@ -1295,24 +1235,22 @@ CREATE TABLE `listings` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`publishedAt` timestamp,
 	`archivedAt` timestamp,
-	`location_id` int,
-
-	CONSTRAINT `listings_id` PRIMARY KEY(`id`)
+	`location_id` int
 );
 --> statement-breakpoint
 CREATE TABLE `location_search_cache` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`searchQuery` varchar(255) NOT NULL,
 	`searchType` enum('province','city','suburb','address','all') NOT NULL,
 	`resultsJSON` text NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`expiresAt` timestamp NOT NULL,
-
-	CONSTRAINT `location_search_cache_id` PRIMARY KEY(`id`)
+	`expiresAt` timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `locations` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(200) NOT NULL,
 	`slug` varchar(200) NOT NULL,
 	`type` enum('province','city','suburb','neighborhood') NOT NULL,
@@ -1330,38 +1268,35 @@ CREATE TABLE `locations` (
 	`viewport_sw_lng` decimal(11,8),
 	`seo_title` varchar(255),
 	`seo_description` text,
-	`hero_image` varchar(500),
-
-	CONSTRAINT `locations_id` PRIMARY KEY(`id`)
+	`hero_image` varchar(500)
 );
 --> statement-breakpoint
 CREATE TABLE `market_insights_cache` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`cacheKey` varchar(255) NOT NULL,
 	`cacheData` text NOT NULL,
 	`cacheType` enum('suburb_heatmap','city_trends','popular_areas','price_predictions','user_recommendations') NOT NULL,
 	`expiresAt` timestamp NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `market_insights_cache_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `marketplace_bundles` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`slug` varchar(100) NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`description` text,
 	`target_audience` varchar(100),
 	`is_active` tinyint DEFAULT 1,
 	`display_order` int DEFAULT 0,
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `marketplace_bundles_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `notifications` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int NOT NULL,
 	`type` enum('lead_assigned','offer_received','showing_scheduled','system_alert') NOT NULL,
 	`title` varchar(255) NOT NULL,
@@ -1369,13 +1304,12 @@ CREATE TABLE `notifications` (
 	`data` text,
 	`isRead` int NOT NULL,
 	`readAt` timestamp,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `notifications_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `offers` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`propertyId` int NOT NULL,
 	`leadId` int,
 	`agentId` int,
@@ -1388,13 +1322,12 @@ CREATE TABLE `offers` (
 	`expiresAt` timestamp,
 	`respondedAt` timestamp,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `offers_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `partner_leads` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`partner_id` varchar(36) NOT NULL,
 	`user_id` varchar(36) NOT NULL,
 	`content_id` varchar(36),
@@ -1405,13 +1338,12 @@ CREATE TABLE `partner_leads` (
 	`intent_details` text,
 	`dispute_reason` text,
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `partner_leads_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `partner_subscriptions` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`partner_id` varchar(36) NOT NULL,
 	`tier` enum('free','basic','premium','featured') NOT NULL,
 	`price_monthly` decimal(10,2) NOT NULL,
@@ -1419,25 +1351,23 @@ CREATE TABLE `partner_subscriptions` (
 	`end_date` date,
 	`status` enum('active','cancelled','expired') DEFAULT 'active',
 	`features` json NOT NULL,
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `partner_subscriptions_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `partner_tiers` (
 	`id` int NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(100) NOT NULL,
 	`allowed_content_types` json NOT NULL,
 	`allowed_ctas` json NOT NULL,
 	`requires_credentials` tinyint DEFAULT 0,
 	`max_monthly_content` int DEFAULT 10,
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `partner_tiers_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `partners` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(255) NOT NULL,
 	`category` enum('mortgage_broker','lawyer','photographer','inspector','mover','other') NOT NULL,
 	`description` text,
@@ -1447,13 +1377,12 @@ CREATE TABLE `partners` (
 	`phone` varchar(50),
 	`is_verified` int NOT NULL DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `partners_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `payment_methods` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agencyId` int NOT NULL,
 	`stripePaymentMethodId` varchar(100),
 	`type` enum('card','bank_account') NOT NULL DEFAULT 'card',
@@ -1467,13 +1396,12 @@ CREATE TABLE `payment_methods` (
 	`isActive` int NOT NULL DEFAULT 1,
 	`metadata` text,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `payment_methods_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `plans` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(100) NOT NULL,
 	`displayName` varchar(100) NOT NULL,
 	`description` text,
@@ -1487,13 +1415,12 @@ CREATE TABLE `plans` (
 	`isPopular` int NOT NULL,
 	`sortOrder` int NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `plans_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `platform_settings` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`key` varchar(100) NOT NULL,
 	`value` text NOT NULL,
 	`description` text,
@@ -1501,13 +1428,12 @@ CREATE TABLE `platform_settings` (
 	`isPublic` int NOT NULL,
 	`updatedBy` int,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `platform_settings_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `price_analytics` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`locationId` int NOT NULL,
 	`locationType` enum('suburb','city','province') NOT NULL,
 	`currentAvgPrice` int,
@@ -1533,13 +1459,12 @@ CREATE TABLE `price_analytics` (
 	`priceVolatility` int,
 	`marketMomentum` int,
 	`investmentScore` int,
-	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `price_analytics_id` PRIMARY KEY(`id`)
+	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `price_history` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`propertyId` int NOT NULL,
 	`suburbId` int,
 	`cityId` int,
@@ -1551,13 +1476,12 @@ CREATE TABLE `price_history` (
 	`recordedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`source` enum('new_listing','price_change','sold','rented','market_update') NOT NULL DEFAULT 'market_update',
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `price_history_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `price_predictions` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`propertyId` int,
 	`suburbId` int,
 	`cityId` int,
@@ -1573,13 +1497,12 @@ CREATE TABLE `price_predictions` (
 	`predictionError` int,
 	`predictionAccuracy` int,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`validatedAt` timestamp,
-
-	CONSTRAINT `price_predictions_id` PRIMARY KEY(`id`)
+	`validatedAt` timestamp
 );
 --> statement-breakpoint
 CREATE TABLE `properties` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`title` varchar(255) NOT NULL,
 	`description` text NOT NULL,
 	`propertyType` enum('apartment','house','villa','plot','commercial','townhouse','cluster_home','farm','shared_living') NOT NULL,
@@ -1618,24 +1541,22 @@ CREATE TABLE `properties` (
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`location_id` int,
-	`developer_brand_profile_id` int,
-
-	CONSTRAINT `properties_id` PRIMARY KEY(`id`)
+	`developer_brand_profile_id` int
 );
 --> statement-breakpoint
 CREATE TABLE `propertyImages` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`propertyId` int NOT NULL,
 	`imageUrl` text NOT NULL,
 	`isPrimary` int NOT NULL,
 	`displayOrder` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `propertyImages_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `property_similarity_index` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`propertyId1` int NOT NULL,
 	`propertyId2` int NOT NULL,
 	`locationSimilarity` int,
@@ -1644,22 +1565,20 @@ CREATE TABLE `property_similarity_index` (
 	`featureSimilarity` int,
 	`overallSimilarity` int,
 	`similarityReason` text,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `property_similarity_index_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `prospect_favorites` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`prospectId` int NOT NULL,
 	`propertyId` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `prospect_favorites_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `prospects` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`sessionId` varchar(255) NOT NULL,
 	`email` varchar(320),
 	`phone` varchar(50),
@@ -1687,13 +1606,12 @@ CREATE TABLE `prospects` (
 	`userAgent` text,
 	`referrer` text,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `prospects_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `provinces` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(100) NOT NULL,
 	`code` varchar(10) NOT NULL,
 	`latitude` varchar(20),
@@ -1703,22 +1621,20 @@ CREATE TABLE `provinces` (
 	`slug` varchar(100),
 	`place_id` varchar(255),
 	`seo_title` varchar(255),
-	`seo_description` text,
-
-	CONSTRAINT `provinces_id` PRIMARY KEY(`id`)
+	`seo_description` text
 );
 --> statement-breakpoint
 CREATE TABLE `recently_viewed` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`prospectId` int NOT NULL,
 	`propertyId` int NOT NULL,
-	`viewedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `recently_viewed_id` PRIMARY KEY(`id`)
+	`viewedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `reviews` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int NOT NULL,
 	`reviewType` enum('agent','developer','property') NOT NULL,
 	`targetId` int NOT NULL,
@@ -1728,26 +1644,24 @@ CREATE TABLE `reviews` (
 	`isVerified` int NOT NULL,
 	`isPublished` int NOT NULL DEFAULT 1,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `reviews_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `saved_searches` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`criteria` json NOT NULL,
 	`notificationFrequency` enum('never','daily','weekly') DEFAULT 'never',
 	`lastNotifiedAt` timestamp,
 	`createdAt` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `saved_searches_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `scheduled_viewings` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`prospectId` int NOT NULL,
 	`propertyId` int NOT NULL,
 	`agentId` int,
@@ -1759,13 +1673,12 @@ CREATE TABLE `scheduled_viewings` (
 	`prospectPhone` varchar(50),
 	`notificationSent` int,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `scheduled_viewings_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `services` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`name` varchar(255) NOT NULL,
 	`category` enum('home_loan','insurance','interior_design','legal','moving','other') NOT NULL,
 	`description` text,
@@ -1777,13 +1690,12 @@ CREATE TABLE `services` (
 	`isActive` int NOT NULL DEFAULT 1,
 	`isFeatured` int NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `services_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `showings` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`propertyId` int NOT NULL,
 	`leadId` int,
 	`agentId` int,
@@ -1791,25 +1703,23 @@ CREATE TABLE `showings` (
 	`status` enum('requested','confirmed','completed','cancelled') NOT NULL DEFAULT 'requested',
 	`notes` text,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `showings_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `subscription_events` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` int NOT NULL,
 	`subscription_id` int,
 	`event_type` enum('trial_started','trial_expiring_soon','trial_expired','subscription_created','subscription_renewed','subscription_upgraded','subscription_downgraded','subscription_cancelled','payment_succeeded','payment_failed','feature_locked','limit_reached') NOT NULL,
 	`event_data` json,
 	`metadata` json,
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `subscription_events_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `subscription_plans` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`plan_id` varchar(100) NOT NULL,
 	`category` enum('agent','agency','developer') NOT NULL,
 	`name` varchar(100) NOT NULL,
@@ -1831,13 +1741,12 @@ CREATE TABLE `subscription_plans` (
 	`stripe_price_id` varchar(255),
 	`paystack_plan_code` varchar(255),
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `subscription_plans_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `subscription_usage` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` int NOT NULL,
 	`subscription_id` int NOT NULL,
 	`period_start` timestamp NOT NULL,
@@ -1851,13 +1760,12 @@ CREATE TABLE `subscription_usage` (
 	`crm_contacts` int DEFAULT 0,
 	`emails_sent` int DEFAULT 0,
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `subscription_usage_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `suburb_price_analytics` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`suburbId` int NOT NULL,
 	`cityId` int NOT NULL,
 	`provinceId` int NOT NULL,
@@ -1874,13 +1782,12 @@ CREATE TABLE `suburb_price_analytics` (
 	`oneMonthGrowthPercent` int,
 	`trendingDirection` enum('up','down','stable') NOT NULL DEFAULT 'stable',
 	`trendConfidence` int,
-	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `suburb_price_analytics_id` PRIMARY KEY(`id`)
+	`lastUpdated` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `suburbs` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`cityId` int NOT NULL,
 	`name` varchar(200) NOT NULL,
 	`latitude` varchar(20),
@@ -1888,13 +1795,12 @@ CREATE TABLE `suburbs` (
 	`postalCode` varchar(10),
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`slug` varchar(100),
-
-	CONSTRAINT `suburbs_id` PRIMARY KEY(`id`)
+	`slug` varchar(100)
 );
 --> statement-breakpoint
 CREATE TABLE `topics` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`slug` varchar(100) NOT NULL,
 	`name` varchar(100) NOT NULL,
 	`description` text,
@@ -1904,13 +1810,12 @@ CREATE TABLE `topics` (
 	`content_tags` json,
 	`property_features` json,
 	`partner_categories` json,
-	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `topics_id` PRIMARY KEY(`id`)
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `unit_types` (
 	`id` varchar(36) NOT NULL,
+	PRIMARY KEY (`id`),
 	`development_id` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`bedrooms` int NOT NULL,
@@ -1962,13 +1867,12 @@ CREATE TABLE `unit_types` (
 	`reserve_price` decimal(15,2),
 	`auction_start_date` datetime,
 	`auction_end_date` datetime,
-	`auction_status` enum('scheduled','active','sold','passed_in','withdrawn') DEFAULT 'scheduled',
-
-	CONSTRAINT `unit_types_id` PRIMARY KEY(`id`)
+	`auction_status` enum('scheduled','active','sold','passed_in','withdrawn') DEFAULT 'scheduled'
 );
 --> statement-breakpoint
 CREATE TABLE `user_behavior_events` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int,
 	`sessionId` varchar(255) NOT NULL,
 	`eventType` enum('property_view','search','save_property','contact_agent','map_interaction','price_filter','location_filter','property_type_filter') NOT NULL,
@@ -1985,9 +1889,7 @@ CREATE TABLE `user_behavior_events` (
 	`referrer` varchar(500),
 	`userAgent` text,
 	`ipAddress` varchar(45),
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `user_behavior_events_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `user_onboarding_state` (
@@ -2007,6 +1909,7 @@ CREATE TABLE `user_onboarding_state` (
 --> statement-breakpoint
 CREATE TABLE `user_preferences` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int NOT NULL,
 	`preferredPropertyTypes` text,
 	`preferredPriceMin` int,
@@ -2035,13 +1938,12 @@ CREATE TABLE `user_preferences` (
 	`sizeWeight` int DEFAULT 20,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`lastUsed` timestamp,
-
-	CONSTRAINT `user_preferences_id` PRIMARY KEY(`id`)
+	`lastUsed` timestamp
 );
 --> statement-breakpoint
 CREATE TABLE `user_recommendations` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`userId` int NOT NULL,
 	`preferredSuburbs` text,
 	`preferredCities` text,
@@ -2054,13 +1956,12 @@ CREATE TABLE `user_recommendations` (
 	`recommendationClickCount` int,
 	`recommendationConversionCount` int,
 	`lastRecommendationUpdate` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `user_recommendations_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `user_subscriptions` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`user_id` int NOT NULL,
 	`plan_id` varchar(100) NOT NULL,
 	`status` enum('trial_active','trial_expired','active_paid','past_due','cancelled','downgraded','grace_period') NOT NULL DEFAULT 'trial_active',
@@ -2085,13 +1986,12 @@ CREATE TABLE `user_subscriptions` (
 	`downgrade_to_plan_id` varchar(100),
 	`downgrade_effective_date` timestamp,
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `user_subscriptions_id` PRIMARY KEY(`id`)
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `users` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`openId` varchar(64),
 	`email` varchar(320),
 	`passwordHash` varchar(255),
@@ -2109,22 +2009,20 @@ CREATE TABLE `users` (
 	`lastSignedIn` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`passwordResetToken` varchar(255),
 	`passwordResetTokenExpiresAt` timestamp,
-	`emailVerificationToken` varchar(255),
-
-	CONSTRAINT `users_id` PRIMARY KEY(`id`)
+	`emailVerificationToken` varchar(255)
 );
 --> statement-breakpoint
 CREATE TABLE `video_likes` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`videoId` int NOT NULL,
 	`userId` int NOT NULL,
-	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-	CONSTRAINT `video_likes_id` PRIMARY KEY(`id`)
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `videos` (
 	`id` int AUTO_INCREMENT NOT NULL,
+	PRIMARY KEY (`id`),
 	`agentId` int,
 	`propertyId` int,
 	`developmentId` int,
@@ -2138,9 +2036,7 @@ CREATE TABLE `videos` (
 	`isPublished` tinyint NOT NULL DEFAULT 1,
 	`isFeatured` int NOT NULL DEFAULT 0,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-
-	CONSTRAINT `videos_id` PRIMARY KEY(`id`)
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 ALTER TABLE `activities` ADD CONSTRAINT `activities_developer_id_developers_id_fk` FOREIGN KEY (`developer_id`) REFERENCES `developers`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -2177,12 +2073,12 @@ ALTER TABLE `commissions` ADD CONSTRAINT `commissions_propertyId_properties_id_f
 ALTER TABLE `commissions` ADD CONSTRAINT `commissions_leadId_leads_id_fk` FOREIGN KEY (`leadId`) REFERENCES `leads`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `content_approval_queue` ADD CONSTRAINT `content_approval_queue_partner_id_explore_partners_id_fk` FOREIGN KEY (`partner_id`) REFERENCES `explore_partners`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `content_topics` ADD CONSTRAINT `content_topics_topic_id_topics_id_fk` FOREIGN KEY (`topic_id`) REFERENCES `topics`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developer_brand_profiles` ADD CONSTRAINT `fk_dev_brand_linked_dev` FOREIGN KEY (`linked_developer_account_id`) REFERENCES `developers`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developer_brand_profiles` ADD CONSTRAINT `dev_brand_profiles_linked_dev_id_fk` FOREIGN KEY (`linked_developer_account_id`) REFERENCES `developers`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_brand_profiles` ADD CONSTRAINT `developer_brand_profiles_created_by_users_id_fk` FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_notifications` ADD CONSTRAINT `developer_notifications_developer_id_developers_id_fk` FOREIGN KEY (`developer_id`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_notifications` ADD CONSTRAINT `developer_notifications_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developer_subscription_limits` ADD CONSTRAINT `fk_dev_sub_lim_sub` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developer_subscription_usage` ADD CONSTRAINT `fk_dev_sub_use_sub` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developer_subscription_limits` ADD CONSTRAINT `dev_sub_limits_sub_id_fk` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developer_subscription_usage` ADD CONSTRAINT `dev_sub_usage_sub_id_fk` FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_subscriptions` ADD CONSTRAINT `developer_subscriptions_developer_id_developers_id_fk` FOREIGN KEY (`developer_id`) REFERENCES `developers`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_subscriptions` ADD CONSTRAINT `developer_subscriptions_plan_id_plans_id_fk` FOREIGN KEY (`plan_id`) REFERENCES `plans`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developers` ADD CONSTRAINT `developers_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -2192,17 +2088,17 @@ ALTER TABLE `development_approval_queue` ADD CONSTRAINT `development_approval_qu
 ALTER TABLE `development_approval_queue` ADD CONSTRAINT `development_approval_queue_submitted_by_users_id_fk` FOREIGN KEY (`submitted_by`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_approval_queue` ADD CONSTRAINT `development_approval_queue_reviewed_by_users_id_fk` FOREIGN KEY (`reviewed_by`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_drafts` ADD CONSTRAINT `development_drafts_developerId_developers_id_fk` FOREIGN KEY (`developerId`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `development_drafts` ADD CONSTRAINT `fk_dev_drafts_brand_profile` FOREIGN KEY (`developer_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `development_drafts` ADD CONSTRAINT `dev_drafts_brand_profile_id_fk` FOREIGN KEY (`developer_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_lead_routes` ADD CONSTRAINT `development_lead_routes_development_id_developments_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `development_lead_routes` ADD CONSTRAINT `fk_dev_lead_routes_src_brand` FOREIGN KEY (`source_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `development_lead_routes` ADD CONSTRAINT `fk_dev_lead_routes_recv_brand` FOREIGN KEY (`receiver_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `development_lead_routes` ADD CONSTRAINT `fk_dev_lead_routes_fallback_brand` FOREIGN KEY (`fallback_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `development_lead_routes` ADD CONSTRAINT `dev_lead_routes_source_brand_fk` FOREIGN KEY (`source_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `development_lead_routes` ADD CONSTRAINT `dev_lead_routes_receiver_brand_fk` FOREIGN KEY (`receiver_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `development_lead_routes` ADD CONSTRAINT `dev_lead_routes_fallback_brand_fk` FOREIGN KEY (`fallback_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_phases` ADD CONSTRAINT `development_phases_development_id_developments_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_units` ADD CONSTRAINT `development_units_development_id_developments_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_units` ADD CONSTRAINT `development_units_phase_id_development_phases_id_fk` FOREIGN KEY (`phase_id`) REFERENCES `development_phases`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developments` ADD CONSTRAINT `developments_developer_id_developers_id_fk` FOREIGN KEY (`developer_id`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developments` ADD CONSTRAINT `fk_developments_dev_brand_profile` FOREIGN KEY (`developer_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `developments` ADD CONSTRAINT `fk_developments_mkt_brand_profile` FOREIGN KEY (`marketing_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developments` ADD CONSTRAINT `developments_dev_brand_profile_fk` FOREIGN KEY (`developer_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `developments` ADD CONSTRAINT `developments_mkt_brand_profile_fk` FOREIGN KEY (`marketing_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `email_templates` ADD CONSTRAINT `email_templates_agencyId_agencies_id_fk` FOREIGN KEY (`agencyId`) REFERENCES `agencies`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `explore_partners` ADD CONSTRAINT `explore_partners_tier_id_partner_tiers_id_fk` FOREIGN KEY (`tier_id`) REFERENCES `partner_tiers`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `favorites` ADD CONSTRAINT `favorites_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -2247,7 +2143,7 @@ ALTER TABLE `properties` ADD CONSTRAINT `properties_agentId_agents_id_fk` FOREIG
 ALTER TABLE `properties` ADD CONSTRAINT `properties_developmentId_developments_id_fk` FOREIGN KEY (`developmentId`) REFERENCES `developments`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `properties` ADD CONSTRAINT `properties_ownerId_users_id_fk` FOREIGN KEY (`ownerId`) REFERENCES `users`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `properties` ADD CONSTRAINT `properties_location_id_locations_id_fk` FOREIGN KEY (`location_id`) REFERENCES `locations`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `properties` ADD CONSTRAINT `fk_properties_dev_brand_profile` FOREIGN KEY (`developer_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `properties` ADD CONSTRAINT `properties_dev_brand_profile_fk` FOREIGN KEY (`developer_brand_profile_id`) REFERENCES `developer_brand_profiles`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `propertyImages` ADD CONSTRAINT `propertyImages_propertyId_properties_id_fk` FOREIGN KEY (`propertyId`) REFERENCES `properties`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `property_similarity_index` ADD CONSTRAINT `property_similarity_index_propertyId1_properties_id_fk` FOREIGN KEY (`propertyId1`) REFERENCES `properties`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `property_similarity_index` ADD CONSTRAINT `property_similarity_index_propertyId2_properties_id_fk` FOREIGN KEY (`propertyId2`) REFERENCES `properties`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -2413,6 +2309,5 @@ CREATE INDEX `email_idx` ON `users` (`email`);--> statement-breakpoint
 CREATE INDEX `role_idx` ON `users` (`role`);--> statement-breakpoint
 CREATE ALGORITHM = undefined
 SQL SECURITY definer
-VIEW `price_facts` AS (SELECT 1 AS `sourceType`,1 AS `sourceId`,1 AS `developmentId`,1 AS `province`,1 AS `created_at`,1 AS `locationId`,1 AS `cityLocationId`,1 AS `suburbLocationId`,1 AS `priceAmount`,1 AS `areaM2`,1 AS `offerKind`,1 AS `isActive`);
-
-
+VIEW `price_facts` AS (SELECT 1 AS `sourceType`,1 AS `sourceId`,1 AS `developmentId`,1 AS `province`,1 AS `created_at`,1 AS `locationId`,1 AS `cityLocationId`,1 AS `suburbLocationId`,1 AS `priceAmount`,1 AS `areaM2`,1 AS `offerKind`,1 AS `isActive`)
+;

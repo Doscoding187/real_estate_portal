@@ -500,9 +500,20 @@ async function filterListingsByPlaceIdDirect(
 export async function trackLocationSearch(locationId: number, userId?: number): Promise<void> {
   const db = await getDb();
 
-  await db.insert(locationSearches).values({
-    locationId,
-    userId: userId ?? null,
-    // searchedAt default CURRENT_TIMESTAMP
-  });
+  try {
+    await db.insert(locationSearches).values({
+      locationId,
+      userId: userId ?? null,
+      // searchedAt default CURRENT_TIMESTAMP
+    });
+  } catch (error) {
+    // Search/discovery must not fail if analytics tracking cannot persist
+    // (eg. randomized or stale location ids in tests/property-based inputs).
+    console.warn('[GlobalSearch] trackLocationSearch skipped', {
+      locationId,
+      userId: userId ?? null,
+      message: (error as any)?.message || String(error),
+      code: (error as any)?.code || null,
+    });
+  }
 }

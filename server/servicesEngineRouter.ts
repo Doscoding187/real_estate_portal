@@ -24,7 +24,12 @@ const intentStageSchema = z.enum([
   'general',
 ]);
 
-const sourceSurfaceSchema = z.enum(['directory', 'explore', 'journey_injection', 'agent_dashboard']);
+const sourceSurfaceSchema = z.enum([
+  'directory',
+  'explore',
+  'journey_injection',
+  'agent_dashboard',
+]);
 const leadStatusSchema = z.enum(['new', 'accepted', 'quoted', 'won', 'lost', 'expired']);
 const leadInteractionEventTypeSchema = z.enum([
   'recommendations_shown',
@@ -58,6 +63,15 @@ async function requireProviderId(userId: number): Promise<string> {
     });
   }
   return String(provider.id);
+}
+
+function requireProviderRole(role: string | null | undefined) {
+  if (role !== 'service_provider') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Partner access is limited to service provider accounts.',
+    });
+  }
 }
 
 export const servicesEngineRouter = router({
@@ -111,6 +125,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       return servicesEngineService.upsertProviderIdentity({
         userId: user.id,
         companyName: input.companyName,
@@ -137,6 +152,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.upsertProviderProfile(providerId, {
         headline: input.headline ?? null,
@@ -171,6 +187,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.replaceProviderServices(providerId, input.services);
     }),
@@ -193,6 +210,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.replaceProviderLocations(providerId, input.locations);
     }),
@@ -225,7 +243,9 @@ export const servicesEngineRouter = router({
         limit: z.number().int().min(1).max(200).optional(),
       }),
     )
-    .query(({ input }) => servicesEngineService.getProviderReviews(input.providerId, input.limit || 50)),
+    .query(({ input }) =>
+      servicesEngineService.getProviderReviews(input.providerId, input.limit || 50),
+    ),
 
   recommendProviders: publicProcedure
     .input(
@@ -308,12 +328,14 @@ export const servicesEngineRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.listProviderLeads(providerId, input.limit || 50);
     }),
 
   myProviderProfile: protectedProcedure.query(async ({ ctx }) => {
     const user = requireUser(ctx);
+    requireProviderRole(user.role);
     return servicesEngineService.getMyProviderProfile(user.id);
   }),
 
@@ -325,6 +347,7 @@ export const servicesEngineRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.getProviderDashboard(providerId, input.days || 30);
     }),
@@ -337,6 +360,7 @@ export const servicesEngineRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.listMyExploreVideos(providerId, input.limit || 50);
     }),
@@ -352,6 +376,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.submitExploreVideo({
         providerId,

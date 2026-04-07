@@ -12,8 +12,6 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
-import { getDb } from '../db';
-import { sql } from 'drizzle-orm';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
@@ -26,6 +24,18 @@ export type SessionPayload = {
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
+
+const getRequestId = (req: Request): string => {
+  const value = (req as any)?.requestId;
+  return typeof value === 'string' && value.trim().length > 0 ? value : 'unknown';
+};
+
+export const normalizeAuthRole = (role: unknown): User['role'] => {
+  const normalized = typeof role === 'string' ? role.trim().toLowerCase() : '';
+  if (normalized === 'admin') return 'super_admin';
+  if (normalized === 'user') return 'visitor';
+  return (role as User['role']) || 'visitor';
+};
 
 class AuthService {
   private getSessionSecret() {
@@ -79,8 +89,12 @@ class AuthService {
   /**
    * Verify a session token from a cookie
    */
-  async verifySession(cookieValue: string | undefined | null): Promise<SessionPayload | null> {
+  async verifySession(
+    cookieValue: string | undefined | null,
+    requestId = 'unknown',
+  ): Promise<SessionPayload | null> {
     if (!cookieValue) {
+      console.warn('[Auth][Session] Cookie missing', { requestId });
       return null;
     }
 
@@ -93,7 +107,11 @@ class AuthService {
       const { userId, email, name } = payload as Record<string, unknown>;
 
       if (typeof userId !== 'number' || !isNonEmptyString(email)) {
-        console.warn('[Auth] Session payload missing required fields');
+        console.warn('[Auth][Session] Payload missing required fields', {
+          requestId,
+          hasUserId: typeof userId === 'number',
+          hasEmail: isNonEmptyString(email),
+        });
         return null;
       }
 
@@ -105,16 +123,19 @@ class AuthService {
     } catch (error: any) {
       // Provide specific error messages for common JWT issues
       if (error?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
-        console.error('[Auth] ❌ INVALID SIGNATURE: Token was signed with a different secret key.');
-        console.error('[Auth] This usually means:');
-        console.error('[Auth]   1. JWT_SECRET in .env was changed after token was created');
-        console.error('[Auth]   2. Token was created by old OAuth system (Manus)');
-        console.error('[Auth]   3. Token is corrupted');
-        console.error('[Auth] 💡 Solution: Clear browser cookies and login again');
+        console.error('[Auth][Session] JWT signature verification failed', {
+          requestId,
+          code: error?.code || null,
+        });
       } else if (error?.code === 'ERR_JWT_EXPIRED') {
-        console.warn('[Auth] Token expired');
+        console.warn('[Auth][Session] JWT expired', { requestId });
       } else {
-        console.warn('[Auth] Session verification failed:', error?.message || String(error));
+        console.warn('[Auth][Session] Verification failed', {
+          requestId,
+          message: error?.message || String(error),
+          code: error?.code || null,
+          name: error?.name || null,
+        });
       }
       return null;
     }
@@ -136,36 +157,66 @@ class AuthService {
    * This is the main authentication method used in tRPC context
    */
   async authenticateRequest(req: Request): Promise<User> {
-    console.log('[Auth] authenticateRequest called');
-    console.log('[Auth] Cookie header:', req.headers.cookie);
-
+    const requestId = getRequestId(req);
     const cookies = this.parseCookies(req.headers.cookie);
-    console.log('[Auth] Parsed cookies:', Array.from(cookies.entries()));
-
     const sessionCookie = cookies.get(COOKIE_NAME);
-    console.log('[Auth] COOKIE_NAME:', COOKIE_NAME);
-    console.log('[Auth] sessionCookie value:', sessionCookie ? '(exists)' : '(missing)');
-    console.log('[Auth] Session cookie value:', sessionCookie ? '(exists)' : '(missing)');
+    console.info('[Auth][Session] authenticateRequest', {
+      requestId,
+      hasCookieHeader: Boolean(req.headers.cookie),
+      cookieCount: cookies.size,
+      hasSessionCookie: Boolean(sessionCookie),
+    });
 
-    const session = await this.verifySession(sessionCookie);
-    console.log('[Auth] Session verification result:', session ? 'valid' : 'invalid');
+    const session = await this.verifySession(sessionCookie, requestId);
 
     if (!session) {
+      console.warn('[Auth][Session] No valid session', { requestId });
       throw ForbiddenError('Invalid or missing session cookie');
     }
 
     // Get user from database using userId from session
     const user = await db.getUserById(session.userId);
-    console.log('[Auth] User from DB:', user ? `${user.email} (role: ${user.role})` : 'not found');
+    console.info('[Auth][Session] User lookup', {
+      requestId,
+      userId: session.userId,
+      userFound: Boolean(user),
+    });
 
     if (!user) {
       throw ForbiddenError('User not found');
     }
 
-    // Update last signed in timestamp
-    await db.updateUserLastSignIn(user.id);
+    const normalizedRole = normalizeAuthRole(user.role);
+    const normalizedUser = {
+      ...user,
+      role: normalizedRole,
+    } as User;
 
-    return user;
+    // Update last signed in timestamp
+    await db.updateUserLastSignIn(normalizedUser.id);
+
+    return normalizedUser;
+  }
+
+  /**
+   * Register a new user with email and password
+   */
+  async resendVerificationEmail(email: string): Promise<{ sent: boolean }> {
+    const user = await db.getUserByEmail(email);
+    if (!user || user.emailVerified || !user.email) {
+      return { sent: false };
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    await db.updateUserEmailVerificationToken(user.id, verificationToken);
+
+    await sendVerificationEmail({
+      to: user.email,
+      verificationToken,
+      name: user.name || undefined,
+    });
+
+    return { sent: true };
   }
 
   /**
@@ -175,15 +226,21 @@ class AuthService {
     email: string,
     password: string,
     name?: string,
-    role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
+    role:
+      | 'visitor'
+      | 'agent'
+      | 'agency_admin'
+      | 'property_developer'
+      | 'service_provider' = 'visitor',
     agentProfile?: {
       displayName: string;
-      phone: string;
+      phone?: string;
+      phoneNumber?: string;
       bio?: string;
       licenseNumber?: string;
       specializations?: string[];
     },
-  ): Promise<number> {
+  ): Promise<{ userId: number; verificationEmailSent: boolean }> {
     // Check if user already exists
     const existingUser = await db.getUserByEmail(email);
     if (existingUser) {
@@ -208,22 +265,36 @@ class AuthService {
       emailVerificationToken,
     });
 
-    // Store agent profile data for creation after email verification
-    if (role === 'agent' && agentProfile) {
-      const database = await getDb();
-      if (database) {
-        await database.execute(sql`
-          INSERT INTO pending_agent_profiles 
-          (userId, displayName, phone, bio, licenseNumber, specializations)
-          VALUES (
-            ${userId}, 
-            ${agentProfile.displayName}, 
-            ${agentProfile.phone}, 
-            ${agentProfile.bio || null}, 
-            ${agentProfile.licenseNumber || null}, 
-            ${agentProfile.specializations ? agentProfile.specializations.join(',') : null}
-          )
-        `);
+    const normalizedAgentProfile =
+      role === 'agent' && agentProfile
+        ? {
+            displayName: agentProfile.displayName.trim(),
+            phone: agentProfile.phone || agentProfile.phoneNumber,
+            bio: agentProfile.bio,
+            licenseNumber: agentProfile.licenseNumber,
+            specializations: agentProfile.specializations,
+          }
+        : undefined;
+
+    // Create the pending agent profile immediately so registration does not
+    // depend on the optional pending_agent_profiles staging table.
+    if (role === 'agent' && normalizedAgentProfile) {
+      if (!normalizedAgentProfile.displayName || !normalizedAgentProfile.phone) {
+        throw new Error('Agent profile with display name and phone number is required');
+      }
+
+      try {
+        await db.createAgentProfile({
+          userId,
+          displayName: normalizedAgentProfile.displayName,
+          phone: normalizedAgentProfile.phone,
+          bio: normalizedAgentProfile.bio,
+          licenseNumber: normalizedAgentProfile.licenseNumber,
+          specializations: normalizedAgentProfile.specializations,
+        });
+      } catch (error) {
+        await db.deleteUserById(userId);
+        throw error;
       }
     }
 
@@ -234,6 +305,7 @@ class AuthService {
     }
 
     // Send verification email
+    let verificationEmailSent = false;
     try {
       await sendVerificationEmail({
         to: user.email!,
@@ -241,12 +313,12 @@ class AuthService {
         name: user.name || undefined,
       });
       console.log('[Auth] Verification email sent successfully');
+      verificationEmailSent = true;
     } catch (emailError) {
       console.error('[Auth] Failed to send verification email:', emailError);
-      // Don't throw error - allow registration to complete even if email fails
     }
 
-    return userId;
+    return { userId, verificationEmailSent };
   }
 
   /**
@@ -263,25 +335,30 @@ class AuthService {
       throw ForbiddenError('Invalid email or password');
     }
 
+    const normalizedUser = {
+      ...user,
+      role: normalizeAuthRole(user.role),
+    } as User;
+
     // Check if user has password (not OAuth-only)
-    if (!user.passwordHash) {
+    if (!normalizedUser.passwordHash) {
       throw ForbiddenError('This account uses OAuth login. Please use your original login method.');
     }
 
     // Verify password
-    const isValid = await this.verifyPassword(password, user.passwordHash);
+    const isValid = await this.verifyPassword(password, normalizedUser.passwordHash);
     if (!isValid) {
       throw ForbiddenError('Invalid email or password');
     }
 
     // Check if email is verified
-    if (!user.emailVerified) {
+    if (!normalizedUser.emailVerified) {
       throw ForbiddenError('Please verify your email address before logging in.');
     }
 
     // Check agent status if user is an agent
-    if (user.role === 'agent') {
-      const agentProfile = await db.getAgentByUserId(user.id);
+    if (normalizedUser.role === 'agent') {
+      const agentProfile = await db.getAgentByUserId(normalizedUser.id);
       if (agentProfile) {
         if (agentProfile.status === 'pending') {
           throw new Error(
@@ -299,7 +376,7 @@ class AuthService {
     }
 
     // Update last signed in timestamp
-    await db.updateUserLastSignIn(user.id);
+    await db.updateUserLastSignIn(normalizedUser.id);
 
     // Create session token
     const expiresInMs = rememberMe
@@ -307,13 +384,13 @@ class AuthService {
       : 24 * 60 * 60 * 1000; // 24 hours
 
     const sessionToken = await this.createSessionToken(
-      user.id,
-      user.email!,
-      user.name || user.email!,
+      normalizedUser.id,
+      normalizedUser.email!,
+      normalizedUser.name || normalizedUser.email!,
       { expiresInMs },
     );
 
-    return { user, sessionToken };
+    return { user: normalizedUser, sessionToken };
   }
 
   /**
@@ -383,35 +460,12 @@ class AuthService {
     // Verify the email
     await db.verifyUserEmail(user.id);
 
-    // If user is an agent, create agent profile from pending data
+    // Agent profiles are created directly during registration.
+    // Verification should not depend on the legacy pending_agent_profiles table.
     if (user.role === 'agent') {
-      const database = await getDb();
-      if (database) {
-        // Get pending agent profile data
-        const [pendingProfile] = await database.execute(sql`
-          SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
-        `);
-
-        if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
-          const profileData = pendingProfile.rows[0] as any;
-
-          // Create agent profile
-          await db.createAgentProfile({
-            userId: user.id,
-            displayName: profileData.displayName,
-            phone: profileData.phone,
-            bio: profileData.bio,
-            licenseNumber: profileData.licenseNumber,
-            specializations: profileData.specializations
-              ? profileData.specializations.split(',')
-              : undefined,
-          });
-
-          // Delete pending profile data
-          await database.execute(sql`
-            DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
-          `);
-        }
+      const existingProfile = await db.getAgentByUserId(user.id);
+      if (!existingProfile) {
+        throw new Error('Agent profile is missing for this account. Please contact support.');
       }
     }
   }
@@ -429,7 +483,12 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     (req as any).user = user;
     next();
   } catch (error) {
-    console.warn('[AuthMiddleware] Unauthorized access attempt:', error);
+    console.warn('[AuthMiddleware] Unauthorized access attempt', {
+      requestId: getRequestId(req),
+      message: (error as any)?.message || String(error),
+      code: (error as any)?.code || null,
+      name: (error as any)?.name || null,
+    });
     res.status(401).json({ error: 'Unauthorized' });
   }
 };

@@ -66,13 +66,18 @@ export function SimpleDevelopmentCard({
   return (
     <Link
       href={href || `/development/${slug || id}`}
-      className="group block relative rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-lg transition-all duration-300 w-full max-w-[288px]"
+      className="group relative block w-full max-w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg"
     >
       {/* Image Frame - Fixed Aspect Ratio */}
-      <div className="relative aspect-[16/9] bg-slate-100 overflow-hidden">
+      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
         {/* Placeholder Background (Always Rendered as Base Layer) */}
-        <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-emerald-50" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+          <span className="rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 shadow-sm">
+            Development Listing
+          </span>
           <Building2 className="w-12 h-12" />
+          <span className="text-[11px] font-medium text-slate-500">Image coming soon</span>
         </div>
 
         {/* Image Layer - Hides on Error to reveal placeholder */}
@@ -95,7 +100,7 @@ export function SimpleDevelopmentCard({
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 z-20" />
 
         {/* Badges - Top Right */}
-        <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-30">
+        <div className="absolute right-2.5 top-2.5 z-30 flex flex-col items-end gap-1.5">
           {isHotSelling && (
             <span className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded shadow-sm">
               Hot
@@ -110,21 +115,21 @@ export function SimpleDevelopmentCard({
       </div>
 
       {/* Content - Compact Layout */}
-      <div className="p-5 pt-6">
+      <div className="p-4 pt-5">
         {/* Title */}
-        <h3 className="font-semibold text-slate-900 truncate text-fluid-sm leading-tight mb-1 group-hover:text-[#2774AE] transition-colors">
+        <h3 className="mb-1 line-clamp-2 text-fluid-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">
           {title}
         </h3>
 
         {/* Location */}
-        <div className="flex items-center gap-1 text-slate-500 text-xs mb-3">
+        <div className="mb-3 flex items-center gap-1 text-xs text-slate-500">
           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
           <span className="truncate">{locationLabel}</span>
         </div>
 
         {/* Bedrooms - Badge Style */}
         {bedroomLabel && (
-          <div className="flex items-center gap-1 mb-4">
+          <div className="mb-3 flex items-center gap-1">
             <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-1 rounded-md">
               {bedroomLabel}
             </span>
@@ -132,7 +137,7 @@ export function SimpleDevelopmentCard({
         )}
 
         {/* Price */}
-        <div className="pt-2 border-t border-slate-100">
+        <div className="border-t border-slate-100 pt-2">
           <p className="font-bold text-[#2774AE] text-fluid-sm">{priceLabel}</p>
         </div>
       </div>

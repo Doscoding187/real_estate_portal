@@ -32,19 +32,338 @@ import {
   listings,
   listingMedia,
   agents,
+  analyticsEvents,
+  showings,
   developments,
   developers,
   developmentApprovalQueue,
 } from '../drizzle/schema';
-import { eq, desc, asc, and, or, like, sql, type SQL, gte, lte } from 'drizzle-orm';
+import { eq, desc, asc, and, or, like, sql, type SQL, gte, lte, inArray } from 'drizzle-orm';
 import { logAudit, AuditActions } from './_core/auditLog';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
+import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
+import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
 
 /**
  * Admin router - Super admin and agency admin endpoints
  */
 export const adminRouter = router({
+  getDiscoveryOpsReport: superAdminProcedure.query(async () => {
+    return getDiscoveryOpsReport();
+  }),
+
+  getAgentInventoryBoundaryReport: superAdminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const candidateListings = await db
+      .select({
+        id: listings.id,
+        ownerId: listings.ownerId,
+        agentId: listings.agentId,
+        title: listings.title,
+        address: listings.address,
+        city: listings.city,
+        province: listings.province,
+        status: listings.status,
+        updatedAt: listings.updatedAt,
+      })
+      .from(listings)
+      .where(inArray(listings.status, ['approved', 'published', 'pending_review', 'draft']))
+      .orderBy(desc(listings.updatedAt));
+
+    const resolvedMap = await resolvePropertiesForListings(db, candidateListings);
+    const unresolvedListingIds = candidateListings
+      .filter(listing => (resolvedMap.get(listing.id)?.propertyId ?? null) == null)
+      .map(listing => listing.id);
+
+    const showingCountsRaw =
+      unresolvedListingIds.length > 0
+        ? await db
+            .select({
+              listingId: showings.listingId,
+              total: sql<number>`count(*)`,
+            })
+            .from(showings)
+            .where(inArray(showings.listingId, unresolvedListingIds))
+            .groupBy(showings.listingId)
+        : [];
+
+    const showingCounts = new Map(
+      showingCountsRaw.map(row => [Number(row.listingId), Number(row.total || 0)]),
+    );
+
+    const totals = candidateListings.reduce(
+      (acc, listing) => {
+        const resolved = resolvedMap.get(listing.id);
+        if (resolved?.propertyId != null) {
+          acc.resolvedListings += 1;
+        } else {
+          acc.unresolvedListings += 1;
+          acc.unresolvedShowings += showingCounts.get(listing.id) ?? 0;
+        }
+        return acc;
+      },
+      {
+        totalListings: candidateListings.length,
+        resolvedListings: 0,
+        unresolvedListings: 0,
+        unresolvedShowings: 0,
+      },
+    );
+
+    const sampleUnresolved = candidateListings
+      .filter(listing => (resolvedMap.get(listing.id)?.propertyId ?? null) == null)
+      .slice(0, 20)
+      .map(listing => ({
+        listingId: listing.id,
+        title: listing.title,
+        address: listing.address,
+        city: listing.city,
+        status: listing.status,
+        updatedAt: listing.updatedAt,
+        activeShowings: showingCounts.get(listing.id) ?? 0,
+      }));
+
+    const resolutionRate =
+      totals.totalListings > 0 ? totals.resolvedListings / totals.totalListings : 0;
+
+    return {
+      summary: {
+        ...totals,
+        resolutionRate,
+      },
+      metrics: [
+        {
+          key: 'resolved_listing_inventory',
+          label: 'Listings Resolved To Properties',
+          count: totals.resolvedListings,
+          total: totals.totalListings,
+          rate: resolutionRate,
+        },
+        {
+          key: 'unresolved_listing_inventory',
+          label: 'Listings Still Legacy-Only',
+          count: totals.unresolvedListings,
+          total: totals.totalListings,
+          rate: totals.totalListings > 0 ? totals.unresolvedListings / totals.totalListings : 0,
+        },
+        {
+          key: 'showings_on_unresolved_inventory',
+          label: 'Showings On Unresolved Legacy Listings',
+          count: totals.unresolvedShowings,
+        },
+      ],
+      unresolvedListings: sampleUnresolved,
+    };
+  }),
+
+  getAgentOsReadinessReport: superAdminProcedure
+    .input(
+      z
+        .object({
+          weeklyWindowDays: z.number().min(1).max(30).default(7),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const weeklyWindowDays = input?.weeklyWindowDays ?? 7;
+      const weeklyCutoff = new Date(
+        Date.now() - weeklyWindowDays * 24 * 60 * 60 * 1000,
+      ).toISOString();
+
+      const thresholds = {
+        profilePublishedRate: 0.6,
+        firstListingLiveRate: 0.45,
+        firstLeadReceivedRate: 0.3,
+        firstCrmActionRate: 0.25,
+        firstShowingBookedRate: 0.15,
+        weeklyActiveCoreRate: 0.2,
+        weeklyActiveQualifiedRate: 0.1,
+      } as const;
+
+      const [{ totalAgents }] = await db
+        .select({
+          totalAgents: sql<number>`count(*)`,
+        })
+        .from(agents);
+
+      const totalAgentCount = Number(totalAgents || 0);
+
+      const milestoneCountsRaw = await db
+        .select({
+          eventType: analyticsEvents.eventType,
+          userCount: sql<number>`count(distinct ${analyticsEvents.userId})`,
+        })
+        .from(analyticsEvents)
+        .where(
+          and(
+            sql`${analyticsEvents.userId} is not null`,
+            sql`${analyticsEvents.eventType} in (
+              'agent_profile_published',
+              'agent_listing_live',
+              'agent_lead_received',
+              'agent_crm_action_logged',
+              'agent_showing_booked',
+              'agent_showing_completed'
+            )`,
+          ),
+        )
+        .groupBy(analyticsEvents.eventType);
+
+      const milestoneCounts = Object.fromEntries(
+        milestoneCountsRaw.map(row => [row.eventType, Number(row.userCount || 0)]),
+      ) as Record<string, number>;
+
+      const weeklyEvents = await db
+        .select({
+          userId: analyticsEvents.userId,
+          eventType: analyticsEvents.eventType,
+        })
+        .from(analyticsEvents)
+        .where(
+          and(
+            sql`${analyticsEvents.userId} is not null`,
+            gte(analyticsEvents.createdAt, weeklyCutoff),
+            sql`${analyticsEvents.eventType} in (
+              'agent_listing_created',
+              'agent_listing_live',
+              'agent_lead_received',
+              'agent_lead_stage_updated',
+              'agent_crm_action_logged',
+              'agent_showing_booked',
+              'agent_showing_updated',
+              'agent_showing_completed'
+            )`,
+          ),
+        );
+
+      const byUser = new Map<number, Set<string>>();
+      for (const event of weeklyEvents) {
+        const userId = Number(event.userId || 0);
+        if (!userId) continue;
+        const set = byUser.get(userId) ?? new Set<string>();
+        set.add(event.eventType);
+        byUser.set(userId, set);
+      }
+
+      let weeklyActiveCore = 0;
+      let weeklyActiveQualified = 0;
+      for (const eventTypes of byUser.values()) {
+        const hasCore =
+          eventTypes.has('agent_listing_created') ||
+          eventTypes.has('agent_listing_live') ||
+          eventTypes.has('agent_lead_received') ||
+          eventTypes.has('agent_crm_action_logged') ||
+          eventTypes.has('agent_showing_booked') ||
+          eventTypes.has('agent_showing_updated') ||
+          eventTypes.has('agent_showing_completed');
+        const hasQualifiedCrm =
+          eventTypes.has('agent_lead_received') ||
+          eventTypes.has('agent_lead_stage_updated') ||
+          eventTypes.has('agent_crm_action_logged');
+        const hasQualifiedScheduling =
+          eventTypes.has('agent_showing_booked') ||
+          eventTypes.has('agent_showing_updated') ||
+          eventTypes.has('agent_showing_completed');
+
+        if (hasCore) weeklyActiveCore += 1;
+        if (hasQualifiedCrm && hasQualifiedScheduling) weeklyActiveQualified += 1;
+      }
+
+      const metrics = [
+        {
+          key: 'profilePublishedRate',
+          label: 'Profile Published',
+          count: milestoneCounts.agent_profile_published || 0,
+          rate:
+            totalAgentCount > 0
+              ? (milestoneCounts.agent_profile_published || 0) / totalAgentCount
+              : 0,
+          threshold: thresholds.profilePublishedRate,
+        },
+        {
+          key: 'firstListingLiveRate',
+          label: 'First Listing Live',
+          count: milestoneCounts.agent_listing_live || 0,
+          rate:
+            totalAgentCount > 0 ? (milestoneCounts.agent_listing_live || 0) / totalAgentCount : 0,
+          threshold: thresholds.firstListingLiveRate,
+        },
+        {
+          key: 'firstLeadReceivedRate',
+          label: 'First Lead Received',
+          count: milestoneCounts.agent_lead_received || 0,
+          rate:
+            totalAgentCount > 0
+              ? (milestoneCounts.agent_lead_received || 0) / totalAgentCount
+              : 0,
+          threshold: thresholds.firstLeadReceivedRate,
+        },
+        {
+          key: 'firstCrmActionRate',
+          label: 'First CRM Action',
+          count: milestoneCounts.agent_crm_action_logged || 0,
+          rate:
+            totalAgentCount > 0
+              ? (milestoneCounts.agent_crm_action_logged || 0) / totalAgentCount
+              : 0,
+          threshold: thresholds.firstCrmActionRate,
+        },
+        {
+          key: 'firstShowingBookedRate',
+          label: 'First Showing Booked',
+          count:
+            (milestoneCounts.agent_showing_booked || 0) ||
+            (milestoneCounts.agent_showing_completed || 0),
+          rate:
+            totalAgentCount > 0
+              ? ((milestoneCounts.agent_showing_booked || 0) ||
+                  (milestoneCounts.agent_showing_completed || 0)) /
+                totalAgentCount
+              : 0,
+          threshold: thresholds.firstShowingBookedRate,
+        },
+        {
+          key: 'weeklyActiveCoreRate',
+          label: `Weekly Active Core (${weeklyWindowDays}d)`,
+          count: weeklyActiveCore,
+          rate: totalAgentCount > 0 ? weeklyActiveCore / totalAgentCount : 0,
+          threshold: thresholds.weeklyActiveCoreRate,
+        },
+        {
+          key: 'weeklyActiveQualifiedRate',
+          label: `Weekly Active Qualified (${weeklyWindowDays}d)`,
+          count: weeklyActiveQualified,
+          rate: totalAgentCount > 0 ? weeklyActiveQualified / totalAgentCount : 0,
+          threshold: thresholds.weeklyActiveQualifiedRate,
+        },
+      ].map(metric => ({
+        ...metric,
+        passed: metric.rate >= metric.threshold,
+      }));
+
+      const passedMetrics = metrics.filter(metric => metric.passed).length;
+
+      return {
+        cohort: {
+          totalAgents: totalAgentCount,
+          weeklyWindowDays,
+        },
+        thresholds,
+        metrics,
+        readiness: {
+          passedMetrics,
+          totalMetrics: metrics.length,
+          readyForPhase2: passedMetrics === metrics.length && totalAgentCount > 0,
+        },
+      };
+    }),
+
   /**
    * Super Admin: Get action items (pending counts)
    * Designed for fast polling on the dashboard
@@ -736,8 +1055,6 @@ export const adminRouter = router({
    */
   /*
   updateSubscription: superAdminProcedure.mutation(async () => { throw new Error("Unavailable"); }),
-  getPlatformSettings: superAdminProcedure.query(async () => { throw new Error("Unavailable"); }),
-  updatePlatformSetting: superAdminProcedure.mutation(async () => { throw new Error("Unavailable"); }),
   */
 
   /**
@@ -1049,13 +1366,31 @@ export const adminRouter = router({
    */
 
   getPlatformSettings: superAdminProcedure.query(async () => {
-    // Temporary stub – frontend expects this
-    return {};
+    const settings = await getAllPlatformSettings();
+    return settings.map(setting => ({
+      id: setting.id,
+      key: setting.settingKey,
+      value: setting.settingValue,
+      description: setting.description,
+      category: setting.category,
+      isPublic: setting.isPublic,
+      updatedBy: setting.updatedBy,
+      createdAt: setting.createdAt,
+      updatedAt: setting.updatedAt,
+    }));
   }),
 
-  updatePlatformSetting: superAdminProcedure.input(z.any()).mutation(async () => {
-    throw new Error('NOT_IMPLEMENTED');
-  }),
+  updatePlatformSetting: superAdminProcedure
+    .input(
+      z.object({
+        key: z.string().min(1),
+        value: z.any(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await setPlatformSetting(input.key, input.value, ctx.user.id);
+      return { success: true };
+    }),
 
   getRevenueAnalytics: superAdminProcedure.query(async () => {
     // Frontend expects revenue analytics object

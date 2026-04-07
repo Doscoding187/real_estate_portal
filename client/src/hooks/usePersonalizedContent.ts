@@ -5,10 +5,10 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import type { DiscoveryItem } from '@/domains/discovery/types';
 import { trpc } from '@/lib/trpc';
-import { DiscoveryItem } from './useDiscoveryFeed';
 import { getFeedItems, type FeedItem as CanonicalFeedItem } from '@/lib/exploreFeed';
-import { type ExploreIntent, readStoredExploreIntent } from '@/lib/exploreIntent';
+import { type ExploreIntent } from '@/lib/exploreIntent';
 import { getExploreMockFeedItems } from '@/data/exploreMockFeed';
 import { isExploreMockMode } from '@/lib/exploreMockMode';
 
@@ -24,12 +24,10 @@ export interface PersonalizedSection {
 
 interface UsePersonalizedContentOptions {
   categoryId?: number;
-  location?: { lat: number; lng: number };
   intent?: ExploreIntent | null;
 }
 
 export function usePersonalizedContent(options: UsePersonalizedContentOptions = {}) {
-  const intent = options.intent ?? readStoredExploreIntent();
   const [sections, setSections] = useState<PersonalizedSection[]>([]);
   const useMockData = isExploreMockMode();
   const allowPlacementMock = import.meta.env.DEV;
@@ -39,12 +37,11 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const mockItems = useMemo(() => getExploreMockFeedItems(), []);
 
   // Fetch "For You" personalized content
-  const forYouQuery = trpc.explore.getFeed.useQuery(
+  const forYouQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'recommended',
+      mode: 'home',
+      contentType: 'video',
       limit: 10,
-      offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -54,17 +51,14 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const forYouData = forYouQuery.data;
   const forYouLoading = forYouQuery.isLoading;
 
-  // Fetch "Popular Near You" location-based content
-  const popularNearYouQuery = trpc.explore.getFeed.useQuery(
+  const popularNearYouQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'area',
-      location: options.location ? `${options.location.lat},${options.location.lng}` : '',
+      mode: 'home',
+      contentType: 'video',
       limit: 10,
-      offset: 0,
-      intent: intent ?? undefined,
     },
     {
-      enabled: !useMockData && !!options.location,
+      enabled: !useMockData,
     },
   );
 
@@ -72,12 +66,12 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const popularNearYouLoading = popularNearYouQuery.isLoading;
 
   // Fetch "New Developments" content
-  const newDevelopmentsQuery = trpc.explore.getFeed.useQuery(
+  const newDevelopmentsQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'recommended',
+      mode: 'home',
+      contentType: 'video',
+      category: 'property',
       limit: 10,
-      offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -88,12 +82,11 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const newDevelopmentsLoading = newDevelopmentsQuery.isLoading;
 
   // Fetch "Trending" content
-  const trendingQuery = trpc.explore.getFeed.useQuery(
+  const trendingQuery = trpc.discovery.getFeed.useQuery(
     {
-      feedType: 'recommended',
+      mode: 'home',
+      contentType: 'video',
       limit: 10,
-      offset: 0,
-      intent: intent ?? undefined,
     },
     {
       enabled: !useMockData,
@@ -106,6 +99,12 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   // Calculate isLoading BEFORE using it in useEffect
   const isLoading =
     !useMockData && (forYouLoading || popularNearYouLoading || newDevelopmentsLoading || trendingLoading);
+  const error =
+    forYouQuery.error ??
+    popularNearYouQuery.error ??
+    newDevelopmentsQuery.error ??
+    trendingQuery.error ??
+    null;
 
   // Organize data into sections
   useEffect(() => {
@@ -474,8 +473,25 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     allowPlacementMock,
   ]);
 
+  const hasAnyContent = sections.some(section => section.items.length > 0);
+  const isEmpty = !isLoading && !error && !hasAnyContent;
+  const refetch = async () => {
+    if (useMockData) return [];
+
+    return Promise.all([
+      forYouQuery.refetch(),
+      popularNearYouQuery.refetch(),
+      newDevelopmentsQuery.refetch(),
+      trendingQuery.refetch(),
+    ]);
+  };
+
   return {
     sections,
     isLoading,
+    error,
+    hasAnyContent,
+    isEmpty,
+    refetch,
   };
 }

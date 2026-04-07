@@ -137,8 +137,7 @@ export default function DeveloperPlans() {
     },
   });
 
-  const currentTier =
-    (subscriptionData as any)?.subscription?.tier ?? (subscriptionData as any)?.tier;
+  const currentTier = (subscriptionData as any)?.subscription?.tier ?? (subscriptionData as any)?.tier;
 
   const handleSelectPlan = (plan: (typeof DEVELOPER_PLANS)[0]) => {
     if (plan.tier === currentTier) {
