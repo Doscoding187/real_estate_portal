@@ -49,7 +49,7 @@ export function ResultsHeader({
   showMobileFilterButton = true,
   locationContext,
 }: ResultsHeaderProps) {
-  // Generate hierarchy breadcrumbs if context exists
+  const journeySummary = [filters.listingType, filters.propertyType].filter(Boolean).join(' / ');
   const locationHierarchy = locationContext?.hierarchy
     ? [
         locationContext.hierarchy.suburb,
@@ -57,107 +57,148 @@ export function ResultsHeader({
         locationContext.hierarchy.province,
       ]
         .filter(Boolean)
-        .join(' · ')
+        .join(' / ')
     : null;
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      {/* Left Column: Market + Count */}
-      <div className="min-w-0">
-        <div className="text-sm text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            <span>Live Market Updates</span>
-          </div>
-          <div className="mt-1">
-            {!isLoading ? (
-              <span>
-                Showing {displayedPropertyCount.toLocaleString()} of {resultCount.toLocaleString()}{' '}
-                properties
-                {developmentCount > 0 ? ` and ${developmentCount.toLocaleString()} developments` : ''}
+    <div className="rounded-[24px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_14px_40px_-28px_rgba(15,23,42,0.35)] sm:px-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            {journeySummary && (
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                {journeySummary}
+              </div>
+            )}
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700 sm:hidden">
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              Live
+            </div>
+            <div className="hidden items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700 sm:inline-flex">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
               </span>
+              Live Market Updates
+            </div>
+          </div>
+
+          <div className="mt-3">
+            {!isLoading ? (
+              <>
+                <h1 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-2xl lg:text-[1.65rem]">
+                  {displayedPropertyCount.toLocaleString()} listings ready to review
+                </h1>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Showing {displayedPropertyCount.toLocaleString()} of{' '}
+                  {resultCount.toLocaleString()} properties
+                  {developmentCount > 0
+                    ? ` and ${developmentCount.toLocaleString()} developments`
+                    : ''}
+                  .
+                </p>
+              </>
             ) : (
-              <span>Loading results...</span>
+              <>
+                <h1 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-2xl lg:text-[1.65rem]">
+                  Loading current market matches
+                </h1>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  We are preparing the latest listings for this search.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2 sm:hidden">
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+              {displayedPropertyCount.toLocaleString()} visible
+            </div>
+            {developmentCount > 0 && (
+              <div className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                {developmentCount.toLocaleString()} developments
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 hidden flex-wrap gap-2 sm:flex">
+            {locationHierarchy && (
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                Searching in {locationHierarchy}
+              </div>
+            )}
+            {developmentCount > 0 && (
+              <div className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                {developmentCount.toLocaleString()} developments in this mix
+              </div>
             )}
           </div>
         </div>
-        {locationHierarchy && (
-          <div className="mt-1 text-xs text-slate-500">
-            Searching in: <span className="text-slate-700">{locationHierarchy}</span>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end lg:min-w-[340px]">
+          {showMobileFilterButton && onOpenFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden border-slate-200 bg-white text-slate-700 shadow-sm sm:flex lg:hidden"
+              onClick={onOpenFilters}
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+          )}
+
+          <div className="hidden items-center rounded-xl border border-slate-200 bg-slate-100/90 p-1 shadow-inner sm:flex">
+            <button
+              onClick={() => onViewModeChange('list')}
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                viewMode === 'list'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              <span className="hidden md:inline">List</span>
+            </button>
+            <button
+              onClick={() => onViewModeChange('grid')}
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="hidden md:inline">Grid</span>
+            </button>
+            <button
+              onClick={() => onViewModeChange('map')}
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                viewMode === 'map'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <MapIcon className="h-4 w-4" />
+              <span className="hidden md:inline">Map</span>
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* Controls */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Mobile Filter Button - Kept for legacy/tablet, but hidden if Sticky Controls are used on mobile */}
-        {showMobileFilterButton && onOpenFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="lg:hidden border-gray-200 hidden sm:flex" // Hide on tiny screens where sticky bar takes over
-            onClick={onOpenFilters}
-          >
-            <SlidersHorizontal className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-        )}
-
-        {/* View Mode Toggle - Segmented Control Style */}
-        <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
-          <button
-            onClick={() => onViewModeChange('list')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'list'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <List className="h-4 w-4" />
-            <span className="hidden md:inline">List</span>
-          </button>
-          <button
-            onClick={() => onViewModeChange('grid')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'grid'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <LayoutGrid className="h-4 w-4" />
-            <span className="hidden md:inline">Grid</span>
-          </button>
-          <button
-            onClick={() => onViewModeChange('map')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'map'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <MapIcon className="h-4 w-4" />
-            <span className="hidden md:inline">Map</span>
-          </button>
-        </div>
-
-        {/* Sort Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500 font-medium hidden sm:inline">Sort by:</span>
-          <Select value={sortBy} onValueChange={val => onSortChange(val as SortOption)}>
-            <SelectTrigger className="w-[140px] sm:w-[180px] h-10 bg-white border-gray-200 font-medium text-slate-700">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="relevance">Relevance</SelectItem>
-              <SelectItem value="price_asc">Lowest Price</SelectItem>
-              <SelectItem value="price_desc">Highest Price</SelectItem>
-              <SelectItem value="date_desc">Newest Listed</SelectItem>
-              <SelectItem value="date_asc">Oldest Listed</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="hidden items-center gap-2 sm:flex">
+            <span className="hidden text-sm font-medium text-slate-500 sm:inline">Sort by:</span>
+            <Select value={sortBy} onValueChange={val => onSortChange(val as SortOption)}>
+              <SelectTrigger className="h-11 w-full min-w-[160px] border-slate-200 bg-white font-medium text-slate-700 shadow-sm sm:w-[190px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="relevance">Relevance</SelectItem>
+                <SelectItem value="price_asc">Lowest Price</SelectItem>
+                <SelectItem value="price_desc">Highest Price</SelectItem>
+                <SelectItem value="date_desc">Newest Listed</SelectItem>
+                <SelectItem value="date_asc">Oldest Listed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </div>

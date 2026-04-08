@@ -344,8 +344,8 @@ export default function SearchResults({
         }))}
       />
 
-      <div className="container pt-24 pb-8">
-        <div className="mx-auto w-full max-w-[1180px]">
+      <div className="container pb-32 pt-24 lg:pb-12">
+        <div className="mx-auto w-full max-w-[1280px]">
           {/* Header Section */}
           <div className="mb-3">
             <div className="mb-2">
@@ -378,7 +378,7 @@ export default function SearchResults({
           </div>
 
           {/* Content Section */}
-          <div className="grid grid-cols-1 gap-2 px-2 sm:px-3 lg:grid-cols-[292px_minmax(0,760px)] lg:justify-center lg:gap-3 lg:px-0">
+          <div className="grid grid-cols-1 gap-5 px-2 sm:px-3 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6 lg:px-0 xl:grid-cols-[340px_minmax(0,1fr)]">
             {/* LEFT SIDEBAR - FILTERS */}
             <div className="hidden lg:block">
               <div className="sticky top-24">
@@ -403,7 +403,7 @@ export default function SearchResults({
                 ) : hasRenderableResults ? (
                   <>
                     {viewMode === 'list' && (
-                      <div className="flex flex-col items-start gap-4">
+                      <div className="flex flex-col gap-4 sm:gap-5 lg:gap-6">
                       {mixedListResults.map((item, index) => {
                         if (item.kind === 'development') {
                           const development = item.value as any;
@@ -464,7 +464,7 @@ export default function SearchResults({
                     )}
 
                   {viewMode === 'grid' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3 2xl:gap-7">
                       {sortedProperties.map(property => {
                         const normalized = normalizePropertyForUI(property);
                         if (!normalized) return null;
