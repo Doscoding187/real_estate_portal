@@ -30,7 +30,6 @@ import {
   Zap,
   Droplets,
   Square,
-  Phone,
   Mail,
   MessageCircle,
   type LucideIcon,
@@ -717,14 +716,10 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
   };
   const handleWhatsAppContact = (message?: string) => {
     if (!whatsappNumber) return;
-
-    const normalizedNumber = whatsappNumber.replace(/[^\d]/g, '');
-    const defaultMessage = `Hi, I'm interested in ${property.title}. Please share more information.`;
-    const targetUrl = `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(
-      message || defaultMessage,
-    )}`;
-
-    window.open(targetUrl, '_blank');
+    openContactModal({
+      initialMessage:
+        message || `Hi, I'm interested in ${property.title}. Please share more information.`,
+    });
   };
   const handleQualificationToEnquiry = (snapshot: PropertyQualificationSnapshot) => {
     setIsQualificationOpen(false);
@@ -1261,22 +1256,6 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                           </div>
                         )}
 
-                        {(directPhone || whatsappNumber) && (
-                          <div className="grid gap-3 sm:grid-cols-[92px_minmax(0,1fr)] lg:grid-cols-[92px_minmax(0,1fr)]">
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm font-semibold text-slate-700">
-                              +27
-                            </div>
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                              <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-                                Phone Number
-                              </p>
-                              <p className="mt-1 font-semibold text-slate-900">
-                                {directPhone || whatsappNumber}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
                         <Button
                           className="h-12 w-full bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
                           onClick={handleBookAppointment}
@@ -1294,18 +1273,6 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                             >
                               <MessageCircle className="mr-2 h-4 w-4" />
                               WhatsApp Agent
-                            </Button>
-                          )}
-                          {directPhone && (
-                            <Button
-                              variant="outline"
-                              className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                              asChild
-                            >
-                              <a href={`tel:${directPhone}`}>
-                                <Phone className="mr-2 h-4 w-4" />
-                                Call Agent
-                              </a>
                             </Button>
                           )}
                           {agentProfileHref && (
@@ -1582,20 +1549,8 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                             </Button>
                           </div>
 
-                          {(directPhone || agentProfileHref) && (
+                          {agentProfileHref && (
                             <div className="grid gap-3">
-                              {directPhone && (
-                                <Button
-                                  variant="outline"
-                                  className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                                  asChild
-                                >
-                                  <a href={`tel:${directPhone}`}>
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    Call Agent
-                                  </a>
-                                </Button>
-                              )}
                               {agentProfileHref && (
                                 <Button
                                   variant="outline"
@@ -1678,20 +1633,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                                 <MessageCircle className="h-4 w-4" />
                                 WhatsApp {contactRoleLabel || 'Contact'}
                               </span>
-                              <span className="truncate pl-4 font-semibold">{whatsappNumber}</span>
                             </button>
-                          )}
-                          {directPhone && (
-                            <a
-                              href={`tel:${directPhone}`}
-                              className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
-                            >
-                              <span className="flex items-center gap-2 font-medium">
-                                <Phone className="h-4 w-4" />
-                                Call
-                              </span>
-                              <span className="font-semibold">{directPhone}</span>
-                            </a>
                           )}
                           {directEmail && (
                             <a
@@ -1882,7 +1824,10 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
 
       <PropertyContactModal
         isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
+        onClose={() => {
+          setIsContactModalOpen(false);
+          setContactInitialMessage('');
+        }}
         propertyId={propertyId}
         propertyTitle={property.title}
         agentName={contactIdentity?.name || 'Listing Contact'}
