@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
@@ -19,8 +19,6 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const sortedImages = [...images].sort((a, b) => {
     if (a.isPrimary === 1) return -1;
@@ -38,47 +36,17 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
     setZoomLevel(1);
   };
 
-  // Swipe handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (touchStart === null || touchEnd === null) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-    if (isLeftSwipe && selectedImageIndex < sortedImages.length - 1) {
-      handleNext();
-    }
-    if (isRightSwipe && selectedImageIndex > 0) {
-      handlePrevious();
-    }
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (!isLightboxOpen) return;
+    if (e.key === 'ArrowLeft') handlePrevious();
+    if (e.key === 'ArrowRight') handleNext();
+    if (e.key === 'Escape') setIsLightboxOpen(false);
   };
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isLightboxOpen) return;
-
-      if (e.key === 'ArrowLeft') {
-        setSelectedImageIndex(prev => (prev === 0 ? sortedImages.length - 1 : prev - 1));
-        setZoomLevel(1);
-      } else if (e.key === 'ArrowRight') {
-        setSelectedImageIndex(prev => (prev === sortedImages.length - 1 ? 0 : prev + 1));
-        setZoomLevel(1);
-      } else if (e.key === 'Escape') {
-        setIsLightboxOpen(false);
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isLightboxOpen, sortedImages.length]);
+  });
 
   if (sortedImages.length === 0) {
     return (
@@ -95,20 +63,22 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
         <img
           src={sortedImages[selectedImageIndex].imageUrl}
           alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
-          className="w-full h-[280px] sm:h-[400px] lg:h-[500px] object-cover cursor-pointer transition-transform hover:scale-105"
+          className="w-full h-[320px] md:h-[500px] object-cover cursor-pointer transition-transform hover:scale-105"
           onClick={() => setIsLightboxOpen(true)}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
         />
 
-        {/* Navigation Arrows - Always visible on mobile */}
+        {/* Image Counter */}
+        <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+          {selectedImageIndex + 1} / {sortedImages.length}
+        </div>
+
+        {/* Navigation Arrows */}
         {sortedImages.length > 1 && (
           <>
             <Button
               variant="secondary"
               size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-full"
+              className="absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
               onClick={handlePrevious}
             >
               <ChevronLeft className="h-6 w-6" />
@@ -116,7 +86,7 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
             <Button
               variant="secondary"
               size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-full"
+              className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
               onClick={handleNext}
             >
               <ChevronRight className="h-6 w-6" />
@@ -141,24 +111,9 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
         </div>
       </div>
 
-      {/* Media Tabs */}
-      <div className="flex justify-center gap-4">
-        <button className="px-4 py-2 text-sm font-medium text-orange-600 border-b-2 border-orange-600">
-          Photos
-        </button>
-        {/* Add other tabs conditionally when data is available */}
-      </div>
-
-      {/* Image Counter - Below image */}
-      <div className="text-center">
-        <span className="text-sm text-slate-500">
-          {selectedImageIndex + 1} / {sortedImages.length}
-        </span>
-      </div>
-
-      {/* Thumbnail Grid - Hidden on mobile */}
+      {/* Thumbnail Grid */}
       {sortedImages.length > 1 && (
-        <div className="hidden md:grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+        <div className="hidden md:grid grid-cols-6 lg:grid-cols-8 gap-2">
           {sortedImages.slice(0, 8).map((image, index) => (
             <div
               key={image.id}
@@ -186,7 +141,7 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
 
       {/* Lightbox Modal */}
       <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
-        <DialogContent className="max-w-full h-full p-2 sm:p-8 lg:max-w-7xl lg:h-[90vh] lg:p-16 bg-black/95">
+        <DialogContent className="max-w-7xl h-[90vh] p-0 bg-black/95">
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Close Button */}
             <Button
@@ -202,28 +157,6 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
             <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium z-50">
               {selectedImageIndex + 1} / {sortedImages.length}
             </div>
-
-            {/* Navigation in lightbox - Always visible on mobile */}
-            {sortedImages.length > 1 && (
-              <>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full z-50"
-                  onClick={handlePrevious}
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full z-50"
-                  onClick={handleNext}
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-              </>
-            )}
 
             {/* Zoom Controls */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-50">
@@ -249,17 +182,36 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
             </div>
 
             {/* Main Image */}
-            <div className="relative w-full h-full flex items-center justify-center p-2 sm:p-8 lg:p-16">
+            <div className="relative w-full h-full flex items-center justify-center p-16">
               <img
                 src={sortedImages[selectedImageIndex].imageUrl}
                 alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
                 className="max-w-full max-h-full object-contain transition-transform"
                 style={{ transform: `scale(${zoomLevel})` }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
               />
             </div>
+
+            {/* Navigation */}
+            {sortedImages.length > 1 && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full"
+                  onClick={handlePrevious}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full"
+                  onClick={handleNext}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </>
+            )}
 
             {/* Thumbnail Strip */}
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-4xl overflow-x-auto">
