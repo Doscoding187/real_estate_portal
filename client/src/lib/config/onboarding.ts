@@ -9,7 +9,7 @@ export const onboardingConfig = {
     success: (sessionId?: string) =>
       `${import.meta.env.VITE_APP_URL || window.location.origin}/agency/dashboard?welcome=true${sessionId ? `&session_id=${sessionId}` : ''}`,
     cancel: (step?: number) =>
-      `${import.meta.env.VITE_APP_URL || window.location.origin}/agency/onboarding${step ? `?step=${step}` : ''}`,
+      `${import.meta.env.VITE_APP_URL || window.location.origin}/agency/setup${step ? `?step=${step}` : ''}`,
     inviteAccept: (token: string) =>
       `${import.meta.env.VITE_APP_URL || window.location.origin}/invite/accept?token=${token}`,
   },

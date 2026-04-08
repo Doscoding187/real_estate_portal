@@ -1,9 +1,10 @@
 import { router } from './_core/trpc';
-import { agentProcedure } from './_core/trpc';
+import { agentProcedure, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
-import { getDb } from './db';
+import { getDb, getPlatformSetting } from './db';
 import {
   properties,
+  listings,
   leads,
   showings,
   commissions,
@@ -13,13 +14,36 @@ import {
   propertyImages,
   users,
   notifications,
+  analyticsEvents,
 } from '../drizzle/schema';
 import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
-import { nowAsDbTimestamp } from './utils/dbTypeUtils';
+import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 import { requireUser } from './_core/requireUser';
+import { slugify } from './_core/utils/slug';
+import { recordAgentOsEvent } from './services/agentOsEventService';
+import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import { agentOnboardingService } from './services/agentOnboardingService';
+import {
+  getRuntimeSchemaCapabilities,
+  warnSchemaCapabilityOnce,
+} from './services/runtimeSchemaCapabilities';
+import {
+  getAgentInventorySchedulingOptions,
+  getInventoryBridgeSchemaCapabilities,
+  resolvePropertiesForListings,
+  resolvePropertyForListing,
+} from './services/inventoryLinkResolver';
+import {
+  getShowingsSchemaVariant,
+  mapAgentShowingStatusToStorage,
+  mapStorageShowingStatusToAgent,
+  type AgentShowingStatus,
+  type ShowingsSchemaDetails,
+  type ShowingsSchemaVariant,
+} from './services/showingsSchemaCompatibility';
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -33,11 +57,417 @@ const NOTIFICATION_TYPES = [
   'system_alert',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
+
+function buildAgentPublicSlug(agent: {
+  id: number;
+  slug?: string | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}) {
+  if (agent.slug) return agent.slug;
+  const label = agent.displayName || `${agent.firstName || ''} ${agent.lastName || ''}`.trim();
+  const base = slugify(label) || 'agent';
+  return `${base}-${agent.id}`;
+}
+
+function extractTrailingId(slug: string) {
+  const match = slug.match(/-(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function parseTextList(value?: string | null) {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function stringifyTextList(values?: string[]) {
+  if (!values || values.length === 0) return null;
+  return values
+    .map(item => item.trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+function buildAgentInventoryConditions(userId: number, agentId: number | null, status?: string) {
+  const conditions: SQL[] = [
+    agentId
+      ? or(eq(properties.agentId, agentId), eq(properties.ownerId, userId))!
+      : eq(properties.ownerId, userId),
+  ];
+
+  if (status && status !== 'all') {
+    if (status === 'active') {
+      conditions.push(inArray(properties.status, [...LIVE_AGENT_LISTING_STATUSES]));
+    } else {
+      conditions.push(eq(properties.status, status as any));
+    }
+  }
+
+  return conditions;
+}
+
+function parseSocialLinks(value?: string | null) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function splitDisplayName(displayName: string) {
+  const trimmed = displayName.trim();
+  const [firstName, ...rest] = trimmed.split(/\s+/);
+  return {
+    firstName: firstName || trimmed,
+    lastName: rest.join(' '),
+  };
+}
+
+function toAgentOnboardingResponse(agentRecord: typeof agents.$inferSelect | null) {
+  if (!agentRecord) return null;
+
+  return {
+    ...agentRecord,
+    specializations: parseTextList(agentRecord.specialization),
+    propertyTypes: parseTextList(agentRecord.propertyTypes),
+    areasServed: parseTextList(agentRecord.areasServed),
+    languages: parseTextList(agentRecord.languages),
+    socialLinks: parseSocialLinks(agentRecord.socialLinks),
+  };
+}
+
+type RawAgentShowingRow = {
+  id: number | string;
+  listingId?: number | string | null;
+  propertyId?: number | string | null;
+  leadId?: number | string | null;
+  agentId?: number | string | null;
+  scheduledTime?: string | Date | null;
+  scheduledAt?: string | Date | null;
+  status?: string | null;
+  notes?: string | null;
+  feedback?: string | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+};
+
+type AgentShowingProperty = {
+  id: number;
+  listingId?: number | null;
+  propertyId?: number | null;
+  inventoryModel?: string;
+  title: string;
+  address?: string | null;
+  city?: string | null;
+};
+
+type AgentShowingClient = {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+};
+
+type AgentShowingRecord = {
+  id: number;
+  listingId: number | null;
+  propertyId: number | null;
+  leadId: number | null;
+  agentId: number | null;
+  scheduledAt: string | Date | null;
+  scheduledTime: string | Date | null;
+  status: AgentShowingStatus;
+  notes: string | null;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
+  property: AgentShowingProperty | null;
+  client: AgentShowingClient | null;
+};
+
+function normalizeDbRows(result: any): Array<Record<string, unknown>> {
+  if (Array.isArray(result)) {
+    if (result.length > 0 && Array.isArray(result[0])) {
+      return result[0] as Array<Record<string, unknown>>;
+    }
+    if (result.length > 0 && typeof result[0] === 'object') {
+      return result as Array<Record<string, unknown>>;
+    }
+  }
+  if (result && Array.isArray(result.rows)) {
+    return result.rows as Array<Record<string, unknown>>;
+  }
+  return [];
+}
+
+function readCountValue(result: any): number {
+  const row = normalizeDbRows(result)[0] || {};
+  const value =
+    row.count_value ??
+    row.count ??
+    row.COUNT ??
+    row['COUNT(*)'] ??
+    row['COUNT(1)'] ??
+    Object.values(row)[0];
+  const countValue = Number(value ?? 0);
+  return Number.isFinite(countValue) ? countValue : 0;
+}
+
+function getShowingsDateColumn(variant: ShowingsSchemaVariant) {
+  return sql.identifier(variant === 'current' ? 'scheduledTime' : 'scheduledAt');
+}
+
+function getShowingsIdColumn(details: ShowingsSchemaDetails, variant: ShowingsSchemaVariant) {
+  if (variant === 'current' || (variant === 'hybrid' && details.listingIdColumn)) {
+    return sql.identifier('listingId');
+  }
+  if (details.propertyIdColumn) {
+    return sql.identifier('propertyId');
+  }
+  return sql`NULL`;
+}
+
+function getShowingsNotesColumn(details: ShowingsSchemaDetails) {
+  return details.notesColumn ? sql.identifier('notes') : sql.identifier('feedback');
+}
+
+function normalizeAgentShowingRow(
+  row: RawAgentShowingRow,
+  variant: ShowingsSchemaVariant,
+): AgentShowingRecord {
+  const listingIdRaw = row.listingId ?? row.propertyId ?? null;
+  const scheduledAt = row.scheduledAt ?? row.scheduledTime ?? null;
+
+  return {
+    id: Number(row.id),
+    listingId: listingIdRaw === null ? null : Number(listingIdRaw),
+    propertyId: row.propertyId == null ? null : Number(row.propertyId),
+    leadId: row.leadId == null ? null : Number(row.leadId),
+    agentId: row.agentId == null ? null : Number(row.agentId),
+    scheduledAt,
+    scheduledTime: scheduledAt,
+    status: mapStorageShowingStatusToAgent(row.status, variant),
+    notes: row.notes ?? row.feedback ?? null,
+    createdAt: row.createdAt ?? null,
+    updatedAt: row.updatedAt ?? null,
+    property: null,
+    client: null,
+  };
+}
+
+async function countAgentShowingsInRange(params: {
+  db: any;
+  agentId: number;
+  startIso: string;
+  endIso: string;
+  details: ShowingsSchemaDetails;
+}) {
+  const variant = getShowingsSchemaVariant(params.details);
+  if (variant === 'missing') return 0;
+
+  const scheduledColumn = getShowingsDateColumn(variant);
+  const result = await params.db.execute(sql`
+    SELECT COUNT(*) AS count_value
+    FROM showings
+    WHERE agentId = ${params.agentId}
+      AND ${scheduledColumn} >= ${params.startIso}
+      AND ${scheduledColumn} <= ${params.endIso}
+  `);
+
+  return readCountValue(result);
+}
+
+async function countAgentPendingOffers(params: { db: any; agentId: number }) {
+  const strategies = [
+    sql`
+      SELECT COUNT(*) AS count_value
+      FROM offers
+      WHERE agentId = ${params.agentId}
+        AND status = ${'pending'}
+    `,
+    sql`
+      SELECT COUNT(*) AS count_value
+      FROM offers
+      WHERE assigned_agent_id = ${params.agentId}
+        AND status = ${'pending'}
+    `,
+    sql`
+      SELECT COUNT(*) AS count_value
+      FROM offers
+      INNER JOIN listings ON offers.listingId = listings.id
+      WHERE listings.agentId = ${params.agentId}
+        AND offers.status = ${'pending'}
+    `,
+  ];
+
+  let lastError: unknown;
+  for (const statement of strategies) {
+    try {
+      const result = await params.db.execute(statement);
+      return readCountValue(result);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function listAgentShowings(params: {
+  db: any;
+  agentId: number;
+  startDate?: string;
+  endDate?: string;
+  status?: 'all' | AgentShowingStatus;
+  details: ShowingsSchemaDetails;
+}): Promise<AgentShowingRecord[]> {
+  const variant = getShowingsSchemaVariant(params.details);
+  if (variant === 'missing') return [];
+
+  const scheduledColumn = getShowingsDateColumn(variant);
+  const listingColumn = getShowingsIdColumn(params.details, variant);
+  const leadColumn = params.details.leadIdColumn ? sql.identifier('leadId') : sql`NULL`;
+  const notesColumn = getShowingsNotesColumn(params.details);
+  const startCondition = params.startDate
+    ? sql` AND ${scheduledColumn} >= ${new Date(params.startDate).toISOString()}`
+    : sql``;
+  const endCondition = params.endDate
+    ? sql` AND ${scheduledColumn} <= ${new Date(params.endDate).toISOString()}`
+    : sql``;
+  const statusValue =
+    params.status && params.status !== 'all'
+      ? mapAgentShowingStatusToStorage(params.status, variant)
+      : null;
+  const statusCondition = statusValue ? sql` AND status = ${statusValue}` : sql``;
+
+  const result = await params.db.execute(sql`
+    SELECT
+      id,
+      ${listingColumn} AS listingId,
+      ${params.details.propertyIdColumn ? sql.identifier('propertyId') : sql`NULL`} AS propertyId,
+      ${leadColumn} AS leadId,
+      agentId,
+      ${scheduledColumn} AS scheduledAt,
+      status,
+      ${notesColumn} AS notes,
+      createdAt,
+      updatedAt
+    FROM showings
+    WHERE agentId = ${params.agentId}
+    ${startCondition}
+    ${endCondition}
+    ${statusCondition}
+    ORDER BY ${scheduledColumn}
+  `);
+
+  return normalizeDbRows(result).map(row =>
+    normalizeAgentShowingRow(row as RawAgentShowingRow, variant),
+  );
+}
 
 /**
  * Agent Router - Dashboard and CRM functionality for agents
  */
 export const agentRouter = router({
+  list: publicProcedure.query(async () => {
+    const db = await getDb();
+
+    const records = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.status, 'approved'))
+      .orderBy(desc(agents.isFeatured), desc(agents.updatedAt));
+
+    return records.map(record => ({
+      ...record,
+      slug: buildAgentPublicSlug(record),
+    }));
+  }),
+
+  getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+    const db = await getDb();
+
+    const [record] = await db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, input.id), eq(agents.status, 'approved')))
+      .limit(1);
+
+    if (!record) return null;
+
+    return {
+      ...record,
+      slug: buildAgentPublicSlug(record),
+    };
+  }),
+
+  getPublicProfileBySlug: publicProcedure
+    .input(z.object({ slug: z.string().min(3) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      const [exactMatch] = await db
+        .select()
+        .from(agents)
+        .where(and(eq(agents.slug, input.slug), eq(agents.status, 'approved')))
+        .limit(1);
+
+      if (exactMatch) {
+        return {
+          ...exactMatch,
+          slug: buildAgentPublicSlug(exactMatch),
+        };
+      }
+
+      const fallbackId = extractTrailingId(input.slug);
+      if (!fallbackId) return null;
+
+      const [fallbackRecord] = await db
+        .select()
+        .from(agents)
+        .where(and(eq(agents.id, fallbackId), eq(agents.status, 'approved')))
+        .limit(1);
+
+      if (!fallbackRecord) return null;
+
+      const fallbackSlug = buildAgentPublicSlug(fallbackRecord);
+      if (fallbackSlug !== input.slug) return null;
+
+      return {
+        ...fallbackRecord,
+        slug: fallbackSlug,
+      };
+    }),
+
+  getPublicProfileRouteById: publicProcedure
+    .input(z.object({ agentId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      const [record] = await db
+        .select({
+          id: agents.id,
+          slug: agents.slug,
+          displayName: agents.displayName,
+          firstName: agents.firstName,
+          lastName: agents.lastName,
+        })
+        .from(agents)
+        .where(and(eq(agents.id, input.agentId), eq(agents.status, 'approved')))
+        .limit(1);
+
+      if (!record) return null;
+
+      return {
+        slug: buildAgentPublicSlug(record),
+      };
+    }),
+
   /**
    * Get agent's dashboard KPIs
    */
@@ -53,26 +483,16 @@ export const agentRouter = router({
     }> => {
       try {
         const db = await getDb();
+        const capabilities = await getRuntimeSchemaCapabilities();
+        const userId = requireUser(ctx).id;
 
         // Get agent record from user
         const [agentRecord] = await db
           .select()
           .from(agents)
-          .where(eq(agents.userId, requireUser(ctx).id))
+          .where(eq(agents.userId, userId))
           .limit(1);
-
-        if (!agentRecord) {
-          // Return empty stats if no agent profile found
-          return {
-            activeListings: 0,
-            newLeadsThisWeek: 0,
-            showingsToday: 0,
-            offersInProgress: 0,
-            commissionsPending: 0,
-          };
-        }
-
-        const agentId = agentRecord.id;
+        const agentId = agentRecord?.id ?? null;
         // Date calculations
         const todayDate = new Date();
         todayDate.setHours(0, 0, 0, 0);
@@ -87,43 +507,45 @@ export const agentRouter = router({
         const [activeListingsResult] = await db
           .select({ count: count() })
           .from(properties)
-          .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
+          .where(and(...buildAgentInventoryConditions(userId, agentId, 'active')));
 
-        // New leads this week
-        const [newLeadsResult] = await db
-          .select({ count: count() })
-          .from(leads)
-          .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
+        let newLeadsResult: { count: number } | undefined;
+        let pendingCommissionsResult: { total: number | null } | undefined;
+        let showingsTodayCount = 0;
+        let offersInProgressCount = 0;
 
-        // Showings today
-        const [showingsTodayResult] = await db
-          .select({ count: count() })
-          .from(showings)
-          .where(
-            and(
-              eq(showings.agentId, agentId),
-              gte(showings.scheduledTime, today),
-              lte(showings.scheduledTime, tomorrow),
-            ),
-          );
+        if (agentId) {
+          [newLeadsResult] = await db
+            .select({ count: count() })
+            .from(leads)
+            .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
 
-        // Offers in progress
-        const [offersInProgressResult] = await db
-          .select({ count: count() })
-          .from(offers)
-          .where(and(eq((offers as any).agentId, agentId), eq(offers.status, 'pending')));
+          showingsTodayCount = capabilities.showingsReady
+            ? await countAgentShowingsInRange({
+                db,
+                agentId,
+                startIso: today,
+                endIso: tomorrow,
+                details: capabilities.showingsDetails,
+              })
+            : 0;
 
-        // Pending commissions sum
-        const [pendingCommissionsResult] = await db
-          .select({ total: sql<number>`SUM(${commissions.amount})` })
-          .from(commissions)
-          .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+          offersInProgressCount = await countAgentPendingOffers({
+            db,
+            agentId,
+          });
+
+          [pendingCommissionsResult] = await db
+            .select({ total: sql<number>`SUM(${commissions.amount})` })
+            .from(commissions)
+            .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+        }
 
         return {
           activeListings: activeListingsResult?.count || 0,
           newLeadsThisWeek: newLeadsResult?.count || 0,
-          showingsToday: showingsTodayResult?.count || 0,
-          offersInProgress: offersInProgressResult?.count || 0,
+          showingsToday: showingsTodayCount,
+          offersInProgress: offersInProgressCount,
           commissionsPending: Number(pendingCommissionsResult?.total || 0),
         };
       } catch (error) {
@@ -138,6 +560,82 @@ export const agentRouter = router({
       }
     },
   ),
+
+  getActivationMilestones: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    const userId = requireUser(ctx).id;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const milestoneEvents = [
+      'agent_profile_completed',
+      'agent_profile_published',
+      'agent_listing_created',
+      'agent_listing_live',
+      'agent_lead_received',
+      'agent_lead_stage_updated',
+      'agent_crm_action_logged',
+      'agent_showing_booked',
+      'agent_showing_updated',
+      'agent_showing_completed',
+      'agent_dashboard_viewed',
+      'agent_analytics_viewed',
+    ] as const;
+
+    const events = await db
+      .select({
+        eventType: analyticsEvents.eventType,
+        createdAt: analyticsEvents.createdAt,
+      })
+      .from(analyticsEvents)
+      .where(
+        and(
+          eq(analyticsEvents.userId, userId),
+          inArray(analyticsEvents.eventType, milestoneEvents),
+        ),
+      )
+      .orderBy(desc(analyticsEvents.createdAt));
+
+    const firstSeen: Record<string, string | null> = {};
+    for (const event of milestoneEvents) {
+      firstSeen[event] = null;
+    }
+
+    [...events].reverse().forEach(event => {
+      if (event.eventType in firstSeen) {
+        firstSeen[event.eventType] = event.createdAt;
+      }
+    });
+
+    const weeklyEvents = events.filter(event => event.createdAt >= weekAgo);
+    const weeklyEventTypes = new Set(weeklyEvents.map(event => event.eventType));
+
+    return {
+      milestones: firstSeen,
+      weeklyActive: {
+        core:
+          weeklyEventTypes.has('agent_listing_created') ||
+          weeklyEventTypes.has('agent_lead_received') ||
+          weeklyEventTypes.has('agent_crm_action_logged') ||
+          weeklyEventTypes.has('agent_showing_completed') ||
+          weeklyEventTypes.has('agent_showing_updated'),
+        crm:
+          weeklyEventTypes.has('agent_lead_received') ||
+          weeklyEventTypes.has('agent_lead_stage_updated') ||
+          weeklyEventTypes.has('agent_crm_action_logged'),
+        scheduling:
+          weeklyEventTypes.has('agent_showing_booked') ||
+          weeklyEventTypes.has('agent_showing_updated') ||
+          weeklyEventTypes.has('agent_showing_completed'),
+        qualified:
+          (weeklyEventTypes.has('agent_lead_received') ||
+            weeklyEventTypes.has('agent_lead_stage_updated') ||
+            weeklyEventTypes.has('agent_crm_action_logged')) &&
+          (weeklyEventTypes.has('agent_showing_booked') ||
+            weeklyEventTypes.has('agent_showing_updated') ||
+            weeklyEventTypes.has('agent_showing_completed')),
+      },
+    };
+  }),
 
   /**
    * Get leads pipeline for Kanban board
@@ -181,7 +679,9 @@ export const agentRouter = router({
       }
 
       if (input.filters?.source) {
-        conditions.push(eq(leads.source, input.filters.source));
+        conditions.push(
+          or(eq(leads.source, input.filters.source), eq(leads.leadSource, input.filters.source))!,
+        );
       }
 
       if (input.filters?.dateRange?.start) {
@@ -203,7 +703,7 @@ export const agentRouter = router({
         .from(leads)
         .leftJoin(properties, eq(leads.propertyId, properties.id))
         .where(and(...conditions))
-        .orderBy(leads.createdAt);
+        .orderBy(desc(leads.createdAt));
 
       // Define Output Type
       interface LeadPipelineItem {
@@ -251,6 +751,7 @@ export const agentRouter = router({
             stage = 'offer';
             break;
           case 'closed':
+          case 'lost':
             stage = 'closed';
             break;
           default:
@@ -263,7 +764,7 @@ export const agentRouter = router({
           email: lead.email,
           phone: lead.phone,
           status: lead.status,
-          source: lead.source,
+          source: lead.leadSource || lead.source || 'web',
           notes: lead.notes,
           createdAt: lead.createdAt || new Date(),
           property: property
@@ -344,8 +845,8 @@ export const agentRouter = router({
       // Log activity
       await db.insert(leadActivities).values({
         leadId: input.leadId,
-        agentId: agentRecord.id,
-        activityType: 'status_change',
+        userId: requireUser(ctx).id,
+        type: 'status_change',
         description: input.notes || `Moved to ${input.targetStage} stage`,
       });
 
@@ -356,6 +857,19 @@ export const agentRouter = router({
         title: 'Lead Status Updated',
         content: `Lead "${lead.name}" moved to ${input.targetStage} stage`,
         data: JSON.stringify({ leadId: input.leadId, newStage: input.targetStage }),
+        isRead: 0,
+      });
+
+      await recordAgentOsEvent({
+        userId: requireUser(ctx).id,
+        eventType: 'agent_lead_stage_updated',
+        eventData: {
+          leadId: input.leadId,
+          targetStage: input.targetStage,
+          leadStatus: newStatus,
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
       });
 
       return { success: true };
@@ -384,21 +898,11 @@ export const agentRouter = router({
         .limit(1);
 
       // Build conditions - use agentId if profile exists, otherwise use ownerId
-      const conditions: SQL[] = [];
-
-      if (agentRecord) {
-        // User has agent profile - query by agentId OR ownerId
-        conditions.push(
-          or(eq(properties.agentId, agentRecord.id), eq(properties.ownerId, user.id))!,
-        );
-      } else {
-        // No agent profile - query by ownerId only
-        conditions.push(eq(properties.ownerId, user.id));
-      }
-
-      if (input.status && input.status !== 'all') {
-        conditions.push(eq(properties.status, input.status as any));
-      }
+      const conditions = buildAgentInventoryConditions(
+        user.id,
+        agentRecord?.id ?? null,
+        input.status,
+      );
 
       const listings = await db
         .select()
@@ -437,6 +941,33 @@ export const agentRouter = router({
 
       return listingsWithImages;
     }),
+
+  getShowingListingOptions: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    const userId = requireUser(ctx).id;
+
+    const [agentRecord] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(agents.userId, userId))
+      .limit(1);
+
+    const allowLegacySetting = await getPlatformSetting(
+      'agent_os_allow_legacy_scheduling_inventory',
+    );
+    let allowLegacyFallback = true;
+    if (allowLegacySetting != null) {
+      try {
+        allowLegacyFallback = Boolean(JSON.parse(String(allowLegacySetting.settingValue)));
+      } catch {
+        allowLegacyFallback = true;
+      }
+    }
+
+    return getAgentInventorySchedulingOptions(db, userId, agentRecord?.id ?? null, {
+      allowLegacyFallback,
+    });
+  }),
 
   /**
    * Archive property
@@ -557,8 +1088,210 @@ export const agentRouter = router({
         specializations: input.specializations,
       });
 
+      await recordAgentOsEvent({
+        userId: requireUser(ctx).id,
+        eventType: 'agent_profile_completed',
+        eventData: {
+          agentId,
+          displayName: input.displayName,
+          hasBio: Boolean(input.bio),
+          hasLicenseNumber: Boolean(input.licenseNumber),
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
+
       return { success: true, agentId };
     }),
+
+  getMyProfileOnboarding: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    const userId = requireUser(ctx).id;
+
+    const [agentRecord] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
+
+    const entitlements = await getAgentEntitlementsForUserId(userId);
+
+    return {
+      agent: toAgentOnboardingResponse(agentRecord || null),
+      entitlements,
+    };
+  }),
+
+  updateMyProfileOnboarding: agentProcedure
+    .input(
+      z.object({
+        displayName: z.string().min(2).max(100),
+        phone: z.string().min(7).max(20),
+        whatsapp: z.string().max(50).optional(),
+        profileImage: z.string().optional(),
+        areasServed: z.array(z.string()).optional(),
+        focus: z.enum(['sales', 'rentals', 'both']).optional(),
+        specializations: z.array(z.string()).optional(),
+        propertyTypes: z.array(z.string()).optional(),
+        bio: z.string().max(1000).optional(),
+        licenseNumber: z.string().max(100).optional(),
+        yearsExperience: z.number().min(0).max(80).optional(),
+        languages: z.array(z.string()).optional(),
+        socialLinks: z
+          .object({
+            website: z.string().optional(),
+            facebook: z.string().optional(),
+            instagram: z.string().optional(),
+            linkedin: z.string().optional(),
+            twitter: z.string().optional(),
+          })
+          .optional(),
+        slug: z.string().max(200).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = requireUser(ctx).id;
+      const db = await getDb();
+      const result = await agentOnboardingService.saveProfile(userId, input);
+      const agentId = result.profile?.id;
+      const entitlements = result.entitlements;
+
+      if (agentId && entitlements && entitlements.profileCompletionScore >= 70) {
+        const [existingCompletionEvent] = await db
+          .select({ id: analyticsEvents.id })
+          .from(analyticsEvents)
+          .where(
+            and(
+              eq(analyticsEvents.userId, userId),
+              eq(analyticsEvents.eventType, 'agent_profile_completed'),
+            ),
+          )
+          .limit(1);
+
+        if (!existingCompletionEvent) {
+          await recordAgentOsEvent({
+            userId,
+            eventType: 'agent_profile_completed',
+            eventData: {
+              agentId,
+              profileCompletionScore: entitlements.profileCompletionScore,
+              profileCompletionFlags: entitlements.profileCompletionFlags,
+            },
+            req: ctx.req,
+            requestId: ctx.requestId,
+          });
+        }
+      }
+
+      return {
+        success: result.success,
+        agent: result.profile,
+        entitlements: result.entitlements,
+      };
+    }),
+
+  publishProfile: agentProcedure
+    .input(
+      z
+        .object({
+          forceSlugRefresh: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{
+        success: boolean;
+        agentId: number;
+        slug: string;
+        isPublic: boolean;
+        status: string;
+        approvalState: 'live' | 'pending_approval';
+      }> => {
+        const db = await getDb();
+        const userId = requireUser(ctx).id;
+
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, userId))
+          .limit(1);
+
+        if (!agentRecord) {
+          throw new Error('Agent profile not found');
+        }
+
+        if (agentRecord.status === 'rejected' || agentRecord.status === 'suspended') {
+          throw new Error('This profile cannot be published in its current state');
+        }
+
+        let nextSlug =
+          input?.forceSlugRefresh || !agentRecord.slug
+            ? buildAgentPublicSlug(agentRecord)
+            : agentRecord.slug;
+
+        if (!nextSlug) {
+          nextSlug = `agent-${agentRecord.id}`;
+        }
+
+        let suffix = 1;
+        while (true) {
+          const [existingSlug] = await db
+            .select({ id: agents.id })
+            .from(agents)
+            .where(and(eq(agents.slug, nextSlug), sql`${agents.id} <> ${agentRecord.id}`))
+            .limit(1);
+
+          if (!existingSlug) break;
+
+          suffix += 1;
+          nextSlug = `${buildAgentPublicSlug(agentRecord)}-${suffix}`;
+        }
+
+        await db
+          .update(agents)
+          .set({
+            slug: nextSlug,
+            updatedAt: nowAsDbTimestamp(),
+          })
+          .where(eq(agents.id, agentRecord.id));
+
+        const isPublic = agentRecord.status === 'approved';
+
+        if (isPublic) {
+          const [existingPublishEvent] = await db
+            .select({ id: analyticsEvents.id })
+            .from(analyticsEvents)
+            .where(
+              and(
+                eq(analyticsEvents.userId, userId),
+                eq(analyticsEvents.eventType, 'agent_profile_published'),
+              ),
+            )
+            .limit(1);
+
+          if (!existingPublishEvent) {
+            await recordAgentOsEvent({
+              userId,
+              eventType: 'agent_profile_published',
+              eventData: {
+                agentId: agentRecord.id,
+                slug: nextSlug,
+              },
+              req: ctx.req,
+              requestId: ctx.requestId,
+            });
+          }
+        }
+
+        return {
+          success: true,
+          agentId: agentRecord.id,
+          slug: nextSlug,
+          isPublic,
+          status: agentRecord.status,
+          approvalState: isPublic ? 'live' : 'pending_approval',
+        };
+      },
+    ),
 
   /**
    * Get agent's leads with filtering
@@ -584,6 +1317,7 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
 
       // Get agent record
       const [agentRecord] = await db
@@ -680,9 +1414,21 @@ export const agentRouter = router({
       // Log activity
       await db.insert(leadActivities).values({
         leadId: input.leadId,
-        agentId: agentRecord.id,
-        activityType: 'status_change',
+        userId: requireUser(ctx).id,
+        type: 'status_change',
         description: input.notes || `Status changed to ${input.status}`,
+      });
+
+      await recordAgentOsEvent({
+        userId: requireUser(ctx).id,
+        eventType: 'agent_lead_stage_updated',
+        eventData: {
+          leadId: input.leadId,
+          leadStatus: input.status,
+          source: 'updateLeadStatus',
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
       });
 
       return { success: true };
@@ -732,10 +1478,12 @@ export const agentRouter = router({
       // Add activity
       await db.insert(leadActivities).values({
         leadId: input.leadId,
-        agentId: agentRecord.id,
-        activityType: input.activityType,
+        userId: requireUser(ctx).id,
+        type:
+          input.activityType === 'viewing_scheduled' || input.activityType === 'offer_sent'
+            ? 'status_change'
+            : input.activityType,
         description: input.description,
-        metadata: input.metadata,
       });
 
       // Update lead's updatedAt
@@ -743,6 +1491,17 @@ export const agentRouter = router({
         .update(leads)
         .set({ updatedAt: nowAsDbTimestamp() })
         .where(eq(leads.id, input.leadId));
+
+      await recordAgentOsEvent({
+        userId: requireUser(ctx).id,
+        eventType: 'agent_crm_action_logged',
+        eventData: {
+          leadId: input.leadId,
+          activityType: input.activityType,
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
 
       return { success: true };
     }),
@@ -758,6 +1517,22 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }): Promise<(typeof leadActivities.$inferSelect)[]> => {
       const db = await getDb();
+
+      const [agentRecord] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.userId, requireUser(ctx).id))
+        .limit(1);
+
+      if (!agentRecord) {
+        throw new Error('Agent profile not found');
+      }
+
+      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+
+      if (!lead || lead.agentId !== agentRecord.id) {
+        throw new Error('Lead not found or unauthorized');
+      }
 
       const activities = await db
         .select()
@@ -776,50 +1551,261 @@ export const agentRouter = router({
       z.object({
         startDate: z.string().optional(),
         endDate: z.string().optional(),
-        status: z.enum(['all', 'requested', 'confirmed', 'completed', 'cancelled']).optional(),
+        status: z.enum(['all', 'scheduled', 'completed', 'cancelled', 'no_show']).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
+      try {
+        const db = await getDb();
+        const capabilities = await getRuntimeSchemaCapabilities();
+        if (!capabilities.showingsReady) {
+          warnSchemaCapabilityOnce(
+            'agent-getMyShowings-schema-not-ready',
+            '[agent.getMyShowings] Showings schema not ready. Returning empty showings.',
+            capabilities.showingsDetails,
+          );
+          return [];
+        }
 
-      // Get agent record
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.userId, requireUser(ctx).id))
+          .limit(1);
+
+        if (!agentRecord) {
+          return [];
+        }
+
+        return await listAgentShowings({
+          db,
+          agentId: agentRecord.id,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          status: input.status,
+          details: capabilities.showingsDetails,
+        });
+      } catch (error) {
+        console.warn('[agent.getMyShowings] Returning empty showings due to error:', error);
+        return [];
+      }
+    }),
+
+  bookShowing: agentProcedure
+    .input(
+      z.object({
+        listingId: z.number(),
+        scheduledAt: z.string().min(10),
+        durationMinutes: z.number().min(15).max(240).optional(),
+        visitorName: z.string().min(2).max(150),
+        notes: z.string().max(2000).optional(),
+        leadId: z.number().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean; showingId: number }> => {
+      const db = await getDb();
+      const userId = requireUser(ctx).id;
+
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(eq(agents.userId, userId))
         .limit(1);
 
       if (!agentRecord) {
         throw new Error('Agent profile not found');
       }
 
-      // Build conditions
-      const conditions: SQL[] = [eq(showings.agentId, agentRecord.id)];
-
-      if (input.startDate) {
-        conditions.push(gte(showings.scheduledTime, new Date(input.startDate).toISOString()));
-      }
-      if (input.endDate) {
-        conditions.push(lte(showings.scheduledTime, new Date(input.endDate).toISOString()));
-      }
-      if (input.status && input.status !== 'all') {
-        conditions.push(eq(showings.status, input.status as any));
-      }
-
-      // Fetch showings with property and lead info
-      const showingsList = await db
+      const [listingRecord] = await db
         .select({
-          showing: showings,
+          id: listings.id,
+          ownerId: listings.ownerId,
+          agentId: listings.agentId,
+          title: listings.title,
+          address: listings.address,
+          city: listings.city,
+          province: listings.province,
+          status: listings.status,
         })
-        .from(showings)
-        .where(and(...conditions))
-        .orderBy(showings.scheduledTime);
+        .from(listings)
+        .where(eq(listings.id, input.listingId))
+        .limit(1);
 
-      return showingsList.map(({ showing }) => ({
-        ...showing,
-        property: null,
-        client: null,
-      }));
+      if (!listingRecord) {
+        throw new Error('Listing not found');
+      }
+
+      const isOwner = listingRecord.ownerId === userId;
+      const isAssignedAgent = listingRecord.agentId === agentRecord.id;
+      if (!isOwner && !isAssignedAgent) {
+        throw new Error('Not authorized to book showings for this listing');
+      }
+
+      const resolvedInventory = await resolvePropertyForListing(db, {
+        id: listingRecord.id,
+        ownerId: listingRecord.ownerId,
+        agentId: listingRecord.agentId ?? null,
+        title: listingRecord.title,
+        address: listingRecord.address,
+        city: listingRecord.city,
+        province: listingRecord.province,
+        status: listingRecord.status,
+      });
+
+      const allowLegacySetting = await getPlatformSetting(
+        'agent_os_allow_legacy_scheduling_inventory',
+      );
+      let allowLegacyFallback = true;
+      if (allowLegacySetting != null) {
+        try {
+          allowLegacyFallback = Boolean(JSON.parse(String(allowLegacySetting.settingValue)));
+        } catch {
+          allowLegacyFallback = true;
+        }
+      }
+
+      if (!allowLegacyFallback && resolvedInventory.propertyId == null) {
+        throw new Error(
+          'This listing is not yet linked to Agent OS inventory. Legacy scheduling fallback is disabled.',
+        );
+      }
+
+      let leadRecord: typeof leads.$inferSelect | null = null;
+      if (input.leadId) {
+        const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+
+        if (!lead || lead.agentId !== agentRecord.id) {
+          throw new Error('Lead not found or unauthorized');
+        }
+
+        const persistedLead = lead;
+        leadRecord = persistedLead;
+
+        if (
+          persistedLead.propertyId != null &&
+          resolvedInventory.propertyId != null &&
+          Number(persistedLead.propertyId) !== Number(resolvedInventory.propertyId)
+        ) {
+          throw new Error('Selected listing does not match the lead inventory');
+        }
+      }
+
+      const capabilities = await getRuntimeSchemaCapabilities();
+      const variant = getShowingsSchemaVariant(capabilities.showingsDetails);
+      if (variant === 'missing') {
+        throw new Error('Showings schema not ready');
+      }
+
+      const showingColumns = [
+        sql.identifier('listingId'),
+        sql.identifier('agentId'),
+        sql.identifier('visitorName'),
+        getShowingsDateColumn(variant),
+        sql.identifier('durationMinutes'),
+        sql.identifier('status'),
+      ];
+      const showingValues = [
+        sql`${input.listingId}`,
+        sql`${agentRecord.id}`,
+        sql`${input.visitorName}`,
+        sql`${toDbTimestampRequired(input.scheduledAt)}`,
+        sql`${input.durationMinutes ?? 30}`,
+        sql`${mapAgentShowingStatusToStorage('scheduled', variant)}`,
+      ];
+
+      if (capabilities.showingsDetails.propertyIdColumn) {
+        showingColumns.push(sql.identifier('propertyId'));
+        showingValues.push(sql`${resolvedInventory.propertyId}`);
+      }
+
+      if (capabilities.showingsDetails.leadIdColumn) {
+        showingColumns.push(sql.identifier('leadId'));
+        showingValues.push(sql`${leadRecord?.id ?? null}`);
+      }
+
+      if (capabilities.showingsDetails.notesColumn) {
+        showingColumns.push(sql.identifier('notes'));
+        showingValues.push(sql`${input.notes || null}`);
+      } else {
+        showingColumns.push(sql.identifier('feedback'));
+        showingValues.push(sql`${input.notes || null}`);
+      }
+
+      const insertResult =
+        typeof (db as { execute?: unknown }).execute === 'function'
+          ? await db.execute(sql`
+              INSERT INTO showings (${sql.join(showingColumns, sql`, `)})
+              VALUES (${sql.join(showingValues, sql`, `)})
+            `)
+          : await db.insert(showings).values({
+              listingId: input.listingId,
+              propertyId: capabilities.showingsDetails.propertyIdColumn
+                ? resolvedInventory.propertyId
+                : undefined,
+              leadId: capabilities.showingsDetails.leadIdColumn
+                ? (leadRecord?.id ?? null)
+                : undefined,
+              agentId: agentRecord.id,
+              visitorName: input.visitorName,
+              scheduledAt: toDbTimestampRequired(input.scheduledAt),
+              durationMinutes: input.durationMinutes ?? 30,
+              status: mapAgentShowingStatusToStorage('scheduled', variant),
+              notes: capabilities.showingsDetails.notesColumn ? input.notes || null : undefined,
+              feedback: capabilities.showingsDetails.notesColumn ? undefined : input.notes || null,
+            } as any);
+
+      const insertRows = Array.isArray(insertResult) ? insertResult : [insertResult];
+      const showingId = Number(
+        (insertRows[0] as any)?.insertId ??
+          (insertRows[0] as any)?.lastInsertRowid ??
+          (insertResult as any)?.insertId,
+      );
+
+      if (leadRecord) {
+        const persistedLead = leadRecord;
+
+        await db
+          .update(leads)
+          .set({
+            status: 'viewing_scheduled',
+            updatedAt: nowAsDbTimestamp(),
+          })
+          .where(eq(leads.id, persistedLead.id));
+
+        await db.insert(leadActivities).values({
+          leadId: persistedLead.id,
+          userId,
+          type: 'status_change',
+          description: `Showing booked for ${new Date(input.scheduledAt).toLocaleString()}`,
+        });
+
+        await recordAgentOsEvent({
+          userId,
+          eventType: 'agent_crm_action_logged',
+          eventData: {
+            leadId: persistedLead.id,
+            activityType: 'viewing_scheduled',
+            showingId,
+          },
+          req: ctx.req,
+          requestId: ctx.requestId,
+        });
+      }
+
+      await recordAgentOsEvent({
+        userId,
+        eventType: 'agent_showing_booked',
+        eventData: {
+          showingId,
+          listingId: input.listingId,
+          propertyId: resolvedInventory.propertyId,
+          leadId: input.leadId ?? null,
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
+
+      return { success: true, showingId };
     }),
 
   /**
@@ -829,12 +1815,13 @@ export const agentRouter = router({
     .input(
       z.object({
         showingId: z.number(),
-        status: z.enum(['requested', 'confirmed', 'completed', 'cancelled']),
+        status: z.enum(['scheduled', 'completed', 'cancelled', 'no_show']),
         notes: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
+      const capabilities = await getRuntimeSchemaCapabilities();
 
       // Get agent record
       const [agentRecord] = await db
@@ -847,14 +1834,42 @@ export const agentRouter = router({
         throw new Error('Agent profile not found');
       }
 
-      // Update showing
-      await db
-        .update(showings)
-        .set({
+      const variant = getShowingsSchemaVariant(capabilities.showingsDetails);
+      if (variant === 'missing') {
+        throw new Error('Showings schema not ready');
+      }
+
+      const nextStatus = mapAgentShowingStatusToStorage(input.status, variant);
+      const notesAssignment = capabilities.showingsDetails.notesColumn
+        ? sql`, notes = ${input.notes ?? null}`
+        : sql`, feedback = ${input.notes ?? null}`;
+      const result = await db.execute(sql`
+        UPDATE showings
+        SET status = ${nextStatus},
+            updatedAt = ${nowAsDbTimestamp()}
+            ${notesAssignment}
+        WHERE id = ${input.showingId} AND agentId = ${agentRecord.id}
+      `);
+
+      const affectedRows = Number(
+        (result as any)?.affectedRows ?? (result as any)?.[0]?.affectedRows ?? 0,
+      );
+      if (affectedRows === 0) {
+        throw new Error('Showing not found or unauthorized');
+      }
+
+      await recordAgentOsEvent({
+        userId: requireUser(ctx).id,
+        eventType:
+          input.status === 'completed' ? 'agent_showing_completed' : 'agent_showing_updated',
+        eventData: {
+          showingId: input.showingId,
           status: input.status,
-          updatedAt: nowAsDbTimestamp(),
-        })
-        .where(and(eq(showings.id, input.showingId), eq(showings.agentId, agentRecord.id)));
+          hasNotes: Boolean(input.notes),
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
 
       return { success: true };
     }),

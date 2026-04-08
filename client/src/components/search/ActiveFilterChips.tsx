@@ -23,9 +23,16 @@ function getFilterLabel(key: string, value: any): string | null {
   switch (key) {
     case 'listingType':
       return value === 'sale' ? 'For Sale' : value === 'rent' ? 'To Rent' : null;
-    case 'propertyType':
+    case 'listingSource':
+      return value === 'development'
+        ? 'New Developments'
+        : value === 'manual'
+          ? 'Property Listings'
+          : null;
+    case 'propertyType': {
       const slug = propertyTypeToSlug[value];
       return slug ? unslugify(slug) : value;
+    }
     case 'city':
       return value;
     case 'suburb':
@@ -60,6 +67,7 @@ export function ActiveFilterChips({ filters, onRemoveFilter, onClearAll }: Activ
     if (typeof value === 'boolean' && !value) return false;
     // Include these filter types
     return [
+      'listingSource',
       'minPrice',
       'maxPrice',
       'minBedrooms',

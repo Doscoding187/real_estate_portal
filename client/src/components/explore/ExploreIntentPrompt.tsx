@@ -3,7 +3,7 @@ import { type ExploreIntent } from '@/lib/exploreIntent';
 
 type ExploreIntentPromptProps = {
   open: boolean;
-  onSelect: (intent: ExploreIntent) => void;
+  onSelect: (intent: ExploreIntent) => void | Promise<void>;
   onDismiss?: () => void;
 };
 
@@ -20,7 +20,7 @@ export function ExploreIntentPrompt({ open, onSelect, onDismiss }: ExploreIntent
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-4 sm:items-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -31,34 +31,39 @@ export function ExploreIntentPrompt({ open, onSelect, onDismiss }: ExploreIntent
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 8 }}
           >
-            <h3 className="text-lg font-semibold">What are you here for?</h3>
-            <p className="mt-1 text-sm text-white/70">
-              We use this to softly prioritize your Explore feed. You can change it later.
-            </p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold">Customize your Explore feed</h3>
+                <p className="mt-1 text-sm text-white/70">
+                  Pick your primary intent. You can change it later.
+                </p>
+              </div>
+              {onDismiss && (
+                <button
+                  type="button"
+                  onClick={onDismiss}
+                  className="rounded-md px-2 py-1 text-sm text-white/70 hover:bg-white/10 hover:text-white"
+                >
+                  Skip
+                </button>
+              )}
+            </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {OPTIONS.map(option => (
                 <button
                   key={option.intent}
                   type="button"
-                  onClick={() => onSelect(option.intent)}
-                  className="rounded-xl border border-white/15 bg-white/5 px-3 py-3 text-left hover:bg-white/10"
+                  onClick={() => {
+                    void onSelect(option.intent);
+                  }}
+                  className="rounded-xl border border-white/15 bg-white/5 px-3 py-3 text-left transition hover:border-white/30 hover:bg-white/10"
                 >
                   <div className="font-medium">{option.label}</div>
                   <div className="text-xs text-white/70">{option.description}</div>
                 </button>
               ))}
             </div>
-
-            {onDismiss && (
-              <button
-                type="button"
-                onClick={onDismiss}
-                className="mt-4 w-full rounded-lg border border-white/20 px-3 py-2 text-sm text-white/80 hover:bg-white/5"
-              >
-                Maybe later
-              </button>
-            )}
           </motion.div>
         </motion.div>
       )}

@@ -11,7 +11,14 @@ import { ContentRail } from '@/components/layout/ContentRail';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
 import { TestimonialsSection } from '@/sections/home/TestimonialsSection';
 import { CTASection } from '@/sections/home/CTASection';
-import { normalizeHeroUiTab, toEnhancedHeroTabLabel, type HeroTab } from '@/types/hero';
+import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
+import { MetaControl } from '@/components/seo/MetaControl';
+import {
+  buildOrganizationStructuredData,
+  buildWebsiteStructuredData,
+  toAbsoluteUrl,
+} from '@/lib/seo/structuredData';
+import { VITE_APP_LOGO } from '@/const';
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -39,9 +46,45 @@ export default function Home() {
     setActiveHeroTab(normalizedTab);
   };
 
+  const heroTabValue =
+    activeHeroTab === 'buy'
+      ? 'buy'
+      : activeHeroTab === 'rent'
+        ? 'rental'
+        : activeHeroTab === 'developments'
+          ? 'projects'
+          : activeHeroTab === 'shared_living'
+            ? 'pg'
+            : activeHeroTab === 'plot_land'
+              ? 'plot'
+              : 'commercial';
+  const homeCanonicalUrl = toAbsoluteUrl('/');
+  const homeDescription =
+    'Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify.';
+  const homeStructuredData = [
+    buildOrganizationStructuredData({
+      name: 'Property Listify',
+      url: '/',
+      logoUrl: VITE_APP_LOGO,
+      description: homeDescription,
+    }),
+    buildWebsiteStructuredData({
+      name: 'Property Listify',
+      url: '/',
+      description: homeDescription,
+    }),
+  ];
+
   return (
     <HomeLayout>
-      <EnhancedHero activeTab={toEnhancedHeroTabLabel(activeHeroTab)} onTabChange={handleTabChange} />
+      <MetaControl
+        canonicalUrl={homeCanonicalUrl}
+        title="Property Listify | South African Property Search and New Developments"
+        description={homeDescription}
+        image={toAbsoluteUrl(VITE_APP_LOGO)}
+        structuredData={homeStructuredData}
+      />
+      <EnhancedHero activeTab={heroTabValue} onTabChange={handleTabChange} />
       <ContentRail>
         <HomeTrendingSection
           selectedProvince={selectedProvince}

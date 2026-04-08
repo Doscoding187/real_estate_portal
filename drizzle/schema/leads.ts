@@ -34,6 +34,11 @@ export const leads = mysqlTable('leads', {
   email: varchar({ length: 320 }).notNull(),
   phone: varchar({ length: 50 }),
   message: text(),
+  unitId: varchar('unit_id', { length: 36 }),
+  unitName: varchar('unit_name', { length: 255 }),
+  unitPriceFrom: decimal('unit_price_from', { precision: 15, scale: 2 }),
+  unitBedrooms: int('unit_bedrooms'),
+  unitBathrooms: decimal('unit_bathrooms', { precision: 3, scale: 1 }),
   leadType: mysqlEnum('leadType', ['inquiry', 'viewing_request', 'offer', 'callback'])
     .default('inquiry')
     .notNull(),
@@ -160,25 +165,34 @@ export const offers = mysqlTable('offers', {
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export const showings = mysqlTable('showings', {
-  id: int().autoincrement().primaryKey(),
-  listingId: int()
-    .notNull()
-    .references(() => listings.id, { onDelete: 'cascade' }),
-  agentId: int()
-    .notNull()
-    .references(() => agents.id, { onDelete: 'cascade' }),
-  visitorId: int().references(() => users.id, { onDelete: 'set null' }),
-  visitorName: varchar({ length: 150 }),
-  scheduledTime: timestamp({ mode: 'string' }).notNull(),
-  durationMinutes: int().default(30).notNull(),
-  status: mysqlEnum(['scheduled', 'completed', 'cancelled', 'no_show'])
-    .default('scheduled')
-    .notNull(),
-  feedback: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+export const showings = mysqlTable(
+  'showings',
+  {
+    id: int().autoincrement().primaryKey(),
+    listingId: int('listingId').references(() => listings.id, { onDelete: 'set null' }),
+    propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
+    leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
+    agentId: int()
+      .notNull()
+      .references(() => agents.id, { onDelete: 'set null' }),
+    scheduledAt: timestamp({ mode: 'string' }).notNull(),
+    status: mysqlEnum(['requested', 'confirmed', 'completed', 'cancelled', 'no_show'])
+      .default('requested')
+      .notNull(),
+    visitorId: int().references(() => users.id, { onDelete: 'set null' }),
+    visitorName: varchar({ length: 150 }),
+    durationMinutes: int().default(30).notNull(),
+    notes: text(),
+    feedback: text(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index('idx_showings_agent_scheduled_at').on(table.agentId, table.scheduledAt),
+    index('idx_showings_listing').on(table.listingId),
+    index('idx_showings_property').on(table.propertyId),
+  ],
+);
 
 export const scheduledViewings = mysqlTable(
   'scheduled_viewings',
@@ -248,5 +262,71 @@ export const savedSearches = mysqlTable(
   table => [
     index('idx_saved_searches_user').on(table.userId),
     index('idx_saved_searches_frequency').on(table.notificationFrequency),
+  ],
+);
+
+export const savedSearchDeliveryHistory = mysqlTable(
+  'saved_search_delivery_history',
+  {
+    id: int().autoincrement().primaryKey(),
+    savedSearchId: int('saved_search_id').references(() => savedSearches.id, {
+      onDelete: 'set null',
+    }),
+    userId: int('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    searchName: varchar('search_name', { length: 255 }).notNull(),
+    title: varchar({ length: 255 }).notNull(),
+    content: text().notNull(),
+    listingSource: mysqlEnum('saved_search_listing_source', ['manual', 'development', 'all'])
+      .notNull()
+      .default('all'),
+    notificationFrequency: mysqlEnum('saved_search_delivery_frequency', [
+      'instant',
+      'daily',
+      'weekly',
+      'never',
+    ])
+      .notNull()
+      .default('daily'),
+    totalMatches: int('total_matches').notNull().default(0),
+    newMatchCount: int('new_match_count').notNull().default(0),
+    inAppRequested: tinyint('in_app_requested').notNull().default(0),
+    emailRequested: tinyint('email_requested').notNull().default(0),
+    inAppDelivered: tinyint('in_app_delivered').notNull().default(0),
+    emailDelivered: tinyint('email_delivered').notNull().default(0),
+    status: mysqlEnum('saved_search_delivery_status', [
+      'delivered',
+      'partial',
+      'skipped',
+      'failed',
+    ])
+      .notNull()
+      .default('delivered'),
+    retryState: mysqlEnum('saved_search_delivery_retry_state', [
+      'not_needed',
+      'pending',
+      'retrying',
+      'succeeded',
+      'abandoned',
+    ])
+      .notNull()
+      .default('not_needed'),
+    retryCount: int('retry_count').notNull().default(0),
+    maxRetryCount: int('max_retry_count').notNull().default(3),
+    nextRetryAt: timestamp('next_retry_at', { mode: 'string' }),
+    lastRetryAt: timestamp('last_retry_at', { mode: 'string' }),
+    actionUrl: varchar('action_url', { length: 500 }),
+    previewMatches: json('preview_matches'),
+    error: text(),
+    processedAt: timestamp('processed_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_saved_search_delivery_history_saved_search').on(table.savedSearchId),
+    index('idx_saved_search_delivery_history_user').on(table.userId),
+    index('idx_saved_search_delivery_history_status').on(table.status),
+    index('idx_saved_search_delivery_history_retry_state').on(table.retryState),
+    index('idx_saved_search_delivery_history_next_retry').on(table.nextRetryAt),
+    index('idx_saved_search_delivery_history_processed').on(table.processedAt),
   ],
 );

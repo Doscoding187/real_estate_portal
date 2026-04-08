@@ -31,4 +31,3 @@ export function toEnhancedHeroTabLabel(tab: HeroTab): string {
   if (tab === 'plot_land') return 'Plot & Land';
   return 'Commercial';
 }
-

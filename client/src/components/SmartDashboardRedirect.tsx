@@ -29,6 +29,9 @@ export default function SmartDashboardRedirect() {
       case 'agent':
         setLocation('/agent/dashboard');
         break;
+      case 'service_provider':
+        setLocation('/service/dashboard');
+        break;
       case 'visitor':
       default:
         setLocation('/user/dashboard');

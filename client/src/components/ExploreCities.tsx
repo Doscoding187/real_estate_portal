@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, ArrowRight, ChevronRight, ChevronDown, Building } from 'lucide-react';
+import { MapPin, ChevronRight, ChevronDown, Building } from 'lucide-react';
 
 interface City {
   name: string;
@@ -194,19 +193,19 @@ export function ExploreCities({
     description || "Browse properties in South Africa's most sought-after locations.";
 
   return (
-    <section className="py-16 bg-white">
+    <section className="bg-white py-8 md:py-16">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-10 text-center md:text-left flex flex-col md:flex-row justify-between items-end gap-4">
-          <div>
-            <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
-            <p className="text-slate-500 text-xs md:text-sm max-w-3xl">{displayDescription}</p>
+        <div className="mb-5 flex flex-col gap-2.5 text-left md:mb-10 md:flex-row md:items-end md:justify-between md:gap-4">
+          <div className="max-w-3xl">
+            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">{displayDescription}</p>
           </div>
 
           <Link href="/property-for-sale">
             <Button
               variant="ghost"
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium group"
+              className="group h-9 justify-start rounded-full border border-slate-200 px-3.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:justify-center md:rounded-md md:border-0 md:px-0 md:text-sm"
             >
               View All Locations{' '}
               <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
@@ -215,52 +214,52 @@ export function ExploreCities({
         </div>
 
         {/* Grid Layout */}
-        <div className="flex overflow-x-auto gap-4 pb-2 snap-x scrollbar-hide -mx-4 px-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 sm:overflow-visible sm:mx-0 sm:px-0">
-          {displayedCities.map(city => (
-            <Link
-              key={city.slug}
-              href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(
-                /\/\//g,
-                '/',
-              )}
-              className="flex-none w-[200px] sm:w-auto snap-center"
-            >
-              <div className="group cursor-pointer h-full">
-                <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                  {/* Image */}
-                  {/* Icon Only */}
-                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 relative bg-blue-50 flex items-center justify-center text-blue-500 shadow-sm border border-blue-100">
-                    <Building className="h-8 w-8 opacity-90" />
-                  </div>
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white via-white/90 to-transparent sm:hidden" />
+          <div className="scrollbar-hide -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+            {displayedCities.map(city => (
+              <Link
+                key={city.slug}
+                href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(
+                  /\/\//g,
+                  '/',
+                )}
+                className="w-[75vw] max-w-[236px] flex-none snap-start sm:w-auto"
+              >
+                <div className="group h-full cursor-pointer">
+                  <div className="flex h-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-slate-300 group-hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:gap-4 sm:rounded-xl sm:border-transparent sm:bg-transparent sm:p-3 sm:shadow-none sm:hover:border-slate-100 sm:hover:bg-slate-50">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-500 shadow-sm sm:h-16 sm:w-16 sm:rounded-lg">
+                      <Building className="h-6 w-6 opacity-90 sm:h-8 sm:w-8" />
+                    </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 py-1">
-                    <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                      {city.name}
-                    </h3>
+                    <div className="min-w-0 flex-1 py-0.5">
+                      <h3 className="truncate text-[15px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-lg">
+                        {city.name}
+                      </h3>
 
-                    {city.propertyCount && (
-                      <p className="text-slate-500 text-sm mb-1 truncate">{city.propertyCount}</p>
-                    )}
+                      {city.propertyCount && (
+                        <p className="mb-1 truncate text-sm text-slate-500">{city.propertyCount}</p>
+                      )}
 
-                    <div className="flex items-center gap-1 text-xs text-slate-400">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{city.province}</span>
+                      <div className="flex items-center gap-1 text-xs text-slate-400">
+                        <MapPin className="h-3 w-3" />
+                        <span className="truncate">{city.province}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Show More Button */}
         {remainingCount > 0 && (
-          <div className="mt-8 flex justify-center">
+          <div className="mt-6 flex justify-center md:mt-8">
             <Button
               variant="outline"
               onClick={() => setVisibleCount(prev => prev + 12)}
-              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-600 min-w-[200px]"
+              className="min-w-[220px] rounded-full border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
             >
               Show More Locations ({remainingCount})
               <ChevronDown className="ml-2 h-4 w-4" />

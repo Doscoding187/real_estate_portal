@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { MapPin } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -39,9 +40,25 @@ const AMENITIES = [
   'Wi-Fi',
 ];
 
+const LISTING_SOURCE_OPTIONS = [
+  {
+    value: undefined,
+    label: 'All',
+  },
+  {
+    value: 'manual',
+    label: 'Resale',
+  },
+  {
+    value: 'development',
+    label: 'New Development',
+  },
+] as const;
+
 export function SidebarFilters({
   filters,
   filterCounts,
+  locationContext,
   onFilterChange,
   onSaveSearch,
 }: SidebarFiltersProps) {
@@ -90,6 +107,19 @@ export function SidebarFilters({
     }
   };
 
+  const handleListingSourceChange = (source: SearchFilters['listingSource'] | undefined) => {
+    if (!source || filters.listingSource === source) {
+      const { listingSource, ...rest } = filters;
+      onFilterChange(rest);
+      return;
+    }
+
+    onFilterChange({
+      ...filters,
+      listingSource: source,
+    });
+  };
+
   const handleAmenitiesChange = (value: string, checked: boolean) => {
     const category = 'amenities';
     const currentValues = filters[category] || [];
@@ -107,16 +137,10 @@ export function SidebarFilters({
     });
   };
 
-  const handleLocationChange = (slug: string, checked: boolean) => {
-    const selected = Array.isArray(filters.suburb)
-      ? filters.suburb
-      : filters.suburb
-        ? [filters.suburb]
-        : [];
-    const next = checked ? [...selected, slug] : selected.filter(v => v !== slug);
+  const handleLocationNavigate = (slug: string) => {
     onFilterChange({
       ...filters,
-      suburb: (next.length > 0 ? next : undefined) as any,
+      suburb: slug ? ([slug] as any) : undefined,
     });
   };
 
@@ -192,9 +216,42 @@ export function SidebarFilters({
 
       <Accordion
         type="multiple"
-        defaultValue={['budget', 'locations', 'type', 'bedrooms']}
+        defaultValue={['listing-source', 'budget', 'locations', 'type', 'bedrooms']}
         className="w-full"
       >
+        <AccordionItem value="listing-source">
+          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
+            Listing source
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="grid grid-cols-3 gap-1 pt-1">
+              {LISTING_SOURCE_OPTIONS.map(option => (
+                <Button
+                  key={option.label}
+                  variant={
+                    option.value === undefined
+                      ? !filters.listingSource
+                        ? 'default'
+                        : 'outline'
+                      : filters.listingSource === option.value
+                        ? 'default'
+                        : 'outline'
+                  }
+                  className={`h-8 w-full min-w-0 rounded-full px-0 text-[10px] font-medium tracking-tight ${
+                    (option.value === undefined && !filters.listingSource) ||
+                    filters.listingSource === option.value
+                      ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                      : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
+                  }`}
+                  onClick={() => handleListingSourceChange(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
         {/* Budget Filter */}
         <AccordionItem value="budget">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
@@ -254,31 +311,36 @@ export function SidebarFilters({
             Locations
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2 pt-1">
+              {locationOptions.length > 0 && (
+                <p className="text-[11px] font-medium text-slate-500">
+                  {locationContext?.type === 'city'
+                    ? `Nearby areas in ${locationContext.name}`
+                    : locationContext?.type === 'suburb'
+                      ? `Nearby areas around ${locationContext.name}`
+                      : 'Nearby areas'}
+                </p>
+              )}
               {locationOptions.length > 0 ? (
                 locationOptions.map(location => (
-                  <div key={location.slug} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`location-${location.slug}`}
-                      checked={Array.isArray(filters.suburb) && filters.suburb.includes(location.slug)}
-                      onCheckedChange={checked =>
-                        handleLocationChange(location.slug, checked as boolean)
-                      }
-                    />
-                    <Label
-                      htmlFor={`location-${location.slug}`}
-                      className="text-sm font-medium leading-none cursor-pointer text-slate-700"
-                    >
+                  <button
+                    key={location.slug}
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-blue-50"
+                    onClick={() => handleLocationNavigate(location.slug)}
+                  >
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">
                       {location.name}
-                    </Label>
-                    <span className="ml-auto rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                    </span>
+                    <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
                       {location.count.toLocaleString()}
                     </span>
-                  </div>
+                  </button>
                 ))
               ) : (
                 <p className="text-xs text-slate-500">
-                  Location counts will appear when more listings are available in this search area.
+                  Nearby areas will appear when more listings are available in this search area.
                 </p>
               )}
             </div>

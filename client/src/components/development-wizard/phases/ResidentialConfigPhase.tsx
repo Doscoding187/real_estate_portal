@@ -1,17 +1,14 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Building2,
   Home,
   Castle,
-  TreePine,
   Waves,
   GraduationCap,
   Users,
-  Shield,
   Check,
   Info,
 } from 'lucide-react';
@@ -23,8 +20,7 @@ import {
   type ResidentialType,
   type CommunityType,
 } from '@/types/wizardTypes';
-import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { toast } from 'sonner';
+import { type FreeholdCategory, useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 
 const RESIDENTIAL_ICONS: Record<ResidentialType, typeof Building2> = {
   apartment: Building2,
@@ -35,6 +31,48 @@ const RESIDENTIAL_ICONS: Record<ResidentialType, typeof Building2> = {
   mixed: Waves, // Placeholder icon
 };
 
+const FREEHOLD_CATEGORY_OPTIONS: Array<{
+  value: FreeholdCategory;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: 'freestanding',
+    label: 'Freestanding Houses',
+    description: 'Standalone and non-security freehold home formats.',
+  },
+  {
+    value: 'security_estate',
+    label: 'Security Estate Homes',
+    description: 'Freehold homes inside secured estate environments.',
+  },
+];
+
+const FREEHOLD_FREESTANDING_TYPES: CommunityType[] = [
+  'freehold_housing_development',
+  'residential_township',
+  'housing_estate_non_security',
+  'suburban_housing_development',
+  'cluster_housing_freehold',
+  'infill_housing_development',
+  'turnkey_housing_development',
+  'non_estate',
+];
+
+const FREEHOLD_SECURITY_ESTATE_TYPES: CommunityType[] = [
+  'security_estate_general',
+  'golf_estate',
+  'equestrian_estate',
+  'country_estate',
+  'lifestyle_estate',
+  'eco_estate',
+  'game_estate',
+  'nature_estate',
+  'coastal_security_estate',
+  'mountain_estate',
+  'residential_estate',
+];
+
 export function ResidentialConfigPhase() {
   const { residentialConfig, setResidentialConfig } = useDevelopmentWizard();
 
@@ -42,6 +80,14 @@ export function ResidentialConfigPhase() {
     // Clear community types when residential type changes since options differ
     setResidentialConfig({
       residentialType: type,
+      freeholdCategory: null,
+      communityTypes: [],
+    });
+  };
+
+  const handleFreeholdCategorySelect = (category: FreeholdCategory) => {
+    setResidentialConfig({
+      freeholdCategory: category,
       communityTypes: [],
     });
   };
@@ -64,6 +110,21 @@ export function ResidentialConfigPhase() {
       setResidentialConfig({ communityTypes: [...filtered, type] });
     }
   };
+
+  const isFreehold = residentialConfig.residentialType === 'freehold';
+  const hasSelectedFreeholdCategory = isFreehold && !!residentialConfig.freeholdCategory;
+
+  const applicableCommunityOptions = (() => {
+    const baseOptions = getApplicableCommunityTypes(residentialConfig.residentialType || null);
+    if (!isFreehold) return baseOptions;
+    if (!residentialConfig.freeholdCategory) return [];
+
+    const allowedTypes =
+      residentialConfig.freeholdCategory === 'security_estate'
+        ? FREEHOLD_SECURITY_ESTATE_TYPES
+        : FREEHOLD_FREESTANDING_TYPES;
+    return baseOptions.filter(option => allowedTypes.includes(option.value));
+  })();
 
   return (
     <div className="space-y-8">
@@ -163,8 +224,44 @@ export function ResidentialConfigPhase() {
         </CardContent>
       </Card>
 
-      {/* Step 1B: Community / Property Type - Only shows after development type is selected */}
-      {residentialConfig.residentialType && (
+      {isFreehold && (
+        <Card className="border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl text-slate-900">Freehold Category</CardTitle>
+            <CardDescription>
+              First choose the freehold grouping so the right subtype filters are captured.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {FREEHOLD_CATEGORY_OPTIONS.map(option => {
+                const isSelected = residentialConfig.freeholdCategory === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleFreeholdCategorySelect(option.value)}
+                    className={cn(
+                      'text-left rounded-xl border-2 p-4 transition-all duration-200',
+                      isSelected
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-slate-200 hover:border-purple-300 hover:bg-purple-50/30',
+                    )}
+                  >
+                    <p className={cn('font-medium text-sm', isSelected ? 'text-purple-900' : 'text-slate-900')}>
+                      {option.label}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">{option.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 1B/C: Community / Property Type */}
+      {residentialConfig.residentialType && (!isFreehold || hasSelectedFreeholdCategory) && (
         <Card className="border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl text-slate-900 flex items-center gap-2">
@@ -184,45 +281,43 @@ export function ResidentialConfigPhase() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {getApplicableCommunityTypes(residentialConfig.residentialType || null).map(
-                option => {
-                  const isSelected = residentialConfig.communityTypes?.includes(option.value);
+              {applicableCommunityOptions.map(option => {
+                const isSelected = residentialConfig.communityTypes?.includes(option.value);
 
-                  return (
-                    <label
-                      key={option.value}
-                      className={cn(
-                        'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200',
-                        isSelected
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-slate-200 hover:border-purple-300 hover:bg-purple-50/30',
-                      )}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => handleCommunityTypeToggle(option.value)}
-                        className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span
-                          className={cn(
-                            'font-medium text-sm',
-                            isSelected ? 'text-purple-900' : 'text-slate-700',
-                          )}
-                        >
-                          {option.label}
-                        </span>
-                        <p className="text-xs text-slate-500 mt-0.5">{option.description}</p>
-                        {option.triggersEstateProfile && (
-                          <p className="text-xs text-purple-600 mt-0.5 font-medium">
-                            + Estate Profile
-                          </p>
+                return (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200',
+                      isSelected
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-slate-200 hover:border-purple-300 hover:bg-purple-50/30',
+                    )}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => handleCommunityTypeToggle(option.value)}
+                      className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className={cn(
+                          'font-medium text-sm',
+                          isSelected ? 'text-purple-900' : 'text-slate-700',
                         )}
-                      </div>
-                    </label>
-                  );
-                },
-              )}
+                      >
+                        {option.label}
+                      </span>
+                      <p className="text-xs text-slate-500 mt-0.5">{option.description}</p>
+                      {option.triggersEstateProfile && (
+                        <p className="text-xs text-purple-600 mt-0.5 font-medium">
+                          + Estate Profile
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
 
             {/* Info about Estate Profile */}

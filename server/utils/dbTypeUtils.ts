@@ -6,28 +6,28 @@
  */
 
 /**
- * Convert Date to ISO string for database insertion
+ * Convert Date to MySQL timestamp string for database insertion
  * Schema expects timestamp({ mode: 'string' })
  */
 export function toDbTimestamp(date: Date | string | null | undefined): string | null {
   if (!date) return null;
   if (typeof date === 'string') return date;
-  return date.toISOString();
+  return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 /**
- * Convert Date to ISO string, required (throws if null)
+ * Convert Date to MySQL timestamp string, required (throws if null)
  */
 export function toDbTimestampRequired(date: Date | string): string {
   if (typeof date === 'string') return date;
-  return date.toISOString();
+  return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 /**
- * Get current timestamp as ISO string
+ * Get current timestamp as a MySQL-safe timestamp string
  */
 export function nowAsDbTimestamp(): string {
-  return new Date().toISOString();
+  return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
 /**

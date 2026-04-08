@@ -52,7 +52,9 @@ export const partnerRouter = router({
       return { ok: true };
     }),
 
-  delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(() => {
-    return { ok: true };
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(() => {
+      return { ok: true };
+    }),
 });

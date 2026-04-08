@@ -18,6 +18,9 @@ import {
   Lightbulb,
   Menu,
   X,
+  LayoutDashboard,
+  LogOut,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
@@ -38,8 +41,7 @@ import {
 } from '@/components/ui/navigation-menu';
 import { trpc } from '@/lib/trpc';
 import { generatePropertyUrl } from '@/lib/urlUtils';
-import { useState } from 'react';
-import { Input } from '@/components/ui/input';
+import { useEffect, useState } from 'react';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { LocationSelectionModal } from '@/components/LocationSelectionModal';
 
@@ -241,10 +243,73 @@ function CityDropdownContent() {
   );
 }
 
+const REFERRER_PRIORITY_EXCLUSIONS = new Set(['super_admin', 'property_developer', 'agency_admin']);
+
+type NavbarUser = {
+  email?: string;
+  firstName?: string;
+  hasManagerIdentity?: boolean;
+  lastName?: string;
+  name?: string;
+  role?: string;
+} | null;
+
+function getDisplayName(user: NavbarUser) {
+  if (!user) return 'Account';
+
+  const composedName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  if (composedName) return composedName;
+  if (user.name) return user.name;
+  if (user.email) return String(user.email).split('@')[0];
+
+  return 'Account';
+}
+
+function getInitials(user: NavbarUser) {
+  const name = getDisplayName(user);
+  const parts = name.split(/\s+/).filter(Boolean).slice(0, 2);
+
+  if (parts.length === 0) return 'A';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return parts
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+function getPrimaryAccountRoute(user: NavbarUser, hasReferrerAccess: boolean) {
+  if (user?.hasManagerIdentity) return '/distribution/manager';
+  if (hasReferrerAccess && !REFERRER_PRIORITY_EXCLUSIONS.has(user?.role)) {
+    return '/referrer/dashboard';
+  }
+
+  switch (user?.role) {
+    case 'super_admin':
+    case 'admin':
+      return '/admin/overview';
+    case 'property_developer':
+      return '/developer/dashboard';
+    case 'agency_admin':
+      return '/agency/dashboard';
+    case 'agent':
+      return '/agent/dashboard';
+    case 'service_provider':
+      return '/service/dashboard';
+    default:
+      return '/user/dashboard';
+  }
+}
+
 export function EnhancedNavbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMarketingPage =
+    location === '/advertise' ||
+    location === '/book-strategy' ||
+    location === '/subscription-plans' ||
+    location.startsWith('/get-started');
 
   // Check if current route is advertise page
   const isAdvertisePage = location === '/advertise';
@@ -253,6 +318,61 @@ export function EnhancedNavbar() {
     propertyType: string;
     listingType: 'sale' | 'rent';
   } | null>(null);
+  const shouldCheckReferrerAccess = Boolean(user && !REFERRER_PRIORITY_EXCLUSIONS.has(user.role));
+  const referrerStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled: shouldCheckReferrerAccess,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
+  const displayName = getDisplayName(user);
+  const accountInitials = getInitials(user);
+  const primaryAccountRoute = getPrimaryAccountRoute(user, hasReferrerAccess);
+  const primaryAccountLabel =
+    primaryAccountRoute === '/referrer/dashboard'
+      ? 'Referral workspace'
+      : user?.role === 'super_admin' || user?.role === 'admin'
+        ? 'Admin overview'
+        : 'Dashboard';
+  const accountItems = user
+    ? [
+        {
+          label: primaryAccountLabel,
+          hint:
+            primaryAccountRoute === '/referrer/dashboard'
+              ? 'Track referrals and deal flow'
+              : 'Open your workspace',
+          href: primaryAccountRoute,
+          icon: LayoutDashboard,
+        },
+        ...(hasReferrerAccess && primaryAccountRoute !== '/referrer/dashboard'
+          ? [
+              {
+                label: 'Referral workspace',
+                hint: 'Manage referrals and commissions',
+                href: '/referrer/dashboard',
+                icon: Briefcase,
+              },
+            ]
+          : []),
+        {
+          label: 'Saved homes',
+          hint: 'Review your favorites',
+          href: '/favorites',
+          icon: Heart,
+        },
+        ...(user.role === 'agent'
+          ? [
+              {
+                label: 'Account settings',
+                hint: 'Manage your profile and preferences',
+                href: '/agent/settings',
+                icon: Settings,
+              },
+            ]
+          : []),
+      ]
+    : [];
 
   // Check if user has a recent search location
   const getLastSearchLocation = () => {
@@ -369,23 +489,57 @@ export function EnhancedNavbar() {
     { label: 'Blog', href: '#' },
   ];
 
+  const mobileMenuItems = [
+    { label: 'Buy Property', href: '/property-for-sale', icon: Home },
+    { label: 'Rent Property', href: '/property-to-rent', icon: Key },
+    { label: 'New Developments', href: '/new-developments', icon: Building2 },
+    { label: 'Find Agents', href: '/agents', icon: User },
+    { label: 'Explore', href: '/explore/home', icon: TrendingUp },
+    { label: 'Services', href: '/services', icon: Lightbulb },
+    { label: 'Referrals', href: '/distribution-network', icon: Briefcase },
+  ];
+
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
+  const navigateTo = (href: string) => {
+    setMobileMenuOpen(false);
+    setLocation(href);
+  };
+
+  const handleLogout = async () => {
+    setMobileMenuOpen(false);
+    await logout();
+    setLocation('/');
+  };
   return (
-    <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200/50">
-      <div className="w-full px-4 sm:px-6 lg:px-20">
-        <div className="flex items-center justify-between h-14 lg:h-16">
+    <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/92 shadow-sm backdrop-blur-md">
+      <div className="w-full px-3 sm:px-6 lg:px-20">
+        <div className="flex h-13 items-center justify-between sm:h-14 lg:h-16">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="rounded-xl p-2 text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600 lg:hidden"
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer group">
-              <span className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700 transition-colors">
+              <span className="text-base font-bold tracking-tight text-blue-600 transition-colors group-hover:text-blue-700 sm:text-xl lg:text-2xl">
                 Property Listify
               </span>
             </div>
@@ -857,6 +1011,27 @@ export function EnhancedNavbar() {
                   </Button>
                 </Link>
               </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <Link href="/services">
+                  <span className="inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
+                    Services
+                  </span>
+                </Link>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <Link href="/distribution-network">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 font-semibold"
+                  >
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    Referrals
+                  </Button>
+                </Link>
+              </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
 
@@ -881,55 +1056,88 @@ export function EnhancedNavbar() {
               </Button>
             </Link>
 
-            {/* Favorites */}
-            {!!user && (
-              <Link href="/favorites">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-foreground hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <Heart className="h-5 w-5" />
-                </Button>
-              </Link>
-            )}
-
             {/* User Menu */}
-            {user ? (
+            {loading && !isMarketingPage ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="border-slate-200 bg-white text-slate-400"
+              >
+                <span className="h-2 w-2 rounded-full bg-slate-300" />
+                Loading
+              </Button>
+            ) : user && !isMarketingPage ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all font-medium"
+                    className="h-10 rounded-full px-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Open account menu"
                   >
-                    <User className="h-4 w-4 mr-2" />
-                    {user?.name || 'Account'}
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                      {accountInitials}
+                    </span>
+                    <ChevronDown className="ml-1 h-4 w-4 text-slate-400" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem disabled>
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{user?.name}</span>
-                      <span className="text-xs text-muted-foreground">{user?.email}</span>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-64 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl"
+                >
+                  <div className="rounded-[1rem] px-3 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                        {accountInitials}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {displayName}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">{user?.email}</p>
+                      </div>
                     </div>
-                  </DropdownMenuItem>
+                  </div>
+
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/favorites">
-                      <a className="flex items-center gap-2 w-full">
-                        <Heart className="h-4 w-4" />
-                        My Favorites
-                      </a>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => logout()} className="text-destructive">
-                    Logout
-                  </DropdownMenuItem>
+                  <div className="p-1">
+                    {accountItems.map(item => {
+                      const Icon = item.icon;
+
+                      return (
+                        <DropdownMenuItem
+                          key={item.href}
+                          onClick={() => navigateTo(item.href)}
+                          className="group flex items-center gap-3 rounded-xl px-3 py-2.5"
+                        >
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors group-focus:bg-slate-900 group-focus:text-white group-data-[highlighted]:bg-slate-900 group-data-[highlighted]:text-white">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold text-slate-900">
+                              {item.label}
+                            </span>
+                          </span>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="rounded-xl px-3 py-2.5 text-red-600 focus:text-red-700"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                        <LogOut className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1">
+                        <span className="block text-sm font-semibold">Logout</span>
+                      </span>
+                    </DropdownMenuItem>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
+            ) : !user ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -938,83 +1146,170 @@ export function EnhancedNavbar() {
               >
                 Login
               </Button>
-            )}
+            ) : null}
           </div>
 
-          {/* Mobile: Login Button */}
-          <div className="lg:hidden">
-            {user ? (
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="text-blue-600">
-                  <User className="h-5 w-5" />
-                </Button>
-              </Link>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => (window.location.href = getLoginUrl())}
-                className="text-blue-600 font-medium"
-              >
-                Login
-              </Button>
-            )}
-          </div>
+          <div className="w-9 lg:hidden" />
+          <div className="w-9 lg:hidden" />
         </div>
 
         {/* Mobile Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-100 py-4 animate-in slide-in-from-top-2 duration-200">
-            <div className="space-y-1">
-              <Link href="/property-for-sale">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Buy Property
-                </button>
-              </Link>
-              <Link href="/property-to-rent">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Rent Property
-                </button>
-              </Link>
-              <Link href="/new-developments">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  New Developments
-                </button>
-              </Link>
-              <Link href="/agents">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Find Agents
-                </button>
-              </Link>
-              <Link href="/explore/home">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                >
-                  Explore
-                </button>
-              </Link>
-              <div className="pt-2 mt-2 border-t border-gray-100">
+          <div className="animate-in slide-in-from-top-2 border-t border-gray-100 bg-white/95 py-3 duration-200 lg:hidden">
+            <div className="space-y-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              <div className="grid grid-cols-2 gap-2 px-1">
                 <Link href="/advertise">
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
                   >
-                    Advertise with us
+                    <Megaphone className="h-4 w-4" />
+                    Advertise
                   </button>
                 </Link>
+                <Link href="/explore/home">
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Explore
+                  </button>
+                </Link>
+              </div>
+
+              <div className="space-y-1">
+                {mobileMenuItems.map(item => {
+                  const Icon = item.icon;
+
+                  return (
+                    <Link key={item.label} href={item.href}>
+                      <button
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="flex-1">{item.label}</span>
+                        <ChevronDown className="h-4 w-4 -rotate-90 text-slate-400" />
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="mx-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Quick access
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link href="/new-developments">
+                    <span
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="inline-flex rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+                    >
+                      New Developments
+                    </span>
+                  </Link>
+                  <Link href="/agents">
+                    <span
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="inline-flex rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+                    >
+                      Agents
+                    </span>
+                  </Link>
+                  <Link href="/services">
+                    <span
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="inline-flex rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+                    >
+                      Services
+                    </span>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="mx-1 border-t border-slate-200 px-1 pt-3">
+                {loading ? (
+                  <div className="flex items-center gap-3 py-2">
+                    <div className="h-10 w-10 rounded-full bg-slate-100" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-28 rounded-full bg-slate-100" />
+                      <div className="h-3 w-40 rounded-full bg-slate-100" />
+                    </div>
+                  </div>
+                ) : user ? (
+                  <>
+                    <div className="flex items-center gap-3 px-3 py-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                        {accountInitials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                        <p className="truncate text-sm text-slate-500">{user.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 space-y-1">
+                      {accountItems.map(item => {
+                        const Icon = item.icon;
+
+                        return (
+                          <button
+                            key={item.href}
+                            onClick={() => navigateTo(item.href)}
+                            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-slate-100"
+                          >
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold text-slate-900">
+                                {item.label}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={handleLogout}
+                      className="mt-2 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                        <LogOut className="h-4 w-4" />
+                      </span>
+                      <span className="text-sm font-semibold">Logout</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="px-3 text-sm font-semibold text-slate-900">
+                      Sign in to personalize your account
+                    </p>
+                    <p className="mt-1 px-3 text-sm text-slate-500">
+                      Save homes, track activity, and pick up where you left off.
+                    </p>
+                    <div className="mt-4 grid grid-cols-2 gap-2 px-3">
+                      <Button
+                        onClick={() => (window.location.href = getLoginUrl())}
+                        className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
+                      >
+                        Login
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigateTo('/get-started')}
+                        className="rounded-2xl border-slate-300"
+                      >
+                        Create account
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

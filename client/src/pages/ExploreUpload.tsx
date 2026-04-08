@@ -68,6 +68,7 @@ export default function ExploreUpload() {
     if (user?.role === 'agent') return '/agent/dashboard';
     if (user?.role === 'property_developer') return '/developer/dashboard';
     if (user?.role === 'agency_admin') return '/agency/dashboard';
+    if (user?.role === 'service_provider') return '/service/dashboard';
     return '/dashboard';
   };
 

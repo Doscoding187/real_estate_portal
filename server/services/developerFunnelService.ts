@@ -285,18 +285,18 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
 function deriveOwner(lead: LeadRow, ownerName: string | null) {
   const ownerOverride = parseOwnerOverride(lead.notes);
 
-  if (ownerOverride === 'distribution_partner' && lead.ownerId) {
+  if (ownerOverride === 'distribution_partner' && lead.assignedTo) {
     return {
       ownerType: 'distribution_partner' as const,
-      ownerId: String(lead.ownerId),
+      ownerId: String(lead.assignedTo),
       ownerName: ownerName || null,
     };
   }
 
-  if (ownerOverride === 'agency' && lead.ownerId) {
+  if (ownerOverride === 'agency' && lead.assignedTo) {
     return {
       ownerType: 'agency' as const,
-      ownerId: String(lead.ownerId),
+      ownerId: String(lead.assignedTo),
       ownerName: ownerName || null,
     };
   }
@@ -313,14 +313,6 @@ function deriveOwner(lead: LeadRow, ownerName: string | null) {
     return {
       ownerType: 'developer_sales' as const,
       ownerId: String(lead.assignedTo),
-      ownerName: ownerName || null,
-    };
-  }
-
-  if (lead.ownerType === 'agency' && lead.ownerId) {
-    return {
-      ownerType: 'agency' as const,
-      ownerId: String(lead.ownerId),
       ownerName: ownerName || null,
     };
   }
@@ -606,25 +598,17 @@ export async function assignDeveloperLead(params: AssignParams) {
   if (params.ownerType === 'developer_sales') {
     updateSet.assignedTo = params.ownerId || null;
     updateSet.assignedAt = now;
-    updateSet.ownerType = 'agent';
-    updateSet.ownerId = null;
     updateSet.notes = appendOwnerOverride(row.lead.notes, 'developer_sales');
   } else if (params.ownerType === 'agency') {
-    updateSet.assignedTo = null;
+    updateSet.assignedTo = params.ownerId || null;
     updateSet.assignedAt = now;
-    updateSet.ownerType = 'agency';
-    updateSet.ownerId = params.ownerId || null;
     updateSet.notes = appendOwnerOverride(row.lead.notes, 'agency');
   } else if (params.ownerType === 'distribution_partner') {
-    updateSet.assignedTo = null;
+    updateSet.assignedTo = params.ownerId || null;
     updateSet.assignedAt = now;
-    updateSet.ownerType = 'agency';
-    updateSet.ownerId = params.ownerId || null;
     updateSet.notes = appendOwnerOverride(row.lead.notes, 'distribution_partner');
   } else {
     updateSet.assignedTo = null;
-    updateSet.ownerType = 'agent';
-    updateSet.ownerId = null;
     updateSet.notes = appendOwnerOverride(row.lead.notes, 'unassigned');
   }
 
@@ -667,10 +651,6 @@ export async function transitionDeveloperLead(params: TransitionParams) {
   await db.insert(leadActivities).values({
     leadId: params.leadId,
     userId: params.userId,
-    ownerType: row.lead.ownerType || 'agent',
-    ownerId: row.lead.ownerId || null,
-    assignedAgentId: row.lead.assignedAgentId || null,
-    visibilityScope: row.lead.visibilityScope || 'private',
     type: 'status_change',
     description: `Transitioned ${fromStage} -> ${toStage}`,
   });
@@ -702,10 +682,6 @@ export async function logDeveloperLeadActivity(params: ActivityParams) {
   await db.insert(leadActivities).values({
     leadId: params.leadId,
     userId: params.userId,
-    ownerType: row.lead.ownerType || 'agent',
-    ownerId: row.lead.ownerId || null,
-    assignedAgentId: row.lead.assignedAgentId || null,
-    visibilityScope: row.lead.visibilityScope || 'private',
     type: dbType,
     description,
   });
@@ -752,10 +728,6 @@ export async function setDeveloperLeadNextAction(params: NextActionParams) {
   await db.insert(leadActivities).values({
     leadId: params.leadId,
     userId: params.userId,
-    ownerType: row.lead.ownerType || 'agent',
-    ownerId: row.lead.ownerId || null,
-    assignedAgentId: row.lead.assignedAgentId || null,
-    visibilityScope: row.lead.visibilityScope || 'private',
     type: 'note',
     description: `Next action set: ${params.type} @ ${params.at}`,
   });

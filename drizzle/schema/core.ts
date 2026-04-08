@@ -34,13 +34,38 @@ export const users = mysqlTable(
     phone: varchar({ length: 30 }),
     loginMethod: varchar({ length: 64 }),
     emailVerified: int().default(0).notNull(),
-    role: mysqlEnum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin'])
+    role: mysqlEnum([
+      'visitor',
+      'agent',
+      'agency_admin',
+      'property_developer',
+      'service_provider',
+      'super_admin',
+    ])
       .default('visitor')
       .notNull(),
     plan: mysqlEnum(['trial', 'paid']).default('trial').notNull(),
     trialStatus: mysqlEnum(['active', 'expired']).default('active').notNull(),
     trialStartedAt: timestamp({ mode: 'string' }),
     trialEndsAt: timestamp({ mode: 'string' }),
+    onboardingComplete: tinyint('onboarding_complete').default(0).notNull(),
+    onboardingStep: int('onboarding_step').default(0).notNull(),
+    subscriptionTier: mysqlEnum('subscription_tier', [
+      'free',
+      'starter',
+      'professional',
+      'elite',
+    ])
+      .default('free')
+      .notNull(),
+    subscriptionStatus: mysqlEnum('subscription_status', [
+      'trial',
+      'active',
+      'expired',
+      'cancelled',
+    ])
+      .default('trial')
+      .notNull(),
     agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
     isSubaccount: int().default(0).notNull(),
     createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
@@ -147,6 +172,8 @@ export const userOnboardingState = mysqlTable('user_onboarding_state', {
   saveCount: int('save_count').default(0),
   partnerEngagementCount: int('partner_engagement_count').default(0),
   featuresUnlocked: json('features_unlocked'),
+  consumerDashboardPreferences: json('consumer_dashboard_preferences'),
+  sellerPlanningInputs: json('seller_planning_inputs'),
   createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
 });
