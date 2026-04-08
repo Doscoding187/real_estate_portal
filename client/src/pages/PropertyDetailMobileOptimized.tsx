@@ -991,7 +991,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 <button
                   key={tab.id}
                   type="button"
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-orange-200 hover:text-orange-600"
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
                   onClick={() => handleJumpToSection(tab.id)}
                 >
                   {tab.label}
@@ -1061,7 +1061,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               </span>
             </div>
 
-            <div className="text-3xl font-bold text-orange-500 mb-2">
+            <div className="text-3xl font-bold text-blue-700 mb-2">
               {formatCurrency(displayPrice, { compact: false })}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm mb-4">
@@ -1121,7 +1121,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   const Icon = item.icon;
                   return (
                     <div key={item.key} className="flex min-w-0 flex-col items-center gap-1">
-                      <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                      <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                         <Icon className="h-5 w-5" />
                       </div>
                       <span className="text-xs font-semibold text-slate-700 truncate">
@@ -1186,7 +1186,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             </div>
             {/* Price Section - Desktop Only */}
             <div className="hidden lg:block">
-              <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
+              <div className="text-fluid-h1 font-bold text-blue-700 mb-2">
                 {formatCurrency(displayPrice, { compact: false })}
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -1213,7 +1213,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     const Icon = item.icon;
                     return (
                       <div key={item.key} className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>
@@ -1226,7 +1226,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   {showLegacyPropertyDetails && (
                     <>
                       <div className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Maximize className="h-5 w-5" />
                         </div>
                         <div>
@@ -1237,7 +1237,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Home className="h-5 w-5" />
                         </div>
                         <div>
@@ -1246,7 +1246,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Building2 className="h-5 w-5" />
                         </div>
                         <div>
@@ -1268,7 +1268,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {transactionDetailItems.map(item => (
                     <div key={item.key} className="flex items-start gap-3">
-                      <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                      <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                         <Square className="h-5 w-5" />
                       </div>
                       <div>
@@ -1292,7 +1292,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     <Badge
                       key={room}
                       variant="secondary"
-                      className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium"
+                      className="bg-blue-50 text-slate-900 hover:bg-blue-100 border-0 px-4 py-1.5 rounded-full font-medium"
                     >
                       {room}
                     </Badge>
@@ -1316,7 +1316,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                     return (
                       <div key={index} className="flex items-center gap-3">
-                        <IconComponent className="h-5 w-5 text-orange-500" />
+                        <IconComponent className="h-5 w-5 text-blue-600" />
                         <span className="capitalize text-slate-700 font-medium">{amenity}</span>
                       </div>
                     );
@@ -1337,7 +1337,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   onClick={() => handleJumpToSection(tab.id)}
                   className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors ${
                     activeSection === tab.id
-                      ? 'bg-orange-500 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -1397,7 +1397,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                           key={item.key}
                           className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg"
                         >
-                          <Icon className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <Icon className="h-5 w-5 text-blue-600 mt-0.5" />
                           <div>
                             <p className="text-sm text-slate-500">{item.label}</p>
                             <p className="font-semibold text-slate-900" title={item.value}>
@@ -1449,7 +1449,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                           {contactIdentity?.name || 'Listing Contact'}
                         </h4>
                         {listingContextLabel && (
-                          <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
+                          <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
                             {listingContextLabel}
                           </Badge>
                         )}

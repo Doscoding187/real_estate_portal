@@ -918,7 +918,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
               <button
                 key={item.id}
                 type="button"
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-orange-200 hover:text-orange-600"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
                 onClick={() => scrollToSection(item.id)}
               >
                 {item.label}
@@ -942,7 +942,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
           <div className="lg:col-span-5 space-y-8">
             {/* Price Section */}
             <div id="overview">
-              <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
+              <div className="text-fluid-h1 font-bold text-blue-700 mb-2">
                 {formatCurrency(displayPrice, { compact: false })}
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -969,7 +969,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                     const Icon = item.icon;
                     return (
                       <div key={item.key} className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>
@@ -982,7 +982,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                   {showLegacyPropertyDetails && (
                     <>
                       <div className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Maximize className="h-5 w-5" />
                         </div>
                         <div>
@@ -993,7 +993,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Home className="h-5 w-5" />
                         </div>
                         <div>
@@ -1002,7 +1002,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
                           <Building2 className="h-5 w-5" />
                         </div>
                         <div>
@@ -1031,7 +1031,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         key={item.key}
                         className="rounded-xl border border-slate-200 bg-white/90 px-3 py-3 shadow-sm"
                       >
-                        <div className="mb-1.5 flex items-center gap-1.5 text-orange-500">
+                        <div className="mb-1.5 flex items-center gap-1.5 text-blue-600">
                           <Icon className="h-3.5 w-3.5 shrink-0" />
                           <p className="text-[10px] font-medium leading-none text-slate-400 sm:text-[11px]">
                             {item.label}
@@ -1058,7 +1058,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                     </p>
                   </div>
                   {qualificationStatusLabel && (
-                    <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                    <Badge className="border border-blue-200 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-50">
                       {qualificationStatusLabel}
                     </Badge>
                   )}
@@ -1145,7 +1145,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-orange-100 text-xl font-bold text-orange-600">
+                            <div className="flex h-full w-full items-center justify-center bg-blue-100 text-xl font-bold text-blue-700">
                               {contactIdentity.name?.charAt(0) || '?'}
                             </div>
                           )}
@@ -1153,7 +1153,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         <div className="min-w-0">
                           <div className="mb-2 flex flex-wrap items-center gap-2">
                             {contactBadgeLabel && (
-                              <Badge className="border border-orange-200 bg-orange-50 text-[10px] text-orange-700 hover:bg-orange-50">
+                              <Badge className="border border-blue-200 bg-blue-50 text-[10px] text-blue-700 hover:bg-blue-50">
                                 {contactBadgeLabel}
                               </Badge>
                             )}
@@ -1257,7 +1257,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         )}
 
                         <Button
-                          className="h-12 w-full bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
+                          className="h-12 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
                           onClick={handleBookAppointment}
                         >
                           Contact Now
@@ -1309,7 +1309,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                       <Badge
                         key={room}
                         variant="secondary"
-                        className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium"
+                        className="bg-blue-50 text-slate-900 hover:bg-blue-100 border-0 px-4 py-1.5 rounded-full font-medium"
                       >
                         {room}
                       </Badge>
@@ -1345,7 +1345,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                       const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                       return (
                         <div key={index} className="flex items-center gap-3">
-                          <IconComponent className="h-5 w-5 text-orange-500" />
+                          <IconComponent className="h-5 w-5 text-blue-600" />
                           <span className="capitalize text-slate-700 font-medium">{amenity}</span>
                         </div>
                       );
@@ -1413,7 +1413,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                     Est. {formatCurrency(displayRepayment, { compact: false })}/Pm
                   </p>
                   {qualificationStatusLabel && (
-                    <Badge className="mt-3 border border-orange-300 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                    <Badge className="mt-3 border border-blue-300 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-50">
                       {qualificationStatusLabel}
                     </Badge>
                   )}
@@ -1467,7 +1467,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                                 className="h-full w-full object-cover"
                               />
                             ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-orange-100 text-xl font-bold text-orange-600">
+                              <div className="flex h-full w-full items-center justify-center bg-blue-100 text-xl font-bold text-blue-700">
                                 {contactIdentity?.name?.charAt(0) || '?'}
                               </div>
                             )}
@@ -1475,7 +1475,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                           <div className="min-w-0 flex-1">
                             <div className="mb-2 flex flex-wrap items-center gap-2">
                               {contactBadgeLabel && (
-                                <Badge className="border border-orange-200 bg-orange-50 text-[10px] text-orange-700 hover:bg-orange-50">
+                                <Badge className="border border-blue-200 bg-blue-50 text-[10px] text-blue-700 hover:bg-blue-50">
                                   {contactBadgeLabel}
                                 </Badge>
                               )}
@@ -1536,7 +1536,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                               </Button>
                             )}
                             <Button
-                              className="h-12 w-full bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
+                              className="h-12 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
                               onClick={handleBookAppointment}
                             >
                               Book an Appointment
@@ -1585,7 +1585,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                                 {contactIdentity?.name || 'Listing Contact'}
                               </h3>
                               {contactBadgeLabel && (
-                                <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
+                                <Badge className="border border-blue-200 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-50">
                                   {contactBadgeLabel}
                                 </Badge>
                               )}
@@ -1656,8 +1656,8 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                     )}
 
                     {qualificationSnapshot && (
-                      <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
+                      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                           Qualification Status
                         </p>
                         <p className="mt-1 text-sm font-semibold text-slate-900">
@@ -1712,7 +1712,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
               </div>
               <Button
                 variant="outline"
-                className="w-full border-slate-300 text-slate-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 md:w-auto"
+                className="w-full border-slate-300 text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 md:w-auto"
                 onClick={() => setLocation(similarListingsHref)}
               >
                 View All Matching Listings
@@ -1762,7 +1762,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                             </p>
                           )}
                         </div>
-                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-700">
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
                           Compare
                         </span>
                       </div>
@@ -1794,7 +1794,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         )}
                       </div>
 
-                      <div className="border-t border-slate-100 pt-3 text-sm font-medium text-slate-700 transition group-hover:text-orange-700">
+                      <div className="border-t border-slate-100 pt-3 text-sm font-medium text-slate-700 transition group-hover:text-blue-700">
                         Open listing
                       </div>
                     </div>
@@ -1862,3 +1862,4 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     </div>
   );
 }
+
