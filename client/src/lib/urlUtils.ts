@@ -76,6 +76,11 @@ export function unslugify(slug: string): string {
     .join(' ');
 }
 
+export function buildPropertyUrl(id: string | number, title?: string | null): string {
+  const slug = slugify(String(title || ''));
+  return slug ? `/property/${id}-${slug}` : `/property/${id}`;
+}
+
 // Search filters type
 export interface SearchFilters {
   listingType?: 'sale' | 'rent' | 'rent_to_buy' | 'auction';
