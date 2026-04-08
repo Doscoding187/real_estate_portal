@@ -4,6 +4,7 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -30,15 +31,11 @@ import {
   Zap,
   Droplets,
   Square,
-  Phone,
-  Mail,
-  MessageCircle,
-  type LucideIcon,
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
-import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
+import { buildPropertyUrl, generateBreadcrumbs } from '@/lib/urlUtils';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { BondCalculator } from '@/components/BondCalculator';
@@ -47,115 +44,13 @@ import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
 import { PropertyMobileFooter } from '@/components/property/PropertyMobileFooter';
 import {
-  PropertyQualificationDrawer,
-  PropertyQualificationSnapshot,
-} from '@/components/property/PropertyQualificationDrawer';
-import {
   DeveloperBrandSection,
   DeveloperBrandData,
 } from '@/components/property/DeveloperBrandSection';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/seo/structuredData';
 
-interface PropertyDetailProps {
-  propertyId?: number;
-}
-
-interface PropertyImageLike {
-  id?: number;
-  imageUrl?: string;
-  url?: string;
-  isPrimary?: number;
-  displayOrder?: number;
-}
-
-interface PropertySpecs {
-  ownershipType?: string;
-  powerBackup?: string;
-  securityFeatures?: string[];
-  waterSupply?: string;
-  internetAccess?: string;
-  flooring?: string;
-  parkingType?: string;
-  petFriendly?: string;
-  electricitySupply?: string;
-  additionalRooms?: string[];
-  badges?: string[];
-}
-
-interface DeveloperBrandLite {
-  id?: number | string;
-  brandName?: string;
-  logoUrl?: string;
-  publicContactEmail?: string;
-  slug?: string;
-}
-
-interface DevelopmentLite {
-  id?: number | string;
-  name?: string;
-  slug?: string;
-}
-
-interface ContactIdentityLite {
-  id?: number | string;
-  agencyId?: number | string;
-  name?: string;
-  image?: string;
-  phone?: string;
-  whatsapp?: string;
-  email?: string;
-  agency?: string;
-  slug?: string;
-  areasServed?: string[];
-  yearsExperience?: number;
-  rating?: number;
-  reviewCount?: number;
-  activeListingsCount?: number;
-  isVerified?: boolean;
-}
-
-interface PropertyPayload {
-  id: number;
-  title: string;
-  description?: string;
-  listingType?: SearchFilters['listingType'] | string;
-  province?: string;
-  city?: string;
-  suburb?: string;
-  address?: string;
-  zipCode?: string;
-  price?: number | string;
-  bedrooms?: number;
-  bathrooms?: number;
-  propertyType?: string;
-  featured?: number;
-  amenities?: string | string[];
-  features?: string | string[];
-  propertySettings?: string | PropertySpecs;
-  propertyDetails?: string | Record<string, unknown>;
-  developerBrand?: DeveloperBrandLite;
-  developerBrandProfile?: DeveloperBrandLite;
-  listerType?: string;
-  development?: DevelopmentLite;
-  developmentId?: number | string;
-  developerBrandProfileId?: number | string;
-  suburbId?: number | string;
-  agentId?: number | string;
-  latitude?: number | string;
-  longitude?: number | string;
-  area?: number;
-  mainImage?: string;
-  agent?: ContactIdentityLite;
-}
-
-interface PropertyDetailResponse {
-  property: PropertyPayload;
-  images?: PropertyImageLike[];
-  agent?: ContactIdentityLite;
-}
-
-const amenityIcons: Record<string, LucideIcon> = {
+const amenityIcons: Record<string, any> = {
   parking: Car,
   wifi: Wifi,
   gym: Dumbbell,
@@ -176,7 +71,21 @@ const parseStrictNumber = (value: unknown) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
-export default function PropertyDetail(props: PropertyDetailProps) {
+const formatDateLabel = (value: unknown) => {
+  if (!value) return null;
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) {
+    const fallback = String(value).trim();
+    return fallback || null;
+  }
+  return parsed.toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+export default function PropertyDetail(props: { propertyId?: number } & any) {
   const { propertyId: propPropertyId } = props;
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
@@ -191,11 +100,8 @@ export default function PropertyDetail(props: PropertyDetailProps) {
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isQualificationOpen, setIsQualificationOpen] = useState(false);
+  const [isBondCalculatorModalOpen, setIsBondCalculatorModalOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [qualificationSnapshot, setQualificationSnapshot] =
-    useState<PropertyQualificationSnapshot | null>(null);
-  const [contactInitialMessage, setContactInitialMessage] = useState('');
 
   const { data, isLoading } = trpc.properties.getById.useQuery(
     { id: propertyId },
@@ -277,8 +183,8 @@ export default function PropertyDetail(props: PropertyDetailProps) {
     );
   }
 
-  const { property, images } = data as PropertyDetailResponse;
-  const agent = property.agent || (data as PropertyDetailResponse).agent;
+  const { property, images } = data as any;
+  const agent = (property as any)?.agent || (data as any)?.agent;
 
   // Safely parse amenities with error handling
   let amenitiesList: string[] = [];
@@ -316,7 +222,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
   const canonicalUrl =
     typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath;
   const breadcrumbItems = generateBreadcrumbs({
-    listingType: property.listingType as SearchFilters['listingType'],
+    listingType: property.listingType as any,
     province: property.province,
     city: property.city,
     suburb: property.suburb,
@@ -332,43 +238,121 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       )
       .join(', ');
 
-  let specs: PropertySpecs = {};
-  try {
-    if (property.propertySettings) {
-      specs =
-        typeof property.propertySettings === 'string'
-          ? JSON.parse(property.propertySettings)
-          : property.propertySettings;
-    }
-  } catch (e) {
-    console.error('Failed to parse property settings', e);
+  // Parse Property Specs
+  interface PropertySpecs {
+    ownershipType?: string;
+    powerBackup?: string;
+    securityFeatures?: string[];
+    waterSupply?: string;
+    internetAccess?: string;
+    flooring?: string;
+    parkingType?: string;
+    petFriendly?: string;
+    electricitySupply?: string;
+    additionalRooms?: string[];
   }
 
   let rawPropertyDetails: Record<string, unknown> = {};
   try {
-    if (property.propertyDetails) {
+    if ((property as any).propertyDetails) {
       rawPropertyDetails =
-        typeof property.propertyDetails === 'string'
-          ? JSON.parse(property.propertyDetails)
-          : property.propertyDetails;
+        typeof (property as any).propertyDetails === 'string'
+          ? JSON.parse((property as any).propertyDetails)
+          : (property as any).propertyDetails;
     }
   } catch (error) {
     console.error('Failed to parse property details', error);
   }
 
-  const developerBrand = property.developerBrand || property.developerBrandProfile;
-  const normalizedListerType = String(property.listerType || '')
+  let parsedPropertySettings: Record<string, unknown> = {};
+  try {
+    if ((property as any).propertySettings) {
+      parsedPropertySettings =
+        typeof (property as any).propertySettings === 'string'
+          ? JSON.parse((property as any).propertySettings)
+          : (property as any).propertySettings;
+    }
+  } catch (e) {
+    console.error('Failed to parse property settings', e);
+  }
+
+  const mergedDetailSpecs = {
+    ...rawPropertyDetails,
+    ...parsedPropertySettings,
+  } as Record<string, unknown>;
+
+  const specs: PropertySpecs = {
+    ownershipType:
+      String(
+        mergedDetailSpecs.ownershipType ?? parsedPropertySettings.ownershipType ?? '',
+      ).trim() || undefined,
+    powerBackup:
+      String(mergedDetailSpecs.powerBackup ?? parsedPropertySettings.powerBackup ?? '').trim() ||
+      undefined,
+    securityFeatures: Array.isArray(mergedDetailSpecs.securityFeatures)
+      ? (mergedDetailSpecs.securityFeatures as string[])
+      : Array.isArray(parsedPropertySettings.securityFeatures)
+        ? (parsedPropertySettings.securityFeatures as string[])
+        : undefined,
+    waterSupply:
+      String(mergedDetailSpecs.waterSupply ?? parsedPropertySettings.waterSupply ?? '').trim() ||
+      undefined,
+    internetAccess:
+      String(
+        mergedDetailSpecs.internetAccess ??
+          mergedDetailSpecs.internetAvailability ??
+          parsedPropertySettings.internetAccess ??
+          '',
+      ).trim() || undefined,
+    flooring:
+      String(
+        mergedDetailSpecs.flooring ??
+          mergedDetailSpecs.flooringType ??
+          parsedPropertySettings.flooring ??
+          '',
+      ).trim() || undefined,
+    parkingType:
+      String(mergedDetailSpecs.parkingType ?? parsedPropertySettings.parkingType ?? '').trim() ||
+      undefined,
+    petFriendly:
+      typeof mergedDetailSpecs.petFriendly === 'boolean'
+        ? mergedDetailSpecs.petFriendly
+          ? 'yes'
+          : 'no'
+        : String(
+            mergedDetailSpecs.petFriendly ?? parsedPropertySettings.petFriendly ?? '',
+          ).trim() || undefined,
+    electricitySupply:
+      String(
+        mergedDetailSpecs.electricitySupply ??
+          mergedDetailSpecs.electricitySource ??
+          parsedPropertySettings.electricitySupply ??
+          '',
+      ).trim() || undefined,
+    additionalRooms: Array.isArray(mergedDetailSpecs.additionalRooms)
+      ? (mergedDetailSpecs.additionalRooms as string[])
+      : Array.isArray(parsedPropertySettings.additionalRooms)
+        ? (parsedPropertySettings.additionalRooms as string[])
+        : undefined,
+  };
+
+  const developerBrand = ((property as any).developerBrand ||
+    (property as any).developerBrandProfile) as any;
+  const normalizedListerType = String((property as any).listerType || '')
     .trim()
     .toLowerCase();
-  const hasAgentIdentity = Boolean(agent?.id || agent?.name || property.agentId);
+  const hasAgentIdentity = Boolean(agent?.id || agent?.name);
   const hasDeveloperIdentity = Boolean(developerBrand?.id || developerBrand?.brandName);
-  const contactMode = hasAgentIdentity
-    ? 'agent'
-    : hasDeveloperIdentity
-      ? 'developer'
-      : normalizedListerType === 'private'
-        ? 'private'
-        : 'unknown';
+  const contactMode =
+    normalizedListerType === 'private'
+      ? 'private'
+      : normalizedListerType === 'agent' && hasAgentIdentity
+        ? 'agent'
+        : hasDeveloperIdentity
+          ? 'developer'
+          : hasAgentIdentity
+            ? 'agent'
+            : 'unknown';
   const contactRoleLabel =
     contactMode === 'private'
       ? 'Seller'
@@ -401,17 +385,25 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               whatsapp: undefined,
               email: undefined,
               agency: undefined,
-              areasServed: [],
             }
           : undefined;
-  const propertyBadges = Array.isArray(specs.badges)
-    ? specs.badges
+  const propertyBadges = Array.isArray((specs as any).badges)
+    ? (specs as any).badges
         .map(
           (badge: string) => BADGE_TEMPLATES[badge as keyof typeof BADGE_TEMPLATES]?.label || badge,
         )
         .filter(Boolean)
     : [];
-  const development = property.development;
+  const isDeveloperListing = contactMode === 'developer';
+  const listingContextLabel =
+    contactMode === 'developer'
+      ? 'New Development'
+      : contactMode === 'agent'
+        ? 'Listed by Agent'
+        : contactMode === 'private'
+          ? 'Private Listing'
+          : null;
+  const development = (property as any).development as any;
   const developmentName = String(development?.name || '').trim();
   const developmentHref = developmentName
     ? development?.slug
@@ -422,54 +414,18 @@ export default function PropertyDetail(props: PropertyDetailProps) {
     : null;
 
   const similarProperties = (similarPropertiesData ?? []).filter(p => p.id !== propertyId);
-  const similarListingsQuery = new URLSearchParams();
-  if (property.city) {
-    similarListingsQuery.set('city', String(property.city));
-  }
-  if (property.suburb) {
-    similarListingsQuery.set('suburb', String(property.suburb));
-  }
-  if (property.propertyType) {
-    similarListingsQuery.set('propertyType', String(property.propertyType));
-  }
-  if (property.listingType) {
-    similarListingsQuery.set('listingType', String(property.listingType));
-  }
-  const similarListingsHref = `/properties${
-    similarListingsQuery.toString() ? `?${similarListingsQuery.toString()}` : ''
-  }`;
-  const propertyImages = (Array.isArray(images) ? images : []).filter(
-    (image): image is PropertyImageLike =>
-      Boolean(
-        (typeof image?.imageUrl === 'string' && image.imageUrl) ||
-        (typeof image?.url === 'string' && image.url),
-      ),
-  );
-  const propertyImageUrls = propertyImages
-    .map(image =>
-      typeof image.imageUrl === 'string'
+  const propertyImages = (Array.isArray(images) ? images : [])
+    .map((image: any) =>
+      typeof image?.imageUrl === 'string'
         ? image.imageUrl
-        : typeof image.url === 'string'
+        : typeof image?.url === 'string'
           ? image.url
           : '',
     )
     .filter(Boolean);
-  const propertyGalleryImages = propertyImages
-    .map((image, index) => ({
-      id: image.id ?? index,
-      imageUrl:
-        typeof image.imageUrl === 'string'
-          ? image.imageUrl
-          : typeof image.url === 'string'
-            ? image.url
-            : '',
-      isPrimary: image.isPrimary,
-      displayOrder: image.displayOrder,
-    }))
-    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-  const houseSizeM2 = parseStrictNumber(rawPropertyDetails.houseAreaM2);
-  const erfSizeM2 = parseStrictNumber(rawPropertyDetails.erfSizeM2);
-  const unitSizeM2 = parseStrictNumber(rawPropertyDetails.unitSizeM2);
+  const houseSizeM2 = parseStrictNumber(mergedDetailSpecs.houseAreaM2);
+  const erfSizeM2 = parseStrictNumber(mergedDetailSpecs.erfSizeM2);
+  const unitSizeM2 = parseStrictNumber(mergedDetailSpecs.unitSizeM2);
   const parkingLabel = formatLabel(specs.parkingType);
   const displayPrice = Number(property.price) || 0;
   const displayRepayment = displayPrice > 0 ? Math.round(displayPrice * 0.0095) : 0;
@@ -479,129 +435,6 @@ export default function PropertyDetail(props: PropertyDetailProps) {
   const hasPrimaryContactAction = Boolean(
     directPhone || whatsappNumber || directEmail || contactMode !== 'unknown',
   );
-  const qualificationStatusLabel = qualificationSnapshot
-    ? qualificationSnapshot.resultTone === 'success'
-      ? 'Likely qualifies'
-      : qualificationSnapshot.resultTone === 'warning'
-        ? 'Close fit'
-        : 'Budget gap'
-    : null;
-  const affordabilityPayload = qualificationSnapshot
-    ? {
-        monthlyIncome:
-          qualificationSnapshot.monthlyIncome + qualificationSnapshot.coApplicantIncome,
-        monthlyExpenses: qualificationSnapshot.monthlyExpenses,
-        monthlyDebts: qualificationSnapshot.monthlyDebts,
-        availableDeposit: qualificationSnapshot.availableDeposit,
-        maxAffordable: qualificationSnapshot.maxAffordable,
-        calculatedAt: new Date().toISOString(),
-      }
-    : undefined;
-  const contactBadgeLabel =
-    contactMode === 'developer'
-      ? 'New Development'
-      : contactMode === 'agent'
-        ? contactIdentity?.isVerified
-          ? 'Verified Agent'
-          : 'Registered Agent'
-        : contactMode === 'private'
-          ? 'Owner Listed'
-          : null;
-  const contactIntro =
-    contactMode === 'developer'
-      ? 'Reach the development contact for pricing, availability, and next steps.'
-      : contactMode === 'private'
-        ? 'You are contacting the owner directly through Property Listify.'
-        : 'Connect directly with the agent handling this listing.';
-  const agentAgencyLabel =
-    contactMode === 'agent' ? String(contactIdentity?.agency || '').trim() || 'Independent' : '';
-  const agentPrimaryArea =
-    contactMode === 'agent' && Array.isArray(contactIdentity?.areasServed)
-      ? String(contactIdentity?.areasServed?.[0] || '').trim()
-      : '';
-  const contactSubline =
-    contactMode === 'developer'
-      ? developmentName || 'New development listing'
-      : contactMode === 'agent'
-        ? [agentAgencyLabel, agentPrimaryArea].filter(Boolean).join(' · ') || 'Independent'
-        : '';
-  const contactAvailabilityItems = [
-    whatsappNumber ? 'WhatsApp available' : null,
-    directPhone ? 'Call available' : null,
-    directEmail ? 'Email available' : null,
-  ].filter(Boolean) as string[];
-  const agentStats =
-    contactMode === 'agent'
-      ? ([
-          typeof contactIdentity?.activeListingsCount === 'number'
-            ? {
-                key: 'listings',
-                label: 'Listings',
-                value: String(contactIdentity.activeListingsCount),
-              }
-            : null,
-          {
-            key: 'rating',
-            label: 'Rating',
-            value:
-              typeof contactIdentity?.rating === 'number'
-                ? `${contactIdentity.rating.toFixed(1)}`
-                : '5.0',
-          },
-          typeof contactIdentity?.yearsExperience === 'number'
-            ? {
-                key: 'experience',
-                label: 'Experience',
-                value: `${contactIdentity.yearsExperience}yr`,
-              }
-            : null,
-        ].filter(Boolean) as Array<{ key: string; label: string; value: string }>)
-      : [];
-  const agentOverviewPills =
-    contactMode === 'agent'
-      ? ([
-          typeof contactIdentity?.yearsExperience === 'number'
-            ? `${contactIdentity.yearsExperience} Years Experience`
-            : null,
-          agentPrimaryArea ? `Operates in ${agentPrimaryArea}` : null,
-          typeof contactIdentity?.reviewCount === 'number' && contactIdentity.reviewCount > 0
-            ? `${contactIdentity.reviewCount} Reviews`
-            : null,
-        ].filter(Boolean) as string[])
-      : [];
-  const hasCoordinates =
-    Number.isFinite(Number(property.latitude)) &&
-    Number.isFinite(Number(property.longitude)) &&
-    Number(property.latitude) !== 0 &&
-    Number(property.longitude) !== 0;
-  const locationOverviewItems = [
-    property.suburb
-      ? {
-          key: 'suburb',
-          label: 'Suburb',
-          value: property.suburb,
-        }
-      : null,
-    property.city
-      ? {
-          key: 'city',
-          label: 'City',
-          value: property.city,
-        }
-      : null,
-    property.province
-      ? {
-          key: 'province',
-          label: 'Province',
-          value: property.province,
-        }
-      : null,
-    {
-      key: 'pin',
-      label: 'Map Pin',
-      value: hasCoordinates ? 'Available' : 'Not Provided',
-    },
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
   const propertyDetailItems = [
     property.bedrooms
       ? {
@@ -658,7 +491,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
           icon: Building2,
         }
       : null,
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: LucideIcon }>;
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: any }>;
   const featureSpecItems = [
     specs.ownershipType
       ? {
@@ -727,52 +560,112 @@ export default function PropertyDetail(props: PropertyDetailProps) {
           icon: Zap,
         }
       : null,
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: LucideIcon }>;
-  const heroFeatureSpecItems = featureSpecItems.slice(0, 8);
-  const openQualification = () => {
-    setIsQualificationOpen(true);
-  };
-  const openContactModal = ({
-    initialMessage = '',
-    snapshot = null,
-  }: {
-    initialMessage?: string;
-    snapshot?: PropertyQualificationSnapshot | null;
-  } = {}) => {
-    setContactInitialMessage(initialMessage);
-    setQualificationSnapshot(snapshot);
-    setIsContactModalOpen(true);
-  };
-  const handleOpenStandardEnquiry = () => {
-    openContactModal();
-  };
-  const handleBookAppointment = () => {
-    openContactModal({
-      initialMessage: `Hi, I'd like to book an appointment to view ${property.title}. Please let me know the next available time slot.`,
-    });
-  };
-  const handleWhatsAppContact = (message?: string) => {
-    if (!whatsappNumber) return;
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: any }>;
+  const normalizedListingType = String(property.listingType || '')
+    .trim()
+    .toLowerCase();
+  const isSaleListing = normalizedListingType === 'sale' || normalizedListingType === 'sell';
+  const isRentalListing = normalizedListingType === 'rent';
+  const isAuctionListing = normalizedListingType === 'auction';
+  const leviesAmount = parseStrictNumber(
+    (property as any).levies ??
+      mergedDetailSpecs.levies ??
+      mergedDetailSpecs.leviesHoaOperatingCosts,
+  );
+  const ratesTaxesAmount = parseStrictNumber(
+    (property as any).ratesAndTaxes ??
+      mergedDetailSpecs.ratesAndTaxes ??
+      mergedDetailSpecs.ratesTaxes,
+  );
+  const transactionDetailItems = [
+    ratesTaxesAmount
+      ? {
+          key: 'rates-taxes',
+          label: 'Rates & Taxes',
+          value: formatCurrency(ratesTaxesAmount),
+        }
+      : null,
+    leviesAmount
+      ? {
+          key: 'levies',
+          label: 'Levies / HOA',
+          value: formatCurrency(leviesAmount),
+        }
+      : null,
+    isSaleListing && mergedDetailSpecs.negotiable != null
+      ? {
+          key: 'negotiable',
+          label: 'Negotiable',
+          value: mergedDetailSpecs.negotiable ? 'Yes' : 'No',
+        }
+      : null,
+    isSaleListing && parseStrictNumber(mergedDetailSpecs.transferCostEstimate)
+      ? {
+          key: 'transfer-costs',
+          label: 'Estimated Transfer Costs',
+          value: formatCurrency(Number(mergedDetailSpecs.transferCostEstimate)),
+        }
+      : null,
+    isRentalListing && parseStrictNumber(mergedDetailSpecs.deposit)
+      ? {
+          key: 'deposit',
+          label: 'Deposit',
+          value: formatCurrency(Number(mergedDetailSpecs.deposit)),
+        }
+      : null,
+    isRentalListing && String(mergedDetailSpecs.leaseTerms || '').trim()
+      ? {
+          key: 'lease-terms',
+          label: 'Lease Terms',
+          value: String(mergedDetailSpecs.leaseTerms).trim(),
+        }
+      : null,
+    isRentalListing && formatDateLabel(mergedDetailSpecs.availableFrom)
+      ? {
+          key: 'available-from',
+          label: 'Available From',
+          value: formatDateLabel(mergedDetailSpecs.availableFrom) as string,
+        }
+      : null,
+    isRentalListing && mergedDetailSpecs.utilitiesIncluded != null
+      ? {
+          key: 'utilities',
+          label: 'Utilities Included',
+          value: mergedDetailSpecs.utilitiesIncluded ? 'Yes' : 'No',
+        }
+      : null,
+    isAuctionListing && parseStrictNumber(mergedDetailSpecs.reservePrice)
+      ? {
+          key: 'reserve-price',
+          label: 'Reserve Price',
+          value: formatCurrency(Number(mergedDetailSpecs.reservePrice)),
+        }
+      : null,
+    isAuctionListing && formatDateLabel(mergedDetailSpecs.auctionDateTime)
+      ? {
+          key: 'auction-date',
+          label: 'Auction Date',
+          value: formatDateLabel(mergedDetailSpecs.auctionDateTime) as string,
+        }
+      : null,
+    isAuctionListing && String(mergedDetailSpecs.auctionTermsDocumentUrl || '').trim()
+      ? {
+          key: 'auction-terms',
+          label: 'Auction Terms',
+          value: 'Available on request',
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
+  const handleScrollToCalculator = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsBondCalculatorModalOpen(true);
+      return;
+    }
 
-    const normalizedNumber = whatsappNumber.replace(/[^\d]/g, '');
-    const defaultMessage = `Hi, I'm interested in ${property.title}. Please share more information.`;
-    const targetUrl = `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(
-      message || defaultMessage,
-    )}`;
-
-    window.open(targetUrl, '_blank');
-  };
-  const handleQualificationToEnquiry = (snapshot: PropertyQualificationSnapshot) => {
-    setIsQualificationOpen(false);
-    openContactModal({
-      initialMessage: snapshot.summaryMessage,
-      snapshot,
+    document.getElementById('buyability-calculator')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
     });
-  };
-  const handleQualificationToWhatsApp = (snapshot: PropertyQualificationSnapshot) => {
-    setQualificationSnapshot(snapshot);
-    setIsQualificationOpen(false);
-    handleWhatsAppContact(snapshot.summaryMessage);
   };
   const showLegacyPropertyDetails = false;
   const propertyStructuredData = [
@@ -784,7 +677,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       name: property.title || 'Property',
       description: seoDescription,
       url: canonicalUrl,
-      images: propertyImageUrls,
+      images: propertyImages,
       address: {
         streetAddress: property.address,
         addressLocality: property.city,
@@ -793,8 +686,8 @@ export default function PropertyDetail(props: PropertyDetailProps) {
         addressCountry: 'ZA',
       },
       geo: {
-        latitude: property.latitude,
-        longitude: property.longitude,
+        latitude: (property as any).latitude,
+        longitude: (property as any).longitude,
       },
       additionalProperties: [
         property.propertyType
@@ -823,32 +716,6 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       ].filter(Boolean) as Array<{ name: string; value: string | number; unitText?: string }>,
     }),
   ];
-  const sectionNavItems = [
-    { id: 'overview', label: 'Overview' },
-    {
-      id: 'features',
-      label: 'Features',
-      enabled: featureSpecItems.length > 0 || highlights.length > 0,
-    },
-    { id: 'contact', label: 'Contact', enabled: contactMode !== 'unknown' },
-    { id: 'location', label: 'Location' },
-    { id: 'reviews', label: 'Reviews' },
-    { id: 'buyability-calculator', label: 'Calculator' },
-  ].filter(item => item.enabled !== false);
-  const scrollToSection = (sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  };
-  const agentProfileHref =
-    contactMode === 'agent'
-      ? contactIdentity?.slug
-        ? `/agents/${contactIdentity.slug}`
-        : contactIdentity?.id && /^\d+$/.test(String(contactIdentity.id))
-          ? `/agent/profile/${contactIdentity.id}`
-          : null
-      : null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -856,7 +723,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
         canonicalUrl={canonicalUrl}
         title={seoTitle}
         description={seoDescription}
-        image={propertyImageUrls[0]}
+        image={propertyImages[0]}
         structuredData={propertyStructuredData}
       />
       <ListingNavbar />
@@ -865,17 +732,29 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       <div className="bg-white border-b border-slate-200 pt-16">
         <div className="container py-6">
           {/* Breadcrumbs */}
-          <div className="mb-4">
+          <div className="hidden lg:block mb-4">
             <Breadcrumbs items={breadcrumbItems} />
           </div>
 
-          {/* Top Row: Buyer-facing badges */}
+          {/* Top Row: Badges */}
           <div className="flex items-center gap-2 mb-4">
             {property.featured === 1 && (
               <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
                 FEATURED
               </Badge>
             )}
+            {listingContextLabel ? (
+              <Badge
+                variant="secondary"
+                className={
+                  isDeveloperListing
+                    ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
+                }
+              >
+                {listingContextLabel}
+              </Badge>
+            ) : null}
             {propertyBadges.slice(0, 2).map((badge: string) => (
               <Badge
                 key={badge}
@@ -887,78 +766,38 @@ export default function PropertyDetail(props: PropertyDetailProps) {
             ))}
           </div>
 
-          {/* Title Row with Action Buttons */}
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-1">
-            <div className="flex-1">
-              <h1 className="text-fluid-h2 font-bold text-slate-900 mb-1">{property.title}</h1>
-              <div className="flex items-center gap-2 text-slate-500">
-                <MapPin className="h-4 w-4" />
-                <span className="text-base text-slate-500">
-                  {property.address}, {property.city}, {property.province}
-                </span>
-              </div>
-              {developmentName && (
-                <div className="mt-2 flex items-center gap-2 text-slate-500">
-                  <Home className="h-4 w-4" />
-                  {developmentHref ? (
-                    <button
-                      type="button"
-                      className="text-sm hover:text-blue-600 hover:underline transition-colors truncate"
-                      onClick={() => setLocation(developmentHref)}
-                      title={developmentName}
-                    >
-                      Part of {developmentName}
-                    </button>
-                  ) : (
-                    <span className="text-sm truncate" title={developmentName}>
-                      Part of {developmentName}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
+          {/* Desktop Action Buttons */}
+          <div className="hidden lg:flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleFavoriteClick}
+              className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
+            >
+              <Heart className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleShare}
+              className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
+            >
+              Shortlist
+            </Button>
+            {hasPrimaryContactAction && (
               <Button
-                variant="outline"
-                size="icon"
-                onClick={handleFavoriteClick}
-                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
+                className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
+                onClick={() => setIsContactModalOpen(true)}
               >
-                <Heart className="h-5 w-5" />
+                {contactRoleLabel ? `Contact ${contactRoleLabel}` : 'Send Enquiry'}
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleShare}
-                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
-              >
-                Shortlist
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="sticky top-16 z-30 hidden border-b border-slate-200 bg-white/95 backdrop-blur lg:block">
-        <div className="container py-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            {sectionNavItems.map(item => (
-              <button
-                key={item.id}
-                type="button"
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-orange-200 hover:text-orange-600"
-                onClick={() => scrollToSection(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -967,16 +806,140 @@ export default function PropertyDetail(props: PropertyDetailProps) {
         {/* Image Gallery + Property Info Block */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
           {/* Left Column - Image Gallery */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 relative">
+            {/* Mobile Overlay */}
+            <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between lg:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => window.history.back()}
+                className="bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-white rounded-full shadow-sm"
+              >
+                <ChevronRight className="h-5 w-5 rotate-180" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleFavoriteClick}
+                  className="bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-white rounded-full shadow-sm"
+                >
+                  <Heart className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleShare}
+                  className="bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-white rounded-full shadow-sm"
+                >
+                  <Share2 className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
             <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white">
-              <PropertyImageGallery images={propertyGalleryImages} propertyTitle={property.title} />
+              <PropertyImageGallery images={images} propertyTitle={property.title} />
+            </div>
+          </div>
+
+          {/* Mobile Title Section - Below Gallery */}
+          <div className="lg:hidden container py-6">
+            <h1 className="text-fluid-h2 font-bold text-slate-900 mb-2">{property.title}</h1>
+            <div className="flex items-center gap-2 text-slate-500 mb-4">
+              <MapPin className="h-4 w-4" />
+              <span className="text-base text-slate-500">
+                {property.address}, {property.city}, {property.province}
+              </span>
+            </div>
+
+            <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
+              {formatCurrency(displayPrice, { compact: false })}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm mb-4">
+              <span className="text-slate-500 font-medium">Estimated Repayment:</span>
+              <span className="text-slate-900 font-bold">
+                {formatCurrency(displayRepayment, { compact: false })}/Pm
+              </span>
+              <button
+                type="button"
+                className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1"
+                onClick={handleScrollToCalculator}
+              >
+                Get Pre-Qualified
+              </button>
+            </div>
+
+            {developmentName && (
+              <div className="flex items-center gap-2 text-slate-500 mb-4">
+                <Home className="h-4 w-4" />
+                {developmentHref ? (
+                  <button
+                    type="button"
+                    className="text-sm hover:text-blue-600 hover:underline transition-colors truncate"
+                    onClick={() => setLocation(developmentHref)}
+                    title={developmentName}
+                  >
+                    Part of {developmentName}
+                  </button>
+                ) : (
+                  <span className="text-sm truncate" title={developmentName}>
+                    Part of {developmentName}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Property Details Icons - Mobile 4 icons */}
+            {propertyDetailItems.length > 0 && (
+              <div className="flex items-center justify-between gap-2 mb-6">
+                {propertyDetailItems.slice(0, 4).map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.key} className="flex flex-col items-center gap-1">
+                      <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-xs text-slate-500">{item.label.split(' ')[0]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Badges */}
+            <div className="flex items-center gap-2">
+              {property.featured === 1 && (
+                <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
+                  FEATURED
+                </Badge>
+              )}
+              {listingContextLabel ? (
+                <Badge
+                  variant="secondary"
+                  className={
+                    isDeveloperListing
+                      ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
+                  }
+                >
+                  {listingContextLabel}
+                </Badge>
+              ) : null}
+              {propertyBadges.slice(0, 2).map((badge: string) => (
+                <Badge
+                  key={badge}
+                  variant="secondary"
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+                >
+                  {badge}
+                </Badge>
+              ))}
             </div>
           </div>
 
           {/* Right Column - Property Info */}
-          <div className="lg:col-span-5 space-y-8">
-            {/* Price Section */}
-            <div id="overview">
+          <div className="lg:col-span-5 space-y-12">
+            {/* Price Section - Desktop Only */}
+            <div className="hidden lg:block">
               <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
                 {formatCurrency(displayPrice, { compact: false })}
               </div>
@@ -988,16 +951,16 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                 <button
                   type="button"
                   className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1"
-                  onClick={openQualification}
+                  onClick={handleScrollToCalculator}
                 >
                   Get Pre-Qualified
                 </button>
               </div>
             </div>
 
-            {/* Property Details */}
+            {/* Property Details - Desktop Only */}
             {propertyDetailItems.length > 0 && (
-              <div>
+              <div className="hidden lg:block">
                 <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Property Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {propertyDetailItems.map(item => {
@@ -1023,7 +986,7 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                         <div>
                           <p className="text-sm text-slate-400">House Size</p>
                           <p className="font-semibold text-slate-900">
-                            {(property.area ?? 0).toLocaleString()} m²
+                            {property.area.toLocaleString()} m²
                           </p>
                         </div>
                       </div>
@@ -1053,75 +1016,65 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               </div>
             )}
 
-            {heroFeatureSpecItems.length > 0 && (
-              <div id="features">
-                <h3 className="mb-3 text-sm font-semibold text-slate-700">
-                  Property Features & Specifications
-                </h3>
-                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                  {heroFeatureSpecItems.map(item => {
-                    const Icon = item.icon;
-                    return (
-                      <div
-                        key={item.key}
-                        className="rounded-xl border border-slate-200 bg-white/90 px-3 py-3 shadow-sm"
-                      >
-                        <div className="mb-1.5 flex items-center gap-1.5 text-orange-500">
-                          <Icon className="h-3.5 w-3.5 shrink-0" />
-                          <p className="text-[10px] font-medium leading-none text-slate-400 sm:text-[11px]">
-                            {item.label}
-                          </p>
-                        </div>
-                        <p className="text-[13px] font-semibold leading-snug text-slate-800 sm:text-sm">
-                          {item.value}
-                        </p>
+            {transactionDetailItems.length > 0 && (
+              <div className="hidden lg:block">
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Transaction Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {transactionDetailItems.map(item => (
+                    <div key={item.key} className="flex items-start gap-3">
+                      <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <Square className="h-5 w-5" />
                       </div>
-                    );
-                  })}
+                      <div>
+                        <p className="text-sm text-slate-400">{item.label}</p>
+                        <p className="font-semibold text-slate-900">{item.value}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {hasPrimaryContactAction && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-900">Ready for the next step?</p>
-                    <p className="text-xs text-slate-500">
-                      Start with qualification or contact the listing{' '}
-                      {contactRoleLabel?.toLowerCase() || 'contact'} directly.
-                    </p>
-                  </div>
-                  {qualificationStatusLabel && (
-                    <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
-                      {qualificationStatusLabel}
-                    </Badge>
-                  )}
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  <Button
-                    className="h-11 bg-orange-500 text-white hover:bg-orange-600"
-                    onClick={openQualification}
-                  >
-                    Check If You Qualify
-                  </Button>
-                  {whatsappNumber && (
-                    <Button
-                      variant="outline"
-                      className="h-11 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
-                      onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+            {/* Additional Rooms */}
+            {specs.additionalRooms && specs.additionalRooms.length > 0 && (
+              <div className="mb-6 hidden lg:block">
+                <h3 className="text-lg font-medium text-slate-400 mb-3">
+                  Additional rooms & Specifications
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {specs.additionalRooms.map(room => (
+                    <Badge
+                      key={room}
+                      variant="secondary"
+                      className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium"
                     >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      WhatsApp {contactRoleLabel || 'Agent'}
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="h-11 border-slate-200 text-slate-700 hover:bg-slate-50"
-                    onClick={handleOpenStandardEnquiry}
-                  >
-                    Send Enquiry
-                  </Button>
+                      {room}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Amenities */}
+            {highlights.length > 0 && (
+              <div>
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">
+                  Amenities & Features
+                </h3>
+                <div
+                  className={`grid gap-y-3 gap-x-4 ${
+                    highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
+                  }`}
+                >
+                  {highlights.map((amenity: string, index: number) => {
+                    const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
+                    return (
+                      <div key={index} className="flex items-center gap-3">
+                        <IconComponent className="h-5 w-5 text-orange-500" />
+                        <span className="capitalize text-slate-700 font-medium">{amenity}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1160,262 +1113,30 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               </Card>
             )}
 
-            {/* 2.2 Listing Agent */}
-            {contactMode === 'agent' && contactIdentity && (
+            {/* 2.2 Property Features / Specs Table (Dynamic) */}
+            {featureSpecItems.length > 0 && (
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Listing Agent
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-5">
-                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_320px]">
-                    <div className="space-y-5">
-                      <div className="flex items-start gap-4">
-                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                          {contactIdentity.image ? (
-                            <img
-                              src={contactIdentity.image}
-                              alt={contactIdentity.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-orange-100 text-xl font-bold text-orange-600">
-                              {contactIdentity.name?.charAt(0) || '?'}
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="mb-2 flex flex-wrap items-center gap-2">
-                            {contactBadgeLabel && (
-                              <Badge className="border border-orange-200 bg-orange-50 text-[10px] text-orange-700 hover:bg-orange-50">
-                                {contactBadgeLabel}
-                              </Badge>
-                            )}
-                            <Badge className="border border-amber-200 bg-amber-50 text-[10px] text-amber-700 hover:bg-amber-50">
-                              {typeof contactIdentity.rating === 'number'
-                                ? `${contactIdentity.rating.toFixed(1)}`
-                                : '5.0'}{' '}
-                              Rating
-                            </Badge>
-                          </div>
-                          <h3 className="text-xl font-bold text-slate-900">
-                            {contactIdentity.name || 'Listing Agent'}
-                          </h3>
-                          {contactSubline && (
-                            <p className="mt-1 text-sm font-medium text-slate-600">
-                              {contactSubline}
-                            </p>
-                          )}
-                          <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                            {contactIntro}
-                          </p>
-                        </div>
-                      </div>
-
-                      {agentOverviewPills.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {agentOverviewPills.map(item => (
-                            <span
-                              key={item}
-                              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                            >
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {agentStats.length > 0 && (
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          {agentStats.map(stat => (
-                            <div
-                              key={stat.key}
-                              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
-                            >
-                              <p className="text-base font-bold text-slate-900">{stat.value}</p>
-                              <p className="mt-1 text-[11px] font-medium text-slate-500">
-                                {stat.label}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm text-slate-700">
-                            <span>Active listings</span>
-                            <span className="font-semibold">
-                              {typeof contactIdentity.activeListingsCount === 'number'
-                                ? contactIdentity.activeListingsCount
-                                : agentStats.find(stat => stat.key === 'listings')?.value || '0'}
-                            </span>
-                          </div>
-                          {directPhone && (
-                            <div className="flex items-center justify-between text-sm text-slate-700">
-                              <span>Phone</span>
-                              <span className="font-semibold">{directPhone}</span>
-                            </div>
-                          )}
-                          {directEmail && (
-                            <div className="flex items-center justify-between gap-3 text-sm text-slate-700">
-                              <span>Email</span>
-                              <span className="truncate font-semibold">{directEmail}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">Contact Agent</p>
-                          <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                            Use the fastest route to connect with the agent handling this listing.
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                          <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-                            Contact Name
-                          </p>
-                          <p className="mt-1 font-semibold text-slate-900">
-                            {contactIdentity.name || 'Listing Agent'}
-                          </p>
-                        </div>
-
-                        {directEmail && (
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-                              Email
-                            </p>
-                            <p className="mt-1 truncate font-semibold text-slate-900">
-                              {directEmail}
-                            </p>
-                          </div>
-                        )}
-
-                        {(directPhone || whatsappNumber) && (
-                          <div className="grid gap-3 sm:grid-cols-[92px_minmax(0,1fr)] lg:grid-cols-[92px_minmax(0,1fr)]">
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm font-semibold text-slate-700">
-                              +27
-                            </div>
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                              <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-                                Phone Number
-                              </p>
-                              <p className="mt-1 font-semibold text-slate-900">
-                                {directPhone || whatsappNumber}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        <Button
-                          className="h-12 w-full bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
-                          onClick={handleBookAppointment}
-                        >
-                          Contact Now
-                        </Button>
-
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                          {whatsappNumber && (
-                            <Button
-                              className="h-11 w-full bg-green-500 text-white hover:bg-green-600"
-                              onClick={() =>
-                                handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                              }
-                            >
-                              <MessageCircle className="mr-2 h-4 w-4" />
-                              WhatsApp Agent
-                            </Button>
-                          )}
-                          {directPhone && (
-                            <Button
-                              variant="outline"
-                              className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                              asChild
-                            >
-                              <a href={`tel:${directPhone}`}>
-                                <Phone className="mr-2 h-4 w-4" />
-                                Call Agent
-                              </a>
-                            </Button>
-                          )}
-                          {agentProfileHref && (
-                            <Button
-                              variant="outline"
-                              className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                              onClick={() => setLocation(agentProfileHref)}
-                            >
-                              View Agent Profile
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 2.3 Additional Rooms */}
-            {specs.additionalRooms && specs.additionalRooms.length > 0 && (
-              <Card
-                id={heroFeatureSpecItems.length === 0 ? 'features' : undefined}
-                className="border-slate-200 shadow-sm"
-              >
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Additional Rooms & Specifications
+                    Property Features & Specifications
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="flex flex-wrap gap-2">
-                    {specs.additionalRooms.map(room => (
-                      <Badge
-                        key={room}
-                        variant="secondary"
-                        className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium"
-                      >
-                        {room}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 2.4 Amenities */}
-            {highlights.length > 0 && (
-              <Card
-                id={
-                  heroFeatureSpecItems.length === 0 &&
-                  (!specs.additionalRooms || specs.additionalRooms.length === 0)
-                    ? 'features'
-                    : undefined
-                }
-                className="border-slate-200 shadow-sm"
-              >
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Amenities & Features
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div
-                    className={`grid gap-y-3 gap-x-4 ${
-                      highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
-                    }`}
-                  >
-                    {highlights.map((amenity: string, index: number) => {
-                      const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {featureSpecItems.map(item => {
+                      const Icon = item.icon;
                       return (
-                        <div key={index} className="flex items-center gap-3">
-                          <IconComponent className="h-5 w-5 text-orange-500" />
-                          <span className="capitalize text-slate-700 font-medium">{amenity}</span>
+                        <div
+                          key={item.key}
+                          className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg"
+                        >
+                          <Icon className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">{item.label}</p>
+                            <p className="font-semibold text-slate-900" title={item.value}>
+                              {item.value}
+                            </p>
+                          </div>
                         </div>
                       );
                     })}
@@ -1424,371 +1145,149 @@ export default function PropertyDetail(props: PropertyDetailProps) {
               </Card>
             )}
 
-            {/* 2.5 Developer Brand Section (when property is linked to a brand profile) */}
-            {(property.developerBrand || property.developerBrandProfile) && (
+            {/* 2.3 Contact Overview */}
+            {contactMode !== 'unknown' && (
+              <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
+                  <h3 className="text-fluid-h3 font-bold text-slate-900">
+                    {contactMode === 'developer'
+                      ? 'Developer Contact'
+                      : contactMode === 'private'
+                        ? 'Seller Contact'
+                        : 'Agent Contact'}
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
+                        {contactIdentity?.image ? (
+                          <img
+                            src={contactIdentity.image}
+                            alt={contactIdentity.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
+                            {contactIdentity?.name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-lg font-bold text-slate-900">
+                          {contactIdentity?.name || 'Listing Contact'}
+                        </h4>
+                        {listingContextLabel && (
+                          <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
+                            {listingContextLabel}
+                          </Badge>
+                        )}
+                        {contactIdentity?.agency && (
+                          <p className="mt-2 text-sm text-slate-500">{contactIdentity.agency}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {developmentHref && contactMode === 'developer' && (
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
+                          onClick={() => setLocation(developmentHref)}
+                        >
+                          <span className="font-medium text-slate-700">View Development</span>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between gap-4">
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-semibold text-slate-900">
+                        Enquire about this property
+                      </h4>
+                      <p className="text-sm text-slate-600">
+                        Use the enquiry form to send your interest through the platform.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {whatsappNumber && (
+                        <Button
+                          variant="outline"
+                          className="w-full h-12 rounded-lg border-green-200 text-green-700 hover:bg-green-50"
+                          onClick={() =>
+                            window.open(
+                              `https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`,
+                              '_blank',
+                            )
+                          }
+                        >
+                          WhatsApp {contactRoleLabel || 'Contact'}
+                        </Button>
+                      )}
+                      <Button
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg shadow-sm"
+                        onClick={() => setIsContactModalOpen(true)}
+                      >
+                        Send Enquiry
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
+            {((property as any).developerBrand || (property as any).developerBrandProfile) && (
               <DeveloperBrandSection
                 brand={
-                  (property.developerBrand || property.developerBrandProfile) as DeveloperBrandData
+                  ((property as any).developerBrand ||
+                    (property as any).developerBrandProfile) as DeveloperBrandData
                 }
               />
             )}
 
-            {/* 2.6 Location Decision Support */}
-            <section id="location" className="space-y-6">
-              <NearbyLandmarks
-                property={{
-                  id: property.id,
-                  title: property.title,
-                  latitude: property.latitude,
-                  longitude: property.longitude,
-                }}
-                overviewItems={locationOverviewItems}
-              />
-            </section>
+            {/* 2.5 Nearby Landmarks */}
+            <NearbyLandmarks property={property} />
 
-            {/* 2.7 Suburb Reviews & Insights */}
-            <Card id="reviews" className="border-slate-200 shadow-sm">
+            {/* 2.5 Suburb Reviews & Insights */}
+            <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-6">
                 <SuburbInsights
-                  suburbId={Number(property.suburbId ?? 0)}
-                  suburbName={property.suburb || property.city || 'Selected area'}
+                  suburbId={Number((property as any).suburbId ?? 0)}
+                  suburbName={property.suburb || property.city}
                   isDevelopment={!!property.developmentId}
                 />
               </CardContent>
             </Card>
 
-            {/* 2.8 Locality Guide */}
-            <LocalityGuide
-              suburb={property.suburb || property.city || 'Selected area'}
-              city={property.city || property.suburb || 'Selected area'}
-              province={property.province}
-            />
+            {/* 2.6 Locality Guide */}
+            <LocalityGuide suburb={property.suburb || property.city} city={property.city} />
           </div>
 
           {/* RIGHT COLUMN (4 columns) */}
-          <div className="col-span-12 lg:col-span-4">
-            <div className="sticky top-24 space-y-4">
-              <div
-                id="contact"
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-              >
-                <div className="bg-slate-950 px-5 py-5 text-white">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
-                    Ready to take the next step?
-                  </p>
-                  <div className="mt-2 text-2xl font-bold">
-                    {formatCurrency(displayPrice, { compact: false })}
-                  </div>
-                  <p className="mt-1 text-sm text-slate-300">
-                    Est. {formatCurrency(displayRepayment, { compact: false })}/Pm
-                  </p>
-                  {qualificationStatusLabel && (
-                    <Badge className="mt-3 border border-orange-300 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
-                      {qualificationStatusLabel}
-                    </Badge>
-                  )}
-                </div>
+          <div className="col-span-12 lg:col-span-4 hidden lg:block">
+            {/* Buyability Calculator - Sticky */}
+            <div id="buyability-calculator" className="sticky top-24 space-y-4">
+              <BondCalculator
+                propertyPrice={displayPrice}
+                showTransferCosts={true}
+                ctaLabel={
+                  contactRoleLabel ? `Request Help From ${contactRoleLabel}` : 'Send Enquiry'
+                }
+                onCtaClick={() => setIsContactModalOpen(true)}
+              />
 
-                <div className="space-y-3 px-5 py-5">
-                  <Button
-                    className="h-11 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
-                    onClick={openQualification}
-                  >
-                    Check If You Qualify
-                  </Button>
-                  {whatsappNumber && (
-                    <Button
-                      variant="outline"
-                      className="h-11 w-full border-green-200 text-green-700 hover:bg-green-50"
-                      onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
-                    >
-                      WhatsApp {contactRoleLabel || 'Contact'}
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                    onClick={handleOpenStandardEnquiry}
-                  >
-                    Send Enquiry
-                  </Button>
-                  <p className="text-center text-xs leading-relaxed text-slate-500">
-                    Start with qualification, then enquire with your affordability context if you
-                    want a faster response.
-                  </p>
-                </div>
-              </div>
-
-              {contactMode !== 'unknown' && (
-                <Card className="border-slate-200 shadow-sm">
-                  <CardContent className="space-y-5 p-5">
-                    {contactMode === 'agent' ? (
-                      <>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">Agent Overview</p>
-                        </div>
-
-                        <div className="flex items-start gap-4">
-                          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                            {contactIdentity?.image ? (
-                              <img
-                                src={contactIdentity.image}
-                                alt={contactIdentity.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-orange-100 text-xl font-bold text-orange-600">
-                                {contactIdentity?.name?.charAt(0) || '?'}
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-                              {contactBadgeLabel && (
-                                <Badge className="border border-orange-200 bg-orange-50 text-[10px] text-orange-700 hover:bg-orange-50">
-                                  {contactBadgeLabel}
-                                </Badge>
-                              )}
-                              <Badge className="border border-amber-200 bg-amber-50 text-[10px] text-amber-700 hover:bg-amber-50">
-                                {typeof contactIdentity?.rating === 'number'
-                                  ? `${contactIdentity.rating.toFixed(1)}`
-                                  : '5.0'}{' '}
-                                Rating
-                              </Badge>
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900">
-                              {contactIdentity?.name || 'Listing Agent'}
-                            </h3>
-                            {contactSubline && (
-                              <p className="mt-1 text-sm font-medium text-slate-600">
-                                {contactSubline}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {agentOverviewPills.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {agentOverviewPills.map(item => (
-                              <span
-                                key={item}
-                                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                              >
-                                {item}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {agentStats.length > 0 && (
-                          <div className="grid grid-cols-3 gap-2">
-                            {agentStats.map(stat => (
-                              <div
-                                key={stat.key}
-                                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
-                              >
-                                <p className="text-base font-bold text-slate-900">{stat.value}</p>
-                                <p className="mt-1 text-[11px] font-medium text-slate-500">
-                                  {stat.label}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="space-y-3">
-                          <div
-                            className={`grid gap-3 ${whatsappNumber ? 'grid-cols-[56px_minmax(0,1fr)]' : 'grid-cols-1'}`}
-                          >
-                            {whatsappNumber && (
-                              <Button
-                                className="h-12 w-full bg-green-500 px-0 text-white hover:bg-green-600"
-                                onClick={() =>
-                                  handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                                }
-                                aria-label="WhatsApp Agent"
-                              >
-                                <MessageCircle className="h-5 w-5" />
-                              </Button>
-                            )}
-                            <Button
-                              className="h-12 w-full bg-amber-400 text-sm font-semibold text-slate-950 hover:bg-amber-500"
-                              onClick={handleBookAppointment}
-                            >
-                              Book an Appointment
-                            </Button>
-                          </div>
-
-                          {(directPhone || agentProfileHref) && (
-                            <div className="grid gap-3">
-                              {directPhone && (
-                                <Button
-                                  variant="outline"
-                                  className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                                  asChild
-                                >
-                                  <a href={`tel:${directPhone}`}>
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    Call Agent
-                                  </a>
-                                </Button>
-                              )}
-                              {agentProfileHref && (
-                                <Button
-                                  variant="outline"
-                                  className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                                  onClick={() => setLocation(agentProfileHref)}
-                                >
-                                  View Agent Profile
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            {contactMode === 'developer' ? 'Developer Contact' : 'Seller Contact'}
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-4">
-                          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                            {contactIdentity?.image ? (
-                              <img
-                                src={contactIdentity.image}
-                                alt={contactIdentity.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-slate-200 text-xl font-bold text-slate-500">
-                                {contactIdentity?.name?.charAt(0) || '?'}
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-lg font-bold text-slate-900">
-                                {contactIdentity?.name || 'Listing Contact'}
-                              </h3>
-                              {contactBadgeLabel && (
-                                <Badge className="border border-orange-200 bg-orange-50 text-[11px] text-orange-700 hover:bg-orange-50">
-                                  {contactBadgeLabel}
-                                </Badge>
-                              )}
-                            </div>
-                            {contactSubline && (
-                              <p className="mt-1 text-sm font-medium text-slate-600">
-                                {contactSubline}
-                              </p>
-                            )}
-                            <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                              {contactIntro}
-                            </p>
-                          </div>
-                        </div>
-
-                        {contactAvailabilityItems.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {contactAvailabilityItems.map(item => (
-                              <span
-                                key={item}
-                                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                              >
-                                {item}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="space-y-3">
-                          {whatsappNumber && (
-                            <button
-                              type="button"
-                              className="flex w-full items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-left text-sm text-green-800 transition hover:bg-green-100"
-                              onClick={() =>
-                                handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                              }
-                            >
-                              <span className="flex items-center gap-2 font-medium">
-                                <MessageCircle className="h-4 w-4" />
-                                WhatsApp {contactRoleLabel || 'Contact'}
-                              </span>
-                              <span className="truncate pl-4 font-semibold">{whatsappNumber}</span>
-                            </button>
-                          )}
-                          {directPhone && (
-                            <a
-                              href={`tel:${directPhone}`}
-                              className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
-                            >
-                              <span className="flex items-center gap-2 font-medium">
-                                <Phone className="h-4 w-4" />
-                                Call
-                              </span>
-                              <span className="font-semibold">{directPhone}</span>
-                            </a>
-                          )}
-                          {directEmail && (
-                            <a
-                              href={`mailto:${directEmail}`}
-                              className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
-                            >
-                              <span className="flex items-center gap-2 font-medium">
-                                <Mail className="h-4 w-4" />
-                                Email
-                              </span>
-                              <span className="ml-4 truncate font-medium">{directEmail}</span>
-                            </a>
-                          )}
-                          {developmentHref && contactMode === 'developer' && (
-                            <Button
-                              variant="outline"
-                              className="h-12 w-full justify-between rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                              onClick={() => setLocation(developmentHref)}
-                            >
-                              <span className="font-medium text-slate-700">View Development</span>
-                              <ChevronRight className="h-4 w-4 text-slate-400" />
-                            </Button>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {qualificationSnapshot && (
-                      <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
-                          Qualification Status
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {qualificationSnapshot.resultTitle}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-600">
-                          Your affordability summary can be carried into your enquiry or WhatsApp
-                          message.
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              <div id="buyability-calculator">
-                <BondCalculator
-                  propertyPrice={displayPrice}
-                  showTransferCosts={true}
-                  compact={true}
-                  ctaLabel="Check If You Qualify"
-                  onCtaClick={openQualification}
-                />
-              </div>
-
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-[11px] leading-relaxed text-amber-900">
+              {/* Disclaimer */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
                   <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
                   approval, interest rates, and transfer costs may vary based on individual
-                  circumstances and bank policies.
+                  circumstances and bank policies. Consult with a bond originator or financial
+                  advisor for accurate figures.
                 </p>
               </div>
             </div>
@@ -1797,27 +1296,14 @@ export default function PropertyDetail(props: PropertyDetailProps) {
 
         {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties Carousel */}
         {similarProperties.length > 0 && (
-          <div className="mt-12 rounded-[28px] border border-slate-200 bg-slate-50 p-6 md:p-8">
-            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Keep Browsing
-                </p>
-                <h3 className="mt-1 text-2xl font-bold text-slate-900">
-                  Still comparing? Explore more in {property.suburb || property.city}
-                </h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  These listings match the same area or property type, so you can compare options
-                  without leaving the marketplace.
-                </p>
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-slate-900">
+                Property Listings in {property.suburb || property.city}
+              </h3>
+              <div className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                View All
               </div>
-              <Button
-                variant="outline"
-                className="w-full border-slate-300 text-slate-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 md:w-auto"
-                onClick={() => setLocation(similarListingsHref)}
-              >
-                View All Matching Listings
-              </Button>
             </div>
 
             {/* Horizontal Scroll Carousel */}
@@ -1826,8 +1312,8 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                 {similarProperties.map(prop => (
                   <div
                     key={prop.id}
-                    onClick={() => setLocation(buildPropertyUrl(prop.id, prop.title))}
-                    className="group min-w-[280px] cursor-pointer snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg md:min-w-[320px]"
+                    onClick={() => setLocation(`/property/${prop.id}`)}
+                    className="group cursor-pointer bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all overflow-hidden min-w-[280px] md:min-w-[300px] snap-start"
                   >
                     {/* Image */}
                     <div className="relative h-44 overflow-hidden bg-slate-100">
@@ -1836,45 +1322,27 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                         alt={prop.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
-                      <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-                        <Badge className="h-6 border-0 bg-white/90 px-2.5 text-xs text-slate-700 shadow-sm backdrop-blur-sm hover:bg-white">
+                      <div className="absolute top-2 left-2">
+                        <Badge className="bg-white/90 text-slate-700 hover:bg-white backdrop-blur-sm shadow-sm border-0 text-xs py-0 h-5">
                           {prop.propertyType}
                         </Badge>
-                        {prop.suburb && (
-                          <Badge className="h-6 border border-white/20 bg-slate-900/75 px-2.5 text-xs text-white backdrop-blur-sm hover:bg-slate-900/75">
-                            {prop.suburb}
-                          </Badge>
-                        )}
                       </div>
                     </div>
 
                     {/* Content */}
-                    <div className="space-y-3 p-4">
+                    <div className="p-3 space-y-2">
                       {/* Price */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-lg font-bold text-slate-900">
-                            R {prop.price.toLocaleString()}
-                          </p>
-                          {(prop.suburb || prop.city) && (
-                            <p className="mt-1 text-xs text-slate-500">
-                              {prop.suburb || prop.city}
-                              {prop.suburb && prop.city ? `, ${prop.city}` : ''}
-                            </p>
-                          )}
-                        </div>
-                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-700">
-                          Compare
-                        </span>
-                      </div>
+                      <p className="text-lg font-bold text-[#005ca8]">
+                        R {prop.price.toLocaleString()}
+                      </p>
 
                       {/* Title */}
-                      <h4 className="line-clamp-2 text-sm font-semibold text-slate-800">
+                      <h4 className="font-semibold text-slate-800 line-clamp-1 text-sm">
                         {prop.title}
                       </h4>
 
                       {/* Property Details */}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
                         {prop.bedrooms && (
                           <div className="flex items-center gap-1">
                             <Bed className="h-3.5 w-3.5" />
@@ -1894,10 +1362,6 @@ export default function PropertyDetail(props: PropertyDetailProps) {
                           </div>
                         )}
                       </div>
-
-                      <div className="border-t border-slate-100 pt-3 text-sm font-medium text-slate-700 transition group-hover:text-orange-700">
-                        Open listing
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -1910,24 +1374,18 @@ export default function PropertyDetail(props: PropertyDetailProps) {
       {/* Sticky Mobile Footer */}
       <PropertyMobileFooter
         agentName={contactIdentity?.name || 'Listing Contact'}
-        onQualify={openQualification}
-        onEnquire={handleOpenStandardEnquiry}
-        onWhatsApp={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
-        canQualify={displayPrice > 0}
-        canEnquire={hasPrimaryContactAction}
+        price={formatCurrency(displayPrice, { compact: false })}
+        repayment={`${formatCurrency(displayRepayment, { compact: false })}/Pm`}
+        onEmail={() => setIsContactModalOpen(true)}
+        onWhatsApp={() =>
+          whatsappNumber
+            ? window.open(`https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`, '_blank')
+            : undefined
+        }
         canWhatsApp={Boolean(whatsappNumber)}
       />
 
       {/* Modals */}
-      <PropertyQualificationDrawer
-        open={isQualificationOpen}
-        onOpenChange={setIsQualificationOpen}
-        propertyTitle={property.title}
-        propertyPrice={displayPrice}
-        onProceedToEnquiry={handleQualificationToEnquiry}
-        onProceedToWhatsApp={handleQualificationToWhatsApp}
-      />
-
       <PropertyContactModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
@@ -1952,9 +1410,31 @@ export default function PropertyDetail(props: PropertyDetailProps) {
             ? Number(property.developerBrandProfileId)
             : undefined
         }
-        initialMessage={contactInitialMessage}
-        affordabilityData={affordabilityPayload}
       />
+
+      <Dialog open={isBondCalculatorModalOpen} onOpenChange={setIsBondCalculatorModalOpen}>
+        <DialogContent className="w-[95vw] max-w-md p-0 overflow-hidden">
+          <div className="max-h-[85vh] overflow-y-auto p-4 space-y-4">
+            <h3 className="text-lg font-semibold text-slate-900">Get Pre-Qualified</h3>
+            <BondCalculator
+              propertyPrice={displayPrice}
+              showTransferCosts={true}
+              ctaLabel={contactRoleLabel ? `Request Help From ${contactRoleLabel}` : 'Send Enquiry'}
+              onCtaClick={() => {
+                setIsBondCalculatorModalOpen(false);
+                setIsContactModalOpen(true);
+              }}
+            />
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs text-yellow-800">
+                <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
+                approval, interest rates, and transfer costs may vary based on individual
+                circumstances and bank policies.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <PropertyShareModal
         isOpen={isShareModalOpen}
