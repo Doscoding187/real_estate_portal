@@ -97,8 +97,6 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
 
               <div className="absolute inset-0">
                 <GooglePropertyMap
-                  center={{ lat: latitude as number, lng: longitude as number }}
-                  zoom={14}
                   minimal={true}
                   className="pointer-events-none"
                   properties={[
