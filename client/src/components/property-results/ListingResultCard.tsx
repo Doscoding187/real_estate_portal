@@ -95,7 +95,8 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         : null
     : null;
   const listingHref =
-    data.href || (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
+    data.href ||
+    (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
   const contactCtaLabel = isDevelopmentListing
     ? 'Contact Developer'
     : isPrivateListing
@@ -105,24 +106,27 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const emailTarget = String(data.contactEmail || '').trim();
   const resolvedImage = withApiBase(data.image) || '/placeholder-property.jpg';
   const resolvedAvatar = withApiBase(data.agentAvatarUrl);
-  const modalTitle = isDevelopmentListing
-    ? developmentName || data.title
-    : data.title;
+  const modalTitle = isDevelopmentListing ? developmentName || data.title : data.title;
   const whatsappPrefill = `Hi, I'm interested in ${modalTitle}. Please share more details.`;
-  const canOpenContact = !!(data.agentId || data.developerBrandProfileId || emailTarget || whatsappTarget);
+  const canOpenContact = !!(
+    data.agentId ||
+    data.developerBrandProfileId ||
+    emailTarget ||
+    whatsappTarget
+  );
 
   return (
     <>
       <div
-        className="w-full max-w-[780px] cursor-pointer overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md sm:min-h-[300px]"
+        className="group w-full max-w-[780px] cursor-pointer overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-none lg:rounded-[26px]"
         onClick={() => setLocation(listingHref)}
       >
         <div className="flex flex-col sm:flex-row">
-          <div className="relative h-[192px] flex-shrink-0 sm:h-[300px] sm:w-[300px]">
+          <div className="relative h-[192px] flex-shrink-0 overflow-hidden sm:h-[300px] sm:w-[300px] lg:w-[340px]">
             <img
               src={resolvedImage}
               alt={data.title}
-              className="h-full w-full object-cover object-center"
+              className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
               onError={e => {
                 const target = e.target as HTMLImageElement;
                 target.onerror = null;
@@ -131,7 +135,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             />
           </div>
 
-          <div className="min-w-0 flex-1 overflow-hidden p-4 pr-5 sm:flex sm:min-h-[300px] sm:flex-col">
+          <div className="min-w-0 flex-1 overflow-hidden p-4 sm:flex sm:min-h-[300px] sm:flex-col sm:p-5 lg:p-6">
             {isDevelopmentListing && developmentName && (
               <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                 <Building2 className="h-3.5 w-3.5" />
@@ -154,7 +158,9 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 )}
               </p>
             )}
-            <h3 className="line-clamp-2 text-[17px] font-bold leading-5 text-slate-800">{data.title}</h3>
+            <h3 className="line-clamp-2 text-[17px] font-bold leading-5 text-slate-800">
+              {data.title}
+            </h3>
             <p className="mt-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />
               {data.location || '-'}
@@ -182,7 +188,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               </p>
             )}
 
-            <p className="mt-2 text-[23px] font-bold leading-none text-foreground">
+            <p className="mt-3 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
               {formatPrice(data.price, { from: isDevelopmentListing })}
             </p>
 
@@ -214,38 +220,36 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             </div>
 
             {Array.isArray(data.highlights) && data.highlights.length > 0 && (
-              <div className="mt-3 pr-3">
-                <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
-                  {data.highlights.slice(0, 3).map((h, index) => (
-                    <span
-                      key={`highlight-${index}-${h}`}
-                      className="max-w-[170px] shrink-0 truncate rounded border border-primary/15 bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
-                    >
-                      {h}
-                    </span>
-                  ))}
-                </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {data.highlights.slice(0, 3).map((h, index) => (
+                  <span
+                    key={`highlight-${index}-${h}`}
+                    className="max-w-[220px] truncate rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary"
+                  >
+                    {h}
+                  </span>
+                ))}
               </div>
             )}
 
             {data.description && (
-              <p className="mt-3 line-clamp-2 pr-3 text-[13px] leading-5 text-muted-foreground">
+              <p className="mt-4 line-clamp-2 max-w-2xl text-sm leading-7 text-slate-600 sm:line-clamp-3">
                 {data.description}
               </p>
             )}
 
-            <div className="mt-4 flex flex-col gap-3 pr-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
-                <Avatar className="h-7 w-7 shrink-0 border border-slate-200 bg-white">
+                <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
                   <AvatarImage
                     src={resolvedAvatar || ''}
                     alt={identityDisplayName}
                     className={isDevelopmentListing ? 'object-contain p-0.5' : 'object-cover'}
                   />
-                  <AvatarFallback className="bg-slate-100 text-[10px]">{agentInitials}</AvatarFallback>
+                  <AvatarFallback className="bg-slate-100 text-xs">{agentInitials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 max-w-[140px] sm:max-w-[180px]">
-                  <p className="line-clamp-2 break-words text-xs font-semibold leading-snug text-foreground">
+                  <p className="line-clamp-2 break-words text-sm font-semibold leading-snug text-foreground">
                     {agentFirstName}
                     {agentSurname ? (
                       <>
@@ -261,7 +265,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 gap-1 border-primary px-2 text-[10px] text-primary hover:bg-primary/10"
+                    className="h-10 w-full gap-1 border-primary px-3 text-[11px] text-primary hover:bg-primary/10 sm:h-9 sm:w-auto sm:text-[10px]"
                     onClick={event => {
                       event.stopPropagation();
                       setContactIntent('whatsapp');
@@ -273,7 +277,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 )}
                 <Button
                   size="sm"
-                  className="h-7 gap-1 bg-primary px-2 text-[10px] text-primary-foreground hover:bg-primary/90"
+                  className="h-10 w-full gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:text-[10px]"
                   disabled={!canOpenContact}
                   onClick={event => {
                     event.stopPropagation();
