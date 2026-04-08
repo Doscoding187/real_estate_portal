@@ -4,6 +4,7 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -99,6 +100,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isBondCalculatorModalOpen, setIsBondCalculatorModalOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   const { data, isLoading } = trpc.properties.getById.useQuery(
@@ -655,6 +657,11 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
       : null,
   ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
   const handleScrollToCalculator = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsBondCalculatorModalOpen(true);
+      return;
+    }
+
     document.getElementById('buyability-calculator')?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
@@ -1262,7 +1269,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           </div>
 
           {/* RIGHT COLUMN (4 columns) */}
-          <div className="col-span-12 lg:col-span-4">
+          <div className="col-span-12 lg:col-span-4 hidden lg:block">
             {/* Buyability Calculator - Sticky */}
             <div id="buyability-calculator" className="sticky top-24 space-y-4">
               <BondCalculator
@@ -1404,6 +1411,30 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             : undefined
         }
       />
+
+      <Dialog open={isBondCalculatorModalOpen} onOpenChange={setIsBondCalculatorModalOpen}>
+        <DialogContent className="w-[95vw] max-w-md p-0 overflow-hidden">
+          <div className="max-h-[85vh] overflow-y-auto p-4 space-y-4">
+            <h3 className="text-lg font-semibold text-slate-900">Get Pre-Qualified</h3>
+            <BondCalculator
+              propertyPrice={displayPrice}
+              showTransferCosts={true}
+              ctaLabel={contactRoleLabel ? `Request Help From ${contactRoleLabel}` : 'Send Enquiry'}
+              onCtaClick={() => {
+                setIsBondCalculatorModalOpen(false);
+                setIsContactModalOpen(true);
+              }}
+            />
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs text-yellow-800">
+                <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
+                approval, interest rates, and transfer costs may vary based on individual
+                circumstances and bank policies.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <PropertyShareModal
         isOpen={isShareModalOpen}

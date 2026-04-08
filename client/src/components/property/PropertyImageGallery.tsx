@@ -61,17 +61,24 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (!isLightboxOpen) return;
-    if (e.key === 'ArrowLeft') handlePrevious();
-    if (e.key === 'ArrowRight') handleNext();
-    if (e.key === 'Escape') setIsLightboxOpen(false);
-  };
-
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown as any);
-    return () => window.removeEventListener('keydown', handleKeyDown as any);
-  }, []);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isLightboxOpen) return;
+
+      if (e.key === 'ArrowLeft') {
+        setSelectedImageIndex(prev => (prev === 0 ? sortedImages.length - 1 : prev - 1));
+        setZoomLevel(1);
+      } else if (e.key === 'ArrowRight') {
+        setSelectedImageIndex(prev => (prev === sortedImages.length - 1 ? 0 : prev + 1));
+        setZoomLevel(1);
+      } else if (e.key === 'Escape') {
+        setIsLightboxOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, sortedImages.length]);
 
   if (sortedImages.length === 0) {
     return (
