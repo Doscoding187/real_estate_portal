@@ -101,6 +101,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isBondCalculatorOpen, setIsBondCalculatorOpen] = useState(false);
+  const [contactInitialMessage, setContactInitialMessage] = useState('');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
 
@@ -809,6 +810,13 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     if (property.propertyType) params.set('propertyType', String(property.propertyType));
     setLocation(`/properties?${params.toString()}`);
   };
+  const handleWhatsAppLeadCapture = (message?: string) => {
+    if (!whatsappNumber) return;
+    setContactInitialMessage(
+      message || `Hi, I'm interested in ${property.title}. Please share more information.`,
+    );
+    setIsContactModalOpen(true);
+  };
   const showLegacyPropertyDetails = false;
   const propertyStructuredData = [
     buildBreadcrumbStructuredData([
@@ -1480,12 +1488,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Button
                           variant="outline"
                           className="w-full h-12 rounded-lg border-green-200 text-green-700 hover:bg-green-50"
-                          onClick={() =>
-                            window.open(
-                              `https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`,
-                              '_blank',
-                            )
-                          }
+                          onClick={() => handleWhatsAppLeadCapture()}
                         >
                           WhatsApp Agent
                         </Button>
@@ -1639,24 +1642,27 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         agentName={contactIdentity?.name || 'Listing Contact'}
         price={formatCurrency(displayPrice, { compact: false })}
         repayment={`${formatCurrency(displayRepayment, { compact: false })}/Pm`}
-        onEmail={() => setIsContactModalOpen(true)}
-        onWhatsApp={() =>
-          whatsappNumber
-            ? window.open(`https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`, '_blank')
-            : undefined
-        }
+        onEmail={() => {
+          setContactInitialMessage('');
+          setIsContactModalOpen(true);
+        }}
+        onWhatsApp={() => handleWhatsAppLeadCapture()}
         canWhatsApp={Boolean(whatsappNumber)}
       />
 
       {/* Modals */}
       <PropertyContactModal
         isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
+        onClose={() => {
+          setIsContactModalOpen(false);
+          setContactInitialMessage('');
+        }}
         propertyId={propertyId}
         propertyTitle={property.title}
         agentName={contactIdentity?.name || 'Listing Contact'}
         agentPhone={undefined}
         agentEmail={undefined}
+        initialMessage={contactInitialMessage}
         agentId={
           contactIdentity?.id
             ? Number(contactIdentity.id)
