@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useGuestActivity } from '@/contexts/GuestActivityContext';
+import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -18,15 +18,9 @@ import {
   Maximize,
   Heart,
   Share2,
-  Calendar,
-  Eye,
-  ArrowLeft,
   CheckCircle2,
   Home,
   ChevronRight,
-  Phone,
-  Mail,
-  MessageSquare,
   Building2,
   Car,
   Wifi,
@@ -35,22 +29,15 @@ import {
   Shield,
   Zap,
   Droplets,
-  User,
   Square,
-  Calculator,
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
-import { generateBreadcrumbs } from '@/lib/urlUtils';
+import { buildPropertyUrl, generateBreadcrumbs } from '@/lib/urlUtils';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
-import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
-import { GoogleAmenitiesMap } from '@/components/maps/GoogleAmenitiesMap';
 import { BondCalculator } from '@/components/BondCalculator';
-import PropertyCard from '@/components/PropertyCard';
-import { SidebarContactForm } from '@/components/property/SidebarContactForm';
-import { ResponsiveHighlights } from '@/components/ResponsiveHighlights';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
@@ -59,6 +46,8 @@ import {
   DeveloperBrandSection,
   DeveloperBrandData,
 } from '@/components/property/DeveloperBrandSection';
+import { MetaControl } from '@/components/seo/MetaControl';
+import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/seo/structuredData';
 
 const amenityIcons: Record<string, any> = {
   parking: Car,
@@ -68,6 +57,31 @@ const amenityIcons: Record<string, any> = {
   security: Shield,
   pool: Droplets,
   electricity: Zap,
+};
+
+const formatLabel = (value?: string | null) =>
+  String(value || '')
+    .replace(/_/g, ' ')
+    .trim()
+    .replace(/\b\w/g, char => char.toUpperCase());
+
+const parseStrictNumber = (value: unknown) => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const formatDateLabel = (value: unknown) => {
+  if (!value) return null;
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) {
+    const fallback = String(value).trim();
+    return fallback || null;
+  }
+  return parsed.toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 };
 
 export default function PropertyDetail(props: { propertyId?: number } & any) {
@@ -168,7 +182,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   }
 
   const { property, images } = data as any;
-  const agent = (data as any)?.agent;
+  const agent = (property as any)?.agent || (data as any)?.agent;
 
   // Safely parse amenities with error handling
   let amenitiesList: string[] = [];
@@ -202,6 +216,25 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const shouldTruncate = description.length > 300;
   const displayDescription =
     showFullDescription || !shouldTruncate ? description : description.slice(0, 300) + '...';
+  const canonicalPath = buildPropertyUrl(propertyId, property.title);
+  const canonicalUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath;
+  const breadcrumbItems = generateBreadcrumbs({
+    listingType: property.listingType as any,
+    province: property.province,
+    city: property.city,
+    suburb: property.suburb,
+  });
+  const seoTitle = property.title
+    ? `${property.title} | Property Listify`
+    : 'Property | Property Listify';
+  const seoDescription =
+    description.trim() ||
+    [property.suburb, property.city, property.province]
+      .filter(
+        (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0,
+      )
+      .join(', ');
 
   // Parse Property Specs
   interface PropertySpecs {
@@ -217,10 +250,22 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     additionalRooms?: string[];
   }
 
-  let specs: PropertySpecs = {};
+  let rawPropertyDetails: Record<string, unknown> = {};
+  try {
+    if ((property as any).propertyDetails) {
+      rawPropertyDetails =
+        typeof (property as any).propertyDetails === 'string'
+          ? JSON.parse((property as any).propertyDetails)
+          : (property as any).propertyDetails;
+    }
+  } catch (error) {
+    console.error('Failed to parse property details', error);
+  }
+
+  let parsedPropertySettings: Record<string, unknown> = {};
   try {
     if ((property as any).propertySettings) {
-      specs =
+      parsedPropertySettings =
         typeof (property as any).propertySettings === 'string'
           ? JSON.parse((property as any).propertySettings)
           : (property as any).propertySettings;
@@ -229,25 +274,459 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     console.error('Failed to parse property settings', e);
   }
 
+  const mergedDetailSpecs = {
+    ...rawPropertyDetails,
+    ...parsedPropertySettings,
+  } as Record<string, unknown>;
+
+  const specs: PropertySpecs = {
+    ownershipType:
+      String(
+        mergedDetailSpecs.ownershipType ?? parsedPropertySettings.ownershipType ?? '',
+      ).trim() || undefined,
+    powerBackup:
+      String(mergedDetailSpecs.powerBackup ?? parsedPropertySettings.powerBackup ?? '').trim() ||
+      undefined,
+    securityFeatures: Array.isArray(mergedDetailSpecs.securityFeatures)
+      ? (mergedDetailSpecs.securityFeatures as string[])
+      : Array.isArray(parsedPropertySettings.securityFeatures)
+        ? (parsedPropertySettings.securityFeatures as string[])
+        : undefined,
+    waterSupply:
+      String(mergedDetailSpecs.waterSupply ?? parsedPropertySettings.waterSupply ?? '').trim() ||
+      undefined,
+    internetAccess:
+      String(
+        mergedDetailSpecs.internetAccess ??
+          mergedDetailSpecs.internetAvailability ??
+          parsedPropertySettings.internetAccess ??
+          '',
+      ).trim() || undefined,
+    flooring:
+      String(
+        mergedDetailSpecs.flooring ??
+          mergedDetailSpecs.flooringType ??
+          parsedPropertySettings.flooring ??
+          '',
+      ).trim() || undefined,
+    parkingType:
+      String(mergedDetailSpecs.parkingType ?? parsedPropertySettings.parkingType ?? '').trim() ||
+      undefined,
+    petFriendly:
+      typeof mergedDetailSpecs.petFriendly === 'boolean'
+        ? mergedDetailSpecs.petFriendly
+          ? 'yes'
+          : 'no'
+        : String(
+            mergedDetailSpecs.petFriendly ?? parsedPropertySettings.petFriendly ?? '',
+          ).trim() || undefined,
+    electricitySupply:
+      String(
+        mergedDetailSpecs.electricitySupply ??
+          mergedDetailSpecs.electricitySource ??
+          parsedPropertySettings.electricitySupply ??
+          '',
+      ).trim() || undefined,
+    additionalRooms: Array.isArray(mergedDetailSpecs.additionalRooms)
+      ? (mergedDetailSpecs.additionalRooms as string[])
+      : Array.isArray(parsedPropertySettings.additionalRooms)
+        ? (parsedPropertySettings.additionalRooms as string[])
+        : undefined,
+  };
+
+  const developerBrand = ((property as any).developerBrand ||
+    (property as any).developerBrandProfile) as any;
+  const normalizedListerType = String((property as any).listerType || '')
+    .trim()
+    .toLowerCase();
+  const hasAgentIdentity = Boolean(agent?.id || agent?.name);
+  const hasDeveloperIdentity = Boolean(developerBrand?.id || developerBrand?.brandName);
+  const contactMode =
+    normalizedListerType === 'private'
+      ? 'private'
+      : normalizedListerType === 'agent' && hasAgentIdentity
+        ? 'agent'
+        : hasDeveloperIdentity
+          ? 'developer'
+          : hasAgentIdentity
+            ? 'agent'
+            : 'unknown';
+  const contactRoleLabel =
+    contactMode === 'private'
+      ? 'Seller'
+      : contactMode === 'developer'
+        ? 'Developer'
+        : contactMode === 'agent'
+          ? 'Agent'
+          : null;
+  const contactIdentity =
+    contactMode === 'agent'
+      ? agent
+      : contactMode === 'developer'
+        ? {
+            id: developerBrand?.id,
+            agencyId: undefined,
+            name: String(developerBrand?.brandName || '').trim(),
+            image: developerBrand?.logoUrl,
+            phone: undefined,
+            whatsapp: undefined,
+            email: developerBrand?.publicContactEmail,
+            agency: undefined,
+          }
+        : contactMode === 'private'
+          ? {
+              id: undefined,
+              agencyId: undefined,
+              name: 'Private Seller',
+              image: undefined,
+              phone: undefined,
+              whatsapp: undefined,
+              email: undefined,
+              agency: undefined,
+            }
+          : undefined;
+  const propertyBadges = Array.isArray((specs as any).badges)
+    ? (specs as any).badges
+        .map(
+          (badge: string) => BADGE_TEMPLATES[badge as keyof typeof BADGE_TEMPLATES]?.label || badge,
+        )
+        .filter(Boolean)
+    : [];
+  const isDeveloperListing = contactMode === 'developer';
+  const listingContextLabel =
+    contactMode === 'developer'
+      ? 'New Development'
+      : contactMode === 'agent'
+        ? 'Listed by Agent'
+        : contactMode === 'private'
+          ? 'Private Listing'
+          : null;
+  const development = (property as any).development as any;
+  const developmentName = String(development?.name || '').trim();
+  const developmentHref = developmentName
+    ? development?.slug
+      ? `/development/${development.slug}`
+      : development?.id
+        ? `/development/${development.id}`
+        : null
+    : null;
+
   const similarProperties = (similarPropertiesData ?? []).filter(p => p.id !== propertyId);
+  const propertyImages = (Array.isArray(images) ? images : [])
+    .map((image: any) =>
+      typeof image?.imageUrl === 'string'
+        ? image.imageUrl
+        : typeof image?.url === 'string'
+          ? image.url
+          : '',
+    )
+    .filter(Boolean);
+  const houseSizeM2 = parseStrictNumber(mergedDetailSpecs.houseAreaM2);
+  const erfSizeM2 = parseStrictNumber(mergedDetailSpecs.erfSizeM2);
+  const unitSizeM2 = parseStrictNumber(mergedDetailSpecs.unitSizeM2);
+  const parkingLabel = formatLabel(specs.parkingType);
+  const displayPrice = Number(property.price) || 0;
+  const displayRepayment = displayPrice > 0 ? Math.round(displayPrice * 0.0095) : 0;
+  const directPhone = String(contactIdentity?.phone || '').trim();
+  const whatsappNumber = String(contactIdentity?.whatsapp || contactIdentity?.phone || '').trim();
+  const directEmail = String(contactIdentity?.email || '').trim();
+  const hasPrimaryContactAction = Boolean(
+    directPhone || whatsappNumber || directEmail || contactMode !== 'unknown',
+  );
+  const propertyDetailItems = [
+    property.bedrooms
+      ? {
+          key: 'bedrooms',
+          label: 'Bedrooms',
+          value: `${property.bedrooms} Bedroom${property.bedrooms === 1 ? '' : 's'}`,
+          icon: Bed,
+        }
+      : null,
+    property.bathrooms
+      ? {
+          key: 'bathrooms',
+          label: 'Bathrooms',
+          value: `${property.bathrooms} Bathroom${property.bathrooms === 1 ? '' : 's'}`,
+          icon: Bath,
+        }
+      : null,
+    parkingLabel
+      ? {
+          key: 'parking',
+          label: 'Parking',
+          value: parkingLabel,
+          icon: Car,
+        }
+      : null,
+    houseSizeM2
+      ? {
+          key: 'house-size',
+          label: 'House Size',
+          value: `${houseSizeM2.toLocaleString()} m²`,
+          icon: Maximize,
+        }
+      : unitSizeM2
+        ? {
+            key: 'floor-size',
+            label: 'Floor Size',
+            value: `${unitSizeM2.toLocaleString()} m²`,
+            icon: Maximize,
+          }
+        : null,
+    erfSizeM2
+      ? {
+          key: 'erf-size',
+          label: 'Erf Size',
+          value: `${erfSizeM2.toLocaleString()} m²`,
+          icon: Home,
+        }
+      : null,
+    property.propertyType
+      ? {
+          key: 'property-type',
+          label: 'Property Type',
+          value: formatLabel(property.propertyType),
+          icon: Building2,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: any }>;
+  const featureSpecItems = [
+    specs.ownershipType
+      ? {
+          key: 'ownershipType',
+          label: 'Ownership Type',
+          value: formatLabel(specs.ownershipType),
+          icon: Home,
+        }
+      : null,
+    specs.powerBackup
+      ? {
+          key: 'powerBackup',
+          label: 'Power Backup',
+          value: formatLabel(specs.powerBackup),
+          icon: Zap,
+        }
+      : null,
+    specs.securityFeatures && specs.securityFeatures.length > 0
+      ? {
+          key: 'security',
+          label: 'Security',
+          value: specs.securityFeatures.map(feature => formatLabel(feature)).join(', '),
+          icon: Shield,
+        }
+      : null,
+    specs.waterSupply
+      ? {
+          key: 'waterSupply',
+          label: 'Water Supply',
+          value: formatLabel(specs.waterSupply),
+          icon: Droplets,
+        }
+      : null,
+    specs.internetAccess
+      ? {
+          key: 'internetAccess',
+          label: 'Internet',
+          value: formatLabel(specs.internetAccess),
+          icon: Wifi,
+        }
+      : null,
+    specs.flooring
+      ? { key: 'flooring', label: 'Flooring', value: formatLabel(specs.flooring), icon: Building2 }
+      : null,
+    specs.parkingType
+      ? {
+          key: 'parkingType',
+          label: 'Parking Type',
+          value: formatLabel(specs.parkingType),
+          icon: Car,
+        }
+      : null,
+    specs.petFriendly
+      ? {
+          key: 'petFriendly',
+          label: 'Pet Friendly',
+          value: formatLabel(specs.petFriendly),
+          icon: CheckCircle2,
+        }
+      : null,
+    specs.electricitySupply
+      ? {
+          key: 'electricitySupply',
+          label: 'Electricity',
+          value: formatLabel(specs.electricitySupply),
+          icon: Zap,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: any }>;
+  const normalizedListingType = String(property.listingType || '')
+    .trim()
+    .toLowerCase();
+  const isSaleListing = normalizedListingType === 'sale' || normalizedListingType === 'sell';
+  const isRentalListing = normalizedListingType === 'rent';
+  const isAuctionListing = normalizedListingType === 'auction';
+  const leviesAmount = parseStrictNumber(
+    (property as any).levies ??
+      mergedDetailSpecs.levies ??
+      mergedDetailSpecs.leviesHoaOperatingCosts,
+  );
+  const ratesTaxesAmount = parseStrictNumber(
+    (property as any).ratesAndTaxes ??
+      mergedDetailSpecs.ratesAndTaxes ??
+      mergedDetailSpecs.ratesTaxes,
+  );
+  const transactionDetailItems = [
+    ratesTaxesAmount
+      ? {
+          key: 'rates-taxes',
+          label: 'Rates & Taxes',
+          value: formatCurrency(ratesTaxesAmount),
+        }
+      : null,
+    leviesAmount
+      ? {
+          key: 'levies',
+          label: 'Levies / HOA',
+          value: formatCurrency(leviesAmount),
+        }
+      : null,
+    isSaleListing && mergedDetailSpecs.negotiable != null
+      ? {
+          key: 'negotiable',
+          label: 'Negotiable',
+          value: mergedDetailSpecs.negotiable ? 'Yes' : 'No',
+        }
+      : null,
+    isSaleListing && parseStrictNumber(mergedDetailSpecs.transferCostEstimate)
+      ? {
+          key: 'transfer-costs',
+          label: 'Estimated Transfer Costs',
+          value: formatCurrency(Number(mergedDetailSpecs.transferCostEstimate)),
+        }
+      : null,
+    isRentalListing && parseStrictNumber(mergedDetailSpecs.deposit)
+      ? {
+          key: 'deposit',
+          label: 'Deposit',
+          value: formatCurrency(Number(mergedDetailSpecs.deposit)),
+        }
+      : null,
+    isRentalListing && String(mergedDetailSpecs.leaseTerms || '').trim()
+      ? {
+          key: 'lease-terms',
+          label: 'Lease Terms',
+          value: String(mergedDetailSpecs.leaseTerms).trim(),
+        }
+      : null,
+    isRentalListing && formatDateLabel(mergedDetailSpecs.availableFrom)
+      ? {
+          key: 'available-from',
+          label: 'Available From',
+          value: formatDateLabel(mergedDetailSpecs.availableFrom) as string,
+        }
+      : null,
+    isRentalListing && mergedDetailSpecs.utilitiesIncluded != null
+      ? {
+          key: 'utilities',
+          label: 'Utilities Included',
+          value: mergedDetailSpecs.utilitiesIncluded ? 'Yes' : 'No',
+        }
+      : null,
+    isAuctionListing && parseStrictNumber(mergedDetailSpecs.reservePrice)
+      ? {
+          key: 'reserve-price',
+          label: 'Reserve Price',
+          value: formatCurrency(Number(mergedDetailSpecs.reservePrice)),
+        }
+      : null,
+    isAuctionListing && formatDateLabel(mergedDetailSpecs.auctionDateTime)
+      ? {
+          key: 'auction-date',
+          label: 'Auction Date',
+          value: formatDateLabel(mergedDetailSpecs.auctionDateTime) as string,
+        }
+      : null,
+    isAuctionListing && String(mergedDetailSpecs.auctionTermsDocumentUrl || '').trim()
+      ? {
+          key: 'auction-terms',
+          label: 'Auction Terms',
+          value: 'Available on request',
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
+  const handleScrollToCalculator = () => {
+    document.getElementById('buyability-calculator')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
+  const showLegacyPropertyDetails = false;
+  const propertyStructuredData = [
+    buildBreadcrumbStructuredData([
+      ...breadcrumbItems,
+      { label: property.title || 'Property', href: canonicalPath },
+    ]),
+    buildPlaceStructuredData({
+      name: property.title || 'Property',
+      description: seoDescription,
+      url: canonicalUrl,
+      images: propertyImages,
+      address: {
+        streetAddress: property.address,
+        addressLocality: property.city,
+        addressRegion: property.province,
+        postalCode: property.zipCode,
+        addressCountry: 'ZA',
+      },
+      geo: {
+        latitude: (property as any).latitude,
+        longitude: (property as any).longitude,
+      },
+      additionalProperties: [
+        property.propertyType
+          ? { name: 'Property Type', value: String(property.propertyType) }
+          : null,
+        property.listingType ? { name: 'Listing Type', value: String(property.listingType) } : null,
+        Number(property.price) > 0
+          ? { name: 'Price', value: Number(property.price), unitText: 'ZAR' }
+          : null,
+        Number(property.bedrooms) > 0
+          ? { name: 'Bedrooms', value: Number(property.bedrooms) }
+          : null,
+        Number(property.bathrooms) > 0
+          ? { name: 'Bathrooms', value: Number(property.bathrooms) }
+          : null,
+        houseSizeM2 || unitSizeM2
+          ? { name: 'Floor Size', value: houseSizeM2 || unitSizeM2 || 0, unitText: 'm2' }
+          : null,
+        erfSizeM2 ? { name: 'Erf Size', value: erfSizeM2, unitText: 'm2' } : null,
+        specs.ownershipType
+          ? { name: 'Ownership Type', value: String(specs.ownershipType).replace(/_/g, ' ') }
+          : null,
+        specs.parkingType
+          ? { name: 'Parking Type', value: String(specs.parkingType).replace(/_/g, ' ') }
+          : null,
+      ].filter(Boolean) as Array<{ name: string; value: string | number; unitText?: string }>,
+    }),
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <MetaControl
+        canonicalUrl={canonicalUrl}
+        title={seoTitle}
+        description={seoDescription}
+        image={propertyImages[0]}
+        structuredData={propertyStructuredData}
+      />
       <ListingNavbar />
 
       {/* Hero / Header Section */}
       <div className="bg-white border-b border-slate-200 pt-16">
         <div className="container py-6">
           {/* Breadcrumbs */}
-          <div className="mb-4">
-            <Breadcrumbs
-              items={generateBreadcrumbs({
-                listingType: property.listingType as any,
-                province: property.province,
-                city: property.city,
-                suburb: property.suburb,
-              })}
-            />
+          <div className="hidden lg:block mb-4">
+            <Breadcrumbs items={breadcrumbItems} />
           </div>
 
           {/* Top Row: Badges */}
@@ -257,56 +736,61 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 FEATURED
               </Badge>
             )}
-            <Badge
-              variant="secondary"
-              className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
-            >
-              Ready to move
-            </Badge>
+            {listingContextLabel ? (
+              <Badge
+                variant="secondary"
+                className={
+                  isDeveloperListing
+                    ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
+                }
+              >
+                {listingContextLabel}
+              </Badge>
+            ) : null}
+            {propertyBadges.slice(0, 2).map((badge: string) => (
+              <Badge
+                key={badge}
+                variant="secondary"
+                className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+              >
+                {badge}
+              </Badge>
+            ))}
           </div>
 
-          {/* Title Row with Action Buttons */}
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-1">
-            <div className="flex-1">
-              <h1 className="text-fluid-h2 font-bold text-slate-900 mb-1">{property.title}</h1>
-              <div className="flex items-center gap-2 text-slate-500">
-                <MapPin className="h-4 w-4" />
-                <span className="text-base text-slate-500">
-                  {property.address}, {property.city}, {property.province}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleFavoriteClick}
-                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
-              >
-                <Heart className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleShare}
-                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
-              >
-                Shortlist
-              </Button>
+          {/* Desktop Action Buttons */}
+          <div className="hidden lg:flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleFavoriteClick}
+              className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
+            >
+              <Heart className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleShare}
+              className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
+            >
+              Shortlist
+            </Button>
+            {hasPrimaryContactAction && (
               <Button
                 className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
                 onClick={() => setIsContactModalOpen(true)}
               >
-                Contact Agent
+                {contactRoleLabel ? `Contact ${contactRoleLabel}` : 'Send Enquiry'}
               </Button>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -315,102 +799,238 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         {/* Image Gallery + Property Info Block */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
           {/* Left Column - Image Gallery */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 relative">
+            {/* Mobile Overlay */}
+            <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between lg:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => window.history.back()}
+                className="bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-white rounded-full shadow-sm"
+              >
+                <ChevronRight className="h-5 w-5 rotate-180" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleFavoriteClick}
+                  className="bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-white rounded-full shadow-sm"
+                >
+                  <Heart className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleShare}
+                  className="bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-white rounded-full shadow-sm"
+                >
+                  <Share2 className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
             <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white">
               <PropertyImageGallery images={images} propertyTitle={property.title} />
             </div>
           </div>
 
+          {/* Mobile Title Section - Below Gallery */}
+          <div className="lg:hidden container py-6">
+            <h1 className="text-fluid-h2 font-bold text-slate-900 mb-2">{property.title}</h1>
+            <div className="flex items-center gap-2 text-slate-500 mb-4">
+              <MapPin className="h-4 w-4" />
+              <span className="text-base text-slate-500">
+                {property.address}, {property.city}, {property.province}
+              </span>
+            </div>
+
+            <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
+              {formatCurrency(displayPrice, { compact: false })}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm mb-4">
+              <span className="text-slate-500 font-medium">Estimated Repayment:</span>
+              <span className="text-slate-900 font-bold">
+                {formatCurrency(displayRepayment, { compact: false })}/Pm
+              </span>
+              <button
+                type="button"
+                className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1"
+                onClick={handleScrollToCalculator}
+              >
+                Get Pre-Qualified
+              </button>
+            </div>
+
+            {developmentName && (
+              <div className="flex items-center gap-2 text-slate-500 mb-4">
+                <Home className="h-4 w-4" />
+                {developmentHref ? (
+                  <button
+                    type="button"
+                    className="text-sm hover:text-blue-600 hover:underline transition-colors truncate"
+                    onClick={() => setLocation(developmentHref)}
+                    title={developmentName}
+                  >
+                    Part of {developmentName}
+                  </button>
+                ) : (
+                  <span className="text-sm truncate" title={developmentName}>
+                    Part of {developmentName}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Property Details Icons - Mobile 4 icons */}
+            {propertyDetailItems.length > 0 && (
+              <div className="flex items-center justify-between gap-2 mb-6">
+                {propertyDetailItems.slice(0, 4).map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.key} className="flex flex-col items-center gap-1">
+                      <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-xs text-slate-500">{item.label.split(' ')[0]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Badges */}
+            <div className="flex items-center gap-2">
+              {property.featured === 1 && (
+                <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
+                  FEATURED
+                </Badge>
+              )}
+              {listingContextLabel ? (
+                <Badge
+                  variant="secondary"
+                  className={
+                    isDeveloperListing
+                      ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
+                  }
+                >
+                  {listingContextLabel}
+                </Badge>
+              ) : null}
+              {propertyBadges.slice(0, 2).map((badge: string) => (
+                <Badge
+                  key={badge}
+                  variant="secondary"
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+                >
+                  {badge}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
           {/* Right Column - Property Info */}
           <div className="lg:col-span-5 space-y-12">
-            {/* Price Section */}
-            <div>
+            {/* Price Section - Desktop Only */}
+            <div className="hidden lg:block">
               <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
-                {formatCurrency(property.price, { compact: false })}
+                {formatCurrency(displayPrice, { compact: false })}
               </div>
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-slate-500 font-medium">Estimated Repayment:</span>
                 <span className="text-slate-900 font-bold">
-                  {formatCurrency(Math.round(property.price * 0.0095), { compact: false })}/Pm
+                  {formatCurrency(displayRepayment, { compact: false })}/Pm
                 </span>
-                <button className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1">
+                <button
+                  type="button"
+                  className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1"
+                  onClick={handleScrollToCalculator}
+                >
                   Get Pre-Qualified
                 </button>
               </div>
             </div>
 
-            {/* Property Details */}
-            <div>
-              <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Property Details</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {property.bedrooms && (
-                  <div className="flex items-start gap-3">
-                    <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                      <Bed className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Bedrooms</p>
-                      <p className="font-semibold text-slate-900">{property.bedrooms} Bedrooms</p>
-                    </div>
-                  </div>
-                )}
-                {property.bathrooms && (
-                  <div className="flex items-start gap-3">
-                    <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                      <Bath className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Bathrooms</p>
-                      <p className="font-semibold text-slate-900">{property.bathrooms} Bathrooms</p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Car className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Parking</p>
-                    <p className="font-semibold text-slate-900">Garage</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Maximize className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">House Size</p>
-                    <p className="font-semibold text-slate-900">
-                      {property.area.toLocaleString()} m²
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Home className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Erf Size</p>
-                    <p className="font-semibold text-slate-900">150 m²</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-50 p-2 rounded-md text-orange-500">
-                    <Building2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Property Type</p>
-                    <p className="font-semibold text-slate-900 capitalize">
-                      {property.propertyType}
-                    </p>
-                  </div>
+            {/* Property Details - Desktop Only */}
+            {propertyDetailItems.length > 0 && (
+              <div className="hidden lg:block">
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Property Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {propertyDetailItems.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.key} className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">{item.label}</p>
+                          <p className="font-semibold text-slate-900">{item.value}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {showLegacyPropertyDetails && (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Maximize className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">House Size</p>
+                          <p className="font-semibold text-slate-900">
+                            {property.area.toLocaleString()} m²
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Home className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">Erf Size</p>
+                          <p className="font-semibold text-slate-900">150 m²</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                          <Building2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-400">Property Type</p>
+                          <p className="font-semibold text-slate-900 capitalize">
+                            {property.propertyType}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
+
+            {transactionDetailItems.length > 0 && (
+              <div className="hidden lg:block">
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Transaction Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {transactionDetailItems.map(item => (
+                    <div key={item.key} className="flex items-start gap-3">
+                      <div className="bg-orange-50 p-2 rounded-md text-orange-500">
+                        <Square className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-400">{item.label}</p>
+                        <p className="font-semibold text-slate-900">{item.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Additional Rooms */}
             {specs.additionalRooms && specs.additionalRooms.length > 0 && (
-              <div className="mb-6">
+              <div className="mb-6 hidden lg:block">
                 <h3 className="text-lg font-medium text-slate-400 mb-3">
                   Additional rooms & Specifications
                 </h3>
@@ -429,10 +1049,16 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             )}
 
             {/* Amenities */}
-            <div>
-              <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Amenities & Features</h3>
-              {highlights.length > 0 ? (
-                <div className="grid grid-cols-3 gap-y-3 gap-x-2">
+            {highlights.length > 0 && (
+              <div>
+                <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">
+                  Amenities & Features
+                </h3>
+                <div
+                  className={`grid gap-y-3 gap-x-4 ${
+                    highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
+                  }`}
+                >
                   {highlights.map((amenity: string, index: number) => {
                     const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                     return (
@@ -443,10 +1069,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     );
                   })}
                 </div>
-              ) : (
-                <p className="text-slate-500 italic">No specific amenities listed.</p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -458,38 +1082,32 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           {/* LEFT COLUMN (8 columns) */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
             {/* 2.1 About This Property */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                  About This Property
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <p className="text-slate-600 leading-relaxed whitespace-pre-line">
-                  {displayDescription}
-                </p>
-                {shouldTruncate && (
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-blue-600 font-medium mt-4"
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                  >
-                    {showFullDescription ? 'Show Less' : 'Read Full Description'}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            {description.trim() && (
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                    About This Property
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                    {displayDescription}
+                  </p>
+                  {shouldTruncate && (
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-blue-600 font-medium mt-4"
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                    >
+                      {showFullDescription ? 'Show Less' : 'Read Full Description'}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* 2.2 Property Features / Specs Table (Dynamic) */}
-            {(specs.ownershipType ||
-              specs.powerBackup ||
-              (specs.securityFeatures && specs.securityFeatures.length > 0) ||
-              specs.waterSupply ||
-              specs.internetAccess ||
-              specs.flooring ||
-              specs.parkingType ||
-              specs.petFriendly ||
-              specs.electricitySupply) && (
+            {featureSpecItems.length > 0 && (
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
@@ -498,216 +1116,122 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {specs.ownershipType && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Home className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Ownership Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.ownershipType).replace(/_/g, ' ')}
-                          </p>
+                    {featureSpecItems.map(item => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.key}
+                          className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg"
+                        >
+                          <Icon className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">{item.label}</p>
+                            <p className="font-semibold text-slate-900" title={item.value}>
+                              {item.value}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.powerBackup && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Power Backup</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.powerBackup).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.securityFeatures && specs.securityFeatures.length > 0 && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Security</p>
-                          <p
-                            className="font-semibold text-slate-900 capitalize text-ellipsis overflow-hidden whitespace-nowrap"
-                            title={specs.securityFeatures.join(', ').replace(/_/g, ' ')}
-                          >
-                            {specs.securityFeatures.length > 1
-                              ? `${specs.securityFeatures.length} Features`
-                              : String(specs.securityFeatures[0]).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.waterSupply && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Water Supply</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.waterSupply).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.internetAccess && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Internet</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.internetAccess).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.flooring && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Flooring</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.flooring).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.parkingType && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Car className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Parking Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.parkingType).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.petFriendly && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Pet Friendly</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.petFriendly).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {specs.electricitySupply && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Electricity</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {String(specs.electricitySupply).replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* 2.3 Agent Overview */}
-            {/* 2.3 Agent Overview */}
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                <h3 className="text-fluid-h3 font-bold text-slate-900">Agent Overview</h3>
-              </div>
+            {/* 2.3 Contact Overview */}
+            {contactMode !== 'unknown' && (
+              <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
+                  <h3 className="text-fluid-h3 font-bold text-slate-900">
+                    {contactMode === 'developer'
+                      ? 'Developer Contact'
+                      : contactMode === 'private'
+                        ? 'Seller Contact'
+                        : 'Agent Contact'}
+                  </h3>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Left Column: Agent Profile Card */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-                  {/* Header Area */}
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
-                      {agent?.image ? (
-                        <img
-                          src={agent.image}
-                          alt={agent.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
-                          {agent?.name?.charAt(0) || 'A'}
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
+                        {contactIdentity?.image ? (
+                          <img
+                            src={contactIdentity.image}
+                            alt={contactIdentity.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
+                            {contactIdentity?.name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-lg font-bold text-slate-900">
+                          {contactIdentity?.name || 'Listing Contact'}
+                        </h4>
+                        {listingContextLabel && (
+                          <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
+                            {listingContextLabel}
+                          </Badge>
+                        )}
+                        {contactIdentity?.agency && (
+                          <p className="mt-2 text-sm text-slate-500">{contactIdentity.agency}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {developmentHref && contactMode === 'developer' && (
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
+                          onClick={() => setLocation(developmentHref)}
+                        >
+                          <span className="font-medium text-slate-700">View Development</span>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </Button>
                       )}
                     </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-slate-900">
-                        {agent?.name || 'Property Agent'}
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between gap-4">
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-semibold text-slate-900">
+                        Enquire about this property
                       </h4>
-                      <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
-                        PRO AGENT
-                      </Badge>
+                      <p className="text-sm text-slate-600">
+                        Use the enquiry form to send your interest through the platform.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {whatsappNumber && (
+                        <Button
+                          variant="outline"
+                          className="w-full h-12 rounded-lg border-green-200 text-green-700 hover:bg-green-50"
+                          onClick={() =>
+                            window.open(
+                              `https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`,
+                              '_blank',
+                            )
+                          }
+                        >
+                          WhatsApp {contactRoleLabel || 'Contact'}
+                        </Button>
+                      )}
+                      <Button
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg shadow-sm"
+                        onClick={() => setIsContactModalOpen(true)}
+                      >
+                        Send Enquiry
+                      </Button>
                     </div>
                   </div>
-
-                  {/* Stats Row */}
-                  <div className="flex gap-4 mb-6">
-                    <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="text-fluid-h2 font-bold text-orange-500">
-                          {agent?.experience || 9}
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium">years of Experience</p>
-                    </div>
-                    <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="text-fluid-h2 font-bold text-orange-500">
-                          {agent?.totalListings || 54}
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium">Total Listings</p>
-                    </div>
-                  </div>
-
-                  {/* Current Listings Button */}
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
-                  >
-                    <span className="font-medium text-slate-700">Current Listings</span>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full group-hover:bg-white">
-                        {agent?.totalListings || 53}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </div>
-                  </Button>
-                </div>
-
-                {/* Right Column: Contact Form */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col h-full">
-                  <div className="space-y-4 flex-1">
-                    <div className="space-y-1">
-                      <Input
-                        placeholder="Name"
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Input
-                        type="email"
-                        placeholder="Email ID"
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Input
-                        type="tel"
-                        placeholder="Phone Number"
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
-                      />
-                    </div>
-                  </div>
-
-                  <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg mt-6 shadow-sm">
-                    Whatsapp Agent
-                  </Button>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
             {((property as any).developerBrand || (property as any).developerBrandProfile) && (
@@ -740,8 +1264,15 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           {/* RIGHT COLUMN (4 columns) */}
           <div className="col-span-12 lg:col-span-4">
             {/* Buyability Calculator - Sticky */}
-            <div className="sticky top-24 space-y-4">
-              <BondCalculator propertyPrice={property.price} showTransferCosts={true} />
+            <div id="buyability-calculator" className="sticky top-24 space-y-4">
+              <BondCalculator
+                propertyPrice={displayPrice}
+                showTransferCosts={true}
+                ctaLabel={
+                  contactRoleLabel ? `Request Help From ${contactRoleLabel}` : 'Send Enquiry'
+                }
+                onCtaClick={() => setIsContactModalOpen(true)}
+              />
 
               {/* Disclaimer */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -835,12 +1366,16 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
       {/* Sticky Mobile Footer */}
       <PropertyMobileFooter
-        agentName={agent?.name || 'Agent'}
-        onCall={() => window.open(`tel:${agent?.phone || ''}`)}
+        agentName={contactIdentity?.name || 'Listing Contact'}
+        price={formatCurrency(displayPrice, { compact: false })}
+        repayment={`${formatCurrency(displayRepayment, { compact: false })}/Pm`}
         onEmail={() => setIsContactModalOpen(true)}
         onWhatsApp={() =>
-          window.open(`https://wa.me/${agent?.phone?.replace(/\s+/g, '') || ''}`, '_blank')
+          whatsappNumber
+            ? window.open(`https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`, '_blank')
+            : undefined
         }
+        canWhatsApp={Boolean(whatsappNumber)}
       />
 
       {/* Modals */}
@@ -849,12 +1384,24 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         onClose={() => setIsContactModalOpen(false)}
         propertyId={propertyId}
         propertyTitle={property.title}
-        agentName="Property Agent"
-        agentId={property?.agentId ? Number(property.agentId) : undefined}
-        agencyId={property?.agencyId ? Number(property.agencyId) : undefined}
-        developmentId={property?.developmentId ? Number(property.developmentId) : undefined}
+        agentName={contactIdentity?.name || 'Listing Contact'}
+        agentPhone={contactIdentity?.phone || undefined}
+        agentEmail={contactIdentity?.email || undefined}
+        agentId={
+          contactIdentity?.id
+            ? Number(contactIdentity.id)
+            : property?.agentId
+              ? Number(property.agentId)
+              : undefined
+        }
+        agencyId={contactIdentity?.agencyId ? Number(contactIdentity.agencyId) : undefined}
+        developmentId={
+          !agent && property?.developmentId ? Number(property.developmentId) : undefined
+        }
         developerBrandProfileId={
-          property?.developerBrandProfileId ? Number(property.developerBrandProfileId) : undefined
+          !agent && property?.developerBrandProfileId
+            ? Number(property.developerBrandProfileId)
+            : undefined
         }
       />
 
