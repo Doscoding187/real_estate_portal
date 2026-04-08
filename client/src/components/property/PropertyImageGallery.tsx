@@ -158,6 +158,11 @@ export function PropertyImageGallery({
           onTouchEnd={handleTouchEnd}
         />
 
+        {/* Desktop Image Counter */}
+        <div className="absolute top-4 right-4 hidden md:block bg-black/70 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+          {selectedImageIndex + 1} / {sortedImages.length}
+        </div>
+
         {/* Navigation Arrows - Always visible on mobile */}
         {sortedImages.length > 1 && (
           <>
@@ -180,17 +185,28 @@ export function PropertyImageGallery({
           </>
         )}
 
-        {/* Fullscreen button */}
-        <div className="absolute bottom-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        {/* Desktop Expand Buttons */}
+        <div className="absolute bottom-4 right-4 hidden md:flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button variant="secondary" size="sm" onClick={() => setIsLightboxOpen(true)}>
             <ZoomIn className="h-4 w-4 mr-2" />
-            Fullscreen
+            View All Photos
           </Button>
+          {videoCount > 0 && onOpenVideos && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="bg-orange-500 hover:bg-orange-600 text-white border-0"
+              onClick={onOpenVideos}
+            >
+              <ZoomIn className="h-4 w-4 mr-2" />
+              View All Videos
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Media Tabs */}
-      <div className="flex justify-center gap-2 overflow-x-auto pb-1">
+      {/* Media Tabs - Mobile */}
+      <div className="flex justify-center gap-2 overflow-x-auto pb-1 md:hidden">
         {mediaTabs.map(tab => (
           <button
             key={tab.id}
@@ -208,8 +224,8 @@ export function PropertyImageGallery({
         ))}
       </div>
 
-      {/* Image Counter - Below image */}
-      <div className="text-center space-y-2">
+      {/* Image Counter - Mobile */}
+      <div className="text-center space-y-2 md:hidden">
         <span className="text-sm text-slate-500">
           {selectedImageIndex + 1} / {sortedImages.length}
         </span>
