@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState } from 'react';
 import { MapPin, School, Heart, Bus, ShoppingBag, Ticket, Footprints, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
