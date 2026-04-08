@@ -732,12 +732,22 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
       : null,
     leviesAmount ? { key: 'levies', label: 'Levies', value: formatCurrency(leviesAmount) } : null,
   ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
-  const sectionTabs = [
+  const mobileSectionTabs = [
     description.trim() ? { id: 'overview', label: 'Overview' } : null,
     featureSpecItems.length > 0 ? { id: 'features', label: 'Features' } : null,
     contactMode !== 'unknown' ? { id: 'contact', label: 'Contact' } : null,
     { id: 'locality', label: 'Locality' },
     similarProperties.length > 0 ? { id: 'similar', label: 'Similar' } : null,
+  ].filter(Boolean) as Array<{ id: string; label: string }>;
+  const desktopSectionTabs = [
+    description.trim() ? { id: 'overview', label: 'Overview' } : null,
+    featureSpecItems.length > 0 || highlights.length > 0
+      ? { id: 'features', label: 'Features' }
+      : null,
+    contactMode !== 'unknown' ? { id: 'contact', label: 'Contact' } : null,
+    { id: 'locality', label: 'Location' },
+    similarProperties.length > 0 ? { id: 'similar', label: 'Similar' } : null,
+    { id: 'buyability-calculator', label: 'Calculator' },
   ].filter(Boolean) as Array<{ id: string; label: string }>;
   const handleScrollToCalculator = () => {
     document.getElementById('buyability-calculator')?.scrollIntoView({
@@ -898,41 +908,91 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             ))}
           </div>
 
-          {/* Desktop Action Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleFavoriteClick}
-              className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
-            >
-              <Heart className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleShare}
-              className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
-            >
-              <Share2 className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
-            >
-              Shortlist
-            </Button>
-            {hasPrimaryContactAction && (
+          {/* Desktop Title Row */}
+          <div className="hidden lg:flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-1">
+            <div className="flex-1">
+              <h1 className="text-fluid-h2 font-bold text-slate-900 mb-1">{property.title}</h1>
+              <div className="flex items-center gap-2 text-slate-500">
+                <MapPin className="h-4 w-4" />
+                <span className="text-base text-slate-500">
+                  {property.address}, {property.city}, {property.province}
+                </span>
+              </div>
+              {developmentName && (
+                <div className="mt-2 flex items-center gap-2 text-slate-500">
+                  <Home className="h-4 w-4" />
+                  {developmentHref ? (
+                    <button
+                      type="button"
+                      className="text-sm hover:text-blue-600 hover:underline transition-colors truncate"
+                      onClick={() => setLocation(developmentHref)}
+                      title={developmentName}
+                    >
+                      Part of {developmentName}
+                    </button>
+                  ) : (
+                    <span className="text-sm truncate" title={developmentName}>
+                      Part of {developmentName}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
               <Button
-                className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
-                onClick={() => setIsContactModalOpen(true)}
+                variant="outline"
+                size="icon"
+                onClick={handleFavoriteClick}
+                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
               >
-                Enquire Now
+                <Heart className="h-5 w-5" />
               </Button>
-            )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleShare}
+                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="outline"
+                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
+              >
+                Shortlist
+              </Button>
+              {hasPrimaryContactAction && (
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
+                  onClick={() => setIsContactModalOpen(true)}
+                >
+                  Enquire Now
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {desktopSectionTabs.length > 0 && (
+        <div className="sticky top-16 z-30 hidden border-b border-slate-200 bg-white/95 backdrop-blur lg:block">
+          <div className="container py-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              {desktopSectionTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-orange-200 hover:text-orange-600"
+                  onClick={() => handleJumpToSection(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="container py-4 sm:py-6 lg:py-8">
         {/* Image Gallery + Property Info Block */}
@@ -1099,13 +1159,6 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           {/* Right Column - Property Info */}
           <div className="lg:col-span-5 space-y-6 lg:space-y-12">
             <div className="hidden lg:block">
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">{property.title}</h1>
-              <div className="flex items-center gap-2 text-slate-500 mb-4">
-                <MapPin className="h-4 w-4" />
-                <span className="text-base">
-                  {property.address}, {property.city}, {property.province}
-                </span>
-              </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
                   <span>Listing ID #{property.id}</span>
@@ -1266,10 +1319,10 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           </div>
         </div>
 
-        {sectionTabs.length > 0 && (
-          <div className="sticky top-16 z-20 mb-6 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+        {mobileSectionTabs.length > 0 && (
+          <div className="sticky top-16 z-20 mb-6 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur lg:hidden">
             <div className="scrollbar-hide flex gap-2 overflow-x-auto">
-              {sectionTabs.map(tab => (
+              {mobileSectionTabs.map(tab => (
                 <button
                   key={tab.id}
                   type="button"
