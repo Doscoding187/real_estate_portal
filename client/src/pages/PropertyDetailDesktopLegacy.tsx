@@ -554,17 +554,23 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
             : null,
         ].filter(Boolean) as Array<{ key: string; label: string; value: string }>)
       : [];
+  const agentOperatingAreas =
+    contactMode === 'agent'
+      ? Array.from(
+          new Set(
+            (Array.isArray(contactIdentity?.areasServed) ? contactIdentity.areasServed : [])
+              .map(area => String(area || '').trim())
+              .filter(Boolean),
+          ),
+        )
+      : [];
   const agentOverviewPills =
     contactMode === 'agent'
-      ? ([
-          typeof contactIdentity?.yearsExperience === 'number'
-            ? `${contactIdentity.yearsExperience} Years Experience`
-            : null,
-          agentPrimaryArea ? `Operates in ${agentPrimaryArea}` : null,
-          typeof contactIdentity?.reviewCount === 'number' && contactIdentity.reviewCount > 0
-            ? `${contactIdentity.reviewCount} Reviews`
-            : null,
-        ].filter(Boolean) as string[])
+      ? agentOperatingAreas.length > 0
+        ? agentOperatingAreas.map(area => `Operates in ${area}`)
+        : agentPrimaryArea
+          ? [`Operates in ${agentPrimaryArea}`]
+          : []
       : [];
   const propertyDetailItems = [
     property.bedrooms
@@ -1156,12 +1162,6 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                                 {contactBadgeLabel}
                               </Badge>
                             )}
-                            <Badge className="border border-amber-200 bg-amber-50 text-[10px] text-amber-700 hover:bg-amber-50">
-                              {typeof contactIdentity.rating === 'number'
-                                ? `${contactIdentity.rating.toFixed(1)}`
-                                : '5.0'}{' '}
-                              Rating
-                            </Badge>
                           </div>
                           <h3 className="text-xl font-bold text-slate-900">
                             {contactIdentity.name || 'Listing Agent'}
@@ -1512,12 +1512,6 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                                   {contactBadgeLabel}
                                 </Badge>
                               )}
-                              <Badge className="border border-amber-200 bg-amber-50 text-[10px] text-amber-700 hover:bg-amber-50">
-                                {typeof contactIdentity?.rating === 'number'
-                                  ? `${contactIdentity.rating.toFixed(1)}`
-                                  : '5.0'}{' '}
-                                Rating
-                              </Badge>
                             </div>
                             <h3 className="text-lg font-bold text-slate-900">
                               {contactIdentity?.name || 'Listing Agent'}
