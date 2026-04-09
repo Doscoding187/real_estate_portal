@@ -74,10 +74,6 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         ? 'Private Seller'
         : 'Listing Agent';
   const hasAgentName = identityDisplayName !== '-';
-  const [agentFirstName, ...agentSurnameParts] = hasAgentName
-    ? identityDisplayName.split(/\s+/)
-    : ['-'];
-  const agentSurname = agentSurnameParts.join(' ');
   const agentInitials = hasAgentName
     ? identityDisplayName
         .split(/\s+/)
@@ -119,7 +115,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   return (
     <>
       <div
-        className="group w-full max-w-[780px] cursor-pointer overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-none lg:rounded-[26px]"
+        className="group w-full max-w-[780px] cursor-pointer overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-[840px] lg:rounded-[26px]"
         onClick={() => setLocation(listingHref)}
       >
         <div className="flex flex-col sm:flex-row">
@@ -189,7 +185,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               </p>
             )}
 
-            <p className="mt-3 text-xl font-semibold tracking-tight text-blue-600 sm:text-2xl">
+            <p className="mt-3 text-lg font-semibold tracking-tight text-blue-600 sm:text-xl">
               {formatPrice(data.price, { from: isDevelopmentListing })}
             </p>
 
@@ -234,12 +230,12 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             )}
 
             {data.description && (
-              <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-5 text-slate-600">
+              <p className="mt-3 line-clamp-2 max-w-[46ch] text-sm leading-5 text-slate-600">
                 {data.description}
               </p>
             )}
 
-            <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-3 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-3 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
                 <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
                   <AvatarImage
@@ -250,14 +246,8 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                   <AvatarFallback className="bg-slate-100 text-xs">{agentInitials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 max-w-[140px] sm:max-w-[180px]">
-                  <p className="line-clamp-2 break-words text-sm font-semibold leading-snug text-foreground">
-                    {agentFirstName}
-                    {agentSurname ? (
-                      <>
-                        <br />
-                        {agentSurname}
-                      </>
-                    ) : null}
+                  <p className="line-clamp-1 truncate text-[12px] font-semibold leading-snug text-foreground">
+                    {identityDisplayName}
                   </p>
                 </div>
               </div>
