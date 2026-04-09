@@ -52,11 +52,8 @@ export function ResultsHeader({
             Live Market Updates
           </div>
 
-          <h1 className="mt-3 text-lg font-semibold tracking-tight text-slate-950 sm:text-2xl lg:text-[1.65rem]">
+          <p className="mt-3 text-sm font-medium leading-6 text-slate-700 sm:text-base">
             {countLabel}
-          </h1>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            Use filters, map, and sort to shape this result set quickly.
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2 sm:hidden">

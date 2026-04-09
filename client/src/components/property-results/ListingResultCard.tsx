@@ -104,7 +104,8 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       : 'Contact Agent';
   const whatsappTarget = String(data.contactWhatsapp || data.contactPhone || '').trim();
   const emailTarget = String(data.contactEmail || '').trim();
-  const resolvedImage = withApiBase(data.image) || '/placeholder-property.jpg';
+  const resolvedImage =
+    withApiBase(data.image) || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
   const resolvedAvatar = withApiBase(data.agentAvatarUrl);
   const modalTitle = isDevelopmentListing ? developmentName || data.title : data.title;
   const whatsappPrefill = `Hi, I'm interested in ${modalTitle}. Please share more details.`;
@@ -122,7 +123,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         onClick={() => setLocation(listingHref)}
       >
         <div className="flex flex-col sm:flex-row">
-          <div className="relative h-[192px] flex-shrink-0 overflow-hidden sm:h-[300px] sm:w-[300px] lg:w-[340px]">
+          <div className="relative h-[192px] flex-shrink-0 overflow-hidden sm:h-auto sm:w-[300px] sm:self-stretch lg:w-[340px]">
             <img
               src={resolvedImage}
               alt={data.title}
@@ -188,7 +189,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               </p>
             )}
 
-            <p className="mt-3 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+            <p className="mt-3 text-xl font-semibold tracking-tight text-blue-600 sm:text-2xl">
               {formatPrice(data.price, { from: isDevelopmentListing })}
             </p>
 
@@ -233,12 +234,12 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             )}
 
             {data.description && (
-              <p className="mt-4 line-clamp-2 max-w-2xl text-sm leading-7 text-slate-600 sm:line-clamp-3">
+              <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-5 text-slate-600">
                 {data.description}
               </p>
             )}
 
-            <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-3 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
                 <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
                   <AvatarImage
@@ -260,7 +261,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                   </p>
                 </div>
               </div>
-              <div className="flex shrink-0 gap-1.5 sm:justify-end">
+              <div className="flex shrink-0 gap-1 sm:justify-end">
                 {whatsappTarget && (
                   <Button
                     variant="outline"

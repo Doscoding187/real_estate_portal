@@ -485,6 +485,27 @@ export default function SearchResults({
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
+  const resolveCardImage = (card: SearchCardResult) => {
+    const direct = typeof card.image === 'string' ? card.image.trim() : '';
+    if (direct) return direct;
+
+    if (Array.isArray(card.images)) {
+      const firstImage = card.images
+        .map(image => {
+          if (typeof image === 'string') return image.trim();
+          if (image && typeof image === 'object') {
+            const maybeUrl = (image as any).url || (image as any).imageUrl;
+            return typeof maybeUrl === 'string' ? maybeUrl.trim() : '';
+          }
+          return '';
+        })
+        .find(Boolean);
+      if (firstImage) return firstImage;
+    }
+
+    return 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} />
@@ -558,7 +579,7 @@ export default function SearchResults({
                                 title: card.title,
                                 location: card.location,
                                 price: card.price,
-                                image: card.image || '/placeholder-property.jpg',
+                                image: resolveCardImage(card),
                                 development: card.development,
                                 area: card.area,
                                 bedrooms: card.bedrooms,
