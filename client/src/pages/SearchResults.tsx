@@ -28,7 +28,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Search components
 import {
@@ -115,45 +121,42 @@ export default function SearchResults({
 
   const normalizedLocationFilters = useMemo<NavbarLocation[]>(
     () =>
-      (filters.locations ?? [])
-        .reduce<NavbarLocation[]>((acc, location) => {
-          if (typeof location === 'string') {
-            const slug = location.trim();
-            if (!slug) return acc;
-            const type: NavbarLocation['type'] = PROVINCE_SLUGS.includes(slug.toLowerCase())
-              ? 'province'
-              : 'city';
-            acc.push({
-              name: unslugify(slug),
-              slug,
-              type,
-              provinceSlug: type === 'province' ? slug : undefined,
-              citySlug: type === 'city' ? slug : undefined,
-              fullAddress: unslugify(slug),
-            });
-            return acc;
-          }
-
-          if (location && typeof location === 'object' && 'slug' in location) {
-            const slug = String(location.slug || '').trim();
-            if (!slug) return acc;
-            acc.push({
-              name: String((location as any).name || '').trim() || unslugify(slug),
-              slug,
-              type:
-                location.type === 'province' ||
-                location.type === 'city' ||
-                location.type === 'suburb'
-                  ? location.type
-                  : 'city',
-              citySlug: (location as any).citySlug,
-              provinceSlug: (location as any).provinceSlug,
-              fullAddress: String((location as any).fullAddress || '').trim() || unslugify(slug),
-            });
-          }
-
+      (filters.locations ?? []).reduce<NavbarLocation[]>((acc, location) => {
+        if (typeof location === 'string') {
+          const slug = location.trim();
+          if (!slug) return acc;
+          const type: NavbarLocation['type'] = PROVINCE_SLUGS.includes(slug.toLowerCase())
+            ? 'province'
+            : 'city';
+          acc.push({
+            name: unslugify(slug),
+            slug,
+            type,
+            provinceSlug: type === 'province' ? slug : undefined,
+            citySlug: type === 'city' ? slug : undefined,
+            fullAddress: unslugify(slug),
+          });
           return acc;
-        }, []),
+        }
+
+        if (location && typeof location === 'object' && 'slug' in location) {
+          const slug = String(location.slug || '').trim();
+          if (!slug) return acc;
+          acc.push({
+            name: String((location as any).name || '').trim() || unslugify(slug),
+            slug,
+            type:
+              location.type === 'province' || location.type === 'city' || location.type === 'suburb'
+                ? location.type
+                : 'city',
+            citySlug: (location as any).citySlug,
+            provinceSlug: (location as any).provinceSlug,
+            fullAddress: String((location as any).fullAddress || '').trim() || unslugify(slug),
+          });
+        }
+
+        return acc;
+      }, []),
     [filters.locations],
   );
 
@@ -257,31 +260,31 @@ export default function SearchResults({
       enabled: shouldFetchDevelopmentListings,
     });
   const isLoading = isPropertySearchLoading || isDevelopmentSearchLoading;
-  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery(
-    {
-      filters: {
-        city: filters.city,
-        province: filters.province,
-        suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-        locations: normalizedLocationSlugs,
-        listingType: filters.listingType,
-        listingSource: filters.listingSource,
-        propertyType: filters.propertyType,
-        minPrice: filters.minPrice,
-        maxPrice: filters.maxPrice,
-        minBedrooms: filters.minBedrooms,
-        maxBedrooms: filters.maxBedrooms,
-      },
+  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
+    filters: {
+      city: filters.city,
+      province: filters.province,
+      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+      locations: normalizedLocationSlugs,
+      listingType: filters.listingType,
+      listingSource: filters.listingSource,
+      propertyType: filters.propertyType,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      minBedrooms: filters.minBedrooms,
+      maxBedrooms: filters.maxBedrooms,
     },
-  );
+  });
 
-  const propertyCards: SearchCardResult[] =
-    shouldFetchManualListings ? ((propertySearchResults as any)?.cards ?? []) : [];
-  const developmentCards: SearchCardResult[] =
-    shouldFetchDevelopmentListings ? ((developmentListingResults as any)?.cards ?? []) : [];
+  const propertyCards: SearchCardResult[] = shouldFetchManualListings
+    ? ((propertySearchResults as any)?.cards ?? [])
+    : [];
+  const developmentCards: SearchCardResult[] = shouldFetchDevelopmentListings
+    ? ((developmentListingResults as any)?.cards ?? [])
+    : [];
   const resultTotal =
-    (shouldFetchManualListings ? (propertySearchResults as any)?.total ?? 0 : 0) +
-    (shouldFetchDevelopmentListings ? (developmentListingResults as any)?.total ?? 0 : 0);
+    (shouldFetchManualListings ? ((propertySearchResults as any)?.total ?? 0) : 0) +
+    (shouldFetchDevelopmentListings ? ((developmentListingResults as any)?.total ?? 0) : 0);
   const locationContext = (propertySearchResults as any)?.locationContext;
 
   // Mutations
@@ -449,7 +452,8 @@ export default function SearchResults({
           if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
           return {
-            markerId: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
+            markerId:
+              item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
             href: card.href,
             property: {
               id: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
@@ -484,12 +488,10 @@ export default function SearchResults({
   return (
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} />
-      <ListingNavbar
-        defaultLocations={normalizedLocationFilters}
-      />
+      <ListingNavbar defaultLocations={normalizedLocationFilters} />
 
-      <div className="container pt-24 pb-8">
-        <div className="mx-auto w-full max-w-[1180px]">
+      <div className="container pb-32 pt-24 lg:pb-12">
+        <div className="mx-auto w-full max-w-[1280px]">
           {/* Header Section */}
           <div className="mb-3">
             <div className="mb-2">
@@ -519,7 +521,7 @@ export default function SearchResults({
           </div>
 
           {/* Content Section */}
-          <div className="grid grid-cols-1 gap-2 px-2 sm:px-3 lg:grid-cols-[292px_minmax(0,760px)] lg:justify-center lg:gap-3 lg:px-0">
+          <div className="grid grid-cols-1 gap-5 px-2 sm:px-3 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6 lg:px-0 xl:grid-cols-[340px_minmax(0,1fr)]">
             {/* LEFT SIDEBAR - FILTERS */}
             <div className="hidden lg:block">
               <div className="sticky top-24">
@@ -544,7 +546,7 @@ export default function SearchResults({
                 ) : hasRenderableResults ? (
                   <>
                     {viewMode === 'list' && (
-                      <div className="flex flex-col items-start gap-4">
+                      <div className="flex flex-col gap-4 sm:gap-5 lg:gap-6">
                         {renderedResults.map((item, index) => {
                           const card = item.value as SearchCardResult;
                           return (
@@ -588,7 +590,7 @@ export default function SearchResults({
                     )}
 
                     {viewMode === 'grid' && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3 2xl:gap-7">
                         {renderedResults.map(item => {
                           const card = item.value as SearchCardResult;
                           const cardProps = searchCardResultToPropertyCardProps(card);
@@ -714,7 +716,9 @@ export default function SearchResults({
               <Select
                 value={saveSearchNotificationFrequency}
                 onValueChange={value =>
-                  setSaveSearchNotificationFrequency(value as typeof saveSearchNotificationFrequency)
+                  setSaveSearchNotificationFrequency(
+                    value as typeof saveSearchNotificationFrequency,
+                  )
                 }
               >
                 <SelectTrigger id="search-frequency">
@@ -757,10 +761,7 @@ export default function SearchResults({
             <Button variant="outline" onClick={() => setIsSaveSearchOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={confirmSaveSearch}
-              disabled={saveSearchMutation.isPending}
-            >
+            <Button onClick={confirmSaveSearch} disabled={saveSearchMutation.isPending}>
               {saveSearchMutation.isPending ? 'Saving...' : 'Save Search'}
             </Button>
           </DialogFooter>
