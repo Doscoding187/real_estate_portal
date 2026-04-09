@@ -195,7 +195,7 @@ export function PropertyImageGallery({
             <Button
               variant="secondary"
               size="sm"
-              className="bg-orange-500 hover:bg-orange-600 text-white border-0"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-0"
               onClick={onOpenVideos}
             >
               <ZoomIn className="h-4 w-4 mr-2" />
@@ -214,7 +214,7 @@ export function PropertyImageGallery({
             onClick={tab.action}
             className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
               activeMediaTab === tab.id
-                ? 'bg-orange-500 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -237,7 +237,7 @@ export function PropertyImageGallery({
                 type="button"
                 aria-label={`Go to image ${index + 1}`}
                 className={`h-1.5 w-1.5 rounded-full transition-all ${
-                  selectedImageIndex === index ? 'bg-orange-500 w-4' : 'bg-slate-300'
+                  selectedImageIndex === index ? 'bg-blue-600 w-4' : 'bg-slate-300'
                 }`}
                 onClick={() => setSelectedImageIndex(index)}
               />

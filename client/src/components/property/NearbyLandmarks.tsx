@@ -156,13 +156,11 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'border-orange-500 bg-orange-50 text-orange-700'
-                      : 'border-orange-200 bg-white text-slate-600 hover:border-orange-300 hover:bg-orange-50/50'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-blue-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50/60'
                   }`}
                 >
-                  <Icon
-                    className={`h-3.5 w-3.5 ${isActive ? 'text-orange-500' : 'text-slate-400'}`}
-                  />
+                  <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                   {tab.label}
                 </button>
               );
