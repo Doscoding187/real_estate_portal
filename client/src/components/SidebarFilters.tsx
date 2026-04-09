@@ -239,7 +239,7 @@ export function SidebarFilters({
             Listing source
           </AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-3 gap-0.5 pt-1">
+            <div className="flex flex-wrap gap-0.5 pt-1">
               {LISTING_SOURCE_OPTIONS.map(option => (
                 <Button
                   key={option.label}
@@ -253,7 +253,7 @@ export function SidebarFilters({
                         ? 'default'
                         : 'outline'
                   }
-                  className={`h-8 w-full min-w-0 rounded-full px-1 text-[9px] font-medium leading-none tracking-tight sm:text-[10px] ${
+                  className={`h-8 !w-auto min-w-0 grow basis-0 rounded-full px-1 text-[9px] font-medium leading-none tracking-tight sm:text-[10px] ${
                     (option.value === undefined && !filters.listingSource) ||
                     filters.listingSource === option.value
                       ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
