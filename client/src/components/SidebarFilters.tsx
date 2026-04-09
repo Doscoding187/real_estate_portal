@@ -55,6 +55,14 @@ const LISTING_SOURCE_OPTIONS = [
   },
 ] as const;
 
+const FALLBACK_PROPERTY_TYPES = [
+  { value: 'apartment', label: 'Apartment' },
+  { value: 'house', label: 'House' },
+  { value: 'villa', label: 'Villa' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'plot', label: 'Plot' },
+] as const;
+
 export function SidebarFilters({
   filters,
   filterCounts,
@@ -137,10 +145,19 @@ export function SidebarFilters({
     });
   };
 
-  const handleLocationNavigate = (slug: string) => {
+  const handleLocationToggle = (slug: string) => {
+    const selected = Array.isArray(filters.suburb)
+      ? filters.suburb
+      : filters.suburb
+        ? [filters.suburb]
+        : [];
+    const next = selected.includes(slug)
+      ? selected.filter(value => value !== slug)
+      : [...selected, slug];
+
     onFilterChange({
       ...filters,
-      suburb: slug ? ([slug] as any) : undefined,
+      suburb: next.length > 0 ? (next as any) : undefined,
     });
   };
 
@@ -172,15 +189,13 @@ export function SidebarFilters({
       }))
       .sort((a, b) => b.count - a.count);
 
-    if (fromCounts.length > 0) return fromCounts;
+    const seeded = [...fromCounts];
+    FALLBACK_PROPERTY_TYPES.forEach(type => {
+      if (seeded.some(option => option.value === type.value)) return;
+      seeded.push({ ...type, count: 0 });
+    });
 
-    return [
-      { value: 'apartment', label: 'Apartment', count: 0 },
-      { value: 'house', label: 'House', count: 0 },
-      { value: 'villa', label: 'Villa', count: 0 },
-      { value: 'commercial', label: 'Commercial', count: 0 },
-      { value: 'plot', label: 'Plot', count: 0 },
-    ];
+    return seeded.slice(0, 7);
   })();
 
   const bedroomOptions = (() => {
@@ -224,10 +239,11 @@ export function SidebarFilters({
             Listing source
           </AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-3 gap-1 pt-1">
+            <div className="grid grid-cols-3 gap-0.5 pt-1">
               {LISTING_SOURCE_OPTIONS.map(option => (
                 <Button
                   key={option.label}
+                  size="sm"
                   variant={
                     option.value === undefined
                       ? !filters.listingSource
@@ -237,7 +253,7 @@ export function SidebarFilters({
                         ? 'default'
                         : 'outline'
                   }
-                  className={`h-8 w-full min-w-0 rounded-full px-0 text-[10px] font-medium tracking-tight ${
+                  className={`h-8 w-full min-w-0 rounded-full px-1 text-[9px] font-medium leading-none tracking-tight sm:text-[10px] ${
                     (option.value === undefined && !filters.listingSource) ||
                     filters.listingSource === option.value
                       ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
@@ -269,7 +285,7 @@ export function SidebarFilters({
                 defaultValue={[0, 50000000]}
                 value={[priceRange[0], priceRange[1]]}
                 max={50000000}
-                step={100000}
+                step={5000}
                 min={0}
                 onValueChange={handlePriceChange}
                 onValueCommit={handlePriceCommit}
@@ -279,6 +295,7 @@ export function SidebarFilters({
                 <Input
                   type="number"
                   min={0}
+                  step={5000}
                   value={priceRange[0]}
                   onChange={e => {
                     const nextMin = Number(e.target.value || 0);
@@ -291,6 +308,7 @@ export function SidebarFilters({
                 <Input
                   type="number"
                   min={0}
+                  step={5000}
                   value={priceRange[1]}
                   onChange={e => {
                     const nextMax = Number(e.target.value || 0);
@@ -322,22 +340,33 @@ export function SidebarFilters({
                 </p>
               )}
               {locationOptions.length > 0 ? (
-                locationOptions.map(location => (
-                  <button
-                    key={location.slug}
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-blue-50"
-                    onClick={() => handleLocationNavigate(location.slug)}
-                  >
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">
-                      {location.name}
-                    </span>
-                    <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
-                      {location.count.toLocaleString()}
-                    </span>
-                  </button>
-                ))
+                locationOptions.map(location => {
+                  const isSelected = Array.isArray(filters.suburb)
+                    ? filters.suburb.includes(location.slug)
+                    : filters.suburb === location.slug;
+
+                  return (
+                    <button
+                      key={location.slug}
+                      type="button"
+                      className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors ${
+                        isSelected
+                          ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                          : 'hover:bg-blue-50'
+                      }`}
+                      onClick={() => handleLocationToggle(location.slug)}
+                    >
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span
+                        className={`min-w-0 flex-1 truncate text-sm font-medium ${
+                          isSelected ? 'text-blue-700' : 'text-slate-700'
+                        }`}
+                      >
+                        {location.name}
+                      </span>
+                    </button>
+                  );
+                })
               ) : (
                 <p className="text-xs text-slate-500">
                   Nearby areas will appear when more listings are available in this search area.
@@ -353,31 +382,32 @@ export function SidebarFilters({
             Type of property
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-3 pt-2">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               {propertyTypeOptions.map(type => (
-                <div key={type.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`type-${type.value}`}
-                    checked={filters.propertyType === type.value}
-                    onCheckedChange={checked =>
-                      handlePropertyTypeChange(type.value, checked as boolean)
-                    }
-                  />
-                  <Label
-                    htmlFor={`type-${type.value}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-slate-600"
-                  >
+                <Button
+                  key={type.value}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 w-full min-w-0 rounded-full px-2 text-[10px] font-medium tracking-tight ${
+                    filters.propertyType === type.value
+                      ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                      : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
+                  }`}
+                  onClick={() =>
+                    handlePropertyTypeChange(type.value, filters.propertyType !== type.value)
+                  }
+                  title={type.label}
+                >
+                  <span className="truncate">
                     {type.label}
-                  </Label>
-                  <span className="ml-auto rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
-                    {type.count}
                   </span>
-                </div>
+                </Button>
               ))}
             </div>
           </AccordionContent>
         </AccordionItem>
-
+        
         {/* No. of Bedrooms */}
         <AccordionItem value="bedrooms">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
