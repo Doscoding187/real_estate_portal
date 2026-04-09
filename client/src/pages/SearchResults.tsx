@@ -491,14 +491,7 @@ export default function SearchResults({
 
     if (Array.isArray(card.images)) {
       const firstImage = card.images
-        .map(image => {
-          if (typeof image === 'string') return image.trim();
-          if (image && typeof image === 'object') {
-            const maybeUrl = (image as any).url || (image as any).imageUrl;
-            return typeof maybeUrl === 'string' ? maybeUrl.trim() : '';
-          }
-          return '';
-        })
+        .map(image => (typeof image?.url === 'string' ? image.url.trim() : ''))
         .find(Boolean);
       if (firstImage) return firstImage;
     }
