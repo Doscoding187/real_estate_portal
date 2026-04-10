@@ -1,4 +1,5 @@
 import type { PropertyCardProps } from '@/components/PropertyCard';
+import { resolveMediaUrl } from '@/lib/mediaUtils';
 
 // Normalizes raw API property objects to the props expected by PropertyCard.
 export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
@@ -111,8 +112,12 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
         raw.media?.find((m: any) => m.isPrimary)?.url ||
         raw.media?.[0]?.url ||
         '/placeholder.jpg';
-      if (typeof img === 'string' && !img.startsWith('http') && !img.startsWith('/')) {
-        return `/${img}`;
+      if (typeof img === 'string') {
+        const resolved = resolveMediaUrl(img);
+        if (resolved) return resolved;
+        if (!img.startsWith('http') && !img.startsWith('/')) {
+          return `/${img}`;
+        }
       }
       return img;
     })(),

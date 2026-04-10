@@ -12,7 +12,7 @@ import type { PropertyFilters, SortOption, SearchResults, Property } from '../..
 import { locationResolver, ResolvedLocation } from './locationResolverService';
 
 // Cache key prefix for property searches
-const CACHE_PREFIX = 'property:search:';
+const CACHE_PREFIX = 'property:search:v2:';
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 
@@ -101,6 +101,43 @@ function deriveLoadSheddingSolutions(details: Record<string, any>): LoadShedding
   }
   if (solutions.size === 0) solutions.add('none');
   return Array.from(solutions);
+}
+
+function getMediaCdnBaseUrl(): string {
+  const cloudFrontUrl = String(process.env.CLOUDFRONT_URL || '').trim();
+  if (cloudFrontUrl) {
+    return cloudFrontUrl.replace(/\/+$/, '');
+  }
+
+  const bucketName = String(process.env.S3_BUCKET_NAME || '').trim();
+  const awsRegion = String(process.env.AWS_REGION || 'af-south-1').trim();
+  if (!bucketName) return '';
+
+  return `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
+}
+
+const MEDIA_CDN_BASE_URL = getMediaCdnBaseUrl();
+
+function resolveMediaUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return undefined;
+
+  if (
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    /^https?:\/\//i.test(trimmed)
+  ) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
+
+  const normalizedPath = trimmed.replace(/^\/+/, '');
+  if (!normalizedPath) return undefined;
+
+  if (!MEDIA_CDN_BASE_URL) return `/${normalizedPath}`;
+  return `${MEDIA_CDN_BASE_URL}/${normalizedPath}`;
 }
 
 export class PropertySearchService {
@@ -360,12 +397,19 @@ export class PropertySearchService {
         ...parseStringList(details.outdoorFeatures),
       ]);
 
-      const primaryImage = (imagesByProperty.get(Number(prop.id)) || []).map((img: any) => ({
-        url: img.imageUrl,
-        thumbnailUrl: img.imageUrl,
-      }));
-      if (primaryImage.length === 0 && prop.mainImage) {
-        primaryImage.push({ url: prop.mainImage, thumbnailUrl: prop.mainImage });
+      const primaryImage: Array<{ url: string; thumbnailUrl: string }> = [];
+      for (const img of imagesByProperty.get(Number(prop.id)) || []) {
+        const resolvedImageUrl = resolveMediaUrl((img as any).imageUrl);
+        if (!resolvedImageUrl) continue;
+        primaryImage.push({
+          url: resolvedImageUrl,
+          thumbnailUrl: resolvedImageUrl,
+        });
+      }
+
+      const resolvedMainImage = resolveMediaUrl(prop.mainImage);
+      if (primaryImage.length === 0 && resolvedMainImage) {
+        primaryImage.push({ url: resolvedMainImage, thumbnailUrl: resolvedMainImage });
       }
 
       const agentName = (
@@ -402,7 +446,7 @@ export class PropertySearchService {
         fibreReady,
         loadSheddingSolutions: deriveLoadSheddingSolutions(details),
         images: primaryImage,
-        mainImage: prop.mainImage || primaryImage[0]?.url || undefined,
+        mainImage: resolvedMainImage || primaryImage[0]?.url || undefined,
         videoCount: Number(prop.videoCount || 0),
         status: this.mapStatus(prop.status),
         listedDate: new Date(prop.listedDate),
