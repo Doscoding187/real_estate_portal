@@ -132,7 +132,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             />
           </div>
 
-          <div className="min-w-0 flex-1 overflow-hidden p-4 sm:flex sm:min-h-[300px] sm:flex-col sm:p-5 lg:p-6">
+          <div className="min-w-0 flex-1 overflow-hidden px-4 py-3 sm:flex sm:min-h-[300px] sm:flex-col sm:px-5 sm:py-3 lg:px-6 lg:py-3">
             {isDevelopmentListing && developmentName && (
               <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                 <Building2 className="h-3.5 w-3.5" />
