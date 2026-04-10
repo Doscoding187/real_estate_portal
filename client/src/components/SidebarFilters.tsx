@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { MapPin } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -56,12 +55,42 @@ const LISTING_SOURCE_OPTIONS = [
 ] as const;
 
 const FALLBACK_PROPERTY_TYPES = [
-  { value: 'apartment', label: 'Apartment' },
-  { value: 'house', label: 'House' },
-  { value: 'villa', label: 'Villa' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'plot', label: 'Plot' },
+  { value: 'house', label: 'Houses' },
+  { value: 'apartment', label: 'Apartments / Flats' },
+  { value: 'townhouse', label: 'Townhouses' },
+  { value: 'commercial', label: 'Commercial Property' },
+  { value: 'plot', label: 'Land / Plots' },
 ] as const;
+
+const PROPERTY_TYPE_CATEGORIES = {
+  residential: ['house', 'apartment', 'townhouse'],
+  commercial: ['commercial'],
+  land: ['plot'],
+} as const;
+
+type PropertyTypeCategory = keyof typeof PROPERTY_TYPE_CATEGORIES;
+
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  house: 'Houses',
+  apartment: 'Apartments / Flats',
+  townhouse: 'Townhouses',
+  commercial: 'Commercial Property',
+  plot: 'Land / Plots',
+};
+
+const inferPropertyTypeCategory = (value?: string): PropertyTypeCategory => {
+  if (!value) return 'residential';
+  if (PROPERTY_TYPE_CATEGORIES.commercial.includes(value as any)) return 'commercial';
+  if (PROPERTY_TYPE_CATEGORIES.land.includes(value as any)) return 'land';
+  return 'residential';
+};
+
+const areSameSelections = (left: string[], right: string[]) => {
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  return sortedLeft.every((value, index) => value === sortedRight[index]);
+};
 
 export function SidebarFilters({
   filters,
@@ -70,11 +99,27 @@ export function SidebarFilters({
   onFilterChange,
   onSaveSearch,
 }: SidebarFiltersProps) {
+  const selectedSuburbs = Array.isArray(filters.suburb)
+    ? filters.suburb
+    : filters.suburb
+      ? [filters.suburb]
+      : [];
+  const selectedSuburbsKey = selectedSuburbs.join('|');
+  const selectedPropertyType =
+    typeof filters.propertyType === 'string' ? filters.propertyType : undefined;
+
   // Local state for sliders to avoid excessive re-renders/fetches while dragging
   const [priceRange, setPriceRange] = useState<[number, number]>([
     filters.minPrice || 0,
     filters.maxPrice || 50000000,
   ]);
+  const [pendingSuburbs, setPendingSuburbs] = useState<string[]>(selectedSuburbs);
+  const [propertyTypeCategory, setPropertyTypeCategory] = useState<PropertyTypeCategory>(
+    inferPropertyTypeCategory(selectedPropertyType),
+  );
+  const [pendingPropertyType, setPendingPropertyType] = useState<string | undefined>(
+    selectedPropertyType,
+  );
 
   // Sync local state with props when they change externally
   useEffect(() => {
@@ -82,6 +127,15 @@ export function SidebarFilters({
       setPriceRange([filters.minPrice || 0, filters.maxPrice || 50000000]);
     }
   }, [filters.minPrice, filters.maxPrice]);
+
+  useEffect(() => {
+    setPendingSuburbs(selectedSuburbs);
+  }, [selectedSuburbsKey]);
+
+  useEffect(() => {
+    setPendingPropertyType(selectedPropertyType);
+    setPropertyTypeCategory(inferPropertyTypeCategory(selectedPropertyType));
+  }, [selectedPropertyType]);
 
   const handlePriceChange = (value: number[]) => {
     setPriceRange([value[0], value[1]]);
@@ -96,14 +150,7 @@ export function SidebarFilters({
   };
 
   const handlePropertyTypeChange = (type: string, checked: boolean) => {
-    // This is a simplification. In a real app, propertyType might be an array.
-    // For now, we'll treat it as a single selection or clear it.
-    if (checked) {
-      onFilterChange({ ...filters, propertyType: type as any });
-    } else {
-      const { propertyType, ...rest } = filters;
-      onFilterChange(rest);
-    }
+    setPendingPropertyType(checked ? type : undefined);
   };
 
   const handleBedroomChange = (beds: number) => {
@@ -146,19 +193,27 @@ export function SidebarFilters({
   };
 
   const handleLocationToggle = (slug: string) => {
-    const selected = Array.isArray(filters.suburb)
-      ? filters.suburb
-      : filters.suburb
-        ? [filters.suburb]
-        : [];
-    const next = selected.includes(slug)
-      ? selected.filter(value => value !== slug)
-      : [...selected, slug];
+    const next = pendingSuburbs.includes(slug)
+      ? pendingSuburbs.filter(value => value !== slug)
+      : [...pendingSuburbs, slug];
 
+    setPendingSuburbs(next);
+  };
+
+  const handleApplySuburbs = () => {
     onFilterChange({
       ...filters,
-      suburb: next.length > 0 ? (next as any) : undefined,
+      suburb: pendingSuburbs.length > 0 ? (pendingSuburbs as any) : undefined,
     });
+  };
+
+  const handleApplyPropertyType = () => {
+    if (pendingPropertyType) {
+      onFilterChange({ ...filters, propertyType: pendingPropertyType as any });
+      return;
+    }
+    const { propertyType, ...rest } = filters;
+    onFilterChange(rest);
   };
 
   const formatBudgetCompact = (value: number) => {
@@ -181,10 +236,12 @@ export function SidebarFilters({
     const fromCounts = Object.entries(filterCounts?.byType ?? {})
       .map(([value, count]) => ({
         value,
-        label: value
-          .split('_')
-          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' '),
+        label:
+          PROPERTY_TYPE_LABELS[value] ||
+          value
+            .split('_')
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' '),
         count: Number(count) || 0,
       }))
       .sort((a, b) => b.count - a.count);
@@ -195,8 +252,23 @@ export function SidebarFilters({
       seeded.push({ ...type, count: 0 });
     });
 
-    return seeded.slice(0, 7);
+    return seeded.slice(0, 10);
   })();
+
+  const propertyTypeMap = new Map(propertyTypeOptions.map(option => [option.value, option]));
+  const propertyTypeCategoryOptions = PROPERTY_TYPE_CATEGORIES[propertyTypeCategory].map(value => {
+    const match = propertyTypeMap.get(value);
+    if (match) return match;
+    return {
+      value,
+      label: PROPERTY_TYPE_LABELS[value] || value,
+      count: 0,
+    };
+  });
+
+  const hasPendingSuburbChanges = !areSameSelections(selectedSuburbs, pendingSuburbs);
+  const hasPendingPropertyTypeChanges =
+    (pendingPropertyType || '') !== (selectedPropertyType || '');
 
   const bedroomOptions = (() => {
     const byBedrooms = filterCounts?.byBedrooms ?? {};
@@ -239,7 +311,7 @@ export function SidebarFilters({
             Listing source
           </AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-3 gap-0.5 pt-1">
+            <div className="flex flex-wrap gap-0.5 pt-1">
               {LISTING_SOURCE_OPTIONS.map(option => (
                 <Button
                   key={option.label}
@@ -253,7 +325,7 @@ export function SidebarFilters({
                         ? 'default'
                         : 'outline'
                   }
-                  className={`h-8 w-full min-w-0 rounded-full px-1 text-[9px] font-medium leading-none tracking-tight sm:text-[10px] ${
+                  className={`h-8 !w-auto min-w-0 grow basis-0 rounded-full px-1 text-[9px] font-medium leading-none tracking-tight sm:text-[10px] ${
                     (option.value === undefined && !filters.listingSource) ||
                     filters.listingSource === option.value
                       ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
@@ -329,44 +401,51 @@ export function SidebarFilters({
             Locations
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-2 pt-1">
+            <div className="space-y-3 pt-1">
               {locationOptions.length > 0 && (
                 <p className="text-[11px] font-medium text-slate-500">
-                  {locationContext?.type === 'city'
-                    ? `Nearby areas in ${locationContext.name}`
-                    : locationContext?.type === 'suburb'
-                      ? `Nearby areas around ${locationContext.name}`
-                      : 'Nearby areas'}
+                  {locationContext?.name
+                    ? `Add surrounding suburbs near ${locationContext.name}`
+                    : 'Add surrounding suburbs'}
                 </p>
               )}
               {locationOptions.length > 0 ? (
-                locationOptions.map(location => {
-                  const isSelected = Array.isArray(filters.suburb)
-                    ? filters.suburb.includes(location.slug)
-                    : filters.suburb === location.slug;
+                <>
+                  <div className="space-y-1">
+                    {locationOptions.map(location => {
+                      const isSelected = pendingSuburbs.includes(location.slug);
 
-                  return (
-                    <button
-                      key={location.slug}
-                      type="button"
-                      className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors ${
-                        isSelected
-                          ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                          : 'hover:bg-blue-50'
-                      }`}
-                      onClick={() => handleLocationToggle(location.slug)}
-                    >
-                      <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                      <span
-                        className={`min-w-0 flex-1 truncate text-sm font-medium ${
-                          isSelected ? 'text-blue-700' : 'text-slate-700'
-                        }`}
-                      >
-                        {location.name}
-                      </span>
-                    </button>
-                  );
-                })
+                      return (
+                        <label
+                          key={location.slug}
+                          className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-1.5 py-1.5 hover:bg-slate-50"
+                        >
+                          <div className="min-w-0 flex flex-1 items-center gap-2">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleLocationToggle(location.slug)}
+                            />
+                            <span className="truncate text-[13px] font-medium text-slate-700">
+                              {location.name}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            ({location.count.toLocaleString()})
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="mt-1 h-9 w-full bg-emerald-500 text-white hover:bg-emerald-600"
+                    disabled={!hasPendingSuburbChanges}
+                    onClick={handleApplySuburbs}
+                  >
+                    Update Suburbs
+                  </Button>
+                </>
               ) : (
                 <p className="text-xs text-slate-500">
                   Nearby areas will appear when more listings are available in this search area.
@@ -382,32 +461,62 @@ export function SidebarFilters({
             Type of property
           </AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              {propertyTypeOptions.map(type => (
-                <Button
-                  key={type.value}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={`h-8 w-full min-w-0 rounded-full px-2 text-[10px] font-medium tracking-tight ${
-                    filters.propertyType === type.value
-                      ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-                      : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
-                  }`}
-                  onClick={() =>
-                    handlePropertyTypeChange(type.value, filters.propertyType !== type.value)
-                  }
-                  title={type.label}
-                >
-                  <span className="truncate">
-                    {type.label}
-                  </span>
-                </Button>
-              ))}
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-3 gap-1">
+                {(Object.keys(PROPERTY_TYPE_CATEGORIES) as PropertyTypeCategory[]).map(category => (
+                  <Button
+                    key={category}
+                    type="button"
+                    variant={propertyTypeCategory === category ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 rounded-full px-2 text-[10px] font-medium capitalize"
+                    onClick={() => setPropertyTypeCategory(category)}
+                  >
+                    {category}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="space-y-1">
+                {propertyTypeCategoryOptions.map(type => {
+                  const isSelected = pendingPropertyType === type.value;
+                  return (
+                    <label
+                      key={type.value}
+                      className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-1.5 py-1.5 hover:bg-slate-50"
+                    >
+                      <div className="min-w-0 flex flex-1 items-center gap-2">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={checked =>
+                            handlePropertyTypeChange(type.value, Boolean(checked))
+                          }
+                        />
+                        <span className="truncate text-[13px] font-medium text-slate-700">
+                          {type.label}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        ({type.count.toLocaleString()})
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 w-full bg-emerald-500 text-white hover:bg-emerald-600"
+                disabled={!hasPendingPropertyTypeChanges}
+                onClick={handleApplyPropertyType}
+              >
+                Update Property Type
+              </Button>
             </div>
           </AccordionContent>
         </AccordionItem>
-        
+
         {/* No. of Bedrooms */}
         <AccordionItem value="bedrooms">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
