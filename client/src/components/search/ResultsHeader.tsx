@@ -52,7 +52,7 @@ export function ResultsHeader({
             Live Market Updates
           </div>
 
-          <p className="mt-3 text-sm font-medium leading-6 text-slate-700 sm:text-base">
+          <p className="mt-3 text-xs font-medium leading-5 text-slate-700 sm:text-sm">
             {countLabel}
           </p>
 
