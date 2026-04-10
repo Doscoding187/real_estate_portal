@@ -2186,6 +2186,7 @@ const adminDistributionRouter = router({
           requestedIdentity: distributionReferrerApplications.requestedIdentity,
           fullName: distributionReferrerApplications.fullName,
           email: distributionReferrerApplications.email,
+          phone: distributionReferrerApplications.phone,
           status: distributionReferrerApplications.status,
         })
         .from(distributionReferrerApplications)
@@ -2217,24 +2218,72 @@ const adminDistributionRouter = router({
         return { success: true, applicationId: input.applicationId, status: 'rejected' as const };
       }
 
-      const [user] = await db
-        .select({ id: users.id, role: users.role })
+      const normalizedEmail = String(application.email || '')
+        .trim()
+        .toLowerCase();
+      const [existingUser] = await db
+        .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, application.email))
+        .where(eq(users.email, normalizedEmail))
         .limit(1);
 
-      if (!user) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message:
-            'No user account exists for this email yet. Ask applicant to register/login first, then approve.',
+      let userId = Number(existingUser?.id || 0);
+      let userCreated = false;
+      let activationEmailSent = false;
+
+      if (!userId) {
+        const cleanFullName = String(application.fullName || '').trim();
+        const { firstName, lastName } = splitFullName(cleanFullName || normalizedEmail);
+        const tempPassword = `Tmp!${Math.random().toString(36).slice(-10)}Aa1`;
+        const passwordHash = await authService.hashPassword(tempPassword);
+
+        const [insertResult] = await db.insert(users).values({
+          email: normalizedEmail,
+          passwordHash,
+          name: cleanFullName || normalizedEmail,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          phone: application.phone ? String(application.phone).trim() : null,
+          loginMethod: 'email',
+          emailVerified: 1,
+          role: 'visitor',
+          isSubaccount: 0,
         });
+
+        userId = Number((insertResult as any).insertId || 0);
+        if (!userId) {
+          const [resolvedUser] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, normalizedEmail))
+            .limit(1);
+          userId = Number(resolvedUser?.id || 0);
+        }
+
+        if (!userId) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Unable to resolve approved referrer account.',
+          });
+        }
+
+        userCreated = true;
+
+        try {
+          await authService.forgotPassword(normalizedEmail);
+          activationEmailSent = true;
+        } catch (error) {
+          console.warn(
+            '[distribution.reviewReferrerApplication] Failed to send activation reset email:',
+            error,
+          );
+        }
       }
 
       await db
         .insert(distributionIdentities)
         .values({
-          userId: Number(user.id),
+          userId,
           identityType: application.requestedIdentity as DistributionIdentityType,
           active: 1,
           displayName: application.fullName || application.email,
@@ -2250,7 +2299,7 @@ const adminDistributionRouter = router({
         .update(distributionReferrerApplications)
         .set({
           status: 'approved',
-          userId: Number(user.id),
+          userId,
           reviewedBy: ctx.user.id,
           reviewedAt: sql`CURRENT_TIMESTAMP`,
           reviewNotes: input.notes ?? null,
@@ -2261,7 +2310,9 @@ const adminDistributionRouter = router({
         success: true,
         applicationId: input.applicationId,
         status: 'approved' as const,
-        userId: Number(user.id),
+        userId,
+        userCreated,
+        activationEmailSent,
       };
     }),
 
