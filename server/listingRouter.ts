@@ -345,6 +345,16 @@ export const listingRouter = router({
         // Update listing
         await db.updateListing(input.id, updatePayload);
 
+        // Keep published listing media mirrored for search cards.
+        try {
+          await db.syncPublishedListingMediaToPropertyMirror(input.id);
+        } catch (syncError) {
+          console.warn('[listing.update] Property media mirror sync skipped:', {
+            listingId: input.id,
+            message: syncError instanceof Error ? syncError.message : String(syncError),
+          });
+        }
+
         // Recalculate readiness and quality
         // Fetch full listing with media to ensure accuracy (or construct from input + existing)
         const fullListing = await db.getListingById(input.id);

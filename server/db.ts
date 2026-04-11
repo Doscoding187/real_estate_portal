@@ -2407,6 +2407,97 @@ export async function getListingMedia(listingId: number) {
 }
 
 /**
+ * Keep search mirror media in sync for already-published listings.
+ * This updates properties.mainImage and property_images from listing_media.
+ */
+export async function syncPublishedListingMediaToPropertyMirror(listingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const listing = await getListingById(listingId);
+  if (!listing) {
+    return { synced: false, reason: 'listing_not_found' as const };
+  }
+
+  if (listing.status !== 'published' && listing.status !== 'approved') {
+    return { synced: false, reason: 'listing_not_published' as const };
+  }
+
+  const mappedListingType =
+    listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction';
+
+  const basePropertyMatch = [
+    eq(properties.ownerId, Number(listing.ownerId || 0)),
+    eq(properties.listingType, mappedListingType as any),
+  ] as SQL[];
+
+  let mirroredProperty: { id: number } | undefined;
+
+  const normalizedPlaceId = String(listing.placeId || '').trim();
+  if (normalizedPlaceId) {
+    const [byPlaceId] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(and(...basePropertyMatch, eq(properties.placeId, normalizedPlaceId)))
+      .orderBy(desc(properties.createdAt))
+      .limit(1);
+    mirroredProperty = byPlaceId;
+  }
+
+  if (!mirroredProperty) {
+    const [byIdentity] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(
+        and(
+          ...basePropertyMatch,
+          eq(properties.title, listing.title),
+          eq(properties.address, listing.address),
+          eq(properties.city, listing.city),
+          eq(properties.province, listing.province),
+        ),
+      )
+      .orderBy(desc(properties.createdAt))
+      .limit(1);
+    mirroredProperty = byIdentity;
+  }
+
+  if (!mirroredProperty) {
+    return { synced: false, reason: 'property_mirror_not_found' as const };
+  }
+
+  const mediaItems = await getListingMedia(listingId);
+  const imageItems = mediaItems.filter(item => item.mediaType === 'image');
+  const mainMedia = imageItems.find(item => item.isPrimary) || imageItems[0] || null;
+
+  await db
+    .update(properties)
+    .set({
+      mainImage: mainMedia ? mainMedia.processedUrl || mainMedia.originalUrl : null,
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(eq(properties.id, mirroredProperty.id));
+
+  await db.delete(propertyImages).where(eq(propertyImages.propertyId, mirroredProperty.id));
+
+  for (const item of imageItems) {
+    await db.insert(propertyImages).values({
+      propertyId: mirroredProperty.id,
+      imageUrl: item.processedUrl || item.originalUrl,
+      isPrimary: item.isPrimary ? 1 : 0,
+      displayOrder: item.displayOrder,
+      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    });
+  }
+
+  return {
+    synced: true,
+    propertyId: mirroredProperty.id,
+    imageCount: imageItems.length,
+  };
+}
+
+/**
  * Get approval queue items
  */
 export async function getApprovalQueue(status?: string) {
