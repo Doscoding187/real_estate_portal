@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import {
   ArrowRight,
+  Building2,
   Check,
-  Clock3,
   CircleDollarSign,
   ClipboardCheck,
-  Eye,
-  ShieldCheck,
+  LogIn,
   Target,
   X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { DistributionFunnelNavbar } from '@/components/distribution/DistributionFunnelNavbar';
 import { MobileStickyCTA, useMobileStickyCTA } from '@/components/advertise/MobileStickyCTA';
 import { SEOHead } from '@/components/advertise/SEOHead';
+import { Skeleton } from '@/components/ui/skeleton';
+import { trpc } from '@/lib/trpc';
+import { DevelopmentCard } from '@/components/DevelopmentCard';
 import '@/styles/advertise-responsive.css';
 import '@/styles/advertise-focus-indicators.css';
 
@@ -31,8 +32,7 @@ const heroRotatorMessages = [
     suffix: ' when they sign.',
   },
   {
-    prefix:
-      'Already living in a new development? Refer your next neighbour and earn up to ',
+    prefix: 'Already living in a new development? Refer your next neighbour and earn up to ',
     suffix: ' at signing.',
   },
   {
@@ -41,8 +41,7 @@ const heroRotatorMessages = [
     suffix: ' per successful referral.',
   },
   {
-    prefix:
-      'Know someone who qualifies for a new development home? Earn up to ',
+    prefix: 'Know someone who qualifies for a new development home? Earn up to ',
     suffix: ' per successful referral.',
   },
 ];
@@ -51,7 +50,7 @@ const problemCards = [
   {
     title: 'You already speak to buyers every day.',
     detail:
-      "Some want new developments, but you do not always have access. Instead of losing them, refer them and add an income stream alongside your resale business.",
+      'Some want new developments, but you do not always have access. Instead of losing them, refer them and add an income stream alongside your resale business.',
   },
   {
     title: 'Living in a new development?',
@@ -65,54 +64,25 @@ const problemCards = [
   },
 ];
 
-const howItWorksSteps = [
+const funnelSteps = [
   {
     title: 'Submit the Qualified Buyer',
     description:
-      'Enter the referral details and upload the required documents through our structured submission form.',
+      'Provide the referral parameters and required documents securely through our structured submission form.',
     icon: ClipboardCheck,
   },
   {
-    title: 'We Match & Manage the Deal',
+    title: 'We Match & Qualify',
     description:
-      'Our team routes the buyer to an approved development and manages the submission process through to approval.',
+      'Our team verifies the details, confirms qualification criteria, and matches the buyer to a suitable development.',
     icon: Target,
   },
   {
-    title: 'Track Progress. Get Paid After Signing.',
+    title: 'You Get Paid At Signing',
     description:
-      'Follow the deal through to attorney signing with full visibility. Referral payout is paid once the transaction confirms.',
+      'Once the buyer officially signs the attorney documents, your referral payout is processed automatically.',
     icon: CircleDollarSign,
   },
-];
-
-const workflowMilestones = [
-  {
-    stage: 'Application Review',
-    timeline: '24-72 hours',
-    detail: 'Your referral-access application is reviewed by operations before program activation.',
-  },
-  {
-    stage: 'Access Activation',
-    timeline: '1 business day',
-    detail: 'Once approved, your profile is linked to active partner developments and payout rules.',
-  },
-  {
-    stage: 'Deal Pipeline',
-    timeline: 'Ongoing',
-    detail: 'Submitted buyers progress through qualification, viewing, and contract stages with audit history.',
-  },
-  {
-    stage: 'Attorney Signing',
-    timeline: 'Deal milestone',
-    detail: 'Commission status switches to payout-ready only after legal signing confirmation.',
-  },
-];
-
-const workflowVisibilityChecks = [
-  'Referrer sees stage progression from submission to signing.',
-  'Manager validates viewings and controls progression events.',
-  'Commission payout state remains visible until settlement.',
 ];
 
 export default function DistributionNetworkPublicPage() {
@@ -120,6 +90,21 @@ export default function DistributionNetworkPublicPage() {
   const stickyVisible = useMobileStickyCTA('distribution-network-hero');
   const [heroMessageIndex, setHeroMessageIndex] = useState(0);
   const [isHeroRotatorPaused, setIsHeroRotatorPaused] = useState(false);
+
+  const { data: developments, isLoading: isLoadingDevs } =
+    trpc.developer.listPublicDevelopments.useQuery({ limit: 4 }, { staleTime: 1000 * 60 * 5 });
+
+  const calculateQualifyingIncome = (priceFrom: number | null | undefined) => {
+    if (!priceFrom) return 'Income dependent on unit type';
+    // Rough estimate: ~1.05% of value as monthly repayment * 3.3 for 30% DTI
+    const estRepayment = priceFrom * 0.0105;
+    const estGross = estRepayment * 3.3;
+
+    if (estGross >= 1000000) {
+      return `Min R${(estGross / 1000000).toFixed(1)}m / month (gross)`;
+    }
+    return `Min R${(estGross / 1000).toFixed(0)}k / month (gross)`;
+  };
 
   useEffect(() => {
     if (isHeroRotatorPaused) return;
@@ -133,14 +118,52 @@ export default function DistributionNetworkPublicPage() {
     <>
       <SEOHead
         title="Distribution Network | Property Listify"
-        description="Qualification-led referral distribution for approved developments, with clear stage tracking and referral payout visibility."
-        canonicalUrl="https://platform.com/distribution-network"
-        ogImage="https://platform.com/images/advertise-og-image.jpg"
+        description="Qualification-led referral distribution for approved developments, with clear stage guidance and referral payout visibility."
+        canonicalUrl="/distribution-network"
         ogType="website"
       />
       <div className="min-h-screen bg-slate-50">
-        <DistributionFunnelNavbar />
-        <main id="main-content" className="advertise-page relative overflow-x-hidden bg-slate-50 pt-16 text-slate-900">
+        <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-lg">
+          <div className="container flex h-16 items-center justify-between">
+            <Link href="/">
+              <span className="flex cursor-pointer items-center gap-2 text-lg font-bold text-slate-900">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                Property Listify
+              </span>
+            </Link>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="hidden border-slate-300 bg-white text-slate-700 sm:inline-flex"
+                onClick={() => setLocation('/book-strategy')}
+              >
+                Book Strategy Call
+              </Button>
+              <Button
+                size="sm"
+                className="border-0 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white hover:opacity-95"
+                onClick={() => setLocation(REFERRAL_APPLY_PATH)}
+              >
+                Apply to Join
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 text-slate-600 hover:text-slate-900"
+                aria-label="Sign in"
+                onClick={() => setLocation('/login')}
+              >
+                <LogIn className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </header>
+        <main
+          id="main-content"
+          className="advertise-page relative overflow-x-hidden bg-slate-50 pt-16 text-slate-900"
+        >
           <section
             id="distribution-network-hero"
             className="relative overflow-hidden pb-10 pt-10 md:pb-14 md:pt-12"
@@ -221,7 +244,6 @@ export default function DistributionNetworkPublicPage() {
                   Book Strategy Call
                 </Button>
               </div>
-
             </div>
           </section>
 
@@ -232,8 +254,8 @@ export default function DistributionNetworkPublicPage() {
                   The Buyer Is Already in Your Network.
                 </h2>
                 <p className="text-slate-600">
-                  You are closer to a referral payout than you think. Existing relationships can become structured
-                  opportunity when submitted through the right path.
+                  You are closer to a referral payout than you think. Existing relationships can
+                  become structured opportunity when submitted through the right path.
                 </p>
               </div>
 
@@ -256,112 +278,141 @@ export default function DistributionNetworkPublicPage() {
             </div>
           </section>
 
-          <section id="how-it-works" className="scroll-mt-24 bg-white py-16 md:py-24">
-            <div className="container">
-              <div className="mx-auto mb-14 max-w-3xl text-center">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
-                  How it works
-                </div>
-                <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
-                  From Introduction to Income - In 3 Simple Steps
-                </h2>
-              </div>
-
-              <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3">
-                {howItWorksSteps.map((step, index) => {
-                  const Icon = step.icon;
-                  return (
-                    <div key={step.title} className="text-center">
-                      <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-sm font-bold text-white">
-                        {index + 1}
-                      </div>
-                      <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <h3 className="mb-2 text-base font-semibold text-slate-900">{step.title}</h3>
-                      <p className="text-sm text-slate-600">{step.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-
-          <section id="workflow-milestones" className="scroll-mt-24 bg-slate-100/70 py-16 md:py-24">
+          <section id="available-developments" className="scroll-mt-24 bg-slate-50 py-16 md:py-24 border-y border-slate-200/60">
             <div className="container">
               <div className="mx-auto mb-12 max-w-3xl text-center">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
-                  Workflow clarity
+                  Approved Stock
                 </div>
-                <h2 className="mb-4 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
-                  See How Referrals Move Through the Network
+                <h2 className="mb-4 text-2xl font-bold text-slate-900 sm:text-3xl md:text-3xl">
+                  High-Demand Developments Ready For Referrals
                 </h2>
                 <p className="text-slate-600">
-                  The distribution workflow is structured into explicit milestones so referrers and managers stay
-                  aligned on what happens next.
+                  You don't need a mandate. Submit your pre-qualified buyers to our approved partner developments and secure your commission.
                 </p>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-                <Card className="border-slate-200 bg-white shadow-[0_12px_30px_-16px_rgba(15,23,42,0.18)]">
-                  <CardContent className="space-y-4 p-6 sm:p-7">
-                    {workflowMilestones.map((milestone, index) => (
-                      <div key={milestone.stage} className="flex gap-3 rounded-xl border border-slate-200 p-4">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                          {index + 1}
+              {isLoadingDevs ? (
+                <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2">
+                  <Skeleton className="h-[300px] w-full rounded-xl bg-slate-200" />
+                  <Skeleton className="h-[300px] w-full rounded-xl bg-slate-200" />
+                </div>
+              ) : developments && developments.length > 0 ? (
+                <div className="mx-auto flex flex-col gap-8 max-w-6xl">
+                  {developments.map(dev => {
+                    const priceFrom = dev.priceFrom ? Number(dev.priceFrom) : null;
+                    const qualifyingThreshold = calculateQualifyingIncome(priceFrom);
+                    
+                    return (
+                      <div key={dev.id} className="relative rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col xl:flex-row">
+                        <div className="p-1 xl:p-0 flex-1">
+                          <DevelopmentCard
+                            id={String(dev.id)}
+                            title={dev.name}
+                            rating={dev.rating ?? undefined}
+                            location={dev.suburb ? `${dev.suburb}, ${dev.city}` : `${dev.city}, ${dev.province}`}
+                            description={dev.description || 'No description available'}
+                            image={dev.images?.[0]?.url || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'}
+                            unitTypes={(dev.configurations || []).map((c: any) => ({
+                              bedrooms: 0,
+                              label: c.label,
+                              priceFrom: c.priceFrom || 0,
+                            }))}
+                            highlights={(dev.highlights as string[]) || []}
+                            developer={{ name: dev.builderName || 'Developer', isFeatured: dev.isFeatured }}
+                            status={dev.status as any}
+                            onContactClick={() => setLocation(REFERRAL_APPLY_PATH)}
+                          />
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{milestone.stage}</p>
-                          <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-blue-700">
-                            Typical timing: {milestone.timeline}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-600">{milestone.detail}</p>
+
+                        {/* Qualifying Criteria Side Panel */}
+                        <div className="w-full xl:w-72 bg-slate-50/80 border-t xl:border-t-0 xl:border-l border-slate-200 flex flex-col justify-center p-6 sm:p-8">
+                          <div className="mb-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Required to qualify</h4>
+                            <div className="text-lg font-semibold text-slate-900 bg-blue-100/50 rounded-lg px-4 py-3 border border-blue-200/50">
+                              {qualifyingThreshold}
+                            </div>
+                          </div>
+                          
+                          <div className="mb-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Availability</h4>
+                            <p className="text-sm font-medium text-slate-700">
+                              {dev.configurations && dev.configurations.length > 0
+                                ? dev.configurations.map((c: any) => c.label).join(', ')
+                                : 'Various Units'}
+                            </p>
+                          </div>
+
+                          <Button
+                            className="w-full bg-[linear-gradient(135deg,#0f172a,#1e293b)] text-white hover:bg-slate-800"
+                            onClick={() => setLocation(REFERRAL_APPLY_PATH)}
+                          >
+                            Refer to this Development
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 rounded-xl border border-slate-200 bg-white">
+                  <p className="text-slate-500">No active developments are currently available for referrals.</p>
+                </div>
+              )}
+            </div>
+          </section>
 
-                <Card className="border-slate-200 bg-white shadow-[0_12px_30px_-16px_rgba(15,23,42,0.18)]">
-                  <CardContent className="p-6 sm:p-7">
-                    <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
-                      <Eye className="h-3.5 w-3.5" />
-                      Visibility rules
-                    </div>
-                    <ul className="space-y-3">
-                      {workflowVisibilityChecks.map(item => (
-                        <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
-                          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
-                      <p className="flex items-center gap-2 font-medium text-slate-900">
-                        <Clock3 className="h-4 w-4 text-blue-700" />
-                        Time to first response
-                      </p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        Most complete applications are reviewed within 72 hours.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+          <section id="the-referral-timeline" className="scroll-mt-24 bg-white py-16 md:py-24">
+            <div className="container">
+              <div className="mx-auto mb-14 max-w-3xl text-center">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  The Referral Timeline
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl md:text-3xl">
+                  A Clear Path to Payout
+                </h2>
+              </div>
+
+              <div className="mx-auto max-w-5xl">
+                <div className="relative">
+                  {/* Visual Timeline Line */}
+                  <div className="absolute top-12 left-0 right-0 h-1 hidden md:block bg-slate-100 rounded-full" />
+                  
+                  <div className="grid gap-8 md:grid-cols-3 relative">
+                    {funnelSteps.map((step, index) => {
+                      const Icon = step.icon;
+                      return (
+                        <div key={step.title} className="relative z-10 text-center flex flex-col items-center">
+                          <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white ring-8 ring-white shadow-sm transition-transform duration-300 hover:scale-110">
+                            <Icon className="h-6 w-6" />
+                          </div>
+                          
+                          <div className="bg-white px-4">
+                            <div className="text-sm font-bold text-slate-400 mb-2">STEP {index + 1}</div>
+                            <h3 className="mb-3 text-lg font-semibold text-slate-900">{step.title}</h3>
+                            <p className="text-sm text-slate-600 loading-relaxed">{step.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
-          <section id="referral-payouts" className="scroll-mt-24 py-16 md:py-24">
+          <section id="referral-payouts" className="scroll-mt-24 py-16 md:py-24 bg-slate-50 border-t border-slate-200/60">
             <div className="container">
               <div className="mx-auto mb-14 max-w-3xl text-center">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
                   Referral payout transparency
                 </div>
                 <h2 className="mb-4 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
-                  How Much You Earn. When You Get Paid. No Surprises.
+                  How Much You Earn. No Surprises.
                 </h2>
                 <p className="text-slate-600">
-                  Earn between R15,000 - R45,000 per successful referral, depending on development and unit type.
+                  Earn up to R25,000 per successful referral, depending on the development
+                  and unit type.
                 </p>
               </div>
 
@@ -371,12 +422,14 @@ export default function DistributionNetworkPublicPage() {
                     <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-blue-100">
                       Payout certainty
                     </p>
-                    <h3 className="mb-4 text-xl font-semibold">Your Commission Is Locked at Submission</h3>
+                    <h3 className="mb-4 text-xl font-semibold">
+                      Your Commission Is Locked at Submission
+                    </h3>
                     <ul className="space-y-2 text-sm text-blue-50">
                       <li className="flex items-start gap-2">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-white" />
-                        Once the deal is submitted, your agreed referral payout is snapshot-protected and cannot
-                        change.
+                        Once the deal is submitted, your agreed referral payout is
+                        snapshot-protected and cannot change.
                       </li>
                     </ul>
                   </CardContent>
@@ -384,8 +437,12 @@ export default function DistributionNetworkPublicPage() {
 
                 <Card className="pricing-card border-slate-200 bg-white shadow-[0_12px_30px_-16px_rgba(15,23,42,0.18)]">
                   <CardContent className="p-6 sm:p-8">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-blue-700">Settlement gate</p>
-                    <h3 className="mb-4 text-xl font-semibold text-slate-900">Paid After Attorney Signing</h3>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-blue-700">
+                      Settlement gate
+                    </p>
+                    <h3 className="mb-4 text-xl font-semibold text-slate-900">
+                      Paid After Attorney Signing
+                    </h3>
                     <ul className="space-y-2 text-sm text-slate-600">
                       <li className="flex items-start gap-2">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
@@ -397,12 +454,16 @@ export default function DistributionNetworkPublicPage() {
 
                 <Card className="pricing-card border-slate-200 bg-white shadow-[0_12px_30px_-16px_rgba(15,23,42,0.18)]">
                   <CardContent className="p-6 sm:p-8">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-blue-700">Reporting</p>
-                    <h3 className="mb-4 text-xl font-semibold text-slate-900">Track Every Stage Until Payout</h3>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-blue-700">
+                      Visibility
+                    </p>
+                    <h3 className="mb-4 text-xl font-semibold text-slate-900">
+                      Clear Stage Visibility
+                    </h3>
                     <ul className="space-y-2 text-sm text-slate-600">
                       <li className="flex items-start gap-2">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
-                        See exactly where your referral sits - from submission to signing.
+                        You are kept informed exactly where your referral sits - from submission to signing.
                       </li>
                     </ul>
                   </CardContent>
@@ -417,12 +478,12 @@ export default function DistributionNetworkPublicPage() {
                 <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">
                   Every month you wait is income left on the table.
                 </p>
-                <h2 className="mx-auto mb-4 max-w-3xl text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">
+                <h2 className="mx-auto mb-4 max-w-3xl text-2xl font-bold leading-tight text-white sm:text-3xl md:text-3xl">
                   You Already Have Buyers. We Have Stock. Plug In.
                 </h2>
                 <p className="mx-auto max-w-2xl text-sm text-blue-100">
-                  If you know someone ready to buy in a new development, do not let the opportunity pass. Submit the
-                  referral. We handle the process. You earn when it signs.
+                  If you know someone ready to buy in a new development, do not let the opportunity
+                  pass. Submit the referral. We handle the process. You earn when it signs.
                 </p>
 
                 <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
