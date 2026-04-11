@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   Eye,
+  LogIn,
   ShieldCheck,
   Target,
   X,
@@ -21,6 +22,7 @@ import '@/styles/advertise-responsive.css';
 import '@/styles/advertise-focus-indicators.css';
 
 const REFERRAL_APPLY_PATH = '/distribution-network/apply';
+const REFERRAL_LOGIN_PATH = '/distribution-network/login';
 
 const HERO_ROTATION_MS = 4000;
 
@@ -210,6 +212,16 @@ export default function DistributionNetworkPublicPage() {
                 >
                   Apply to Join
                   <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 w-full border-blue-300 bg-blue-50 px-8 text-base text-blue-700 hover:bg-blue-100 sm:w-auto"
+                  onClick={() => setLocation(REFERRAL_LOGIN_PATH)}
+                >
+                  Referral Sign in
+                  <LogIn className="ml-2 h-4 w-4" />
                 </Button>
 
                 <Button

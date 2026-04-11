@@ -224,7 +224,7 @@ export default function DistributionNetworkPage() {
             result.userCreated
               ? result.activationEmailSent
                 ? 'Referrer approved, account created, and activation email sent.'
-                : 'Referrer approved and account created.'
+                : 'Referrer approved and account created, but activation email failed to send. Ask user to use Forgot Password.'
               : 'Referrer approved.',
           );
         } else {

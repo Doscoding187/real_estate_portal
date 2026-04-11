@@ -526,6 +526,9 @@ function Router() {
             component={PartnerReferralDetailPage}
           />
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
+          <Route path="/distribution-network/login">
+            <Redirect to="/login?next=/distribution/partner/developments" />
+          </Route>
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
           <Route path="/referral/apply">
             <Redirect to="/distribution-network/apply" />

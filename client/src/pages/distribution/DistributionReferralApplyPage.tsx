@@ -29,6 +29,8 @@ type JoinFormState = {
   partnerType: PartnerType;
 };
 
+const REFERRAL_LOGIN_PATH = '/distribution-network/login';
+
 const whoCanJoin = [
   'Independent property agents',
   'Small brokerages',
@@ -180,7 +182,7 @@ export default function DistributionReferralApplyPage() {
                       </p>
                       <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                         <Button onClick={() => setLocation('/distribution-network')}>Back to Network Page</Button>
-                        <Button variant="outline" onClick={() => setLocation('/login')}>
+                        <Button variant="outline" onClick={() => setLocation(REFERRAL_LOGIN_PATH)}>
                           Sign in
                         </Button>
                       </div>
@@ -243,7 +245,10 @@ export default function DistributionReferralApplyPage() {
                       </div>
 
                       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-                        <Link href="/login" className="text-sm font-medium text-blue-700 hover:text-blue-800">
+                        <Link
+                          href={REFERRAL_LOGIN_PATH}
+                          className="text-sm font-medium text-blue-700 hover:text-blue-800"
+                        >
                           Already have access? Sign in
                         </Link>
                         <Button
