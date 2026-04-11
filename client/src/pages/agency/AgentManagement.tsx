@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,14 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -31,21 +24,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, ArrowLeft, Settings, Trash2, Mail, Calendar, UserCheck } from 'lucide-react';
+import { Users, ArrowLeft, Trash2, Mail, Calendar, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AgentManagement() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+  const { status, isLoading: onboardingLoading } = useAgencyOnboardingStatus({
+    requireDashboardUnlocked: true,
+  });
+  const agencyReady = Boolean(status?.dashboardUnlocked);
   const [agentToRemove, setAgentToRemove] = useState<any>(null);
 
-  const { data: agents, isLoading, refetch } = trpc.agency.listAgents.useQuery();
+  const {
+    data: agents,
+    isLoading,
+    refetch,
+  } = trpc.agency.listAgents.useQuery(undefined, {
+    enabled: agencyReady,
+  });
 
   const updateRoleMutation = trpc.agency.updateAgentRole.useMutation({
     onSuccess: () => {
       toast.success('Agent role updated successfully');
-      setSelectedAgent(null);
       refetch();
     },
     onError: error => {
@@ -68,6 +69,17 @@ export default function AgentManagement() {
   if (!isAuthenticated || user?.role !== 'agency_admin') {
     setLocation('/login');
     return null;
+  }
+
+  if (onboardingLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">
+          Preparing your agency workspace...
+        </div>
+      </div>
+    );
   }
 
   const handleRoleChange = (userId: number, newRole: string) => {

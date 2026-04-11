@@ -3,7 +3,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useDevelopmentWizard } from './useDevelopmentWizard';
 
 describe('useDevelopmentWizard Validation Logic', () => {
-  // Reset store before each test to ensure isolation
   beforeEach(() => {
     const { result } = renderHook(() => useDevelopmentWizard());
     act(() => {
@@ -11,224 +10,161 @@ describe('useDevelopmentWizard Validation Logic', () => {
     });
   });
 
-  describe('Phase 1: Identity Validation', () => {
-    it('should fail validation if name or address is missing', () => {
+  describe('Current Phase Mapping', () => {
+    it('phase 1 requires a represented developer brand for marketing agencies', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
 
-      // Initial state is empty
       const validation = result.current.validatePhase(1);
-      expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain('Name is required');
-      expect(validation.errors).toContain('Location is required');
+      act(() => {
+        result.current.setListingIdentity({ identityType: 'marketing_agency' });
+      });
+
+      const invalid = result.current.validatePhase(1);
+      expect(invalid.isValid).toBe(false);
+      expect(invalid.errors).toContain('Select the Developer Brand you are representing');
+
+      act(() => {
+        result.current.setListingIdentity({ developerBrandProfileId: 123 });
+      });
+
+      const valid = result.current.validatePhase(1);
+      expect(valid.isValid).toBe(true);
     });
 
-    it('should pass validation when name and address are provided', () => {
+    it('phase 4 enforces core identity/market fields', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
+      const validation = result.current.validatePhase(4);
+
+      expect(validation.isValid).toBe(false);
+      expect(validation.errors).toContain('Development name is required');
+      expect(validation.errors).toContain('Please select at least one ownership type');
+    });
+
+    it('phase 5 enforces location address and city', () => {
+      const { result } = renderHook(() => useDevelopmentWizard());
+      const invalid = result.current.validatePhase(5);
+      expect(invalid.isValid).toBe(false);
+      expect(invalid.errors).toContain('Location is required');
+      expect(invalid.errors).toContain('City is required');
 
       act(() => {
         result.current.setIdentity({
-          name: 'Test Development',
           location: {
-            address: '123 Test St',
-            city: 'Test City',
-            province: 'Test',
-            latitude: '0',
-            longitude: '0',
+            address: '123 Main Road',
+            city: 'Cape Town',
+            province: 'Western Cape',
+            latitude: '-33.9',
+            longitude: '18.4',
           },
         });
       });
 
-      const validation = result.current.validatePhase(1);
-      expect(validation.isValid).toBe(true);
-      expect(validation.errors).toHaveLength(0);
-    });
-  });
-
-  describe('Phase 2: Classification Validation', () => {
-    it('should be valid by default as it initializes with residential', () => {
-      const { result } = renderHook(() => useDevelopmentWizard());
-      const validation = result.current.validatePhase(2);
-      expect(validation.isValid).toBe(true);
+      const valid = result.current.validatePhase(5);
+      expect(valid.isValid).toBe(true);
     });
 
-    it('should fail if type is somehow cleared', () => {
+    it('phase 8 enforces highlights/description only', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-
       act(() => {
-        // @ts-ignore - forcing invalid state for test
-        result.current.setClassification({ type: '' });
-      });
-
-      const validation = result.current.validatePhase(2);
-      expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain('Type is required');
-    });
-  });
-
-  describe('Phase 3: Overview Validation', () => {
-    it('should fail if highlights are fewer than 3 or description is too short', () => {
-      const { result } = renderHook(() => useDevelopmentWizard());
-
-      act(() => {
-        result.current.setOverview({
-          highlights: ['One', 'Two'], // Need 3
-          description: 'Too short', // Need 50 chars
+        result.current.setIdentity({
+          status: 'selling',
+          highlights: ['One', 'Two'],
+          description: 'Too short',
         });
       });
 
-      const validation = result.current.validatePhase(3);
+      const validation = result.current.validatePhase(8);
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain('Add at least 3 highlights');
+      expect(validation.errors).toContain('Add at least 3 key selling points');
       expect(validation.errors).toContain('Description must be at least 50 characters');
     });
 
-    it('should pass with valid highlights and description', () => {
+    it('phase 9 enforces hero image and at least one brochure/document', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
+      const validation = result.current.validatePhase(9);
 
-      act(() => {
-        result.current.setOverview({
-          highlights: ['One', 'Two', 'Three'],
-          description:
-            'This is a long enough description that should pass the validation check of fifty characters easily.',
-        });
-      });
-
-      const validation = result.current.validatePhase(3);
-      expect(validation.isValid).toBe(true);
-    });
-  });
-
-  describe('Phase 4: Unit Types Validation', () => {
-    it('should require at least one unit type for residential developments', () => {
-      const { result } = renderHook(() => useDevelopmentWizard());
-
-      // Ensure type is residential
-      act(() => {
-        result.current.setClassification({ type: 'residential' });
-      });
-
-      const validation = result.current.validatePhase(4);
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain('Add at least one unit type');
+      expect(validation.errors).toContain('Hero image is required');
+      expect(validation.errors).toContain('Add at least 1 brochure or document');
     });
 
-    it('should NOT require unit types for Land developments', () => {
+    it('phase 10 requires unit types for non-land and skips for land', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
+
+      const requiresUnits = result.current.validatePhase(10);
+      expect(requiresUnits.isValid).toBe(false);
+      expect(requiresUnits.errors).toContain('Add at least one unit type');
 
       act(() => {
         result.current.setClassification({ type: 'land' });
       });
-
-      const validation = result.current.validatePhase(4);
-      expect(validation.isValid).toBe(true);
+      const landValidation = result.current.validatePhase(10);
+      expect(landValidation.isValid).toBe(true);
     });
 
-    it('should pass if a unit type is added', () => {
+    it('phase 10 passes with at least one unit for residential', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
 
       act(() => {
+        result.current.setClassification({ type: 'residential' });
         result.current.addUnitType({
-          name: 'Test Unit',
+          name: 'Unit A',
           bedrooms: 2,
           bathrooms: 2,
-          parking: '1',
-          basePriceFrom: 1000000,
+          parkingType: 'carport',
+          parkingBays: 1,
+          priceFrom: 1000000,
+          priceTo: 1200000,
+          totalUnits: 10,
+          availableUnits: 10,
+          reservedUnits: 0,
           amenities: { standard: [], additional: [] },
-          specifications: {
-            builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true },
-            finishes: {},
-            electrical: { prepaidElectricity: true },
-          },
-          baseMedia: { gallery: [], floorPlans: [], renders: [] },
-          specs: [],
-          displayOrder: 0,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         });
       });
 
-      const validation = result.current.validatePhase(4);
+      const validation = result.current.validatePhase(10);
       expect(validation.isValid).toBe(true);
     });
   });
 
   describe('Final Publish Validation', () => {
-    it('should validate media requirements', () => {
+    it('should enforce image requirement', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
 
-      // Setup valid state for everything EXCEPT media
       act(() => {
         result.current.setIdentity({
-          name: 'Valid Name',
+          name: 'Valid Development',
+          ownershipType: 'sectional-title',
+          transactionType: 'for_sale',
           location: {
-            address: 'Valid Address',
-            city: '',
-            province: '',
-            latitude: '',
-            longitude: '',
+            address: '123 Main Road',
+            city: 'Cape Town',
+            province: 'Western Cape',
+            latitude: '-33.9',
+            longitude: '18.4',
           },
-        });
-        result.current.setOverview({
-          highlights: ['1', '2', '3'],
-          description: 'Long enough description for validation purposes -------------------',
+          highlights: ['A', 'B', 'C', 'D'],
+          description:
+            'This description is long enough to pass publish validation requirements for summaries.',
         });
         result.current.addUnitType({
-          name: 'Unit',
+          name: 'Unit A',
           bedrooms: 1,
           bathrooms: 1,
-          parking: '1',
-          basePriceFrom: 100,
+          parkingType: 'carport',
+          parkingBays: 1,
+          priceFrom: 1000000,
+          priceTo: 1100000,
+          totalUnits: 10,
+          availableUnits: 9,
+          reservedUnits: 1,
           amenities: { standard: [], additional: [] },
-          specifications: {
-            builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true },
-            finishes: {},
-            electrical: { prepaidElectricity: true },
-          },
-          baseMedia: { gallery: [], floorPlans: [], renders: [] },
-          specs: [],
-          displayOrder: 0,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         });
       });
 
       const validation = result.current.validateForPublish();
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain('At least 1 image is required');
-    });
-
-    it('should validate unit prices', () => {
-      const { result } = renderHook(() => useDevelopmentWizard());
-
-      act(() => {
-        // Add unit with 0 price
-        result.current.addUnitType({
-          name: 'Free Unit',
-          bedrooms: 1,
-          bathrooms: 1,
-          parking: '1',
-          basePriceFrom: 0, // Invalid
-          amenities: { standard: [], additional: [] },
-          specifications: {
-            builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true },
-            finishes: {},
-            electrical: { prepaidElectricity: true },
-          },
-          baseMedia: { gallery: [], floorPlans: [], renders: [] },
-          specs: [],
-          displayOrder: 0,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-        // Set type to residential so units are checked
-        result.current.setClassification({ type: 'residential' });
-      });
-
-      const validation = result.current.validateForPublish();
-      expect(validation.errors).toContain('All unit types must have a base price');
     });
   });
 });

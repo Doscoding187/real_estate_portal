@@ -7,8 +7,8 @@
 import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
-import { locations } from '../drizzle/schema';
+import { and, count, desc, eq } from 'drizzle-orm';
+import { agents, leads, locations, properties } from '../drizzle/schema';
 import * as db from './db';
 import { ENV } from './_core/env';
 import {
@@ -18,6 +18,8 @@ import {
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
 import { requireUser } from './_core/requireUser';
+import { recordAgentOsEvent } from './services/agentOsEventService';
+import { resolvePropertyForListing } from './services/inventoryLinkResolver';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -258,6 +260,20 @@ export const listingRouter = router({
       // Set approval status based on account verification
       // For now, we'll put it in draft status
       const canonicalUrl = `/listings/${slug}`;
+
+      await recordAgentOsEvent({
+        userId,
+        eventType: 'agent_listing_created',
+        eventData: {
+          listingId,
+          slug,
+          status: 'draft',
+          action: input.action,
+          propertyType: input.propertyType,
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
 
       return {
         id: listingId,
@@ -627,30 +643,129 @@ export const listingRouter = router({
    */
   getLeads: protectedProcedure
     .input(
-      z.object({
-        listingId: z.number(),
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      }),
+      z
+        .object({
+          listingId: z.number().optional(),
+          propertyId: z.number().optional(),
+          limit: z.number().default(50),
+          offset: z.number().default(0),
+        })
+        .refine(input => input.listingId || input.propertyId, {
+          message: 'Either listingId or propertyId is required',
+        }),
     )
     .query(async ({ ctx, input }) => {
       try {
-        // Fetch leads with filtering
-        // For now, we'll return mock data
-        // In a real implementation, this would query the leads database
+        const dbInstance = await db.getDb();
+        const currentUserId = requireUser(ctx).id;
 
-        // Verify ownership
-        const listing = await db.getListingById(input.listingId);
-        if (!listing) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+        const [agentRecord] = await dbInstance
+          .select({ id: agents.id })
+          .from(agents)
+          .where(eq(agents.userId, currentUserId))
+          .limit(1);
+
+        let propertyId = input.propertyId ?? null;
+
+        if (propertyId != null) {
+          const [property] = await dbInstance
+            .select({
+              id: properties.id,
+              ownerId: properties.ownerId,
+              agentId: properties.agentId,
+            })
+            .from(properties)
+            .where(eq(properties.id, propertyId))
+            .limit(1);
+
+          if (!property) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+          }
+
+          const isOwner = property.ownerId === currentUserId;
+          const isAssignedAgent = !!agentRecord && property.agentId === agentRecord.id;
+
+          if (!isOwner && !isAssignedAgent) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view leads' });
+          }
+        } else if (input.listingId != null) {
+          const listing = await db.getListingById(input.listingId);
+          if (!listing) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+          }
+
+          const isOwner = listing.userId === currentUserId || listing.ownerId === currentUserId;
+          const isAssignedAgent = !!agentRecord && listing.agentId === agentRecord.id;
+
+          if (!isOwner && !isAssignedAgent) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view leads' });
+          }
+
+          // Published inventory lives in properties, while drafts and pending review listings
+          // do not have public enquiries yet.
+          const resolvedInventory = await resolvePropertyForListing(dbInstance, {
+            id: listing.id,
+            ownerId: listing.ownerId,
+            agentId: listing.agentId ?? null,
+            title: listing.title,
+            address: listing.address,
+            city: listing.city,
+            province: listing.province,
+            status: listing.status,
+          });
+
+          propertyId = resolvedInventory.propertyId;
         }
 
+        if (!propertyId) {
+          return {
+            leads: [],
+            total: 0,
+            propertyId: null,
+          };
+        }
+
+        const [leadRows, totalRows] = await Promise.all([
+          dbInstance
+            .select({
+              id: leads.id,
+              name: leads.name,
+              email: leads.email,
+              phone: leads.phone,
+              message: leads.message,
+              status: leads.status,
+              leadType: leads.leadType,
+              source: leads.source,
+              leadSource: leads.leadSource,
+              qualificationStatus: leads.qualificationStatus,
+              funnelStage: leads.funnelStage,
+              createdAt: leads.createdAt,
+              propertyId: leads.propertyId,
+              developmentId: leads.developmentId,
+              agentId: leads.agentId,
+              agencyId: leads.agencyId,
+            })
+            .from(leads)
+            .where(eq(leads.propertyId, propertyId))
+            .orderBy(desc(leads.createdAt))
+            .limit(input.limit)
+            .offset(input.offset),
+          dbInstance
+            .select({ total: count() })
+            .from(leads)
+            .where(eq(leads.propertyId, propertyId)),
+        ]);
+
         return {
-          leads: [],
-          total: 0,
+          leads: leadRows,
+          total: totalRows[0]?.total ?? 0,
+          propertyId,
         };
       } catch (error) {
         console.error('Error fetching leads:', error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch leads' });
       }
     }),
@@ -684,10 +799,25 @@ export const listingRouter = router({
           });
         }
 
+        const currentUser = requireUser(ctx);
+        const agent = await db.getAgentByUserId(currentUser.id);
+        const owner = await db.getUserById(currentUser.id);
+        const whatsappContact =
+          String(agent?.whatsapp || '').trim() ||
+          String(agent?.phone || '').trim() ||
+          String(owner?.phone || '').trim();
+
+        if (!whatsappContact) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'A WhatsApp contact number is required before this listing can go live. Add a WhatsApp-ready number to your profile and try again.',
+          });
+        }
+
         // --- Fast-Track Approval Logic (Phase 5) ---
         // Criteria: Readiness 100%, Quality >= 85, Trusted/Verified Agent
         const quality = calculateListingQualityScore({ ...fullListing, media });
-        const agent = await db.getAgentByUserId(requireUser(ctx).id);
 
         // Check if agent is verified (assuming isVerified is 1 or true)
         const isTrusted = agent?.isVerified === 1;
@@ -699,11 +829,43 @@ export const listingRouter = router({
             requireUser(ctx).id,
             'Fast-Track Auto Approval (High Quality & Trusted)',
           );
+          await recordAgentOsEvent({
+            userId: requireUser(ctx).id,
+            eventType: 'agent_listing_submitted',
+            eventData: {
+              listingId: input.listingId,
+              status: 'approved',
+              fastTracked: true,
+            },
+            req: ctx.req,
+            requestId: ctx.requestId,
+          });
+          await recordAgentOsEvent({
+            userId: requireUser(ctx).id,
+            eventType: 'agent_listing_live',
+            eventData: {
+              listingId: input.listingId,
+              source: 'fast_track_approval',
+            },
+            req: ctx.req,
+            requestId: ctx.requestId,
+          });
           return { success: true, status: 'approved', fastTracked: true };
         }
 
         // Otherwise, add to manual review queue
         await db.submitListingForReview(input.listingId);
+        await recordAgentOsEvent({
+          userId: requireUser(ctx).id,
+          eventType: 'agent_listing_submitted',
+          eventData: {
+            listingId: input.listingId,
+            status: 'pending_review',
+            fastTracked: false,
+          },
+          req: ctx.req,
+          requestId: ctx.requestId,
+        });
 
         return { success: true, status: 'pending_review' };
       } catch (error) {
@@ -783,8 +945,23 @@ export const listingRouter = router({
       }
 
       try {
+        const listing = await db.getListingById(input.listingId);
+
         // Update listing status to approved
         await db.approveListing(input.listingId, requireUser(ctx).id, input.notes);
+
+        if (listing?.userId) {
+          await recordAgentOsEvent({
+            userId: listing.userId,
+            eventType: 'agent_listing_live',
+            eventData: {
+              listingId: input.listingId,
+              source: 'admin_approval',
+            },
+            req: ctx.req,
+            requestId: ctx.requestId,
+          });
+        }
 
         return { success: true };
       } catch (error) {

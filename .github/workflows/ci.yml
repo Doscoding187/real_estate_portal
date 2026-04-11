@@ -52,7 +52,7 @@ jobs:
       - name: Apply Drizzle migrations
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: pnpm drizzle-kit migrate --config drizzle.config.ts
+        run: pnpm db:migrate:test
 
       - name: Run DB Contract Verification
         env:
@@ -67,6 +67,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -83,11 +90,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate @ts-nocheck baseline
+        run: pnpm run lint:tsnocheck-baseline
+
       - name: Run ESLint
         run: pnpm run lint
 
       - name: Run TypeScript type check
-        run: pnpm run check
+        run: pnpm run type-check
 
   test:
     name: Unit & Integration Tests
@@ -111,6 +121,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -130,12 +147,25 @@ jobs:
       - name: Apply Drizzle migrations
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: pnpm drizzle-kit migrate --config drizzle.config.ts
+        run: pnpm db:migrate:test
 
       - name: Run tests
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: pnpm test
+          NODE_OPTIONS: --max-old-space-size=12288
+        run: |
+          mapfile -t CLIENT_TESTS < <(
+            find client/src -type f \
+              \( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.spec.ts' -o -name '*.spec.tsx' \) \
+              ! -name '*.visual.test.ts' \
+              ! -name '*.visual.test.tsx' \
+              | sort
+          )
+          for test_file in "${CLIENT_TESTS[@]}"; do
+            echo "Running client test: ${test_file}"
+            pnpm vitest run --project client --minWorkers=1 --maxWorkers=1 --silent "${test_file}"
+          done
+          pnpm vitest run --project server --minWorkers=1 --maxWorkers=2 --silent
 
   build:
     name: Build Application
@@ -145,6 +175,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -162,7 +199,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build application
-        run: pnpm build
+        run: pnpm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

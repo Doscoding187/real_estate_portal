@@ -26,7 +26,7 @@ export function Navbar() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasIdentity);
+  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
@@ -52,6 +52,8 @@ export function Navbar() {
         return '/agency/dashboard';
       case 'agent':
         return '/agent/dashboard';
+      case 'service_provider':
+        return '/service/dashboard';
       default:
         return '/dashboard';
     }
@@ -60,7 +62,14 @@ export function Navbar() {
   const dashboardRoute = getDashboardRoute(user?.role, hasReferrerAccess);
   const showDashboardLink =
     user?.role &&
-    ['admin', 'super_admin', 'property_developer', 'agency_admin', 'agent'].includes(user.role);
+    [
+      'admin',
+      'super_admin',
+      'property_developer',
+      'agency_admin',
+      'agent',
+      'service_provider',
+    ].includes(user.role);
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
@@ -73,6 +82,8 @@ export function Navbar() {
       : []),
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
+    { href: '/services', label: 'Services' },
+    { href: '/distribution-network', label: 'Referrals', icon: Briefcase },
     { href: '/agents', label: 'Agents' },
     { href: '/listing-template', label: 'Listing Template' },
     { href: '/dashboard', label: 'My Properties', protected: true },

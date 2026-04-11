@@ -34,7 +34,8 @@ export interface GradientInputProps extends React.InputHTMLAttributes<HTMLInputE
 
 const GradientInput = React.forwardRef<HTMLInputElement, GradientInputProps>(
   ({ className, label, error, required, helperText, containerClassName, id, ...props }, ref) => {
-    const inputId = id || `input-${React.useId()}`;
+    const generatedId = React.useId();
+    const inputId = id ?? `input-${generatedId}`;
     const hasError = !!error;
 
     return (

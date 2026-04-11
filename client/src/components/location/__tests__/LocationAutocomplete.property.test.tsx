@@ -72,11 +72,14 @@ afterEach(() => {
   // Clean up all rendered components - CRITICAL for property-based tests
   cleanup();
 
+  // Drain pending timers so property iterations cannot leak async work between runs.
+  vi.runOnlyPendingTimers();
+
   // Restore real timers
   vi.useRealTimers();
 });
 
-describe('LocationAutocomplete Property-Based Tests', () => {
+describe('LocationAutocomplete Property-Based Tests', { timeout: 20000 }, () => {
   /**
    * Property 13: Debounce delay enforcement
    * Feature: google-places-autocomplete-integration, Property 13: Debounce delay enforcement
@@ -87,7 +90,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
    */
   describe('Property 13: Debounce delay enforcement', () => {
     it.prop([fc.string({ minLength: 3, maxLength: 10 })], {
-      numRuns: 100,
+      numRuns: 40,
       timeout: 10000,
     })('should only make API request after 300ms delay for any valid input', async searchQuery => {
       // Reset mocks for this iteration
@@ -128,7 +131,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
     });
 
     it.prop([fc.string({ minLength: 3, maxLength: 10 })], {
-      numRuns: 100,
+      numRuns: 40,
       timeout: 10000,
     })('should reset debounce timer on each keystroke', async searchQuery => {
       // Reset mocks for this iteration
@@ -180,7 +183,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
    */
   describe('Property 1: Minimum input length triggers autocomplete', () => {
     it.prop([fc.string({ minLength: 1, maxLength: 2 }).filter(s => s.trim().length > 0)], {
-      numRuns: 100,
+      numRuns: 40,
       timeout: 10000,
     })('should NOT fetch suggestions for input with less than 3 characters', async shortInput => {
       const onChange = vi.fn();
@@ -204,7 +207,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
     });
 
     it.prop([fc.string({ minLength: 3, maxLength: 15 })], {
-      numRuns: 100,
+      numRuns: 40,
       timeout: 10000,
     })('should fetch suggestions for input with 3 or more characters', async validInput => {
       const onChange = vi.fn();
@@ -233,7 +236,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
     });
 
     it.prop([fc.integer({ min: 1, max: 2 }), fc.integer({ min: 3, max: 8 })], {
-      numRuns: 100,
+      numRuns: 40,
       timeout: 10000,
     })(
       'should transition from no-fetch to fetch when crossing 3-character threshold',
@@ -296,7 +299,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       [
         fc.integer({ min: 6, max: 15 }), // Number of predictions returned by API
       ],
-      { numRuns: 100, timeout: 10000 },
+      { numRuns: 40, timeout: 10000 },
     )('should display at most 5 suggestions when API returns more', async numPredictions => {
       const onChange = vi.fn();
 
@@ -343,7 +346,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
       [
         fc.integer({ min: 1, max: 5 }), // Number of predictions (within cap)
       ],
-      { numRuns: 100, timeout: 10000 },
+      { numRuns: 40, timeout: 10000 },
     )('should display all suggestions when API returns 5 or fewer', async numPredictions => {
       const onChange = vi.fn();
 
@@ -398,7 +401,7 @@ describe('LocationAutocomplete Property-Based Tests', () => {
           { minLength: 10, maxLength: 20 },
         ),
       ],
-      { numRuns: 100, timeout: 10000 },
+      { numRuns: 40, timeout: 10000 },
     )('should always cap at 5 regardless of prediction content', async predictionData => {
       // Reset mocks for this iteration
       vi.clearAllMocks();

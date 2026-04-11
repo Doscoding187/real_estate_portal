@@ -1,8 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
+import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 export type FeedTab =
   | 'buy'
@@ -21,6 +29,27 @@ interface LocationTrendingFeedSectionProps {
   activeTab?: FeedTab;
   onTabChange?: (tab: FeedTab) => void;
 }
+
+type TrendingFeedItem = {
+  id: string;
+  kind: 'development' | 'listing' | 'unit';
+  title: string;
+  city: string;
+  suburb: string;
+  priceFrom: number;
+  priceTo: number;
+  image: string;
+  href: string;
+  listingType?: 'sale' | 'rent';
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  area?: number | null;
+  yardSize?: number | null;
+  unitSize?: number | null;
+  propertyType?: string | null;
+  developmentName?: string | null;
+  badges?: string[];
+};
 
 const FEED_TABS: Array<{ label: string; value: FeedTab }> = [
   { label: 'Buy', value: 'buy' },
@@ -78,27 +107,7 @@ export function LocationTrendingFeedSection({
     limit: maxItems,
   });
 
-  const placeholders = useMemo(
-    () =>
-      Array.from({ length: maxItems }, (_, idx) => ({
-        id: `placeholder-${activeTab}-${idx + 1}`,
-        kind: 'placeholder' as const,
-        title: `Preview ${idx + 1}`,
-        city: city || province || locationName,
-        suburb: suburb || '',
-        priceFrom: 0,
-        priceTo: 0,
-        image: '',
-        href: '#',
-      })),
-    [activeTab, city, locationName, maxItems, province, suburb],
-  );
-
-  const liveItems = (feedData?.items || []).slice(0, maxItems);
-  const items =
-    liveItems.length > 0
-      ? [...liveItems, ...placeholders.slice(0, Math.max(0, maxItems - liveItems.length))]
-      : placeholders;
+  const items = ((feedData?.items || []) as TrendingFeedItem[]).slice(0, maxItems);
 
   const copy = TAB_COPY[activeTab];
   const title = `${copy.title} in ${locationName}`;
@@ -133,41 +142,78 @@ export function LocationTrendingFeedSection({
         </div>
       </div>
 
-      <div className="group/carousel relative w-full max-w-[1240px]">
-        <Carousel opts={{ align: 'start', loop: items.length > 4 }} className="w-full">
-          <CarouselContent className="-ml-3 pb-2 justify-start">
-            {items.map((item, index) => (
-              <CarouselItem
-                key={item.id}
-                className="pl-3 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
-              >
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
-                    #{index + 1}
-                  </span>
-                  <SimpleDevelopmentCard
-                    id={item.id}
-                    title={item.title}
-                    city={item.city}
-                    suburb={item.suburb}
-                    priceRange={{ min: item.priceFrom, max: item.priceTo }}
-                    image={
-                      item.kind === 'development'
-                        ? getPrimaryDevelopmentImageUrl(item.image) || ''
-                        : item.image || ''
-                    }
-                    slug={item.kind === 'development' ? item.id : undefined}
-                    href={item.href}
-                    isHotSelling={item.kind !== 'placeholder'}
-                  />
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
-          <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
-        </Carousel>
-      </div>
+      {items.length > 0 ? (
+        <div className="group/carousel relative w-full max-w-[1240px]">
+          <Carousel opts={{ align: 'start', loop: items.length > 4 }} className="w-full">
+            <CarouselContent className="-ml-3 pb-2 justify-start">
+              {items.map((item, index) => (
+                <CarouselItem
+                  key={item.id}
+                  className="pl-3 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                >
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                      #{index + 1}
+                    </span>
+                    {item.kind === 'listing' ? (
+                      <SimpleHomeListingCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        image={item.image || ''}
+                        href={item.href}
+                        price={item.priceFrom}
+                        bedrooms={item.bedrooms}
+                        bathrooms={item.bathrooms}
+                        area={item.area}
+                        yardSize={item.yardSize}
+                        propertyType={item.propertyType}
+                        badgeLabel="Resale"
+                      />
+                    ) : item.kind === 'unit' ? (
+                      <SimpleDevelopmentUnitCard
+                        id={item.id}
+                        title={item.title}
+                        developmentName={item.developmentName || 'Featured Development'}
+                        city={item.city}
+                        suburb={item.suburb}
+                        image={item.image || ''}
+                        href={item.href}
+                        priceFrom={item.priceFrom}
+                        priceTo={item.priceTo}
+                        bedrooms={item.bedrooms}
+                        bathrooms={item.bathrooms}
+                        unitSize={item.unitSize}
+                        yardSize={item.yardSize}
+                        badgeLabel="New development"
+                      />
+                    ) : (
+                      <SimpleDevelopmentCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        priceRange={{ min: item.priceFrom, max: item.priceTo }}
+                        image={getPrimaryDevelopmentImageUrl(item.image) || ''}
+                        slug={item.kind === 'development' ? item.id : undefined}
+                        href={item.href}
+                        isHotSelling
+                      />
+                    )}
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
+            <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
+          </Carousel>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
+          No live inventory found for this location yet.
+        </div>
+      )}
     </section>
   );
 }

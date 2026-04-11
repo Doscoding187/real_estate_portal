@@ -35,9 +35,15 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
   try {
     // Try to authenticate using custom auth service
     user = await authService.authenticateRequest(opts.req);
-  } catch (_error) {
+  } catch (error) {
     // Authentication is optional for public procedures.
     // If auth fails, user remains null and public endpoints still work.
+    console.warn('[AuthContext] authenticateRequest failed', {
+      requestId,
+      message: (error as any)?.message || String(error),
+      code: (error as any)?.code || null,
+      name: (error as any)?.name || null,
+    });
     user = null;
   }
 

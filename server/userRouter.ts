@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { router, superAdminProcedure } from './_core/trpc';
-import { users } from '../drizzle/schema';
+import { protectedProcedure, router, superAdminProcedure } from './_core/trpc';
+import { userOnboardingState, users } from '../drizzle/schema';
 import { eq, like, or, desc, and, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { getDb } from './db';
@@ -15,7 +15,14 @@ import { logAudit } from './_core/auditLog';
 const userFiltersSchema = z.object({
   search: z.string().optional(),
   role: z
-    .enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin'])
+    .enum([
+      'visitor',
+      'agent',
+      'agency_admin',
+      'property_developer',
+      'service_provider',
+      'super_admin',
+    ])
     .optional(),
   agencyId: z.number().optional(),
   limit: z.number().min(1).max(100).default(20),
@@ -24,7 +31,14 @@ const userFiltersSchema = z.object({
 
 const updateUserRoleSchema = z.object({
   userId: z.number(),
-  role: z.enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin']),
+  role: z.enum([
+    'visitor',
+    'agent',
+    'agency_admin',
+    'property_developer',
+    'service_provider',
+    'super_admin',
+  ]),
 });
 
 const assignToAgencySchema = z.object({
@@ -33,7 +47,168 @@ const assignToAgencySchema = z.object({
   isSubaccount: z.boolean().default(false),
 });
 
+const consumerIntentSchema = z.enum(['buyer', 'seller', 'both']);
+
+const sellerPlanningInputsSchema = z.object({
+  goal: z.enum(['upgrade', 'downsize', 'sell_investment', 'test_market', 'relocating']).optional(),
+  timeline: z.enum(['0_30_days', '1_3_months', '3_6_months', '6_months_plus']).optional(),
+  readiness: z.enum(['needs_work', 'good_condition', 'launch_ready']).optional(),
+  propertyType: z.enum(['apartment', 'house', 'townhouse', 'vacant_land', 'commercial']).optional(),
+  bedroomProfile: z.enum(['studio_1', '2', '3', '4_plus']).optional(),
+  occupancy: z.enum(['owner_occupied', 'vacant', 'tenant_occupied']).optional(),
+  pricingPriority: z.enum(['maximize_price', 'balanced', 'sell_quickly']).optional(),
+  estimatedValueBand: z.enum(['under_1m', '1m_2m', '2m_3m', '3m_5m', '5m_plus']).optional(),
+});
+
+const consumerDashboardPreferencesSchema = z.object({
+  intent: consumerIntentSchema.default('buyer'),
+});
+
+const updateConsumerDashboardStateSchema = z.object({
+  preferences: consumerDashboardPreferencesSchema.optional(),
+  sellerPlanning: sellerPlanningInputsSchema.optional(),
+});
+
+function parseJsonRecord(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export const userRouter = router({
+  getConsumerDashboardState: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+    if (!ctx.user) {
+      throw new Error('Unauthorized');
+    }
+
+    const userId = Number(ctx.user.id);
+    let [state] = await db
+      .select()
+      .from(userOnboardingState)
+      .where(eq(userOnboardingState.userId, userId))
+      .limit(1);
+
+    if (!state) {
+      await db.insert(userOnboardingState).values({
+        userId,
+        isFirstSession: 1,
+        welcomeOverlayShown: 0,
+        welcomeOverlayDismissed: 0,
+        suggestedTopics: [],
+        tooltipsShown: [],
+        contentViewCount: 0,
+        saveCount: 0,
+        partnerEngagementCount: 0,
+        featuresUnlocked: [],
+        consumerDashboardPreferences: { intent: 'buyer' },
+        sellerPlanningInputs: null,
+      });
+
+      [state] = await db
+        .select()
+        .from(userOnboardingState)
+        .where(eq(userOnboardingState.userId, userId))
+        .limit(1);
+    }
+
+    const preferences = consumerDashboardPreferencesSchema.parse(
+      parseJsonRecord(state?.consumerDashboardPreferences) || { intent: 'buyer' },
+    );
+    const sellerPlanning = sellerPlanningInputsSchema
+      .partial()
+      .parse(parseJsonRecord(state?.sellerPlanningInputs) || {});
+
+    return {
+      preferences,
+      sellerPlanning,
+      updatedAt: state?.updatedAt || null,
+    };
+  }),
+
+  updateConsumerDashboardState: protectedProcedure
+    .input(updateConsumerDashboardStateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error('Database not available');
+      }
+      if (!ctx.user) {
+        throw new Error('Unauthorized');
+      }
+
+      const userId = Number(ctx.user.id);
+      let [state] = await db
+        .select()
+        .from(userOnboardingState)
+        .where(eq(userOnboardingState.userId, userId))
+        .limit(1);
+
+      if (!state) {
+        await db.insert(userOnboardingState).values({
+          userId,
+          isFirstSession: 1,
+          welcomeOverlayShown: 0,
+          welcomeOverlayDismissed: 0,
+          suggestedTopics: [],
+          tooltipsShown: [],
+          contentViewCount: 0,
+          saveCount: 0,
+          partnerEngagementCount: 0,
+          featuresUnlocked: [],
+          consumerDashboardPreferences: { intent: 'buyer' },
+          sellerPlanningInputs: null,
+        });
+
+        [state] = await db
+          .select()
+          .from(userOnboardingState)
+          .where(eq(userOnboardingState.userId, userId))
+          .limit(1);
+      }
+
+      const currentPreferences = consumerDashboardPreferencesSchema.parse(
+        parseJsonRecord(state?.consumerDashboardPreferences) || { intent: 'buyer' },
+      );
+      const currentSellerPlanning = sellerPlanningInputsSchema
+        .partial()
+        .parse(parseJsonRecord(state?.sellerPlanningInputs) || {});
+
+      const nextPreferences = input.preferences
+        ? { ...currentPreferences, ...input.preferences }
+        : currentPreferences;
+      const nextSellerPlanning = input.sellerPlanning
+        ? { ...currentSellerPlanning, ...input.sellerPlanning }
+        : currentSellerPlanning;
+
+      await db
+        .update(userOnboardingState)
+        .set({
+          consumerDashboardPreferences: nextPreferences,
+          sellerPlanningInputs:
+            Object.keys(nextSellerPlanning).length > 0 ? nextSellerPlanning : null,
+        })
+        .where(eq(userOnboardingState.userId, userId));
+
+      return {
+        preferences: nextPreferences,
+        sellerPlanning: nextSellerPlanning,
+      };
+    }),
+
   /**
    * Get all users with filters (Super Admin only)
    */
@@ -275,6 +450,8 @@ export const userRouter = router({
         super_admin: allUsers.filter((u: any) => u.role === 'super_admin').length,
         agency_admin: allUsers.filter((u: any) => u.role === 'agency_admin').length,
         agent: allUsers.filter((u: any) => u.role === 'agent').length,
+        property_developer: allUsers.filter((u: any) => u.role === 'property_developer').length,
+        service_provider: allUsers.filter((u: any) => u.role === 'service_provider').length,
         visitor: allUsers.filter((u: any) => u.role === 'visitor').length,
       },
       withAgency: allUsers.filter((u: any) => u.agencyId !== null).length,

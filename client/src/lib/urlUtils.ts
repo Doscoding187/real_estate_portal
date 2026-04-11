@@ -76,9 +76,15 @@ export function unslugify(slug: string): string {
     .join(' ');
 }
 
+export function buildPropertyUrl(id: string | number, title?: string | null): string {
+  const slug = slugify(String(title || ''));
+  return slug ? `/property/${id}-${slug}` : `/property/${id}`;
+}
+
 // Search filters type
 export interface SearchFilters {
   listingType?: 'sale' | 'rent' | 'rent_to_buy' | 'auction';
+  listingSource?: 'manual' | 'development';
   propertyType?: string;
   city?: string;
   suburb?: string;
@@ -94,19 +100,22 @@ export interface SearchFilters {
   maxArea?: number;
   amenities?: string[];
   furnished?: boolean;
-  locations?: {
-    slug: string;
-    type: 'province' | 'city' | 'suburb';
-    citySlug?: string;
-    provinceSlug?: string;
-    id?: string; // locationId for this location
-  }[];
+  locations?: Array<
+    | string
+    | {
+        slug: string;
+        type: 'province' | 'city' | 'suburb';
+        citySlug?: string;
+        provinceSlug?: string;
+        id?: string; // locationId for this location
+        name?: string;
+        fullAddress?: string;
+      }
+  >;
   // Additional filters stored in query params
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-// Import shared location utils
-import { CITY_PROVINCE_MAP } from './locationUtils';
 import { generateIntentUrl, SearchIntent } from './searchIntent';
 
 // Helper to bridge SearchFilters -> SearchIntent for URL generation
@@ -165,8 +174,8 @@ export interface ParsedUrlParams {
 }
 
 export function parsePropertyUrl(
-  params: ParsedUrlParams,
-  searchParams?: URLSearchParams,
+  _params: ParsedUrlParams,
+  _searchParams?: URLSearchParams,
 ): SearchFilters {
   // This function is less critical now as we rely on resolveSearchIntent
   // But strictly for backward compatibility or simple parsing:

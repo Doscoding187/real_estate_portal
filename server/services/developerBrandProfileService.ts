@@ -492,15 +492,15 @@ async function getBrandLeadStats(brandProfileId: number) {
  */
 async function deleteBrandProfile(id: number, force: boolean = false) {
   // 1. Get brand profile with status
-  const [profile] = await db
-    .select({
-      id: developerBrandProfiles.id,
-      brandName: developerBrandProfiles.brandName,
-      profileType: developerBrandProfiles.profileType,
-      ownerType: developerBrandProfiles.ownerType,
-    })
-    .from(developerBrandProfiles)
-    .where(eq(developerBrandProfiles.id, id));
+    const [profile] = await db
+      .select({
+        id: developerBrandProfiles.id,
+        brandName: developerBrandProfiles.brandName,
+        profileType: developerBrandProfiles.profileType,
+        ownerType: developerBrandProfiles.ownerType,
+      })
+      .from(developerBrandProfiles)
+      .where(eq(developerBrandProfiles.id, id));
 
   if (!profile) {
     throw new TRPCError({

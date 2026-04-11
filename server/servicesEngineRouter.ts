@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
 import { servicesEngineService } from './services/servicesEngineService';
+import { getDb } from './db';
+import { users } from '../drizzle/schema';
+import { eq } from 'drizzle-orm';
 
 const serviceCategorySchema = z.enum([
   'home_improvement',
@@ -24,7 +27,12 @@ const intentStageSchema = z.enum([
   'general',
 ]);
 
-const sourceSurfaceSchema = z.enum(['directory', 'explore', 'journey_injection', 'agent_dashboard']);
+const sourceSurfaceSchema = z.enum([
+  'directory',
+  'explore',
+  'journey_injection',
+  'agent_dashboard',
+]);
 const leadStatusSchema = z.enum(['new', 'accepted', 'quoted', 'won', 'lost', 'expired']);
 const leadInteractionEventTypeSchema = z.enum([
   'recommendations_shown',
@@ -60,7 +68,91 @@ async function requireProviderId(userId: number): Promise<string> {
   return String(provider.id);
 }
 
+function requireProviderRole(role: string | null | undefined) {
+  if (role !== 'service_provider') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Partner access is limited to service provider accounts.',
+    });
+  }
+}
+
 export const servicesEngineRouter = router({
+  myOnboardingStatus: protectedProcedure.query(async ({ ctx }) => {
+    const user = requireUser(ctx);
+    requireProviderRole(user.role);
+
+    const provider = await servicesEngineService.getProviderByUserId(user.id);
+    const profile = provider?.id
+      ? await servicesEngineService.getMyProviderProfile(user.id)
+      : null;
+
+    const hasProviderIdentity = Boolean(provider?.id);
+    const profileConfigured = Boolean(
+      profile &&
+        String(profile.headline || '').trim() &&
+        String(profile.bio || '').trim() &&
+        (String(profile.contactEmail || '').trim() || String(profile.contactPhone || '').trim()),
+    );
+    const servicesConfigured = Boolean(profile && (profile.services || []).length > 0);
+    const locationsConfigured = Boolean(profile && (profile.locations || []).length > 0);
+
+    let onboardingStep = 0;
+    if (hasProviderIdentity) onboardingStep = 1;
+    if (profileConfigured) onboardingStep = 2;
+    if (servicesConfigured) onboardingStep = 3;
+    if (locationsConfigured) onboardingStep = 4;
+
+    const dashboardUnlocked = hasProviderIdentity;
+    const fullFeaturesUnlocked =
+      hasProviderIdentity && profileConfigured && servicesConfigured && locationsConfigured;
+    const recommendedNextStep = !hasProviderIdentity
+      ? '/service/profile'
+      : !profileConfigured
+        ? '/service/profile'
+        : !servicesConfigured
+          ? '/service/profile'
+          : !locationsConfigured
+            ? '/service/profile'
+            : '/service/dashboard';
+
+    const db = await getDb();
+    if (
+      db &&
+      (Number(user.onboardingStep || 0) !== onboardingStep ||
+        Number(user.onboardingComplete || 0) !== (fullFeaturesUnlocked ? 1 : 0))
+    ) {
+      await db
+        .update(users)
+        .set({
+          onboardingStep,
+          onboardingComplete: fullFeaturesUnlocked ? 1 : 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+    }
+
+    return {
+      hasProviderIdentity,
+      profileConfigured,
+      servicesConfigured,
+      locationsConfigured,
+      onboardingStep,
+      dashboardUnlocked,
+      fullFeaturesUnlocked,
+      recommendedNextStep,
+      provider: profile
+        ? {
+            providerId: profile.providerId,
+            companyName: profile.companyName,
+            verificationStatus: profile.verificationStatus,
+            subscriptionTier: profile.subscriptionTier,
+            subscriptionStatus: profile.subscriptionStatus,
+          }
+        : null,
+    };
+  }),
+
   leads: router({
     logEvent: protectedProcedure
       .input(
@@ -111,6 +203,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       return servicesEngineService.upsertProviderIdentity({
         userId: user.id,
         companyName: input.companyName,
@@ -137,6 +230,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.upsertProviderProfile(providerId, {
         headline: input.headline ?? null,
@@ -171,6 +265,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.replaceProviderServices(providerId, input.services);
     }),
@@ -193,6 +288,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.replaceProviderLocations(providerId, input.locations);
     }),
@@ -225,7 +321,9 @@ export const servicesEngineRouter = router({
         limit: z.number().int().min(1).max(200).optional(),
       }),
     )
-    .query(({ input }) => servicesEngineService.getProviderReviews(input.providerId, input.limit || 50)),
+    .query(({ input }) =>
+      servicesEngineService.getProviderReviews(input.providerId, input.limit || 50),
+    ),
 
   recommendProviders: publicProcedure
     .input(
@@ -308,12 +406,14 @@ export const servicesEngineRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.listProviderLeads(providerId, input.limit || 50);
     }),
 
   myProviderProfile: protectedProcedure.query(async ({ ctx }) => {
     const user = requireUser(ctx);
+    requireProviderRole(user.role);
     return servicesEngineService.getMyProviderProfile(user.id);
   }),
 
@@ -325,6 +425,7 @@ export const servicesEngineRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.getProviderDashboard(providerId, input.days || 30);
     }),
@@ -337,6 +438,7 @@ export const servicesEngineRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.listMyExploreVideos(providerId, input.limit || 50);
     }),
@@ -352,6 +454,7 @@ export const servicesEngineRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
+      requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.submitExploreVideo({
         providerId,

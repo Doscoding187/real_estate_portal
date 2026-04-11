@@ -1,9 +1,17 @@
-// @ts-nocheck
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -14,29 +22,32 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Search,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
+interface ShowingProperty {
+  id?: number | null;
+  title?: string | null;
+  address?: string | null;
+  city?: string | null;
+  inventoryModel?: string | null;
+}
+
 interface Showing {
   id: number;
-  propertyId: number;
-  leadId: number | null;
-  scheduledAt: string;
-  status: 'requested' | 'confirmed' | 'completed' | 'cancelled';
+  listingId: number | null;
+  scheduledAt: string | Date | null;
+  scheduledTime?: string | Date | null;
+  durationMinutes?: number | null;
+  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
-  property?: {
-    id: number;
-    title: string;
-    address: string;
-    city: string;
-  } | null;
+  property?: ShowingProperty | null;
   client?: {
-    name: string;
-    email: string;
-    phone: string;
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
   } | null;
 }
 
@@ -52,14 +63,46 @@ const VIEW_MODES = [
 
 type ViewMode = (typeof VIEW_MODES)[number]['id'];
 
+function getShowingScheduledDate(showing: Showing): Date | null {
+  const value = showing.scheduledTime ?? showing.scheduledAt;
+  if (!value) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatShowingTime(showing: Showing) {
+  const date = getShowingScheduledDate(showing);
+  if (!date) return 'Scheduling pending';
+
+  return date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatShowingDateTime(showing: Showing) {
+  const date = getShowingScheduledDate(showing);
+  return date ? date.toLocaleString() : 'Scheduling pending';
+}
+
 export function ShowingsCalendar({ className }: CalendarViewProps) {
+  const [, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<
-    'cancelled' | 'completed' | 'requested' | 'confirmed' | ''
+    'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''
   >('');
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    listingId: '',
+    visitorName: '',
+    scheduledAt: '',
+    durationMinutes: '30',
+    notes: '',
+  });
 
   const utils = trpc.useUtils();
 
@@ -91,11 +134,18 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
   };
 
   // Fetch showings for the current date range
-  const { data: showings, isLoading } = trpc.agent.getMyShowings.useQuery({
+  const {
+    data: showings = [],
+    isLoading,
+    error: showingsError,
+  } = trpc.agent.getMyShowings.useQuery({
     startDate: getDateRange().start,
     endDate: getDateRange().end,
     status: statusFilter || undefined,
   });
+  const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
+  const resolvedListings = availableListings.filter(listing => listing.isResolved);
+  const legacyListings = availableListings.filter(listing => !listing.isResolved);
 
   // Update showing status mutation
   const updateShowingStatusMutation = trpc.agent.updateShowingStatus.useMutation({
@@ -105,6 +155,23 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     },
     onError: error => {
       toast.error(error.message || 'Failed to update showing status');
+    },
+  });
+  const bookShowingMutation = trpc.agent.bookShowing.useMutation({
+    onSuccess: () => {
+      toast.success('Showing booked');
+      utils.agent.getMyShowings.invalidate();
+      setIsBookingOpen(false);
+      setBookingForm({
+        listingId: '',
+        visitorName: '',
+        scheduledAt: '',
+        durationMinutes: '30',
+        notes: '',
+      });
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to book showing');
     },
   });
 
@@ -130,37 +197,51 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     setCurrentDate(new Date());
   };
 
-  const getShowingsForDate = (date: Date) => {
-    if (!showings) return [];
+  const openBookingDialog = () => {
+    const nextDate = selectedDate || currentDate;
+    const defaultDateTime = new Date(nextDate);
+    defaultDateTime.setHours(9, 0, 0, 0);
 
+    setBookingForm(prev => ({
+      ...prev,
+      scheduledAt: prev.scheduledAt || defaultDateTime.toISOString().slice(0, 16),
+    }));
+    setIsBookingOpen(true);
+  };
+
+  const resolvedShowings = showings.filter(showing => Boolean(getShowingScheduledDate(showing)));
+
+  const getShowingsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return showings.filter((showing: any) => {
-      const showingDate = new Date(showing.scheduledAt).toISOString().split('T')[0];
+    return resolvedShowings.filter((showing: Showing) => {
+      const scheduledDate = getShowingScheduledDate(showing);
+      if (!scheduledDate) return false;
+      const showingDate = scheduledDate.toISOString().split('T')[0];
       return showingDate === dateStr;
     });
   };
 
-  const filteredShowings =
-    showings?.filter((showing: any) => {
-      if (
-        searchQuery &&
-        !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-        return false;
-      return true;
-    }) || [];
+  const filteredShowings = resolvedShowings.filter((showing: Showing) => {
+    if (
+      searchQuery &&
+      !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'requested':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed':
+      case 'scheduled':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
+      case 'no_show':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -168,11 +249,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
   const renderMonthView = () => {
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     const startOfCalendar = new Date(startOfMonth);
     startOfCalendar.setDate(startOfCalendar.getDate() - startOfCalendar.getDay());
 
-    const days = [];
+    const days: ReactNode[] = [];
     const today = new Date();
 
     for (let i = 0; i < 42; i++) {
@@ -196,18 +276,13 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
             {date.getDate()}
           </div>
           <div className="space-y-1">
-            {dayShowings.slice(0, 3).map((showing: any) => (
+            {dayShowings.slice(0, 3).map((showing: Showing) => (
               <div
                 key={showing.id}
                 className={`text-xs p-1 rounded truncate border ${getStatusColor(showing.status)}`}
-                title={`${showing.property?.title || 'Property'} - ${new Date(showing.scheduledAt).toLocaleTimeString()}`}
+                title={`${showing.property?.title || 'Property'} - ${formatShowingTime(showing)}`}
               >
-                <div className="font-medium">
-                  {new Date(showing.scheduledAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
+                <div className="font-medium">{formatShowingTime(showing)}</div>
                 <div className="truncate">{showing.property?.title || 'Property'}</div>
               </div>
             ))}
@@ -256,7 +331,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {dayShowings.map((showing: any) => (
+            {dayShowings.map((showing: Showing) => (
               <ShowingCard
                 key={showing.id}
                 showing={showing}
@@ -281,6 +356,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
           <h2 className="text-2xl font-bold">Showings Calendar</h2>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={openBookingDialog} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Book Showing
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -292,14 +371,18 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
           </div>
           <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+            onChange={e =>
+              setStatusFilter(
+                e.target.value as '' | 'cancelled' | 'completed' | 'scheduled' | 'no_show',
+              )
+            }
             className="px-3 py-1 border rounded text-sm"
           >
             <option value="">All Statuses</option>
-            <option value="requested">Requested</option>
-            <option value="confirmed">Confirmed</option>
+            <option value="scheduled">Scheduled</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
+            <option value="no_show">No Show</option>
           </select>
         </div>
       </div>
@@ -345,40 +428,208 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
       </Card>
 
       {/* Calendar Grid or List View */}
-      {viewMode === 'month' && renderMonthView()}
-
-      {/* Selected Date Showings */}
-      {selectedDate && renderShowingsList()}
-
-      {/* All Showings List */}
-      {!selectedDate && filteredShowings.length > 0 && (
+      {showingsError ? (
         <Card>
-          <CardHeader>
-            <CardTitle>All Showings ({filteredShowings.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredShowings.map((showing: any) => (
-                <ShowingCard
-                  key={showing.id}
-                  showing={showing}
-                  onStatusUpdate={(showingId, status) =>
-                    updateShowingStatusMutation.mutate({ showingId, status })
-                  }
-                  isUpdating={updateShowingStatusMutation.isPending}
-                />
-              ))}
+          <CardContent className="p-6 text-center text-muted-foreground">
+            <div className="space-y-3">
+              <p>
+                {showingsError.message?.includes('Agent profile not found')
+                  ? 'Complete your agent profile to unlock the calendar.'
+                  : 'Unable to load showings right now.'}
+              </p>
+              {showingsError.message?.includes('Agent profile not found') ? (
+                <Button onClick={() => setLocation('/agent/setup')}>Finish setup</Button>
+              ) : (
+                <Button variant="outline" onClick={() => utils.agent.getMyShowings.invalidate()}>
+                  Retry
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
+      ) : isLoading ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Loading showings...
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {viewMode === 'month' && renderMonthView()}
+
+          {/* Selected Date Showings */}
+          {selectedDate && renderShowingsList()}
+
+          {/* All Showings List */}
+          {!selectedDate && filteredShowings.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>All Showings ({filteredShowings.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {filteredShowings.map((showing: Showing) => (
+                    <ShowingCard
+                      key={showing.id}
+                      showing={showing}
+                      onStatusUpdate={(showingId, status) =>
+                        updateShowingStatusMutation.mutate({ showingId, status })
+                      }
+                      isUpdating={updateShowingStatusMutation.isPending}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!selectedDate && filteredShowings.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                No showings found for the selected range.
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
+
+      <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Book Showing</DialogTitle>
+            <DialogDescription>
+              Create a real showing record for one of your listings. This writes to the canonical
+              scheduling workflow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Listing</label>
+              {availableListings.length === 0 ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  No schedulable inventory is currently available. Publish and bridge listings into
+                  Agent OS inventory before booking showings.
+                </div>
+              ) : null}
+              {resolvedListings.length > 0 && legacyListings.length > 0 ? (
+                <p className="text-xs text-amber-700">
+                  Legacy listing options are fallback only until inventory bridging is fully
+                  backfilled.
+                </p>
+              ) : null}
+              <select
+                value={bookingForm.listingId}
+                onChange={e => setBookingForm(prev => ({ ...prev, listingId: e.target.value }))}
+                className="w-full rounded-md border px-3 py-2 text-sm"
+              >
+                <option value="">Select listing</option>
+                {resolvedListings.length > 0 ? (
+                  <optgroup label="Resolved inventory">
+                    {resolvedListings.map((listing: ShowingProperty, index: number) => (
+                      <option
+                        key={listing.id ?? `resolved-${index}`}
+                        value={String(listing.id ?? '')}
+                      >
+                        {listing.title} {listing.city ? `- ${listing.city}` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                {legacyListings.length > 0 ? (
+                  <optgroup label="Legacy fallback">
+                    {legacyListings.map((listing: ShowingProperty, index: number) => (
+                      <option
+                        key={listing.id ?? `legacy-${index}`}
+                        value={String(listing.id ?? '')}
+                      >
+                        {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Visitor name</label>
+                <Input
+                  value={bookingForm.visitorName}
+                  onChange={e => setBookingForm(prev => ({ ...prev, visitorName: e.target.value }))}
+                  placeholder="Prospective buyer"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Duration (minutes)</label>
+                <Input
+                  type="number"
+                  min={15}
+                  max={240}
+                  step={15}
+                  value={bookingForm.durationMinutes}
+                  onChange={e =>
+                    setBookingForm(prev => ({ ...prev, durationMinutes: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Scheduled for</label>
+              <Input
+                type="datetime-local"
+                value={bookingForm.scheduledAt}
+                onChange={e => setBookingForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notes</label>
+              <Textarea
+                value={bookingForm.notes}
+                onChange={e => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Access notes, visitor context, or follow-up details"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsBookingOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() =>
+                  bookShowingMutation.mutate({
+                    listingId: Number(bookingForm.listingId),
+                    visitorName: bookingForm.visitorName.trim(),
+                    scheduledAt: new Date(bookingForm.scheduledAt).toISOString(),
+                    durationMinutes: Number(bookingForm.durationMinutes || 30),
+                    notes: bookingForm.notes.trim() || undefined,
+                  })
+                }
+                disabled={
+                  bookShowingMutation.isPending ||
+                  availableListings.length === 0 ||
+                  !bookingForm.listingId ||
+                  !bookingForm.visitorName.trim() ||
+                  !bookingForm.scheduledAt
+                }
+              >
+                {bookShowingMutation.isPending ? 'Booking...' : 'Save Showing'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 interface ShowingCardProps {
-  showing: any;
-  onStatusUpdate: (showingId: number, status: string) => void;
+  showing: Showing;
+  onStatusUpdate: (showingId: number, status: Showing['status']) => void;
   isUpdating: boolean;
 }
 
@@ -397,7 +648,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  {new Date(showing.scheduledAt).toLocaleString()}
+                  {formatShowingDateTime(showing)}
                 </div>
                 {showing.property && (
                   <div className="flex items-center gap-2">
@@ -405,6 +656,9 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                     {showing.property.address}, {showing.property.city}
                   </div>
                 )}
+                {showing.property?.inventoryModel === 'legacy_listing' ? (
+                  <div className="text-amber-700 text-xs font-medium">Legacy listing fallback</div>
+                ) : null}
               </div>
 
               {showing.client && (
@@ -437,16 +691,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
           </div>
 
           <div className="flex flex-col gap-2 ml-4">
-            {showing.status === 'requested' && (
-              <Button
-                size="sm"
-                onClick={() => onStatusUpdate(showing.id, 'confirmed')}
-                disabled={isUpdating}
-              >
-                Confirm
-              </Button>
-            )}
-            {showing.status === 'confirmed' && (
+            {showing.status === 'scheduled' && (
               <Button
                 size="sm"
                 onClick={() => onStatusUpdate(showing.id, 'completed')}
@@ -455,7 +700,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                 Complete
               </Button>
             )}
-            {(showing.status === 'requested' || showing.status === 'confirmed') && (
+            {showing.status === 'scheduled' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -463,6 +708,16 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                 disabled={isUpdating}
               >
                 Cancel
+              </Button>
+            )}
+            {showing.status === 'scheduled' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onStatusUpdate(showing.id, 'no_show')}
+                disabled={isUpdating}
+              >
+                No Show
               </Button>
             )}
           </div>
@@ -474,14 +729,14 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
 
 function getStatusColor(status: string) {
   switch (status) {
-    case 'requested':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'confirmed':
+    case 'scheduled':
       return 'bg-blue-100 text-blue-800 border-blue-200';
     case 'completed':
       return 'bg-green-100 text-green-800 border-green-200';
     case 'cancelled':
       return 'bg-red-100 text-red-800 border-red-200';
+    case 'no_show':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }

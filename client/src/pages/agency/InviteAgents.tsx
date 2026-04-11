@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -29,15 +30,25 @@ import { toast } from 'sonner';
 export default function InviteAgents() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
+  const { status, isLoading: onboardingLoading } = useAgencyOnboardingStatus({
+    requireDashboardUnlocked: true,
+  });
+  const agencyReady = Boolean(status?.dashboardUnlocked);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'agent' | 'agency_admin'>('agent');
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
-  const { data: invitations, isLoading, refetch } = trpc.invitation.list.useQuery();
+  const {
+    data: invitations,
+    isLoading,
+    refetch,
+  } = trpc.invitation.list.useQuery(undefined, {
+    enabled: agencyReady,
+  });
 
   const createMutation = trpc.invitation.create.useMutation({
-    onSuccess: data => {
+    onSuccess: () => {
       toast.success('Invitation sent successfully!');
       setEmail('');
       setRole('agent');
@@ -73,6 +84,17 @@ export default function InviteAgents() {
   if (!isAuthenticated || (user?.role !== 'agency_admin' && user?.role !== 'super_admin')) {
     setLocation('/login');
     return null;
+  }
+
+  if (onboardingLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">
+          Preparing your agency workspace...
+        </div>
+      </div>
+    );
   }
 
   const handleSendInvitation = () => {

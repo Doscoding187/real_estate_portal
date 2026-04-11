@@ -7,6 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { PartnerDevelopmentOnboardingDrawer } from '@/components/admin/distribution/PartnerDevelopmentOnboardingDrawer';
+import {
+  buildDistributionManagerInviteMailtoUrl,
+  buildDistributionManagerInviteWhatsappUrl,
+} from '../../../../shared/distributionManagerInvite';
+import {
+  getPartnerDevelopmentSetupDescription,
+  getPartnerDevelopmentSetupLabel,
+  getPartnerDevelopmentSetupState,
+} from './distributionSetupState';
 
 const DEFAULT_SUBMODULE = 'partner-developments';
 
@@ -19,18 +29,80 @@ function formatMoney(value: number | null | undefined) {
   }).format(value);
 }
 
+function collectErrorMessages(...errors: Array<{ message?: string } | null | undefined>) {
+  return Array.from(
+    new Set(errors.map(error => error?.message?.trim()).filter((value): value is string => Boolean(value))),
+  );
+}
+
+function openInviteShareWindow(url: string) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function groupBrandLinkedDevelopments(
+  rows: any[],
+  programByDevelopmentId: Map<number, any>,
+) {
+  const groups = new Map<
+    number,
+    {
+      brandProfileId: number;
+      brandProfileName: string;
+      activeRows: any[];
+      availableRows: any[];
+    }
+  >();
+
+  for (const row of rows) {
+    const brandProfileId = Number(row.brandProfileId || 0);
+    if (!brandProfileId) continue;
+
+    const group =
+      groups.get(brandProfileId) ||
+      {
+        brandProfileId,
+        brandProfileName: String(row.brandProfileName || `Brand #${brandProfileId}`),
+        activeRows: [],
+        availableRows: [],
+      };
+
+    const state = getPartnerDevelopmentSetupState(row, programByDevelopmentId);
+    if (state === 'already_in_partner_developments') {
+      group.activeRows.push(row);
+    } else {
+      group.availableRows.push(row);
+    }
+
+    groups.set(brandProfileId, group);
+  }
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      activeRows: group.activeRows.sort((a, b) =>
+        String(a.developmentName || '').localeCompare(String(b.developmentName || '')),
+      ),
+      availableRows: group.availableRows.sort((a, b) =>
+        String(a.developmentName || '').localeCompare(String(b.developmentName || '')),
+      ),
+    }))
+    .sort((a, b) => a.brandProfileName.localeCompare(b.brandProfileName));
+}
+
 export default function DistributionNetworkPage() {
   const [location, setLocation] = useLocation();
   const [search, setSearch] = useState('');
   const [brandSearch, setBrandSearch] = useState('');
   const [selectedBrandProfileId, setSelectedBrandProfileId] = useState<number | null>(null);
   const [selectedBrandName, setSelectedBrandName] = useState('');
+  const [onboardingDrawerOpen, setOnboardingDrawerOpen] = useState(false);
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteRole, setInviteRole] = useState('');
   const [inviteNotes, setInviteNotes] = useState('');
   const [latestInviteUrl, setLatestInviteUrl] = useState('');
+  const [onboardingDevelopmentId, setOnboardingDevelopmentId] = useState<number | null>(null);
 
   const submoduleSlug = useMemo(() => {
     if (!location.startsWith('/admin/distribution')) return DEFAULT_SUBMODULE;
@@ -81,7 +153,10 @@ export default function DistributionNetworkPage() {
   );
   const teamRegistrationsQuery = trpc.distribution.admin.listTeamRegistrations.useQuery(
     { limit: 200, requestedArea: 'distribution_manager' },
-    { enabled: submoduleSlug === 'distribution-managers' },
+    {
+      enabled:
+        submoduleSlug === 'distribution-managers' || submoduleSlug === 'partner-developments',
+    },
   );
   const brandProfilesQuery = trpc.superAdminPublisher.listBrandProfiles.useQuery(
     {
@@ -93,22 +168,34 @@ export default function DistributionNetworkPage() {
         submoduleSlug === 'partner-developments' || submoduleSlug === 'distribution-managers',
     },
   );
+  const allCatalogQuery = trpc.distribution.admin.listDevelopmentCatalog.useQuery(
+    {
+      search,
+      includeUnpublished: true,
+      onlyBrandProfileLinked: false,
+      limit: 300,
+    },
+    {
+      enabled: submoduleSlug === 'partner-developments',
+    },
+  );
   const programsQuery = trpc.distribution.admin.listPrograms.useQuery(undefined, {
     enabled: submoduleSlug === 'partner-developments' || submoduleSlug === 'distribution-managers',
   });
-  const ensureProgramMutation = trpc.distribution.admin.ensureProgramForDevelopment.useMutation({
-    onSuccess: () => {
-      toast.success('Development linked to partner program');
-      programsQuery.refetch();
-      catalogQuery.refetch();
-    },
-    onError: err => toast.error(err.message),
-  });
+  const onboardDevelopmentMutation =
+    trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
   const createManagerInviteMutation = trpc.distribution.admin.createManagerInvite.useMutation({
     onSuccess: result => {
       setLatestInviteUrl(result.inviteUrl || '');
       toast.success('Manager invite created');
       teamRegistrationsQuery.refetch();
+    },
+    onError: err => toast.error(err.message),
+  });
+  const attachDevelopmentToBrandMutation = trpc.brandProfile.adminAttachDevelopment.useMutation({
+    onSuccess: async () => {
+      toast.success('Development linked to brand profile');
+      await Promise.all([catalogQuery.refetch(), allCatalogQuery.refetch(), programsQuery.refetch()]);
     },
     onError: err => toast.error(err.message),
   });
@@ -176,6 +263,9 @@ export default function DistributionNetworkPage() {
   const brandProfileDevelopmentRows = useMemo(() => {
     return (catalogQuery.data || []) as any[];
   }, [catalogQuery.data]);
+  const allDevelopmentRows = useMemo(() => {
+    return (allCatalogQuery.data || []) as any[];
+  }, [allCatalogQuery.data]);
   const activePartnerRows = useMemo(() => {
     return brandProfileDevelopmentRows.filter(
       row => Boolean(row.program) || programByDevelopmentId.has(Number(row.developmentId)),
@@ -186,6 +276,75 @@ export default function DistributionNetworkPage() {
       row => !(Boolean(row.program) || programByDevelopmentId.has(Number(row.developmentId))),
     );
   }, [brandProfileDevelopmentRows, programByDevelopmentId]);
+  const groupedBrandDevelopmentRows = useMemo(() => {
+    return groupBrandLinkedDevelopments(brandProfileDevelopmentRows, programByDevelopmentId);
+  }, [brandProfileDevelopmentRows, programByDevelopmentId]);
+  const unlinkedDevelopmentRows = useMemo(() => {
+    return allDevelopmentRows.filter(row => getPartnerDevelopmentSetupState(row, programByDevelopmentId) === 'needs_brand_link');
+  }, [allDevelopmentRows, programByDevelopmentId]);
+  const partnerDevelopmentErrorMessages = useMemo(
+    () =>
+      collectErrorMessages(
+        catalogQuery.error,
+        allCatalogQuery.error,
+        programsQuery.error,
+        onboardDevelopmentMutation.error,
+      ),
+    [allCatalogQuery.error, catalogQuery.error, onboardDevelopmentMutation.error, programsQuery.error],
+  );
+  const managerErrorMessages = useMemo(
+    () => collectErrorMessages(teamRegistrationsQuery.error, createManagerInviteMutation.error),
+    [createManagerInviteMutation.error, teamRegistrationsQuery.error],
+  );
+  const copyLatestInviteUrl = async () => {
+    if (!latestInviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(latestInviteUrl);
+      toast.success('Invite URL copied');
+    } catch {
+      toast.error('Failed to copy invite URL');
+    }
+  };
+  const shareLatestInviteViaWhatsapp = () => {
+    if (!latestInviteUrl) return;
+    openInviteShareWindow(buildDistributionManagerInviteWhatsappUrl(latestInviteUrl));
+  };
+  const shareLatestInviteViaEmail = () => {
+    if (!latestInviteUrl) return;
+    window.location.href = buildDistributionManagerInviteMailtoUrl(latestInviteUrl);
+  };
+  const managerOptions = useMemo(() => {
+    return (teamRegistrationsQuery.data || [])
+      .filter((row: any) => row.status === 'approved' && row.userId)
+      .map((row: any) => ({
+        userId: Number(row.userId),
+        label: `${row.fullName || row.email} (${row.email})`,
+      }));
+  }, [teamRegistrationsQuery.data]);
+
+  async function handleOnboardDevelopment(row: any) {
+    setOnboardingDevelopmentId(Number(row.developmentId));
+    try {
+      const result = await onboardDevelopmentMutation.mutateAsync({
+        developmentId: Number(row.developmentId),
+      });
+      await Promise.all([catalogQuery.refetch(), allCatalogQuery.refetch(), programsQuery.refetch()]);
+      if (row.brandProfileId) {
+        setSelectedBrandProfileId(Number(row.brandProfileId));
+        setSelectedBrandName(String(row.brandProfileName || `Brand #${row.brandProfileId}`));
+      }
+      setOnboardingDrawerOpen(true);
+      toast.success(
+        result.mode === 'created'
+          ? 'Development added to partner developments'
+          : 'Partner development access refreshed',
+      );
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to add development to partner developments');
+    } finally {
+      setOnboardingDevelopmentId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -262,6 +421,7 @@ export default function DistributionNetworkPage() {
                             setSelectedBrandProfileId(Number(brand.id));
                             setSelectedBrandName(String(brand.brandName || 'Brand'));
                             setBrandSearch('');
+                            setOnboardingDrawerOpen(true);
                           }}
                         >
                           {brand.brandName}
@@ -284,15 +444,50 @@ export default function DistributionNetworkPage() {
                         setSelectedBrandProfileId(null);
                         setSelectedBrandName('');
                         setBrandSearch('');
+                        setOnboardingDrawerOpen(false);
                       }}
                     >
                       Clear
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setOnboardingDrawerOpen(true)}
+                    >
+                      Open Onboarding
                     </Button>
                   </div>
                 ) : null}
               </div>
             </div>
-            {catalogQuery.isLoading ? (
+
+            <div className="rounded border bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-900">Setup path</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Brand-linked developments can be added to Partner Developments. Use Publisher admin
+                to create a brand profile or development, or attach an existing development below.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setLocation('/admin/publisher')}>
+                  Open Publisher Brand Manager
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLocation('/developer/create-development')}
+                >
+                  Create Development
+                </Button>
+              </div>
+            </div>
+
+            {partnerDevelopmentErrorMessages.map(message => (
+              <div key={message} className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                {message}
+              </div>
+            ))}
+
+            {catalogQuery.isLoading || allCatalogQuery.isLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
@@ -302,85 +497,201 @@ export default function DistributionNetworkPage() {
               <div className="space-y-6">
                 <div>
                   <p className="mb-2 text-sm font-medium text-slate-700">
-                    Active Partner Developments ({activePartnerRows.length})
+                    Brand-Linked Developments ({brandProfileDevelopmentRows.length})
                   </p>
                   <div className="space-y-2">
-                    {activePartnerRows.map((row: any) => (
-                      <div key={row.developmentId} className="rounded border p-3">
-                        <div className="flex flex-col items-center justify-center gap-2 text-center">
+                    {groupedBrandDevelopmentRows.map(group => (
+                      <div key={group.brandProfileId} className="rounded border p-4">
+                        <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
                           <div>
-                            <p className="font-semibold">{row.developmentName}</p>
+                            <p className="font-semibold">{group.brandProfileName}</p>
                             <p className="text-xs text-slate-500">
-                              {row.city}, {row.province}
+                              {group.activeRows.length + group.availableRows.length} linked developments
                             </p>
                           </div>
-                          <div className="flex flex-wrap justify-center gap-2">
-                            <Badge variant="default">Program Linked</Badge>
-                            {row.brandProfileName ? (
-                              <Badge variant="outline">Brand: {row.brandProfileName}</Badge>
-                            ) : null}
-                            <Badge variant="outline">
-                              {formatMoney(row.priceFrom)} - {formatMoney(row.priceTo)}
-                            </Badge>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="default">In Partner Developments: {group.activeRows.length}</Badge>
+                            <Badge variant="secondary">Available To Add: {group.availableRows.length}</Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedBrandProfileId(group.brandProfileId);
+                                setSelectedBrandName(group.brandProfileName);
+                                setOnboardingDrawerOpen(true);
+                              }}
+                            >
+                              Open Brand Onboarding
+                            </Button>
                           </div>
                         </div>
+
+                        {!!group.activeRows.length && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                              In Partner Developments
+                            </p>
+                            {group.activeRows.map((row: any) => {
+                              const state = getPartnerDevelopmentSetupState(row, programByDevelopmentId);
+                              return (
+                                <div key={row.developmentId} className="rounded border bg-slate-50 p-3">
+                                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                      <p className="font-semibold">{row.developmentName}</p>
+                                      <p className="text-xs text-slate-500">
+                                        {row.city}, {row.province}
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      <Badge variant="default">{getPartnerDevelopmentSetupLabel(state)}</Badge>
+                                      <Badge variant="outline">
+                                        {formatMoney(row.priceFrom)} - {formatMoney(row.priceTo)}
+                                      </Badge>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setSelectedBrandProfileId(group.brandProfileId);
+                                          setSelectedBrandName(group.brandProfileName);
+                                          setOnboardingDrawerOpen(true);
+                                        }}
+                                      >
+                                        Configure
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {!!group.availableRows.length && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                              Available To Add
+                            </p>
+                            {group.availableRows.map((row: any) => {
+                              const state = getPartnerDevelopmentSetupState(row, programByDevelopmentId);
+                              const isProcessing = onboardingDevelopmentId === Number(row.developmentId);
+                              return (
+                                <div key={row.developmentId} className="rounded border p-3">
+                                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                    <div className="space-y-1">
+                                      <p className="font-semibold">{row.developmentName}</p>
+                                      <p className="text-xs text-slate-500">
+                                        {row.city}, {row.province}
+                                      </p>
+                                      <p className="text-xs text-slate-500">
+                                        {getPartnerDevelopmentSetupDescription(state)}
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        <Badge variant="secondary">
+                                          {getPartnerDevelopmentSetupLabel(state)}
+                                        </Badge>
+                                        <Badge variant="outline">
+                                          Partnership: {row.partnershipStatus || 'missing'}
+                                        </Badge>
+                                        <Badge variant="outline">
+                                          Access: {row.accessStatus || 'missing'}
+                                        </Badge>
+                                        <Badge
+                                          variant={row.submissionAllowed ? 'default' : 'secondary'}
+                                        >
+                                          {row.submissionAllowed
+                                            ? 'Submission allowed'
+                                            : 'Submission blocked'}
+                                        </Badge>
+                                        {!row.publishedEligible ? (
+                                          <Badge variant="destructive">Not publisher-ready</Badge>
+                                        ) : null}
+                                        <Badge variant="outline">
+                                          {formatMoney(row.priceFrom)} - {formatMoney(row.priceTo)}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={isProcessing}
+                                        onClick={() => void handleOnboardDevelopment(row)}
+                                      >
+                                        {isProcessing
+                                          ? 'Adding...'
+                                          : 'Add to Partner Developments'}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     ))}
-                    {!activePartnerRows.length && (
-                      <p className="text-sm text-slate-500">No active partner developments yet.</p>
+                    {!groupedBrandDevelopmentRows.length && (
+                      <p className="text-sm text-slate-500">
+                        No brand-linked developments found for current search.
+                      </p>
                     )}
                   </div>
                 </div>
 
                 <div>
                   <p className="mb-2 text-sm font-medium text-slate-700">
-                    Available Brand-Profile Developments ({availablePartnerRows.length})
+                    Needs Brand Link ({unlinkedDevelopmentRows.length})
                   </p>
                   <div className="space-y-2">
-                    {availablePartnerRows.map((row: any) => (
+                    {unlinkedDevelopmentRows.map((row: any) => (
                       <div key={row.developmentId} className="rounded border p-3">
-                        <div className="flex flex-col items-center justify-center gap-2 text-center">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                           <div>
                             <p className="font-semibold">{row.developmentName}</p>
                             <p className="text-xs text-slate-500">
                               {row.city}, {row.province}
                             </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {getPartnerDevelopmentSetupDescription('needs_brand_link')}
+                            </p>
                           </div>
-                          <div className="flex flex-wrap justify-center gap-2">
-                            <Badge variant="secondary">Not Yet Added</Badge>
-                            {row.brandProfileName ? (
-                              <Badge variant="outline">Brand: {row.brandProfileName}</Badge>
-                            ) : null}
+                          <div className="flex flex-wrap gap-2">
                             <Badge variant="outline">
-                              {formatMoney(row.priceFrom)} - {formatMoney(row.priceTo)}
+                              {getPartnerDevelopmentSetupLabel('needs_brand_link')}
                             </Badge>
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={ensureProgramMutation.isPending}
+                              disabled={
+                                !selectedBrandProfileId || attachDevelopmentToBrandMutation.isPending
+                              }
                               onClick={() =>
-                                ensureProgramMutation.mutate({
+                                selectedBrandProfileId &&
+                                attachDevelopmentToBrandMutation.mutate({
                                   developmentId: Number(row.developmentId),
+                                  brandProfileId: selectedBrandProfileId,
                                 })
                               }
                             >
-                              Add to Partner Developments
+                              {selectedBrandProfileId
+                                ? `Attach to ${selectedBrandName}`
+                                : 'Select a Brand First'}
                             </Button>
                           </div>
                         </div>
                       </div>
                     ))}
-                    {!availablePartnerRows.length && (
+                    {!unlinkedDevelopmentRows.length && (
                       <p className="text-sm text-slate-500">
-                        All brand-profile developments are already added to partner developments.
+                        No unlinked developments found for current search.
                       </p>
                     )}
                   </div>
                 </div>
 
-                {!brandProfileDevelopmentRows.length && (
+                {!brandProfileDevelopmentRows.length && !unlinkedDevelopmentRows.length && (
                   <p className="text-sm text-slate-500">
-                    No brand-profile developments found for current search.
+                    No developments found for current search.
                   </p>
                 )}
               </div>
@@ -388,6 +699,22 @@ export default function DistributionNetworkPage() {
           </CardContent>
         </Card>
       )}
+      <PartnerDevelopmentOnboardingDrawer
+        open={onboardingDrawerOpen}
+        onOpenChange={setOnboardingDrawerOpen}
+        brandProfileId={selectedBrandProfileId}
+        brandProfileName={selectedBrandName}
+        developments={brandProfileDevelopmentRows}
+        isLoading={catalogQuery.isLoading}
+        isError={Boolean(catalogQuery.error)}
+        onRetry={() => {
+          void Promise.all([catalogQuery.refetch(), allCatalogQuery.refetch()]);
+        }}
+        managerOptions={managerOptions}
+        onRefreshCatalog={async () => {
+          await Promise.all([catalogQuery.refetch(), allCatalogQuery.refetch(), programsQuery.refetch()]);
+        }}
+      />
 
       {submoduleSlug === 'distribution-managers' && (
         <div className="grid gap-4 md:grid-cols-2">
@@ -399,6 +726,11 @@ export default function DistributionNetworkPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {managerErrorMessages.map(message => (
+                <div key={message} className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  {message}
+                </div>
+              ))}
               <Input
                 placeholder="Manager full name"
                 value={inviteFullName}
@@ -449,21 +781,17 @@ export default function DistributionNetworkPage() {
                 <div className="rounded border bg-slate-50 p-3 text-xs">
                   <p className="font-medium text-slate-700">Invite URL</p>
                   <p className="break-all text-slate-600">{latestInviteUrl}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(latestInviteUrl);
-                        toast.success('Invite URL copied');
-                      } catch {
-                        toast.error('Failed to copy invite URL');
-                      }
-                    }}
-                  >
-                    Copy Link
-                  </Button>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={copyLatestInviteUrl}>
+                      Copy Link
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={shareLatestInviteViaWhatsapp}>
+                      Share via WhatsApp
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={shareLatestInviteViaEmail}>
+                      Share via Email
+                    </Button>
+                  </div>
                 </div>
               ) : null}
             </CardContent>

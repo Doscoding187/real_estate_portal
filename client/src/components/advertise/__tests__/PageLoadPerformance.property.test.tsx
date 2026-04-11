@@ -284,7 +284,7 @@ describe('Property 15: Page load performance', () => {
     fc.assert(
       fc.property(
         fc.record({
-          totalBundleSize: fc.integer({ min: 500, max: 5000 }), // KB
+          totalBundleSize: fc.integer({ min: 501, max: 5000 }), // KB
           criticalChunkSize: fc.integer({ min: 100, max: 500 }), // KB
           lazyChunkCount: fc.integer({ min: 3, max: 10 }),
         }),

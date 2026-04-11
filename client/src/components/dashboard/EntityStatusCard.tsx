@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
 import { cn } from '@/lib/utils';
-import { Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Edit, Trash2, AlertTriangle, Eye, Inbox } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { getQualityTier } from '@/lib/quality';
 import { withApiBase, getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
@@ -17,6 +17,7 @@ interface EntityStatusCardProps {
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
   onView?: (id: number) => void;
+  onViewEnquiries?: (id: number) => void;
   className?: string;
 }
 
@@ -28,6 +29,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   onEdit,
   onDelete,
   onView,
+  onViewEnquiries,
   className,
 }) => {
   const isListing = type === 'listing';
@@ -37,9 +39,10 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   // Status Badge Logic
   const getStatusBadge = () => {
     switch (status) {
+      case 'available':
       case 'published':
       case 'active':
-        return <Badge className="bg-green-500 hover:bg-green-600">Published</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600">Live</Badge>;
       case 'approved':
         return <Badge className="bg-blue-500 hover:bg-blue-600">Approved (Unpublished)</Badge>;
       case 'pending':
@@ -147,7 +150,10 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
 
                   {/* Quality Indicator (Only for drafts/active) */}
                   {quality &&
-                    (status === 'draft' || status === 'active' || status === 'published') && (
+                    (status === 'draft' ||
+                      status === 'active' ||
+                      status === 'available' ||
+                      status === 'published') && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200">
                         <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                           Quality
@@ -239,6 +245,31 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
             </div>
 
             {/* Footer Actions if needed */}
+            {!isRejected &&
+              (status === 'published' || status === 'active' || status === 'available') && (
+                <div className="mt-5 flex flex-col gap-3 border-t border-slate-50 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-slate-500">
+                    {typeof data.enquiries === 'number'
+                      ? `${data.enquiries} enquiries`
+                      : 'No enquiry data'}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {onViewEnquiries && (
+                      <Button size="sm" variant="outline" onClick={() => onViewEnquiries(data.id)}>
+                        <Inbox className="mr-2 h-4 w-4" />
+                        View Enquiries
+                      </Button>
+                    )}
+                    {onView && (
+                      <Button size="sm" onClick={() => onView(data.id)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Property
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
             {!isRejected && status !== 'published' && status !== 'active' && (
               <div className="mt-5 flex justify-end border-t border-slate-50 pt-4">
                 {status === 'draft' ? (

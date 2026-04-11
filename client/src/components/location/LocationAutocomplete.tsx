@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Command,
   CommandEmpty,
@@ -11,7 +9,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { MapPin, Search, Loader2 } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
 interface LocationOption {
@@ -47,6 +45,10 @@ export function LocationAutocomplete({
   const [searchQuery, setSearchQuery] = useState(value);
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
+  useEffect(() => {
+    setSearchQuery(value);
+  }, [value]);
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -69,7 +71,6 @@ export function LocationAutocomplete({
   );
 
   const handleSelect = (location: LocationOption) => {
-    console.log('Location selected:', location);
     setSearchQuery(location.name);
     onValueChange(location.name);
     if (onLocationSelect) {
@@ -79,9 +80,9 @@ export function LocationAutocomplete({
   };
 
   const handleInputChange = (newValue: string) => {
-    console.log('LocationAutocomplete input changed:', newValue);
     setSearchQuery(newValue);
     onValueChange(newValue);
+    setOpen(newValue.trim().length > 2);
   };
 
   return (
@@ -110,7 +111,7 @@ export function LocationAutocomplete({
           <CommandInput
             placeholder="Search locations..."
             value={searchQuery}
-            onValueChange={setSearchQuery}
+            onValueChange={handleInputChange}
           />
           <CommandList>
             <CommandEmpty>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isSuperAdminRole } from '@/_core/roles';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +32,7 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const isSuperAdmin = isSuperAdminRole(user?.role);
 
   const { data, isLoading, refetch } = trpc.user.list.useQuery({
     search: searchTerm || undefined,
@@ -79,7 +81,7 @@ export default function UserManagement() {
   });
 
   // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || !isSuperAdmin) {
     setLocation('/login');
     return null;
   }

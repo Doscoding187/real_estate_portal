@@ -4,6 +4,18 @@
   "framework": null,
   "routes": [
     {
+      "src": "/robots.txt",
+      "dest": "https://api.propertylistifysa.co.za/robots.txt"
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "https://api.propertylistifysa.co.za/sitemap.xml"
+    },
+    {
+      "src": "/sitemap-(.*)\\.xml",
+      "dest": "https://api.propertylistifysa.co.za/sitemap-$1.xml"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },

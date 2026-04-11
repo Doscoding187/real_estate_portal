@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,22 +17,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Phone, Mail, Calendar, Send, Loader2 } from 'lucide-react';
+import { Phone, Mail, Send, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
 interface PropertyContactModalProps {
   isOpen: boolean;
   onClose: () => void;
-  propertyId: number;
+  propertyId?: number;
   propertyTitle: string;
   agentName?: string;
   agentPhone?: string;
   agentEmail?: string;
   agentId?: number;
   agencyId?: number;
-  developerBrandProfileId?: number; // For brand lead routing
+  developerBrandProfileId?: number;
   developmentId?: number;
+  initialMessage?: string;
+  source?: string;
+  submitLabel?: string;
+  successMessage?: string;
+  successAction?: {
+    type: 'whatsapp';
+    phone: string;
+    message?: string;
+  };
+  affordabilityData?: {
+    monthlyIncome?: number;
+    monthlyExpenses?: number;
+    monthlyDebts?: number;
+    availableDeposit?: number;
+    maxAffordable?: number;
+    calculatedAt?: string;
+  };
+}
+
+type InquiryType = 'general' | 'viewing' | 'offer' | 'financing';
+
+interface ContactFormState {
+  name: string;
+  email: string;
+  phone: string;
+  inquiryType: InquiryType;
+  message: string;
 }
 
 export function PropertyContactModal({
@@ -41,25 +67,61 @@ export function PropertyContactModal({
   onClose,
   propertyId,
   propertyTitle,
-  agentName = 'Property Agent',
+  agentName = 'Listing Contact',
   agentPhone,
   agentEmail,
   agentId,
   agencyId,
   developerBrandProfileId,
   developmentId,
+  initialMessage,
+  source = 'property_search',
+  submitLabel = 'Send Inquiry',
+  successMessage = 'Your inquiry has been sent successfully!',
+  successAction,
+  affordabilityData,
 }: PropertyContactModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactFormState>({
     name: '',
     email: '',
     phone: '',
     inquiryType: 'general',
-    message: '',
+    message: initialMessage || '',
   });
+
+  const buildWhatsAppUrl = (phone: string, message?: string) => {
+    const digits = phone.replace(/[^\d+]/g, '');
+    if (!digits) return null;
+
+    const params = new URLSearchParams();
+    if (message?.trim()) {
+      params.set('text', message.trim());
+    }
+
+    const query = params.toString();
+    return `https://wa.me/${digits.replace(/^\+/, '')}${query ? `?${query}` : ''}`;
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setFormData(prev => ({
+      ...prev,
+      message: initialMessage || '',
+    }));
+  }, [initialMessage, isOpen]);
 
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: () => {
-      toast.success('Your inquiry has been sent successfully!');
+      toast.success(successMessage);
+
+      if (successAction?.type === 'whatsapp') {
+        const whatsappUrl = buildWhatsAppUrl(successAction.phone, successAction.message);
+        if (whatsappUrl) {
+          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        }
+      }
+
       setFormData({
         name: '',
         email: '',
@@ -89,35 +151,35 @@ export function PropertyContactModal({
       email: formData.email,
       phone: formData.phone,
       message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
-      source: 'property_detail',
+      source,
       agentId,
       agencyId,
-      developerBrandProfileId, // For brand lead routing
+      developerBrandProfileId,
       developmentId,
+      affordabilityData,
     });
   };
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = <K extends keyof ContactFormState>(field: K, value: ContactFormState[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Contact {agentName}</DialogTitle>
           <DialogDescription>
-            Interested in {propertyTitle}? Send a message to the agent.
+            Interested in {propertyTitle}? Send a message and we'll get back to you.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Inquiry Type */}
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="inquiryType">Inquiry Type</Label>
             <Select
               value={formData.inquiryType}
-              onValueChange={value => handleChange('inquiryType', value)}
+              onValueChange={value => handleChange('inquiryType', value as InquiryType)}
             >
               <SelectTrigger id="inquiryType">
                 <SelectValue placeholder="Select inquiry type" />
@@ -131,7 +193,6 @@ export function PropertyContactModal({
             </Select>
           </div>
 
-          {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">
               Your Name <span className="text-destructive">*</span>
@@ -145,7 +206,6 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email">
               Email Address <span className="text-destructive">*</span>
@@ -160,7 +220,6 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Phone */}
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
             <Input
@@ -172,7 +231,6 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Message */}
           <div className="space-y-2">
             <Label htmlFor="message">
               Message <span className="text-destructive">*</span>
@@ -187,9 +245,8 @@ export function PropertyContactModal({
             />
           </div>
 
-          {/* Agent Contact Info */}
           {(agentPhone || agentEmail) && (
-            <div className="bg-muted p-4 rounded-lg space-y-2">
+            <div className="space-y-2 rounded-lg bg-muted p-4">
               <p className="text-sm font-medium">Direct Contact</p>
               {agentPhone && (
                 <a
@@ -212,27 +269,26 @@ export function PropertyContactModal({
             </div>
           )}
 
-          {/* Submit Button */}
           <div className="flex gap-2 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               className="flex-1"
-              disabled={createLeadMutation.isLoading}
+              disabled={createLeadMutation.isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={createLeadMutation.isLoading}>
-              {createLeadMutation.isLoading ? (
+            <Button type="submit" className="flex-1" disabled={createLeadMutation.isPending}>
+              {createLeadMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send Inquiry
+                  <Send className="mr-2 h-4 w-4" />
+                  {submitLabel}
                 </>
               )}
             </Button>

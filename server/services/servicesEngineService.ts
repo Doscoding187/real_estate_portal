@@ -94,7 +94,10 @@ const STAGE_CATEGORY_AFFINITY: Record<ServiceIntentStage, ServiceCategory[]> = {
   ],
 };
 
-export function getStageCategoryBoost(stage: ServiceIntentStage, category: ServiceCategory): number {
+export function getStageCategoryBoost(
+  stage: ServiceIntentStage,
+  category: ServiceCategory,
+): number {
   return STAGE_CATEGORY_AFFINITY[stage].includes(category) ? 2 : 0;
 }
 
@@ -335,8 +338,10 @@ export class ServicesEngineService {
         code: item.code,
         displayName: item.displayName,
         description: item.description || null,
-        minPrice: item.minPrice !== null && item.minPrice !== undefined ? Number(item.minPrice) : null,
-        maxPrice: item.maxPrice !== null && item.maxPrice !== undefined ? Number(item.maxPrice) : null,
+        minPrice:
+          item.minPrice !== null && item.minPrice !== undefined ? Number(item.minPrice) : null,
+        maxPrice:
+          item.maxPrice !== null && item.maxPrice !== undefined ? Number(item.maxPrice) : null,
         currency: item.currency,
       })),
       locations: locations.map(item => ({
@@ -401,15 +406,21 @@ export class ServicesEngineService {
 
     let tierId = Number(input.tierId || 0);
     if (!tierId) {
+      const [preferredTier] = await db
+        .select({ id: partnerTiers.id })
+        .from(partnerTiers)
+        .where(eq(partnerTiers.id, 2))
+        .limit(1);
       const [fallbackTier] = await db
         .select({ id: partnerTiers.id })
         .from(partnerTiers)
         .orderBy(partnerTiers.id)
         .limit(1);
-      if (!fallbackTier?.id) {
+      const resolvedTierId = Number(preferredTier?.id || fallbackTier?.id || 0);
+      if (!resolvedTierId) {
         throw new Error('Cannot create provider without a partner tier. Seed partner_tiers first.');
       }
-      tierId = Number(fallbackTier.id);
+      tierId = resolvedTierId;
     }
 
     const providerId = randomUUID();
@@ -501,7 +512,9 @@ export class ServicesEngineService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    await db.delete(serviceProviderServices).where(eq(serviceProviderServices.providerId, providerId));
+    await db
+      .delete(serviceProviderServices)
+      .where(eq(serviceProviderServices.providerId, providerId));
 
     const rows = services
       .filter(item => normalizeText(item.code) && normalizeText(item.displayName))
@@ -532,7 +545,9 @@ export class ServicesEngineService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    await db.delete(serviceProviderLocations).where(eq(serviceProviderLocations.providerId, providerId));
+    await db
+      .delete(serviceProviderLocations)
+      .where(eq(serviceProviderLocations.providerId, providerId));
 
     const normalized = locations
       .map((location, index) => ({
@@ -582,7 +597,10 @@ export class ServicesEngineService {
         subscriptionTier: serviceProviderSubscriptions.tier,
       })
       .from(explorePartners)
-      .innerJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, explorePartners.id))
+      .innerJoin(
+        serviceProviderProfiles,
+        eq(serviceProviderProfiles.providerId, explorePartners.id),
+      )
       .leftJoin(
         serviceProviderSubscriptions,
         eq(serviceProviderSubscriptions.providerId, explorePartners.id),
@@ -659,7 +677,8 @@ export class ServicesEngineService {
       bio: row.bio || null,
       moderationTier: row.moderationTier as 'basic' | 'verified' | 'pro',
       subscriptionTier:
-        (row.subscriptionTier as 'directory' | 'directory_explore' | 'ecosystem_pro') || 'directory',
+        (row.subscriptionTier as 'directory' | 'directory_explore' | 'ecosystem_pro') ||
+        'directory',
       averageRating: Number(row.averageRating || 0),
       reviewCount: Number(row.reviewCount || 0),
       services: servicesByProvider.get(row.providerId) || [],
@@ -686,13 +705,10 @@ export class ServicesEngineService {
 
       if (!normalizedQuery) return true;
 
-      const serviceText = record.services.map(service => service.displayName.toLowerCase()).join(' ');
-      const haystack = [
-        record.companyName,
-        record.headline || '',
-        record.bio || '',
-        serviceText,
-      ]
+      const serviceText = record.services
+        .map(service => service.displayName.toLowerCase())
+        .join(' ');
+      const haystack = [record.companyName, record.headline || '', record.bio || '', serviceText]
         .join(' ')
         .toLowerCase();
       return haystack.includes(normalizedQuery);
@@ -721,10 +737,14 @@ export class ServicesEngineService {
     const stageCategoryBoost = getStageCategoryBoost(input.intentStage, input.category);
     const scored = directory.map(provider => {
       const matchesSuburb = suburbLower
-        ? provider.locations.some(location => String(location.suburb || '').toLowerCase() === suburbLower)
+        ? provider.locations.some(
+            location => String(location.suburb || '').toLowerCase() === suburbLower,
+          )
         : false;
       const matchesCity = cityLower
-        ? provider.locations.some(location => String(location.city || '').toLowerCase() === cityLower)
+        ? provider.locations.some(
+            location => String(location.city || '').toLowerCase() === cityLower,
+          )
         : false;
       const score = scoreProviderCandidate({
         serviceCategory: input.category,
@@ -796,7 +816,9 @@ export class ServicesEngineService {
             | 'ecosystem_pro'
             | null) || 'directory'
         : null;
-      const billingEligible = providerId ? isBillingEligibleForTier(tier || 'directory', input.sourceSurface) : false;
+      const billingEligible = providerId
+        ? isBillingEligibleForTier(tier || 'directory', input.sourceSurface)
+        : false;
 
       const insertResult = await db.insert(serviceLeads).values({
         requesterUserId: input.requesterUserId || null,
@@ -923,7 +945,11 @@ export class ServicesEngineService {
     if (!db) throw new Error('Database not available');
 
     const [lead] = await db
-      .select({ id: serviceLeads.id, providerId: serviceLeads.providerId, status: serviceLeads.status })
+      .select({
+        id: serviceLeads.id,
+        providerId: serviceLeads.providerId,
+        status: serviceLeads.status,
+      })
       .from(serviceLeads)
       .where(and(eq(serviceLeads.id, input.leadId), eq(serviceLeads.providerId, input.providerId)))
       .limit(1);
@@ -1011,7 +1037,8 @@ export class ServicesEngineService {
     const quoted = totalsByStatus.quoted || 0;
     const activePipeline = (totalsByStatus.new || 0) + (totalsByStatus.accepted || 0) + quoted;
     const conversionBase = won + lost + quoted + (totalsByStatus.accepted || 0);
-    const conversionRate = conversionBase > 0 ? Number(((won / conversionBase) * 100).toFixed(1)) : 0;
+    const conversionRate =
+      conversionBase > 0 ? Number(((won / conversionBase) * 100).toFixed(1)) : 0;
 
     const moderationRows = await db
       .select({
@@ -1039,7 +1066,12 @@ export class ServicesEngineService {
     providerId: string;
     title: string;
     description?: string | null;
-    vertical: 'walkthroughs' | 'home_improvement' | 'finance_legal' | 'moving_lifestyle' | 'developer_story';
+    vertical:
+      | 'walkthroughs'
+      | 'home_improvement'
+      | 'finance_legal'
+      | 'moving_lifestyle'
+      | 'developer_story';
     submittedByUserId?: number | null;
     exploreContentId?: number | null;
   }) {

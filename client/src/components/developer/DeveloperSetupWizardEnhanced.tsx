@@ -374,12 +374,12 @@ export default function DeveloperSetupWizardEnhanced() {
         logo: data.logo || null,
       });
 
-      toast.success('Profile submitted for review successfully!');
+      toast.success('Profile submitted. Continue in your dashboard while we review it.');
 
       // Clear the draft from localStorage
       localStorage.removeItem('developer-registration-draft');
 
-      setLocation('/developer/success');
+      setLocation('/developer/dashboard?setup=complete');
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Failed to submit profile');

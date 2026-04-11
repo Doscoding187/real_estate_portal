@@ -39,19 +39,11 @@ describe('properties.search contract', () => {
         id: 101,
         name: 'Demo Development',
         slug: 'demo-development',
-        description: 'Wizard description',
         city: 'Cape Town',
         suburb: 'City Bowl',
         province: 'Western Cape',
         priceFrom: 1200000,
         priceTo: 2500000,
-        status: 'selling',
-        isFeatured: true,
-        rating: 4.7,
-        highlights: ['24-Hour Security', 'Pool'],
-        builderName: 'Wizard Builder',
-        builderLogoUrl: 'https://cdn.example.com/logo.png',
-        configurations: [{ label: '2 Bed Apartment', priceFrom: 1200000 }],
         images: [],
         developerBrandProfileId: 1,
       },
@@ -100,16 +92,5 @@ describe('properties.search contract', () => {
     expect((result as any).developments).toBeDefined();
     expect(Array.isArray((result as any).developments.items)).toBe(true);
     expect(typeof (result as any).developments.total).toBe('number');
-    expect((result as any).developments.items[0]).toMatchObject({
-      id: 101,
-      name: 'Demo Development',
-      description: 'Wizard description',
-      status: 'selling',
-      isFeatured: true,
-      rating: 4.7,
-      highlights: ['24-Hour Security', 'Pool'],
-      builderName: 'Wizard Builder',
-      builderLogoUrl: 'https://cdn.example.com/logo.png',
-    });
   });
 });

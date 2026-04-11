@@ -7,6 +7,35 @@ import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { distributionIdentities } from '../../drizzle/schema';
 
+const VERIFIED_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+const getRequestId = (req: Request): string => {
+  const requestId = (req as any).requestId;
+  return typeof requestId === 'string' && requestId.trim().length > 0 ? requestId : 'unknown';
+};
+
+const isDatabaseQueryError = (message: string): boolean =>
+  message.includes('Failed query:') ||
+  message.includes('ECONNREFUSED') ||
+  message.includes('connect');
+
+const getPostVerificationPath = (role: string | null | undefined): string => {
+  switch (role) {
+    case 'super_admin':
+      return '/admin/overview?verified=true';
+    case 'agent':
+      return '/agent/select-package?verified=true';
+    case 'agency_admin':
+      return '/agency/setup?verified=true';
+    case 'property_developer':
+      return '/developer/setup?verified=true';
+    case 'service_provider':
+      return '/service/profile?verified=true';
+    default:
+      return '/user/dashboard?verified=true';
+  }
+};
+
 /**
  * Register authentication routes
  * This replaces the Manus OAuth routes
@@ -20,6 +49,18 @@ export function registerAuthRoutes(app: Express) {
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
       const { email, password, name, role, agentProfile } = req.body;
+      const normalizedAgentProfile =
+        role === 'agent' && agentProfile
+          ? {
+              ...agentProfile,
+              displayName:
+                typeof agentProfile.displayName === 'string'
+                  ? agentProfile.displayName.trim()
+                  : agentProfile.displayName,
+              phoneNumber: agentProfile.phoneNumber || agentProfile.phone,
+              phone: agentProfile.phone || agentProfile.phoneNumber,
+            }
+          : undefined;
 
       // Validate input
       if (!email || !password) {
@@ -32,7 +73,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
       if (!passwordStrengthRegex.test(password)) {
         return res.status(400).json({
           error:
@@ -42,7 +83,11 @@ export function registerAuthRoutes(app: Express) {
 
       // Validate agent profile if role is agent
       if (role === 'agent') {
-        if (!agentProfile || !agentProfile.displayName || !agentProfile.phoneNumber) {
+        if (
+          !normalizedAgentProfile ||
+          !normalizedAgentProfile.displayName ||
+          !normalizedAgentProfile.phoneNumber
+        ) {
           return res.status(400).json({
             error:
               'Agent profile with display name and phone number is required for agent registration',
@@ -52,31 +97,45 @@ export function registerAuthRoutes(app: Express) {
 
       // Register user (sends verification email)
       // Allow specific roles if requested, otherwise default to 'visitor'
-      const allowedRoles = ['agent', 'agency_admin', 'property_developer', 'visitor'];
+      const allowedRoles = [
+        'agent',
+        'agency_admin',
+        'property_developer',
+        'service_provider',
+        'visitor',
+      ];
       const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
 
-      const userId = await authService.register(
+      const { verificationEmailSent } = await authService.register(
         email,
         password,
         name,
         requestedRole as any,
-        agentProfile,
+        normalizedAgentProfile,
       );
 
       // Return success message - user must verify email before logging in
       const message =
         role === 'agent'
-          ? 'Registration successful! Please check your email to verify your account. Your agent profile will be created after email verification.'
-          : 'Registration successful. Please check your email to verify your account.';
+          ? 'Registration successful! Please check your email to verify your account. Your agent profile is pending review and will unlock after verification and approval.'
+          : role === 'service_provider'
+            ? 'Registration successful! Please verify your email, then complete your partner profile.'
+            : 'Registration successful. Please check your email to verify your account.';
 
-      res.status(201).json({
+      res.status(verificationEmailSent ? 201 : 202).json({
         success: true,
-        message,
+        verificationEmailSent,
+        message: verificationEmailSent
+          ? message
+          : 'Account created, but we could not send the verification email right now. Please use resend verification before logging in.',
       });
     } catch (error: any) {
       console.error('[Auth] Registration failed', error);
 
-      if (error.message?.includes('already exists')) {
+      if (
+        error.message?.includes('already exists') ||
+        error.message?.includes('Multiple accounts found for this email')
+      ) {
         return res.status(409).json({ error: error.message });
       }
 
@@ -90,8 +149,12 @@ export function registerAuthRoutes(app: Express) {
    * Body: { email: string, password: string, rememberMe?: boolean }
    */
   app.post('/api/auth/login', async (req: Request, res: Response) => {
+    const requestId = getRequestId(req);
+    const emailFromBody = req.body?.email;
+    const normalizedEmail =
+      typeof emailFromBody === 'string' ? emailFromBody.trim().toLowerCase() : null;
+
     try {
-      console.log('🔐 Login attempt:', req.body);
       const { email, password, rememberMe } = req.body;
 
       // Validate input
@@ -103,30 +166,39 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid input types' });
       }
 
-      console.log('🔍 Validating credentials for:', email);
+      console.info('[Auth][Login] Attempt', { requestId, email: normalizedEmail });
+
       // Login user
       const { user, sessionToken } = await authService.login(email, password, rememberMe);
-      console.log('✅ Auth service returned user:', user.email);
+      console.info('[Auth][Login] Success', {
+        requestId,
+        userId: user.id,
+        email: user.email || null,
+      });
 
       let hasReferrerIdentity = false;
+      let hasManagerIdentity = false;
       try {
         const db = await getDb();
         if (db) {
-          const [identity] = await db
-            .select({ id: distributionIdentities.id })
+          const identityRows = await db
+            .select({
+              id: distributionIdentities.id,
+              identityType: distributionIdentities.identityType,
+            })
             .from(distributionIdentities)
             .where(
-              and(
-                eq(distributionIdentities.userId, user.id),
-                eq(distributionIdentities.identityType, 'referrer'),
-                eq(distributionIdentities.active, 1),
-              ),
-            )
-            .limit(1);
-          hasReferrerIdentity = Boolean(identity?.id);
+              and(eq(distributionIdentities.userId, user.id), eq(distributionIdentities.active, 1)),
+            );
+          hasReferrerIdentity = identityRows.some(
+            row => Boolean(row.id) && row.identityType === 'referrer',
+          );
+          hasManagerIdentity = identityRows.some(
+            row => Boolean(row.id) && row.identityType === 'manager',
+          );
         }
       } catch (identityError) {
-        console.warn('[Auth] Referrer identity lookup failed (non-fatal):', identityError);
+        console.warn('[Auth] Distribution identity lookup failed (non-fatal):', identityError);
       }
 
       // Feature 4: "Remember Me" Functionality
@@ -134,14 +206,12 @@ export function registerAuthRoutes(app: Express) {
         ? 30 * 24 * 60 * 60 * 1000 // 30 days
         : 24 * 60 * 60 * 1000; // 24 hours
 
-      console.log('🍪 Setting cookie with name:', COOKIE_NAME);
       // Set session cookie
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, {
         ...cookieOptions,
         maxAge,
       });
-      console.log('✅ Cookie set successfully');
 
       // Return success with user info
       res.json({
@@ -152,24 +222,40 @@ export function registerAuthRoutes(app: Express) {
           name: user.name,
           role: user.role,
           hasReferrerIdentity,
+          hasManagerIdentity,
         },
       });
     } catch (error: any) {
-      console.error('❌ Login failed:', error);
-      console.error('Error stack:', error.stack);
-
       // Handle specific error cases with appropriate status codes
-      const errorMessage = error.message || 'Unknown error';
+      const errorMessage = error?.message || 'Unknown error';
+      const dbErrorMessage = isDatabaseQueryError(errorMessage) ? errorMessage : null;
+
+      console.error('[Auth][Login] Failure', {
+        requestId,
+        email: normalizedEmail,
+        errorMessage,
+        dbErrorMessage,
+        code: error?.code || null,
+        name: error?.name || null,
+      });
 
       if (
         errorMessage.includes('Invalid email or password') ||
         errorMessage.includes('verify your email')
       ) {
-        return res.status(401).json({ error: errorMessage });
+        return res.status(401).json({
+          error: errorMessage,
+          code: errorMessage.includes('verify your email') ? 'EMAIL_UNVERIFIED' : undefined,
+          email: errorMessage.includes('verify your email') ? normalizedEmail : undefined,
+        });
       }
 
       if (errorMessage.includes('OAuth login')) {
         return res.status(403).json({ error: errorMessage });
+      }
+
+      if (errorMessage.includes('Multiple accounts found for this email')) {
+        return res.status(409).json({ error: errorMessage, requestId });
       }
 
       if (
@@ -183,20 +269,20 @@ export function registerAuthRoutes(app: Express) {
       if (errorMessage.includes('JWT_SECRET')) {
         return res
           .status(500)
-          .json({ error: 'Server configuration error. Please contact support.' });
+          .json({ error: 'Server configuration error. Please contact support.', requestId });
       }
 
       // Database connection errors
       if (errorMessage.includes('connect') || errorMessage.includes('ECONNREFUSED')) {
         return res
           .status(503)
-          .json({ error: 'Database service unavailable. Please try again later.' });
+          .json({ error: 'Database service unavailable. Please try again later.', requestId });
       }
 
       res.status(500).json({
         error: 'Login failed',
-        message: errorMessage,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        message: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        requestId,
       });
     }
   });
@@ -256,7 +342,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Feature 3: Password Strength Requirements
       const passwordStrengthRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
       if (!passwordStrengthRegex.test(newPassword)) {
         return res.status(400).json({
           error:
@@ -292,10 +378,21 @@ export function registerAuthRoutes(app: Express) {
           );
       }
 
-      await authService.verifyEmail(token);
+      const user = await authService.verifyEmail(token);
+      const sessionToken = await authService.createSessionToken(
+        user.id,
+        user.email || '',
+        user.name || user.email || 'User',
+        { expiresInMs: VERIFIED_SESSION_MAX_AGE_MS },
+      );
 
-      // Redirect to the login page with a success message
-      res.redirect(`${ENV.appUrl}/login?verified=true`);
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, {
+        ...cookieOptions,
+        maxAge: VERIFIED_SESSION_MAX_AGE_MS,
+      });
+
+      res.redirect(`${ENV.appUrl}${getPostVerificationPath(user.role)}`);
     } catch (error: any) {
       console.error('[Auth] Email verification failed', error);
       res
@@ -303,6 +400,33 @@ export function registerAuthRoutes(app: Express) {
         .send(
           `<h1>Email Verification Failed</h1><p>${error.message || 'The verification link is invalid or has expired.'}</p>`,
         );
+    }
+  });
+
+  /**
+   * Resend verification email for unverified accounts.
+   * POST /api/auth/resend-verification
+   * Body: { email: string }
+   */
+  app.post('/api/auth/resend-verification', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'A valid email is required' });
+      }
+
+      await authService.resendVerificationEmail(email);
+
+      res.json({
+        success: true,
+        message: 'If this account exists and is unverified, a verification email has been sent.',
+      });
+    } catch (error: any) {
+      console.error('[Auth] Resend verification failed', error);
+      res.status(503).json({
+        error: 'Verification email could not be sent right now. Please try again later.',
+      });
     }
   });
 }

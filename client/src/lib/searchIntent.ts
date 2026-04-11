@@ -64,11 +64,17 @@ export function resolveSearchIntent(
 
   const queryProvince = searchParams.get('province');
   const queryCity = searchParams.get('city');
-  const querySuburb = searchParams.get('suburb');
+  const querySuburbs = searchParams
+    .getAll('suburb')
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean);
+  const querySuburb = querySuburbs[0];
 
-  if (querySuburb) {
+  if (querySuburb && querySuburbs.length === 1) {
     geography.level = 'locality';
-    geography.suburb = querySuburb.toLowerCase();
+    geography.suburb = querySuburb;
+  } else if (querySuburbs.length > 1 && queryCity) {
+    geography.level = 'city';
   }
 
   if (queryCity) {
@@ -128,6 +134,23 @@ export function resolveSearchIntent(
     filters.locations = locations;
   }
 
+  if (querySuburbs.length > 1) {
+    filters.suburb = querySuburbs;
+  } else if (querySuburbs.length === 1) {
+    filters.suburb = querySuburbs[0];
+  }
+
+  if (!geography.province && !geography.city && !geography.suburb && locations.length === 1) {
+    const [locationSlug] = locations;
+    if (PROVINCE_SLUGS.includes(locationSlug.toLowerCase())) {
+      geography.level = 'province';
+      geography.province = locationSlug.toLowerCase();
+    } else {
+      geography.level = 'city';
+      geography.city = locationSlug.toLowerCase();
+    }
+  }
+
   searchParams.forEach((value, key) => {
     // Skip geography keys - they're handled above
     if (key === 'province' || key === 'city' || key === 'suburb') return;
@@ -174,18 +197,54 @@ export function generateIntentUrl(intent: SearchIntent): string {
 
   // 2. Build query params from filters
   const queryParams = new URLSearchParams();
+  const normalizedSuburbs = (() => {
+    if (Array.isArray(filters.suburb)) {
+      return filters.suburb
+        .map(value => String(value).trim().toLowerCase())
+        .filter(Boolean);
+    }
+
+    if (typeof filters.suburb === 'string' && filters.suburb.trim()) {
+      return [filters.suburb.trim().toLowerCase()];
+    }
+
+    return [];
+  })();
 
   Object.entries(filters).forEach(([key, value]) => {
     // Skip internal keys that shouldn't appear in URL
     if (key === 'listingType') return;
+    if (key === 'suburb') return;
     if (!value) return;
 
     if (Array.isArray(value)) {
-      value.forEach(v => queryParams.append(key, String(v)));
+      value.forEach(v => {
+        if (key === 'locations') {
+          if (typeof v === 'string' && v.trim()) {
+            queryParams.append(key, v);
+            return;
+          }
+
+          if (v && typeof v === 'object' && 'slug' in v) {
+            const slug = String((v as { slug?: unknown }).slug || '').trim();
+            if (slug) {
+              queryParams.append(key, slug);
+            }
+          }
+          return;
+        }
+
+        queryParams.append(key, String(v));
+      });
     } else {
       queryParams.set(key, String(value));
     }
   });
+
+  if (normalizedSuburbs.length > 0) {
+    queryParams.delete('suburb');
+    normalizedSuburbs.forEach(suburb => queryParams.append('suburb', suburb));
+  }
 
   // ============================================================
   // CRITICAL: City/Suburb searches MUST use query-based URLs
@@ -194,7 +253,9 @@ export function generateIntentUrl(intent: SearchIntent): string {
 
   if (geography.suburb) {
     // Suburb search → Query-based SRP
-    queryParams.set('suburb', geography.suburb);
+    if (normalizedSuburbs.length === 0) {
+      queryParams.set('suburb', geography.suburb);
+    }
     if (geography.city) queryParams.set('city', geography.city);
     if (geography.province) queryParams.set('province', geography.province);
 

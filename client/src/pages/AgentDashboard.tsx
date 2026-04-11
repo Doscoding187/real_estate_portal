@@ -2,12 +2,14 @@ import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { AgentSidebar } from '@/components/agent/AgentSidebar';
-import { AgentTopNav } from '@/components/agent/AgentTopNav';
+import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { AgentDashboardOverview } from '@/components/agent/AgentDashboardOverview';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
+
+type AgentOnboardingGuard = {
+  packageSelected: boolean;
+  dashboardUnlocked: boolean;
+};
 
 export default function AgentDashboard() {
   const [, setLocation] = useLocation();
@@ -18,7 +20,7 @@ export default function AgentDashboard() {
     enabled: isAuthenticated && user?.role === 'agent',
     retry: false,
   });
-  const { data: agentProfile, isLoading: isLoadingProfile, error } = agentProfileQuery;
+  const { isLoading: isLoadingProfile, error } = agentProfileQuery;
 
   useEffect(() => {
     if (!error) return;
@@ -27,50 +29,53 @@ export default function AgentDashboard() {
     }
   }, [error, setLocation]);
 
+  useEffect(() => {
+    if (loading || !isAuthenticated || user?.role !== 'agent') return;
+
+    let cancelled = false;
+
+    const checkOnboarding = async () => {
+      try {
+        const onboarding = await apiFetch<AgentOnboardingGuard>('/agent/onboarding-status');
+        if (cancelled) return;
+
+        if (!onboarding.packageSelected) {
+          setLocation('/agent/select-package');
+          return;
+        }
+
+        if (!onboarding.dashboardUnlocked) {
+          setLocation('/agent/setup');
+        }
+      } catch {
+        if (!cancelled) {
+          setLocation('/agent/select-package');
+        }
+      }
+    };
+
+    void checkOnboarding();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, loading, setLocation, user?.role]);
+
   // Show loading spinner while auth is being checked
   if (loading || isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-emerald-600"></div>
           <p className="text-slate-400">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Redirect if not authenticated or not agent
-  if (!isAuthenticated) {
-    setLocation('/login');
-    return null;
-  }
-
-  if (user?.role !== 'agent') {
-    setLocation('/dashboard');
-    return null;
-  }
-
   return (
-    <div className="flex min-h-screen bg-[#F4F7FA]">
-      <AgentSidebar />
-
-      {/* Mobile Menu */}
-      <Sheet>
-        <SheetTrigger asChild className="lg:hidden fixed top-4 left-4 z-50">
-          <Button variant="ghost" size="icon">
-            <Menu className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <AgentSidebar />
-        </SheetContent>
-      </Sheet>
-
-      {/* Main Content */}
-      <div className="flex-1 lg:pl-64">
-        <AgentTopNav />
-        <AgentDashboardOverview />
-      </div>
-    </div>
+    <AgentAppShell>
+      <AgentDashboardOverview />
+    </AgentAppShell>
   );
 }

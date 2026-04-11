@@ -25,7 +25,7 @@ import {
   UserX,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { stageGroupMatches, useDeveloperLeadsQuery } from '@/hooks/useDeveloperLeadsQuery';
 import { useLocation } from 'wouter';
@@ -862,4 +862,3 @@ export default function LeadsManager() {
     </div>
   );
 }
-
