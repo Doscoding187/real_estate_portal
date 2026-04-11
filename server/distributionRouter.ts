@@ -7817,7 +7817,13 @@ export const distributionRouter = router({
       z.object({
         fullName: z.string().trim().min(2).max(200),
         email: z.string().trim().email().max(320),
-        phone: z.string().trim().max(50).optional(),
+        phone: z.string().trim().min(7).max(50),
+        partnerType: z.enum([
+          'independent_agent',
+          'small_brokerage',
+          'referral_partner',
+          'individual',
+        ]),
         notes: z.string().max(2000).optional(),
       }),
     )
@@ -7849,7 +7855,7 @@ export const distributionRouter = router({
         requestedIdentity: 'referrer',
         fullName: input.fullName.trim(),
         email: normalizedEmail,
-        phone: input.phone?.trim() || null,
+        phone: input.phone.trim(),
         notes: input.notes?.trim() || null,
         status: 'pending',
       });
