@@ -180,8 +180,7 @@ export default function DistributionNetworkPage() {
     },
   );
   const programsQuery = trpc.distribution.admin.listPrograms.useQuery(undefined, {
-    enabled:
-      submoduleSlug === 'partner-developments' || submoduleSlug === 'distribution-managers',
+    enabled: submoduleSlug === 'partner-developments' || submoduleSlug === 'distribution-managers',
   });
   const onboardDevelopmentMutation =
     trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
@@ -217,6 +216,25 @@ export default function DistributionNetworkPage() {
       onError: err => toast.error(err.message),
     },
   );
+  const reviewReferrerApplicationMutation =
+    trpc.distribution.admin.reviewReferrerApplication.useMutation({
+      onSuccess: result => {
+        if (result.status === 'approved') {
+          toast.success(
+            result.userCreated
+              ? result.activationEmailSent
+                ? 'Referrer approved, account created, and activation email sent.'
+                : 'Referrer approved and account created.'
+              : 'Referrer approved.',
+          );
+        } else {
+          toast.success('Referrer application rejected.');
+        }
+        applicationsQuery.refetch();
+        accessQuery.refetch();
+      },
+      onError: err => toast.error(err.message),
+    });
   const setManagerAccessMutation = trpc.distribution.admin.setManagerAccess.useMutation({
     onSuccess: result => {
       toast.success(result.active ? 'Manager access enabled' : 'Manager access revoked');
@@ -889,29 +907,128 @@ export default function DistributionNetworkPage() {
       )}
 
       {submoduleSlug === 'agent-network' && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Agent Tiers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{(tiersQuery.data || []).length}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Access Grants</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{(accessQuery.data || []).length}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Referrer Applications</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{(applicationsQuery.data || []).length}</p>
+                <p className="text-xs text-slate-500">
+                  Pending:{' '}
+                  {
+                    (applicationsQuery.data || []).filter(
+                      (application: any) => application.status === 'pending',
+                    ).length
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Agent Tiers</CardTitle>
+              <CardTitle>Referrer Application Queue</CardTitle>
+              <CardDescription>Review pending applications and approve onboarding.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{(tiersQuery.data || []).length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Access Grants</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{(accessQuery.data || []).length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Referrer Applications</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{(applicationsQuery.data || []).length}</p>
+            <CardContent className="space-y-2">
+              {(applicationsQuery.data || []).map((application: any) => (
+                <div key={application.id} className="rounded border p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{application.fullName}</p>
+                      <p className="text-xs text-slate-500">
+                        {application.email}
+                        {application.phone ? ` | ${application.phone}` : ''}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Badge
+                          variant={application.status === 'approved' ? 'default' : 'secondary'}
+                        >
+                          {application.status}
+                        </Badge>
+                        <Badge variant="outline">
+                          {String(application.requestedIdentity || 'referrer')}
+                        </Badge>
+                        {application.userId ? (
+                          <Badge variant="outline">User #{application.userId}</Badge>
+                        ) : null}
+                      </div>
+                      {application.reviewedByDisplayName ? (
+                        <p className="mt-2 text-xs text-slate-500">
+                          Reviewed by {application.reviewedByDisplayName}
+                          {application.reviewedAt
+                            ? ` on ${new Date(application.reviewedAt).toLocaleString()}`
+                            : ''}
+                        </p>
+                      ) : null}
+                      {application.createdAt ? (
+                        <p className="text-xs text-slate-500">
+                          Applied on {new Date(application.createdAt).toLocaleString()}
+                        </p>
+                      ) : null}
+                      {application.notes ? (
+                        <p className="mt-2 whitespace-pre-line text-xs text-slate-600">
+                          {application.notes}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {application.status === 'pending' ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              reviewReferrerApplicationMutation.mutate({
+                                applicationId: Number(application.id),
+                                decision: 'approved',
+                                notes: 'Approved from Referrer Application Queue',
+                              })
+                            }
+                            disabled={reviewReferrerApplicationMutation.isPending}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() =>
+                              reviewReferrerApplicationMutation.mutate({
+                                applicationId: Number(application.id),
+                                decision: 'rejected',
+                                notes: 'Rejected from Referrer Application Queue',
+                              })
+                            }
+                            disabled={reviewReferrerApplicationMutation.isPending}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!applicationsQuery.isLoading && !(applicationsQuery.data || []).length && (
+                <p className="text-sm text-slate-500">No referrer applications found.</p>
+              )}
             </CardContent>
           </Card>
         </div>
