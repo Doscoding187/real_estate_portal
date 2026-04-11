@@ -101,23 +101,28 @@ export default function DistributionReferralApplyPage() {
     },
   });
 
-  const canSubmit = form.fullName.trim().length >= 2 && form.email.trim().length > 0;
+  const canSubmit =
+    form.fullName.trim().length >= 2 &&
+    form.email.trim().length > 0 &&
+    form.phone.trim().length > 0 &&
+    form.partnerType !== '';
 
   const notes = useMemo(() => {
-    if (!form.partnerType) return 'Conversion-first apply form submission';
+    if (!form.partnerType) return 'Applicant type: Not specified';
     return `Applicant type: ${partnerTypeLabels[form.partnerType]}`;
   }, [form.partnerType]);
 
   const handleSubmit = () => {
     if (!canSubmit) {
-      toast.error('Please enter your full name and email.');
+      toast.error('Please complete full name, email, phone/WhatsApp, and applicant type.');
       return;
     }
 
     submitMutation.mutate({
       fullName: form.fullName.trim(),
       email: form.email.trim(),
-      phone: form.phone.trim() || undefined,
+      phone: form.phone.trim(),
+      partnerType: form.partnerType as Exclude<PartnerType, ''>,
       notes,
     });
   };
@@ -214,7 +219,7 @@ export default function DistributionReferralApplyPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-700">Phone / WhatsApp (Optional)</label>
+                          <label className="text-sm font-medium text-slate-700">Phone / WhatsApp</label>
                           <Input
                             value={form.phone}
                             onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
@@ -222,7 +227,7 @@ export default function DistributionReferralApplyPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-700">I am a... (Optional)</label>
+                          <label className="text-sm font-medium text-slate-700">I am a...</label>
                           <select
                             value={form.partnerType}
                             onChange={e =>
