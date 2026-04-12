@@ -1,4 +1,4 @@
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import { createTRPCProxyClient, httpBatchLink, splitLink } from '@trpc/client';
 import superjson from 'superjson';
 import type { AppRouter } from '../../../server/routers';
 
@@ -12,16 +12,31 @@ const TRPC_URL = new URL(
 
 export const trpcClient = createTRPCProxyClient<AppRouter>({
   links: [
-    httpBatchLink({
-      url: TRPC_URL,
-      transformer: superjson,
-      methodOverride: 'POST',
-      async fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: 'include',
-        });
+    splitLink({
+      condition(op) {
+        return op.type === 'mutation';
       },
+      true: httpBatchLink({
+        url: TRPC_URL,
+        transformer: superjson,
+        methodOverride: 'POST',
+        async fetch(input, init) {
+          return globalThis.fetch(input, {
+            ...(init ?? {}),
+            credentials: 'include',
+          });
+        },
+      }),
+      false: httpBatchLink({
+        url: TRPC_URL,
+        transformer: superjson,
+        async fetch(input, init) {
+          return globalThis.fetch(input, {
+            ...(init ?? {}),
+            credentials: 'include',
+          });
+        },
+      }),
     }),
   ],
 });
