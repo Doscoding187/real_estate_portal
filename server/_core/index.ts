@@ -118,7 +118,19 @@ async function startServer() {
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        const originHost = (() => {
+          try {
+            return new URL(origin).hostname;
+          } catch {
+            return '';
+          }
+        })();
+
+        const isPropertyListifyOrigin =
+          originHost === 'propertylistifysa.co.za' ||
+          originHost.endsWith('.propertylistifysa.co.za');
+
+        if (isPropertyListifyOrigin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
           console.log(`✅ CORS: Allowed origin: ${origin}`);
           callback(null, true);
         } else {
