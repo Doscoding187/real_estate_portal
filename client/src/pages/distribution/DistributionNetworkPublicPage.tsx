@@ -1,6 +1,6 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ReferralApplyModal } from '@/components/distribution/ReferralApplyModal';
+import { ReferralApplyForm } from '@/components/distribution/ReferralApplyForm';
 import {
   ArrowRight,
   Building2,
@@ -65,8 +65,8 @@ export default function DistributionNetworkPublicPage() {
   const [, setLocation] = useLocation();
   const stickyVisible = useMobileStickyCTA('distribution-network-hero');
 
-  // Apply modal state
-  const [isApplyOpen, setIsApplyOpen] = useState(false);
+  // Expandable form state
+  const [isFormVisible, setIsFormVisible] = useState(false);
   const [interestedDevId, setInterestedDevId] = useState<number | null>(null);
 
   // Matcher State â€” no prefills
@@ -90,9 +90,15 @@ export default function DistributionNetworkPublicPage() {
     return `Min R${(estGross / 1000).toFixed(0)}k / month`;
   };
 
-  const openApplyModal = (devId?: number) => {
+  const revealAndScrollToForm = (devId?: number) => {
     setInterestedDevId(devId ?? null);
-    setIsApplyOpen(true);
+    setIsFormVisible(true);
+    setTimeout(() => {
+      document.getElementById('apply-form-section')?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 150);
   };
 
   const toggleBed = (bed: string) => {
@@ -210,7 +216,7 @@ export default function DistributionNetworkPublicPage() {
               <Button
                 size="sm"
                 className="border-0 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white hover:opacity-95"
-                onClick={() => openApplyModal()}
+                onClick={() => revealAndScrollToForm()}
               >
                 Apply to Join
               </Button>
@@ -273,7 +279,7 @@ export default function DistributionNetworkPublicPage() {
                 <Button
                   size="lg"
                   className="h-14 border-0 bg-[linear-gradient(135deg,#3b82f6,#0ea5e9)] px-10 text-base font-bold text-white shadow-[0_12px_28px_-14px_rgba(59,130,246,0.6)] sm:w-auto hover:opacity-90 transition-transform hover:-translate-y-0.5"
-                  onClick={() => openApplyModal()}
+                  onClick={() => revealAndScrollToForm()}
                 >
                   Start Referring Now
                 </Button>
@@ -310,6 +316,33 @@ export default function DistributionNetworkPublicPage() {
               </div>
             </div>
           </section>
+
+          {/* EXPANDABLE FORM SECTION */}
+          <AnimatePresence>
+            {isFormVisible && (
+              <motion.section
+                id="apply-form-section"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
+                className="overflow-hidden bg-slate-100"
+              >
+                <div className="container py-12 md:py-16 border-b border-slate-200">
+                  <ReferralApplyForm
+                    onClose={() => setIsFormVisible(false)}
+                    interestedDevId={interestedDevId}
+                    developments={developments?.map(d => ({
+                      id: d.id,
+                      name: d.name,
+                      suburb: d.suburb,
+                      city: d.city,
+                    }))}
+                  />
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
 
           {/* MATCHER ENGINE */}
           <section className="scroll-mt-24 py-16 md:py-24 border-b border-slate-200 bg-white">
@@ -465,7 +498,7 @@ export default function DistributionNetworkPublicPage() {
 
                   <Button
                     className="w-full h-14 bg-[linear-gradient(135deg,#0f172a,#1e293b)] text-white text-base font-bold shadow-lg hover:bg-slate-800 group"
-                    onClick={() => openApplyModal()}
+                    onClick={() => revealAndScrollToForm()}
                   >
                     Submit Buyer Now
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -647,10 +680,10 @@ export default function DistributionNetworkPublicPage() {
                           </div>
                         </div>
                         <div className="opp-footer">
-                          <button className="btn-refer" onClick={() => openApplyModal(dev.id)}>
+                          <button className="btn-refer" onClick={() => revealAndScrollToForm(dev.id)}>
                             Refer a Buyer
                           </button>
-                          <button className="btn-details" onClick={() => openApplyModal(dev.id)}>
+                          <button className="btn-details" onClick={() => revealAndScrollToForm(dev.id)}>
                             Details
                           </button>
                         </div>
@@ -669,7 +702,7 @@ export default function DistributionNetworkPublicPage() {
                     </p>
                     <Button
                       className="bg-blue-600 text-white hover:bg-blue-700 w-full font-bold"
-                      onClick={() => openApplyModal()}
+                      onClick={() => revealAndScrollToForm()}
                     >
                       Apply to Join
                     </Button>
@@ -909,7 +942,7 @@ export default function DistributionNetworkPublicPage() {
                 <Button
                   size="lg"
                   className="h-14 w-full border-0 bg-[linear-gradient(135deg,#3b82f6,#0ea5e9)] px-10 text-base font-bold text-white shadow-lg sm:w-auto hover:opacity-90 transition-transform hover:-translate-y-0.5"
-                  onClick={() => openApplyModal()}
+                  onClick={() => revealAndScrollToForm()}
                 >
                   Start Referring Now
                 </Button>
@@ -931,18 +964,7 @@ export default function DistributionNetworkPublicPage() {
         label="Start Referring"
         href="/distribution-network/apply"
         isVisible={stickyVisible}
-        onClick={() => openApplyModal()}
-      />
-      <ReferralApplyModal
-        isOpen={isApplyOpen}
-        onClose={() => setIsApplyOpen(false)}
-        interestedDevId={interestedDevId}
-        developments={developments?.map(d => ({
-          id: d.id,
-          name: d.name,
-          suburb: d.suburb,
-          city: d.city,
-        }))}
+        onClick={() => revealAndScrollToForm()}
       />
     </>
   );
