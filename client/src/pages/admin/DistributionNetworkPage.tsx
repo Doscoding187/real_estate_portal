@@ -102,6 +102,7 @@ export default function DistributionNetworkPage() {
   const [inviteRole, setInviteRole] = useState('');
   const [inviteNotes, setInviteNotes] = useState('');
   const [latestInviteUrl, setLatestInviteUrl] = useState('');
+  const [resendTargetId, setResendTargetId] = useState<number | null>(null);
   const [onboardingDevelopmentId, setOnboardingDevelopmentId] = useState<number | null>(null);
 
   const submoduleSlug = useMemo(() => {
@@ -238,13 +239,25 @@ export default function DistributionNetworkPage() {
   const resendReferrerActivationMutation =
     trpc.distribution.admin.resendReferrerActivationEmail.useMutation({
       onSuccess: result => {
+        setResendTargetId(null);
         if (result.activationEmailSent) {
-          toast.success('Activation email resent.');
+          toast.success(
+            result.userCreated
+              ? `Activation email sent and account created for ${result.email}.`
+              : `Activation email resent to ${result.email}.`,
+          );
         } else {
-          toast.error('Activation email resend failed. Ask user to use Forgot Password.');
+          toast.error(
+            result.email
+              ? `Activation email failed for ${result.email}. Ask user to use Forgot Password.`
+              : 'Activation email resend failed. Ask user to use Forgot Password.',
+          );
         }
       },
-      onError: err => toast.error(err.message),
+      onError: err => {
+        setResendTargetId(null);
+        toast.error(err.message);
+      },
     });
   const setManagerAccessMutation = trpc.distribution.admin.setManagerAccess.useMutation({
     onSuccess: result => {
@@ -1037,14 +1050,18 @@ export default function DistributionNetworkPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            resendReferrerActivationMutation.mutate({
-                              applicationId: Number(application.id),
-                            })
+                          onClick={() => {
+                            const applicationId = Number(application.id);
+                            setResendTargetId(applicationId);
+                            resendReferrerActivationMutation.mutate({ applicationId });
+                          }}
+                          disabled={
+                            resendReferrerActivationMutation.isPending &&
+                            resendTargetId === Number(application.id)
                           }
-                          disabled={resendReferrerActivationMutation.isPending}
                         >
-                          {resendReferrerActivationMutation.isPending
+                          {resendReferrerActivationMutation.isPending &&
+                          resendTargetId === Number(application.id)
                             ? 'Resending...'
                             : 'Resend Activation Email'}
                         </Button>
