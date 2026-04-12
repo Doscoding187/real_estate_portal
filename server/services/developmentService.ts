@@ -657,7 +657,7 @@ export async function listPublicDevelopments(options: {
       commissionModel: distributionPrograms.commissionModel,
       referrerCommissionType: distributionPrograms.referrerCommissionType,
       referrerCommissionValue: distributionPrograms.referrerCommissionValue,
-      referrerCommissionAmount: distributionPrograms.referrerCommissionAmount,
+      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
     })
     .from(developments)
     .leftJoin(developers, eq(developments.developerId, developers.id))
@@ -734,7 +734,7 @@ export async function listPublicDevelopments(options: {
     commissionModel: d.commissionModel || null,
     referrerCommissionType: d.referrerCommissionType || null,
     referrerCommissionValue: d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
-    referrerCommissionAmount: d.referrerCommissionAmount != null ? Number(d.referrerCommissionAmount) : null,
+    referrerCommissionAmount: d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
     configurations: unitsByDevelopment.get(Number(d.id)) || [],
   }));
 }
