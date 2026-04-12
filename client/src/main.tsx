@@ -2,7 +2,7 @@ import { trpc } from '@/lib/trpc';
 // getApiUrl removed as we are hardcoding TRPC_URL for safety
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { httpBatchLink, TRPCClientError } from '@trpc/client';
+import { httpBatchLink, splitLink, TRPCClientError } from '@trpc/client';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
@@ -136,102 +136,179 @@ function createClientRequestId() {
 const links = [
   // Debug link to log tRPC paths
   trpcDebugLink(),
-  // Brand emulation link to inject X-Brand-Emulation headers when in emulator mode
-  httpBatchLink({
-    url: TRPC_URL,
-    transformer: superjson,
-    methodOverride: 'POST',
-    // Fix: Inject headers here to ensure they survive tRPC batching
-    headers: () => {
-      const headers: Record<string, string> = {};
-
-      try {
-        // Get brand context from localStorage directly
-        // We can't easily reuse the service here as it's outside React context
-        const storedContext = localStorage.getItem('publisher-context');
-        if (storedContext) {
-          const publisherContext = JSON.parse(storedContext);
-          // Zustand persistence wraps state in 'state' property
-          const brandId = publisherContext.state?.context?.brandProfileId;
-
-          if (brandId) {
-            headers['x-operating-as-brand'] = String(brandId);
-          }
-        }
-      } catch {
-        // Silent failure for emulation headers
-      }
-
-      return headers;
+  // Split link: GET for queries, POST for mutations (fixes GET-to-mutation + POST-to-query errors)
+  splitLink({
+    condition(op) {
+      return op.type === 'mutation';
     },
-    async fetch(input, init) {
-      const requestId = createClientRequestId();
-      const url = typeof input === 'string' ? input : (input as Request).url;
-      const headers = new Headers(init?.headers ?? undefined);
-      headers.set('x-request-id', requestId);
+    true: httpBatchLink({
+      url: TRPC_URL,
+      transformer: superjson,
+      methodOverride: 'POST',
+      // Fix: Inject headers here to ensure they survive tRPC batching
+      headers: () => {
+        const headers: Record<string, string> = {};
 
-      let res: Response;
-      try {
-        res = await globalThis.fetch(input, {
-          ...(init ?? {}),
-          headers,
-          credentials: 'include',
-        });
-      } catch (error) {
-        const networkError = new Error(
-          [
-            'Network request failed before the API returned a response.',
-            `Request ID: ${requestId}`,
-            `URL: ${url}`,
-            '',
-            'Most likely causes:',
-            '- API gateway / upstream failure',
-            '- Backend process crash or restart',
-            '- Temporary network interruption',
-          ].join('\n'),
-        );
-        (networkError as Error & { cause?: unknown }).cause = error;
-        throw networkError;
-      }
-
-      // Defensive: Validate response is JSON before tRPC tries to parse it
-      // This prevents misleading "Unexpected end of JSON input" errors when:
-      // - Backend is down (Vite proxy returns text/plain 500)
-      // - Proxy fails (returns HTML or empty response)
-      // - Network issues (connection drops mid-stream)
-      const contentType = res.headers.get('content-type') || '';
-      const isJson = contentType.includes('application/json');
-
-      if (!isJson) {
-        // Try to read response body snippet for diagnostics (won't throw on empty)
-        let snippet = '';
         try {
-          const text = await res.clone().text();
-          snippet = text.slice(0, 300);
+          // Get brand context from localStorage directly
+          // We can't easily reuse the service here as it's outside React context
+          const storedContext = localStorage.getItem('publisher-context');
+          if (storedContext) {
+            const publisherContext = JSON.parse(storedContext);
+            // Zustand persistence wraps state in 'state' property
+            const brandId = publisherContext.state?.context?.brandProfileId;
+
+            if (brandId) {
+              headers['x-operating-as-brand'] = String(brandId);
+            }
+          }
         } catch {
-          // Ignore - body might already be consumed
+          // Silent failure for emulation headers
         }
 
-        // Throw clear error instead of letting tRPC crash on JSON parse
-        throw new Error(
-          [
-            `Backend returned non-JSON response (status ${res.status}).`,
-            `Request ID: ${requestId}`,
-            `URL: ${url}`,
-            `Content-Type: ${contentType || '(missing)'}`,
-            snippet ? `Body: ${snippet}` : 'Body: (empty)',
-            '',
-            'Most likely causes:',
-            '- Backend server is not running (start with: pnpm dev)',
-            '- Proxy configuration issue',
-            '- Upstream server error returned HTML/text instead of JSON',
-            '- Environment configuration (check VITE_API_URL)',
-          ].join('\n'),
-        );
-      }
+        return headers;
+      },
+      async fetch(input, init) {
+        const requestId = createClientRequestId();
+        const url = typeof input === 'string' ? input : (input as Request).url;
+        const headers = new Headers(init?.headers ?? undefined);
+        headers.set('x-request-id', requestId);
 
-      return res;
-    },
+        let res: Response;
+        try {
+          res = await globalThis.fetch(input, {
+            ...(init ?? {}),
+            headers,
+            credentials: 'include',
+          });
+        } catch (error) {
+          const networkError = new Error(
+            [
+              'Network request failed before the API returned a response.',
+              `Request ID: ${requestId}`,
+              `URL: ${url}`,
+              '',
+              'Most likely causes:',
+              '- API gateway / upstream failure',
+              '- Backend process crash or restart',
+              '- Temporary network interruption',
+            ].join('\n'),
+          );
+          (networkError as Error & { cause?: unknown }).cause = error;
+          throw networkError;
+        }
+
+        const contentType = res.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+
+        if (!isJson) {
+          let snippet = '';
+          try {
+            const text = await res.clone().text();
+            snippet = text.slice(0, 300);
+          } catch {}
+
+          throw new Error(
+            [
+              `Backend returned non-JSON response (status ${res.status}).`,
+              `Request ID: ${requestId}`,
+              `URL: ${url}`,
+              `Content-Type: ${contentType || '(missing)'}`,
+              snippet ? `Body: ${snippet}` : 'Body: (empty)',
+              '',
+              'Most likely causes:',
+              '- Backend server is not running (start with: pnpm dev)',
+              '- Proxy configuration issue',
+              '- Upstream server error returned HTML/text instead of JSON',
+              '- Environment configuration (check VITE_API_URL)',
+            ].join('\n'),
+          );
+        }
+
+        return res;
+      },
+    }),
+    false: httpBatchLink({
+      url: TRPC_URL,
+      transformer: superjson,
+      // Fix: Inject headers here to ensure they survive tRPC batching
+      headers: () => {
+        const headers: Record<string, string> = {};
+
+        try {
+          const storedContext = localStorage.getItem('publisher-context');
+          if (storedContext) {
+            const publisherContext = JSON.parse(storedContext);
+            const brandId = publisherContext.state?.context?.brandProfileId;
+
+            if (brandId) {
+              headers['x-operating-as-brand'] = String(brandId);
+            }
+          }
+        } catch {}
+
+        return headers;
+      },
+      async fetch(input, init) {
+        const requestId = createClientRequestId();
+        const url = typeof input === 'string' ? input : (input as Request).url;
+        const headers = new Headers(init?.headers ?? undefined);
+        headers.set('x-request-id', requestId);
+
+        let res: Response;
+        try {
+          res = await globalThis.fetch(input, {
+            ...(init ?? {}),
+            headers,
+            credentials: 'include',
+          });
+        } catch (error) {
+          const networkError = new Error(
+            [
+              'Network request failed before the API returned a response.',
+              `Request ID: ${requestId}`,
+              `URL: ${url}`,
+              '',
+              'Most likely causes:',
+              '- API gateway / upstream failure',
+              '- Backend process crash or restart',
+              '- Temporary network interruption',
+            ].join('\n'),
+          );
+          (networkError as Error & { cause?: unknown }).cause = error;
+          throw networkError;
+        }
+
+        const contentType = res.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+
+        if (!isJson) {
+          let snippet = '';
+          try {
+            const text = await res.clone().text();
+            snippet = text.slice(0, 300);
+          } catch {}
+
+          throw new Error(
+            [
+              `Backend returned non-JSON response (status ${res.status}).`,
+              `Request ID: ${requestId}`,
+              `URL: ${url}`,
+              `Content-Type: ${contentType || '(missing)'}`,
+              snippet ? `Body: ${snippet}` : 'Body: (empty)',
+              '',
+              'Most likely causes:',
+              '- Backend server is not running (start with: pnpm dev)',
+              '- Proxy configuration issue',
+              '- Upstream server error returned HTML/text instead of JSON',
+              '- Environment configuration (check VITE_API_URL)',
+            ].join('\n'),
+          );
+        }
+
+        return res;
+      },
+    }),
   }),
 ].filter(Boolean);
 
