@@ -15,6 +15,7 @@ import {
   Repeat2,
   ChevronDown,
   ShieldCheck,
+  Unlock,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -30,18 +31,50 @@ const REFERRAL_APPLY_PATH = '/distribution-network/apply';
 
 const HERO_ROTATION_MS = 4000;
 
+// Bedroom chip options
+const BED_CHIPS = ['Studio', '1 Bed', '2 Bed', '3 Bed', '4 Bed', '4+ Bed'];
+
+// Area option → keywords to match against dev suburb/city
+const AREA_OPTIONS = [
+  { label: '— Select area —', value: '' },
+  { label: 'Roodepoort / West Rand', value: 'roodepoort,west rand,constantia,wilgeheuwel,northgate' },
+  { label: 'Johannesburg South', value: 'johannesburg south,alberton,soweto,lenasia,ennerdale,ormonde' },
+  { label: 'North Riding / Sandton', value: 'north riding,sandton,fourways,randburg,lonehill,dainfern' },
+  { label: 'Pretoria / Centurion', value: 'pretoria,centurion,midrand,menlyn,brooklyn,hatfield' },
+  { label: 'East Rand', value: 'east rand,boksburg,germiston,bedfordview,edenvale,benoni' },
+  { label: 'Any area', value: 'any' },
+];
+
+const INCOME_OPTIONS = [
+  { label: '— Select income —', value: '' },
+  { label: 'R15k - R25k / month', value: 'R15k - R25k / month', minPrice: 0, maxPrice: 900_000 },
+  { label: 'R25k - R40k / month', value: 'R25k - R40k / month', minPrice: 700_000, maxPrice: 1_500_000 },
+  { label: 'R40k - R60k / month', value: 'R40k - R60k / month', minPrice: 1_200_000, maxPrice: 2_200_000 },
+  { label: 'R60k+ / month', value: 'R60k+ / month', minPrice: 2_000_000, maxPrice: Infinity },
+];
+
+// Varied badge labels cycling by card index
+const BADGE_LABELS = [
+  { text: 'High Demand Area', color: 'bg-emerald-500' },
+  { text: 'Limited Units', color: 'bg-amber-500' },
+  { text: 'New Launch', color: 'bg-blue-500' },
+  { text: 'Top Pick', color: 'bg-indigo-500' },
+  { text: 'Selling Fast', color: 'bg-emerald-500' },
+];
+
 export default function DistributionNetworkPublicPage() {
   const [, setLocation] = useLocation();
   const stickyVisible = useMobileStickyCTA('distribution-network-hero');
 
-  // Matcher State
-  const [matchIncome, setMatchIncome] = useState('R40k - R60k / month');
-  const [matchArea, setMatchArea] = useState('Roodepoort / West Rand');
-  const [matchType, setMatchType] = useState('Either / Flexible');
-  const [matchBeds, setMatchBeds] = useState('3 Bedrooms');
+  // Matcher State — no prefills
+  const [matchIncome, setMatchIncome] = useState('');
+  const [matchArea, setMatchArea] = useState('');
+  const [matchType, setMatchType] = useState('');
+  // Bedrooms = multi-select chip set
+  const [selectedBeds, setSelectedBeds] = useState<Set<string>>(new Set());
 
   const { data: developments, isLoading: isLoadingDevs } =
-    trpc.developer.listPublicDevelopments.useQuery({ limit: 6 }, { staleTime: 1000 * 60 * 5 });
+    trpc.developer.listPublicDevelopments.useQuery({ limit: 5 }, { staleTime: 1000 * 60 * 5 });
 
   const calculateQualifyingIncome = (priceFrom: number | null | undefined) => {
     if (!priceFrom) return 'Income dependent on unit type';
@@ -59,12 +92,90 @@ export default function DistributionNetworkPublicPage() {
     setLocation(url);
   };
 
+  const toggleBed = (bed: string) => {
+    setSelectedBeds(prev => {
+      const next = new Set(prev);
+      if (next.has(bed)) next.delete(bed);
+      else next.add(bed);
+      return next;
+    });
+  };
+
+  // Dynamic matcher — filter real development data
   const matcherResult = useMemo(() => {
-    if (matchIncome === 'R15k - R25k / month') return { count: 1, payout: 'R18k - R20k' };
-    if (matchIncome === 'R25k - R40k / month') return { count: 2, payout: 'R20k - R22k' };
-    if (matchIncome === 'R40k - R60k / month') return { count: 3, payout: 'R22k - R25k' };
-    return { count: 5, payout: 'R25k - R30k' };
-  }, [matchIncome]);
+    const hasFilter = matchIncome || matchArea || matchType || selectedBeds.size > 0;
+    if (!hasFilter || !developments || developments.length === 0) {
+      return null; // no filters selected yet
+    }
+
+    const incomeOption = INCOME_OPTIONS.find(o => o.value === matchIncome);
+    const areaOption = AREA_OPTIONS.find(o => o.value === matchArea);
+    const areaKeywords = areaOption?.value && areaOption.value !== 'any'
+      ? areaOption.value.split(',').map(k => k.trim().toLowerCase())
+      : null;
+
+    const matched = developments.filter(dev => {
+      // Income / price filter
+      if (incomeOption && incomeOption.minPrice !== undefined) {
+        const price = dev.priceFrom ? Number(dev.priceFrom) : null;
+        if (price !== null) {
+          if (price < incomeOption.minPrice || price > incomeOption.maxPrice) return false;
+        }
+      }
+
+      // Area filter (keyword match on suburb/city)
+      if (areaKeywords) {
+        const devArea = `${dev.suburb || ''} ${dev.city || ''}`.toLowerCase();
+        const areaMatch = areaKeywords.some(kw => devArea.includes(kw));
+        if (!areaMatch) return false;
+      }
+
+      // Bedrooms filter (match config labels)
+      if (selectedBeds.size > 0) {
+        const configs = dev.configurations || [];
+        if (configs.length > 0) {
+          const labelStr = configs.map((c: any) => c.label.toLowerCase()).join(' ');
+          const bedMatch = [...selectedBeds].some(bed => {
+            const n = bed.toLowerCase();
+            if (n === 'studio') return labelStr.includes('studio') || labelStr.includes('bach');
+            if (n === '4+ bed') return /[4-9](\s*bed|br)/.test(labelStr);
+            const num = n.match(/\d+/)?.[0];
+            return num ? labelStr.includes(`${num} bed`) || labelStr.includes(`${num}bed`) : false;
+          });
+          if (!bedMatch) return false;
+        }
+      }
+
+      return true;
+    });
+
+    const count = matched.length;
+
+    if (count === 0) {
+      return { count: 0, payout: null, noMatch: true };
+    }
+
+    // Compute payout range from matched developments
+    const flatAmounts = matched
+      .filter(d => d.referrerCommissionType === 'flat' && d.referrerCommissionAmount)
+      .map(d => Number(d.referrerCommissionAmount));
+    const percentAmounts = matched
+      .filter(d => d.referrerCommissionType === 'percentage' && d.referrerCommissionValue)
+      .map(d => `${d.referrerCommissionValue}%`);
+
+    let payoutStr = '';
+    if (flatAmounts.length > 0) {
+      const minK = Math.min(...flatAmounts) / 1000;
+      const maxK = Math.max(...flatAmounts) / 1000;
+      payoutStr = minK === maxK ? `R${Math.round(minK)}k` : `R${Math.round(minK)}k – R${Math.round(maxK)}k`;
+    } else if (percentAmounts.length > 0) {
+      payoutStr = [...new Set(percentAmounts)].join(' / ') + ' referral fee';
+    } else {
+      payoutStr = 'R18k – R30k';
+    }
+
+    return { count, payout: payoutStr, noMatch: false };
+  }, [matchIncome, matchArea, matchType, selectedBeds, developments]);
 
   return (
     <>
@@ -195,7 +306,7 @@ export default function DistributionNetworkPublicPage() {
           </section>
 
           {/* MATCHER ENGINE */}
-          <section className="scroll-mt-24 bg-[ линейная-заливка] py-16 md:py-24 border-b border-slate-200">
+          <section className="scroll-mt-24 py-16 md:py-24 border-b border-slate-200 bg-white">
             <div className="container">
               <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
                 <div className="max-w-xl">
@@ -219,6 +330,7 @@ export default function DistributionNetworkPublicPage() {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -z-0"></div>
 
                   <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                    {/* Income */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
                         Buyer's gross income
@@ -229,14 +341,17 @@ export default function DistributionNetworkPublicPage() {
                           value={matchIncome}
                           onChange={e => setMatchIncome(e.target.value)}
                         >
-                          <option>R15k - R25k / month</option>
-                          <option>R25k - R40k / month</option>
-                          <option>R40k - R60k / month</option>
-                          <option>R60k+ / month</option>
+                          {INCOME_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value} disabled={o.value === ''}>
+                              {o.label}
+                            </option>
+                          ))}
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
                     </div>
+
+                    {/* Area */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
                         Preferred area
@@ -247,14 +362,17 @@ export default function DistributionNetworkPublicPage() {
                           value={matchArea}
                           onChange={e => setMatchArea(e.target.value)}
                         >
-                          <option>Johannesburg South</option>
-                          <option>Roodepoort / West Rand</option>
-                          <option>North Riding / Sandton</option>
-                          <option>Any area</option>
+                          {AREA_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value} disabled={o.value === ''}>
+                              {o.label}
+                            </option>
+                          ))}
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
                     </div>
+
+                    {/* Property Type */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
                         Property type
@@ -265,48 +383,78 @@ export default function DistributionNetworkPublicPage() {
                           value={matchType}
                           onChange={e => setMatchType(e.target.value)}
                         >
-                          <option>Apartment</option>
-                          <option>Townhouse / House</option>
-                          <option>Either / Flexible</option>
+                          <option value="" disabled>— Select type —</option>
+                          <option value="apartment">Apartment</option>
+                          <option value="townhouse">Townhouse / House</option>
+                          <option value="flexible">Either / Flexible</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
                     </div>
-                    <div>
+
+                    {/* Bedrooms — multi-select chips spanning 2 cols */}
+                    <div className="md:col-span-2">
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
-                        Bedrooms
+                        Bedrooms <span className="text-slate-400 font-normal normal-case">(select all that apply)</span>
                       </label>
-                      <div className="relative">
-                        <select
-                          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={matchBeds}
-                          onChange={e => setMatchBeds(e.target.value)}
-                        >
-                          <option>1 Bedroom</option>
-                          <option>2 Bedrooms</option>
-                          <option>3 Bedrooms</option>
-                          <option>4 Bedrooms</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                      <div className="flex flex-wrap gap-2">
+                        {BED_CHIPS.map(bed => {
+                          const active = selectedBeds.has(bed);
+                          return (
+                            <button
+                              key={bed}
+                              type="button"
+                              onClick={() => toggleBed(bed)}
+                              className={`px-3.5 py-2 rounded-lg text-xs font-bold border transition-all select-none ${
+                                active
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-700'
+                              }`}
+                            >
+                              {active && <span className="mr-1">✓</span>}
+                              {bed}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                        Developments Matched
+                  {/* Dynamic Results Card */}
+                  <div className={`rounded-xl p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors ${
+                    matcherResult === null
+                      ? 'bg-slate-50 border border-slate-200'
+                      : matcherResult.noMatch
+                        ? 'bg-amber-50 border border-amber-200'
+                        : 'bg-blue-50 border border-blue-100'
+                  }`}>
+                    {matcherResult === null ? (
+                      <p className="text-sm text-slate-500 font-medium text-center w-full">
+                        Select filters above to see matched developments and estimated payout
                       </p>
-                      <p className="text-xl font-bold text-slate-900">
-                        {matcherResult.count} Developments
-                      </p>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                        Potential Payout
-                      </p>
-                      <p className="text-2xl font-black text-blue-600">{matcherResult.payout}</p>
-                    </div>
+                    ) : matcherResult.noMatch ? (
+                      <div className="w-full text-center">
+                        <p className="text-sm font-bold text-amber-800">No developments found in this area yet</p>
+                        <p className="text-xs text-amber-700 mt-1">Try selecting "Any area" or a different income range</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                            Developments Matched
+                          </p>
+                          <p className="text-xl font-bold text-slate-900">
+                            {matcherResult.count} Development{matcherResult.count !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                            Potential Referral Fee
+                          </p>
+                          <p className="text-2xl font-black text-blue-600">{matcherResult.payout}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <Button
@@ -419,46 +567,47 @@ export default function DistributionNetworkPublicPage() {
 
               {isLoadingDevs ? (
                 <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
-                  <Skeleton className="h-[400px] w-full rounded-2xl bg-slate-100" />
-                  <Skeleton className="h-[400px] w-full rounded-2xl bg-slate-100" />
-                  <Skeleton className="h-[400px] w-full rounded-2xl bg-slate-100" />
+                  <Skeleton className="h-[420px] w-full rounded-2xl bg-slate-100" />
+                  <Skeleton className="h-[420px] w-full rounded-2xl bg-slate-100" />
+                  <Skeleton className="h-[420px] w-full rounded-2xl bg-slate-100" />
                 </div>
-              ) : developments && developments.length > 0 ? (
+              ) : (
                 <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {developments.map((dev, i) => {
+                  {(developments ?? []).map((dev, i) => {
                     const priceFrom = dev.priceFrom ? Number(dev.priceFrom) : null;
                     const qualifyingThreshold = calculateQualifyingIncome(priceFrom);
 
-                    // Generate a deterministic gradient style based on index
                     const bgGradients = [
                       'linear-gradient(140deg, #0f172a 0%, #1e3a8a 100%)',
                       'linear-gradient(140deg, #064e3b 0%, #047857 100%)',
                       'linear-gradient(140deg, #312e81 0%, #4f46e5 100%)',
                       'linear-gradient(140deg, #451a03 0%, #b45309 100%)',
                       'linear-gradient(140deg, #172554 0%, #2563eb 100%)',
-                      'linear-gradient(140deg, #3f3f46 0%, #52525b 100%)',
                     ];
 
                     const defaultBg = bgGradients[i % bgGradients.length];
                     const hasCover = !!dev.images?.[0]?.url;
+                    const badge = BADGE_LABELS[i % BADGE_LABELS.length];
 
                     return (
                       <div
                         key={dev.id}
                         className="opp-card relative hover:-translate-y-1 hover:border-blue-300 transition-all"
                       >
+                        {/* Image header — increased height + explicit center positioning */}
                         <div
                           className="opp-card-img theme-1"
                           style={{
+                            height: '200px',
                             backgroundImage: hasCover
-                              ? `linear-gradient(to top, rgba(15,23,42,0.9), rgba(15,23,42,0)), url(${dev.images?.[0]?.url})`
+                              ? `linear-gradient(to top, rgba(15,23,42,0.88), rgba(15,23,42,0.1)), url(${dev.images?.[0]?.url})`
                               : defaultBg,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center center',
                           }}
                         >
-                          <span className="opp-availability">
-                            {dev.status === 'selling'
-                              ? 'Selling fast'
-                              : dev.status?.replace('-', ' ')}
+                          <span className={`opp-availability ${badge.color}`}>
+                            {badge.text}
                           </span>
                           <div>
                             <div className="opp-name">{dev.name}</div>
@@ -482,10 +631,10 @@ export default function DistributionNetworkPublicPage() {
                               </span>
                             </div>
                             <div className="opp-payout">
-                              {dev.referrerCommissionType === 'flat' && dev.referrerCommissionAmount 
+                              {dev.referrerCommissionType === 'flat' && dev.referrerCommissionAmount
                                 ? `Earn R${(dev.referrerCommissionAmount / 1000).toFixed(0)}k`
                                 : dev.referrerCommissionType === 'percentage' && dev.referrerCommissionValue
-                                  ? `Earn ${dev.referrerCommissionValue}% Comm.`
+                                  ? `Earn ${dev.referrerCommissionValue}% fee`
                                   : 'Earn up to R30k'}
                               <span>per referral</span>
                             </div>
@@ -503,29 +652,22 @@ export default function DistributionNetworkPublicPage() {
                     );
                   })}
 
-                  {/* Coming Soon Box */}
-                  <div className="relative rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 flex flex-col justify-center items-center text-center p-8 hover:border-blue-300 hover:bg-blue-50/20 transition-colors">
-                    <div className="h-14 w-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-light border border-blue-200 mb-4">
-                      +
+                  {/* Permanent CTA slot — always shown as the 6th card */}
+                  <div className="relative rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-slate-50 flex flex-col justify-center items-center text-center p-8 hover:border-blue-400 hover:shadow-md transition-all">
+                    <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center text-white mb-4 shadow-md">
+                      <Unlock className="h-6 w-6" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 mb-2">More coming soon</h3>
-                    <p className="text-sm text-slate-500 max-w-[200px] mb-6">
-                      New developments added monthly. Join now to get early access.
+                    <h3 className="text-base font-bold text-slate-900 mb-2">Unlock More Developments</h3>
+                    <p className="text-sm text-slate-600 max-w-[200px] mb-6">
+                      Approved partners get access to our full portfolio. Apply to see everything available in your area.
                     </p>
                     <Button
-                      variant="outline"
-                      className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full"
+                      className="bg-blue-600 text-white hover:bg-blue-700 w-full font-bold"
                       onClick={() => handleReferClick()}
                     >
-                      Apply Location Access
+                      Apply to Join
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 rounded-xl border border-slate-200 bg-white">
-                  <p className="text-slate-500">
-                    No active developments are currently available for referrals.
-                  </p>
                 </div>
               )}
             </div>
