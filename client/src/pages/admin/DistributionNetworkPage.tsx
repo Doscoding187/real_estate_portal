@@ -235,6 +235,17 @@ export default function DistributionNetworkPage() {
       },
       onError: err => toast.error(err.message),
     });
+  const resendReferrerActivationMutation =
+    trpc.distribution.admin.resendReferrerActivationEmail.useMutation({
+      onSuccess: result => {
+        if (result.activationEmailSent) {
+          toast.success('Activation email resent.');
+        } else {
+          toast.error('Activation email resend failed. Ask user to use Forgot Password.');
+        }
+      },
+      onError: err => toast.error(err.message),
+    });
   const setManagerAccessMutation = trpc.distribution.admin.setManagerAccess.useMutation({
     onSuccess: result => {
       toast.success(result.active ? 'Manager access enabled' : 'Manager access revoked');
@@ -1021,6 +1032,22 @@ export default function DistributionNetworkPage() {
                             Reject
                           </Button>
                         </>
+                      ) : null}
+                      {application.status === 'approved' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            resendReferrerActivationMutation.mutate({
+                              applicationId: Number(application.id),
+                            })
+                          }
+                          disabled={resendReferrerActivationMutation.isPending}
+                        >
+                          {resendReferrerActivationMutation.isPending
+                            ? 'Resending...'
+                            : 'Resend Activation Email'}
+                        </Button>
                       ) : null}
                     </div>
                   </div>
