@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
+import { ReferralApplyModal } from '@/components/distribution/ReferralApplyModal';
 import {
   ArrowRight,
   Building2,
@@ -27,16 +28,14 @@ import { trpc } from '@/lib/trpc';
 import '@/styles/advertise-responsive.css';
 import '@/styles/advertise-focus-indicators.css';
 
-const REFERRAL_APPLY_PATH = '/distribution-network/apply';
-
 const HERO_ROTATION_MS = 4000;
 
 // Bedroom chip options
 const BED_CHIPS = ['Studio', '1 Bed', '2 Bed', '3 Bed', '4 Bed', '4+ Bed'];
 
-// Area option → keywords to match against dev suburb/city
+// Area option â†’ keywords to match against dev suburb/city
 const AREA_OPTIONS = [
-  { label: '— Select area —', value: '' },
+  { label: 'â€” Select area â€”', value: '' },
   { label: 'Roodepoort / West Rand', value: 'roodepoort,west rand,constantia,wilgeheuwel,northgate' },
   { label: 'Johannesburg South', value: 'johannesburg south,alberton,soweto,lenasia,ennerdale,ormonde' },
   { label: 'North Riding / Sandton', value: 'north riding,sandton,fourways,randburg,lonehill,dainfern' },
@@ -46,7 +45,7 @@ const AREA_OPTIONS = [
 ];
 
 const INCOME_OPTIONS = [
-  { label: '— Select income —', value: '' },
+  { label: 'â€” Select income â€”', value: '' },
   { label: 'R15k - R25k / month', value: 'R15k - R25k / month', minPrice: 0, maxPrice: 900_000 },
   { label: 'R25k - R40k / month', value: 'R25k - R40k / month', minPrice: 700_000, maxPrice: 1_500_000 },
   { label: 'R40k - R60k / month', value: 'R40k - R60k / month', minPrice: 1_200_000, maxPrice: 2_200_000 },
@@ -66,7 +65,11 @@ export default function DistributionNetworkPublicPage() {
   const [, setLocation] = useLocation();
   const stickyVisible = useMobileStickyCTA('distribution-network-hero');
 
-  // Matcher State — no prefills
+  // Apply modal state
+  const [isApplyOpen, setIsApplyOpen] = useState(false);
+  const [interestedDevId, setInterestedDevId] = useState<number | null>(null);
+
+  // Matcher State â€” no prefills
   const [matchIncome, setMatchIncome] = useState('');
   const [matchArea, setMatchArea] = useState('');
   const [matchType, setMatchType] = useState('');
@@ -87,9 +90,9 @@ export default function DistributionNetworkPublicPage() {
     return `Min R${(estGross / 1000).toFixed(0)}k / month`;
   };
 
-  const handleReferClick = (devId?: number) => {
-    const url = devId ? `${REFERRAL_APPLY_PATH}?interestedIn=${devId}` : REFERRAL_APPLY_PATH;
-    setLocation(url);
+  const openApplyModal = (devId?: number) => {
+    setInterestedDevId(devId ?? null);
+    setIsApplyOpen(true);
   };
 
   const toggleBed = (bed: string) => {
@@ -101,7 +104,7 @@ export default function DistributionNetworkPublicPage() {
     });
   };
 
-  // Dynamic matcher — filter real development data
+  // Dynamic matcher â€” filter real development data
   const matcherResult = useMemo(() => {
     const hasFilter = matchIncome || matchArea || matchType || selectedBeds.size > 0;
     if (!hasFilter || !developments || developments.length === 0) {
@@ -167,11 +170,11 @@ export default function DistributionNetworkPublicPage() {
     if (flatAmounts.length > 0) {
       const minK = Math.min(...flatAmounts) / 1000;
       const maxK = Math.max(...flatAmounts) / 1000;
-      payoutStr = minK === maxK ? `R${Math.round(minK)}k` : `R${Math.round(minK)}k – R${Math.round(maxK)}k`;
+      payoutStr = minK === maxK ? `R${Math.round(minK)}k` : `R${Math.round(minK)}k â€“ R${Math.round(maxK)}k`;
     } else if (percentAmounts.length > 0) {
       payoutStr = [...new Set(percentAmounts)].join(' / ') + ' referral fee';
     } else {
-      payoutStr = 'R18k – R30k';
+      payoutStr = 'R18k â€“ R30k';
     }
 
     return { count, payout: payoutStr, noMatch: false };
@@ -207,7 +210,7 @@ export default function DistributionNetworkPublicPage() {
               <Button
                 size="sm"
                 className="border-0 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white hover:opacity-95"
-                onClick={() => handleReferClick()}
+                onClick={() => openApplyModal()}
               >
                 Apply to Join
               </Button>
@@ -252,7 +255,7 @@ export default function DistributionNetworkPublicPage() {
               <p className="mx-auto max-w-2xl text-lg text-slate-300 mb-4 font-light">
                 No selling. No mandates. No listings to manage.
                 <br />
-                Just connect qualified buyers to the right development — and earn.
+                Just connect qualified buyers to the right development â€” and earn.
               </p>
 
               <div className="text-blue-200 text-sm md:text-base font-medium mb-10 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-4">
@@ -260,17 +263,17 @@ export default function DistributionNetworkPublicPage() {
                   Earn up to <strong className="text-blue-100 font-bold">R30,000</strong> per
                   referral
                 </span>
-                <span className="hidden md:inline">·</span>
+                <span className="hidden md:inline">Â·</span>
                 <span>Referral fee locked at submission</span>
-                <span className="hidden md:inline">·</span>
+                <span className="hidden md:inline">Â·</span>
                 <span>Paid at attorney signing</span>
               </div>
 
-              <div className="mx-auto mb-16 flex w-full max-w-md flex-col items-center justify-center gap-4 sm:max-w-none sm:flex-row">
+              <div className="mx-auto mb-4 flex w-full max-w-md flex-col items-center justify-center gap-4 sm:max-w-none sm:flex-row">
                 <Button
                   size="lg"
                   className="h-14 border-0 bg-[linear-gradient(135deg,#3b82f6,#0ea5e9)] px-10 text-base font-bold text-white shadow-[0_12px_28px_-14px_rgba(59,130,246,0.6)] sm:w-auto hover:opacity-90 transition-transform hover:-translate-y-0.5"
-                  onClick={() => handleReferClick()}
+                  onClick={() => openApplyModal()}
                 >
                   Start Referring Now
                 </Button>
@@ -286,6 +289,9 @@ export default function DistributionNetworkPublicPage() {
                   See How It Works
                 </Button>
               </div>
+              <p className="text-xs text-slate-500 mb-12">
+                Takes less than 30 seconds. No commitment.
+              </p>
 
               {/* SPEED & EASE BANNER */}
               <div className="border-t border-slate-800 pt-8 flex flex-wrap justify-center gap-x-12 gap-y-6">
@@ -317,7 +323,7 @@ export default function DistributionNetworkPublicPage() {
                     We match your buyer for you.
                   </h2>
                   <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                    Tell us about the buyer — income, location, bedroom needs — and we instantly
+                    Tell us about the buyer â€” income, location, bedroom needs â€” and we instantly
                     show you which developments fit and your estimated payout.
                   </p>
                   <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg text-slate-700 font-medium">
@@ -383,7 +389,7 @@ export default function DistributionNetworkPublicPage() {
                           value={matchType}
                           onChange={e => setMatchType(e.target.value)}
                         >
-                          <option value="" disabled>— Select type —</option>
+                          <option value="" disabled>â€” Select type â€”</option>
                           <option value="apartment">Apartment</option>
                           <option value="townhouse">Townhouse / House</option>
                           <option value="flexible">Either / Flexible</option>
@@ -392,7 +398,7 @@ export default function DistributionNetworkPublicPage() {
                       </div>
                     </div>
 
-                    {/* Bedrooms — multi-select chips spanning 2 cols */}
+                    {/* Bedrooms â€” multi-select chips spanning 2 cols */}
                     <div className="md:col-span-2">
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
                         Bedrooms <span className="text-slate-400 font-normal normal-case">(select all that apply)</span>
@@ -411,7 +417,7 @@ export default function DistributionNetworkPublicPage() {
                                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-700'
                               }`}
                             >
-                              {active && <span className="mr-1">✓</span>}
+                              {active && <span className="mr-1">âœ“</span>}
                               {bed}
                             </button>
                           );
@@ -459,7 +465,7 @@ export default function DistributionNetworkPublicPage() {
 
                   <Button
                     className="w-full h-14 bg-[linear-gradient(135deg,#0f172a,#1e293b)] text-white text-base font-bold shadow-lg hover:bg-slate-800 group"
-                    onClick={() => handleReferClick()}
+                    onClick={() => openApplyModal()}
                   >
                     Submit Buyer Now
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -481,7 +487,7 @@ export default function DistributionNetworkPublicPage() {
                 </h2>
                 <p className="text-lg text-slate-600">
                   You speak to buyers daily. You just haven't had a structured, transparent way to
-                  monetize those conversations — until now.
+                  monetize those conversations â€” until now.
                 </p>
               </div>
 
@@ -495,7 +501,7 @@ export default function DistributionNetworkPublicPage() {
                       You already know buyers
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      Colleagues, friends, family — people planning to buy property are in your
+                      Colleagues, friends, family â€” people planning to buy property are in your
                       circle every single day.
                     </p>
                   </CardContent>
@@ -509,7 +515,7 @@ export default function DistributionNetworkPublicPage() {
                       We handle qualification
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      You don't need to know which development fits. Submit the buyer — we match,
+                      You don't need to know which development fits. Submit the buyer â€” we match,
                       qualify, and close. Your job ends at the referral.
                     </p>
                   </CardContent>
@@ -594,7 +600,7 @@ export default function DistributionNetworkPublicPage() {
                         key={dev.id}
                         className="opp-card relative hover:-translate-y-1 hover:border-blue-300 transition-all"
                       >
-                        {/* Image header — increased height + explicit center positioning */}
+                        {/* Image header â€” increased height + explicit center positioning */}
                         <div
                           className="opp-card-img theme-1"
                           style={{
@@ -611,7 +617,7 @@ export default function DistributionNetworkPublicPage() {
                           </span>
                           <div>
                             <div className="opp-name">{dev.name}</div>
-                            <div className="opp-location">📍 {dev.suburb || dev.city}</div>
+                            <div className="opp-location">ðŸ“ {dev.suburb || dev.city}</div>
                           </div>
                         </div>
                         <div className="opp-body">
@@ -641,10 +647,10 @@ export default function DistributionNetworkPublicPage() {
                           </div>
                         </div>
                         <div className="opp-footer">
-                          <button className="btn-refer" onClick={() => handleReferClick(dev.id)}>
+                          <button className="btn-refer" onClick={() => openApplyModal(dev.id)}>
                             Refer a Buyer
                           </button>
-                          <button className="btn-details" onClick={() => handleReferClick(dev.id)}>
+                          <button className="btn-details" onClick={() => openApplyModal(dev.id)}>
                             Details
                           </button>
                         </div>
@@ -652,7 +658,7 @@ export default function DistributionNetworkPublicPage() {
                     );
                   })}
 
-                  {/* Permanent CTA slot — always shown as the 6th card */}
+                  {/* Permanent CTA slot â€” always shown as the 6th card */}
                   <div className="relative rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-slate-50 flex flex-col justify-center items-center text-center p-8 hover:border-blue-400 hover:shadow-md transition-all">
                     <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center text-white mb-4 shadow-md">
                       <Unlock className="h-6 w-6" />
@@ -663,7 +669,7 @@ export default function DistributionNetworkPublicPage() {
                     </p>
                     <Button
                       className="bg-blue-600 text-white hover:bg-blue-700 w-full font-bold"
-                      onClick={() => handleReferClick()}
+                      onClick={() => openApplyModal()}
                     >
                       Apply to Join
                     </Button>
@@ -681,7 +687,7 @@ export default function DistributionNetworkPublicPage() {
                   The Referral Timeline
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl mb-4">
-                  How you make money — repeatably.
+                  How you make money â€” repeatably.
                 </h2>
                 <p className="text-lg text-slate-600">
                   A simple 4-step loop you can run with multiple buyers simultaneously. This is a
@@ -700,7 +706,7 @@ export default function DistributionNetworkPublicPage() {
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">Know a buyer</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Someone in your network is planning to buy. Income, area, rough budget —
+                      Someone in your network is planning to buy. Income, area, rough budget â€”
                       that's all you need.
                     </p>
                   </div>
@@ -761,10 +767,10 @@ export default function DistributionNetworkPublicPage() {
                       Buyer 3 - At Signing
                     </span>
                     <span className="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 rounded-full text-xs font-medium">
-                      Buyer 4 - Submit →
+                      Buyer 4 - Submit â†’
                     </span>
                     <span className="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 rounded-full text-xs font-medium">
-                      Buyer 5 - Submit →
+                      Buyer 5 - Submit â†’
                     </span>
                   </div>
                 </div>
@@ -817,7 +823,7 @@ export default function DistributionNetworkPublicPage() {
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
                       Referral fee releases once the sale is registered through legal channels.
-                      Milestone-based payment — no vague timelines or arbitrary delays.
+                      Milestone-based payment â€” no vague timelines or arbitrary delays.
                     </p>
                   </CardContent>
                 </Card>
@@ -829,7 +835,7 @@ export default function DistributionNetworkPublicPage() {
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">Clear Stage Tracking</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      You're notified at every stage — submission, qualification, match, and
+                      You're notified at every stage â€” submission, qualification, match, and
                       signing. No need to chase for updates or wonder what's happening.
                     </p>
                   </CardContent>
@@ -847,7 +853,7 @@ export default function DistributionNetworkPublicPage() {
                   Earn between R18,000 and R30,000 depending on development and unit type
                 </p>
                 <p className="text-xs text-slate-400 mt-2 font-medium">
-                  Referral fee confirmed at the time of referral submission · No mandate required
+                  Referral fee confirmed at the time of referral submission Â· No mandate required
                 </p>
               </div>
             </div>
@@ -903,7 +909,7 @@ export default function DistributionNetworkPublicPage() {
                 <Button
                   size="lg"
                   className="h-14 w-full border-0 bg-[linear-gradient(135deg,#3b82f6,#0ea5e9)] px-10 text-base font-bold text-white shadow-lg sm:w-auto hover:opacity-90 transition-transform hover:-translate-y-0.5"
-                  onClick={() => handleReferClick()}
+                  onClick={() => openApplyModal()}
                 >
                   Start Referring Now
                 </Button>
@@ -923,9 +929,20 @@ export default function DistributionNetworkPublicPage() {
       </div>
       <MobileStickyCTA
         label="Start Referring"
-        href={REFERRAL_APPLY_PATH}
+        href="/distribution-network/apply"
         isVisible={stickyVisible}
-        onClick={() => handleReferClick()}
+        onClick={() => openApplyModal()}
+      />
+      <ReferralApplyModal
+        isOpen={isApplyOpen}
+        onClose={() => setIsApplyOpen(false)}
+        interestedDevId={interestedDevId}
+        developments={developments?.map(d => ({
+          id: d.id,
+          name: d.name,
+          suburb: d.suburb,
+          city: d.city,
+        }))}
       />
     </>
   );
