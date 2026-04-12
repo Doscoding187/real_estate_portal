@@ -73,7 +73,7 @@
     width: 100%;
     gap: 0.75rem;
   }
-  
+
   .advertise-page .cta-button-group > * {
     width: 100%;
   }
@@ -101,7 +101,9 @@
    ============================================ */
 
 .advertise-page .feature-tile {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .advertise-page .feature-tile:hover {
@@ -115,7 +117,9 @@
    ============================================ */
 
 .advertise-page .pricing-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .advertise-page .pricing-card:hover {
@@ -129,7 +133,10 @@
    ============================================ */
 
 .advertise-page .partner-type-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .advertise-page .partner-type-card:hover {
@@ -146,7 +153,7 @@
   transition: background-color 0.2s ease;
 }
 
-.advertise-page .faq-accordion-item[data-state="open"] {
+.advertise-page .faq-accordion-item[data-state='open'] {
   background-color: rgba(102, 126, 234, 0.04);
 }
 
@@ -216,7 +223,7 @@
   .advertise-page .faq-accordion-item {
     transition: none;
   }
-  
+
   .advertise-page .feature-tile:hover,
   .advertise-page .pricing-card:hover,
   .advertise-page .partner-type-card:hover {
@@ -229,7 +236,8 @@
    ============================================ */
 
 @keyframes advertise-float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) scale(1);
   }
   50% {
@@ -336,4 +344,165 @@
 
 .advertise-page .advertise-section-gradient {
   background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 50%, #fdf4ff 100%);
+}
+
+/* ============================================
+   OPPORTUNITY CARD UI (User Provided)
+   ============================================ */
+
+.opp-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.opp-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+  border-color: #93c5fd;
+}
+.opp-card-img {
+  position: relative;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1rem;
+  background-size: cover;
+  background-position: center;
+}
+.opp-card-img.theme-1 {
+  background: linear-gradient(140deg, #1e3a8a, #3b82f6);
+}
+.opp-availability {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #10b981;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+}
+.opp-name {
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1.2;
+}
+.opp-location {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.opp-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+}
+.opp-qualify {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.opp-qualify-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  margin-top: 0.35rem;
+  flex-shrink: 0;
+}
+.opp-qualify p {
+  color: #166534;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0;
+}
+.opp-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+.opp-price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+}
+.opp-price span {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 0.1rem;
+}
+.opp-payout {
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #2563eb;
+  display: flex;
+  flex-direction: column;
+}
+.opp-payout span {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 0.1rem;
+}
+.opp-footer {
+  padding: 1rem;
+  background: #f8fafc;
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+.btn-refer {
+  flex: 1;
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  padding: 0.65rem;
+  border-radius: 0.375rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.btn-refer:hover {
+  background: #1e293b;
+}
+.btn-details {
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  padding: 0.65rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.btn-details:hover {
+  background: #f1f5f9;
 }
