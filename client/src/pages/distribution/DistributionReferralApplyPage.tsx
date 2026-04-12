@@ -107,10 +107,22 @@ export default function DistributionReferralApplyPage() {
     form.phone.trim().length > 0 &&
     form.partnerType !== '';
 
+  const interestedIn = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('interestedIn');
+    }
+    return null;
+  }, []);
+
   const notes = useMemo(() => {
-    if (!form.partnerType) return 'Applicant type: Not specified';
-    return `Applicant type: ${partnerTypeLabels[form.partnerType]}`;
-  }, [form.partnerType]);
+    let baseNote = !form.partnerType
+      ? 'Applicant type: Not specified'
+      : `Applicant type: ${partnerTypeLabels[form.partnerType]}`;
+    if (interestedIn) {
+      baseNote += ` | Interested Development ID: ${interestedIn}`;
+    }
+    return baseNote;
+  }, [form.partnerType, interestedIn]);
 
   const handleSubmit = () => {
     if (!canSubmit) {
@@ -139,7 +151,10 @@ export default function DistributionReferralApplyPage() {
       <div className="min-h-screen bg-slate-50">
         <DistributionFunnelNavbar />
 
-        <main id="main-content" className="advertise-page relative overflow-x-hidden bg-slate-50 pt-16 text-slate-900">
+        <main
+          id="main-content"
+          className="advertise-page relative overflow-x-hidden bg-slate-50 pt-16 text-slate-900"
+        >
           <section className="distribution-funnel-hero relative overflow-hidden py-10 md:py-14">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(14,165,233,0.12),transparent_40%),radial-gradient(circle_at_0%_30%,rgba(37,99,235,0.14),transparent_35%)]" />
 
@@ -168,7 +183,8 @@ export default function DistributionReferralApplyPage() {
                   </span>
                 </h1>
                 <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
-                  Get access to approved developments and referral payout tracking before you submit your first buyer.
+                  Get access to approved developments and referral payout tracking before you submit
+                  your first buyer.
                 </p>
               </div>
 
@@ -179,12 +195,17 @@ export default function DistributionReferralApplyPage() {
                       <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                         <Check className="h-6 w-6" />
                       </div>
-                      <h2 className="text-2xl font-semibold text-slate-900">Application Received</h2>
+                      <h2 className="text-2xl font-semibold text-slate-900">
+                        Application Received
+                      </h2>
                       <p className="mx-auto max-w-2xl text-sm text-slate-600">
-                        We review every application manually. You will receive onboarding and access details by email.
+                        We review every application manually. You will receive onboarding and access
+                        details by email.
                       </p>
                       <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                        <Button onClick={() => setLocation('/distribution-network')}>Back to Network Page</Button>
+                        <Button onClick={() => setLocation('/distribution-network')}>
+                          Back to Network Page
+                        </Button>
                         <Button variant="outline" onClick={() => setLocation('/login')}>
                           Sign in
                         </Button>
@@ -195,8 +216,8 @@ export default function DistributionReferralApplyPage() {
                       <div className="text-center">
                         <h2 className="text-2xl font-semibold text-slate-900">Get Access</h2>
                         <p className="mt-2 text-sm text-slate-600">
-                          No buyer details required to join. You can submit referrals after you see approved
-                          developments.
+                          No buyer details required to join. You can submit referrals after you see
+                          approved developments.
                         </p>
                       </div>
 
@@ -219,7 +240,9 @@ export default function DistributionReferralApplyPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-700">Phone / WhatsApp</label>
+                          <label className="text-sm font-medium text-slate-700">
+                            Phone / WhatsApp
+                          </label>
                           <Input
                             value={form.phone}
                             onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
@@ -248,7 +271,10 @@ export default function DistributionReferralApplyPage() {
                       </div>
 
                       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-                        <Link href="/login" className="text-sm font-medium text-blue-700 hover:text-blue-800">
+                        <Link
+                          href="/login"
+                          className="text-sm font-medium text-blue-700 hover:text-blue-800"
+                        >
                           Already have access? Sign in
                         </Link>
                         <Button
@@ -361,7 +387,10 @@ export default function DistributionReferralApplyPage() {
                 </h2>
                 <div className="mt-5 grid gap-4 md:grid-cols-3">
                   {postJoinSteps.map((step, index) => (
-                    <div key={step.title} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div
+                      key={step.title}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
                       <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
                         Step {index + 1}
                       </p>
