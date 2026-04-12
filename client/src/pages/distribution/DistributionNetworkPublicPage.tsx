@@ -482,7 +482,11 @@ export default function DistributionNetworkPublicPage() {
                               </span>
                             </div>
                             <div className="opp-payout">
-                              Earn up to R30k
+                              {dev.referrerCommissionType === 'flat' && dev.referrerCommissionAmount 
+                                ? `Earn R${(dev.referrerCommissionAmount / 1000).toFixed(0)}k`
+                                : dev.referrerCommissionType === 'percentage' && dev.referrerCommissionValue
+                                  ? `Earn ${dev.referrerCommissionValue}% Comm.`
+                                  : 'Earn up to R30k'}
                               <span>per referral</span>
                             </div>
                           </div>
