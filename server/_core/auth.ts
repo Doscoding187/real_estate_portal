@@ -391,11 +391,11 @@ class AuthService {
   /**
    * Forgot password - generate and send reset token
    */
-  async forgotPassword(email: string): Promise<void> {
+  async forgotPassword(email: string): Promise<boolean> {
     const user = await db.getUserByEmail(email);
     if (!user) {
       // Don't reveal that the user doesn't exist
-      return;
+      return false;
     }
 
     // Generate a random token
@@ -411,12 +411,14 @@ class AuthService {
     // Send email with reset link
     const resetLink = `${ENV.appUrl}/reset-password?token=${token}`;
 
-    await EmailService.sendEmail({
+    const emailSent = await EmailService.sendEmail({
       to: user.email!,
       subject: 'Password Reset Request',
       html: `<p>You requested a password reset. Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a><p>This link will expire in 1 hour.</p>`,
       text: `You requested a password reset. Copy and paste this link into your browser to reset your password: ${resetLink}`,
     });
+
+    return emailSent;
   }
 
   /**

@@ -11,6 +11,7 @@ import '@/styles/advertise-responsive.css';
 
 type PartnerType = 'independent_agent' | 'small_brokerage' | 'referral_partner' | 'individual' | '';
 
+const REFERRAL_LOGIN_PATH = '/distribution-network/login';
 const partnerTypeLabels: Record<Exclude<PartnerType, ''>, string> = {
   independent_agent: 'Independent Property Agent',
   small_brokerage: 'Small Brokerage',
@@ -143,7 +144,7 @@ export default function DistributionReferralApplyPage() {
                         <Button onClick={() => setLocation('/distribution-network')}>
                           Explore Opportunities
                         </Button>
-                        <Button variant="outline" onClick={() => setLocation('/login')}>
+                        <Button variant="outline" onClick={() => setLocation(REFERRAL_LOGIN_PATH)}>
                           Sign in
                         </Button>
                       </div>
@@ -199,14 +200,22 @@ export default function DistributionReferralApplyPage() {
                         </div>
                       </div>
 
-                      <Button
-                        className="w-full h-11 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white"
-                        disabled={!canSubmit || submitMutation.isPending}
-                        onClick={handleSubmit}
-                      >
-                        {submitMutation.isPending ? 'Submitting...' : 'Get Access'}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
+                      <div className="space-y-3">
+                        <Button
+                          className="w-full h-11 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white"
+                          disabled={!canSubmit || submitMutation.isPending}
+                          onClick={handleSubmit}
+                        >
+                          {submitMutation.isPending ? 'Submitting...' : 'Get Access'}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                        <Link
+                          href={REFERRAL_LOGIN_PATH}
+                          className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700"
+                        >
+                          Already have access? Sign in
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </CardContent>

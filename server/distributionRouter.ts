@@ -3463,8 +3463,13 @@ const adminDistributionRouter = router({
         userCreated = true;
 
         try {
-          await authService.forgotPassword(normalizedEmail);
-          activationEmailSent = true;
+          activationEmailSent = await authService.forgotPassword(normalizedEmail);
+          if (!activationEmailSent) {
+            console.warn(
+              '[distribution.reviewReferrerApplication] Activation reset email was not delivered.',
+              { applicationId: input.applicationId, userId },
+            );
+          }
         } catch (error) {
           console.warn(
             '[distribution.reviewReferrerApplication] Failed to send activation reset email:',
@@ -3505,6 +3510,86 @@ const adminDistributionRouter = router({
         status: 'approved' as const,
         userId,
         userCreated,
+        activationEmailSent,
+      };
+    }),
+
+  resendReferrerActivationEmail: superAdminProcedure
+    .input(
+      z.object({
+        applicationId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const [application] = await db
+        .select({
+          id: distributionReferrerApplications.id,
+          email: distributionReferrerApplications.email,
+          status: distributionReferrerApplications.status,
+          userId: distributionReferrerApplications.userId,
+        })
+        .from(distributionReferrerApplications)
+        .where(eq(distributionReferrerApplications.id, input.applicationId))
+        .limit(1);
+
+      if (!application) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Referrer application not found.' });
+      }
+
+      if (application.status !== 'approved') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Activation email can only be resent after approval.',
+        });
+      }
+
+      const normalizedEmail = String(application.email || '')
+        .trim()
+        .toLowerCase();
+
+      if (!normalizedEmail) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Application email is missing. Cannot resend activation email.',
+        });
+      }
+
+      let userId = Number(application.userId || 0);
+      if (!userId) {
+        const [resolvedUser] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, normalizedEmail))
+          .limit(1);
+        userId = Number(resolvedUser?.id || 0);
+      }
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'No user account found for this approved referrer.',
+        });
+      }
+
+      const activationEmailSent = await authService.forgotPassword(normalizedEmail);
+      if (!activationEmailSent) {
+        console.warn(
+          '[distribution.resendReferrerActivationEmail] Activation reset email was not delivered.',
+          {
+            applicationId: input.applicationId,
+            userId,
+          },
+        );
+      }
+
+      return {
+        success: true,
+        applicationId: input.applicationId,
+        userId,
         activationEmailSent,
       };
     }),

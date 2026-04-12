@@ -224,7 +224,7 @@ export default function DistributionNetworkPage() {
             result.userCreated
               ? result.activationEmailSent
                 ? 'Referrer approved, account created, and activation email sent.'
-                : 'Referrer approved and account created.'
+                : 'Referrer approved and account created, but activation email failed to send. Ask user to use Forgot Password.'
               : 'Referrer approved.',
           );
         } else {
@@ -232,6 +232,17 @@ export default function DistributionNetworkPage() {
         }
         applicationsQuery.refetch();
         accessQuery.refetch();
+      },
+      onError: err => toast.error(err.message),
+    });
+  const resendReferrerActivationMutation =
+    trpc.distribution.admin.resendReferrerActivationEmail.useMutation({
+      onSuccess: result => {
+        if (result.activationEmailSent) {
+          toast.success('Activation email resent.');
+        } else {
+          toast.error('Activation email resend failed. Ask user to use Forgot Password.');
+        }
       },
       onError: err => toast.error(err.message),
     });
@@ -1021,6 +1032,22 @@ export default function DistributionNetworkPage() {
                             Reject
                           </Button>
                         </>
+                      ) : null}
+                      {application.status === 'approved' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            resendReferrerActivationMutation.mutate({
+                              applicationId: Number(application.id),
+                            })
+                          }
+                          disabled={resendReferrerActivationMutation.isPending}
+                        >
+                          {resendReferrerActivationMutation.isPending
+                            ? 'Resending...'
+                            : 'Resend Activation Email'}
+                        </Button>
                       ) : null}
                     </div>
                   </div>

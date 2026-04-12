@@ -28,6 +28,7 @@ import { trpc } from '@/lib/trpc';
 import '@/styles/advertise-responsive.css';
 import '@/styles/advertise-focus-indicators.css';
 
+const REFERRAL_LOGIN_PATH = '/distribution-network/login';
 const HERO_ROTATION_MS = 4000;
 
 // Bedroom chip options
@@ -293,6 +294,15 @@ export default function DistributionNetworkPublicPage() {
                   }}
                 >
                   See How It Works
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-14 border-slate-600 bg-transparent px-8 text-base text-slate-300 sm:w-auto hover:bg-slate-800 hover:text-white transition-colors"
+                  onClick={() => setLocation(REFERRAL_LOGIN_PATH)}
+                >
+                  Referral Sign in
+                  <LogIn className="ml-2 h-4 w-4" />
                 </Button>
               </div>
               <p className="text-xs text-slate-500 mb-12">
