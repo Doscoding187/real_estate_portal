@@ -3625,7 +3625,6 @@ const adminDistributionRouter = router({
             displayName: application.fullName || application.email,
           },
         });
-
       const activationEmailSent = await authService.forgotPassword(normalizedEmail);
       if (!activationEmailSent) {
         console.warn(
