@@ -15,6 +15,7 @@ import {
   developerBrandProfiles,
   developmentDrafts,
   locations,
+  distributionPrograms,
 } from '../../drizzle/schema';
 
 // ===========================================================================
@@ -653,12 +654,20 @@ export async function listPublicDevelopments(options: {
       developerLogoUrl: developers.logo,
       brandName: developerBrandProfiles.brandName,
       brandLogoUrl: developerBrandProfiles.logoUrl,
+      commissionModel: distributionPrograms.commissionModel,
+      referrerCommissionType: distributionPrograms.referrerCommissionType,
+      referrerCommissionValue: distributionPrograms.referrerCommissionValue,
+      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
     })
     .from(developments)
     .leftJoin(developers, eq(developments.developerId, developers.id))
     .leftJoin(
       developerBrandProfiles,
       eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+    )
+    .leftJoin(
+      distributionPrograms,
+      eq(developments.id, distributionPrograms.developmentId),
     )
     .where(and(...conditions))
     .orderBy(desc(developments.createdAt))
@@ -722,6 +731,10 @@ export async function listPublicDevelopments(options: {
     isFeatured: Number(d.isFeatured || 0) === 1,
     builderName: d.brandName || d.developerName || null,
     builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
+    commissionModel: d.commissionModel || null,
+    referrerCommissionType: d.referrerCommissionType || null,
+    referrerCommissionValue: d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
+    referrerCommissionAmount: d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
     configurations: unitsByDevelopment.get(Number(d.id)) || [],
   }));
 }

@@ -60,10 +60,10 @@ export default function DistributionNetworkPublicPage() {
   };
 
   const matcherResult = useMemo(() => {
-    if (matchIncome === 'R15k - R25k / month') return { count: 1, payout: 'R6k - R8k' };
-    if (matchIncome === 'R25k - R40k / month') return { count: 2, payout: 'R8k - R14k' };
-    if (matchIncome === 'R40k - R60k / month') return { count: 3, payout: 'R18k - R25k' };
-    return { count: 5, payout: 'R20k - R25k' };
+    if (matchIncome === 'R15k - R25k / month') return { count: 1, payout: 'R18k - R20k' };
+    if (matchIncome === 'R25k - R40k / month') return { count: 2, payout: 'R20k - R22k' };
+    if (matchIncome === 'R40k - R60k / month') return { count: 3, payout: 'R22k - R25k' };
+    return { count: 5, payout: 'R25k - R30k' };
   }, [matchIncome]);
 
   return (
@@ -146,11 +146,11 @@ export default function DistributionNetworkPublicPage() {
 
               <div className="text-blue-200 text-sm md:text-base font-medium mb-10 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-4">
                 <span>
-                  Earn up to <strong className="text-blue-100 font-bold">R25,000</strong> per
+                  Earn up to <strong className="text-blue-100 font-bold">R30,000</strong> per
                   referral
                 </span>
                 <span className="hidden md:inline">·</span>
-                <span>Commission locked at submission</span>
+                <span>Referral fee locked at submission</span>
                 <span className="hidden md:inline">·</span>
                 <span>Paid at attorney signing</span>
               </div>
@@ -372,10 +372,10 @@ export default function DistributionNetworkPublicPage() {
                       <Lock className="h-5 w-5" />
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">
-                      Commission locked at submission
+                      Referral fee locked at submission
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      The moment you submit, your referral payout is confirmed and protected. No
+                      The moment you submit, your referral fee is confirmed and protected. No
                       disputes, no renegotiation at signing.
                     </p>
                   </CardContent>
@@ -413,7 +413,7 @@ export default function DistributionNetworkPublicPage() {
                 </h2>
                 <p className="text-lg text-slate-600">
                   You don't need a mandate. Submit your pre-qualified buyers to any of these
-                  developments and secure your commission.
+                  developments and secure your referral fee.
                 </p>
               </div>
 
@@ -445,92 +445,59 @@ export default function DistributionNetworkPublicPage() {
                     return (
                       <div
                         key={dev.id}
-                        className="relative rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-[0_12px_40px_rgba(15,23,42,0.12)] hover:-translate-y-1 hover:border-blue-300 transition-all flex flex-col overflow-hidden"
+                        className="opp-card relative hover:-translate-y-1 hover:border-blue-300 transition-all"
                       >
-                        {/* Header Box */}
                         <div
-                          className="h-36 p-4 flex flex-col justify-end relative"
+                          className="opp-card-img theme-1"
                           style={{
-                            background: hasCover
-                              ? `linear-gradient(to top, rgba(15,23,42,0.9), rgba(15,23,42,0.3)), url(${dev.images?.[0]?.url})`
+                            backgroundImage: hasCover
+                              ? `linear-gradient(to top, rgba(15,23,42,0.9), rgba(15,23,42,0)), url(${dev.images?.[0]?.url})`
                               : defaultBg,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
                           }}
                         >
-                          <div className="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                          <span className="opp-availability">
                             {dev.status === 'selling'
-                              ? 'Selling Fast'
+                              ? 'Selling fast'
                               : dev.status?.replace('-', ' ')}
-                          </div>
+                          </span>
                           <div>
-                            <h3 className="text-lg font-bold text-white leading-tight drop-shadow-sm">
-                              {dev.name}
-                            </h3>
-                            <p className="text-xs text-white/80 mt-1 truncate">
-                              📍 {dev.suburb || dev.city}
-                            </p>
+                            <div className="opp-name">{dev.name}</div>
+                            <div className="opp-location">📍 {dev.suburb || dev.city}</div>
                           </div>
                         </div>
-
-                        {/* Body Details */}
-                        <div className="p-5 flex-1 flex flex-col gap-4">
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                              Available Unit Types
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {dev.configurations && dev.configurations.length > 0 ? (
-                                dev.configurations.map((c: any) => (
-                                  <span
-                                    key={c.label}
-                                    className="bg-slate-100 text-slate-700 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold"
-                                  >
-                                    {c.label}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="bg-slate-100 text-slate-700 border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold">
-                                  Multiple Configurations
-                                </span>
-                              )}
-                            </div>
+                        <div className="opp-body">
+                          <div className="opp-qualify">
+                            <div className="opp-qualify-dot"></div>
+                            <p>Buyers earning {qualifyingThreshold} qualify</p>
                           </div>
-
-                          <div className="bg-emerald-50 rounded-lg p-3 flex items-start gap-2 border border-emerald-100">
-                            <div className="h-2 w-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                            <p className="text-xs font-medium text-emerald-800">
-                              Buyers earning {qualifyingThreshold} qualify
-                            </p>
-                          </div>
-
-                          <div className="mt-auto flex justify-between items-end pt-2">
-                            <div>
-                              <p className="text-lg font-bold text-slate-900 leading-none">
-                                From R
-                                {(priceFrom || 0) >= 1000000
-                                  ? ((priceFrom || 0) / 1000000).toFixed(1) + 'm'
-                                  : ((priceFrom || 0) / 1000).toFixed(0) + 'k'}
-                              </p>
+                          <div className="opp-price-row">
+                            <div className="opp-price">
+                              From R
+                              {(priceFrom || 0) >= 1000000
+                                ? ((priceFrom || 0) / 1000000).toFixed(1) + 'm'
+                                : ((priceFrom || 0) / 1000).toFixed(0) + 'k'}
+                              <span>
+                                From R{priceFrom ? ((priceFrom * 0.0105) / 1000).toFixed(0) : '0'}
+                                k/month bond
+                              </span>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm font-black text-blue-600 leading-none">
-                                Earn up to R25k
-                              </p>
-                              <p className="text-[10px] text-slate-500 mt-1 font-medium">
-                                per referral
-                              </p>
+                            <div className="opp-payout">
+                              {dev.referrerCommissionType === 'flat' && dev.referrerCommissionAmount 
+                                ? `Earn R${(dev.referrerCommissionAmount / 1000).toFixed(0)}k`
+                                : dev.referrerCommissionType === 'percentage' && dev.referrerCommissionValue
+                                  ? `Earn ${dev.referrerCommissionValue}% Comm.`
+                                  : 'Earn up to R30k'}
+                              <span>per referral</span>
                             </div>
                           </div>
                         </div>
-
-                        <div className="p-4 border-t border-slate-100 bg-slate-50">
-                          <Button
-                            className="w-full bg-slate-900 text-white hover:bg-slate-800 font-bold"
-                            onClick={() => handleReferClick(dev.id)}
-                          >
+                        <div className="opp-footer">
+                          <button className="btn-refer" onClick={() => handleReferClick(dev.id)}>
                             Refer a Buyer
-                          </Button>
+                          </button>
+                          <button className="btn-details" onClick={() => handleReferClick(dev.id)}>
+                            Details
+                          </button>
                         </div>
                       </div>
                     );
@@ -604,7 +571,7 @@ export default function DistributionNetworkPublicPage() {
                       Submit their details
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Use our quick referral form. Takes 2 minutes. Your commission is locked the
+                      Use our quick referral form. Takes 2 minutes. Your referral fee is locked the
                       moment you hit submit.
                     </p>
                   </div>
@@ -638,7 +605,7 @@ export default function DistributionNetworkPublicPage() {
                     <p className="text-slate-600 text-sm md:text-base">
                       Run this with{' '}
                       <strong className="text-slate-900 font-bold">5 buyers simultaneously</strong>{' '}
-                      = R90k - R125k potential pipeline. This is your distribution engine.
+                      = R90k - R150k potential pipeline. This is your distribution engine.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 md:max-w-md justify-center md:justify-end">
@@ -677,8 +644,8 @@ export default function DistributionNetworkPublicPage() {
                   How Much You Earn. No Surprises.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  Your commission is confirmed at submission. What you see when you refer is exactly
-                  what you get paid.
+                  Your referral fee is confirmed at submission. What you see when you refer is
+                  exactly what you get paid.
                 </p>
               </div>
 
@@ -689,10 +656,10 @@ export default function DistributionNetworkPublicPage() {
                       Payout certainty
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">
-                      Commission Locked at Submission
+                      Referral Fee Locked at Submission
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      The moment your referral is submitted and accepted, your commission rate is
+                      The moment your referral is submitted and accepted, your referral fee rate is
                       confirmed in writing. No renegotiation. No surprises at closing.
                     </p>
                   </CardContent>
@@ -707,7 +674,7 @@ export default function DistributionNetworkPublicPage() {
                       Paid After Attorney Signing
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Commission releases once the sale is registered through legal channels.
+                      Referral fee releases once the sale is registered through legal channels.
                       Milestone-based payment — no vague timelines or arbitrary delays.
                     </p>
                   </CardContent>
@@ -732,13 +699,13 @@ export default function DistributionNetworkPublicPage() {
                   Maximum referral payout per transaction
                 </span>
                 <div className="text-5xl sm:text-6xl font-black text-blue-600 tracking-tight mb-4">
-                  R25,000
+                  R30,000
                 </div>
                 <p className="text-base text-slate-600 font-medium">
-                  Earn between R8,000 and R25,000 depending on development and unit type
+                  Earn between R18,000 and R30,000 depending on development and unit type
                 </p>
                 <p className="text-xs text-slate-400 mt-2 font-medium">
-                  Commission confirmed at the time of referral submission · No mandate required
+                  Referral fee confirmed at the time of referral submission · No mandate required
                 </p>
               </div>
             </div>
@@ -751,7 +718,7 @@ export default function DistributionNetworkPublicPage() {
                 <div className="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
                   <div className="text-3xl font-black text-slate-900 mb-2">R2.4M+</div>
                   <div className="text-sm text-slate-600 font-medium tracking-wide">
-                    In referral commissions
+                    In referral fees
                   </div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
