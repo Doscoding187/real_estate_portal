@@ -49,7 +49,10 @@ function reloadOnceForStaleChunk(reason: unknown) {
 
   if (Number.isFinite(lastReloadAt) && now - lastReloadAt < STALE_CHUNK_RELOAD_WINDOW_MS) {
     sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY);
-    console.error('[ChunkRecovery] Reload already attempted recently; leaving error visible.', reason);
+    console.error(
+      '[ChunkRecovery] Reload already attempted recently; leaving error visible.',
+      reason,
+    );
     return false;
   }
 
