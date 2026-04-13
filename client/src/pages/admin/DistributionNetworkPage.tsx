@@ -39,6 +39,21 @@ function openInviteShareWindow(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+async function copyActivationResetLink(link: string, label: string) {
+  try {
+    if (typeof navigator?.clipboard?.writeText === 'function') {
+      await navigator.clipboard.writeText(link);
+      toast.success(`${label} reset link copied to clipboard.`);
+      return;
+    }
+  } catch {
+    // fall through to console log
+  }
+
+  console.info(`[${label}] Reset link:`, link);
+  toast.error(`${label} reset link available in console.`);
+}
+
 function groupBrandLinkedDevelopments(
   rows: any[],
   programByDevelopmentId: Map<number, any>,
@@ -221,11 +236,16 @@ export default function DistributionNetworkPage() {
     trpc.distribution.admin.reviewReferrerApplication.useMutation({
       onSuccess: result => {
         if (result.status === 'approved') {
+          if (!result.activationEmailSent && result.activationResetLink) {
+            void copyActivationResetLink(result.activationResetLink, 'Referrer approval');
+          }
           toast.success(
             result.userCreated
               ? result.activationEmailSent
                 ? 'Referrer approved, account created, and activation email sent.'
-                : 'Referrer approved and account created, but activation email failed to send. Ask user to use Forgot Password.'
+                : result.activationResetLink
+                  ? 'Referrer approved and account created. Email failed; reset link copied.'
+                  : 'Referrer approved and account created, but activation email failed to send. Ask user to use Forgot Password.'
               : 'Referrer approved.',
           );
         } else {
@@ -247,10 +267,17 @@ export default function DistributionNetworkPage() {
               : `Activation email resent to ${result.email}.`,
           );
         } else {
+          if (result.activationResetLink) {
+            void copyActivationResetLink(result.activationResetLink, 'Activation');
+          }
           toast.error(
             result.email
-              ? `Activation email failed for ${result.email}. Ask user to use Forgot Password.`
-              : 'Activation email resend failed. Ask user to use Forgot Password.',
+              ? result.activationResetLink
+                ? `Activation email failed for ${result.email}. Reset link copied.`
+                : `Activation email failed for ${result.email}. Ask user to use Forgot Password.`
+              : result.activationResetLink
+                ? 'Activation email resend failed. Reset link copied.'
+                : 'Activation email resend failed. Ask user to use Forgot Password.',
           );
         }
       },
