@@ -73,11 +73,13 @@ export default function ResetPassword() {
         body: JSON.stringify({ token, newPassword: data.newPassword }),
       });
 
-      toast.success(
-        isOnboarding
-          ? 'Your password is set. You can now log in.'
-          : 'Your password has been reset successfully!',
-      );
+      if (isOnboarding) {
+        toast.success('Your password is set. Redirecting to your dashboard...');
+        setLocation('/distribution-network/login');
+        return;
+      }
+
+      toast.success('Your password has been reset successfully!');
       setIsSuccess(true);
     } catch (error) {
       console.error('[ResetPassword] Error caught:', error);
