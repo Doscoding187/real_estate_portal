@@ -3489,6 +3489,14 @@ const adminDistributionRouter = router({
       }
 
       await db
+        .update(users)
+        .set({
+          emailVerified: 1,
+          emailVerificationToken: null,
+        })
+        .where(eq(users.id, userId));
+
+      await db
         .insert(distributionIdentities)
         .values({
           userId,
@@ -3621,6 +3629,14 @@ const adminDistributionRouter = router({
 
         userCreated = true;
       }
+
+      await db
+        .update(users)
+        .set({
+          emailVerified: 1,
+          emailVerificationToken: null,
+        })
+        .where(eq(users.id, userId));
 
       await db
         .insert(distributionIdentities)
