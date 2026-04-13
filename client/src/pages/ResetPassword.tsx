@@ -74,8 +74,8 @@ export default function ResetPassword() {
       });
 
       if (isOnboarding) {
-        toast.success('Your password is set. Redirecting to your dashboard...');
-        setLocation('/distribution-network/login');
+        toast.success('Your password is set. Redirecting...');
+        setLocation('/activation-complete?next=/distribution-network/login');
         return;
       }
 

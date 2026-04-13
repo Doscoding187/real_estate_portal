@@ -65,6 +65,7 @@ const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ActivationComplete = lazy(() => import('./pages/ActivationComplete'));
 const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
@@ -452,6 +453,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/activation-complete" component={ActivationComplete} />
           <Route path="/saved-search/manage" component={SavedSearchManagePage} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
           <Route path="/referral-upload/:token">
