@@ -42,7 +42,7 @@ vi.mock('wouter', async () => {
 });
 
 vi.mock('@/components/ListingNavbar', () => ({
-  ListingNavbar: () => <div data-testid="listing-navbar" />,
+  ListingNavbar: () => <div data-testid="listing-navbar" />, 
 }));
 
 vi.mock('@/components/distribution/partner/AffordabilityForm', () => ({
@@ -88,6 +88,22 @@ vi.mock('@/lib/trpc', () => ({
         },
         requestCreditCheckPlaceholder: {
           useMutation: (opts: unknown) => mockCreditCheckMutation(opts),
+        },
+      },
+      referrer: {
+        myPipeline: {
+          useQuery: () => ({
+            data: { stageCounts: {} },
+            isLoading: false,
+            error: null,
+          }),
+        },
+        status: {
+          useQuery: () => ({
+            data: { accessCount: 0 },
+            isLoading: false,
+            error: null,
+          }),
         },
       },
     },
