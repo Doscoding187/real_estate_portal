@@ -103,6 +103,7 @@ vi.mock('@/lib/trpc', () => ({
             data: { accessCount: 0 },
             isLoading: false,
             error: null,
+            refetchOnWindowFocus: true,
           }),
         },
       },
