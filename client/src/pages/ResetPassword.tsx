@@ -173,10 +173,10 @@ export default function ResetPassword() {
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Resetting...
+                        {isOnboarding ? 'Setting...' : 'Resetting...'}
                       </>
                     ) : (
-                      'Reset Password'
+                      isOnboarding ? 'Set Password' : 'Reset Password'
                     )}
                   </Button>
                 </form>
