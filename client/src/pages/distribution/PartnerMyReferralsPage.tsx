@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
-import { ListingNavbar } from '@/components/ListingNavbar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
 export default function PartnerMyReferralsPage() {
   const { isAuthenticated, loading } = useAuth();
@@ -33,16 +33,15 @@ export default function PartnerMyReferralsPage() {
 
   if (loading || referralsQuery.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <ListingNavbar />
-      <div className="mx-auto max-w-6xl px-4 pb-8 pt-24">
+    <ReferralAppShell>
+      <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 md:px-7">
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>My Referrals</CardTitle>
@@ -54,7 +53,7 @@ export default function PartnerMyReferralsPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => setLocation('/partner/referrals/accelerator')}
+              onClick={() => setLocation('/distribution/partner/accelerator')}
             >
               Open Referral Accelerator
             </Button>
@@ -117,7 +116,7 @@ export default function PartnerMyReferralsPage() {
             ) : null}
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </main>
+    </ReferralAppShell>
   );
 }
