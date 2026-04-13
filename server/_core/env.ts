@@ -51,7 +51,8 @@ export const ENV = {
   maxImageSizeMb: parseInt(process.env.MAX_IMAGE_SIZE_MB ?? '10'),
   // Email configuration
   resendApiKey: process.env.RESEND_API_KEY ?? '',
-  resendFromEmail: process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev',
+  resendFromEmail:
+    process.env.RESEND_FROM_EMAIL ?? process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
   distributionNetworkEnabled:
     String(process.env.FEATURE_DISTRIBUTION_NETWORK ?? 'true').toLowerCase() === 'true',
 };

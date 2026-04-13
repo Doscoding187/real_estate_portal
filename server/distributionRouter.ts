@@ -3423,6 +3423,7 @@ const adminDistributionRouter = router({
       let userId = Number(existingUser?.id || 0);
       let userCreated = false;
       let activationEmailSent = false;
+      let activationResetLink: string | null = null;
 
       if (!userId) {
         const cleanFullName = String(application.fullName || '').trim();
@@ -3469,12 +3470,14 @@ const adminDistributionRouter = router({
               '[distribution.reviewReferrerApplication] Activation reset email was not delivered.',
               { applicationId: input.applicationId, userId },
             );
+            activationResetLink = await authService.generatePasswordResetLink(normalizedEmail);
           }
         } catch (error) {
           console.warn(
             '[distribution.reviewReferrerApplication] Failed to send activation reset email:',
             error,
           );
+          activationResetLink = await authService.generatePasswordResetLink(normalizedEmail);
         }
       }
 
@@ -3511,6 +3514,7 @@ const adminDistributionRouter = router({
         userId,
         userCreated,
         activationEmailSent,
+        activationResetLink,
       };
     }),
 
@@ -3627,6 +3631,7 @@ const adminDistributionRouter = router({
         });
 
       const activationEmailSent = await authService.forgotPassword(normalizedEmail);
+      let activationResetLink: string | null = null;
       if (!activationEmailSent) {
         console.warn(
           '[distribution.resendReferrerActivationEmail] Activation reset email was not delivered.',
@@ -3635,6 +3640,7 @@ const adminDistributionRouter = router({
             userId,
           },
         );
+        activationResetLink = await authService.generatePasswordResetLink(normalizedEmail);
       }
 
       return {
@@ -3644,6 +3650,7 @@ const adminDistributionRouter = router({
         email: normalizedEmail,
         userCreated,
         activationEmailSent,
+        activationResetLink,
       };
     }),
 
