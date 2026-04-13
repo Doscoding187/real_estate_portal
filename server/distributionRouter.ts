@@ -32,6 +32,7 @@ import { ENV } from './_core/env';
 import { protectedProcedure, publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { getDb } from './db';
 import { authService } from './_core/auth';
+import { EmailService } from './_core/emailService';
 import { ensureCommissionEntryForDeal } from './services/distributionCommissionService';
 import { buildDistributionManagerInviteUrl } from '../shared/distributionManagerInvite';
 import {
@@ -3464,20 +3465,26 @@ const adminDistributionRouter = router({
         userCreated = true;
 
         try {
-          activationEmailSent = await authService.forgotPassword(normalizedEmail);
+          const resetLink = await authService.generatePasswordResetLink(normalizedEmail);
+          activationResetLink = resetLink ? `${resetLink}&flow=onboarding` : null;
+          if (activationResetLink) {
+            activationEmailSent = await EmailService.sendReferrerActivationEmail(
+              normalizedEmail,
+              String(application.fullName || ''),
+              activationResetLink,
+            );
+          }
           if (!activationEmailSent) {
             console.warn(
-              '[distribution.reviewReferrerApplication] Activation reset email was not delivered.',
+              '[distribution.reviewReferrerApplication] Activation onboarding email was not delivered.',
               { applicationId: input.applicationId, userId },
             );
-            activationResetLink = await authService.generatePasswordResetLink(normalizedEmail);
           }
         } catch (error) {
           console.warn(
-            '[distribution.reviewReferrerApplication] Failed to send activation reset email:',
+            '[distribution.reviewReferrerApplication] Failed to send activation onboarding email:',
             error,
           );
-          activationResetLink = await authService.generatePasswordResetLink(normalizedEmail);
         }
       }
 
@@ -3630,17 +3637,32 @@ const adminDistributionRouter = router({
           },
         });
 
-      const activationEmailSent = await authService.forgotPassword(normalizedEmail);
       let activationResetLink: string | null = null;
-      if (!activationEmailSent) {
+      let activationEmailSent = false;
+      try {
+        const resetLink = await authService.generatePasswordResetLink(normalizedEmail);
+        activationResetLink = resetLink ? `${resetLink}&flow=onboarding` : null;
+        if (activationResetLink) {
+          activationEmailSent = await EmailService.sendReferrerActivationEmail(
+            normalizedEmail,
+            String(application.fullName || ''),
+            activationResetLink,
+          );
+        }
+        if (!activationEmailSent) {
+          console.warn(
+            '[distribution.resendReferrerActivationEmail] Activation onboarding email was not delivered.',
+            {
+              applicationId: input.applicationId,
+              userId,
+            },
+          );
+        }
+      } catch (error) {
         console.warn(
-          '[distribution.resendReferrerActivationEmail] Activation reset email was not delivered.',
-          {
-            applicationId: input.applicationId,
-            userId,
-          },
+          '[distribution.resendReferrerActivationEmail] Failed to send activation onboarding email:',
+          error,
         );
-        activationResetLink = await authService.generatePasswordResetLink(normalizedEmail);
       }
 
       return {

@@ -45,6 +45,8 @@ export default function ResetPassword() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const token = params.get('token');
+  const flow = params.get('flow');
+  const isOnboarding = flow === 'onboarding';
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -71,7 +73,11 @@ export default function ResetPassword() {
         body: JSON.stringify({ token, newPassword: data.newPassword }),
       });
 
-      toast.success('Your password has been reset successfully!');
+      toast.success(
+        isOnboarding
+          ? 'Your password is set. You can now log in.'
+          : 'Your password has been reset successfully!',
+      );
       setIsSuccess(true);
     } catch (error) {
       console.error('[ResetPassword] Error caught:', error);
@@ -113,16 +119,20 @@ export default function ResetPassword() {
             <Home className="h-10 w-10 text-primary" />
             <h1 className="text-3xl font-bold">{APP_TITLE}</h1>
           </div>
-          <p className="text-muted-foreground">Create a new password</p>
+          <p className="text-muted-foreground">
+            {isOnboarding ? 'Activate your account' : 'Create a new password'}
+          </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Reset Password</CardTitle>
+            <CardTitle>{isOnboarding ? 'Set Your Password' : 'Reset Password'}</CardTitle>
             <CardDescription>
               {isSuccess
-                ? 'Your password has been changed. You can now log in with your new password.'
-                : 'Enter your new password below.'}
+                ? 'Your password has been set. You can now log in with your new password.'
+                : isOnboarding
+                  ? 'Create a password to finish activating your account.'
+                  : 'Enter your new password below.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
