@@ -222,6 +222,14 @@ export default function DistributionNetworkPublicPage() {
                 Apply to Join
               </Button>
               <Button
+                size="sm"
+                variant="outline"
+                className="hidden border-blue-200/70 text-blue-700 sm:inline-flex hover:bg-blue-50"
+                onClick={() => setLocation(REFERRAL_LOGIN_PATH)}
+              >
+                Referrer Login
+              </Button>
+              <Button
                 size="icon"
                 variant="ghost"
                 className="h-9 w-9 text-slate-600 hover:text-slate-900"
