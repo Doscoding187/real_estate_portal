@@ -95,8 +95,11 @@ export default function DistributionReferralApplyPage() {
               <ArrowLeft className="h-4 w-4" />
               Back to Distribution Network
             </button>
-            <Link href="/login" className="text-sm font-medium text-blue-600 hover:text-blue-800">
-              Already have access? Sign in
+            <Link
+              href={REFERRAL_LOGIN_PATH}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
+              Already have access? Referrer login
             </Link>
           </div>
         </header>
