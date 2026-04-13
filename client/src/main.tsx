@@ -140,7 +140,6 @@ const links = [
   httpBatchLink({
     url: TRPC_URL,
     transformer: superjson,
-    methodOverride: 'POST',
     // Fix: Inject headers here to ensure they survive tRPC batching
     headers: () => {
       const headers: Record<string, string> = {};
