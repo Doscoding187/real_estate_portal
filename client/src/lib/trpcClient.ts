@@ -15,7 +15,6 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({
     httpBatchLink({
       url: TRPC_URL,
       transformer: superjson,
-      methodOverride: 'POST',
       async fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
