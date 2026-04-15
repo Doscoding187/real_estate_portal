@@ -781,6 +781,47 @@ export const listingRouter = router({
     }),
 
   /**
+   * Preflight requirements before starting/submitting listing flow.
+   * Used by the wizard UI to show explicit blockers early.
+   */
+  getSubmissionPreflight: protectedProcedure.query(async ({ ctx }) => {
+    const currentUser = requireUser(ctx);
+    const agent = await db.getAgentByUserId(currentUser.id);
+    const owner = await db.getUserById(currentUser.id);
+
+    const whatsappValue =
+      String(agent?.whatsapp || '').trim() ||
+      String(agent?.phone || '').trim() ||
+      String(owner?.phone || '').trim();
+
+    const blockers: Array<{
+      code: string;
+      message: string;
+      actionLabel: string;
+      actionPath: string;
+    }> = [];
+
+    if (!whatsappValue) {
+      blockers.push({
+        code: 'missing_whatsapp_contact',
+        message:
+          'Add a WhatsApp-ready contact number before you start listing. This is required for submission.',
+        actionLabel: 'Update Contact Details',
+        actionPath: '/agent/settings',
+      });
+    }
+
+    return {
+      canStartListing: blockers.length === 0,
+      blockers,
+      contact: {
+        whatsapp: String(agent?.whatsapp || '').trim(),
+        phone: String(agent?.phone || owner?.phone || '').trim(),
+      },
+    };
+  }),
+
+  /**
    * Submit listing for review (manual approval)
    */
   submitForReview: protectedProcedure
