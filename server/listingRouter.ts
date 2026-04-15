@@ -786,10 +786,34 @@ export const listingRouter = router({
   submitForReview: protectedProcedure
     .input(z.object({ listingId: z.number() }))
     .mutation(async ({ ctx, input }) => {
+      const currentUser = requireUser(ctx);
+      const recordSubmitFailure = async (
+        reasonCode: string,
+        message: string,
+        details?: Record<string, unknown>,
+      ) => {
+        await recordAgentOsEvent({
+          userId: currentUser.id,
+          eventType: 'agent_listing_submit_failed',
+          eventData: {
+            listingId: input.listingId,
+            reasonCode,
+            message,
+            ...(details || {}),
+          },
+          req: ctx.req,
+          requestId: ctx.requestId,
+        });
+      };
+
       try {
         // Verify ownership
         const listing = await db.getListingById(input.listingId);
-        if (!listing || listing.userId !== ctx.user?.id) {
+        if (!listing || listing.userId !== currentUser.id) {
+          await recordSubmitFailure(
+            'not_authorized_or_listing_missing',
+            'Not authorized to submit this listing',
+          );
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Not authorized to submit this listing',
@@ -803,13 +827,20 @@ export const listingRouter = router({
 
         if (readiness.score < 75) {
           // Threshold 75%
+          await recordSubmitFailure(
+            'readiness_below_threshold',
+            `Listing readiness ${readiness.score}% is below required 75%`,
+            {
+              readinessScore: readiness.score,
+              missing: Array.isArray((readiness as any).missing) ? (readiness as any).missing : [],
+            },
+          );
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
             message: `Listing is not ready for submission (${readiness.score}%). Please complete missing fields.`,
           });
         }
 
-        const currentUser = requireUser(ctx);
         const agent = await db.getAgentByUserId(currentUser.id);
         const owner = await db.getUserById(currentUser.id);
         const whatsappContact =
@@ -818,6 +849,13 @@ export const listingRouter = router({
           String(owner?.phone || '').trim();
 
         if (!whatsappContact) {
+          await recordSubmitFailure(
+            'missing_whatsapp_contact',
+            'WhatsApp contact number is required before listing submission',
+            {
+              agentId: agent?.id || null,
+            },
+          );
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
             message:
@@ -880,6 +918,14 @@ export const listingRouter = router({
         return { success: true, status: 'pending_review' };
       } catch (error) {
         console.error('Error submitting for review:', error);
+
+        if (!(error instanceof TRPCError)) {
+          await recordSubmitFailure(
+            'unexpected_submission_error',
+            error instanceof Error ? error.message : 'Failed to submit for review',
+          );
+        }
+
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
