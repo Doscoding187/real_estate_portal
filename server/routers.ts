@@ -872,6 +872,7 @@ export const appRouter = router({
             propertySettings: {
               ownershipType: propertyDetails.ownershipType,
               powerBackup: propertyDetails.powerBackup,
+              security: propertyDetails.security || propertyDetails.securityLevel,
               securityFeatures: propertyDetails.securityFeatures,
               waterSupply: propertyDetails.waterSupply,
               internetAccess: propertyDetails.internetAccess,

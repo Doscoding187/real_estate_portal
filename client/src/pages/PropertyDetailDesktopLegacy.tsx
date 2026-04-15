@@ -70,6 +70,7 @@ interface PropertyImageLike {
 interface PropertySpecs {
   ownershipType?: string;
   powerBackup?: string;
+  security?: string;
   securityFeatures?: string[];
   waterSupply?: string;
   internetAccess?: string;
@@ -352,6 +353,17 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     }
   } catch (error) {
     console.error('Failed to parse property details', error);
+  }
+
+  const resolvedSecurity =
+    String(
+      specs.security ??
+        rawPropertyDetails.security ??
+        rawPropertyDetails.securityLevel ??
+        '',
+    ).trim() || undefined;
+  if (resolvedSecurity) {
+    specs.security = resolvedSecurity;
   }
 
   const developerBrand = property.developerBrand || property.developerBrandProfile;
@@ -645,11 +657,11 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
           icon: Zap,
         }
       : null,
-    specs.securityFeatures && specs.securityFeatures.length > 0
+    specs.security
       ? {
           key: 'security',
           label: 'Security',
-          value: specs.securityFeatures.map(feature => formatLabel(feature)).join(', '),
+          value: formatLabel(specs.security),
           icon: Shield,
         }
       : null,
@@ -1862,4 +1874,3 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     </div>
   );
 }
-

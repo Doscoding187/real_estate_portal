@@ -38,11 +38,11 @@ import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
 import PreviewStep from './steps/PreviewStep';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Home, Save, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Home, Save, Check, AlertTriangle, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
 import { calculateListingReadiness } from '@/lib/readiness';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -57,6 +57,7 @@ const ListingWizard: React.FC = () => {
   const [apiError, setApiError] = useState<AppError | null>(null);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrorResult | null>(null);
+  const [showPreflightModal, setShowPreflightModal] = useState(false);
 
   // Auto-save hook - saves draft to localStorage automatically
   const {
@@ -113,6 +114,12 @@ const ListingWizard: React.FC = () => {
     { id: Number(editId) },
     { enabled: !!editId && isEditMode },
   );
+
+  const { data: preflight, isLoading: isPreflightLoading } =
+    trpc.listing.getSubmissionPreflight.useQuery(undefined, {
+      enabled: !isEditMode,
+      refetchOnWindowFocus: true,
+    });
 
   // Populate store with existing listing data
   useEffect(() => {
@@ -224,6 +231,12 @@ const ListingWizard: React.FC = () => {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (!isEditMode && preflight && !preflight.canStartListing) {
+      setShowPreflightModal(true);
+    }
+  }, [isEditMode, preflight]);
 
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -544,8 +557,58 @@ const ListingWizard: React.FC = () => {
     store.propertyDetails,
   ]);
 
+  const readinessMissingItems = useMemo(() => {
+    return Object.entries(readiness.missing || {}).flatMap(([section, fields]) =>
+      (fields || []).map(field => ({
+        section: section.charAt(0).toUpperCase() + section.slice(1),
+        field,
+      })),
+    );
+  }, [readiness.missing]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
+      <Dialog
+        open={showPreflightModal}
+        onOpenChange={nextOpen => {
+          if (!nextOpen && preflight?.canStartListing) setShowPreflightModal(false);
+          if (nextOpen) setShowPreflightModal(true);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <AlertTriangle className="h-5 w-5" />
+              Listing Setup Required
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-700">
+              Your listing flow is paused until required contact details are completed.
+            </p>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              {(preflight?.blockers || []).map(blocker => (
+                <p key={blocker.code}>• {blocker.message}</p>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => {
+                  const actionPath = preflight?.blockers?.[0]?.actionPath || '/agent/settings';
+                  setLocation(actionPath);
+                }}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                {preflight?.blockers?.[0]?.actionLabel || 'Update Profile'}
+              </Button>
+              <Button variant="outline" onClick={() => setLocation('/agent/dashboard')}>
+                Back to Dashboard
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Resume Draft Dialog */}
       <DraftManager
         open={showResumeDraftDialog}
@@ -565,6 +628,10 @@ const ListingWizard: React.FC = () => {
 
       <div className="container mx-auto px-4 max-w-5xl">
         {!isInitialized ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : isPreflightLoading ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
@@ -595,6 +662,12 @@ const ListingWizard: React.FC = () => {
                         size="md"
                       />
                     </div>
+                    <div className="hidden md:block text-right">
+                      <p className="text-xs font-semibold text-slate-700">
+                        Readiness {readiness.score}% / 90%
+                      </p>
+                      <p className="text-[11px] text-slate-500">Submission gate</p>
+                    </div>
                     {/* SaveStatusIndicator removed - auto-save runs silently */}
                   </div>
                 )}
@@ -616,6 +689,36 @@ const ListingWizard: React.FC = () => {
             >
               {getCurrentStep()}
             </div>
+
+            {store.currentStep >= 2 && (
+              <div className="mb-8 rounded-2xl border border-slate-200 bg-white/90 p-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <ListChecks className="h-4 w-4 text-slate-600" />
+                    <p className="text-sm font-semibold text-slate-800">
+                      Readiness Checklist ({readiness.score}% / required 90%)
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Quality score is separate and does not replace readiness.
+                  </p>
+                </div>
+                {readinessMissingItems.length === 0 ? (
+                  <p className="mt-3 text-sm text-green-700">All readiness requirements are complete.</p>
+                ) : (
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {readinessMissingItems.map((item, index) => (
+                      <div
+                        key={`${item.section}-${item.field}-${index}`}
+                        className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                      >
+                        <span className="font-semibold">{item.section}:</span> {item.field}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Navigation */}
             <div className="flex items-center justify-between">
@@ -663,7 +766,7 @@ const ListingWizard: React.FC = () => {
                 <div className="flex flex-col items-end gap-2">
                   {readiness.score < 90 && (
                     <span className="text-xs text-amber-600 font-medium">
-                      Readiness Score must be 90% to submit
+                      Readiness is {readiness.score}%. Complete checklist items to reach 90%.
                     </span>
                   )}
                   <Button
