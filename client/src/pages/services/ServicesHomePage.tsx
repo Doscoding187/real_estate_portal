@@ -53,7 +53,7 @@ function getLastSearchLocation(): LastSearchLocation | null {
 
 export default function ServicesHomePage() {
   const [, setLocation] = useLocation();
-  const lastLocation = useMemo(getLastSearchLocation, []);
+  const lastLocation = useMemo(() => getLastSearchLocation(), []);
   const hasKnownLocation = Boolean(lastLocation?.suburb || lastLocation?.city || lastLocation?.province);
 
   const globalDirectoryQuery = trpc.servicesEngine.directorySearch.useQuery({
