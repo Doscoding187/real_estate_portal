@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -120,6 +120,16 @@ const DeveloperBrandProfilePage = lazy(() => import('./pages/DeveloperBrandProfi
 // Import Comparison Page
 const CompareProperties = lazy(() => import('./pages/CompareProperties'));
 const AdvertiseWithUs = lazy(() => import('./pages/AdvertiseWithUs'));
+const AdvertiseSellPage = lazy(() => import('./pages/advertise/AdvertiseSellPage'));
+const AdvertiseFinancePage = lazy(() => import('./pages/advertise/AdvertiseFinancePage'));
+const AdvertiseServicesPage = lazy(() => import('./pages/advertise/AdvertiseServicesPage'));
+const AgentFunnelPage = lazy(() => import('./pages/advertise/AgentFunnelPage'));
+const DeveloperFunnelPage = lazy(() => import('./pages/advertise/DeveloperFunnelPage'));
+const BankFunnelPage = lazy(() => import('./pages/advertise/BankFunnelPage'));
+const OriginatorFunnelPage = lazy(() => import('./pages/advertise/OriginatorFunnelPage'));
+const AgentOnboardingPage = lazy(() => import('./pages/advertise/AgentOnboardingPage'));
+const AgencyComingSoonPage = lazy(() => import('./pages/advertise/AgencyComingSoonPage'));
+const ActivationGate = lazy(() => import('./pages/dashboard/ActivationGate'));
 const GetStarted = lazy(() => import('./pages/GetStarted'));
 const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
@@ -468,6 +478,15 @@ function Router() {
           <Route path="/get-started" component={GetStarted} />
           <Route path="/book-strategy" component={BookStrategy} />
           <Route path="/role-selection" component={RoleSelection} />
+          <Route path="/advertise/sell/agents/onboarding" component={AgentOnboardingPage} />
+          <Route path="/advertise/sell/agents" component={AgentFunnelPage} />
+          <Route path="/advertise/sell/agencies" component={AgencyComingSoonPage} />
+          <Route path="/advertise/sell/developers" component={DeveloperFunnelPage} />
+          <Route path="/advertise/sell" component={AdvertiseSellPage} />
+          <Route path="/advertise/finance/banks" component={BankFunnelPage} />
+          <Route path="/advertise/finance/originators" component={OriginatorFunnelPage} />
+          <Route path="/advertise/finance" component={AdvertiseFinancePage} />
+          <Route path="/advertise/services" component={AdvertiseServicesPage} />
           <Route path="/advertise" component={AdvertiseWithUs} />
           <Route
             path="/advertise-with-us"
@@ -496,6 +515,13 @@ function Router() {
 
           {/* Other routes that might conflict */}
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/dashboard/settings" component={SettingsPage} />
+          
+          <Route path="/activation">
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
+              <ActivationGate />
+            </Suspense>
+          </Route>
 
           <Route path="/agency/dashboard">
             <RequireRole role="agency_admin">
