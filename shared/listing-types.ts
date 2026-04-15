@@ -294,6 +294,13 @@ export type PetPolicy = 'allowed' | 'cats_only' | 'no_pets' | 'by_arrangement';
 export type RoofType = 'tile' | 'metal' | 'slate' | 'thatch' | 'concrete' | 'other';
 export type WallType = 'brick' | 'plaster' | 'wood' | 'stone' | 'concrete' | 'other';
 export type WindowType = 'steel' | 'aluminium' | 'wood' | 'pvc' | 'other';
+export type SecuritySetting =
+  | 'standard'
+  | 'complex_security'
+  | 'estate_security'
+  | 'paid_security'
+  | 'none'
+  | string;
 export type SecurityFeature =
   | 'alarm'
   | 'electric_fence'
@@ -329,6 +336,7 @@ export interface AdditionalInformation {
   roofType?: RoofType;
   wallType?: WallType;
   windowType?: WindowType;
+  security?: SecuritySetting;
   securityFeatures?: SecurityFeature[];
   outdoorFeatures?: OutdoorFeature[];
 
@@ -367,6 +375,11 @@ export interface LocationData {
   province: string;
   postalCode?: string;
   placeId?: string; // Google Maps Place ID
+  addressComponents?: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>;
 }
 
 // Step 5: Media
