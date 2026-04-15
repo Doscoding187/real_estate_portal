@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerSubmitReferralPage from './PartnerSubmitReferralPage';
 
@@ -8,12 +8,16 @@ const {
   mockListEligibleUseQuery,
   mockSubmitReferralUseMutation,
   mockSetLocation,
+  mockMyPipelineUseQuery,
+  mockStatusUseQuery,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
   mockUseLocation: vi.fn(),
   mockListEligibleUseQuery: vi.fn(),
   mockSubmitReferralUseMutation: vi.fn(),
   mockSetLocation: vi.fn(),
+  mockMyPipelineUseQuery: vi.fn(),
+  mockStatusUseQuery: vi.fn(),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -49,6 +53,14 @@ vi.mock('@/lib/trpc', () => ({
           useMutation: (opts: unknown) => mockSubmitReferralUseMutation(opts),
         },
       },
+      referrer: {
+        myPipeline: {
+          useQuery: (...args: unknown[]) => mockMyPipelineUseQuery(...args),
+        },
+        status: {
+          useQuery: (...args: unknown[]) => mockStatusUseQuery(...args),
+        },
+      },
     },
   },
 }));
@@ -62,6 +74,8 @@ describe('PartnerSubmitReferralPage', () => {
       loading: false,
     });
     mockUseLocation.mockReturnValue(['/distribution/partner/submit', mockSetLocation]);
+    mockMyPipelineUseQuery.mockReturnValue({ data: { stageCounts: {} } });
+    mockStatusUseQuery.mockReturnValue({ data: { accessCount: 0 } });
     mockListEligibleUseQuery.mockReturnValue({
       data: {
         items: [
@@ -108,7 +122,9 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Buyer full name'), {
       target: { value: 'Jane Buyer' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit Referral' }));
+    
+    const mainArea = screen.getByRole('main');
+    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Referral' }));
 
     await waitFor(() =>
       expect(mutateSpy).toHaveBeenCalledWith(
@@ -142,7 +158,9 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Buyer full name'), {
       target: { value: 'John Buyer' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit Referral' }));
+    
+    const mainArea = screen.getByRole('main');
+    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Referral' }));
 
     const viewExistingButton = await screen.findByRole('button', {
       name: 'View existing referral',
