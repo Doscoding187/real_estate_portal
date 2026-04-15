@@ -13,6 +13,8 @@ const {
   mockGetMatchesQuery,
   mockExportPdfMutation,
   mockCreditCheckMutation,
+  mockReferrerPipelineQuery,
+  mockReferrerStatusQuery,
   state,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
@@ -23,6 +25,8 @@ const {
   mockGetMatchesQuery: vi.fn(),
   mockExportPdfMutation: vi.fn(),
   mockCreditCheckMutation: vi.fn(),
+  mockReferrerPipelineQuery: vi.fn(),
+  mockReferrerStatusQuery: vi.fn(),
   state: {
     hasAssessment: false,
     hasMatches: false,
@@ -42,7 +46,7 @@ vi.mock('wouter', async () => {
 });
 
 vi.mock('@/components/ListingNavbar', () => ({
-  ListingNavbar: () => <div data-testid="listing-navbar" />, 
+  ListingNavbar: () => <div data-testid="listing-navbar" />,
 }));
 
 vi.mock('@/components/distribution/partner/AffordabilityForm', () => ({
@@ -92,19 +96,10 @@ vi.mock('@/lib/trpc', () => ({
       },
       referrer: {
         myPipeline: {
-          useQuery: () => ({
-            data: { stageCounts: {} },
-            isLoading: false,
-            error: null,
-          }),
+          useQuery: (input: unknown, opts: unknown) => mockReferrerPipelineQuery(input, opts),
         },
         status: {
-          useQuery: () => ({
-            data: { accessCount: 0 },
-            isLoading: false,
-            error: null,
-            refetchOnWindowFocus: true,
-          }),
+          useQuery: (input: unknown, opts: unknown) => mockReferrerStatusQuery(input, opts),
         },
       },
     },
@@ -199,6 +194,22 @@ describe('PartnerReferralAcceleratorPage', () => {
     mockCreditCheckMutation.mockReturnValue({
       isPending: false,
       mutate: vi.fn(),
+    });
+
+    mockReferrerPipelineQuery.mockReturnValue({
+      data: {
+        stageCounts: {},
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    mockReferrerStatusQuery.mockReturnValue({
+      data: {
+        accessCount: 0,
+      },
+      isLoading: false,
+      error: null,
     });
   });
 

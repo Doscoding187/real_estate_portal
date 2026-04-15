@@ -40,7 +40,7 @@ export function Navbar() {
       role !== 'property_developer' &&
       role !== 'agency_admin'
     ) {
-      return '/referrer/dashboard';
+      return '/distribution/partner';
     }
     switch (role) {
       case 'admin':
@@ -78,7 +78,7 @@ export function Navbar() {
       ? [{ href: dashboardRoute, label: 'Dashboard', icon: LayoutDashboard }]
       : []),
     ...(hasReferrerAccess
-      ? [{ href: '/referrer/dashboard', label: 'Referrer', icon: Briefcase }]
+      ? [{ href: '/distribution/partner', label: 'Referrer', icon: Briefcase }]
       : []),
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
@@ -169,7 +169,7 @@ export function Navbar() {
                   </DropdownMenuItem>
                   {hasReferrerAccess && (
                     <DropdownMenuItem asChild>
-                      <Link href="/referrer/dashboard" className="flex items-center gap-2 w-full">
+                      <Link href="/distribution/partner" className="flex items-center gap-2 w-full">
                         <Briefcase className="h-4 w-4" />
                         Referrer Dashboard
                       </Link>
