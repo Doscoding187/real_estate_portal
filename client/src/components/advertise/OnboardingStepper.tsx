@@ -27,7 +27,9 @@ export function OnboardingStepper({ steps, onComplete }: OnboardingStepperProps)
   useEffect(() => {
     try {
       localStorage.setItem('agent_funnel_step', currentStep.toString());
-    } catch(e) {}
+    } catch(e) {
+      // Non-blocking: persistence may be unavailable in private/restricted browsing contexts.
+    }
   }, [currentStep]);
 
   const handleNext = () => {

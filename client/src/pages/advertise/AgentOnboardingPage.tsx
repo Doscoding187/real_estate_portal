@@ -209,7 +209,9 @@ export default function AgentOnboardingPage() {
     try {
       const saved = localStorage.getItem('agent_funnel_data');
       if (saved) return JSON.parse(saved);
-    } catch(e) {}
+    } catch(e) {
+      // Non-blocking: localStorage may be unavailable in private/restricted browsing contexts.
+    }
     
     // Attempt to pull soft capture email if available
     try {
@@ -217,7 +219,9 @@ export default function AgentOnboardingPage() {
        if (softEmail) {
           return { ...defaultData, email: softEmail };
        }
-    } catch(e) {}
+    } catch(e) {
+      // Non-blocking: sessionStorage may be unavailable in private/restricted browsing contexts.
+    }
 
     return defaultData;
   });
@@ -229,7 +233,9 @@ export default function AgentOnboardingPage() {
   useEffect(() => {
     try {
        localStorage.setItem('agent_funnel_data', JSON.stringify(formData));
-    } catch(e) {}
+    } catch(e) {
+      // Non-blocking: keep onboarding usable even if persistence is blocked.
+    }
   }, [formData]);
 
   const updateForm = (updates: Partial<OnboardingData>) => {
