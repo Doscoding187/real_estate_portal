@@ -7,7 +7,7 @@ import { ReferralTopNav } from '@/components/referral/ReferralTopNav';
 
 export function ReferralAppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-[#f7f6f3]">
+    <div className="flex min-h-screen bg-[#f0ede8] text-[#1a1a18]">
       <ReferralSidebar />
 
       <Sheet>
@@ -21,7 +21,7 @@ export function ReferralAppShell({ children }: { children: ReactNode }) {
         </SheetContent>
       </Sheet>
 
-      <div className="flex-1 lg:pl-[244px]">
+      <div className="flex-1 lg:pl-[210px]">
         <ReferralTopNav />
         {children}
       </div>
