@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -6,6 +6,7 @@ import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   ArrowRight,
   Building2,
@@ -47,9 +48,77 @@ function formatStageLabel(stage: string) {
     .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+type PrequalFormValues = {
+  subjectName: string;
+  subjectPhone: string;
+  grossIncomeMonthly: string;
+  deductionsMonthly: string;
+  depositAmount: string;
+  city: string;
+};
+
+type AcceleratorAssessment = {
+  assessmentId: string;
+  outputs: {
+    maxMonthlyRepayment: number;
+    purchasePrice: number;
+    confidenceLabel: string;
+  };
+};
+
+type AcceleratorMatchSnapshot = {
+  matchSnapshotId: string;
+  matches: Array<{
+    developmentId: number;
+    developmentName: string;
+    area: string;
+    purchasePrice: number;
+    bestFitRatio: number;
+  }>;
+};
+
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
+
+const DEFAULT_PREQUAL_FORM: PrequalFormValues = {
+  subjectName: '',
+  subjectPhone: '',
+  grossIncomeMonthly: '',
+  deductionsMonthly: '0',
+  depositAmount: '0',
+  city: '',
+};
+
+function parseMoneyInt(value: string, fallbackValue = 0) {
+  const parsed = Number(String(value || '').replace(/[^0-9.-]/g, ''));
+  if (!Number.isFinite(parsed)) return fallbackValue;
+  return Math.max(0, Math.round(parsed));
+}
+
+function buildWhatsAppShareMessage(
+  match: AcceleratorMatchSnapshot['matches'][number],
+  assessment: AcceleratorAssessment | null,
+) {
+  const lines = [
+    'Buyer pre-qualification snapshot',
+    `Development: ${match.developmentName}`,
+    `Location: ${match.area || 'N/A'}`,
+    `Indicative price: ${formatCurrency(match.purchasePrice)}`,
+    `Match score: ${(match.bestFitRatio * 100).toFixed(0)}%`,
+  ];
+
+  if (assessment) {
+    lines.push(`Affordability ceiling: ${formatCurrency(assessment.outputs.purchasePrice)}`);
+    lines.push(`Confidence: ${assessment.outputs.confidenceLabel}`);
+  }
+
+  return lines.join('\n');
+}
+
 export default function PartnerDashboardPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
+  const [prequalValues, setPrequalValues] = useState<PrequalFormValues>(DEFAULT_PREQUAL_FORM);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -101,6 +170,34 @@ export default function PartnerDashboardPage() {
       retry: false,
     },
   );
+
+  const createAssessmentMutation =
+    trpc.distribution.partner.createAffordabilityAssessment.useMutation({
+      onSuccess: result => {
+        setAssessmentId(String(result.assessmentId));
+      },
+    });
+
+  const normalizedAssessmentId = assessmentId || ZERO_UUID;
+
+  const assessmentQuery = trpc.distribution.partner.getAffordabilityAssessment.useQuery(
+    { assessmentId: normalizedAssessmentId },
+    {
+      enabled: Boolean(assessmentId),
+      retry: false,
+    },
+  );
+
+  const matchesQuery = trpc.distribution.partner.getAffordabilityMatches.useQuery(
+    { assessmentId: normalizedAssessmentId },
+    {
+      enabled: false,
+      retry: false,
+    },
+  );
+
+  const assessment = (assessmentQuery.data || null) as AcceleratorAssessment | null;
+  const matchSnapshot = (matchesQuery.data || null) as AcceleratorMatchSnapshot | null;
 
   const pendingCommissionAmount = useMemo(() => {
     return (commissionsQuery.data || []).reduce((total, row: any) => {
@@ -199,6 +296,30 @@ export default function PartnerDashboardPage() {
       .slice(0, 3);
   }, [stockRows]);
 
+  const opportunityRows = useMemo(() => {
+    return stockRows
+      .map(row => {
+        const commissionAmount =
+          row.commissionModel === 'flat_amount' && row.defaultCommissionAmount
+            ? Number(row.defaultCommissionAmount)
+            : row.commissionModel === 'flat_percentage' && row.defaultCommissionPercent && row.priceFrom
+              ? (Number(row.priceFrom) * Number(row.defaultCommissionPercent)) / 100
+              : null;
+
+        let badge: 'Hot' | 'High Demand' | 'Fast Payout' = 'High Demand';
+        if ((commissionAmount || 0) >= 30000) badge = 'Hot';
+        if ((commissionAmount || 0) >= 20000 && (commissionAmount || 0) < 30000) badge = 'Fast Payout';
+
+        return {
+          ...row,
+          commissionAmount,
+          badge,
+        };
+      })
+      .sort((a, b) => Number(b.commissionAmount || 0) - Number(a.commissionAmount || 0))
+      .slice(0, 6);
+  }, [stockRows]);
+
   const averageCommissionAmount = useMemo(() => {
     const rows = commissionsQuery.data || [];
     if (!rows.length) return 25000;
@@ -234,6 +355,70 @@ export default function PartnerDashboardPage() {
       .slice(0, 6);
   }, [pipelineDeals]);
 
+  const prequalMatches = matchSnapshot?.matches.slice(0, 3) || [];
+
+  const attentionItems = useMemo(() => {
+    const items: Array<{
+      id: string;
+      title: string;
+      detail: string;
+      severity: 'urgent' | 'action' | 'info';
+      ctaLabel: string;
+      onClick: () => void;
+    }> = [];
+
+    const firstMissingDocs = pendingDocReferrals[0];
+    if (firstMissingDocs) {
+      items.push({
+        id: `docs-${firstMissingDocs.dealId}`,
+        title: `${firstMissingDocs.development?.name || 'Referral'}: missing required documents`,
+        detail: `Verified ${firstMissingDocs.docProgress?.verifiedRequiredCount || 0}/${firstMissingDocs.docProgress?.requiredCount || 0} required docs`,
+        severity: 'urgent',
+        ctaLabel: 'Open referral',
+        onClick: () => setLocation(`/distribution/partner/referrals/${Number(firstMissingDocs.dealId)}`),
+      });
+    }
+
+    const firstUpcomingViewing = upcomingViewings[0];
+    if (firstUpcomingViewing) {
+      items.push({
+        id: `viewing-${firstUpcomingViewing.id}`,
+        title: `Viewing scheduled: ${firstUpcomingViewing.developmentName || 'Development'}`,
+        detail: `Buyer: ${firstUpcomingViewing.buyerName || 'Not provided'} on ${formatDateTime(firstUpcomingViewing.scheduledStartAt)}`,
+        severity: 'action',
+        ctaLabel: 'Open pipeline',
+        onClick: () => setLocation('/distribution/partner/referrals'),
+      });
+    }
+
+    const firstDeal = pipelineDeals[0];
+    if (firstDeal) {
+      items.push({
+        id: `deal-${firstDeal.id}`,
+        title: `Move deal #${firstDeal.id} to next stage`,
+        detail: firstDeal.documentsComplete
+          ? `Current stage: ${formatStageLabel(firstDeal.currentStage)}`
+          : 'Documents incomplete: collect missing docs first',
+        severity: 'info',
+        ctaLabel: 'Open deal',
+        onClick: () => setLocation(`/distribution/partner/referrals/${Number(firstDeal.id)}`),
+      });
+    }
+
+    if (!items.length) {
+      items.push({
+        id: 'empty',
+        title: 'Start with pre-qualification',
+        detail: 'Run affordability first, then submit from matched stock to activate your pipeline.',
+        severity: 'info',
+        ctaLabel: 'Open accelerator',
+        onClick: () => setLocation('/distribution/partner/accelerator'),
+      });
+    }
+
+    return items.slice(0, 5);
+  }, [pendingDocReferrals, upcomingViewings, pipelineDeals, setLocation]);
+
   const showLoadingState =
     loading ||
     statusQuery.isLoading ||
@@ -253,18 +438,38 @@ export default function PartnerDashboardPage() {
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-[1320px] px-4 pb-8 pt-6 md:px-7">
-        <section className="mb-5 rounded-2xl border border-cyan-100 bg-[linear-gradient(120deg,#ecfeff,#f0f9ff)] px-5 py-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
-            Networking Engine Dashboard
-          </p>
-          <h1 className="mt-2 text-2xl font-bold text-slate-900">
-            Pre-Qualify Faster, Place Smarter, Track Income
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Your workflow is centered on four pillars: qualification outcome, current stock,
-            commission income, and explicit pipeline stages.
-          </p>
+      <main className="mx-auto w-full max-w-[1320px] px-4 pb-8 pt-5 md:px-7 md:pt-6">
+        <section className="relative mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-cyan-100/50 blur-3xl" />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                Networking Engine Dashboard
+              </p>
+              <h1 className="mt-2 text-[28px] font-bold leading-tight text-slate-900">
+                Pre-Qualify Faster, Place Smarter, Track Income
+              </h1>
+              <p className="mt-1 text-[13px] text-slate-600">
+                Your workflow is centered on qualification, stock, income, and explicit pipeline
+                stages.
+              </p>
+            </div>
+            <div className="relative flex gap-2">
+              <Button
+                variant="outline"
+                className="border-slate-300 bg-white"
+                onClick={() => setLocation('/distribution/partner/submit')}
+              >
+                Submit Referral
+              </Button>
+              <Button
+                className="bg-slate-900 text-white hover:bg-slate-800"
+                onClick={() => setLocation('/distribution/partner/accelerator')}
+              >
+                Run Accelerator
+              </Button>
+            </div>
+          </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
@@ -307,78 +512,251 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[1.25fr_1fr]">
-          <Card>
+          <Card className="overflow-hidden border-cyan-200/70 shadow-[0_10px_24px_rgba(8,145,178,0.08)]">
             <CardHeader>
-              <CardTitle className="text-base">1) Auto-Qualification Workflow</CardTitle>
+              <CardTitle className="text-base">Core Engine: Quick Pre-Qualification</CardTitle>
               <CardDescription>
-                Seamless process for referrers: capture basics, run backend calculations, and get a
-                clear affordability + match outcome.
+                Capture buyer basics, run affordability, and match to stock without leaving the
+                dashboard.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <WorkflowStep
-                index={1}
-                title="Capture Minimum Client Inputs"
-                description="Income, deductions, deposit, and optional location preference."
-              />
-              <WorkflowStep
-                index={2}
-                title="Run Accelerator"
-                description="Backend computes affordability and returns matching developments."
-              />
-              <WorkflowStep
-                index={3}
-                title="Share Outcome + Submit Referral"
-                description="Use qualification pack as a confidence artifact before submission."
-              />
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button onClick={() => setLocation('/distribution/partner/accelerator')}>
-                  Run Pre-Qualification
+            <CardContent className="space-y-3 bg-[linear-gradient(180deg,rgba(236,254,255,0.35),rgba(255,255,255,1))]">
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  placeholder="Buyer name (optional)"
+                  value={prequalValues.subjectName}
+                  onChange={event =>
+                    setPrequalValues(current => ({ ...current, subjectName: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="Buyer phone (optional)"
+                  value={prequalValues.subjectPhone}
+                  onChange={event =>
+                    setPrequalValues(current => ({ ...current, subjectPhone: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-3">
+                <Input
+                  placeholder="Gross income monthly (required)"
+                  value={prequalValues.grossIncomeMonthly}
+                  onChange={event =>
+                    setPrequalValues(current => ({ ...current, grossIncomeMonthly: event.target.value }))
+                  }
+                  inputMode="numeric"
+                />
+                <Input
+                  placeholder="Deductions monthly"
+                  value={prequalValues.deductionsMonthly}
+                  onChange={event =>
+                    setPrequalValues(current => ({ ...current, deductionsMonthly: event.target.value }))
+                  }
+                  inputMode="numeric"
+                />
+                <Input
+                  placeholder="Deposit amount"
+                  value={prequalValues.depositAmount}
+                  onChange={event =>
+                    setPrequalValues(current => ({ ...current, depositAmount: event.target.value }))
+                  }
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
+                <Input
+                  placeholder="Preferred city (optional)"
+                  value={prequalValues.city}
+                  onChange={event =>
+                    setPrequalValues(current => ({ ...current, city: event.target.value }))
+                  }
+                />
+                <Button
+                  className="bg-slate-900 text-white hover:bg-slate-800"
+                  onClick={() => {
+                    const grossIncomeMonthly = parseMoneyInt(prequalValues.grossIncomeMonthly, 0);
+                    if (grossIncomeMonthly <= 0) return;
+
+                    setAssessmentId(null);
+                    createAssessmentMutation.mutate({
+                      subjectName: prequalValues.subjectName.trim() || undefined,
+                      subjectPhone: prequalValues.subjectPhone.trim() || undefined,
+                      grossIncomeMonthly,
+                      deductionsMonthly: parseMoneyInt(prequalValues.deductionsMonthly, 0),
+                      depositAmount: parseMoneyInt(prequalValues.depositAmount, 0),
+                      locationFilter: prequalValues.city.trim()
+                        ? { city: prequalValues.city.trim() }
+                        : undefined,
+                    });
+                  }}
+                  disabled={createAssessmentMutation.isPending}
+                >
+                  {createAssessmentMutation.isPending ? 'Calculating...' : 'Run Pre-Qualification'}
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setLocation('/distribution/partner/submit')}
+                  className="border-slate-300"
+                  onClick={() => setLocation('/distribution/partner/accelerator')}
                 >
-                  Submit From Outcome
+                  Open Full Accelerator
                 </Button>
               </div>
+
+              {assessmentQuery.isLoading ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                  Loading affordability outcome...
+                </div>
+              ) : null}
+
+              {assessment ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    Qualification Outcome
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-900">
+                    Purchase ceiling: {formatCurrency(assessment.outputs.purchasePrice)}
+                  </p>
+                  <p className="text-xs text-emerald-800">
+                    Max repayment: {formatCurrency(assessment.outputs.maxMonthlyRepayment)}
+                  </p>
+                  <p className="text-xs text-emerald-800">Confidence: {assessment.outputs.confidenceLabel}</p>
+                  <div className="mt-2">
+                    <Button
+                      size="sm"
+                      className="bg-emerald-700 text-white hover:bg-emerald-800"
+                      onClick={() => {
+                        if (!assessmentId) return;
+                        void matchesQuery.refetch();
+                      }}
+                      disabled={matchesQuery.isFetching}
+                    >
+                      {matchesQuery.isFetching ? 'Finding matches...' : 'Get Matched Developments'}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {prequalMatches.length ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Top Matches
+                  </p>
+                  {prequalMatches.map(match => (
+                    <div key={match.developmentId} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-slate-900">{match.developmentName}</p>
+                          <p className="text-xs text-slate-500">{match.area || 'Area unavailable'}</p>
+                        </div>
+                        <Badge variant="secondary">Fit {(match.bestFitRatio * 100).toFixed(0)}%</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-700">
+                        Indicative from {formatCurrency(match.purchasePrice)}
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-slate-900 text-white hover:bg-slate-800"
+                          onClick={() =>
+                            setLocation(
+                              `/distribution/partner/submit?developmentId=${match.developmentId}&assessmentId=${assessmentId}`,
+                            )
+                          }
+                        >
+                          Submit This Buyer
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLocation('/distribution/partner/developments')}
+                        >
+                          View Stock
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const text = buildWhatsAppShareMessage(match, assessment);
+                            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                            window.open(url, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                          Share via WhatsApp
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
             <CardHeader>
-              <CardTitle className="text-base">2) Stock Currently In Place</CardTitle>
+              <CardTitle className="text-base">Opportunities Available Now</CardTitle>
               <CardDescription>
-                Live developments available in your network with visible entry-level pricing.
+                Commission-forward stock cards ranked for speed-to-payout action.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+            <CardContent className="space-y-3">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3">
                 <p className="text-xs uppercase tracking-wide text-emerald-700">Fastest Path To Next Payout</p>
                 <p className="mt-1 text-sm font-semibold text-emerald-900">
                   Close 1 more deal to unlock approximately {formatCurrency(nextPayoutTargetAmount)}
                 </p>
               </div>
-              {stockRows.slice(0, 6).map(row => (
-                <button
-                  key={row.developmentId}
-                  type="button"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-cyan-300"
-                  onClick={() => setLocation('/distribution/partner/developments')}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-900">{row.developmentName}</p>
-                    <Badge variant="outline">{row.accessStatus}</Badge>
+              <div className="grid gap-2 md:grid-cols-2">
+                {opportunityRows.map(row => (
+                  <div key={row.developmentId} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-slate-900">{row.developmentName}</p>
+                      <Badge
+                        variant={
+                          row.badge === 'Hot'
+                            ? 'destructive'
+                            : row.badge === 'Fast Payout'
+                              ? 'secondary'
+                              : 'outline'
+                        }
+                      >
+                        {row.badge}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {[row.city, row.province].filter(Boolean).join(', ') || 'Location unavailable'}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-700">
+                      From {formatCurrency(row.priceFrom)}{' '}
+                      {row.priceTo ? `to ${formatCurrency(row.priceTo)}` : ''}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-emerald-700">
+                      Commission: {formatCurrency(row.commissionAmount)}
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-300"
+                          onClick={() =>
+                          setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
+                        }
+                      >
+                        Match Buyer
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-slate-900 text-white hover:bg-slate-800"
+                        onClick={() => setLocation('/distribution/partner/developments')}
+                      >
+                        Details
+                      </Button>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {[row.city, row.province].filter(Boolean).join(', ') || 'Location unavailable'}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-700">
-                    Price range: {formatCurrency(row.priceFrom)} - {formatCurrency(row.priceTo)}
-                  </p>
-                </button>
-              ))}
-              {!stockRows.length ? (
+                ))}
+              </div>
+              {!opportunityRows.length ? (
                 <p className="rounded-lg border border-dashed border-slate-300 px-3 py-5 text-center text-sm text-slate-500">
                   No accessible stock currently visible.
                 </p>
@@ -395,7 +773,7 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <Card>
+          <Card className="shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <CardHeader>
               <CardTitle className="text-base">3) My Income</CardTitle>
               <CardDescription>
@@ -428,7 +806,7 @@ export default function PartnerDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <CardHeader>
               <CardTitle className="text-base">4) Explicit Stage Workflow</CardTitle>
               <CardDescription>
@@ -457,7 +835,7 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <Card>
+          <Card className="shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <CardHeader>
               <CardTitle className="text-base">Quick Wins</CardTitle>
               <CardDescription>
@@ -489,7 +867,7 @@ export default function PartnerDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <CardHeader>
               <CardTitle className="text-base">Upcoming Activity</CardTitle>
               <CardDescription>Viewings and near-term actions to keep deals moving.</CardDescription>
@@ -519,7 +897,7 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[1.25fr_1fr]">
-          <Card>
+          <Card className="shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-base">Current Deal Queue</CardTitle>
@@ -570,40 +948,61 @@ export default function PartnerDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <CardHeader>
-              <CardTitle className="text-base">Recent Activity Feed</CardTitle>
+              <CardTitle className="text-base">Needs Your Attention</CardTitle>
               <CardDescription>
-                Ownership layer: recent movements across your deals.
+                Priority actions that unblock deal progression and payout momentum.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {activityFeed.map((deal: any) => (
-                <div key={`feed-${deal.id}`} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="font-medium text-slate-900">
-                    Deal #{deal.id} moved to {formatStageLabel(deal.currentStage)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    {deal.developmentName} | {formatDateTime(deal.updatedAt)}
-                  </p>
+              {attentionItems.map(item => (
+                <div
+                  key={item.id}
+                  className="relative rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                >
+                  <span
+                    className={
+                      item.severity === 'urgent'
+                        ? 'absolute inset-y-0 left-0 w-1 rounded-l-xl bg-rose-500'
+                        : item.severity === 'action'
+                          ? 'absolute inset-y-0 left-0 w-1 rounded-l-xl bg-amber-500'
+                          : 'absolute inset-y-0 left-0 w-1 rounded-l-xl bg-cyan-500'
+                    }
+                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-900">{item.title}</p>
+                    <Badge
+                      variant={
+                        item.severity === 'urgent'
+                          ? 'destructive'
+                          : item.severity === 'action'
+                            ? 'secondary'
+                            : 'outline'
+                      }
+                    >
+                      {item.severity}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">{item.detail}</p>
+                  <div className="mt-2">
+                    <Button size="sm" variant="outline" className="border-slate-300" onClick={item.onClick}>
+                      {item.ctaLabel}
+                    </Button>
+                  </div>
                 </div>
               ))}
-              {!activityFeed.length ? (
-                <div className="rounded-lg border border-dashed border-slate-300 p-3">
-                  <p className="text-slate-500">No recent activity yet.</p>
-                </div>
-              ) : null}
-              <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 p-3">
-                <p className="font-medium text-cyan-900">Use the Accelerator First</p>
-                <p className="mt-1 text-cyan-800">
-                  Always run pre-qualification first to improve conversion quality.
-                </p>
-              </div>
-              <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
-                <p className="font-medium text-amber-900">Docs Pending: {pendingDocReferrals.length}</p>
-                <p className="mt-1 text-amber-800">
-                  Complete document sets faster to move deals through stage gates.
-                </p>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="font-medium text-slate-900">Recent activity snapshot</p>
+                {activityFeed.slice(0, 2).map((deal: any) => (
+                  <p key={`feed-mini-${deal.id}`} className="mt-1 text-xs text-slate-600">
+                    Deal #{deal.id} moved to {formatStageLabel(deal.currentStage)} on{' '}
+                    {formatDateTime(deal.updatedAt)}
+                  </p>
+                ))}
+                {!activityFeed.length ? (
+                  <p className="mt-1 text-xs text-slate-600">No recent activity yet.</p>
+                ) : null}
               </div>
               <Button
                 className="w-full"
@@ -632,33 +1031,15 @@ function MetricCard({
   icon: ReactNode;
 }) {
   return (
-    <Card>
+    <Card className="border-slate-200 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
       <CardHeader className="pb-2">
-        <CardDescription className="flex items-center gap-2 text-xs uppercase tracking-wide">
+        <CardDescription className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
           {icon}
           {title}
         </CardDescription>
-        <CardTitle className="text-xl">{value}</CardTitle>
+        <CardTitle className="font-mono text-2xl text-slate-900">{value}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0 text-xs text-slate-500">{description}</CardContent>
     </Card>
-  );
-}
-
-function WorkflowStep({
-  index,
-  title,
-  description,
-}: {
-  index: number;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Step {index}</p>
-      <p className="mt-0.5 font-medium text-slate-900">{title}</p>
-      <p className="mt-0.5 text-sm text-slate-600">{description}</p>
-    </div>
   );
 }
