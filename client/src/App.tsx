@@ -517,7 +517,9 @@ function Router() {
 
           {/* Other routes that might conflict */}
           <Route path="/dashboard" component={Dashboard} />
-          <Route path="/dashboard/settings" component={SettingsPage} />
+          <Route path="/dashboard/settings">
+            <Redirect to="/agent/settings" />
+          </Route>
           
           <Route path="/activation">
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
