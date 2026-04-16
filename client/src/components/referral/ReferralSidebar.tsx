@@ -4,7 +4,6 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
-  Briefcase,
   Building2,
   CircleHelp,
   Compass,
@@ -13,7 +12,6 @@ import {
   Home,
   LogOut,
   Send,
-  Settings,
 } from 'lucide-react';
 
 type ReferralSidebarProps = {
@@ -34,12 +32,6 @@ const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Submit Referral', href: '/distribution/partner/submit', icon: FilePlus2 },
   { label: 'My Referrals', href: '/distribution/partner/referrals', icon: Send },
   { label: 'Commissions', href: '/distribution/partner/referrals', icon: DollarSign },
-];
-
-const MANAGE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
-  { label: 'Network', href: '/distribution-network', icon: Briefcase },
-  { label: 'Settings', href: '/distribution/partner', icon: Settings },
-  { label: 'Help Center', href: '/distribution-network/apply', icon: CircleHelp },
 ];
 
 const REFERRAL_ALIASES = new Set(['/referrer/dashboard']);
@@ -106,63 +98,83 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   return (
     <aside
       className={cn(
-        'relative overflow-hidden border-r border-slate-200 bg-white',
+        'border-r border-[#1a1a18]/10 bg-white',
         mode === 'desktop'
-          ? 'hidden lg:fixed lg:inset-y-0 lg:z-20 lg:flex lg:w-[244px] lg:flex-col'
-          : 'flex h-full w-[244px] flex-col',
+          ? 'hidden lg:fixed lg:inset-y-0 lg:z-20 lg:flex lg:w-[210px] lg:flex-col'
+          : 'flex h-full w-[210px] flex-col',
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,116,144,0.08),transparent_38%)]" />
+      <div className="border-b border-[#1a1a18]/10 px-[18px] pb-[18px] pt-5">
+        <p className="text-[14px] font-semibold tracking-[-0.02em] text-[#1a1a18]">Property Listify</p>
+        <p className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-[#6b6a64]">
+          PARTNER WORKSPACE
+        </p>
+      </div>
 
-      <div className="relative z-10 flex h-full min-h-0 flex-col">
-        <div className="px-4 pt-4">
+      <p className="px-[18px] pb-[5px] pt-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9e9d96]">
+        Workspace
+      </p>
+
+      <nav className="space-y-0.5 px-0">
+        {workspaceLinks.map(item => {
+          const isActive = currentPath === item.href;
+          return (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => setLocation(item.href)}
+              className={cn(
+                'group flex w-full items-center gap-[10px] border-l-2 px-[18px] py-[9px] text-left text-[13px] font-medium transition',
+                isActive
+                  ? 'border-l-[#1a5bbf] bg-[#e8f0fb] text-[#1a5bbf]'
+                  : 'border-l-transparent text-[#6b6a64] hover:bg-[#f5f4f0] hover:text-[#1a1a18]',
+              )}
+            >
+              <item.icon
+                className={cn(
+                  'h-[15px] w-[15px] shrink-0',
+                  isActive ? 'text-[#1a5bbf]' : 'text-[#6b6a64] group-hover:text-[#1a1a18]',
+                )}
+              />
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {item.badge ? (
+                <span className="rounded-full bg-[#1a5bbf] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  {item.badge}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-auto border-t border-[#1a1a18]/10 px-[18px] py-[14px]">
+        <div className="flex items-center gap-[10px]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8f0fb] text-[11px] font-semibold text-[#1a5bbf]">
+            {initials}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[12px] font-semibold text-[#1a1a18]">
+              {user?.name || 'Referral Partner'}
+            </p>
+            <p className="truncate text-[10px] text-[#6b6a64]">Partner Workspace</p>
+          </div>
+        </div>
+        <div className="mt-2 flex gap-1.5">
           <button
             type="button"
-            onClick={() => setLocation('/distribution/partner')}
-            className="w-full rounded-[10px] border border-cyan-200 bg-cyan-50/70 px-[14px] py-[14px] text-left transition hover:bg-cyan-50"
+            onClick={() => setLocation('/distribution-network/apply')}
+            className="inline-flex items-center gap-1 rounded-md border border-[#1a1a18]/20 px-2 py-1 text-[10px] text-[#6b6a64] hover:bg-[#f5f4f0]"
           >
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 text-[13px] font-semibold text-white shadow-[0_10px_28px_rgba(8,145,178,0.28)]">
-                {initials}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-[12.5px] font-semibold leading-[1.25] text-slate-900">
-                  {user?.name || 'Referral Partner'}
-                </p>
-                <p className="truncate text-[10.5px] text-slate-500">
-                  {user?.email || 'No email on file'}
-                </p>
-              </div>
-            </div>
-            <span className="mt-[9px] inline-flex rounded-[4px] bg-cyan-600 px-[9px] py-[2.5px] text-[9.5px] font-bold uppercase tracking-[0.14em] text-white">
-              Partner Workspace
-            </span>
+            <CircleHelp className="h-3 w-3" />
+            Help
           </button>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-[10px]">
-          <SidebarSection
-            title="Workspace"
-            items={workspaceLinks}
-            currentPath={currentPath}
-            onNavigate={setLocation}
-          />
-        </nav>
-
-        <div className="relative z-10 border-t border-slate-200 px-4 py-[14px]">
-          <SidebarSection
-            title="Manage"
-            items={MANAGE_LINKS}
-            currentPath={currentPath}
-            onNavigate={setLocation}
-          />
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="mt-2 flex w-full items-center gap-3 rounded-[10px] px-[10px] py-2 text-[12.5px] text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+            className="inline-flex items-center gap-1 rounded-md border border-[#1a1a18]/20 px-2 py-1 text-[10px] text-[#6b6a64] hover:bg-[#f5f4f0]"
           >
-            <LogOut className="h-[15px] w-[15px]" />
-            <span>Logout</span>
+            <LogOut className="h-3 w-3" />
+            Logout
           </button>
         </div>
       </div>
@@ -170,48 +182,3 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   );
 }
 
-function SidebarSection({
-  title,
-  items,
-  currentPath,
-  onNavigate,
-}: {
-  title: string;
-  items: ReadonlyArray<NavItem>;
-  currentPath: string;
-  onNavigate: (path: string) => void;
-}) {
-  return (
-    <div>
-      <p className="px-3 pb-[6px] text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-        {title}
-      </p>
-      <div className="space-y-1">
-        {items.map(item => {
-          const isActive = currentPath === item.href;
-          return (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => onNavigate(item.href)}
-              className={cn(
-                'flex w-full items-center gap-[11px] rounded-[10px] border px-[10px] py-[9.5px] text-left text-[13px] transition',
-                isActive
-                  ? 'border-cyan-200 bg-cyan-50/70 font-semibold text-cyan-700'
-                  : 'border-transparent text-slate-500 hover:bg-cyan-50/70 hover:text-slate-900',
-              )}
-            >
-              <item.icon className={cn('h-4 w-4', isActive ? 'text-cyan-700' : 'text-slate-400')} />
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              {item.badge ? (
-                <span className="flex h-[18px] min-w-[20px] items-center justify-center rounded-full bg-cyan-600 px-[5px] text-[10px] font-bold text-white">
-                  {item.badge}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}

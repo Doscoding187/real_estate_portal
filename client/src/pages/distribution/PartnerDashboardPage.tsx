@@ -440,10 +440,10 @@ export default function PartnerDashboardPage() {
     <ReferralAppShell>
       <main className="mx-auto w-full max-w-[1320px] px-4 pb-8 pt-5 md:px-7 md:pt-6">
         <section className="relative mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-cyan-100/50 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#e8f0fb]/70 blur-3xl" />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="relative">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1a5bbf]">
                 Networking Engine Dashboard
               </p>
               <h1 className="mt-2 text-[28px] font-bold leading-tight text-slate-900">
@@ -512,7 +512,7 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[1.25fr_1fr]">
-          <Card className="overflow-hidden border-cyan-200/70 shadow-[0_10px_24px_rgba(8,145,178,0.08)]">
+          <Card className="overflow-hidden border-[#1a1a18]/12 shadow-[0_10px_24px_rgba(26,26,24,0.07)]">
             <CardHeader>
               <CardTitle className="text-base">Core Engine: Quick Pre-Qualification</CardTitle>
               <CardDescription>
@@ -611,21 +611,21 @@ export default function PartnerDashboardPage() {
               ) : null}
 
               {assessment ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                <div className="rounded-xl border border-[#1a7a40]/20 bg-[#e8f7ee] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#1a7a40]">
                     Qualification Outcome
                   </p>
-                  <p className="mt-1 text-sm text-emerald-900">
+                  <p className="mt-1 text-sm text-[#1a1a18]">
                     Purchase ceiling: {formatCurrency(assessment.outputs.purchasePrice)}
                   </p>
-                  <p className="text-xs text-emerald-800">
+                  <p className="text-xs text-[#1a7a40]">
                     Max repayment: {formatCurrency(assessment.outputs.maxMonthlyRepayment)}
                   </p>
-                  <p className="text-xs text-emerald-800">Confidence: {assessment.outputs.confidenceLabel}</p>
+                  <p className="text-xs text-[#1a7a40]">Confidence: {assessment.outputs.confidenceLabel}</p>
                   <div className="mt-2">
                     <Button
                       size="sm"
-                      className="bg-emerald-700 text-white hover:bg-emerald-800"
+                      className="bg-[#1a1a18] text-white hover:bg-[#2a2a28]"
                       onClick={() => {
                         if (!assessmentId) return;
                         void matchesQuery.refetch();
@@ -701,15 +701,15 @@ export default function PartnerDashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3">
-                <p className="text-xs uppercase tracking-wide text-emerald-700">Fastest Path To Next Payout</p>
-                <p className="mt-1 text-sm font-semibold text-emerald-900">
+              <div className="rounded-xl border border-[#1a7a40]/20 bg-[#e8f7ee] p-3">
+                <p className="text-xs uppercase tracking-wide text-[#1a7a40]">Fastest Path To Next Payout</p>
+                <p className="mt-1 text-sm font-semibold text-[#1a1a18]">
                   Close 1 more deal to unlock approximately {formatCurrency(nextPayoutTargetAmount)}
                 </p>
               </div>
               <div className="grid gap-2 md:grid-cols-2">
                 {opportunityRows.map(row => (
-                  <div key={row.developmentId} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md">
+                  <div key={row.developmentId} className="rounded-xl border border-[#1a1a18]/12 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-[#1a1a18]/35 hover:shadow-md">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{row.developmentName}</p>
                       <Badge
@@ -731,7 +731,7 @@ export default function PartnerDashboardPage() {
                       From {formatCurrency(row.priceFrom)}{' '}
                       {row.priceTo ? `to ${formatCurrency(row.priceTo)}` : ''}
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-emerald-700">
+                    <p className="mt-1 text-xs font-semibold text-[#1a7a40]">
                       Commission: {formatCurrency(row.commissionAmount)}
                     </p>
                     <div className="mt-2 flex gap-2">
@@ -847,7 +847,7 @@ export default function PartnerDashboardPage() {
                 <button
                   key={`win-${win.developmentId}`}
                   type="button"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-cyan-300"
+                  className="w-full rounded-lg border border-[#1a1a18]/12 bg-white px-3 py-2 text-left transition hover:border-[#1a1a18]/35"
                   onClick={() => setLocation('/distribution/partner/developments')}
                 >
                   <p className="font-medium text-slate-900">{win.developmentName}</p>
@@ -913,7 +913,7 @@ export default function PartnerDashboardPage() {
                 <button
                   key={deal.id}
                   type="button"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-cyan-300"
+                  className="w-full rounded-lg border border-[#1a1a18]/12 bg-white px-3 py-2 text-left transition hover:border-[#1a1a18]/35"
                   onClick={() => setLocation(`/distribution/partner/referrals/${Number(deal.id)}`)}
                 >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -967,7 +967,7 @@ export default function PartnerDashboardPage() {
                         ? 'absolute inset-y-0 left-0 w-1 rounded-l-xl bg-rose-500'
                         : item.severity === 'action'
                           ? 'absolute inset-y-0 left-0 w-1 rounded-l-xl bg-amber-500'
-                          : 'absolute inset-y-0 left-0 w-1 rounded-l-xl bg-cyan-500'
+                          : 'absolute inset-y-0 left-0 w-1 rounded-l-xl bg-[#3B8BD4]'
                     }
                   />
                   <div className="flex items-center justify-between gap-2">
