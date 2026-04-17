@@ -49,6 +49,7 @@ type AccessStockRow = {
   developmentName: string;
   location: string;
   priceFrom: number | null;
+  priceTo: number | null;
   commissionAmount: number;
   commissionDisplay: string;
   commissionModel: string | null;
@@ -82,6 +83,20 @@ function formatCurrency(value: number | null | undefined, abbreviated = false) {
     return `R ${Math.round(numeric / 1000)}k`;
   }
   return `R ${numeric.toLocaleString('en-ZA')}`;
+}
+
+function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: number | null | undefined) {
+  const from = Number(priceFrom || 0);
+  const to = Number(priceTo || 0);
+  const hasFrom = Number.isFinite(from) && from > 0;
+  const hasTo = Number.isFinite(to) && to > 0;
+  if (hasFrom && hasTo) {
+    if (Math.abs(from - to) <= 1) return formatCurrency(from);
+    return `${formatCurrency(from)} - ${formatCurrency(to)}`;
+  }
+  if (hasFrom) return `From ${formatCurrency(from)}`;
+  if (hasTo) return `Up to ${formatCurrency(to)}`;
+  return 'Price not configured';
 }
 
 function parseMoneyInt(value: string, fallbackValue = 0) {
@@ -356,8 +371,16 @@ export default function PartnerDashboardPage() {
               .filter((price: number) => Number.isFinite(price) && price > 0)
               .sort((a: number, b: number) => a - b)[0]
           : null;
+        const unitTypeCeiling = Array.isArray(row.unitTypes)
+          ? row.unitTypes
+              .map((unit: any) => Number(unit?.priceTo || unit?.priceFrom || 0))
+              .filter((price: number) => Number.isFinite(price) && price > 0)
+              .sort((a: number, b: number) => b - a)[0]
+          : null;
         const priceFromRaw = Number(unitTypeFloor || row.priceFrom || 0);
+        const priceToRaw = Number(unitTypeCeiling || row.priceTo || priceFromRaw || 0);
         const priceFrom = Number.isFinite(priceFromRaw) && priceFromRaw > 0 ? priceFromRaw : null;
+        const priceTo = Number.isFinite(priceToRaw) && priceToRaw > 0 ? priceToRaw : priceFrom;
         const commissionModel = row.commissionModel ? String(row.commissionModel) : null;
         const defaultCommissionPercent =
           row.defaultCommissionPercent == null ? null : Number(row.defaultCommissionPercent);
@@ -384,6 +407,7 @@ export default function PartnerDashboardPage() {
           developmentName: row.developmentName || 'Development',
           location: [row.city, row.province].filter(Boolean).join(' - ') || 'Location unavailable',
           priceFrom,
+          priceTo,
           commissionAmount,
           commissionDisplay,
           commissionModel,
@@ -420,13 +444,14 @@ export default function PartnerDashboardPage() {
         developmentId,
         developmentName: item.developmentName || 'Development',
         location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
-        priceFrom: null,
+        priceFrom: item.priceFrom ? Number(item.priceFrom) : null,
+        priceTo: item.priceTo ? Number(item.priceTo) : item.priceFrom ? Number(item.priceFrom) : null,
         commissionAmount,
         commissionDisplay,
         commissionModel,
         defaultCommissionPercent,
         defaultCommissionAmount,
-        imageUrl: null,
+        imageUrl: item.imageUrl ? String(item.imageUrl) : null,
         badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
       });
     }
@@ -457,13 +482,14 @@ export default function PartnerDashboardPage() {
         developmentId,
         developmentName: item.developmentName || 'Development',
         location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
-        priceFrom: null,
+        priceFrom: item.priceFrom ? Number(item.priceFrom) : null,
+        priceTo: item.priceTo ? Number(item.priceTo) : item.priceFrom ? Number(item.priceFrom) : null,
         commissionAmount,
         commissionDisplay,
         commissionModel,
         defaultCommissionPercent,
         defaultCommissionAmount,
-        imageUrl: null,
+        imageUrl: item.imageUrl ? String(item.imageUrl) : null,
         badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
       });
     }
@@ -535,7 +561,7 @@ export default function PartnerDashboardPage() {
         id: `stock-${topStock.developmentId}`,
         urgency: 'info',
         title: `High opportunity - ${topStock.developmentName}`,
-        detail: `From ${formatCurrency(topStock.priceFrom)} - Commission ${formatCurrency(topStock.commissionAmount)}`,
+        detail: `${formatCurrencyRange(topStock.priceFrom, topStock.priceTo)} - Commission ${formatCurrency(topStock.commissionAmount)}`,
         timeLabel: 'Today',
         onClick: () => setLocation('/distribution/partner/developments'),
       });
@@ -965,7 +991,7 @@ export default function PartnerDashboardPage() {
                     <p className="text-[12px] font-semibold text-[#1a1a18]">{row.developmentName}</p>
                     <p className="mt-0.5 text-[10px] text-[#6b6a64]">{row.location}</p>
                     <p className="mt-2 font-mono text-[13px] font-semibold text-[#1a1a18]">
-                      {row.priceFrom ? formatCurrency(row.priceFrom) : 'Price on request'}
+                      {formatCurrencyRange(row.priceFrom, row.priceTo)}
                     </p>
                     <p className="text-[10px] font-medium text-[#1a7a40]">
                       Commission: {row.commissionDisplay}

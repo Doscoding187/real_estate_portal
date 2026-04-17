@@ -3,6 +3,7 @@ import {
   developerBrandProfiles,
   developments,
   distributionPrograms,
+  unitTypes,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
@@ -18,6 +19,9 @@ export type PartnerProgramTermsItem = {
   developmentName: string;
   city?: string | null;
   province?: string | null;
+  priceFrom: number | null;
+  priceTo: number | null;
+  imageUrl: string | null;
   brand: { brandProfileId: number; brandName: string } | null;
   program: {
     programId: number;
@@ -53,6 +57,60 @@ function toNumberOrNull(value: unknown) {
   if (value === null || typeof value === 'undefined') return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function toPositiveNumberOrNull(value: unknown) {
+  const numeric = toNumberOrNull(value);
+  if (numeric === null || numeric <= 0) return null;
+  return numeric;
+}
+
+function extractHeroImageUrl(rawImages: unknown): string | null {
+  if (!rawImages) return null;
+
+  const normalize = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') return null;
+    const candidate =
+      (value as any).url || (value as any).src || (value as any).imageUrl || (value as any).key;
+    return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : null;
+  };
+
+  const fromList = (list: unknown[]): string | null => {
+    const hero = list.find(entry => {
+      if (!entry || typeof entry !== 'object') return false;
+      const category = String((entry as any).category || '').toLowerCase();
+      return category === 'hero' || category === 'featured';
+    });
+    return normalize(hero) || normalize(list[0]) || (typeof list[0] === 'string' ? String(list[0]) : null);
+  };
+
+  if (Array.isArray(rawImages)) {
+    return fromList(rawImages);
+  }
+
+  if (typeof rawImages === 'string') {
+    const trimmed = rawImages.trim();
+    if (!trimmed) return null;
+    if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+      if (trimmed.includes(',')) {
+        return trimmed
+          .split(',')
+          .map(item => item.trim())
+          .find(Boolean) || null;
+      }
+      return trimmed;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return fromList(parsed);
+      return normalize(parsed);
+    } catch {
+      return null;
+    }
+  }
+
+  return normalize(rawImages);
 }
 
 function normalizeCommissionModel(value: unknown): PartnerProgramTermsItem['program']['commissionModel'] {
@@ -175,6 +233,9 @@ export async function listPartnerProgramTerms(
       developmentName: developments.name,
       city: developments.city,
       province: developments.province,
+      developmentPriceFrom: developments.priceFrom,
+      developmentPriceTo: developments.priceTo,
+      developmentImages: developments.images,
       developerBrandProfileId: developments.developerBrandProfileId,
       marketingBrandProfileId: developments.marketingBrandProfileId,
       programId: distributionPrograms.id,
@@ -246,6 +307,60 @@ export async function listPartnerProgramTerms(
     );
   }
 
+  const unitRows = developmentIds.length
+    ? await db
+        .select({
+          developmentId: unitTypes.developmentId,
+          priceFrom: unitTypes.priceFrom,
+          priceTo: unitTypes.priceTo,
+          basePriceFrom: unitTypes.basePriceFrom,
+          basePriceTo: unitTypes.basePriceTo,
+        })
+        .from(unitTypes)
+        .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+    : [];
+
+  const unitPriceRangeByDevelopment = new Map<
+    number,
+    {
+      priceFrom: number | null;
+      priceTo: number | null;
+    }
+  >();
+
+  for (const row of unitRows) {
+    const developmentId = Number(row.developmentId || 0);
+    if (!developmentId) continue;
+    const unitPriceFrom =
+      toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
+    const fallbackTo = toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
+    const unitPriceTo = fallbackTo ?? unitPriceFrom;
+    if (unitPriceFrom === null && unitPriceTo === null) continue;
+
+    const current = unitPriceRangeByDevelopment.get(developmentId) || {
+      priceFrom: null,
+      priceTo: null,
+    };
+
+    const nextMin =
+      unitPriceFrom === null
+        ? current.priceFrom
+        : current.priceFrom === null
+          ? unitPriceFrom
+          : Math.min(current.priceFrom, unitPriceFrom);
+    const nextMax =
+      unitPriceTo === null
+        ? current.priceTo
+        : current.priceTo === null
+          ? unitPriceTo
+          : Math.max(current.priceTo, unitPriceTo);
+
+    unitPriceRangeByDevelopment.set(developmentId, {
+      priceFrom: nextMin,
+      priceTo: nextMax,
+    });
+  }
+
   const items: PartnerProgramTermsItem[] = rows.map(row => {
     const developmentId = Number(row.developmentId);
     const commissionModel = normalizeCommissionModel(row.commissionModel);
@@ -258,12 +373,23 @@ export async function listPartnerProgramTerms(
     const requiredDocuments = docsByDevelopmentId.get(developmentId) || [];
     const primaryBrandId = Number(row.developerBrandProfileId || 0) || Number(row.marketingBrandProfileId || 0);
     const brandRecord = primaryBrandId ? brandById.get(primaryBrandId) : null;
+    const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
+    const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
+    const developmentPriceTo = toPositiveNumberOrNull(row.developmentPriceTo);
+    const priceFrom = unitPriceRange?.priceFrom ?? developmentPriceFrom;
+    const fallbackPriceTo = developmentPriceTo ?? developmentPriceFrom;
+    const rawPriceTo = unitPriceRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
+    const priceTo =
+      priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
 
     return {
       developmentId,
       developmentName: String(row.developmentName || `Development #${developmentId}`),
       city: row.city || null,
       province: row.province || null,
+      priceFrom: priceFrom ?? null,
+      priceTo: priceTo ?? null,
+      imageUrl: extractHeroImageUrl(row.developmentImages),
       brand: brandRecord
         ? { brandProfileId: brandRecord.id, brandName: brandRecord.brandName }
         : null,
