@@ -212,6 +212,13 @@ export default function PartnerDashboardPage() {
       enabled: isAuthenticated,
       retry: false,
     });
+  const programTermsQuery = trpc.distribution.partner.listProgramTerms.useQuery(
+    { includeDisabled: true },
+    {
+      enabled: isAuthenticated,
+      retry: false,
+    },
+  );
 
   const pipelineQuery = trpc.distribution.referrer.myPipeline.useQuery(
     { limit: 200 },
@@ -424,12 +431,49 @@ export default function PartnerDashboardPage() {
       });
     }
 
+    for (const item of programTermsQuery.data?.items || []) {
+      const developmentId = Number(item.developmentId || 0);
+      if (!developmentId || grouped.has(developmentId)) continue;
+      const commissionModel = item.program?.commissionModel ? String(item.program.commissionModel) : null;
+      const defaultCommissionPercent =
+        item.program?.defaultCommissionPercent == null
+          ? null
+          : Number(item.program.defaultCommissionPercent);
+      const defaultCommissionAmount =
+        item.program?.defaultCommissionAmount == null ? null : Number(item.program.defaultCommissionAmount);
+      const commissionAmount = computeCommissionAmount({
+        commissionModel,
+        defaultCommissionPercent,
+        defaultCommissionAmount,
+        purchasePrice: 0,
+      });
+      const commissionDisplay = getCommissionDisplay({
+        amount: commissionAmount,
+        commissionModel,
+        defaultCommissionPercent,
+      });
+
+      grouped.set(developmentId, {
+        developmentId,
+        developmentName: item.developmentName || 'Development',
+        location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
+        priceFrom: null,
+        commissionAmount,
+        commissionDisplay,
+        commissionModel,
+        defaultCommissionPercent,
+        defaultCommissionAmount,
+        imageUrl: null,
+        badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
+      });
+    }
+
     return Array.from(grouped.values()).sort(
       (a, b) =>
         Number(b.commissionAmount || 0) - Number(a.commissionAmount || 0) ||
         a.developmentName.localeCompare(b.developmentName),
     );
-  }, [eligibleDevelopmentsQuery.data?.items, myAccessQuery.data]);
+  }, [eligibleDevelopmentsQuery.data?.items, myAccessQuery.data, programTermsQuery.data?.items]);
 
   const visibleStock = stockRows.slice(0, 3);
   const hiddenStockCount = Math.max(0, stockRows.length - 3);
@@ -515,6 +559,7 @@ export default function PartnerDashboardPage() {
     loading ||
     statusQuery.isLoading ||
     myAccessQuery.isLoading ||
+    programTermsQuery.isLoading ||
     pipelineQuery.isLoading ||
     referralsQuery.isLoading ||
     commissionsQuery.isLoading ||
