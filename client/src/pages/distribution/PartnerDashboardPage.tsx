@@ -48,8 +48,9 @@ type AccessStockRow = {
   developmentId: number;
   developmentName: string;
   location: string;
-  priceFrom: number;
+  priceFrom: number | null;
   commissionAmount: number;
+  commissionDisplay: string;
   commissionModel: string | null;
   defaultCommissionPercent: number | null;
   defaultCommissionAmount: number | null;
@@ -146,6 +147,18 @@ function computeCommissionAmount(input: {
   return 0;
 }
 
+function getCommissionDisplay(input: {
+  amount: number;
+  commissionModel?: string | null;
+  defaultCommissionPercent?: number | null;
+}) {
+  if (input.amount > 0) return formatCurrency(input.amount);
+  if (String(input.commissionModel || '') === 'flat_percentage' && Number(input.defaultCommissionPercent || 0) > 0) {
+    return `${Number(input.defaultCommissionPercent)}% fee`;
+  }
+  return 'Commission configured';
+}
+
 function buildWhatsAppShareMessage(
   matches: AcceleratorMatchSnapshot['matches'],
   maxPurchase: number,
@@ -188,12 +201,17 @@ export default function PartnerDashboardPage() {
   });
 
   const myAccessQuery = trpc.distribution.referrer.myAccess.useQuery(
-    { includePaused: false, includeRevoked: false },
+    { includePaused: true, includeRevoked: false },
     {
       enabled: isAuthenticated,
       retry: false,
     },
   );
+  const eligibleDevelopmentsQuery =
+    trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(undefined, {
+      enabled: isAuthenticated,
+      retry: false,
+    });
 
   const pipelineQuery = trpc.distribution.referrer.myPipeline.useQuery(
     { limit: 200 },
@@ -319,9 +337,9 @@ export default function PartnerDashboardPage() {
   const nextUnlockAmount = averageCommissionAmount;
 
   const stockRows = useMemo<AccessStockRow[]>(() => {
-    const grouped = new Map<number, any>();
+    const grouped = new Map<number, AccessStockRow>();
     for (const row of myAccessQuery.data || []) {
-      if (!row?.isReferralEnabled) continue;
+      if (row?.isReferralEnabled === false) continue;
       if (row?.tierEligible === false) continue;
       const developmentId = Number(row.developmentId);
       if (!grouped.has(developmentId)) {
@@ -331,7 +349,8 @@ export default function PartnerDashboardPage() {
               .filter((price: number) => Number.isFinite(price) && price > 0)
               .sort((a: number, b: number) => a - b)[0]
           : null;
-        const priceFrom = Number(unitTypeFloor || row.priceFrom || 0);
+        const priceFromRaw = Number(unitTypeFloor || row.priceFrom || 0);
+        const priceFrom = Number.isFinite(priceFromRaw) && priceFromRaw > 0 ? priceFromRaw : null;
         const commissionModel = row.commissionModel ? String(row.commissionModel) : null;
         const defaultCommissionPercent =
           row.defaultCommissionPercent == null ? null : Number(row.defaultCommissionPercent);
@@ -341,7 +360,12 @@ export default function PartnerDashboardPage() {
           commissionModel,
           defaultCommissionPercent,
           defaultCommissionAmount,
-          purchasePrice: priceFrom,
+          purchasePrice: priceFrom || 0,
+        });
+        const commissionDisplay = getCommissionDisplay({
+          amount: commissionAmount,
+          commissionModel,
+          defaultCommissionPercent,
         });
 
         let badge: 'Hot' | 'High demand' | 'Fast payout' = 'High demand';
@@ -354,6 +378,7 @@ export default function PartnerDashboardPage() {
           location: [row.city, row.province].filter(Boolean).join(' - ') || 'Location unavailable',
           priceFrom,
           commissionAmount,
+          commissionDisplay,
           commissionModel,
           defaultCommissionPercent,
           defaultCommissionAmount,
@@ -362,10 +387,49 @@ export default function PartnerDashboardPage() {
         });
       }
     }
+
+    for (const item of eligibleDevelopmentsQuery.data?.items || []) {
+      const developmentId = Number(item.developmentId || 0);
+      if (!developmentId || grouped.has(developmentId)) continue;
+      const commissionModel = item.program?.commissionModel ? String(item.program.commissionModel) : null;
+      const defaultCommissionPercent =
+        item.program?.defaultCommissionPercent == null
+          ? null
+          : Number(item.program.defaultCommissionPercent);
+      const defaultCommissionAmount =
+        item.program?.defaultCommissionAmount == null ? null : Number(item.program.defaultCommissionAmount);
+      const commissionAmount = computeCommissionAmount({
+        commissionModel,
+        defaultCommissionPercent,
+        defaultCommissionAmount,
+        purchasePrice: 0,
+      });
+      const commissionDisplay = getCommissionDisplay({
+        amount: commissionAmount,
+        commissionModel,
+        defaultCommissionPercent,
+      });
+      grouped.set(developmentId, {
+        developmentId,
+        developmentName: item.developmentName || 'Development',
+        location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
+        priceFrom: null,
+        commissionAmount,
+        commissionDisplay,
+        commissionModel,
+        defaultCommissionPercent,
+        defaultCommissionAmount,
+        imageUrl: null,
+        badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
+      });
+    }
+
     return Array.from(grouped.values()).sort(
-      (a, b) => Number(b.commissionAmount || 0) - Number(a.commissionAmount || 0),
+      (a, b) =>
+        Number(b.commissionAmount || 0) - Number(a.commissionAmount || 0) ||
+        a.developmentName.localeCompare(b.developmentName),
     );
-  }, [myAccessQuery.data]);
+  }, [eligibleDevelopmentsQuery.data?.items, myAccessQuery.data]);
 
   const visibleStock = stockRows.slice(0, 3);
   const hiddenStockCount = Math.max(0, stockRows.length - 3);
@@ -856,10 +920,10 @@ export default function PartnerDashboardPage() {
                     <p className="text-[12px] font-semibold text-[#1a1a18]">{row.developmentName}</p>
                     <p className="mt-0.5 text-[10px] text-[#6b6a64]">{row.location}</p>
                     <p className="mt-2 font-mono text-[13px] font-semibold text-[#1a1a18]">
-                      {formatCurrency(row.priceFrom)}
+                      {row.priceFrom ? formatCurrency(row.priceFrom) : 'Price on request'}
                     </p>
                     <p className="text-[10px] font-medium text-[#1a7a40]">
-                      Commission: {formatCurrency(row.commissionAmount)}
+                      Commission: {row.commissionDisplay}
                     </p>
                     <div className="mt-2 flex gap-1.5">
                       <button
