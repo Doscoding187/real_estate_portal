@@ -3463,11 +3463,11 @@ const adminDistributionRouter = router({
         userCreated = true;
 
         try {
-          await authService.forgotPassword(normalizedEmail);
+          await authService.sendActivationSetPasswordEmail(normalizedEmail);
           activationEmailSent = true;
         } catch (error) {
           console.warn(
-            '[distribution.reviewReferrerApplication] Failed to send activation reset email:',
+            '[distribution.reviewReferrerApplication] Failed to send activation set-password email:',
             error,
           );
         }
