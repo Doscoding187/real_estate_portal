@@ -6,8 +6,8 @@ type CTASectionProps = {
 
 export function CTASection({ onBrowse }: CTASectionProps) {
   return (
-    <section className="bg-white px-3 py-8 sm:px-4 md:px-0 md:py-16">
-      <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-4 py-7 text-center shadow-2xl sm:px-6 sm:py-12 md:rounded-[2rem] md:px-12 md:py-20">
+    <section className="bg-white py-7 md:py-10">
+      <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-4 py-7 text-center shadow-2xl sm:px-6 sm:py-8 md:rounded-[2rem] md:px-12 md:py-12">
         <div className="absolute left-0 top-0 hidden h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
         <div className="absolute bottom-0 right-0 hidden h-48 w-48 translate-x-1/2 translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30" />
