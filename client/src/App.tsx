@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -66,6 +66,7 @@ const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPag
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const SetPassword = lazy(() => import('./pages/SetPassword'));
+const ActivationComplete = lazy(() => import('./pages/ActivationComplete'));
 const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
@@ -121,12 +122,22 @@ const DeveloperBrandProfilePage = lazy(() => import('./pages/DeveloperBrandProfi
 // Import Comparison Page
 const CompareProperties = lazy(() => import('./pages/CompareProperties'));
 const AdvertiseWithUs = lazy(() => import('./pages/AdvertiseWithUs'));
+const AdvertiseSellPage = lazy(() => import('./pages/advertise/AdvertiseSellPage'));
+const AdvertiseFinancePage = lazy(() => import('./pages/advertise/AdvertiseFinancePage'));
+const AdvertiseServicesPage = lazy(() => import('./pages/advertise/AdvertiseServicesPage'));
+const AgentFunnelPage = lazy(() => import('./pages/advertise/AgentFunnelPage'));
+const DeveloperFunnelPage = lazy(() => import('./pages/advertise/DeveloperFunnelPage'));
+const BankFunnelPage = lazy(() => import('./pages/advertise/BankFunnelPage'));
+const OriginatorFunnelPage = lazy(() => import('./pages/advertise/OriginatorFunnelPage'));
+const AgentOnboardingPage = lazy(() => import('./pages/advertise/AgentOnboardingPage'));
+const AgencyComingSoonPage = lazy(() => import('./pages/advertise/AgencyComingSoonPage'));
+const ActivationGate = lazy(() => import('./pages/dashboard/ActivationGate'));
 const GetStarted = lazy(() => import('./pages/GetStarted'));
 const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
-const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
+const PartnerDashboardPage = lazy(() => import('./pages/distribution/PartnerDashboardPage'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
@@ -326,7 +337,7 @@ function Router() {
           </Route>
           <Route path="/agent/referrals">
             <RequireRole role="agent">
-              <Redirect to="/referrer/dashboard" />
+              <Redirect to="/distribution/partner" />
             </RequireRole>
           </Route>
           <Route path="/agents/:slug" component={AgentMicrosite} />
@@ -406,7 +417,7 @@ function Router() {
 
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
-          <Route path="/referrer/dashboard" component={ReferrerDashboard} />
+          <Route path="/referrer/dashboard" component={PartnerDashboardPage} />
           <Route path="/service/dashboard">
             <RequireRole role="service_provider">
               <ProDashboardPage />
@@ -454,6 +465,7 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/set-password" component={SetPassword} />
+          <Route path="/activation-complete" component={ActivationComplete} />
           <Route path="/saved-search/manage" component={SavedSearchManagePage} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
           <Route path="/referral-upload/:token">
@@ -470,6 +482,15 @@ function Router() {
           <Route path="/get-started" component={GetStarted} />
           <Route path="/book-strategy" component={BookStrategy} />
           <Route path="/role-selection" component={RoleSelection} />
+          <Route path="/advertise/sell/agents/onboarding" component={AgentOnboardingPage} />
+          <Route path="/advertise/sell/agents" component={AgentFunnelPage} />
+          <Route path="/advertise/sell/agencies" component={AgencyComingSoonPage} />
+          <Route path="/advertise/sell/developers" component={DeveloperFunnelPage} />
+          <Route path="/advertise/sell" component={AdvertiseSellPage} />
+          <Route path="/advertise/finance/banks" component={BankFunnelPage} />
+          <Route path="/advertise/finance/originators" component={OriginatorFunnelPage} />
+          <Route path="/advertise/finance" component={AdvertiseFinancePage} />
+          <Route path="/advertise/services" component={AdvertiseServicesPage} />
           <Route path="/advertise" component={AdvertiseWithUs} />
           <Route
             path="/advertise-with-us"
@@ -498,6 +519,15 @@ function Router() {
 
           {/* Other routes that might conflict */}
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/dashboard/settings">
+            <Redirect to="/agent/settings" />
+          </Route>
+          
+          <Route path="/activation">
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
+              <ActivationGate />
+            </Suspense>
+          </Route>
 
           <Route path="/agency/dashboard">
             <RequireRole role="agency_admin">
@@ -515,6 +545,7 @@ function Router() {
           />
           <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
+          <Route path="/distribution/partner" component={PartnerDashboardPage} />
           <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
           <Route
             path="/distribution/partner/accelerator"
@@ -528,6 +559,9 @@ function Router() {
             component={PartnerReferralDetailPage}
           />
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
+          <Route path="/distribution-network/login">
+            <Redirect to="/login?next=/distribution/partner/developments" />
+          </Route>
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
           <Route path="/referral/apply">
             <Redirect to="/distribution-network/apply" />

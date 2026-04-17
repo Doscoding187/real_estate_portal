@@ -193,10 +193,10 @@ export function ExploreCities({
     description || "Browse properties in South Africa's most sought-after locations.";
 
   return (
-    <section className="bg-white py-8 md:py-16">
+    <section className="bg-white py-4 md:py-5">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-5 flex flex-col gap-2.5 text-left md:mb-10 md:flex-row md:items-end md:justify-between md:gap-4">
+        <div className="mb-4 flex flex-col gap-2.5 text-left md:mb-6 md:flex-row md:items-end md:justify-between md:gap-4">
           <div className="max-w-3xl">
             <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
             <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">{displayDescription}</p>

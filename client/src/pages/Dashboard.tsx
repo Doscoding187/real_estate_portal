@@ -68,7 +68,7 @@ export default function Dashboard() {
   }
 
   if (referrerStatusQuery.data?.hasAccess) {
-    setLocation('/referrer/dashboard');
+    setLocation('/distribution/partner');
     return null;
   }
 

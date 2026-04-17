@@ -39,8 +39,8 @@ export default function ServicesResultsPage() {
   const [, params] = useRoute('/services/results/:leadId');
   const [, setLocation] = useLocation();
   const leadId = Number(params?.leadId || 0);
-  const query = useMemo(queryParams, []);
-  const sessionId = useMemo(getOrCreateServicesSessionId, []);
+  const query = useMemo(() => queryParams(), []);
+  const sessionId = useMemo(() => getOrCreateServicesSessionId(), []);
 
   const categoryParam = String(query.get('category') || '').toLowerCase();
   const category = isServiceCategory(categoryParam)

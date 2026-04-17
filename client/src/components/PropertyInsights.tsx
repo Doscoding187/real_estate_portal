@@ -221,7 +221,7 @@ export function PropertyInsights({
 
   if (insightsQuery.isLoading) {
     return (
-      <div className="py-10 md:py-16 bg-white">
+      <div className="py-4 md:py-5 bg-white">
         <div className="container">
           <div className="h-64 bg-slate-50 rounded-xl animate-pulse w-full" />
         </div>
@@ -230,9 +230,9 @@ export function PropertyInsights({
   }
 
   return (
-    <div className="py-10 md:py-16 bg-white">
+    <div className="py-4 md:py-5 bg-white">
       <div className="container">
-        <div className="w-full space-y-6 md:space-y-8">
+        <div className="w-full space-y-5 md:space-y-6">
           {/* Header */}
           <div>
             <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
@@ -248,7 +248,7 @@ export function PropertyInsights({
           <Tabs
             value={activeTabId}
             onValueChange={setActiveTabId}
-            className="w-full space-y-6 md:space-y-8"
+            className="w-full space-y-5 md:space-y-6"
           >
             {/* Left Aligned Tabs to match Header Alignment standard */}
             <div className="flex justify-start overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
