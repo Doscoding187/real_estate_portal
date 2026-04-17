@@ -29,7 +29,7 @@ const testimonials = [
 
 export function TestimonialsSection() {
   return (
-    <section className="bg-gradient-to-b from-slate-50/50 to-white py-7 md:py-10">
+    <section className="bg-gradient-to-b from-slate-50/50 to-white py-4 md:py-5">
       <div className="mb-5 text-left md:mb-8">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-1 sm:mb-4 sm:px-4 sm:py-2">
           <Star className="h-4 w-4 fill-current text-yellow-500 sm:h-5 sm:w-5" />

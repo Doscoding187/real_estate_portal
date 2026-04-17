@@ -214,7 +214,7 @@ export function TopLocalities({
   const compactLocalities = localities.slice(0, 5);
 
   return (
-    <div className="py-7 md:py-10">
+    <div className="py-4 md:py-5">
       <div className="container">
         <div className="mb-5 md:mb-6">
           <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
