@@ -18,6 +18,7 @@ const {
   mockReferrerMyCommissionEntriesQuery,
   mockPartnerListMyReferralsQuery,
   mockPartnerListEligibleDevelopmentsQuery,
+  mockPartnerListProgramTermsQuery,
   state,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
@@ -33,6 +34,7 @@ const {
   mockReferrerMyCommissionEntriesQuery: vi.fn(),
   mockPartnerListMyReferralsQuery: vi.fn(),
   mockPartnerListEligibleDevelopmentsQuery: vi.fn(),
+  mockPartnerListProgramTermsQuery: vi.fn(),
   state: {
     hasAssessment: false,
     hasMatches: false,
@@ -73,6 +75,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         listEligibleDevelopmentsForSubmission: {
           useQuery: (...args: unknown[]) => mockPartnerListEligibleDevelopmentsQuery(...args),
+        },
+        listProgramTerms: {
+          useQuery: (...args: unknown[]) => mockPartnerListProgramTermsQuery(...args),
         },
       },
       referrer: {
@@ -167,6 +172,25 @@ describe('PartnerDashboardPage', () => {
       error: null,
     });
     mockPartnerListEligibleDevelopmentsQuery.mockReturnValue({
+      data: {
+        items: [
+          {
+            developmentId: 10,
+            developmentName: 'Waterfall Estate',
+            city: 'Midrand',
+            province: 'Gauteng',
+            program: {
+              commissionModel: 'flat_amount',
+              defaultCommissionAmount: 25000,
+              defaultCommissionPercent: null,
+            },
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
+    mockPartnerListProgramTermsQuery.mockReturnValue({
       data: {
         items: [
           {
