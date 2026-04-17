@@ -17,6 +17,7 @@ const {
   mockReferrerMyViewingsQuery,
   mockReferrerMyCommissionEntriesQuery,
   mockPartnerListMyReferralsQuery,
+  mockPartnerListEligibleDevelopmentsQuery,
   state,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
@@ -31,6 +32,7 @@ const {
   mockReferrerMyViewingsQuery: vi.fn(),
   mockReferrerMyCommissionEntriesQuery: vi.fn(),
   mockPartnerListMyReferralsQuery: vi.fn(),
+  mockPartnerListEligibleDevelopmentsQuery: vi.fn(),
   state: {
     hasAssessment: false,
     hasMatches: false,
@@ -68,6 +70,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         listMyReferrals: {
           useQuery: (...args: unknown[]) => mockPartnerListMyReferralsQuery(...args),
+        },
+        listEligibleDevelopmentsForSubmission: {
+          useQuery: (...args: unknown[]) => mockPartnerListEligibleDevelopmentsQuery(...args),
         },
       },
       referrer: {
@@ -161,6 +166,25 @@ describe('PartnerDashboardPage', () => {
       isLoading: false,
       error: null,
     });
+    mockPartnerListEligibleDevelopmentsQuery.mockReturnValue({
+      data: {
+        items: [
+          {
+            developmentId: 10,
+            developmentName: 'Waterfall Estate',
+            city: 'Midrand',
+            province: 'Gauteng',
+            program: {
+              commissionModel: 'flat_amount',
+              defaultCommissionAmount: 25000,
+              defaultCommissionPercent: null,
+            },
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
 
     mockCreateAssessmentMutation.mockImplementation((opts: any) => ({
       isPending: false,
@@ -236,4 +260,3 @@ describe('PartnerDashboardPage', () => {
     expect(openSpy.mock.calls[0]?.[0]).toContain('wa.me');
   });
 });
-

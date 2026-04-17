@@ -1,23 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, sql } from 'drizzle-orm';
-import {
-  distributionAgentAccess,
-  distributionAgentTiers,
-  distributionIdentities,
-  distributionPrograms,
-} from '../../drizzle/schema';
+import { and, eq } from 'drizzle-orm';
+import { distributionIdentities, distributionPrograms } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { assertDevelopmentSubmissionEligible } from './distributionAccessPolicy';
-
-type DistributionTier = 'tier_1' | 'tier_2' | 'tier_3' | 'tier_4';
 
 type EligibilityReasonCode =
   | 'PROGRAM_NOT_FOUND'
   | 'PROGRAM_INACTIVE'
-  | 'REFERRALS_DISABLED'
-  | 'PARTNER_ACCESS_REQUIRED'
-  | 'PROGRAM_ACCESS_INACTIVE'
-  | 'TIER_NOT_ELIGIBLE';
+  | 'REFERRALS_DISABLED';
 
 type EligibilityReason = {
   code: EligibilityReasonCode;
@@ -42,17 +31,6 @@ function isRolePartnerEligible(role: string) {
   return role === 'agent' || role === 'agency_admin' || role === 'super_admin';
 }
 
-function isTierEligible(agentTier: DistributionTier | null, minTier: DistributionTier) {
-  const tierRank: Record<DistributionTier, number> = {
-    tier_1: 1,
-    tier_2: 2,
-    tier_3: 3,
-    tier_4: 4,
-  };
-  if (!agentTier) return false;
-  return tierRank[agentTier] >= tierRank[minTier];
-}
-
 async function resolveDb(db?: DbExecutor) {
   if (db) return db;
   const connection = await getDb();
@@ -73,40 +51,6 @@ async function hasActiveReferrerIdentity(db: DbExecutor, actorUserId: number) {
     )
     .limit(1);
   return Boolean(identity?.id);
-}
-
-async function getCurrentTierForAgent(
-  db: DbExecutor,
-  actorUserId: number,
-): Promise<DistributionTier | null> {
-  const [currentTier] = await db
-    .select({
-      tier: distributionAgentTiers.tier,
-    })
-    .from(distributionAgentTiers)
-    .where(
-      and(
-        eq(distributionAgentTiers.agentId, actorUserId),
-        sql`${distributionAgentTiers.effectiveTo} IS NULL`,
-      ),
-    )
-    .orderBy(desc(distributionAgentTiers.id))
-    .limit(1);
-
-  if (currentTier?.tier) {
-    return currentTier.tier as DistributionTier;
-  }
-
-  const [fallbackTier] = await db
-    .select({
-      tier: distributionAgentTiers.tier,
-    })
-    .from(distributionAgentTiers)
-    .where(eq(distributionAgentTiers.agentId, actorUserId))
-    .orderBy(desc(distributionAgentTiers.id))
-    .limit(1);
-
-  return fallbackTier?.tier ? (fallbackTier.tier as DistributionTier) : null;
 }
 
 function buildProgramNotEligibleError(reasons: EligibilityReason[]): never {
@@ -159,18 +103,6 @@ async function findProgramByDevelopmentId(
   };
 }
 
-function normalizePolicy(value: string | null) {
-  const policy = String(value || 'restricted').trim().toLowerCase();
-  if (policy === 'open' || policy === 'restricted' || policy === 'invite_only') {
-    return policy;
-  }
-  return 'restricted';
-}
-
-function mapActorRoleForSubmission(actorRole: string): 'admin' | 'referrer' {
-  return actorRole === 'super_admin' ? 'admin' : 'referrer';
-}
-
 export async function validatePartnerSubmissionEligibility(
   input: {
     developmentId: number;
@@ -208,66 +140,19 @@ export async function validatePartnerSubmissionEligibility(
   const roleEligible = isRolePartnerEligible(input.actorRole);
   const hasReferrerIdentity = await hasActiveReferrerIdentity(db, input.actorUserId);
   const hasPartnerAccess = roleEligible || hasReferrerIdentity;
-  const tierPolicy = normalizePolicy(program.tierAccessPolicy);
 
   if (!hasPartnerAccess) {
     buildForbiddenReferralAccessError();
-  }
-
-  if (tierPolicy === 'restricted' || tierPolicy === 'invite_only') {
-    const [access] = await db
-      .select({
-        accessStatus: distributionAgentAccess.accessStatus,
-        minTierRequired: distributionAgentAccess.minTierRequired,
-      })
-      .from(distributionAgentAccess)
-      .where(
-        and(
-          eq(distributionAgentAccess.programId, program.programId),
-          eq(distributionAgentAccess.agentId, input.actorUserId),
-        ),
-      )
-      .limit(1);
-
-    if (access && String(access.accessStatus) !== 'active') {
-      reasons.push({
-        code: 'PROGRAM_ACCESS_INACTIVE',
-        message: 'Your access to this referral program is not active.',
-      });
-    }
-
-    if (access && String(access.accessStatus) === 'active') {
-      const minTierRequired = String(access.minTierRequired || '') as DistributionTier;
-      if (minTierRequired) {
-        const currentTier = await getCurrentTierForAgent(db, input.actorUserId);
-        if (!isTierEligible(currentTier, minTierRequired)) {
-          reasons.push({
-            code: 'TIER_NOT_ELIGIBLE',
-            message: `Your current tier does not meet the ${minTierRequired} requirement.`,
-          });
-        }
-      }
-    }
   }
 
   if (reasons.length) {
     buildProgramNotEligibleError(reasons);
   }
 
-  await assertDevelopmentSubmissionEligible({
-    db,
-    developmentId: input.developmentId,
-    actor: {
-      role: mapActorRoleForSubmission(input.actorRole),
-      userId: input.actorUserId,
-    },
-    channel: 'submission',
-  });
-
   return {
     ok: true as const,
     programId: program.programId,
     developmentId: program.developmentId,
-    tierAccessPolicy: tierPolicy,
+    tierAccessPolicy: String(program.tierAccessPolicy || 'open'),
   };
 }
