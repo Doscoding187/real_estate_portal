@@ -31,9 +31,30 @@ type AcceleratorMatchSnapshot = {
     developmentId: number;
     developmentName: string;
     area: string;
+    logoUrl?: string | null;
+    unitOptions?: Array<{
+      unitTypeId?: string | null;
+      unitName?: string;
+      priceFrom?: number;
+      priceTo?: number;
+      fitRatio?: number;
+    }>;
     purchasePrice: number;
     bestFitRatio: number;
   }>;
+};
+
+type AccessStockRow = {
+  developmentId: number;
+  developmentName: string;
+  location: string;
+  priceFrom: number;
+  commissionAmount: number;
+  commissionModel: string | null;
+  defaultCommissionPercent: number | null;
+  defaultCommissionAmount: number | null;
+  imageUrl: string | null;
+  badge: 'Hot' | 'High demand' | 'Fast payout';
 };
 
 type AttentionItem = {
@@ -105,6 +126,26 @@ function getMatchConfidence(bestFitRatio: number): 'Strong' | 'Medium' | 'Low' {
   return 'Low';
 }
 
+function computeCommissionAmount(input: {
+  commissionModel?: string | null;
+  defaultCommissionPercent?: number | null;
+  defaultCommissionAmount?: number | null;
+  purchasePrice?: number | null;
+}) {
+  const model = String(input.commissionModel || '');
+  const purchasePrice = Number(input.purchasePrice || 0);
+  if (model === 'flat_amount') {
+    return Math.max(0, Number(input.defaultCommissionAmount || 0));
+  }
+  if (model === 'flat_percentage') {
+    const percent = Number(input.defaultCommissionPercent || 0);
+    if (percent > 0 && purchasePrice > 0) {
+      return Math.round((purchasePrice * percent) / 100);
+    }
+  }
+  return 0;
+}
+
 function buildWhatsAppShareMessage(
   matches: AcceleratorMatchSnapshot['matches'],
   maxPurchase: number,
@@ -147,7 +188,7 @@ export default function PartnerDashboardPage() {
   });
 
   const myAccessQuery = trpc.distribution.referrer.myAccess.useQuery(
-    { includePaused: true, includeRevoked: false },
+    { includePaused: false, includeRevoked: false },
     {
       enabled: isAuthenticated,
       retry: false,
@@ -213,6 +254,11 @@ export default function PartnerDashboardPage() {
   const matchSnapshot = (matchesQuery.data || null) as AcceleratorMatchSnapshot | null;
   const matches = matchSnapshot?.matches || [];
 
+  useEffect(() => {
+    if (!assessmentId) return;
+    void matchesQuery.refetch();
+  }, [assessmentId]);
+
   const pipelineDeals = pipelineQuery.data?.deals || [];
   const stageOrder = pipelineQuery.data?.stageOrder || [];
   const stageCounts = (pipelineQuery.data?.stageCounts || {}) as Record<string, number>;
@@ -272,19 +318,31 @@ export default function PartnerDashboardPage() {
   const unlockDealsRemaining = Math.max(0, unlockTargetDeals - paidDealsCount);
   const nextUnlockAmount = averageCommissionAmount;
 
-  const stockRows = useMemo(() => {
+  const stockRows = useMemo<AccessStockRow[]>(() => {
     const grouped = new Map<number, any>();
     for (const row of myAccessQuery.data || []) {
+      if (!row?.isReferralEnabled) continue;
+      if (row?.tierEligible === false) continue;
       const developmentId = Number(row.developmentId);
       if (!grouped.has(developmentId)) {
-        const commissionAmount =
-          row.commissionModel === 'flat_amount' && row.defaultCommissionAmount
-            ? Number(row.defaultCommissionAmount)
-            : row.commissionModel === 'flat_percentage' &&
-                row.defaultCommissionPercent &&
-                row.priceFrom
-              ? (Number(row.priceFrom) * Number(row.defaultCommissionPercent)) / 100
-              : 0;
+        const unitTypeFloor = Array.isArray(row.unitTypes)
+          ? row.unitTypes
+              .map((unit: any) => Number(unit?.priceFrom || 0))
+              .filter((price: number) => Number.isFinite(price) && price > 0)
+              .sort((a: number, b: number) => a - b)[0]
+          : null;
+        const priceFrom = Number(unitTypeFloor || row.priceFrom || 0);
+        const commissionModel = row.commissionModel ? String(row.commissionModel) : null;
+        const defaultCommissionPercent =
+          row.defaultCommissionPercent == null ? null : Number(row.defaultCommissionPercent);
+        const defaultCommissionAmount =
+          row.defaultCommissionAmount == null ? null : Number(row.defaultCommissionAmount);
+        const commissionAmount = computeCommissionAmount({
+          commissionModel,
+          defaultCommissionPercent,
+          defaultCommissionAmount,
+          purchasePrice: priceFrom,
+        });
 
         let badge: 'Hot' | 'High demand' | 'Fast payout' = 'High demand';
         if (commissionAmount >= 30000) badge = 'Hot';
@@ -294,8 +352,12 @@ export default function PartnerDashboardPage() {
           developmentId,
           developmentName: row.developmentName || 'Development',
           location: [row.city, row.province].filter(Boolean).join(' - ') || 'Location unavailable',
-          priceFrom: Number(row.priceFrom || 0),
+          priceFrom,
           commissionAmount,
+          commissionModel,
+          defaultCommissionPercent,
+          defaultCommissionAmount,
+          imageUrl: row.imageUrl ? String(row.imageUrl) : null,
           badge,
         });
       }
@@ -307,6 +369,13 @@ export default function PartnerDashboardPage() {
 
   const visibleStock = stockRows.slice(0, 3);
   const hiddenStockCount = Math.max(0, stockRows.length - 3);
+  const stockByDevelopmentId = useMemo(() => {
+    const map = new Map<number, AccessStockRow>();
+    for (const row of stockRows) {
+      map.set(Number(row.developmentId), row);
+    }
+    return map;
+  }, [stockRows]);
 
   const activePipelineStage = useMemo(() => {
     const ranked = stageOrder
@@ -580,13 +649,22 @@ export default function PartnerDashboardPage() {
 
                   {matches.slice(0, 3).map(match => {
                     const confidence = getMatchConfidence(match.bestFitRatio);
+                    const unitPriceFrom = Number(match.unitOptions?.[0]?.priceFrom || 0);
+                    const displayPrice = unitPriceFrom > 0 ? unitPriceFrom : Number(match.purchasePrice || 0);
+                    const linkedStock = stockByDevelopmentId.get(Number(match.developmentId));
+                    const commissionAmount = computeCommissionAmount({
+                      commissionModel: linkedStock?.commissionModel,
+                      defaultCommissionPercent: linkedStock?.defaultCommissionPercent,
+                      defaultCommissionAmount: linkedStock?.defaultCommissionAmount,
+                      purchasePrice: displayPrice,
+                    });
                     return (
                       <div key={match.developmentId} className="mb-2 rounded-md border border-[#1a1a18]/12 bg-white p-3">
                         <p className="text-[13px] font-semibold text-[#1a1a18]">{match.developmentName}</p>
                         <p className="text-[11px] text-[#6b6a64]">{match.area || 'N/A'}</p>
                         <div className="mt-2 flex items-center justify-between">
                           <p className="font-mono text-[13px] font-semibold text-[#1a1a18]">
-                            {formatCurrency(match.purchasePrice)}
+                            {formatCurrency(displayPrice)}
                           </p>
                           <span
                             className={
@@ -601,7 +679,7 @@ export default function PartnerDashboardPage() {
                           </span>
                         </div>
                         <p className="mt-1 text-[11px] text-[#1a7a40]">
-                          Est. commission: {formatCurrency((match.purchasePrice * 0.02) || 0)}
+                          Est. commission: {formatCurrency(commissionAmount)}
                         </p>
                         <div className="mt-2 flex gap-2">
                           <Button
@@ -742,7 +820,7 @@ export default function PartnerDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              {visibleStock.map(row => (
+                {visibleStock.map(row => (
                 <div
                   key={row.developmentId}
                   className="overflow-hidden rounded-md border border-[#1a1a18]/12 bg-white"
@@ -759,11 +837,20 @@ export default function PartnerDashboardPage() {
                     >
                       {row.badge}
                     </span>
-                    <svg width="48" height="36" viewBox="0 0 48 36" fill="none" className="text-[#1a1a18]/30">
-                      <rect x="6" y="12" width="36" height="22" rx="2" fill="currentColor" />
-                      <polygon points="24,2 42,14 6,14" fill="currentColor" />
-                      <rect x="19" y="22" width="10" height="12" fill="white" />
-                    </svg>
+                    {row.imageUrl ? (
+                      <img
+                        src={row.imageUrl}
+                        alt={row.developmentName}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <svg width="48" height="36" viewBox="0 0 48 36" fill="none" className="text-[#1a1a18]/30">
+                        <rect x="6" y="12" width="36" height="22" rx="2" fill="currentColor" />
+                        <polygon points="24,2 42,14 6,14" fill="currentColor" />
+                        <rect x="19" y="22" width="10" height="12" fill="white" />
+                      </svg>
+                    )}
                   </div>
                   <div className="p-3">
                     <p className="text-[12px] font-semibold text-[#1a1a18]">{row.developmentName}</p>
