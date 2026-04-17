@@ -221,7 +221,7 @@ export function PropertyInsights({
 
   if (insightsQuery.isLoading) {
     return (
-      <div className="py-10 md:py-16 bg-white">
+      <div className="py-5 md:py-8 bg-white">
         <div className="container">
           <div className="h-64 bg-slate-50 rounded-xl animate-pulse w-full" />
         </div>
@@ -230,7 +230,7 @@ export function PropertyInsights({
   }
 
   return (
-    <div className="py-10 md:py-16 bg-white">
+    <div className="py-5 md:py-8 bg-white">
       <div className="container">
         <div className="w-full space-y-6 md:space-y-8">
           {/* Header */}

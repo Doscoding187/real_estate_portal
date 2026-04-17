@@ -234,7 +234,7 @@ export function DiscoverProperties({
   };
 
   return (
-    <div className="py-10 md:py-16 bg-gradient-to-b from-white to-muted/20">
+    <div className="py-5 md:py-8 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
         <div className="mb-6 md:mb-8">
           <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>

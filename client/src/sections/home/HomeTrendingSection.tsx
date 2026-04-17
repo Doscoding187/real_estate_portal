@@ -113,7 +113,7 @@ export function HomeTrendingSection({
   const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, railLimit);
 
   return (
-    <section className="py-7 md:py-10">
+    <section className="py-4 md:py-5">
       <div className="mb-5 md:mb-10">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1">
           <span className="text-lg">🔥</span>

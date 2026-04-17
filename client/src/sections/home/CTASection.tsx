@@ -6,7 +6,7 @@ type CTASectionProps = {
 
 export function CTASection({ onBrowse }: CTASectionProps) {
   return (
-    <section className="bg-white px-3 py-8 sm:px-4 md:px-0 md:py-16">
+    <section className="bg-white px-3 py-4 sm:px-4 md:px-0 md:py-8">
       <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-4 py-7 text-center shadow-2xl sm:px-6 sm:py-12 md:rounded-[2rem] md:px-12 md:py-20">
         <div className="absolute left-0 top-0 hidden h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
         <div className="absolute bottom-0 right-0 hidden h-48 w-48 translate-x-1/2 translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
