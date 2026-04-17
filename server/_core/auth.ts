@@ -438,6 +438,32 @@ class AuthService {
   }
 
   /**
+   * First-time account activation password setup email for onboarding users.
+   */
+  async sendActivationSetPasswordEmail(email: string): Promise<void> {
+    const user = await db.getUserByEmail(email);
+    if (!user) {
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Onboarding links can reasonably be valid longer than a standard reset request.
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await db.updateUserPasswordResetToken(user.id, hashedToken, expiresAt);
+
+    const setupLink = `${ENV.appUrl}/set-password?token=${token}`;
+
+    await EmailService.sendEmail({
+      to: user.email!,
+      subject: 'Activate your account - set your password',
+      html: `<p>Your referrer account has been approved. Click the link below to set your password and activate your account:</p><a href="${setupLink}">${setupLink}</a><p>This link will expire in 24 hours.</p>`,
+      text: `Your referrer account has been approved. Set your password to activate your account: ${setupLink}`,
+    });
+  }
+
+  /**
    * Reset password using a token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
