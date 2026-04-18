@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ArrowDown, ArrowUp, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, Loader2, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import {
@@ -247,6 +247,7 @@ function DevelopmentProgramConfigPanel({
   const onboardDevelopmentMutation =
     trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
   const setBrandPresetMutation = trpc.distribution.admin.setBrandOnboardingPreset.useMutation();
+  const presignUploadMutation = trpc.upload.presign.useMutation();
 
   const [commissionModel, setCommissionModel] = useState<'flat_percentage' | 'flat_amount'>(
     development.program?.commissionModel === 'fixed_amount' ? 'flat_amount' : 'flat_percentage',
@@ -264,6 +265,7 @@ function DevelopmentProgramConfigPanel({
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
+  const [uploadingDocumentIndex, setUploadingDocumentIndex] = useState<number | null>(null);
 
   const applyPresetToForm = useCallback((preset: BrandOnboardingPreset) => {
     setCommissionModel(preset.commissionModel);
@@ -406,6 +408,41 @@ function DevelopmentProgramConfigPanel({
     ]);
   }
 
+  async function handleSourceDocumentUpload(index: number, file: File | null) {
+    if (!file) return;
+    setUploadingDocumentIndex(index);
+    try {
+      const { url, publicUrl } = await presignUploadMutation.mutateAsync({
+        filename: file.name,
+        contentType: file.type || 'application/octet-stream',
+        propertyId: `distribution-development-${development.developmentId}`,
+      });
+
+      const uploadResponse = await fetch(url, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Document upload failed (${uploadResponse.status}).`);
+      }
+
+      updateDocumentAtIndex(index, item => ({
+        ...item,
+        templateFileUrl: publicUrl,
+        templateFileName: file.name,
+      }));
+      toast.success('Source document uploaded.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to upload source document.');
+    } finally {
+      setUploadingDocumentIndex(null);
+    }
+  }
+
   function renderDocumentSection(input: {
     title: string;
     description: string;
@@ -491,26 +528,56 @@ function DevelopmentProgramConfigPanel({
               </div>
               {input.category === 'developer_document' ? (
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  <Input
-                    value={document.templateFileUrl || ''}
-                    onChange={event =>
-                      updateDocumentAtIndex(index, item => ({
-                        ...item,
-                        templateFileUrl: event.target.value || null,
-                      }))
-                    }
-                    placeholder="Template URL (https://...)"
-                  />
-                  <Input
-                    value={document.templateFileName || ''}
-                    onChange={event =>
-                      updateDocumentAtIndex(index, item => ({
-                        ...item,
-                        templateFileName: event.target.value || null,
-                      }))
-                    }
-                    placeholder="Template filename (optional)"
-                  />
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs text-slate-600">Upload source document</label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        disabled={isSaving || uploadingDocumentIndex === index}
+                        onChange={event => {
+                          const file = event.target.files?.[0] || null;
+                          void handleSourceDocumentUpload(index, file);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isSaving || uploadingDocumentIndex === index}
+                        onClick={() =>
+                          updateDocumentAtIndex(index, item => ({
+                            ...item,
+                            templateFileUrl: null,
+                            templateFileName: null,
+                          }))
+                        }
+                      >
+                        Clear
+                      </Button>
+                      {uploadingDocumentIndex === index ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Uploading...
+                        </span>
+                      ) : null}
+                    </div>
+                    {document.templateFileUrl ? (
+                      <a
+                        href={document.templateFileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                      >
+                        <Upload className="h-3 w-3" />
+                        Uploaded document
+                        {document.templateFileName ? ` (${document.templateFileName})` : ''}
+                      </a>
+                    ) : (
+                      <p className="text-xs text-slate-500">No document uploaded yet.</p>
+                    )}
+                  </div>
                 </div>
               ) : null}
             </div>
