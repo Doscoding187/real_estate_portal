@@ -2792,7 +2792,7 @@ const adminDistributionRouter = router({
       if (duplicateStandardCode) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Only one ${duplicateStandardCode.documentCode} template can be configured per development.`,
+          message: `Only one ${duplicateStandardCode.documentCode} document can be configured per development.`,
         });
       }
 
