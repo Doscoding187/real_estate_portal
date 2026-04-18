@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { ListingNavbar } from '@/components/ListingNavbar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Loader2 } from 'lucide-react';
@@ -17,6 +16,7 @@ import {
   type AcceleratorFormValues,
   type AcceleratorMatchSnapshot,
 } from '@/components/distribution/partner/acceleratorTypes';
+import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -131,16 +131,15 @@ export default function PartnerReferralAcceleratorPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <ListingNavbar />
-      <div className="mx-auto max-w-6xl space-y-4 px-4 pb-8 pt-24">
+    <ReferralAppShell>
+      <main className="mx-auto w-full max-w-6xl space-y-4 px-4 pb-8 pt-6 md:px-7">
         <Card>
           <CardHeader>
             <CardTitle>Referral Accelerator</CardTitle>
@@ -262,7 +261,7 @@ export default function PartnerReferralAcceleratorPage() {
             }}
           />
         ) : null}
-      </div>
-    </div>
+      </main>
+    </ReferralAppShell>
   );
 }

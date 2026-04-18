@@ -8,12 +8,16 @@ const {
   mockUseRoute,
   mockGetReferralUseQuery,
   mockExportPackUseMutation,
+  mockMyPipelineUseQuery,
+  mockStatusUseQuery,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
   mockUseLocation: vi.fn(),
   mockUseRoute: vi.fn(),
   mockGetReferralUseQuery: vi.fn(),
   mockExportPackUseMutation: vi.fn(),
+  mockMyPipelineUseQuery: vi.fn(),
+  mockStatusUseQuery: vi.fn(),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -55,6 +59,14 @@ vi.mock('@/lib/trpc', () => ({
           useMutation: (...args: unknown[]) => mockExportPackUseMutation(...args),
         },
       },
+      referrer: {
+        myPipeline: {
+          useQuery: (...args: unknown[]) => mockMyPipelineUseQuery(...args),
+        },
+        status: {
+          useQuery: (...args: unknown[]) => mockStatusUseQuery(...args),
+        },
+      },
     },
   },
 }));
@@ -69,6 +81,8 @@ describe('PartnerReferralDetailPage', () => {
     });
     mockUseLocation.mockReturnValue(['/distribution/partner/referrals/42', vi.fn()]);
     mockUseRoute.mockReturnValue([true, { dealId: '42' }]);
+    mockMyPipelineUseQuery.mockReturnValue({ data: { stageCounts: {} } });
+    mockStatusUseQuery.mockReturnValue({ data: { accessCount: 0 } });
     mockGetReferralUseQuery.mockReturnValue({
       isLoading: false,
       error: null,

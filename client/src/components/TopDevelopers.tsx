@@ -40,10 +40,10 @@ export function TopDevelopers() {
   const compactDevelopers = developers?.slice(0, 10) ?? [];
 
   return (
-    <section className="py-5 md:py-8 bg-white">
+    <section className="py-4 md:py-5 bg-white">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-6 md:mb-8">
+        <div className="mb-5 md:mb-6">
           <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
             Top Developers in South Africa
           </h2>

@@ -281,7 +281,7 @@ function getInitials(user: NavbarUser) {
 function getPrimaryAccountRoute(user: NavbarUser, hasReferrerAccess: boolean) {
   if (user?.hasManagerIdentity) return '/distribution/manager';
   if (hasReferrerAccess && !REFERRER_PRIORITY_EXCLUSIONS.has(user?.role)) {
-    return '/referrer/dashboard';
+    return '/distribution/partner';
   }
 
   switch (user?.role) {
@@ -329,7 +329,7 @@ export function EnhancedNavbar() {
   const accountInitials = getInitials(user);
   const primaryAccountRoute = getPrimaryAccountRoute(user, hasReferrerAccess);
   const primaryAccountLabel =
-    primaryAccountRoute === '/referrer/dashboard'
+    primaryAccountRoute === '/distribution/partner'
       ? 'Referral workspace'
       : user?.role === 'super_admin' || user?.role === 'admin'
         ? 'Admin overview'
@@ -339,18 +339,18 @@ export function EnhancedNavbar() {
         {
           label: primaryAccountLabel,
           hint:
-            primaryAccountRoute === '/referrer/dashboard'
+            primaryAccountRoute === '/distribution/partner'
               ? 'Track referrals and deal flow'
               : 'Open your workspace',
           href: primaryAccountRoute,
           icon: LayoutDashboard,
         },
-        ...(hasReferrerAccess && primaryAccountRoute !== '/referrer/dashboard'
+        ...(hasReferrerAccess && primaryAccountRoute !== '/distribution/partner'
           ? [
               {
                 label: 'Referral workspace',
                 hint: 'Manage referrals and commissions',
-                href: '/referrer/dashboard',
+                href: '/distribution/partner',
                 icon: Briefcase,
               },
             ]

@@ -94,6 +94,36 @@ export class EmailService {
     });
   }
 
+  static async sendReferrerActivationEmail(
+    email: string,
+    fullName: string,
+    activationLink: string,
+  ): Promise<boolean> {
+    const safeName = fullName?.trim() || 'there';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Activate your referral partner account</h1>
+        <p>Hi ${safeName},</p>
+        <p>Your referral partner application has been approved. Set your password to activate your account and access your dashboard.</p>
+        <p>
+          <a href="${activationLink}" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">
+            Set Password
+          </a>
+        </p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p><a href="${activationLink}">${activationLink}</a></p>
+        <p>This link expires in 1 hour.</p>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Activate your referral partner account',
+      html,
+      text: `Your referral partner application has been approved. Set your password to activate your account: ${activationLink}`,
+    });
+  }
+
   static async sendPaymentFailedEmail(
     email: string,
     agencyName: string,

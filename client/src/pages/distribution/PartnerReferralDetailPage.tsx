@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
-import { ListingNavbar } from '@/components/ListingNavbar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Loader2 } from 'lucide-react';
@@ -9,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
 import { toast } from 'sonner';
+import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
 function base64ToBlob(base64: string, mimeType: string) {
   const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
@@ -61,7 +61,7 @@ export default function PartnerReferralDetailPage() {
 
   if (loading || referralQuery.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
       </div>
     );
@@ -69,28 +69,26 @@ export default function PartnerReferralDetailPage() {
 
   if (referralQuery.error) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <ListingNavbar />
-        <div className="mx-auto max-w-4xl px-4 pb-8 pt-24">
+      <ReferralAppShell>
+        <main className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-7">
           <Card>
             <CardContent className="py-6 text-sm text-red-600">{referralQuery.error.message}</CardContent>
           </Card>
-        </div>
-      </div>
+        </main>
+      </ReferralAppShell>
     );
   }
 
   const referral = referralQuery.data;
   if (!referral) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <ListingNavbar />
-        <div className="mx-auto max-w-4xl px-4 pb-8 pt-24">
+      <ReferralAppShell>
+        <main className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-7">
           <Card>
             <CardContent className="py-6 text-sm text-slate-500">Referral not found.</CardContent>
           </Card>
-        </div>
-      </div>
+        </main>
+      </ReferralAppShell>
     );
   }
 
@@ -104,9 +102,8 @@ export default function PartnerReferralDetailPage() {
     | null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <ListingNavbar />
-      <div className="mx-auto max-w-5xl px-4 pb-8 pt-24">
+    <ReferralAppShell>
+      <main className="mx-auto w-full max-w-5xl px-4 pb-8 pt-6 md:px-7">
         <Card className="mb-4">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -234,7 +231,7 @@ export default function PartnerReferralDetailPage() {
             ) : null}
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </main>
+    </ReferralAppShell>
   );
 }

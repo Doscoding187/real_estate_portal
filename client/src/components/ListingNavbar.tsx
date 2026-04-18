@@ -215,7 +215,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
           <Button
             variant="secondary"
             className="hidden md:flex bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm h-9 px-4"
-            onClick={() => setLocation('/referrer/dashboard')}
+            onClick={() => setLocation('/distribution/partner')}
           >
             Referrer Dashboard
           </Button>
@@ -227,7 +227,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
             setLocation(
               isAuthenticated
                 ? hasReferrerAccess
-                  ? '/referrer/dashboard'
+                  ? '/distribution/partner'
                   : '/dashboard'
                 : '/login',
             )
@@ -242,7 +242,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
 
         <div
           className="cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => setLocation(hasReferrerAccess ? '/referrer/dashboard' : '/dashboard')}
+          onClick={() => setLocation(hasReferrerAccess ? '/distribution/partner' : '/dashboard')}
           title="Menu"
         >
           <Menu className="h-6 w-6 text-white" />

@@ -214,14 +214,14 @@ export function TopLocalities({
   const compactLocalities = localities.slice(0, 5);
 
   return (
-    <div className="py-5 md:py-8">
+    <div className="py-4 md:py-5">
       <div className="container">
-        <div className="mb-6 md:mb-8">
+        <div className="mb-5 md:mb-6">
           <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
-        <div className="flex justify-start mb-6 md:mb-10 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex justify-start mb-4 md:mb-6 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
             {cities.map(city => (
               <button
