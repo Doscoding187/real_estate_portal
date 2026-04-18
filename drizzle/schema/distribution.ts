@@ -355,6 +355,12 @@ export const developmentRequiredDocuments = mysqlTable(
     )
       .default('client_required_document')
       .notNull(),
+    templateFileUrl: varchar('template_file_url', { length: 2048 }),
+    templateFileName: varchar('template_file_name', { length: 255 }),
+    templateUploadedAt: timestamp('template_uploaded_at', { mode: 'string' }),
+    templateUploadedBy: int('template_uploaded_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     isRequired: tinyint('is_required').default(1).notNull(),
     sortOrder: int('sort_order').default(0).notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
@@ -635,6 +641,10 @@ export const distributionDealDocuments = mysqlTable(
     verifiedAt: timestamp('verified_at', { mode: 'string' }),
     receivedBy: int('received_by').references(() => users.id, { onDelete: 'set null' }),
     verifiedBy: int('verified_by').references(() => users.id, { onDelete: 'set null' }),
+    submittedFileUrl: varchar('submitted_file_url', { length: 2048 }),
+    submittedFileName: varchar('submitted_file_name', { length: 255 }),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }),
+    submittedBy: int('submitted_by').references(() => users.id, { onDelete: 'set null' }),
     notes: text(),
     createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),

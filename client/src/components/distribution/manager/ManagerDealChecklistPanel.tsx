@@ -25,14 +25,20 @@ type DealChecklist = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    templateFileUrl?: string | null;
+    templateFileName?: string | null;
     isRequired: boolean;
     sortOrder: number;
     isActive: boolean;
     status: DealDocumentStatus;
     receivedAt: string | null;
     verifiedAt: string | null;
+    submittedFileUrl?: string | null;
+    submittedFileName?: string | null;
+    submittedAt?: string | null;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
+    submittedBy?: { userId: number; name?: string } | null;
     notes: string | null;
   }>;
   computed: {
@@ -76,11 +82,15 @@ export function ManagerDealChecklistPanel({
     templateId: number;
     status: DealDocumentStatus;
     notes?: string | null;
+    submittedFileUrl?: string | null;
+    submittedFileName?: string | null;
   }) => Promise<void>;
   onMarkAllRequiredReceived?: () => Promise<void>;
   onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
   const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
+  const [fileUrlByTemplateId, setFileUrlByTemplateId] = useState<Record<number, string>>({});
+  const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -88,6 +98,14 @@ export function ManagerDealChecklistPanel({
       next[row.templateId] = row.notes || '';
     }
     setNotesByTemplateId(next);
+    const nextUrls: Record<number, string> = {};
+    const nextNames: Record<number, string> = {};
+    for (const row of checklist.requiredDocuments) {
+      nextUrls[row.templateId] = row.submittedFileUrl || '';
+      nextNames[row.templateId] = row.submittedFileName || '';
+    }
+    setFileUrlByTemplateId(nextUrls);
+    setFileNameByTemplateId(nextNames);
   }, [checklist.requiredDocuments]);
 
   const orderedDocuments = useMemo(
@@ -180,6 +198,17 @@ export function ManagerDealChecklistPanel({
                 <div>
                   <p className="font-medium">{document.documentLabel}</p>
                   <p className="text-xs text-slate-500">{document.documentCode}</p>
+                  {document.templateFileUrl ? (
+                    <a
+                      href={document.templateFileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Download template
+                      {document.templateFileName ? ` (${document.templateFileName})` : ''}
+                    </a>
+                  ) : null}
                 </div>
                 <Badge variant={document.isRequired ? 'default' : 'secondary'}>
                   {document.isRequired ? 'Required' : 'Optional'}
@@ -231,6 +260,56 @@ export function ManagerDealChecklistPanel({
                   />
                 </div>
               </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor={`file-url-${document.templateId}`}>Submitted file URL</Label>
+                  <Input
+                    id={`file-url-${document.templateId}`}
+                    placeholder="https://..."
+                    value={fileUrlByTemplateId[document.templateId] || ''}
+                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
+                    onChange={event =>
+                      setFileUrlByTemplateId(current => ({
+                        ...current,
+                        [document.templateId]: event.target.value,
+                      }))
+                    }
+                    onBlur={() =>
+                      void onUpdateDocumentStatus({
+                        templateId: document.templateId,
+                        status: document.status,
+                        notes: notesByTemplateId[document.templateId] || null,
+                        submittedFileUrl: fileUrlByTemplateId[document.templateId] || null,
+                        submittedFileName: fileNameByTemplateId[document.templateId] || null,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor={`file-name-${document.templateId}`}>Submitted file name</Label>
+                  <Input
+                    id={`file-name-${document.templateId}`}
+                    placeholder="Document name"
+                    value={fileNameByTemplateId[document.templateId] || ''}
+                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
+                    onChange={event =>
+                      setFileNameByTemplateId(current => ({
+                        ...current,
+                        [document.templateId]: event.target.value,
+                      }))
+                    }
+                    onBlur={() =>
+                      void onUpdateDocumentStatus({
+                        templateId: document.templateId,
+                        status: document.status,
+                        notes: notesByTemplateId[document.templateId] || null,
+                        submittedFileUrl: fileUrlByTemplateId[document.templateId] || null,
+                        submittedFileName: fileNameByTemplateId[document.templateId] || null,
+                      })
+                    }
+                  />
+                </div>
+              </div>
 
               <div className="mt-3 grid gap-1 text-xs text-slate-500 md:grid-cols-2">
                 <p>
@@ -238,6 +317,10 @@ export function ManagerDealChecklistPanel({
                 </p>
                 <p>
                   Verified: {document.verifiedAt || 'Pending'} | {formatActor(document.verifiedBy)}
+                </p>
+                <p className="md:col-span-2">
+                  Submitted file: {document.submittedAt || 'Pending'} |{' '}
+                  {formatActor(document.submittedBy || null)}
                 </p>
               </div>
 

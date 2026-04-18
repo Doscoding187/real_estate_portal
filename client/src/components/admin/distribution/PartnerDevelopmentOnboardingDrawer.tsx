@@ -46,6 +46,8 @@ type RequiredDocumentDraft = {
     | 'transfer_documents'
     | 'custom';
   documentLabel: string;
+  templateFileUrl?: string | null;
+  templateFileName?: string | null;
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
@@ -336,6 +338,8 @@ function DevelopmentProgramConfigPanel({
         ) as RequiredDocumentDraft['category'],
         documentCode: document.documentCode as RequiredDocumentDraft['documentCode'],
         documentLabel: String(document.documentLabel || ''),
+        templateFileUrl: String(document.templateFileUrl || '') || null,
+        templateFileName: String(document.templateFileName || '') || null,
         isRequired: Boolean(document.isRequired),
         isActive: Boolean(document.isActive),
         sortOrder: Number(document.sortOrder || 0),
@@ -393,6 +397,8 @@ function DevelopmentProgramConfigPanel({
         category,
         documentCode: 'custom',
         documentLabel: '',
+        templateFileUrl: null,
+        templateFileName: null,
         isRequired: true,
         isActive: true,
         sortOrder: current.length,
@@ -483,6 +489,30 @@ function DevelopmentProgramConfigPanel({
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              {input.category === 'developer_document' ? (
+                <div className="mt-2 grid gap-2 md:grid-cols-2">
+                  <Input
+                    value={document.templateFileUrl || ''}
+                    onChange={event =>
+                      updateDocumentAtIndex(index, item => ({
+                        ...item,
+                        templateFileUrl: event.target.value || null,
+                      }))
+                    }
+                    placeholder="Template URL (https://...)"
+                  />
+                  <Input
+                    value={document.templateFileName || ''}
+                    onChange={event =>
+                      updateDocumentAtIndex(index, item => ({
+                        ...item,
+                        templateFileName: event.target.value || null,
+                      }))
+                    }
+                    placeholder="Template filename (optional)"
+                  />
+                </div>
+              ) : null}
             </div>
           ))}
 
@@ -531,6 +561,14 @@ function DevelopmentProgramConfigPanel({
         category: document.category,
         documentCode: document.documentCode,
         documentLabel: document.documentLabel.trim() || 'Custom Document',
+        templateFileUrl:
+          document.category === 'developer_document'
+            ? document.templateFileUrl?.trim() || null
+            : null,
+        templateFileName:
+          document.category === 'developer_document'
+            ? document.templateFileName?.trim() || null
+            : null,
         isRequired: document.isRequired,
         sortOrder: index,
         isActive: document.isActive,
@@ -560,6 +598,14 @@ function DevelopmentProgramConfigPanel({
         category: document.category,
         documentCode: document.documentCode,
         documentLabel: document.documentLabel.trim() || 'Custom Document',
+        templateFileUrl:
+          document.category === 'developer_document'
+            ? document.templateFileUrl?.trim() || null
+            : null,
+        templateFileName:
+          document.category === 'developer_document'
+            ? document.templateFileName?.trim() || null
+            : null,
         isRequired: document.isRequired,
         isActive: document.isActive,
         sortOrder: index,

@@ -2757,6 +2757,8 @@ const adminDistributionRouter = router({
               'custom',
             ]),
             documentLabel: z.string().trim().min(2).max(160),
+            templateFileUrl: z.string().trim().url().max(2048).nullable().optional(),
+            templateFileName: z.string().trim().max(255).nullable().optional(),
             isRequired: z.boolean().default(true),
             sortOrder: z.number().int().min(0).default(0),
             isActive: z.boolean().default(true),
@@ -2772,6 +2774,8 @@ const adminDistributionRouter = router({
         category: document.category,
         documentCode: document.documentCode,
         documentLabel: normalizeRequiredDocumentLabel(document.documentLabel),
+        templateFileUrl: document.templateFileUrl?.trim() || null,
+        templateFileName: document.templateFileName?.trim() || null,
         isRequired: document.isRequired,
         sortOrder: typeof document.sortOrder === 'number' ? document.sortOrder : index,
         isActive: document.isActive,
@@ -2815,6 +2819,11 @@ const adminDistributionRouter = router({
         developmentId: number;
         documentCode: string;
         documentLabel: string;
+        category: 'developer_document' | 'client_required_document';
+        templateFileUrl: string | null;
+        templateFileName: string | null;
+        templateUploadedAt: string | null;
+        templateUploadedBy: number | null;
         isRequired: boolean;
         sortOrder: number;
         isActive: boolean;
@@ -2840,6 +2849,18 @@ const adminDistributionRouter = router({
                   documentCode: document.documentCode,
                   documentLabel: document.documentLabel,
                   category: document.category,
+                  templateFileUrl:
+                    document.category === 'developer_document' ? document.templateFileUrl : null,
+                  templateFileName:
+                    document.category === 'developer_document' ? document.templateFileName : null,
+                  templateUploadedAt:
+                    document.category === 'developer_document' && document.templateFileUrl
+                      ? sql`CURRENT_TIMESTAMP`
+                      : null,
+                  templateUploadedBy:
+                    document.category === 'developer_document' && document.templateFileUrl
+                      ? null
+                      : null,
                   isRequired: document.isRequired ? 1 : 0,
                   sortOrder: document.sortOrder,
                   isActive: document.isActive ? 1 : 0,
@@ -2858,6 +2879,18 @@ const adminDistributionRouter = router({
               documentCode: document.documentCode,
               documentLabel: document.documentLabel,
               category: document.category,
+              templateFileUrl:
+                document.category === 'developer_document' ? document.templateFileUrl : null,
+              templateFileName:
+                document.category === 'developer_document' ? document.templateFileName : null,
+              templateUploadedAt:
+                document.category === 'developer_document' && document.templateFileUrl
+                  ? sql`CURRENT_TIMESTAMP`
+                  : null,
+              templateUploadedBy:
+                document.category === 'developer_document' && document.templateFileUrl
+                  ? null
+                  : null,
               isRequired: document.isRequired ? 1 : 0,
               sortOrder: document.sortOrder,
               isActive: document.isActive ? 1 : 0,
@@ -2883,6 +2916,10 @@ const adminDistributionRouter = router({
                 documentCode: developmentRequiredDocuments.documentCode,
                 documentLabel: developmentRequiredDocuments.documentLabel,
                 category: developmentRequiredDocuments.category,
+                templateFileUrl: developmentRequiredDocuments.templateFileUrl,
+                templateFileName: developmentRequiredDocuments.templateFileName,
+                templateUploadedAt: developmentRequiredDocuments.templateUploadedAt,
+                templateUploadedBy: developmentRequiredDocuments.templateUploadedBy,
                 isRequired: developmentRequiredDocuments.isRequired,
                 sortOrder: developmentRequiredDocuments.sortOrder,
                 isActive: developmentRequiredDocuments.isActive,
@@ -2900,6 +2937,17 @@ const adminDistributionRouter = router({
               String(row.category || 'client_required_document') === 'developer_document'
                 ? 'developer_document'
                 : 'client_required_document',
+            templateFileUrl:
+              typeof row.templateFileUrl === 'string' && row.templateFileUrl.trim()
+                ? row.templateFileUrl.trim()
+                : null,
+            templateFileName:
+              typeof row.templateFileName === 'string' && row.templateFileName.trim()
+                ? row.templateFileName.trim()
+                : null,
+            templateUploadedAt: row.templateUploadedAt || null,
+            templateUploadedBy:
+              typeof row.templateUploadedBy === 'number' ? Number(row.templateUploadedBy) : null,
             isRequired: boolFromTinyInt(row.isRequired),
             sortOrder: Number(row.sortOrder || 0),
             isActive: boolFromTinyInt(row.isActive),
@@ -4944,6 +4992,8 @@ const managerDistributionRouter = router({
         templateId: z.number().int().positive(),
         status: z.enum(['pending', 'received', 'verified', 'rejected']),
         notes: z.string().max(2000).nullable().optional(),
+        submittedFileUrl: z.string().trim().url().max(2048).nullable().optional(),
+        submittedFileName: z.string().trim().max(255).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -4958,6 +5008,8 @@ const managerDistributionRouter = router({
           templateId: input.templateId,
           status: input.status,
           notes: input.notes,
+          submittedFileUrl: input.submittedFileUrl,
+          submittedFileName: input.submittedFileName,
         },
         ctx.user!.id,
         { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
