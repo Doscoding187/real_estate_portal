@@ -13,6 +13,8 @@ type ProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    templateFileUrl?: string | null;
+    templateFileName?: string | null;
     isRequired: boolean;
     sortOrder: number;
   }>;
@@ -53,6 +55,16 @@ export function ProgramRequirementsDialog({
               <div>
                 <p className="font-medium">{document.documentLabel}</p>
                 <p className="text-xs text-slate-500">{document.documentCode}</p>
+                {document.templateFileUrl ? (
+                  <a
+                    href={document.templateFileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Download template{document.templateFileName ? ` (${document.templateFileName})` : ''}
+                  </a>
+                ) : null}
               </div>
               <Badge variant={document.isRequired ? 'default' : 'secondary'}>
                 {document.isRequired ? 'Required' : 'Optional'}

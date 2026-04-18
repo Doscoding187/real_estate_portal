@@ -15,6 +15,10 @@ export type DevelopmentRequiredDocumentRow = {
   documentCode: string;
   documentLabel: string;
   category: DevelopmentDocumentCategory;
+  templateFileUrl: string | null;
+  templateFileName: string | null;
+  templateUploadedAt: string | null;
+  templateUploadedBy: number | null;
   isRequired: boolean;
   sortOrder: number;
   isActive: boolean;
@@ -89,6 +93,10 @@ export async function listDevelopmentRequiredDocumentsOrEmpty(
         documentCode: developmentRequiredDocuments.documentCode,
         documentLabel: developmentRequiredDocuments.documentLabel,
         category: developmentRequiredDocuments.category,
+        templateFileUrl: developmentRequiredDocuments.templateFileUrl,
+        templateFileName: developmentRequiredDocuments.templateFileName,
+        templateUploadedAt: developmentRequiredDocuments.templateUploadedAt,
+        templateUploadedBy: developmentRequiredDocuments.templateUploadedBy,
         isRequired: developmentRequiredDocuments.isRequired,
         sortOrder: developmentRequiredDocuments.sortOrder,
         isActive: developmentRequiredDocuments.isActive,
@@ -106,6 +114,17 @@ export async function listDevelopmentRequiredDocumentsOrEmpty(
         String(row.category || 'client_required_document') === 'developer_document'
           ? 'developer_document'
           : 'client_required_document',
+      templateFileUrl:
+        typeof row.templateFileUrl === 'string' && row.templateFileUrl.trim()
+          ? row.templateFileUrl.trim()
+          : null,
+      templateFileName:
+        typeof row.templateFileName === 'string' && row.templateFileName.trim()
+          ? row.templateFileName.trim()
+          : null,
+      templateUploadedAt: row.templateUploadedAt || null,
+      templateUploadedBy:
+        typeof row.templateUploadedBy === 'number' ? Number(row.templateUploadedBy) : null,
       isRequired: Number(row.isRequired || 0) === 1,
       sortOrder: Number(row.sortOrder || 0),
       isActive: Number(row.isActive || 0) === 1,
@@ -132,6 +151,10 @@ export async function listDevelopmentRequiredDocumentsOrEmpty(
         documentCode: String(row.documentCode),
         documentLabel: String(row.documentLabel || ''),
         category: 'client_required_document',
+        templateFileUrl: null,
+        templateFileName: null,
+        templateUploadedAt: null,
+        templateUploadedBy: null,
         isRequired: Number(row.isRequired || 0) === 1,
         sortOrder: Number(row.sortOrder || 0),
         isActive: Number(row.isActive || 0) === 1,

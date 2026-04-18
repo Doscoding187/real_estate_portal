@@ -39,6 +39,8 @@ export type PartnerProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    templateFileUrl: string | null;
+    templateFileName: string | null;
     isRequired: boolean;
     sortOrder: number;
   }>;
@@ -301,6 +303,8 @@ export async function listPartnerProgramTerms(
           templateId: Number(template.id),
           documentCode: String(template.documentCode),
           documentLabel: String(template.documentLabel || ''),
+          templateFileUrl: template.templateFileUrl || null,
+          templateFileName: template.templateFileName || null,
           isRequired: Boolean(template.isRequired),
           sortOrder: Number(template.sortOrder || 0),
         })),
