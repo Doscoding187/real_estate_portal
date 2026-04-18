@@ -123,170 +123,23 @@ export const priceInsightsRouter = router({
         return { tabs: [], summariesByTabId: {}, topChildrenByTabId: {} };
       }
 
-      // 2) Fetch Summaries for each Tab
-      const summariesByTabId: Record<
-        string,
-        { medianPrice: number | null; avgPrice: number | null; listingCount: number | null }
-      > = {};
-
+      // 2 & 3) Fetch Summaries and Top Children using Live Data
       try {
-        if (tabs.length > 0) {
-          if (level === 'national') {
-            // National level summary: Aggregate city_price_analytics grouped by provinceId
-            const result = await db.execute(sql`
-              SELECT
-                provinceId AS id,
-                AVG(currentAvgPrice) AS avg_price,
-                AVG(currentMedianPrice) AS median_price,
-                SUM(activeListings) AS listing_count
-              FROM city_price_analytics
-              GROUP BY provinceId
-            `);
-            const rows = extractRows(result);
-
-            for (const row of rows) {
-              summariesByTabId[String(row.id)] = {
-                medianPrice: row.median_price != null ? Number(row.median_price) : null,
-                avgPrice: row.avg_price != null ? Number(row.avg_price) : null,
-                listingCount: row.listing_count != null ? Number(row.listing_count) : null,
-              };
-            }
-          }
-
-          if (level === 'province') {
-            // Province level summary: Direct selection from city_price_analytics for specific cities
-            const result = await db.execute(sql`
-              SELECT
-                cityId AS id,
-                currentAvgPrice AS avg_price,
-                currentMedianPrice AS median_price,
-                activeListings AS listing_count
-              FROM city_price_analytics
-              WHERE provinceId = ${parentId}
-            `);
-            const rows = extractRows(result);
-
-            for (const row of rows) {
-              summariesByTabId[String(row.id)] = {
-                medianPrice: row.median_price != null ? Number(row.median_price) : null,
-                avgPrice: row.avg_price != null ? Number(row.avg_price) : null,
-                listingCount: row.listing_count != null ? Number(row.listing_count) : null,
-              };
-            }
-          }
-
-          if (level === 'city') {
-            // City level summary: Direct selection from suburb_price_analytics for specific suburbs
-            const result = await db.execute(sql`
-              SELECT
-                suburbId AS id,
-                currentAvgPrice AS avg_price,
-                currentMedianPrice AS median_price,
-                currentPriceCount AS listing_count
-              FROM suburb_price_analytics
-              WHERE cityId = ${parentId}
-            `);
-            const rows = extractRows(result);
-
-            for (const row of rows) {
-              summariesByTabId[String(row.id)] = {
-                medianPrice: row.median_price != null ? Number(row.median_price) : null,
-                avgPrice: row.avg_price != null ? Number(row.avg_price) : null,
-                listingCount: row.listing_count != null ? Number(row.listing_count) : null,
-              };
-            }
-          }
-        }
+        const { summariesByTabId, topChildrenByTabId } = await priceInsightsService.getHierarchyAggregations(level, parentId);
+        
+        return {
+          tabs,
+          summariesByTabId,
+          topChildrenByTabId,
+        };
       } catch (error) {
-        console.error('Error fetching summaries:', error);
-        // Continue with partial data
+         console.error('Error fetching aggregation insights:', error);
+         return {
+          tabs,
+          summariesByTabId: {},
+          topChildrenByTabId: {},
+        };
       }
-
-      // 3) Fetch Top Children (Explore) for each Tab
-      const topChildrenByTabId: Record<
-        string,
-        Array<{ id: number; name: string; medianPrice: number | null }>
-      > = {};
-
-      try {
-        if (level === 'national') {
-          // National level -> Show top Cities for each Province
-          // We join city_price_analytics with cities
-          const result = await db.execute(sql`
-            SELECT * FROM (
-              SELECT
-                c.id,
-                c.name,
-                cpa.provinceId AS tab_id,
-                cpa.currentMedianPrice AS median_price,
-                ROW_NUMBER() OVER (
-                  PARTITION BY cpa.provinceId
-                  ORDER BY cpa.currentMedianPrice DESC
-                ) AS rn
-              FROM city_price_analytics cpa
-              JOIN cities c ON c.id = cpa.cityId
-              WHERE cpa.currentMedianPrice IS NOT NULL
-            ) t
-            WHERE t.rn <= 5
-          `);
-          const rows = extractRows(result);
-
-          for (const row of rows) {
-            const key = String(row.tab_id);
-            if (!topChildrenByTabId[key]) topChildrenByTabId[key] = [];
-
-            topChildrenByTabId[key].push({
-              id: Number(row.id),
-              name: row.name,
-              medianPrice: row.median_price != null ? Number(row.median_price) : null,
-            });
-          }
-        }
-
-        if (level === 'province') {
-          // Province level -> Show top Suburbs for each City
-          // We join suburb_price_analytics with suburbs
-          const result = await db.execute(sql`
-            SELECT * FROM (
-              SELECT
-                s.id,
-                s.name,
-                spa.cityId AS tab_id,
-                spa.currentMedianPrice AS median_price,
-                ROW_NUMBER() OVER (
-                  PARTITION BY spa.cityId
-                  ORDER BY spa.currentMedianPrice DESC
-                ) AS rn
-              FROM suburb_price_analytics spa
-              JOIN suburbs s ON s.id = spa.suburbId
-              WHERE spa.provinceId = ${parentId}
-                AND spa.currentMedianPrice IS NOT NULL
-            ) t
-            WHERE t.rn <= 5
-          `);
-          const rows = extractRows(result);
-
-          for (const row of rows) {
-            const key = String(row.tab_id);
-            if (!topChildrenByTabId[key]) topChildrenByTabId[key] = [];
-
-            topChildrenByTabId[key].push({
-              id: Number(row.id),
-              name: row.name,
-              medianPrice: row.median_price != null ? Number(row.median_price) : null,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching top children:', error);
-        // Continue
-      }
-
-      return {
-        tabs,
-        summariesByTabId,
-        topChildrenByTabId,
-      };
     }),
 
   /**
@@ -304,88 +157,14 @@ export const priceInsightsRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const { cityId, provinceId, limit } = input;
-      const db = await getDb();
-      if (!db) return [];
-
       try {
-        // Base query to fetch suburb analytics with location details
-        // Note: propertyType and listingType filters are placeholders
-        // as the current schema aggregates these into the main analytics table
-        // or would require a more complex join if they were separate.
-        // For now, we return the main aggregated stats.
-
-        let whereClause = sql`spa.currentMedianPrice IS NOT NULL`;
-
-        if (cityId) {
-          whereClause = sql`${whereClause} AND spa.cityId = ${cityId}`;
-        } else if (provinceId) {
-          whereClause = sql`${whereClause} AND spa.provinceId = ${provinceId}`;
-        }
-
-        // If neither is strictly selected, we might want to limit to a default province (e.g., Gauteng)
-        // or just return top suburbs nationally.
-        // Let's default to not filtering further if nothing provided (National View).
-
-        const result = await db.execute(sql`
-          SELECT
-            spa.suburbId,
-            s.name as suburbName,
-            c.name as cityName,
-            p.name as provinceName,
-            spa.currentAvgPrice,
-            spa.currentMedianPrice,
-            spa.sixMonthGrowthPercent,
-            spa.trendingDirection,
-            spa.trendConfidence,
-            spa.currentPriceCount as propertyCount
-          FROM suburb_price_analytics spa
-          JOIN suburbs s ON s.id = spa.suburbId
-          JOIN cities c ON c.id = spa.cityId
-          JOIN provinces p ON p.id = spa.provinceId
-          WHERE ${whereClause}
-          ORDER BY spa.currentMedianPrice DESC
-          LIMIT ${limit}
-        `);
-        const rows = extractRows(result);
-
-        return rows.map(row => {
-          const medianPrice = Number(row.currentMedianPrice || 0);
-          const growth = Number(row.sixMonthGrowthPercent || 0);
-
-          // logical categorization
-          let priceCategory = 'Mid-Range';
-          if (medianPrice < 1000000) priceCategory = 'Budget';
-          else if (medianPrice < 2000000) priceCategory = 'Affordable';
-          else if (medianPrice < 4000000) priceCategory = 'Mid-Range';
-          else if (medianPrice < 8000000) priceCategory = 'High-End';
-          else priceCategory = 'Premium';
-
-          // Color logic for heatmap
-          let color = '#F59E0B'; // Amber default
-          if (priceCategory === 'Budget') color = '#10B981';
-          if (priceCategory === 'Affordable') color = '#34D399';
-          if (priceCategory === 'High-End') color = '#EF4444';
-          if (priceCategory === 'Premium') color = '#7C2D12';
-
-          return {
-            suburbId: Number(row.suburbId),
-            suburbName: row.suburbName as string,
-            cityName: row.cityName as string,
-            province: row.provinceName as string,
-            averagePrice: Number(row.currentAvgPrice || 0),
-            medianPrice: medianPrice,
-            sixMonthGrowth: growth,
-            trendingDirection: (row.trendingDirection || 'stable') as 'up' | 'down' | 'stable',
-            trendConfidence: Number(row.trendConfidence || 0),
-            propertyCount: Number(row.propertyCount || 0),
-            heatmapIntensity: medianPrice, // simplified intensity
-            color: color,
-            priceCategory: priceCategory,
-            growthInsight:
-              growth > 5 ? 'Strong growth area' : growth < -2 ? 'Cooling market' : 'Stable market',
-          };
-        });
+        const results = await priceInsightsService.getSuburbPriceHeatmap(input);
+        return results.map(r => ({
+          ...r,
+          sixMonthGrowth: 0,
+          trendConfidence: r.confidence,
+          growthInsight: 'Live metrics aggregation mode active'
+        }));
       } catch (error) {
         console.error('Error fetching heatmap data:', error);
         return [];
