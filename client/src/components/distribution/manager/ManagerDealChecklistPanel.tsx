@@ -170,7 +170,7 @@ export function ManagerDealChecklistPanel({
       <Card>
         <CardHeader>
           <CardTitle>Document Checklist</CardTitle>
-          <CardDescription>Update received and verification status per required template.</CardDescription>
+          <CardDescription>Update received and verification status per required document.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2 rounded border bg-slate-50 p-2">
@@ -205,7 +205,7 @@ export function ManagerDealChecklistPanel({
                       rel="noreferrer"
                       className="text-xs text-blue-600 hover:underline"
                     >
-                      Download template
+                      Download document
                       {document.templateFileName ? ` (${document.templateFileName})` : ''}
                     </a>
                   ) : null}

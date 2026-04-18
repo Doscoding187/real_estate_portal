@@ -62,7 +62,8 @@ export function ProgramRequirementsDialog({
                     rel="noreferrer"
                     className="text-xs text-blue-600 hover:underline"
                   >
-                    Download template{document.templateFileName ? ` (${document.templateFileName})` : ''}
+                    Download document
+                    {document.templateFileName ? ` (${document.templateFileName})` : ''}
                   </a>
                 ) : null}
               </div>
