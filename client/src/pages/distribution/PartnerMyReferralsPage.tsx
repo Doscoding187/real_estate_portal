@@ -8,6 +8,50 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
+const JOURNEY_STAGES = [
+  'viewing_scheduled',
+  'viewing_completed',
+  'application_submitted',
+  'contract_signed',
+  'bond_approved',
+  'commission_pending',
+  'commission_paid',
+] as const;
+
+function normalizeStage(stage: string | null | undefined) {
+  const value = String(stage || '').toLowerCase();
+  if (!value) return 'viewing_scheduled';
+  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
+  return value;
+}
+
+function getStageLabel(stage: string | null | undefined) {
+  const normalized = normalizeStage(stage);
+  return normalized
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function getStageProgress(stage: string | null | undefined) {
+  const normalized = normalizeStage(stage);
+  const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
+  if (index < 0) return 0;
+  return Math.round(((index + 1) / JOURNEY_STAGES.length) * 100);
+}
+
+function getNextActionLabel(stage: string | null | undefined, docProgress?: { requiredCount: number; verifiedRequiredCount: number }) {
+  const normalized = normalizeStage(stage);
+  if (normalized === 'commission_paid') return 'View payout';
+  if (normalized === 'commission_pending') return 'Track payout';
+  if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Prepare payout';
+  if (normalized === 'application_submitted') {
+    if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) return 'Upload missing docs';
+    return 'Await approval';
+  }
+  if (normalized === 'cancelled') return 'Review outcome';
+  return 'Move to next stage';
+}
+
 export default function PartnerMyReferralsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -29,6 +73,25 @@ export default function PartnerMyReferralsPage() {
       enabled: isAuthenticated,
       retry: false,
     },
+  );
+  const commissionsQuery = trpc.distribution.referrer.myCommissionEntries.useQuery(
+    { limit: 200 },
+    {
+      enabled: isAuthenticated,
+      retry: false,
+    },
+  );
+
+  const commissionSummary = (commissionsQuery.data || []).reduce(
+    (acc, row: any) => {
+      const status = String(row.entryStatus || '').toLowerCase();
+      const amount = Number(row.commissionAmount || 0);
+      if (status === 'pending') acc.pending += amount;
+      if (status === 'approved') acc.approved += amount;
+      if (status === 'paid') acc.paid += amount;
+      return acc;
+    },
+    { pending: 0, approved: 0, paid: 0 },
   );
 
   if (loading || referralsQuery.isLoading) {
@@ -77,6 +140,35 @@ export default function PartnerMyReferralsPage() {
           </CardContent>
         </Card>
 
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Journey to Commission</CardTitle>
+            <CardDescription>
+              Every referral moves from viewing to application to payout.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded border bg-[#faf9f6] p-3">
+              <p className="text-xs text-slate-500">Pending</p>
+              <p className="text-lg font-semibold text-amber-700">
+                R {Math.round(commissionSummary.pending).toLocaleString('en-ZA')}
+              </p>
+            </div>
+            <div className="rounded border bg-[#faf9f6] p-3">
+              <p className="text-xs text-slate-500">Approved</p>
+              <p className="text-lg font-semibold text-blue-700">
+                R {Math.round(commissionSummary.approved).toLocaleString('en-ZA')}
+              </p>
+            </div>
+            <div className="rounded border bg-[#faf9f6] p-3">
+              <p className="text-xs text-slate-500">Paid</p>
+              <p className="text-lg font-semibold text-green-700">
+                R {Math.round(commissionSummary.paid).toLocaleString('en-ZA')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {referralsQuery.error ? (
           <Card>
             <CardContent className="py-6 text-sm text-red-600">{referralsQuery.error.message}</CardContent>
@@ -98,13 +190,22 @@ export default function PartnerMyReferralsPage() {
                   <div>
                     <p className="font-medium">{item.development.name}</p>
                     <p className="text-xs text-slate-500">Deal #{item.dealId}</p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Next action: {getNextActionLabel(item.status, item.docProgress)}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{item.status}</Badge>
+                    <Badge variant="secondary">{getStageLabel(item.status)}</Badge>
                     <Badge variant="outline">
                       {item.docProgress.verifiedRequiredCount}/{item.docProgress.requiredCount} docs
                     </Badge>
                   </div>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded bg-slate-100">
+                  <div
+                    className="h-full rounded bg-blue-600"
+                    style={{ width: `${getStageProgress(item.status)}%` }}
+                  />
                 </div>
               </button>
             ))}
