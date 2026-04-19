@@ -14,6 +14,9 @@ import {
 import { Button } from '@/components/ui/button';
 
 const ALL_FILTER_VALUE = 'all';
+const BROCHURE_BOND_YEARS = 20;
+const BROCHURE_ANNUAL_INTEREST_RATE = 11.75;
+const BROCHURE_MIN_INCOME_RATIO = 0.3;
 
 function formatCurrency(value: number | null | undefined) {
   const numeric = Number(value || 0);
@@ -41,29 +44,71 @@ function getOpportunityLabel(item: any) {
   return 'Preview stock';
 }
 
+function estimateMonthlyInstallment(price: number | null | undefined) {
+  const principal = Number(price || 0);
+  if (!Number.isFinite(principal) || principal <= 0) return null;
+
+  const monthlyRate = BROCHURE_ANNUAL_INTEREST_RATE / 12 / 100;
+  const months = BROCHURE_BOND_YEARS * 12;
+  if (!Number.isFinite(monthlyRate) || monthlyRate <= 0 || months <= 0) return null;
+
+  const growth = Math.pow(1 + monthlyRate, months);
+  const payment = principal * ((monthlyRate * growth) / (growth - 1));
+  if (!Number.isFinite(payment) || payment <= 0) return null;
+  return payment;
+}
+
+function estimateQualifyingIncome(monthlyInstallment: number | null | undefined) {
+  const monthly = Number(monthlyInstallment || 0);
+  if (!Number.isFinite(monthly) || monthly <= 0) return null;
+  const income = monthly / BROCHURE_MIN_INCOME_RATIO;
+  if (!Number.isFinite(income) || income <= 0) return null;
+  return income;
+}
+
+function pickRepresentativePrice(priceFrom: number | null | undefined, priceTo: number | null | undefined) {
+  const from = Number(priceFrom || 0);
+  const to = Number(priceTo || 0);
+  const hasFrom = Number.isFinite(from) && from > 0;
+  const hasTo = Number.isFinite(to) && to > 0;
+  if (hasFrom) return from;
+  if (hasTo) return to;
+  return null;
+}
+
 function buildBrochureText(item: any) {
   const location = [item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable';
+  const unitTypes = Array.isArray(item.unitTypes) ? item.unitTypes : [];
   const lines = [
     `${item.developmentName}`,
     `${location}`,
     '',
     `Price Range: ${formatCurrencyRange(item.priceFrom, item.priceTo)}`,
-    `Commission: ${item.computed?.commissionDisplay || 'Commission to be confirmed'}`,
-    `Payout: ${item.computed?.payoutDisplay || 'Payout to be confirmed'}`,
     '',
-    'Unit Types:',
+    'Unit Options:',
   ];
 
-  const unitTypes = Array.isArray(item.unitTypes) ? item.unitTypes : [];
   if (!unitTypes.length) {
     lines.push('- Unit types available on request');
   } else {
     for (const unit of unitTypes.slice(0, 10)) {
-      lines.push(`- ${unit.name}: ${formatCurrencyRange(unit.priceFrom, unit.priceTo)}`);
+      const referencePrice = pickRepresentativePrice(unit.priceFrom, unit.priceTo);
+      const monthlyInstallment = estimateMonthlyInstallment(referencePrice);
+      const qualifyingIncome = estimateQualifyingIncome(monthlyInstallment);
+      lines.push(
+        `- ${unit.name}: ${formatCurrencyRange(unit.priceFrom, unit.priceTo)} | Est. installment ${formatCurrency(
+          monthlyInstallment,
+        )} | Qualifying income ${formatCurrency(qualifyingIncome)}`,
+      );
     }
   }
 
-  lines.push('', 'Contact your Property Listify partner manager for full brochure and stock updates.');
+  lines.push(
+    '',
+    `Estimate assumptions: ${BROCHURE_BOND_YEARS}-year bond at ${BROCHURE_ANNUAL_INTEREST_RATE}% annual interest. Income assumes repayment is ${Math.round(
+      BROCHURE_MIN_INCOME_RATIO * 100,
+    )}% of gross income.`,
+  );
   return lines.join('\n');
 }
 
@@ -330,8 +375,11 @@ export default function PartnerDevelopmentsPage() {
                 <p className="font-mono text-[14px] font-semibold text-[#1a1a18]">
                   {formatCurrencyRange(item.priceFrom, item.priceTo)}
                 </p>
-                <p className="text-[11px] text-[#1a7a40]">
-                  {item.computed?.commissionDisplay || 'Commission available on request'}
+                <p className="text-[11px] text-[#6b6a64]">
+                  Estimated installment from{' '}
+                  {formatCurrency(
+                    estimateMonthlyInstallment(pickRepresentativePrice(item.priceFrom, item.priceTo)),
+                  )}
                 </p>
 
                 <p className="text-[10px] text-[#6b6a64]">
@@ -415,44 +463,79 @@ export default function PartnerDevelopmentsPage() {
                   </p>
                 </div>
                 <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Commission</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Estimated Monthly Installment
+                  </p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {brochureItem.computed?.commissionDisplay || 'Commission available on request'}
+                    {formatCurrency(
+                      estimateMonthlyInstallment(
+                        pickRepresentativePrice(brochureItem.priceFrom, brochureItem.priceTo),
+                      ),
+                    )}
                   </p>
                 </div>
               </div>
 
               <div className="rounded border p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Unit Types</p>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Unit Options</p>
                 {Array.isArray(brochureItem.unitTypes) && brochureItem.unitTypes.length ? (
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    {brochureItem.unitTypes.slice(0, 8).map((unit: any) => (
-                      <div key={unit.name} className="rounded border bg-slate-50 p-2">
-                        <p className="text-sm font-medium text-slate-900">{unit.name}</p>
-                        <p className="text-xs text-slate-600">
-                          {formatCurrencyRange(unit.priceFrom, unit.priceTo)}
-                        </p>
-                      </div>
-                    ))}
+                  <div className="mt-2 overflow-hidden rounded border">
+                    <table className="w-full border-collapse text-xs">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr>
+                          <th className="border-b px-2 py-2 text-left font-semibold">Unit Type</th>
+                          <th className="border-b px-2 py-2 text-left font-semibold">Price</th>
+                          <th className="border-b px-2 py-2 text-left font-semibold">
+                            Est. Installment
+                          </th>
+                          <th className="border-b px-2 py-2 text-left font-semibold">
+                            Qualifying Income
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {brochureItem.unitTypes.slice(0, 10).map((unit: any) => {
+                          const referencePrice = pickRepresentativePrice(unit.priceFrom, unit.priceTo);
+                          const monthlyInstallment = estimateMonthlyInstallment(referencePrice);
+                          const qualifyingIncome = estimateQualifyingIncome(monthlyInstallment);
+                          return (
+                            <tr key={unit.name} className="bg-white text-slate-800">
+                              <td className="border-b px-2 py-2">{unit.name || 'Unit'}</td>
+                              <td className="border-b px-2 py-2">
+                                {formatCurrencyRange(unit.priceFrom, unit.priceTo)}
+                              </td>
+                              <td className="border-b px-2 py-2">
+                                {formatCurrency(monthlyInstallment)}
+                              </td>
+                              <td className="border-b px-2 py-2">
+                                {formatCurrency(qualifyingIncome)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
-                  <p className="mt-2 text-sm text-slate-600">Unit type details available on request.</p>
+                  <p className="mt-2 text-sm text-slate-600">Unit option details available on request.</p>
                 )}
               </div>
 
               <div className="rounded border p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Referral Notes</p>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Estimate Assumptions</p>
                 <p className="mt-2 text-sm text-slate-700">
-                  {brochureItem.computed?.payoutDisplay || 'Payout and milestone details on request.'}
+                  {BROCHURE_BOND_YEARS}-year bond at {BROCHURE_ANNUAL_INTEREST_RATE}% annual
+                  interest. Qualifying income assumes repayment is{' '}
+                  {Math.round(BROCHURE_MIN_INCOME_RATIO * 100)}% of gross monthly income.
                 </p>
-                <p className="mt-1 text-sm text-slate-700">
-                  {brochureItem.computed?.requiredDocsSummary || 'Requirements shared on submission.'}
+                <p className="mt-1 text-xs text-slate-600">
+                  Figures are indicative and subject to lender approval.
                 </p>
               </div>
 
               {Array.isArray(brochureItem.sourceDocuments) && brochureItem.sourceDocuments.length ? (
                 <div className="rounded border p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Source Documents</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Brochure Files</p>
                   <div className="mt-2 grid gap-2">
                     {brochureItem.sourceDocuments.map((doc: any) => (
                       <div
@@ -481,11 +564,7 @@ export default function PartnerDevelopmentsPage() {
               ) : null}
 
               <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => downloadBrochure(brochureItem)}
-                  className="gap-1"
-                >
+                <Button variant="outline" onClick={() => downloadBrochure(brochureItem)} className="gap-1">
                   <Download className="h-4 w-4" />
                   Download Brochure
                 </Button>
