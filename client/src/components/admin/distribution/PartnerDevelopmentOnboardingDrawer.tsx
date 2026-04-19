@@ -127,6 +127,19 @@ const developerDocumentCodeOptions: Array<{
   { value: 'custom', label: 'Custom Developer Document' },
 ];
 
+const documentCodeLabelMap: Record<RequiredDocumentDraft['documentCode'], string> = {
+  id_document: 'ID Document',
+  proof_of_address: 'Proof of Address',
+  proof_of_income: 'Payslips / Proof of Income',
+  bank_statement: 'Bank Statement',
+  pre_approval: 'Pre-Approval',
+  signed_offer_to_purchase: 'Offer to Purchase',
+  sale_agreement: 'Sale Agreement',
+  attorney_instruction_letter: 'Attorney Instruction Letter',
+  transfer_documents: 'Transfer Documents',
+  custom: 'Custom Document',
+};
+
 const blockerSectionMap: Record<string, string> = {
   PROGRAM_MISSING: 'section-program',
   PROGRAM_INACTIVE: 'section-program',
@@ -175,6 +188,15 @@ function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramRead
     },
     { enabled: 0, readyToEnable: 0, blocked: 0, loading: 0 },
   );
+}
+
+function toFileBaseName(filename: string | null | undefined) {
+  if (!filename) return '';
+  const trimmed = String(filename).trim();
+  if (!trimmed) return '';
+  const withoutPath = trimmed.split(/[\\/]/).pop() || trimmed;
+  const withoutExt = withoutPath.replace(/\.[^.]+$/, '');
+  return withoutExt.trim();
 }
 
 export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadiness | null }) {
@@ -408,6 +430,18 @@ function DevelopmentProgramConfigPanel({
     ]);
   }
 
+  function resolveDocumentLabel(document: RequiredDocumentDraft) {
+    const typedLabel = document.documentLabel.trim();
+    if (typedLabel) return typedLabel;
+
+    if (document.category === 'developer_document') {
+      const fileLabel = toFileBaseName(document.templateFileName);
+      if (fileLabel) return fileLabel;
+    }
+
+    return documentCodeLabelMap[document.documentCode] || 'Custom Document';
+  }
+
   async function handleSourceDocumentUpload(index: number, file: File | null) {
     if (!file) return;
     setUploadingDocumentIndex(index);
@@ -434,6 +468,7 @@ function DevelopmentProgramConfigPanel({
         ...item,
         templateFileUrl: publicUrl,
         templateFileName: file.name,
+        documentLabel: item.documentLabel.trim() || toFileBaseName(file.name),
       }));
       toast.success('Source document uploaded.');
     } catch (error: any) {
@@ -627,7 +662,7 @@ function DevelopmentProgramConfigPanel({
         id: preserveIds ? document.id : undefined,
         category: document.category,
         documentCode: document.documentCode,
-        documentLabel: document.documentLabel.trim() || 'Custom Document',
+        documentLabel: resolveDocumentLabel(document),
         templateFileUrl:
           document.category === 'developer_document'
             ? document.templateFileUrl?.trim() || null
@@ -664,7 +699,7 @@ function DevelopmentProgramConfigPanel({
       documents: documents.map((document, index) => ({
         category: document.category,
         documentCode: document.documentCode,
-        documentLabel: document.documentLabel.trim() || 'Custom Document',
+        documentLabel: resolveDocumentLabel(document),
         templateFileUrl:
           document.category === 'developer_document'
             ? document.templateFileUrl?.trim() || null
