@@ -36,7 +36,7 @@ function getStageLabel(stage: string | null | undefined) {
 function getStageProgress(stage: string | null | undefined) {
   const normalized = normalizeStage(stage);
   const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
-  if (index < 0) return 0;
+  if (index < 0) return { index: 0, percent: 0 };
   return { index, percent: Math.round(((index + 1) / JOURNEY_STAGES.length) * 100) };
 }
 
