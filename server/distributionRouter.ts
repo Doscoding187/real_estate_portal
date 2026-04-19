@@ -6301,7 +6301,7 @@ const partnerDistributionRouter = router({
 
       return await listPartnerProgramTerms({
         brandProfileId: input?.brandProfileId,
-        includeDisabled: false,
+        includeDisabled: true,
       });
     }),
 
