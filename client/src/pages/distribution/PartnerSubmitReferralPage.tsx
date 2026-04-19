@@ -78,31 +78,40 @@ export default function PartnerSubmitReferralPage() {
     },
   });
 
-  const eligibleItems = eligibleDevelopmentsQuery.data?.items || [];
+  const availableItems = eligibleDevelopmentsQuery.data?.items || [];
+  const referralReadyItems = useMemo(
+    () =>
+      availableItems.filter(
+        item => Boolean(item.program?.isActive) && Boolean(item.program?.isReferralEnabled),
+      ),
+    [availableItems],
+  );
 
   useEffect(() => {
-    if (!eligibleItems.length) {
+    if (!availableItems.length) {
       setSelectedDevelopmentId(null);
       return;
     }
     if (!selectedDevelopmentId) {
-      setSelectedDevelopmentId(Number(eligibleItems[0].developmentId));
+      const defaultItem = referralReadyItems[0] || availableItems[0];
+      setSelectedDevelopmentId(Number(defaultItem.developmentId));
       return;
     }
-    const stillAvailable = eligibleItems.some(
+    const stillAvailable = availableItems.some(
       item => Number(item.developmentId) === Number(selectedDevelopmentId),
     );
     if (!stillAvailable) {
-      setSelectedDevelopmentId(Number(eligibleItems[0].developmentId));
+      const defaultItem = referralReadyItems[0] || availableItems[0];
+      setSelectedDevelopmentId(Number(defaultItem.developmentId));
     }
-  }, [eligibleItems, selectedDevelopmentId]);
+  }, [availableItems, referralReadyItems, selectedDevelopmentId]);
 
   const selectedDevelopment = useMemo(
     () =>
-      eligibleItems.find(
+      availableItems.find(
         item => Number(item.developmentId) === Number(selectedDevelopmentId || 0),
       ) || null,
-    [eligibleItems, selectedDevelopmentId],
+    [availableItems, selectedDevelopmentId],
   );
 
   if (loading || eligibleDevelopmentsQuery.isLoading) {
@@ -120,7 +129,7 @@ export default function PartnerSubmitReferralPage() {
           <CardHeader>
             <CardTitle>Submit Referral</CardTitle>
             <CardDescription>
-              Select an eligible development, review payout rules, and submit your referral.
+              Choose a development, capture buyer details, and submit quickly.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -133,24 +142,50 @@ export default function PartnerSubmitReferralPage() {
           </Card>
         ) : null}
 
-        {!eligibleDevelopmentsQuery.error && !eligibleItems.length ? (
+        {!eligibleDevelopmentsQuery.error && !availableItems.length ? (
           <Card className="mb-4">
-            <CardContent className="py-6 text-sm text-slate-500">
-              No referral-enabled developments are available yet.
+            <CardContent className="space-y-3 py-6">
+              <p className="text-sm text-slate-700">
+                We could not find developments linked to your referral network yet.
+              </p>
+              <p className="text-xs text-slate-500">
+                You can still prepare your buyer and return in seconds once stock sync completes.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => setLocation('/distribution/partner/developments')}
+                >
+                  Browse Developments
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setLocation('/distribution/partner/accelerator')}
+                >
+                  Run Pre-Qualification
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : null}
 
-        {eligibleItems.length ? (
+        {availableItems.length ? (
           <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
             <Card className="h-fit">
               <CardHeader>
-                <CardTitle className="text-base">Eligible Developments</CardTitle>
+                <CardTitle className="text-base">Available Developments</CardTitle>
+                <CardDescription>
+                  {referralReadyItems.length} ready now, {availableItems.length - referralReadyItems.length}{' '}
+                  pending activation.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {eligibleItems.map(item => {
+                {availableItems.map(item => {
                   const isSelected =
                     Number(item.developmentId) === Number(selectedDevelopmentId || 0);
+                  const isReady =
+                    Boolean(item.program?.isActive) && Boolean(item.program?.isReferralEnabled);
                   return (
                     <button
                       key={item.developmentId}
@@ -165,7 +200,20 @@ export default function PartnerSubmitReferralPage() {
                         setDuplicateDealId(null);
                       }}
                     >
-                      <p className="font-semibold">{item.developmentName}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold">{item.developmentName}</p>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : isReady
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {isReady ? 'Ready' : 'Setup'}
+                        </span>
+                      </div>
                       <p className={`text-xs ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}>
                         {[item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable'}
                       </p>
@@ -188,6 +236,14 @@ export default function PartnerSubmitReferralPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {selectedDevelopment &&
+                  (!selectedDevelopment.program?.isActive ||
+                    !selectedDevelopment.program?.isReferralEnabled) ? (
+                    <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                      This development is still completing referral activation. You can capture buyer
+                      details now and submit as soon as activation is complete.
+                    </div>
+                  ) : null}
                   {assessmentId ? (
                     <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
                       This referral will attach affordability assessment <code>{assessmentId}</code>.
@@ -222,7 +278,10 @@ export default function PartnerSubmitReferralPage() {
 
                   {eligibilityBlockers.length ? (
                     <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                      <p className="font-semibold">Submission blocked</p>
+                      <p className="font-semibold">Submission needs one more config step</p>
+                      <p className="mt-1 text-xs text-red-600">
+                        You can still continue preparing the buyer profile while this is resolved.
+                      </p>
                       <ul className="mt-1 list-disc space-y-1 pl-5">
                         {eligibilityBlockers.map(reason => (
                           <li key={reason}>{reason}</li>
