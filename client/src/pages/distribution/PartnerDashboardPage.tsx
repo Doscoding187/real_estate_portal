@@ -136,6 +136,18 @@ function formatStageLabel(stage: string) {
     .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function normalizePipelineStage(stage: unknown) {
+  const value = String(stage || '').toLowerCase();
+  if (!value) return 'viewing_scheduled';
+  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
+  return value;
+}
+
+function formatPercent(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return '0%';
+  return `${Math.round(value * 100)}%`;
+}
+
 function getMatchConfidence(bestFitRatio: number): 'Strong' | 'Medium' | 'Low' {
   if (bestFitRatio >= 0.85) return 'Strong';
   if (bestFitRatio >= 0.65) return 'Medium';
@@ -311,6 +323,7 @@ export default function PartnerDashboardPage() {
       return requiredCount > verifiedCount;
     });
   }, [referralsQuery.data?.items]);
+  const referralItems = referralsQuery.data?.items || [];
   const atRiskReferrals = useMemo(() => {
     const items = referralsQuery.data?.items || [];
     return items.filter((item: any) => Boolean(item.journey?.atRisk));
@@ -361,6 +374,40 @@ export default function PartnerDashboardPage() {
   const unlockProgress = Math.max(0, Math.min(1, paidDealsCount / unlockTargetDeals));
   const unlockDealsRemaining = Math.max(0, unlockTargetDeals - paidDealsCount);
   const nextUnlockAmount = averageCommissionAmount;
+
+  const applicationOrBeyondCount = useMemo(() => {
+    const convertedStages = new Set([
+      'application_submitted',
+      'contract_signed',
+      'bond_approved',
+      'commission_pending',
+      'commission_paid',
+    ]);
+    return referralItems.filter((item: any) =>
+      convertedStages.has(normalizePipelineStage(item.status)),
+    ).length;
+  }, [referralItems]);
+
+  const paidReferralCount = useMemo(
+    () =>
+      referralItems.filter(
+        (item: any) => normalizePipelineStage(item.status) === 'commission_paid',
+      ).length,
+    [referralItems],
+  );
+
+  const submissionsLast7Days = useMemo(() => {
+    const now = Date.now();
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000;
+    return referralItems.filter((item: any) => {
+      const created = toDate(item.createdAt);
+      return Boolean(created && created.getTime() >= cutoff);
+    }).length;
+  }, [referralItems]);
+
+  const submitToApplicationRate =
+    referralItems.length > 0 ? applicationOrBeyondCount / referralItems.length : 0;
+  const submitToPaidRate = referralItems.length > 0 ? paidReferralCount / referralItems.length : 0;
 
   const stockRows = useMemo<AccessStockRow[]>(() => {
     const grouped = new Map<number, AccessStockRow>();
@@ -876,6 +923,45 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card className="border-[#1a1a18]/12 bg-white p-5 lg:col-span-2">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold text-[#1a1a18]">Conversion Funnel</h3>
+              <button
+                type="button"
+                className="text-[12px] text-[#1a5bbf] hover:underline"
+                onClick={() => setLocation('/distribution/partner/referrals')}
+              >
+                Drill into pipeline -
+              </button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Stock Available</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a1a18]">{stockRows.length}</p>
+              </div>
+              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Submitted Deals</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a1a18]">{referralItems.length}</p>
+              </div>
+              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">App+ Conversion</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a5bbf]">
+                  {formatPercent(submitToApplicationRate)}
+                </p>
+              </div>
+              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Paid Conversion</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a7a40]">
+                  {formatPercent(submitToPaidRate)}
+                </p>
+              </div>
+              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Submissions (7d)</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a1a18]">{submissionsLast7Days}</p>
+              </div>
+            </div>
+          </Card>
+
           <Card className="border-[#1a1a18]/12 bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-[13px] font-semibold text-[#1a1a18]">Your Deals in Motion</h3>
