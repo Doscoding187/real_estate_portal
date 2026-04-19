@@ -112,6 +112,108 @@ function buildBrochureText(item: any) {
   return lines.join('\n');
 }
 
+function sanitizePdfText(value: string) {
+  return value.replace(/[^\x20-\x7E]/g, '?');
+}
+
+function escapePdfText(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function wrapText(value: string, maxLength: number) {
+  const text = value.trim();
+  if (!text) return [''];
+  if (text.length <= maxLength) return [text];
+
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxLength) {
+      current = next;
+    } else {
+      if (current) lines.push(current);
+      if (word.length > maxLength) {
+        for (let i = 0; i < word.length; i += maxLength) {
+          lines.push(word.slice(i, i + maxLength));
+        }
+        current = '';
+      } else {
+        current = word;
+      }
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines.length ? lines : [''];
+}
+
+function createSimplePdfBlob(text: string) {
+  const rawLines = text.split('\n');
+  const wrappedLines = rawLines.flatMap(line => wrapText(sanitizePdfText(line), 95));
+  const linesPerPage = 48;
+  const pages: string[][] = [];
+
+  for (let i = 0; i < wrappedLines.length; i += linesPerPage) {
+    pages.push(wrappedLines.slice(i, i + linesPerPage));
+  }
+  if (!pages.length) pages.push(['']);
+
+  const objects: string[] = [];
+  const catalogObj = 1;
+  const pagesObj = 2;
+  let nextObj = 3;
+  const pageObjs: number[] = [];
+  const contentObjs: number[] = [];
+
+  for (let i = 0; i < pages.length; i += 1) {
+    pageObjs.push(nextObj++);
+    contentObjs.push(nextObj++);
+  }
+  const fontObj = nextObj++;
+
+  objects[catalogObj] = `<< /Type /Catalog /Pages ${pagesObj} 0 R >>`;
+  objects[pagesObj] = `<< /Type /Pages /Kids [${pageObjs.map(id => `${id} 0 R`).join(' ')}] /Count ${pageObjs.length} >>`;
+
+  for (let i = 0; i < pages.length; i += 1) {
+    const pageObj = pageObjs[i];
+    const contentObj = contentObjs[i];
+    const commands = ['BT', '/F1 11 Tf', '50 790 Td', '14 TL'];
+    for (const line of pages[i]) {
+      commands.push(`(${escapePdfText(line)}) Tj`, 'T*');
+    }
+    commands.push('ET');
+    const stream = commands.join('\n');
+
+    objects[contentObj] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+    objects[pageObj] =
+      `<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 595 842] ` +
+      `/Resources << /Font << /F1 ${fontObj} 0 R >> >> /Contents ${contentObj} 0 R >>`;
+  }
+
+  objects[fontObj] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+
+  let pdf = '%PDF-1.4\n';
+  const offsets: number[] = [0];
+
+  for (let i = 1; i < nextObj; i += 1) {
+    offsets[i] = pdf.length;
+    pdf += `${i} 0 obj\n${objects[i]}\nendobj\n`;
+  }
+
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${nextObj}\n`;
+  pdf += '0000000000 65535 f \n';
+  for (let i = 1; i < nextObj; i += 1) {
+    pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+
+  pdf += `trailer\n<< /Size ${nextObj} /Root ${catalogObj} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return new Blob([pdf], { type: 'application/pdf' });
+}
+
 function downloadBrochure(item: any) {
   const sourceDocs = Array.isArray(item.sourceDocuments) ? item.sourceDocuments : [];
   const primarySource = sourceDocs.find((doc: any) => typeof doc.fileUrl === 'string' && doc.fileUrl);
@@ -120,7 +222,7 @@ function downloadBrochure(item: any) {
     return;
   }
   const text = buildBrochureText(item);
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const blob = createSimplePdfBlob(text);
   const href = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   const safeName = String(item.developmentName || 'development')
@@ -128,7 +230,7 @@ function downloadBrochure(item: any) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   anchor.href = href;
-  anchor.download = `${safeName || 'development'}-brochure.txt`;
+  anchor.download = `${safeName || 'development'}-brochure.pdf`;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
