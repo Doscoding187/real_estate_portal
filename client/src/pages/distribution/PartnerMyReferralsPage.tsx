@@ -61,6 +61,19 @@ function formatOwnerRole(ownerRole: string | null | undefined) {
   return value.replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function getQuickActions(actionCode: string) {
+  if (actionCode === 'track_payout') {
+    return ['open_commissions', 'open_deal'] as const;
+  }
+  if (actionCode === 'submit_next_referral') {
+    return ['submit_referral', 'open_deal'] as const;
+  }
+  if (actionCode === 'follow_up_docs') {
+    return ['open_deal', 'open_submit'] as const;
+  }
+  return ['open_deal'] as const;
+}
+
 export default function PartnerMyReferralsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -212,11 +225,7 @@ export default function PartnerMyReferralsPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {visibleItems.map((item: any) => (
-              <button
-                key={item.dealId}
-                className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
-                onClick={() => setLocation(`/distribution/partner/referrals/${Number(item.dealId)}`)}
-              >
+              <div key={item.dealId} className="w-full rounded border bg-white p-3 text-left">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">{item.development.name}</p>
@@ -240,7 +249,44 @@ export default function PartnerMyReferralsPage() {
                 <div className="mt-2 h-1.5 overflow-hidden rounded bg-slate-100">
                   <div className="h-full rounded bg-blue-600" style={{ width: `${getStageProgress(item.status)}%` }} />
                 </div>
-              </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {getQuickActions(String(item.journey?.actionCode || '')).map(action => {
+                    if (action === 'open_commissions') {
+                      return (
+                        <Button
+                          key={action}
+                          size="sm"
+                          onClick={() => setLocation('/distribution/partner/commissions')}
+                        >
+                          Open Commissions
+                        </Button>
+                      );
+                    }
+                    if (action === 'submit_referral' || action === 'open_submit') {
+                      return (
+                        <Button
+                          key={action}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLocation('/distribution/partner/submit')}
+                        >
+                          Submit Referral
+                        </Button>
+                      );
+                    }
+                    return (
+                      <Button
+                        key={action}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setLocation(`/distribution/partner/referrals/${Number(item.dealId)}`)}
+                      >
+                        Open Deal
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
 
             {!referralsQuery.error && !visibleItems.length ? (
