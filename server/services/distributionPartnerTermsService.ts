@@ -1,7 +1,8 @@
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import {
   developerBrandProfiles,
   developments,
+  distributionDevelopmentAccess,
   distributionPrograms,
   unitTypes,
 } from '../../drizzle/schema';
@@ -35,6 +36,11 @@ export type PartnerProgramTermsItem = {
     payoutMilestone: string | null;
     payoutMilestoneNotes: string | null;
   };
+  unitTypes: Array<{
+    name: string;
+    priceFrom: number | null;
+    priceTo: number | null;
+  }>;
   requiredDocuments: Array<{
     templateId: number;
     documentCode: string;
@@ -42,6 +48,14 @@ export type PartnerProgramTermsItem = {
     templateFileUrl: string | null;
     templateFileName: string | null;
     isRequired: boolean;
+    sortOrder: number;
+  }>;
+  sourceDocuments: Array<{
+    templateId: number;
+    documentCode: string;
+    documentLabel: string;
+    fileUrl: string | null;
+    fileName: string | null;
     sortOrder: number;
   }>;
   computed: {
@@ -214,11 +228,6 @@ export async function listPartnerProgramTerms(
   const includeDisabled = Boolean(input.includeDisabled);
   const conditions: SQL[] = [];
 
-  if (!includeDisabled) {
-    conditions.push(eq(distributionPrograms.isActive, 1));
-    conditions.push(eq(distributionPrograms.isReferralEnabled, 1));
-  }
-
   if (typeof input.brandProfileId === 'number') {
     conditions.push(
       sql`(${developments.developerBrandProfileId} = ${input.brandProfileId} OR ${developments.marketingBrandProfileId} = ${input.brandProfileId})`,
@@ -226,7 +235,19 @@ export async function listPartnerProgramTerms(
   }
 
   if (input.developmentIds?.length) {
-    conditions.push(inArray(distributionPrograms.developmentId, input.developmentIds));
+    conditions.push(inArray(developments.id, input.developmentIds));
+  }
+
+  if (!includeDisabled) {
+    conditions.push(eq(distributionPrograms.isActive, 1));
+    conditions.push(eq(distributionPrograms.isReferralEnabled, 1));
+  } else {
+    conditions.push(
+      or(
+        sql`${distributionPrograms.id} IS NOT NULL`,
+        inArray(distributionDevelopmentAccess.status, ['included', 'listed']),
+      ) as SQL,
+    );
   }
 
   const rows = await db
@@ -250,9 +271,12 @@ export async function listPartnerProgramTerms(
       currencyCode: distributionPrograms.currencyCode,
       payoutMilestone: distributionPrograms.payoutMilestone,
       payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+      accessStatus: distributionDevelopmentAccess.status,
+      submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
     })
-    .from(distributionPrograms)
-    .innerJoin(developments, eq(distributionPrograms.developmentId, developments.id))
+    .from(developments)
+    .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
+    .leftJoin(distributionDevelopmentAccess, eq(distributionDevelopmentAccess.developmentId, developments.id))
     .where(withConditions(conditions))
     .orderBy(developments.province, developments.city, developments.name);
 
@@ -293,6 +317,7 @@ export async function listPartnerProgramTerms(
   }
 
   const docsByDevelopmentId = new Map<number, PartnerProgramTermsItem['requiredDocuments']>();
+  const sourceDocsByDevelopmentId = new Map<number, PartnerProgramTermsItem['sourceDocuments']>();
   for (const developmentId of developmentIds) {
     const templates = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
     docsByDevelopmentId.set(
@@ -309,12 +334,27 @@ export async function listPartnerProgramTerms(
           sortOrder: Number(template.sortOrder || 0),
         })),
     );
+    sourceDocsByDevelopmentId.set(
+      developmentId,
+      templates
+        .filter(template => template.isActive && template.category === 'developer_document')
+        .map(template => ({
+          templateId: Number(template.id),
+          documentCode: String(template.documentCode),
+          documentLabel: String(template.documentLabel || ''),
+          fileUrl: template.templateFileUrl || null,
+          fileName: template.templateFileName || null,
+          sortOrder: Number(template.sortOrder || 0),
+        })),
+    );
   }
 
   const unitRows = developmentIds.length
     ? await db
         .select({
           developmentId: unitTypes.developmentId,
+          name: unitTypes.name,
+          displayOrder: unitTypes.displayOrder,
           priceFrom: unitTypes.priceFrom,
           priceTo: unitTypes.priceTo,
           basePriceFrom: unitTypes.basePriceFrom,
@@ -322,6 +362,7 @@ export async function listPartnerProgramTerms(
         })
         .from(unitTypes)
         .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+        .orderBy(unitTypes.displayOrder, unitTypes.name)
     : [];
 
   const unitPriceRangeByDevelopment = new Map<
@@ -331,10 +372,19 @@ export async function listPartnerProgramTerms(
       priceTo: number | null;
     }
   >();
+  const unitTypesByDevelopment = new Map<
+    number,
+    Array<{
+      name: string;
+      priceFrom: number | null;
+      priceTo: number | null;
+    }>
+  >();
 
   for (const row of unitRows) {
     const developmentId = Number(row.developmentId || 0);
     if (!developmentId) continue;
+    const unitName = String(row.name || '').trim();
     const unitPriceFrom =
       toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
     const fallbackTo = toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
@@ -363,6 +413,36 @@ export async function listPartnerProgramTerms(
       priceFrom: nextMin,
       priceTo: nextMax,
     });
+
+    if (unitName) {
+      const currentUnitTypes = unitTypesByDevelopment.get(developmentId) || [];
+      const existingIndex = currentUnitTypes.findIndex(item => item.name === unitName);
+      if (existingIndex >= 0) {
+        const existing = currentUnitTypes[existingIndex];
+        currentUnitTypes[existingIndex] = {
+          name: unitName,
+          priceFrom:
+            existing.priceFrom === null
+              ? unitPriceFrom
+              : unitPriceFrom === null
+                ? existing.priceFrom
+                : Math.min(existing.priceFrom, unitPriceFrom),
+          priceTo:
+            existing.priceTo === null
+              ? unitPriceTo
+              : unitPriceTo === null
+                ? existing.priceTo
+                : Math.max(existing.priceTo, unitPriceTo),
+        };
+      } else {
+        currentUnitTypes.push({
+          name: unitName,
+          priceFrom: unitPriceFrom,
+          priceTo: unitPriceTo,
+        });
+      }
+      unitTypesByDevelopment.set(developmentId, currentUnitTypes);
+    }
   }
 
   const items: PartnerProgramTermsItem[] = rows.map(row => {
@@ -398,9 +478,12 @@ export async function listPartnerProgramTerms(
         ? { brandProfileId: brandRecord.id, brandName: brandRecord.brandName }
         : null,
       program: {
-        programId: Number(row.programId),
-        isActive: boolFromTinyInt(row.isActive),
-        isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
+        programId: Number(row.programId || 0),
+        isActive:
+          boolFromTinyInt(row.isActive) ||
+          (row.accessStatus ? String(row.accessStatus) !== 'excluded' : false),
+        isReferralEnabled:
+          boolFromTinyInt(row.isReferralEnabled) || boolFromTinyInt(row.submissionAllowed),
         tierAccessPolicy: row.tierAccessPolicy ? String(row.tierAccessPolicy) : null,
         commissionModel,
         defaultCommissionPercent,
@@ -409,7 +492,9 @@ export async function listPartnerProgramTerms(
         payoutMilestone,
         payoutMilestoneNotes,
       },
+      unitTypes: unitTypesByDevelopment.get(developmentId) || [],
       requiredDocuments,
+      sourceDocuments: sourceDocsByDevelopmentId.get(developmentId) || [],
       computed: {
         commissionDisplay: buildCommissionDisplay({
           commissionModel,
