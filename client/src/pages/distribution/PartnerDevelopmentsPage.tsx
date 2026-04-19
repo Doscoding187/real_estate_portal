@@ -79,7 +79,7 @@ export default function PartnerDevelopmentsPage() {
   }, [isAuthenticated, loading, setLocation]);
 
   const termsQuery = trpc.distribution.partner.listProgramTerms.useQuery(
-    { includeDisabled: false },
+    { includeDisabled: true },
     { enabled: isAuthenticated, retry: false },
   );
 
