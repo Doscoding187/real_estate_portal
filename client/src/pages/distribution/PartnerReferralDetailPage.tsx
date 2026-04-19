@@ -63,6 +63,12 @@ function getNextActionHint(input: {
   return 'Coordinate buyer viewing and progress this referral to application stage.';
 }
 
+function formatOwnerRole(ownerRole: string | null | undefined) {
+  const value = String(ownerRole || '').toLowerCase();
+  if (!value) return 'Team';
+  return value.replace(/\b\w/g, char => char.toUpperCase());
+}
+
 function base64ToBlob(base64: string, mimeType: string) {
   const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
   return new Blob([bytes], { type: mimeType });
@@ -154,10 +160,12 @@ export default function PartnerReferralDetailPage() {
       }
     | null;
   const journeyProgress = getStageProgress(referral.status);
-  const nextActionHint = getNextActionHint({
-    status: String(referral.status || ''),
-    docProgress: referral.docProgress,
-  });
+  const nextActionHint =
+    referral.journey?.nextAction ||
+    getNextActionHint({
+      status: String(referral.status || ''),
+      docProgress: referral.docProgress,
+    });
 
   return (
     <ReferralAppShell>
@@ -229,6 +237,11 @@ export default function PartnerReferralDetailPage() {
             <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
               {nextActionHint}
             </div>
+            {referral.journey?.slaDueAt ? (
+              <p className={`mt-2 text-xs ${referral.journey?.atRisk ? 'text-red-600' : 'text-slate-600'}`}>
+                Owner: {formatOwnerRole(referral.journey.ownerRole)} • SLA due {String(referral.journey.slaDueAt)}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 

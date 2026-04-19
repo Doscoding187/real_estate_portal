@@ -52,6 +52,12 @@ function getNextActionLabel(stage: string | null | undefined, docProgress?: { re
   return 'Move to next stage';
 }
 
+function formatOwnerRole(ownerRole: string | null | undefined) {
+  const value = String(ownerRole || '').toLowerCase();
+  if (!value) return 'Team';
+  return value.replace(/\b\w/g, char => char.toUpperCase());
+}
+
 export default function PartnerMyReferralsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -191,8 +197,14 @@ export default function PartnerMyReferralsPage() {
                     <p className="font-medium">{item.development.name}</p>
                     <p className="text-xs text-slate-500">Deal #{item.dealId}</p>
                     <p className="mt-1 text-xs text-slate-600">
-                      Next action: {getNextActionLabel(item.status, item.docProgress)}
+                      Next action:{' '}
+                      {item.journey?.nextAction || getNextActionLabel(item.status, item.docProgress)}
                     </p>
+                    {item.journey?.slaDueAt ? (
+                      <p className={`mt-1 text-[11px] ${item.journey?.atRisk ? 'text-red-600' : 'text-slate-500'}`}>
+                        Owner: {formatOwnerRole(item.journey.ownerRole)} • SLA due {String(item.journey.slaDueAt)}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{getStageLabel(item.status)}</Badge>

@@ -236,6 +236,10 @@ export default function PartnerSubmitReferralPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800">
+                    After submission: 1) confirm viewing, 2) upload required documents quickly, 3)
+                    monitor stage updates until commission payout.
+                  </div>
                   {selectedDevelopment &&
                   (!selectedDevelopment.program?.isActive ||
                     !selectedDevelopment.program?.isReferralEnabled) ? (
