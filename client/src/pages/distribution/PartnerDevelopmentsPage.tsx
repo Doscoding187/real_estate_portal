@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, Loader2 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { trpc } from '@/lib/trpc';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const ALL_FILTER_VALUE = 'all';
 
@@ -24,42 +32,62 @@ function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: numb
   }
   if (hasFrom) return `From ${formatCurrency(from)}`;
   if (hasTo) return `Up to ${formatCurrency(to)}`;
-  return 'Price not configured';
+  return 'Price on request';
 }
 
-function getBadgeLabel(input: { isActive: boolean; commissionDisplay: string }) {
-  if (!input.isActive) return 'Paused';
-  const commission = String(input.commissionDisplay || '').toLowerCase();
-  if (commission.includes('%')) return 'High demand';
-  if (commission.includes('r')) return 'Fast payout';
-  return 'Open stock';
+function getOpportunityLabel(item: any) {
+  if (item.program?.isReferralEnabled) return 'Open for referral';
+  if (item.program?.isActive) return 'Launching soon';
+  return 'Preview stock';
 }
 
-function getProgressSnapshot(item: any) {
-  const requiredDocs = Array.isArray(item.requiredDocuments) ? item.requiredDocuments : [];
-  const hasRequiredDocs = requiredDocs.length > 0;
-  const steps = [
-    {
-      key: 'program',
-      label: 'Program active',
-      done: Boolean(item.program?.isActive),
-    },
-    {
-      key: 'docs',
-      label: 'Required docs configured',
-      done: hasRequiredDocs,
-    },
-    {
-      key: 'live',
-      label: 'Referrals enabled',
-      done: Boolean(item.program?.isReferralEnabled),
-    },
+function buildBrochureText(item: any) {
+  const location = [item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable';
+  const lines = [
+    `${item.developmentName}`,
+    `${location}`,
+    '',
+    `Price Range: ${formatCurrencyRange(item.priceFrom, item.priceTo)}`,
+    `Commission: ${item.computed?.commissionDisplay || 'Commission to be confirmed'}`,
+    `Payout: ${item.computed?.payoutDisplay || 'Payout to be confirmed'}`,
+    '',
+    'Unit Types:',
   ];
 
-  const completed = steps.filter(step => step.done).length;
-  const total = steps.length;
-  const percent = Math.round((completed / total) * 100);
-  return { steps, completed, total, percent };
+  const unitTypes = Array.isArray(item.unitTypes) ? item.unitTypes : [];
+  if (!unitTypes.length) {
+    lines.push('- Unit types available on request');
+  } else {
+    for (const unit of unitTypes.slice(0, 10)) {
+      lines.push(`- ${unit.name}: ${formatCurrencyRange(unit.priceFrom, unit.priceTo)}`);
+    }
+  }
+
+  lines.push('', 'Contact your Property Listify partner manager for full brochure and stock updates.');
+  return lines.join('\n');
+}
+
+function downloadBrochure(item: any) {
+  const sourceDocs = Array.isArray(item.sourceDocuments) ? item.sourceDocuments : [];
+  const primarySource = sourceDocs.find((doc: any) => typeof doc.fileUrl === 'string' && doc.fileUrl);
+  if (primarySource?.fileUrl) {
+    window.open(primarySource.fileUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  const text = buildBrochureText(item);
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  const safeName = String(item.developmentName || 'development')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  anchor.href = href;
+  anchor.download = `${safeName || 'development'}-brochure.txt`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(href);
 }
 
 export default function PartnerDevelopmentsPage() {
@@ -69,13 +97,11 @@ export default function PartnerDevelopmentsPage() {
   const [selectedProvince, setSelectedProvince] = useState<string>(ALL_FILTER_VALUE);
   const [selectedCity, setSelectedCity] = useState<string>(ALL_FILTER_VALUE);
   const [searchText, setSearchText] = useState('');
-  const [selectedDevelopmentId, setSelectedDevelopmentId] = useState<number | null>(null);
+  const [brochureItem, setBrochureItem] = useState<any | null>(null);
 
   useEffect(() => {
     if (loading) return;
-    if (!isAuthenticated) {
-      setLocation('/login');
-    }
+    if (!isAuthenticated) setLocation('/login');
   }, [isAuthenticated, loading, setLocation]);
 
   const termsQuery = trpc.distribution.partner.listProgramTerms.useQuery(
@@ -129,12 +155,7 @@ export default function PartnerDevelopmentsPage() {
         return false;
       }
       if (!needle) return true;
-      const haystack = [
-        item.developmentName,
-        item.brand?.brandName,
-        item.city,
-        item.province,
-      ]
+      const haystack = [item.developmentName, item.brand?.brandName, item.city, item.province]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
@@ -144,38 +165,13 @@ export default function PartnerDevelopmentsPage() {
 
   const topDevelopments = useMemo(() => filteredItems.slice(0, 10), [filteredItems]);
 
-  useEffect(() => {
-    if (!topDevelopments.length) {
-      setSelectedDevelopmentId(null);
-      return;
-    }
-    if (!selectedDevelopmentId) {
-      setSelectedDevelopmentId(Number(topDevelopments[0].developmentId));
-      return;
-    }
-    const stillVisible = topDevelopments.some(
-      item => Number(item.developmentId) === Number(selectedDevelopmentId),
-    );
-    if (!stillVisible) {
-      setSelectedDevelopmentId(Number(topDevelopments[0].developmentId));
-    }
-  }, [topDevelopments, selectedDevelopmentId]);
-
-  const selectedDevelopment = useMemo(
-    () =>
-      topDevelopments.find(
-        item => Number(item.developmentId) === Number(selectedDevelopmentId),
-      ) || null,
-    [topDevelopments, selectedDevelopmentId],
-  );
-
   const citySummary = useMemo(() => {
-    const counters = new Map<string, { total: number; enabled: number }>();
+    const counters = new Map<string, { total: number; live: number }>();
     for (const item of filteredItems) {
       const city = String(item.city || 'Unspecified city');
-      const current = counters.get(city) || { total: 0, enabled: 0 };
+      const current = counters.get(city) || { total: 0, live: 0 };
       current.total += 1;
-      if (item.program?.isReferralEnabled) current.enabled += 1;
+      if (item.program?.isReferralEnabled) current.live += 1;
       counters.set(city, current);
     }
     return Array.from(counters.entries())
@@ -213,10 +209,10 @@ export default function PartnerDevelopmentsPage() {
               Partner Workspace
             </p>
             <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.03em] text-[#1a1a18]">
-              Deals You Can Close Today
+              Development Opportunities
             </h1>
             <p className="mt-1 text-[12px] text-[#6b6a64]">
-              All referral stock is open to every partner. Match a buyer and submit directly.
+              Browse stock, compare unit types, and download a shareable brochure for clients.
             </p>
           </div>
 
@@ -292,159 +288,85 @@ export default function PartnerDevelopmentsPage() {
           <section className="mt-4 rounded-xl border border-[#1a1a18]/12 bg-white px-5 py-8 text-center">
             <p className="text-[13px] font-medium text-[#1a1a18]">No developments match this filter.</p>
             <p className="mt-1 text-[12px] text-[#6b6a64]">
-              Clear filters to view all available stock in the referral program.
+              Clear filters to view all available opportunities.
             </p>
           </section>
         ) : null}
 
-        {!!topDevelopments.length && (
-          <section className="mt-4 grid gap-3 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.45fr)]">
-            <section className="rounded-xl border border-[#1a1a18]/12 bg-white">
-              <div className="border-b border-[#1a1a18]/12 px-4 py-3">
-                <h2 className="text-[13px] font-semibold text-[#1a1a18]">Developments</h2>
+        <section className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {topDevelopments.map(item => (
+            <article key={item.developmentId} className="overflow-hidden rounded-xl border border-[#1a1a18]/12 bg-white">
+              <div className="relative h-36 bg-[#f5f4f0]">
+                <span className="absolute left-2 top-2 rounded bg-[#1a1a18] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em] text-white">
+                  {getOpportunityLabel(item)}
+                </span>
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.developmentName}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[#1a1a18]/35">
+                    <svg width="62" height="44" viewBox="0 0 62 44" fill="none">
+                      <rect x="7" y="14" width="48" height="26" rx="2" fill="currentColor" />
+                      <polygon points="31,3 56,15 6,15" fill="currentColor" />
+                      <rect x="25" y="24" width="12" height="16" fill="white" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 p-4">
+                <h2 className="text-[14px] font-semibold text-[#1a1a18]">{item.developmentName}</h2>
                 <p className="text-[11px] text-[#6b6a64]">
-                  Select a development to view readiness progress and actions.
+                  {[item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable'}
                 </p>
-              </div>
-              <div className="max-h-[560px] overflow-y-auto p-2">
-                {topDevelopments.map(item => {
-                  const progress = getProgressSnapshot(item);
-                  const isSelected =
-                    Number(item.developmentId) === Number(selectedDevelopment?.developmentId || 0);
-                  return (
-                    <button
-                      key={item.developmentId}
-                      type="button"
-                      onClick={() => setSelectedDevelopmentId(Number(item.developmentId))}
-                      className={`mb-2 w-full rounded-lg border p-3 text-left transition ${
-                        isSelected
-                          ? 'border-[#1a1a18] bg-[#f7f5f0]'
-                          : 'border-[#1a1a18]/12 bg-white hover:border-[#1a1a18]/30'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-[13px] font-semibold text-[#1a1a18]">{item.developmentName}</p>
-                          <p className="text-[11px] text-[#6b6a64]">
-                            {[item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable'}
-                          </p>
-                        </div>
-                        <span className="rounded bg-[#1a1a18]/8 px-2 py-0.5 text-[10px] font-medium text-[#1a1a18]">
-                          {progress.percent}%
-                        </span>
-                      </div>
-                      <div className="mt-2 h-1.5 rounded bg-[#1a1a18]/10">
-                        <div
-                          className="h-full rounded bg-[#1a5bbf]"
-                          style={{ width: `${progress.percent}%` }}
-                        />
-                      </div>
-                      <p className="mt-1 text-[10px] text-[#6b6a64]">
-                        {progress.completed}/{progress.total} readiness checks complete
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+                {item.brand?.brandName ? (
+                  <p className="text-[10px] text-[#9e9d96]">{item.brand.brandName}</p>
+                ) : null}
 
-            {selectedDevelopment && (
-              <section className="rounded-xl border border-[#1a1a18]/12 bg-white">
-                <div className="border-b border-[#1a1a18]/12 px-5 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b6a64]">
-                    Selected Development
-                  </p>
-                  <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[#1a1a18]">
-                    {selectedDevelopment.developmentName}
-                  </h2>
-                  <p className="text-[12px] text-[#6b6a64]">
-                    {[selectedDevelopment.city, selectedDevelopment.province].filter(Boolean).join(' - ') ||
-                      'Location unavailable'}
-                  </p>
+                <p className="font-mono text-[14px] font-semibold text-[#1a1a18]">
+                  {formatCurrencyRange(item.priceFrom, item.priceTo)}
+                </p>
+                <p className="text-[11px] text-[#1a7a40]">
+                  {item.computed?.commissionDisplay || 'Commission available on request'}
+                </p>
+
+                <p className="text-[10px] text-[#6b6a64]">
+                  {Array.isArray(item.unitTypes) && item.unitTypes.length
+                    ? `${item.unitTypes.length} unit type${item.unitTypes.length === 1 ? '' : 's'}`
+                    : 'Unit type details available'}
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBrochureItem(item)}
+                    className="text-[11px]"
+                  >
+                    View Brochure
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-[11px]"
+                    onClick={() => setLocation(`/distribution/partner/submit?developmentId=${item.developmentId}`)}
+                  >
+                    Submit Referral
+                  </Button>
                 </div>
-
-                <div className="space-y-4 px-5 py-4">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="rounded border border-[#1a1a18]/12 bg-[#faf9f6] p-3">
-                      <p className="text-[10px] uppercase tracking-[0.06em] text-[#6b6a64]">Price Range</p>
-                      <p className="mt-1 text-[14px] font-semibold text-[#1a1a18]">
-                        {formatCurrencyRange(selectedDevelopment.priceFrom, selectedDevelopment.priceTo)}
-                      </p>
-                    </div>
-                    <div className="rounded border border-[#1a1a18]/12 bg-[#faf9f6] p-3">
-                      <p className="text-[10px] uppercase tracking-[0.06em] text-[#6b6a64]">Commission</p>
-                      <p className="mt-1 text-[14px] font-semibold text-[#1a7a40]">
-                        {selectedDevelopment.computed?.commissionDisplay || 'Commission configured'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded border border-[#1a1a18]/12 p-3">
-                    <p className="text-[11px] font-semibold text-[#1a1a18]">Development Progress</p>
-                    <div className="mt-2 space-y-2">
-                      {getProgressSnapshot(selectedDevelopment).steps.map(step => (
-                        <div key={step.key} className="flex items-center justify-between rounded bg-[#faf9f6] px-2.5 py-2">
-                          <p className="text-[11px] text-[#1a1a18]">{step.label}</p>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium ${
-                              step.done
-                                ? 'bg-[#e7f7ef] text-[#0f6a36]'
-                                : 'bg-[#f4f4f5] text-[#6b6a64]'
-                            }`}
-                          >
-                            {step.done ? <CheckCircle2 className="h-3 w-3" /> : null}
-                            {step.done ? 'Done' : 'Pending'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded border border-[#1a1a18]/12 p-3">
-                    <p className="text-[11px] font-semibold text-[#1a1a18]">Payout and Requirements</p>
-                    <p className="mt-1 text-[11px] text-[#6b6a64]">
-                      {selectedDevelopment.computed?.payoutDisplay || 'Payout rules not configured'}
-                    </p>
-                    <p className="mt-1 text-[11px] text-[#6b6a64]">
-                      {selectedDevelopment.computed?.requiredDocsSummary || 'Required documents not configured'}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setLocation(
-                          `/distribution/partner/submit?developmentId=${selectedDevelopment.developmentId}`,
-                        )
-                      }
-                      className="rounded-md border border-[#1a1a18]/12 bg-[#f5f4f0] px-2 py-2 text-[11px] font-semibold text-[#1a1a18]"
-                    >
-                      Submit Referral
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setLocation(
-                          `/distribution/partner/accelerator?developmentId=${selectedDevelopment.developmentId}`,
-                        )
-                      }
-                      className="rounded-md bg-[#1a1a18] px-2 py-2 text-[11px] font-semibold text-white"
-                    >
-                      Match Buyer
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )}
-          </section>
-        )}
+              </div>
+            </article>
+          ))}
+        </section>
 
         {!!citySummary.length && (
           <section className="mt-4 rounded-xl border border-[#1a1a18]/12 bg-white px-5 py-4 md:px-6">
-            <h3 className="text-[12px] font-semibold text-[#1a1a18]">City Development Summary</h3>
+            <h3 className="text-[12px] font-semibold text-[#1a1a18]">City Opportunity Summary</h3>
             <p className="mt-0.5 text-[11px] text-[#6b6a64]">
-              Quick footer view of active development concentration by city.
+              Snapshot of where opportunities are concentrated.
             </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {citySummary.map(city => (
@@ -454,7 +376,7 @@ export default function PartnerDevelopmentsPage() {
                     {city.total} development{city.total === 1 ? '' : 's'}
                   </p>
                   <p className="mt-0.5 text-[10px] text-[#0f6a36]">
-                    {city.enabled} referral enabled
+                    {city.live} live for referral
                   </p>
                 </div>
               ))}
@@ -462,6 +384,129 @@ export default function PartnerDevelopmentsPage() {
           </section>
         )}
       </main>
+
+      <Dialog open={Boolean(brochureItem)} onOpenChange={open => !open && setBrochureItem(null)}>
+        <DialogContent className="max-h-[86vh] overflow-y-auto sm:max-w-2xl">
+          {brochureItem ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{brochureItem.developmentName}</DialogTitle>
+                <DialogDescription>
+                  {[brochureItem.city, brochureItem.province].filter(Boolean).join(', ') ||
+                    'Location unavailable'}
+                </DialogDescription>
+              </DialogHeader>
+
+              {brochureItem.imageUrl ? (
+                <div className="overflow-hidden rounded border">
+                  <img
+                    src={brochureItem.imageUrl}
+                    alt={brochureItem.developmentName}
+                    className="h-52 w-full object-cover"
+                  />
+                </div>
+              ) : null}
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded border bg-slate-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Price Range</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {formatCurrencyRange(brochureItem.priceFrom, brochureItem.priceTo)}
+                  </p>
+                </div>
+                <div className="rounded border bg-slate-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Commission</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {brochureItem.computed?.commissionDisplay || 'Commission available on request'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded border p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Unit Types</p>
+                {Array.isArray(brochureItem.unitTypes) && brochureItem.unitTypes.length ? (
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {brochureItem.unitTypes.slice(0, 8).map((unit: any) => (
+                      <div key={unit.name} className="rounded border bg-slate-50 p-2">
+                        <p className="text-sm font-medium text-slate-900">{unit.name}</p>
+                        <p className="text-xs text-slate-600">
+                          {formatCurrencyRange(unit.priceFrom, unit.priceTo)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-600">Unit type details available on request.</p>
+                )}
+              </div>
+
+              <div className="rounded border p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Referral Notes</p>
+                <p className="mt-2 text-sm text-slate-700">
+                  {brochureItem.computed?.payoutDisplay || 'Payout and milestone details on request.'}
+                </p>
+                <p className="mt-1 text-sm text-slate-700">
+                  {brochureItem.computed?.requiredDocsSummary || 'Requirements shared on submission.'}
+                </p>
+              </div>
+
+              {Array.isArray(brochureItem.sourceDocuments) && brochureItem.sourceDocuments.length ? (
+                <div className="rounded border p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Source Documents</p>
+                  <div className="mt-2 grid gap-2">
+                    {brochureItem.sourceDocuments.map((doc: any) => (
+                      <div
+                        key={doc.templateId}
+                        className="flex items-center justify-between rounded border bg-slate-50 px-2.5 py-2"
+                      >
+                        <p className="text-sm text-slate-900">
+                          {doc.documentLabel || 'Developer document'}
+                        </p>
+                        {doc.fileUrl ? (
+                          <a
+                            href={doc.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-medium text-[#1a5bbf] hover:underline"
+                          >
+                            Open
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-500">Pending upload</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => downloadBrochure(brochureItem)}
+                  className="gap-1"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Brochure
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setLocation(`/distribution/partner/accelerator?developmentId=${brochureItem.developmentId}`)
+                  }
+                  className="gap-1"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Pre-Qualify Buyer
+                </Button>
+                <Button onClick={() => setLocation(`/distribution/partner/submit?developmentId=${brochureItem.developmentId}`)}>
+                  Submit Referral
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </ReferralAppShell>
   );
 }
