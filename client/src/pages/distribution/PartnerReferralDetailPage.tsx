@@ -69,6 +69,14 @@ function formatOwnerRole(ownerRole: string | null | undefined) {
   return value.replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function normalizePhoneForWhatsApp(value: string | null | undefined) {
+  const digits = String(value || '').replace(/[^\d]/g, '');
+  if (!digits) return null;
+  if (digits.startsWith('0')) return `27${digits.slice(1)}`;
+  if (digits.startsWith('27')) return digits;
+  return digits;
+}
+
 function base64ToBlob(base64: string, mimeType: string) {
   const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
   return new Blob([bytes], { type: mimeType });
@@ -166,6 +174,7 @@ export default function PartnerReferralDetailPage() {
       status: String(referral.status || ''),
       docProgress: referral.docProgress,
     });
+  const actionCode = String(referral.journey?.actionCode || '');
 
   return (
     <ReferralAppShell>
@@ -242,6 +251,54 @@ export default function PartnerReferralDetailPage() {
                 Owner: {formatOwnerRole(referral.journey.ownerRole)} • SLA due {String(referral.journey.slaDueAt)}
               </p>
             ) : null}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {actionCode === 'track_payout' ? (
+                <Button size="sm" onClick={() => setLocation('/distribution/partner/commissions')}>
+                  Open Commissions
+                </Button>
+              ) : null}
+              {(actionCode === 'follow_up_manager' || referral.journey?.ownerRole === 'manager') &&
+              referral.manager?.email ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const subject = encodeURIComponent(
+                      `Referral follow-up: Deal #${referral.dealId} - ${referral.development.name}`,
+                    );
+                    const body = encodeURIComponent(
+                      `Hi,\n\nI am following up on deal #${referral.dealId}.\nNext action: ${nextActionHint}\n\nThanks.`,
+                    );
+                    window.open(`mailto:${referral.manager?.email}?subject=${subject}&body=${body}`);
+                  }}
+                >
+                  Contact Manager
+                </Button>
+              ) : null}
+              {(() => {
+                const whatsappPhone = normalizePhoneForWhatsApp(referral.buyer?.phone || null);
+                if (!whatsappPhone) return null;
+                const msg = encodeURIComponent(
+                  `Hi ${referral.buyer?.name || ''}, quick update on your ${referral.development.name} referral. ${nextActionHint}`,
+                );
+                return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      window.open(`https://wa.me/${whatsappPhone}?text=${msg}`, '_blank', 'noopener,noreferrer')
+                    }
+                  >
+                    WhatsApp Buyer
+                  </Button>
+                );
+              })()}
+              {actionCode === 'submit_next_referral' ? (
+                <Button size="sm" variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
+                  Submit Next Referral
+                </Button>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 

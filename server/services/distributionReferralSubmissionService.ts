@@ -111,33 +111,48 @@ function buildJourneyGuidance(input: {
 
   let nextAction = 'Continue moving this referral to the next milestone.';
   let ownerRole: JourneyOwnerRole = 'referrer';
+  let actionCode:
+    | 'follow_up_viewing'
+    | 'follow_up_docs'
+    | 'follow_up_manager'
+    | 'track_payout'
+    | 'submit_next_referral'
+    | 'review_outcome' = 'follow_up_viewing';
 
   if (stage === 'commission_paid') {
     nextAction = 'Commission paid. Archive this deal and submit the next referral.';
     ownerRole = 'system';
+    actionCode = 'submit_next_referral';
   } else if (stage === 'commission_pending') {
     nextAction = 'Follow up on payout processing and payment confirmation.';
     ownerRole = 'manager';
+    actionCode = 'track_payout';
   } else if (stage === 'bond_approved' || stage === 'contract_signed') {
     nextAction = 'Confirm final transfer milestones and payout readiness.';
     ownerRole = 'manager';
+    actionCode = 'follow_up_manager';
   } else if (stage === 'application_submitted') {
     if (hasMissingDocs) {
       nextAction = 'Upload and verify missing required documents to prevent delays.';
       ownerRole = 'referrer';
+      actionCode = 'follow_up_docs';
     } else {
       nextAction = 'Application is in review. Stay available for manager requests.';
       ownerRole = 'manager';
+      actionCode = 'follow_up_manager';
     }
   } else if (stage === 'viewing_completed') {
     nextAction = 'Convert this buyer to application submission.';
     ownerRole = 'referrer';
+    actionCode = 'follow_up_viewing';
   } else if (stage === 'viewing_scheduled') {
     nextAction = 'Confirm viewing attendance and prepare buyer application details.';
     ownerRole = 'referrer';
+    actionCode = 'follow_up_viewing';
   } else if (stage === 'cancelled') {
     nextAction = 'Deal closed as cancelled. Review reason and focus on active deals.';
     ownerRole = 'none';
+    actionCode = 'review_outcome';
   }
 
   const baseline = parseSqlDate(input.updatedAt) || parseSqlDate(input.createdAt) || new Date();
@@ -152,6 +167,7 @@ function buildJourneyGuidance(input: {
   return {
     nextAction,
     ownerRole,
+    actionCode,
     slaDueAt: slaDueAt ? toSqlDateTime(slaDueAt) : null,
     atRisk,
   };
