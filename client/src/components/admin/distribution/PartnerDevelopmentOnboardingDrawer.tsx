@@ -495,7 +495,7 @@ function DevelopmentProgramConfigPanel({
         <CardContent className="space-y-2">
           {input.rows.map(({ document, index }, rowIndex) => (
             <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
-              <div className="grid gap-2 md:grid-cols-[1fr_1.4fr_auto_auto_auto]">
+              <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1.4fr)_auto_auto_auto]">
                 <Select
                   value={document.documentCode}
                   onValueChange={value =>
@@ -518,6 +518,7 @@ function DevelopmentProgramConfigPanel({
                 </Select>
 
                 <Input
+                  className="min-w-[220px]"
                   value={document.documentLabel}
                   onChange={event =>
                     updateDocumentAtIndex(index, item => ({
@@ -525,7 +526,11 @@ function DevelopmentProgramConfigPanel({
                       documentLabel: event.target.value,
                     }))
                   }
-                  placeholder="Document title"
+                  placeholder={
+                    input.category === 'developer_document' && document.documentCode === 'custom'
+                      ? 'Custom document name'
+                      : 'Document title'
+                  }
                 />
 
                 <div className="flex items-center gap-2 rounded border px-2 text-xs">
