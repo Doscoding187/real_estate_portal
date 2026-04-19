@@ -311,6 +311,10 @@ export default function PartnerDashboardPage() {
       return requiredCount > verifiedCount;
     });
   }, [referralsQuery.data?.items]);
+  const atRiskReferrals = useMemo(() => {
+    const items = referralsQuery.data?.items || [];
+    return items.filter((item: any) => Boolean(item.journey?.atRisk));
+  }, [referralsQuery.data?.items]);
 
   const activeDealsCount = useMemo(() => {
     const excluded = new Set(['commission_paid', 'cancelled']);
@@ -531,6 +535,20 @@ export default function PartnerDashboardPage() {
   const attentionItems = useMemo(() => {
     const items: AttentionItem[] = [];
 
+    const firstAtRisk = atRiskReferrals[0];
+    if (firstAtRisk) {
+      items.push({
+        id: `risk-${firstAtRisk.dealId}`,
+        urgency: 'urgent',
+        title: `${firstAtRisk.buyer?.name || 'Buyer'} - SLA at risk`,
+        detail:
+          firstAtRisk.journey?.nextAction ||
+          `${firstAtRisk.development?.name || 'Deal'} requires immediate follow-up.`,
+        timeLabel: 'Now',
+        onClick: () => setLocation(`/distribution/partner/referrals/${Number(firstAtRisk.dealId)}`),
+      });
+    }
+
     const firstMissingDocs = pendingDocReferrals[0];
     if (firstMissingDocs) {
       items.push({
@@ -579,7 +597,7 @@ export default function PartnerDashboardPage() {
     }
 
     return items.slice(0, 5);
-  }, [pendingDocReferrals, viewingsQuery.data, visibleStock, setLocation]);
+  }, [atRiskReferrals, pendingDocReferrals, viewingsQuery.data, visibleStock, setLocation]);
 
   const showLoadingState =
     loading ||
@@ -640,10 +658,11 @@ export default function PartnerDashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 border-t border-[#1a1a18]/12 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 border-t border-[#1a1a18]/12 md:grid-cols-3 xl:grid-cols-7">
             <KpiCell label="Network Access" value={String(statusQuery.data?.accessCount || 0)} note="Live developments" />
             <KpiCell label="Active Deals" value={String(activeDealsCount)} note="In progress" />
             <KpiCell label="Docs Pending" value={String(pendingDocReferrals.length)} note="Action needed" valueClassName="text-[#9a6500]" />
+            <KpiCell label="At Risk" value={String(atRiskReferrals.length)} note="Past SLA" valueClassName="text-[#DC2626]" />
             <KpiCell label="Pending Income" value={formatCurrency(pendingIncome, true)} note="Awaiting approval" />
             <KpiCell label="Paid Income" value={formatCurrency(paidIncome, true)} note="This quarter" valueClassName="text-[#1a7a40]" />
             <KpiCell label="Potential Income" value={formatCurrency(potentialIncome, true)} note="From active deals" />

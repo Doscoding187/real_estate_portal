@@ -27,9 +27,7 @@ function normalizeStage(stage: string | null | undefined) {
 
 function getStageLabel(stage: string | null | undefined) {
   const normalized = normalizeStage(stage);
-  return normalized
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, char => char.toUpperCase());
+  return normalized.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
 
 function getStageProgress(stage: string | null | undefined) {
@@ -39,13 +37,18 @@ function getStageProgress(stage: string | null | undefined) {
   return Math.round(((index + 1) / JOURNEY_STAGES.length) * 100);
 }
 
-function getNextActionLabel(stage: string | null | undefined, docProgress?: { requiredCount: number; verifiedRequiredCount: number }) {
+function getNextActionLabel(
+  stage: string | null | undefined,
+  docProgress?: { requiredCount: number; verifiedRequiredCount: number },
+) {
   const normalized = normalizeStage(stage);
   if (normalized === 'commission_paid') return 'View payout';
   if (normalized === 'commission_pending') return 'Track payout';
   if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Prepare payout';
   if (normalized === 'application_submitted') {
-    if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) return 'Upload missing docs';
+    if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) {
+      return 'Upload missing docs';
+    }
     return 'Await approval';
   }
   if (normalized === 'cancelled') return 'Review outcome';
@@ -62,6 +65,7 @@ export default function PartnerMyReferralsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showAtRiskOnly, setShowAtRiskOnly] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -100,6 +104,12 @@ export default function PartnerMyReferralsPage() {
     { pending: 0, approved: 0, paid: 0 },
   );
 
+  const allItems = referralsQuery.data?.items || [];
+  const atRiskCount = allItems.filter((item: any) => Boolean(item.journey?.atRisk)).length;
+  const visibleItems = showAtRiskOnly
+    ? allItems.filter((item: any) => Boolean(item.journey?.atRisk))
+    : allItems;
+
   if (loading || referralsQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
@@ -120,10 +130,7 @@ export default function PartnerMyReferralsPage() {
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
               Submit New Referral
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation('/distribution/partner/accelerator')}
-            >
+            <Button variant="outline" onClick={() => setLocation('/distribution/partner/accelerator')}>
               Open Referral Accelerator
             </Button>
             <label className="ml-auto flex items-center gap-2 text-sm">
@@ -143,15 +150,19 @@ export default function PartnerMyReferralsPage() {
                 <option value="cancelled">Cancelled</option>
               </select>
             </label>
+            <Button
+              variant={showAtRiskOnly ? 'default' : 'outline'}
+              onClick={() => setShowAtRiskOnly(current => !current)}
+            >
+              {showAtRiskOnly ? 'Showing At-Risk' : `At-Risk (${atRiskCount})`}
+            </Button>
           </CardContent>
         </Card>
 
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>Journey to Commission</CardTitle>
-            <CardDescription>
-              Every referral moves from viewing to application to payout.
-            </CardDescription>
+            <CardDescription>Every referral moves from viewing to application to payout.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
             <div className="rounded border bg-[#faf9f6] p-3">
@@ -175,6 +186,20 @@ export default function PartnerMyReferralsPage() {
           </CardContent>
         </Card>
 
+        {!!atRiskCount && !showAtRiskOnly ? (
+          <Card className="mb-4 border-red-200 bg-red-50">
+            <CardContent className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-red-700">
+              <p>
+                {atRiskCount} referral{atRiskCount === 1 ? '' : 's'} are past SLA and need immediate
+                follow-up.
+              </p>
+              <Button size="sm" onClick={() => setShowAtRiskOnly(true)}>
+                Review At-Risk Deals
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
         {referralsQuery.error ? (
           <Card>
             <CardContent className="py-6 text-sm text-red-600">{referralsQuery.error.message}</CardContent>
@@ -186,7 +211,7 @@ export default function PartnerMyReferralsPage() {
             <CardTitle>Referral Deals</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {(referralsQuery.data?.items || []).map(item => (
+            {visibleItems.map((item: any) => (
               <button
                 key={item.dealId}
                 className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
@@ -197,12 +222,11 @@ export default function PartnerMyReferralsPage() {
                     <p className="font-medium">{item.development.name}</p>
                     <p className="text-xs text-slate-500">Deal #{item.dealId}</p>
                     <p className="mt-1 text-xs text-slate-600">
-                      Next action:{' '}
-                      {item.journey?.nextAction || getNextActionLabel(item.status, item.docProgress)}
+                      Next action: {item.journey?.nextAction || getNextActionLabel(item.status, item.docProgress)}
                     </p>
                     {item.journey?.slaDueAt ? (
                       <p className={`mt-1 text-[11px] ${item.journey?.atRisk ? 'text-red-600' : 'text-slate-500'}`}>
-                        Owner: {formatOwnerRole(item.journey.ownerRole)} • SLA due {String(item.journey.slaDueAt)}
+                        Owner: {formatOwnerRole(item.journey.ownerRole)} | SLA due {String(item.journey.slaDueAt)}
                       </p>
                     ) : null}
                   </div>
@@ -214,17 +238,14 @@ export default function PartnerMyReferralsPage() {
                   </div>
                 </div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded bg-slate-100">
-                  <div
-                    className="h-full rounded bg-blue-600"
-                    style={{ width: `${getStageProgress(item.status)}%` }}
-                  />
+                  <div className="h-full rounded bg-blue-600" style={{ width: `${getStageProgress(item.status)}%` }} />
                 </div>
               </button>
             ))}
 
-            {!referralsQuery.error && !(referralsQuery.data?.items || []).length ? (
+            {!referralsQuery.error && !visibleItems.length ? (
               <p className="py-6 text-center text-sm text-slate-500">
-                No referrals found for this filter.
+                No referrals found for this filter{showAtRiskOnly ? ' and SLA state' : ''}.
               </p>
             ) : null}
           </CardContent>
