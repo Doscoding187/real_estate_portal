@@ -15,6 +15,7 @@ const {
   mockCreditCheckMutation,
   mockReferrerPipelineQuery,
   mockReferrerStatusQuery,
+  mockReferrerCommissionsQuery,
   state,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
@@ -27,6 +28,7 @@ const {
   mockCreditCheckMutation: vi.fn(),
   mockReferrerPipelineQuery: vi.fn(),
   mockReferrerStatusQuery: vi.fn(),
+  mockReferrerCommissionsQuery: vi.fn(),
   state: {
     hasAssessment: false,
     hasMatches: false,
@@ -100,6 +102,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         status: {
           useQuery: (input: unknown, opts: unknown) => mockReferrerStatusQuery(input, opts),
+        },
+        myCommissions: {
+          useQuery: (input: unknown, opts: unknown) => mockReferrerCommissionsQuery(input, opts),
         },
       },
     },
@@ -208,6 +213,12 @@ describe('PartnerReferralAcceleratorPage', () => {
       data: {
         accessCount: 0,
       },
+      isLoading: false,
+      error: null,
+    });
+
+    mockReferrerCommissionsQuery.mockReturnValue({
+      data: { rows: [], totalCount: 0 },
       isLoading: false,
       error: null,
     });
