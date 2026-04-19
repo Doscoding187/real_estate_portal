@@ -1,6 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
-import { distributionIdentities, distributionPrograms } from '../../drizzle/schema';
+import {
+  distributionDevelopmentAccess,
+  distributionIdentities,
+  distributionPrograms,
+} from '../../drizzle/schema';
 import { getDb } from '../db';
 
 type EligibilityReasonCode =
@@ -19,6 +23,13 @@ type SubmissionProgram = {
   isActive: boolean;
   isReferralEnabled: boolean;
   tierAccessPolicy: string | null;
+};
+
+type SubmissionAccess = {
+  status: 'listed' | 'included' | 'excluded' | 'paused' | null;
+  submissionAllowed: boolean;
+  excludedByMandate: boolean;
+  excludedByExclusivity: boolean;
 };
 
 type DbExecutor = any;
@@ -103,6 +114,30 @@ async function findProgramByDevelopmentId(
   };
 }
 
+async function findDevelopmentAccessByDevelopmentId(
+  db: DbExecutor,
+  developmentId: number,
+): Promise<SubmissionAccess | null> {
+  const [access] = await db
+    .select({
+      status: distributionDevelopmentAccess.status,
+      submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
+      excludedByMandate: distributionDevelopmentAccess.excludedByMandate,
+      excludedByExclusivity: distributionDevelopmentAccess.excludedByExclusivity,
+    })
+    .from(distributionDevelopmentAccess)
+    .where(eq(distributionDevelopmentAccess.developmentId, developmentId))
+    .limit(1);
+
+  if (!access) return null;
+  return {
+    status: access.status ? (String(access.status) as SubmissionAccess['status']) : null,
+    submissionAllowed: boolFromTinyInt(access.submissionAllowed),
+    excludedByMandate: boolFromTinyInt(access.excludedByMandate),
+    excludedByExclusivity: boolFromTinyInt(access.excludedByExclusivity),
+  };
+}
+
 export async function validatePartnerSubmissionEligibility(
   input: {
     developmentId: number;
@@ -115,6 +150,7 @@ export async function validatePartnerSubmissionEligibility(
   const reasons: EligibilityReason[] = [];
 
   const program = await findProgramByDevelopmentId(db, input.developmentId);
+  const developmentAccess = await findDevelopmentAccessByDevelopmentId(db, input.developmentId);
   if (!program) {
     reasons.push({
       code: 'PROGRAM_NOT_FOUND',
@@ -130,7 +166,13 @@ export async function validatePartnerSubmissionEligibility(
     });
   }
 
-  if (!program.isReferralEnabled) {
+  const submissionAllowedViaAccess =
+    developmentAccess?.status === 'included' &&
+    developmentAccess.submissionAllowed &&
+    !developmentAccess.excludedByMandate &&
+    !developmentAccess.excludedByExclusivity;
+
+  if (!program.isReferralEnabled && !submissionAllowedViaAccess) {
     reasons.push({
       code: 'REFERRALS_DISABLED',
       message: 'Referrals are currently disabled for this development.',

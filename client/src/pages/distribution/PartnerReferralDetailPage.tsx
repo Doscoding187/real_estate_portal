@@ -10,6 +10,59 @@ import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutR
 import { toast } from 'sonner';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
+const JOURNEY_STAGES = [
+  'viewing_scheduled',
+  'viewing_completed',
+  'application_submitted',
+  'contract_signed',
+  'bond_approved',
+  'commission_pending',
+  'commission_paid',
+] as const;
+
+function normalizeStage(stage: string | null | undefined) {
+  const value = String(stage || '').toLowerCase();
+  if (!value) return 'viewing_scheduled';
+  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
+  return value;
+}
+
+function getStageLabel(stage: string | null | undefined) {
+  return normalizeStage(stage)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function getStageProgress(stage: string | null | undefined) {
+  const normalized = normalizeStage(stage);
+  const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
+  if (index < 0) return { index: 0, percent: 0 };
+  return { index, percent: Math.round(((index + 1) / JOURNEY_STAGES.length) * 100) };
+}
+
+function getNextActionHint(input: {
+  status: string;
+  docProgress: { requiredCount: number; verifiedRequiredCount: number };
+}) {
+  const normalized = normalizeStage(input.status);
+  if (normalized === 'commission_paid') {
+    return 'Commission paid. Download supporting documents and submit your next referral.';
+  }
+  if (normalized === 'commission_pending') {
+    return 'Deal closed. Monitor payout approval and payment timing.';
+  }
+  if (normalized === 'bond_approved' || normalized === 'contract_signed') {
+    return 'Keep all required docs complete while payout milestone is processed.';
+  }
+  if (normalized === 'application_submitted') {
+    if (input.docProgress.verifiedRequiredCount < input.docProgress.requiredCount) {
+      return 'Upload and verify remaining required documents to avoid payout delays.';
+    }
+    return 'Application submitted. Track manager feedback and bond progression.';
+  }
+  return 'Coordinate buyer viewing and progress this referral to application stage.';
+}
+
 function base64ToBlob(base64: string, mimeType: string) {
   const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
   return new Blob([bytes], { type: mimeType });
@@ -100,6 +153,11 @@ export default function PartnerReferralDetailPage() {
         calcVersion?: string | null;
       }
     | null;
+  const journeyProgress = getStageProgress(referral.status);
+  const nextActionHint = getNextActionHint({
+    status: String(referral.status || ''),
+    docProgress: referral.docProgress,
+  });
 
   return (
     <ReferralAppShell>
@@ -111,7 +169,7 @@ export default function PartnerReferralDetailPage() {
                 <CardTitle>{referral.development.name}</CardTitle>
                 <CardDescription>Deal #{referral.dealId}</CardDescription>
               </div>
-              <Badge>{referral.status}</Badge>
+              <Badge>{getStageLabel(referral.status)}</Badge>
             </div>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -136,6 +194,41 @@ export default function PartnerReferralDetailPage() {
                   : 'Download Qualification Pack'}
               </Button>
             ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-base">Journey to Commission</CardTitle>
+            <CardDescription>
+              Stage {journeyProgress.index + 1} of {JOURNEY_STAGES.length} ({journeyProgress.percent}
+              % complete)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3 h-2 overflow-hidden rounded bg-slate-100">
+              <div className="h-full rounded bg-blue-600" style={{ width: `${journeyProgress.percent}%` }} />
+            </div>
+            <div className="mb-3 flex flex-wrap gap-1">
+              {JOURNEY_STAGES.map(stage => {
+                const currentIndex = journeyProgress.index;
+                const stageIndex = JOURNEY_STAGES.indexOf(stage);
+                const reached = stageIndex <= currentIndex;
+                return (
+                  <span
+                    key={stage}
+                    className={`rounded px-2 py-1 text-[11px] ${
+                      reached ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {getStageLabel(stage)}
+                  </span>
+                );
+              })}
+            </div>
+            <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              {nextActionHint}
+            </div>
           </CardContent>
         </Card>
 
