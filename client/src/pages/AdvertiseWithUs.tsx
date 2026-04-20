@@ -42,30 +42,6 @@ import {
 import { MetricsPlaceholder } from '@/components/advertise/ErrorStates';
 
 // Lazy load below-the-fold sections for better performance with error handling
-const FeaturesGridSection = lazy(() =>
-  import('@/components/advertise/FeaturesGridSection')
-    .then(module => {
-      console.log('✓ FeaturesGridSection loaded successfully');
-      return module;
-    })
-    .catch(error => {
-      console.error('✗ Failed to load FeaturesGridSection:', error);
-      throw error;
-    }),
-);
-
-const SocialProofSection = lazy(() =>
-  import('@/components/advertise/SocialProofSection')
-    .then(module => {
-      console.log('✓ SocialProofSection loaded successfully');
-      return module;
-    })
-    .catch(error => {
-      console.error('✗ Failed to load SocialProofSection:', error);
-      throw error;
-    }),
-);
-
 const FinalCTASection = lazy(() =>
   import('@/components/advertise/FinalCTASection')
     .then(module => {
@@ -90,11 +66,41 @@ const FAQSection = lazy(() =>
     }),
 );
 
+const ValuePropositionSection = lazy(() =>
+  import('@/components/advertise/ValuePropositionSection')
+    .then(module => ({ default: module.ValuePropositionSection }))
+);
+
+const HowItWorksSection = lazy(() =>
+  import('@/components/advertise/HowItWorksSection')
+    .then(module => ({ default: module.HowItWorksSection }))
+);
+
+const PricingPreviewSection = lazy(() =>
+  import('@/components/advertise/PricingPreviewSection')
+    .then(module => ({ default: module.PricingPreviewSection }))
+);
+
+const ExtendedNetworkSection = lazy(() =>
+  import('@/components/advertise/ExtendedNetworkSection')
+    .then(module => ({ default: module.ExtendedNetworkSection }))
+);
+
+const SegmentationLayer = lazy(() =>
+  import('@/components/advertise/SegmentationLayer')
+    .then(module => ({ default: module.SegmentationLayer }))
+);
+
+const EcosystemSection = lazy(() =>
+  import('@/components/advertise/EcosystemSection')
+    .then(module => ({ default: module.EcosystemSection }))
+);
+
 // Import the actual section components
-import { PartnerSelectionSection } from '@/components/advertise/PartnerSelectionSection';
-import { ValuePropositionSection } from '@/components/advertise/ValuePropositionSection';
-import { HowItWorksSection } from '@/components/advertise/HowItWorksSection';
-import { PricingPreviewSection } from '@/components/advertise/PricingPreviewSection';
+// Import the initial above-the-fold section components statically
+import { TrustStripSection } from '@/components/advertise/TrustStripSection';
+import { LiveDemandSection } from '@/components/advertise/LiveDemandSection';
+import { DemandCaptureModal } from '@/components/advertise/DemandCaptureModal';
 
 export default function AdvertiseWithUs() {
   // Set up analytics tracking (tracks page view and scroll depth automatically)
@@ -104,7 +110,7 @@ export default function AdvertiseWithUs() {
 
   // Loading and error states
   const [heroLoading, setHeroLoading] = useState(false);
-  const [metricsError] = useState(false);
+  const [isCaptureModalOpen, setIsCaptureModalOpen] = useState(false);
 
   // Sample billboard banner
   const billboard = {
@@ -149,6 +155,10 @@ export default function AdvertiseWithUs() {
 
   return (
     <>
+      <DemandCaptureModal 
+        isOpen={isCaptureModalOpen} 
+        onClose={() => setIsCaptureModalOpen(false)} 
+      />
       {/* SEO Meta Tags */}
       <SEOHead
         title="Advertise With Us | Reach High-Intent Property Buyers"
@@ -197,61 +207,86 @@ export default function AdvertiseWithUs() {
                   variant: 'primary' as const,
                 }}
                 secondaryCTA={{
-                  label: 'Request a Demo',
-                  href: '/contact',
+                  label: 'See Buyers Near You',
+                  onClick: () => setIsCaptureModalOpen(true),
                   variant: 'secondary' as const,
                 }}
-                billboard={billboard}
-                trustSignals={trustSignals}
+                stats={[
+                  { value: '150k', suffix: '+', label: 'Verified Leads' },
+                  { value: '25k', suffix: '+', label: 'Properties Promoted' },
+                  { value: '4.8', suffix: '/5', label: 'Partner Satisfaction' }
+                ]}
               />
             )}
           </section>
         </SectionErrorBoundary>
 
-        {/* Partner Selection Section */}
-        <SectionErrorBoundary sectionName="Partner Selection">
-          <section id="partner-selection" aria-labelledby="partner-selection-heading">
-            <PartnerSelectionSection />
+        {/* Trust Strip Section */}
+        <SectionErrorBoundary sectionName="Trust Strip">
+          <section id="trust-strip" aria-labelledby="trust-strip-heading">
+            <TrustStripSection />
           </section>
         </SectionErrorBoundary>
 
-        {/* Value Proposition Section */}
-        <SectionErrorBoundary sectionName="Value Proposition">
-          <section id="value-proposition" aria-labelledby="value-proposition-heading">
-            <ValuePropositionSection />
+        {/* Live Demand Section */}
+        <SectionErrorBoundary sectionName="Live Demand">
+          <section id="live-demand" aria-labelledby="live-demand-heading">
+            <LiveDemandSection onCaptureClick={() => setIsCaptureModalOpen(true)} />
           </section>
         </SectionErrorBoundary>
 
-        {/* How It Works Section */}
-        <SectionErrorBoundary sectionName="How It Works">
-          <section id="how-it-works" aria-labelledby="how-it-works-heading">
-            <HowItWorksSection />
-          </section>
-        </SectionErrorBoundary>
-
-        {/* Features Grid Section - Lazy loaded */}
-        <SectionErrorBoundary sectionName="Features Grid">
-          <Suspense fallback={<FeaturesGridSkeleton />}>
-            <section id="features-grid" aria-labelledby="features-grid-heading">
-              <FeaturesGridSection />
+        {/* Ecosystem Section */}
+        <SectionErrorBoundary sectionName="Ecosystem">
+          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading ecosystem..." />}>
+            <section id="ecosystem" aria-labelledby="ecosystem-heading">
+              <EcosystemSection />
             </section>
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* Social Proof Section - Lazy loaded */}
-        <SectionErrorBoundary sectionName="Social Proof">
-          <Suspense fallback={<SocialProofSkeleton />}>
-            <section id="social-proof" aria-labelledby="social-proof-heading">
-              {metricsError ? <MetricsPlaceholder /> : <SocialProofSection metrics={metrics} />}
+        {/* Segmentation Layer */}
+        <SectionErrorBoundary sectionName="Segmentation Layer">
+          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading segmentation..." />}>
+            <section id="segmentation" aria-labelledby="segmentation-heading">
+              <SegmentationLayer />
+            </section>
+          </Suspense>
+        </SectionErrorBoundary>
+
+        {/* Value Proposition Section */}
+        <SectionErrorBoundary sectionName="Value Proposition">
+          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading value proposition..." />}>
+            <section id="value-proposition" aria-labelledby="value-proposition-heading">
+              <ValuePropositionSection />
+            </section>
+          </Suspense>
+        </SectionErrorBoundary>
+
+        {/* How It Works Section */}
+        <SectionErrorBoundary sectionName="How It Works">
+          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading pipeline..." />}>
+            <section id="how-it-works" aria-labelledby="how-it-works-heading">
+              <HowItWorksSection />
+            </section>
+          </Suspense>
+        </SectionErrorBoundary>
+
+        {/* Extended Network Section */}
+        <SectionErrorBoundary sectionName="Extended Network">
+          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading network..." />}>
+            <section id="extended-network" aria-labelledby="extended-network-heading">
+              <ExtendedNetworkSection />
             </section>
           </Suspense>
         </SectionErrorBoundary>
 
         {/* Pricing Preview Section - Now inline */}
         <SectionErrorBoundary sectionName="Pricing Preview">
-          <section id="pricing-preview" aria-labelledby="pricing-preview-heading">
-            <PricingPreviewSection />
-          </section>
+          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading pricing..." />}>
+            <section id="pricing-preview" aria-labelledby="pricing-preview-heading">
+              <PricingPreviewSection />
+            </section>
+          </Suspense>
         </SectionErrorBoundary>
 
         {/* Final CTA Section - Lazy loaded */}
@@ -261,10 +296,10 @@ export default function AdvertiseWithUs() {
           >
             <section id="final-cta" aria-labelledby="final-cta-heading">
               <FinalCTASection
-                headline="Ready to Grow Your Business?"
-                subtext="Join hundreds of successful partners already advertising on South Africa's fastest-growing property platform."
+                headline="Start Receiving Buyer Leads This Week"
+                subtext="Don't let your competitors capture your market share. Join hundreds of successful partners already plugged into South Africa's most active property demand network."
                 primaryCTA={{
-                  label: 'Get Started Now',
+                  label: 'Claim Your Market Access',
                   href: '/role-selection',
                 }}
                 secondaryCTA={{
