@@ -500,7 +500,6 @@ export function DiscoverProperties({
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 rounded-r-2xl bg-gradient-to-l from-white via-white/80 to-transparent md:hidden" />
           </div>
         </div>
       </div>

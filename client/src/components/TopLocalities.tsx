@@ -352,7 +352,6 @@ export function TopLocalities({
             >
               <ChevronRight className="h-5 w-5" />
             </Button>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/90 to-transparent md:hidden" />
           </div>
         )}
 

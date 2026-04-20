@@ -12,7 +12,7 @@ import type { HeroTab } from '@/types/hero';
 
 type HomeMobileViewProps = {
   activeHeroTab: HeroTab;
-  heroTabValue: string;
+  heroTabValue?: string;
   onBrowseProperties: () => void;
   onProvinceChange: (province: string) => void;
   onTabChange: (tab: string) => void;

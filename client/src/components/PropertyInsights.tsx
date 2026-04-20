@@ -464,7 +464,6 @@ export function PropertyInsights({
                   </div>
                 </InsightCard>
               </div>
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/90 to-transparent lg:hidden" />
             </TabsContent>
           </Tabs>
         </div>
