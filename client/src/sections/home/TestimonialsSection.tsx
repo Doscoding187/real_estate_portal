@@ -46,7 +46,6 @@ export function TestimonialsSection() {
       </div>
 
       <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white via-white/90 to-transparent md:hidden" />
         <div className="scrollbar-hide flex snap-x gap-3 overflow-x-auto px-0.5 pb-4 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:px-0">
           {testimonials.map((testimonial, idx) => (
             <div

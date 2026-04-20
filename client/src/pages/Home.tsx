@@ -17,7 +17,8 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
-  const [activeHeroTab, setActiveHeroTab] = useState<HeroTab>('buy');
+  const [activeHeroTab, setActiveHeroTab] = useState<HeroTab | null>(null);
+  const effectiveHeroTab = activeHeroTab ?? 'buy';
 
   const provinces = [
     'Gauteng',
@@ -41,7 +42,9 @@ export default function Home() {
   };
 
   const heroTabValue =
-    activeHeroTab === 'buy'
+    activeHeroTab === null
+      ? undefined
+      : activeHeroTab === 'buy'
       ? 'buy'
       : activeHeroTab === 'rent'
         ? 'rental'
@@ -80,7 +83,7 @@ export default function Home() {
       />
       {isMobile ? (
         <HomeMobileView
-          activeHeroTab={activeHeroTab}
+          activeHeroTab={effectiveHeroTab}
           heroTabValue={heroTabValue}
           onBrowseProperties={() => setLocation('/properties')}
           onProvinceChange={setSelectedProvince}
@@ -90,7 +93,7 @@ export default function Home() {
         />
       ) : (
         <HomeDesktopView
-          activeHeroTab={activeHeroTab}
+          activeHeroTab={effectiveHeroTab}
           heroTabValue={heroTabValue}
           onBrowseProperties={() => setLocation('/properties')}
           onProvinceChange={setSelectedProvince}
