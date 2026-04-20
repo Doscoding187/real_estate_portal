@@ -305,7 +305,7 @@ export default function Login() {
         else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
         else if (role === 'service_provider') redirectPath = '/service/dashboard';
         else if (result.user?.hasManagerIdentity) redirectPath = '/distribution/manager';
-        else if (result.user?.hasReferrerIdentity) redirectPath = '/referrer/dashboard';
+        else if (result.user?.hasReferrerIdentity) redirectPath = '/distribution/partner';
         else if (role === 'agent') redirectPath = '/agent/select-package';
       }
 

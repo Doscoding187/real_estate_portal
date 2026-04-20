@@ -281,7 +281,7 @@ function getInitials(user: NavbarUser) {
 function getPrimaryAccountRoute(user: NavbarUser, hasReferrerAccess: boolean) {
   if (user?.hasManagerIdentity) return '/distribution/manager';
   if (hasReferrerAccess && !REFERRER_PRIORITY_EXCLUSIONS.has(user?.role)) {
-    return '/referrer/dashboard';
+    return '/distribution/partner';
   }
 
   switch (user?.role) {
@@ -329,7 +329,7 @@ export function EnhancedNavbar() {
   const accountInitials = getInitials(user);
   const primaryAccountRoute = getPrimaryAccountRoute(user, hasReferrerAccess);
   const primaryAccountLabel =
-    primaryAccountRoute === '/referrer/dashboard'
+    primaryAccountRoute === '/distribution/partner'
       ? 'Referral workspace'
       : user?.role === 'super_admin' || user?.role === 'admin'
         ? 'Admin overview'
@@ -339,18 +339,18 @@ export function EnhancedNavbar() {
         {
           label: primaryAccountLabel,
           hint:
-            primaryAccountRoute === '/referrer/dashboard'
+            primaryAccountRoute === '/distribution/partner'
               ? 'Track referrals and deal flow'
               : 'Open your workspace',
           href: primaryAccountRoute,
           icon: LayoutDashboard,
         },
-        ...(hasReferrerAccess && primaryAccountRoute !== '/referrer/dashboard'
+        ...(hasReferrerAccess && primaryAccountRoute !== '/distribution/partner'
           ? [
               {
                 label: 'Referral workspace',
                 hint: 'Manage referrals and commissions',
-                href: '/referrer/dashboard',
+                href: '/distribution/partner',
                 icon: Briefcase,
               },
             ]
@@ -523,22 +523,60 @@ export function EnhancedNavbar() {
     await logout();
     setLocation('/');
   };
+
+  const handleMobileAccountClick = () => {
+    if (user) {
+      navigateTo(primaryAccountRoute);
+      return;
+    }
+
+    window.location.href = getLoginUrl();
+  };
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/92 shadow-sm backdrop-blur-md">
+    <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white shadow-sm">
       <div className="w-full px-3 sm:px-6 lg:px-20">
         <div className="flex h-13 items-center justify-between sm:h-14 lg:h-16">
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-xl p-2 text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600 lg:hidden"
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="flex flex-1 items-center justify-between lg:hidden">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="rounded-xl p-2 text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <Link href="/">
+                <div className="flex items-center cursor-pointer group">
+                  <span className="text-base font-bold tracking-tight text-blue-600 transition-colors group-hover:text-blue-700">
+                    Property Listify
+                  </span>
+                </div>
+              </Link>
+            </div>
 
-          {/* Logo */}
+            <div className="flex items-center gap-2">
+              <Link href="/explore/home">
+                <button className="rounded-lg px-2 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
+                  Explore
+                </button>
+              </Link>
+              <Link href="/distribution-network">
+                <button className="rounded-lg px-2 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
+                  Refer
+                </button>
+              </Link>
+              <button
+                onClick={handleMobileAccountClick}
+                className="rounded-xl p-2 text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                aria-label={user ? 'Open account' : 'Login'}
+              >
+                <User className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer group">
+            <div className="hidden cursor-pointer items-center gap-2 group lg:flex">
               <span className="text-base font-bold tracking-tight text-blue-600 transition-colors group-hover:text-blue-700 sm:text-xl lg:text-2xl">
                 Property Listify
               </span>
@@ -1148,9 +1186,6 @@ export function EnhancedNavbar() {
               </Button>
             ) : null}
           </div>
-
-          <div className="w-9 lg:hidden" />
-          <div className="w-9 lg:hidden" />
         </div>
 
         {/* Mobile Menu Drawer */}
@@ -1247,7 +1282,9 @@ export function EnhancedNavbar() {
                         {accountInitials}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {displayName}
+                        </p>
                         <p className="truncate text-sm text-slate-500">{user.email}</p>
                       </div>
                     </div>

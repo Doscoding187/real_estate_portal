@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ArrowDown, ArrowUp, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, Loader2, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import {
@@ -46,6 +46,8 @@ type RequiredDocumentDraft = {
     | 'transfer_documents'
     | 'custom';
   documentLabel: string;
+  templateFileUrl?: string | null;
+  templateFileName?: string | null;
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
@@ -125,6 +127,19 @@ const developerDocumentCodeOptions: Array<{
   { value: 'custom', label: 'Custom Developer Document' },
 ];
 
+const documentCodeLabelMap: Record<RequiredDocumentDraft['documentCode'], string> = {
+  id_document: 'ID Document',
+  proof_of_address: 'Proof of Address',
+  proof_of_income: 'Payslips / Proof of Income',
+  bank_statement: 'Bank Statement',
+  pre_approval: 'Pre-Approval',
+  signed_offer_to_purchase: 'Offer to Purchase',
+  sale_agreement: 'Sale Agreement',
+  attorney_instruction_letter: 'Attorney Instruction Letter',
+  transfer_documents: 'Transfer Documents',
+  custom: 'Custom Document',
+};
+
 const blockerSectionMap: Record<string, string> = {
   PROGRAM_MISSING: 'section-program',
   PROGRAM_INACTIVE: 'section-program',
@@ -173,6 +188,15 @@ function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramRead
     },
     { enabled: 0, readyToEnable: 0, blocked: 0, loading: 0 },
   );
+}
+
+function toFileBaseName(filename: string | null | undefined) {
+  if (!filename) return '';
+  const trimmed = String(filename).trim();
+  if (!trimmed) return '';
+  const withoutPath = trimmed.split(/[\\/]/).pop() || trimmed;
+  const withoutExt = withoutPath.replace(/\.[^.]+$/, '');
+  return withoutExt.trim();
 }
 
 export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadiness | null }) {
@@ -245,6 +269,7 @@ function DevelopmentProgramConfigPanel({
   const onboardDevelopmentMutation =
     trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
   const setBrandPresetMutation = trpc.distribution.admin.setBrandOnboardingPreset.useMutation();
+  const presignUploadMutation = trpc.upload.presign.useMutation();
 
   const [commissionModel, setCommissionModel] = useState<'flat_percentage' | 'flat_amount'>(
     development.program?.commissionModel === 'fixed_amount' ? 'flat_amount' : 'flat_percentage',
@@ -262,6 +287,7 @@ function DevelopmentProgramConfigPanel({
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
+  const [uploadingDocumentIndex, setUploadingDocumentIndex] = useState<number | null>(null);
 
   const applyPresetToForm = useCallback((preset: BrandOnboardingPreset) => {
     setCommissionModel(preset.commissionModel);
@@ -336,6 +362,8 @@ function DevelopmentProgramConfigPanel({
         ) as RequiredDocumentDraft['category'],
         documentCode: document.documentCode as RequiredDocumentDraft['documentCode'],
         documentLabel: String(document.documentLabel || ''),
+        templateFileUrl: String(document.templateFileUrl || '') || null,
+        templateFileName: String(document.templateFileName || '') || null,
         isRequired: Boolean(document.isRequired),
         isActive: Boolean(document.isActive),
         sortOrder: Number(document.sortOrder || 0),
@@ -393,11 +421,61 @@ function DevelopmentProgramConfigPanel({
         category,
         documentCode: 'custom',
         documentLabel: '',
+        templateFileUrl: null,
+        templateFileName: null,
         isRequired: true,
         isActive: true,
         sortOrder: current.length,
       },
     ]);
+  }
+
+  function resolveDocumentLabel(document: RequiredDocumentDraft) {
+    const typedLabel = document.documentLabel.trim();
+    if (typedLabel) return typedLabel;
+
+    if (document.category === 'developer_document') {
+      const fileLabel = toFileBaseName(document.templateFileName);
+      if (fileLabel) return fileLabel;
+    }
+
+    return documentCodeLabelMap[document.documentCode] || 'Custom Document';
+  }
+
+  async function handleSourceDocumentUpload(index: number, file: File | null) {
+    if (!file) return;
+    setUploadingDocumentIndex(index);
+    try {
+      const { url, publicUrl } = await presignUploadMutation.mutateAsync({
+        filename: file.name,
+        contentType: file.type || 'application/octet-stream',
+        propertyId: `distribution-development-${development.developmentId}`,
+      });
+
+      const uploadResponse = await fetch(url, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Document upload failed (${uploadResponse.status}).`);
+      }
+
+      updateDocumentAtIndex(index, item => ({
+        ...item,
+        templateFileUrl: publicUrl,
+        templateFileName: file.name,
+        documentLabel: item.documentLabel.trim() || toFileBaseName(file.name),
+      }));
+      toast.success('Source document uploaded.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to upload source document.');
+    } finally {
+      setUploadingDocumentIndex(null);
+    }
   }
 
   function renderDocumentSection(input: {
@@ -417,7 +495,7 @@ function DevelopmentProgramConfigPanel({
         <CardContent className="space-y-2">
           {input.rows.map(({ document, index }, rowIndex) => (
             <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
-              <div className="grid gap-2 md:grid-cols-[1fr_1.4fr_auto_auto_auto]">
+              <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1.4fr)_auto_auto_auto]">
                 <Select
                   value={document.documentCode}
                   onValueChange={value =>
@@ -440,6 +518,7 @@ function DevelopmentProgramConfigPanel({
                 </Select>
 
                 <Input
+                  className="min-w-[220px]"
                   value={document.documentLabel}
                   onChange={event =>
                     updateDocumentAtIndex(index, item => ({
@@ -447,7 +526,11 @@ function DevelopmentProgramConfigPanel({
                       documentLabel: event.target.value,
                     }))
                   }
-                  placeholder="Document title"
+                  placeholder={
+                    input.category === 'developer_document' && document.documentCode === 'custom'
+                      ? 'Custom document name'
+                      : 'Document title'
+                  }
                 />
 
                 <div className="flex items-center gap-2 rounded border px-2 text-xs">
@@ -483,6 +566,60 @@ function DevelopmentProgramConfigPanel({
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              {input.category === 'developer_document' ? (
+                <div className="mt-2 grid gap-2 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs text-slate-600">Upload source document</label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        disabled={isSaving || uploadingDocumentIndex === index}
+                        onChange={event => {
+                          const file = event.target.files?.[0] || null;
+                          void handleSourceDocumentUpload(index, file);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isSaving || uploadingDocumentIndex === index}
+                        onClick={() =>
+                          updateDocumentAtIndex(index, item => ({
+                            ...item,
+                            templateFileUrl: null,
+                            templateFileName: null,
+                          }))
+                        }
+                      >
+                        Clear
+                      </Button>
+                      {uploadingDocumentIndex === index ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Uploading...
+                        </span>
+                      ) : null}
+                    </div>
+                    {document.templateFileUrl ? (
+                      <a
+                        href={document.templateFileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                      >
+                        <Upload className="h-3 w-3" />
+                        Uploaded document
+                        {document.templateFileName ? ` (${document.templateFileName})` : ''}
+                      </a>
+                    ) : (
+                      <p className="text-xs text-slate-500">No document uploaded yet.</p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ))}
 
@@ -530,7 +667,15 @@ function DevelopmentProgramConfigPanel({
         id: preserveIds ? document.id : undefined,
         category: document.category,
         documentCode: document.documentCode,
-        documentLabel: document.documentLabel.trim() || 'Custom Document',
+        documentLabel: resolveDocumentLabel(document),
+        templateFileUrl:
+          document.category === 'developer_document'
+            ? document.templateFileUrl?.trim() || null
+            : null,
+        templateFileName:
+          document.category === 'developer_document'
+            ? document.templateFileName?.trim() || null
+            : null,
         isRequired: document.isRequired,
         sortOrder: index,
         isActive: document.isActive,
@@ -559,7 +704,15 @@ function DevelopmentProgramConfigPanel({
       documents: documents.map((document, index) => ({
         category: document.category,
         documentCode: document.documentCode,
-        documentLabel: document.documentLabel.trim() || 'Custom Document',
+        documentLabel: resolveDocumentLabel(document),
+        templateFileUrl:
+          document.category === 'developer_document'
+            ? document.templateFileUrl?.trim() || null
+            : null,
+        templateFileName:
+          document.category === 'developer_document'
+            ? document.templateFileName?.trim() || null
+            : null,
         isRequired: document.isRequired,
         isActive: document.isActive,
         sortOrder: index,

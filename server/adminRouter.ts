@@ -364,6 +364,78 @@ export const adminRouter = router({
       };
     }),
 
+  getListingSubmissionFailures: superAdminProcedure
+    .input(
+      z
+        .object({
+          sinceDays: z.number().min(1).max(90).default(14),
+          limit: z.number().min(1).max(200).default(50),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const sinceDays = input?.sinceDays ?? 14;
+      const limit = input?.limit ?? 50;
+      const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
+
+      const rows = await db
+        .select({
+          id: analyticsEvents.id,
+          createdAt: analyticsEvents.createdAt,
+          userId: analyticsEvents.userId,
+          eventData: analyticsEvents.eventData,
+          userEmail: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        })
+        .from(analyticsEvents)
+        .leftJoin(users, eq(analyticsEvents.userId, users.id))
+        .where(
+          and(
+            eq(analyticsEvents.eventType, 'agent_listing_submit_failed'),
+            gte(analyticsEvents.createdAt, since),
+          ),
+        )
+        .orderBy(desc(analyticsEvents.createdAt))
+        .limit(limit);
+
+      const failures = rows.map(row => {
+        const payload =
+          row.eventData && typeof row.eventData === 'object'
+            ? (row.eventData as Record<string, unknown>)
+            : {};
+        return {
+          id: row.id,
+          createdAt: row.createdAt,
+          userId: row.userId,
+          email: row.userEmail || null,
+          name: [row.firstName, row.lastName].filter(Boolean).join(' ').trim() || null,
+          listingId: Number(payload.listingId || 0) || null,
+          reasonCode: String(payload.reasonCode || '').trim() || 'unknown',
+          message: String(payload.message || '').trim() || 'Submission failed',
+          details: payload,
+        };
+      });
+
+      const reasonCounts = failures.reduce(
+        (acc, item) => {
+          acc[item.reasonCode] = (acc[item.reasonCode] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      return {
+        sinceDays,
+        total: failures.length,
+        reasonCounts,
+        failures,
+      };
+    }),
+
   /**
    * Super Admin: Get action items (pending counts)
    * Designed for fast polling on the dashboard

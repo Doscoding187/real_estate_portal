@@ -21,7 +21,7 @@ function computeChecklistSummary(checklist: any) {
   const allRequiredVerified = requiredCount > 0 && verifiedRequiredCount >= requiredCount;
   const blockers: string[] = [];
   if (requiredCount === 0) {
-    blockers.push('No required document templates are configured for this development.');
+    blockers.push('No required documents are configured for this development.');
   } else if (!allRequiredVerified) {
     const remaining = requiredCount - verifiedRequiredCount;
     blockers.push(
@@ -78,6 +78,8 @@ export default function ManagerDealChecklistPage() {
     templateId: number;
     status: DealDocumentStatus;
     notes?: string | null;
+    submittedFileUrl?: string | null;
+    submittedFileName?: string | null;
   }) {
     if (!localChecklist) return;
     const previousChecklist = localChecklist;
@@ -110,6 +112,8 @@ export default function ManagerDealChecklistPage() {
         templateId: input.templateId,
         status: input.status,
         notes: input.notes,
+        submittedFileUrl: input.submittedFileUrl,
+        submittedFileName: input.submittedFileName,
       });
       setLocalChecklist(updatedChecklist);
     } catch (error: any) {

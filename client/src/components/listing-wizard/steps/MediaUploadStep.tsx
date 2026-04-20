@@ -1,17 +1,20 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
-import { MediaUploadZone } from '@/components/media/MediaUploadZone';
 import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
 import { UploadProgressList, UploadProgress } from '@/components/media/UploadProgressBar';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, Upload } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
 import type { MediaItem } from '@/components/media/SortableMediaGrid';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // TRPC mutation for media upload
   const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
@@ -20,6 +23,7 @@ const MediaUploadStep: React.FC = () => {
   const handleUpload = useCallback(
     async (files: File[]) => {
       if (!files || files.length === 0) return;
+      const existingCount = store.media.length;
 
       // Create upload progress entries
       const newUploads: UploadProgress[] = files.map((file, index) => ({
@@ -107,8 +111,8 @@ const MediaUploadStep: React.FC = () => {
             type: mediaType,
             fileName: file.name,
             fileSize: file.size,
-            displayOrder: store.media.length,
-            isPrimary: store.media.length === 0, // First upload is primary
+            displayOrder: existingCount + i,
+            isPrimary: existingCount === 0 && i === 0, // First uploaded file only
             processingStatus: 'completed',
           };
 
@@ -116,7 +120,7 @@ const MediaUploadStep: React.FC = () => {
           store.addMedia(mediaFile);
 
           // Set as main media if first upload
-          if (store.media.length === 1) {
+          if (existingCount === 0 && i === 0) {
             store.setMainMedia(uploadData.mediaId as any);
           }
 
@@ -141,9 +145,75 @@ const MediaUploadStep: React.FC = () => {
     [store, uploadMediaMutation],
   );
 
+  const MAX_FILES = 30;
+  const MAX_IMAGE_MB = 15;
+  const MAX_VIDEO_MB = 80;
+
+  const validateAndUpload = useCallback(
+    (files: File[]) => {
+      if (!files.length) return;
+
+      const remainingSlots = Math.max(0, MAX_FILES - store.media.length);
+      if (remainingSlots === 0) {
+        toast.error(`Maximum of ${MAX_FILES} files reached.`);
+        return;
+      }
+
+      const limitedFiles = files.slice(0, remainingSlots);
+      const rejected = files.length - limitedFiles.length;
+      if (rejected > 0) {
+        toast.info(`Only ${remainingSlots} file(s) accepted. ${rejected} were skipped.`);
+      }
+
+      const validFiles = limitedFiles.filter(file => {
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        if (!isImage && !isVideo) {
+          toast.error(`Unsupported file type: ${file.name}`);
+          return false;
+        }
+
+        const sizeMb = file.size / (1024 * 1024);
+        const sizeLimit = isVideo ? MAX_VIDEO_MB : MAX_IMAGE_MB;
+        if (sizeMb > sizeLimit) {
+          toast.error(`${file.name} exceeds ${sizeLimit}MB limit.`);
+          return false;
+        }
+
+        return true;
+      });
+
+      if (!validFiles.length) return;
+      void handleUpload(validFiles);
+    },
+    [handleUpload, store.media.length],
+  );
+
+  const openFileDialog = useCallback(() => {
+    if (uploads.some(u => u.status === 'uploading')) return;
+    fileInputRef.current?.click();
+  }, [uploads]);
+
+  const onDropZoneDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+      if (uploads.some(u => u.status === 'uploading')) return;
+      validateAndUpload(Array.from(e.dataTransfer.files || []));
+    },
+    [uploads, validateAndUpload],
+  );
+
   // Convert store media to MediaItem format
+  const getMediaKey = useCallback(
+    (media: MediaFile, index: number) =>
+      String(media.id ?? media.url ?? `${media.fileName || 'media'}-${index}`),
+    [],
+  );
+
   const mediaItems: MediaItem[] = store.media.map((media, index) => ({
-    id: media.id?.toString() || `media-${index}`,
+    id: getMediaKey(media, index),
     url: media.url,
     type: media.type as 'image' | 'video' | 'floorplan' | 'pdf',
     fileName: media.fileName,
@@ -154,39 +224,49 @@ const MediaUploadStep: React.FC = () => {
   // Handle media reorder - bulk replace all media with new order
   const handleReorder = useCallback(
     (reorderedMedia: MediaItem[]) => {
-      // Convert MediaItem[] back to MediaFile[] format and update store
+      const sourceMap = new Map(
+        store.media.map((media, index) => [getMediaKey(media, index), media] as const),
+      );
       const updatedMedia = reorderedMedia
         .map((item, index) => {
-          const original = store.media.find(m => m.id?.toString() === item.id);
-          return {
-            ...original,
-            displayOrder: index,
-          };
+          const original = sourceMap.get(item.id);
+          return original ? { ...original, displayOrder: index } : null;
         })
-        .filter(Boolean) as typeof store.media;
+        .filter(Boolean) as MediaFile[];
 
-      store.setMedia(updatedMedia);
+      if (updatedMedia.length > 0) {
+        store.setMedia(updatedMedia);
+      }
     },
-    [store],
+    [getMediaKey, store],
   );
 
   // Handle media remove
   const handleRemove = useCallback(
     (id: string) => {
-      const index = store.media.findIndex(m => m.id?.toString() === id);
+      const index = store.media.findIndex((m, idx) => getMediaKey(m, idx) === id);
       if (index !== -1) {
         store.removeMedia(index);
       }
     },
-    [store],
+    [getMediaKey, store],
   );
 
   // Handle set as primary
   const handleSetPrimary = useCallback(
     (id: string) => {
-      store.setMainMedia(id as any);
+      const selected = store.media.find((m, idx) => getMediaKey(m, idx) === id);
+      if (selected?.id) {
+        store.setMainMedia(String(selected.id));
+        return;
+      }
+      const updated = store.media.map((m, idx) => ({
+        ...m,
+        isPrimary: getMediaKey(m, idx) === id,
+      }));
+      store.setMedia(updated);
     },
-    [store],
+    [getMediaKey, store],
   );
 
   // Handle upload cancel
@@ -219,15 +299,51 @@ const MediaUploadStep: React.FC = () => {
         </div>
 
         {/* Upload Zone */}
-        <MediaUploadZone
-          onUpload={handleUpload}
-          maxFiles={30}
-          maxSizeMB={5}
-          maxVideoSizeMB={50}
-          acceptedTypes={['image/*', 'video/*']}
-          existingMediaCount={store.media.length}
-          disabled={uploads.some(u => u.status === 'uploading')}
-        />
+        <div
+          className={cn(
+            'border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer',
+            isDragOver ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:bg-slate-50',
+            uploads.some(u => u.status === 'uploading') &&
+              'opacity-60 cursor-not-allowed hover:bg-transparent',
+          )}
+          onClick={openFileDialog}
+          onDragOver={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!uploads.some(u => u.status === 'uploading')) setIsDragOver(true);
+          }}
+          onDragLeave={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.currentTarget === e.target) setIsDragOver(false);
+          }}
+          onDrop={onDropZoneDrop}
+        >
+          <Upload
+            className={cn(
+              'w-10 h-10 mx-auto mb-3 transition-colors',
+              isDragOver ? 'text-blue-600' : 'text-slate-400',
+            )}
+          />
+          <p className="text-base font-medium text-slate-800">
+            {isDragOver ? 'Drop images/videos here' : 'Click to upload or drag and drop'}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            Max {MAX_FILES} files • {MAX_IMAGE_MB}MB per image • {MAX_VIDEO_MB}MB per video
+          </p>
+          <p className="text-xs text-slate-400 mt-1">{store.media.length} uploaded</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            accept="image/*,video/*"
+            onChange={e => {
+              validateAndUpload(Array.from(e.target.files || []));
+              e.currentTarget.value = '';
+            }}
+          />
+        </div>
 
         {/* Upload Progress */}
         {uploads.length > 0 && (

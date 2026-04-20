@@ -7,6 +7,7 @@ export type AgentOsEventType =
   | 'agent_profile_published'
   | 'agent_listing_created'
   | 'agent_listing_submitted'
+  | 'agent_listing_submit_failed'
   | 'agent_listing_live'
   | 'agent_lead_received'
   | 'agent_lead_stage_updated'
