@@ -18,6 +18,7 @@ const {
   mockExportPackUseMutation: vi.fn(),
   mockMyPipelineUseQuery: vi.fn(),
   mockStatusUseQuery: vi.fn(),
+  mockMyCommissionEntriesUseQuery: vi.fn(),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -66,6 +67,9 @@ vi.mock('@/lib/trpc', () => ({
         status: {
           useQuery: (...args: unknown[]) => mockStatusUseQuery(...args),
         },
+        myCommissionEntries: {
+          useQuery: (...args: unknown[]) => mockMyCommissionEntriesUseQuery(...args),
+        },
       },
     },
   },
@@ -83,6 +87,7 @@ describe('PartnerReferralDetailPage', () => {
     mockUseRoute.mockReturnValue([true, { dealId: '42' }]);
     mockMyPipelineUseQuery.mockReturnValue({ data: { stageCounts: {} } });
     mockStatusUseQuery.mockReturnValue({ data: { accessCount: 0 } });
+    mockMyCommissionEntriesUseQuery.mockReturnValue({ data: [], isLoading: false, error: null });
     mockGetReferralUseQuery.mockReturnValue({
       isLoading: false,
       error: null,
