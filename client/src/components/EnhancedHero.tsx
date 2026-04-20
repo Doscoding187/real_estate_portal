@@ -488,11 +488,16 @@ export function EnhancedHero({
           ) : (
             // Default Homepage Title
             <h1 className="mb-0 text-[1.9rem] font-bold leading-[1.08] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-3xl sm:tracking-tight md:text-5xl lg:text-6xl">
+              {/* Mobile Title (3 Lines) */}
               <span className="block sm:hidden">
                 South Africa&apos;s <span className="text-blue-600">Fastest</span>
               </span>
-              <span className="block text-blue-600 sm:hidden">Growing</span>
-              <span className="block sm:hidden">Real Estate Platform</span>
+              <span className="block text-blue-600 sm:hidden">
+                Growing <span className="text-blue-950">Real Estate</span>
+              </span>
+              <span className="block sm:hidden">Platform</span>
+
+              {/* Desktop Title (2 Lines) */}
               <span className="hidden sm:block">
                 South Africa&apos;s <span className="text-blue-600">Fastest Growing</span>
               </span>
