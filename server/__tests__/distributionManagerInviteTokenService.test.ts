@@ -14,6 +14,7 @@ describe('distributionManagerInviteTokenService', () => {
       {
         secret: 'test-secret',
         now: Date.UTC(2026, 2, 11, 12, 0, 0),
+        ttlSeconds: 60 * 60 * 24 * 7,
       },
     );
 
@@ -30,7 +31,7 @@ describe('distributionManagerInviteTokenService', () => {
     });
   });
 
-  it('rejects an expired invite token', () => {
+  it('accepts invite tokens after the old expiry window', () => {
     const token = createDistributionManagerInviteToken(
       {
         registrationId: 42,
@@ -43,11 +44,16 @@ describe('distributionManagerInviteTokenService', () => {
       },
     );
 
-    expect(() =>
+    expect(
       verifyDistributionManagerInviteToken(token, {
         secret: 'test-secret',
         now: Date.UTC(2026, 2, 11, 12, 2, 0),
       }),
-    ).toThrow('Invite token has expired.');
+    ).toEqual({
+      registrationId: 42,
+      email: 'manager@example.com',
+      issuedAt: 1773230400,
+      expiresAt: 1773230460,
+    });
   });
 });

@@ -1,13 +1,11 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-const DEFAULT_INVITE_TTL_SECONDS = 60 * 60 * 24 * 7;
-
 type ManagerInviteTokenPayload = {
   v: 1;
   registrationId: number;
   email: string;
   iat: number;
-  exp: number;
+  exp?: number;
 };
 
 function toBase64Url(input: string) {
@@ -45,8 +43,11 @@ export function createDistributionManagerInviteToken(
     registrationId: input.registrationId,
     email: input.email.trim().toLowerCase(),
     iat: now,
-    exp: now + (options?.ttlSeconds ?? DEFAULT_INVITE_TTL_SECONDS),
   };
+  const ttlSeconds = options?.ttlSeconds;
+  if (Number.isFinite(ttlSeconds) && Number(ttlSeconds) > 0) {
+    payload.exp = now + Math.floor(Number(ttlSeconds));
+  }
   const encodedPayload = toBase64Url(JSON.stringify(payload));
   const signature = signPayload(encodedPayload, secret);
   return `${encodedPayload}.${signature}`;
@@ -81,7 +82,6 @@ export function verifyDistributionManagerInviteToken(
     throw new Error('Invalid invite token payload.');
   }
 
-  const now = Math.floor((options?.now ?? Date.now()) / 1000);
   if (payload.v !== 1) {
     throw new Error('Unsupported invite token version.');
   }
@@ -91,14 +91,14 @@ export function verifyDistributionManagerInviteToken(
   if (!payload.email || typeof payload.email !== 'string') {
     throw new Error('Invalid invite token email.');
   }
-  if (!Number.isInteger(payload.exp) || payload.exp <= now) {
-    throw new Error('Invite token has expired.');
+  if (payload.exp != null && !Number.isInteger(payload.exp)) {
+    throw new Error('Invalid invite token payload.');
   }
 
   return {
     registrationId: payload.registrationId,
     email: payload.email.trim().toLowerCase(),
     issuedAt: payload.iat,
-    expiresAt: payload.exp,
+    expiresAt: Number.isInteger(payload.exp) ? payload.exp : null,
   };
 }
