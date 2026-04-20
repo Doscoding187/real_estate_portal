@@ -10,6 +10,7 @@ const {
   mockExportPackUseMutation,
   mockMyPipelineUseQuery,
   mockStatusUseQuery,
+  mockMyCommissionEntriesUseQuery,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
   mockUseLocation: vi.fn(),
