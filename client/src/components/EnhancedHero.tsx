@@ -466,47 +466,30 @@ export function EnhancedHero({
     .toLowerCase();
 
   return (
-    <div className="relative bg-gradient-to-br from-blue-50 via-white to-blue-50 text-slate-900 overflow-hidden">
-      {/* Background Image / Overlay */}
+    <div className="relative overflow-hidden bg-white text-slate-900">
       {backgroundImage ? (
-        <>
-          <div className="absolute inset-0 z-0">
-            <img
-              src={backgroundImage}
-              alt="Hero Background"
-              className="w-full h-full object-cover opacity-10"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-blue-50/90" />
-          </div>
-        </>
-      ) : (
-        /* Default Animated Background Shapes - Light Mode */
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/40 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-200/40 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute inset-0 z-0">
+          <img
+            src={backgroundImage}
+            alt="Hero Background"
+            className="h-full w-full object-cover opacity-5"
+          />
         </div>
-      )}
-
-      {/* Grid Pattern Overlay - Dark stroke for light bg */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAyMDYxNyIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlQikiLz48L3N2Zz4=')] opacity-30 mix-blend-multiply"></div>
+      ) : null}
 
       <div className="container relative z-10 flex flex-col py-3 md:py-24">
         {/* Hero Title */}
         <div className="mt-1.5 mb-7 max-w-[22rem] text-left sm:mx-auto sm:mt-0 sm:mb-4 sm:max-w-4xl sm:text-center">
           {title ? (
             // Location / Context Title
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight text-blue-950">
+            <h1 className="mb-3 text-2xl font-bold leading-tight text-blue-950 sm:text-3xl md:text-4xl lg:text-5xl">
               {title}
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="mb-0 text-[1.4rem] font-bold leading-[1.1] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-2xl sm:tracking-tight md:text-4xl lg:text-5xl">
+            <h1 className="mb-0 text-[1.7rem] font-bold leading-[1.08] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-3xl sm:tracking-tight md:text-5xl lg:text-6xl">
               <span className="block">
-                South Africa&apos;s{' '}
-                <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
-                  Fastest Growing
-                </span>
+                South Africa&apos;s <span className="text-blue-600">Fastest Growing</span>
               </span>
               <span className="block">Real Estate Platform</span>
             </h1>
@@ -540,18 +523,18 @@ export function EnhancedHero({
                     onClick={() => handleCategoryClick(category.id)}
                     className={`relative flex min-w-[3.7rem] flex-col items-center justify-center gap-0.5 rounded-2xl border px-1.5 py-1.5 text-[0.58rem] font-semibold transition-all ${
                       isActive
-                        ? 'border-blue-100 bg-white/95 text-blue-700 shadow-sm'
+                        ? 'border-blue-100 bg-white text-blue-700 shadow-sm'
                         : 'border-transparent bg-transparent text-slate-500'
                     }`}
                   >
                     <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-2xl ${
+                      className={`flex h-9 w-9 items-center justify-center rounded-2xl ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-200/70'
-                          : 'bg-white/85 text-slate-500 shadow-sm'
+                          : 'bg-white text-slate-500 shadow-sm'
                       }`}
                     >
-                      <Icon className="h-3.5 w-3.5" />
+                      <Icon className="h-5 w-5" />
                     </span>
                     <span className="leading-tight text-center">{category.mobileLabel}</span>
                     {isActive ? (
@@ -562,7 +545,7 @@ export function EnhancedHero({
               })}
             </div>
 
-            <div className="hidden rounded-full border border-slate-200/50 bg-white/90 p-1.5 shadow-lg backdrop-blur-md scrollbar-hide sm:mx-auto sm:flex sm:w-fit sm:max-w-none sm:overflow-visible">
+            <div className="hidden rounded-full border border-slate-200/50 bg-white p-1.5 shadow-lg scrollbar-hide sm:mx-auto sm:flex sm:w-fit sm:max-w-none sm:overflow-visible">
               {HERO_CATEGORIES.map(category => {
                 const Icon = category.icon;
                 const isActive = normalizedActiveTab === category.id;
@@ -578,7 +561,7 @@ export function EnhancedHero({
                     }`}
                   >
                     <Icon
-                      className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-white' : 'text-slate-400'}`}
+                      className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-400'}`}
                     />
                     {category.label}
                   </button>
@@ -590,7 +573,7 @@ export function EnhancedHero({
 
         {/* Search Card */}
         <div className="mx-auto w-full max-w-5xl">
-          <Card className="rounded-[1rem] border-0 bg-white/95 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:shadow-2xl">
+          <Card className="rounded-[1rem] border-0 bg-white shadow-lg sm:rounded-2xl sm:shadow-2xl">
             <CardContent className="p-2 sm:p-4 md:p-6">
               {/* Main Search Row */}
               <div className="flex flex-col gap-2 md:flex-row sm:gap-4">
