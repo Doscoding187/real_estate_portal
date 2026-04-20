@@ -1,18 +1,11 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { EnhancedHero } from '@/components/EnhancedHero';
-import { PropertyInsights } from '@/components/PropertyInsights';
-import { DiscoverProperties } from '@/components/DiscoverProperties';
-import { TopLocalities } from '@/components/TopLocalities';
-import { TopDevelopers } from '@/components/TopDevelopers';
-import { ExploreCities } from '@/components/ExploreCities';
 import { HomeLayout } from '@/layouts/HomeLayout';
-import { ContentRail } from '@/components/layout/ContentRail';
-import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
-import { TestimonialsSection } from '@/sections/home/TestimonialsSection';
-import { CTASection } from '@/sections/home/CTASection';
 import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
 import { MetaControl } from '@/components/seo/MetaControl';
+import { HomeDesktopView } from '@/pages/home/HomeDesktopView';
+import { HomeMobileView } from '@/pages/home/HomeMobileView';
+import { useIsMobile } from '@/hooks/useMobile';
 import {
   buildOrganizationStructuredData,
   buildWebsiteStructuredData,
@@ -22,6 +15,7 @@ import { VITE_APP_LOGO } from '@/const';
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
   const [activeHeroTab, setActiveHeroTab] = useState<HeroTab>('buy');
 
@@ -84,24 +78,27 @@ export default function Home() {
         image={toAbsoluteUrl(VITE_APP_LOGO)}
         structuredData={homeStructuredData}
       />
-      <EnhancedHero activeTab={heroTabValue} onTabChange={handleTabChange} />
-      <ContentRail>
-        <HomeTrendingSection
-          selectedProvince={selectedProvince}
-          onProvinceChange={setSelectedProvince}
+      {isMobile ? (
+        <HomeMobileView
           activeHeroTab={activeHeroTab}
+          heroTabValue={heroTabValue}
+          onBrowseProperties={() => setLocation('/properties')}
+          onProvinceChange={setSelectedProvince}
+          onTabChange={handleTabChange}
+          provinces={provinces}
+          selectedProvince={selectedProvince}
         />
-        <PropertyInsights
-          level="national"
-          fallbackTabs={provinces.map((name, idx) => ({ id: idx + 1, name }))}
+      ) : (
+        <HomeDesktopView
+          activeHeroTab={activeHeroTab}
+          heroTabValue={heroTabValue}
+          onBrowseProperties={() => setLocation('/properties')}
+          onProvinceChange={setSelectedProvince}
+          onTabChange={handleTabChange}
+          provinces={provinces}
+          selectedProvince={selectedProvince}
         />
-        <DiscoverProperties />
-        <TopLocalities />
-        <TopDevelopers />
-        <ExploreCities />
-        <TestimonialsSection />
-        <CTASection onBrowse={() => setLocation('/properties')} />
-      </ContentRail>
+      )}
     </HomeLayout>
   );
 }
