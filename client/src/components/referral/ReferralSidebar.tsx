@@ -31,7 +31,7 @@ const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Accelerator', href: '/distribution/partner/accelerator', icon: Compass },
   { label: 'Submit Referral', href: '/distribution/partner/submit', icon: FilePlus2 },
   { label: 'My Referrals', href: '/distribution/partner/referrals', icon: Send },
-  { label: 'Commissions', href: '/distribution/partner/referrals', icon: DollarSign },
+  { label: 'Commissions', href: '/distribution/partner/commissions', icon: DollarSign },
 ];
 
 const REFERRAL_ALIASES = new Set(['/referrer/dashboard']);
@@ -58,6 +58,14 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const { data: commissionRows } = trpc.distribution.referrer.myCommissionEntries.useQuery(
+    { limit: 200 },
+    {
+      enabled: Boolean(user),
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   const liveReferralCount = useMemo(() => {
     const stageCounts = (pipelineData?.stageCounts || {}) as Record<string, number>;
@@ -70,6 +78,10 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
 
   const currentPath = normalizeCurrentPath(location.split('?')[0]);
   const networkCount = Number(statusData?.accessCount || 0);
+  const pendingCommissionCount = (commissionRows || []).filter((row: any) => {
+    const status = String(row?.entryStatus || '').toLowerCase();
+    return status === 'pending' || status === 'approved';
+  }).length;
 
   const workspaceLinks: NavItem[] = WORKSPACE_LINKS.map(item => {
     if (item.href === '/distribution/partner/referrals') {
@@ -77,6 +89,9 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
     }
     if (item.href === '/distribution/partner/developments') {
       return { ...item, badge: networkCount || undefined };
+    }
+    if (item.href === '/distribution/partner/commissions') {
+      return { ...item, badge: pendingCommissionCount || undefined };
     }
     return item;
   });
@@ -181,4 +196,3 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
     </aside>
   );
 }
-
