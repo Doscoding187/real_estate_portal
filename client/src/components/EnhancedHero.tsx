@@ -501,14 +501,30 @@ export function EnhancedHero({
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="mb-0 text-[1.4rem] font-bold leading-[1.1] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-2xl sm:tracking-tight md:text-4xl lg:text-5xl">
-              <span className="block">
+            <h1 className="mb-0 text-[1.7rem] font-bold leading-[1.08] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-3xl sm:tracking-tight md:text-5xl lg:text-6xl">
+              {/* Mobile Title (3 Lines) */}
+              <span className="block sm:hidden">
+                South Africa&apos;s{' '}
+                <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+                  Fastest
+                </span>
+                <br />
+                <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+                  Growing
+                </span>{' '}
+                Real Estate
+                <br />
+                Platform
+              </span>
+
+              {/* Desktop Title (2 Lines) */}
+              <span className="hidden sm:block">
                 South Africa&apos;s{' '}
                 <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
                   Fastest Growing
                 </span>
               </span>
-              <span className="block">Real Estate Platform</span>
+              <span className="hidden sm:block">Real Estate Platform</span>
             </h1>
           )}
 
