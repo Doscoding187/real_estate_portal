@@ -31,35 +31,57 @@ vi.mock('framer-motion', () => ({
       } = props;
       return <div {...domProps}>{children}</div>;
     },
-    h1: ({ children, ...props }: any) => <h1 {...props}>{children}</h1>,
-    p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+    h1: ({ children, ...props }: any) => {
+      const {
+        variants: _variants,
+        ...domProps
+      } = props;
+      return <h1 {...domProps}>{children}</h1>;
+    },
+    p: ({ children, ...props }: any) => {
+      const {
+        variants: _variants,
+        ...domProps
+      } = props;
+      return <p {...domProps}>{children}</p>;
+    },
     section: ({ children, ...props }: any) => <section {...props}>{children}</section>,
     a: ({ children, ...props }: any) => <a {...props}>{children}</a>,
   },
 }));
 
-// Mock child components to isolate HeroSection testing
-vi.mock('../BillboardBanner', () => ({
-  BillboardBanner: ({ developmentName, tagline }: any) => (
-    <div data-testid="billboard-banner">
-      <div>{developmentName}</div>
-      <div>{tagline}</div>
-    </div>
-  ),
+// Mock design-tokens
+vi.mock('../design-tokens', () => ({
+  softUITokens: {
+    colors: {
+      primary: {
+        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        light: '#f0f4ff',
+        base: '#667eea',
+        main: '#667eea',
+        dark: '#5a67d8',
+        subtle: '#e9ecff',
+      },
+      secondary: {
+        gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        light: '#fff5f7',
+        base: '#f093fb',
+        main: '#f093fb',
+        dark: '#e53e3e',
+        subtle: '#ffe9f0',
+      },
+    },
+  },
 }));
 
-vi.mock('../TrustSignals', () => ({
-  TrustSignals: ({ signals }: any) => (
-    <div data-testid="trust-signals" data-signal-count={signals.length}>
-      Trust Signals
-    </div>
-  ),
+// Mock animation utilities
+vi.mock('@/lib/animations/advertiseAnimations', () => ({
+  fadeUp: {},
+  staggerContainer: {},
+  staggerItem: {},
 }));
 
-vi.mock('../BackgroundOrbs', () => ({
-  BackgroundOrbs: () => <div data-testid="background-orbs">Background Orbs</div>,
-}));
-
+// Mock CTAButton component
 vi.mock('../CTAButton', () => ({
   CTAButtonGroup: ({ primaryCTA, secondaryCTA }: any) => (
     <div data-testid="cta-button-group">
@@ -69,6 +91,38 @@ vi.mock('../CTAButton', () => ({
   ),
 }));
 
+/**
+ * Helper: build valid HeroSectionProps from generated values
+ */
+function buildProps(overrides: Partial<HeroSectionProps> = {}): HeroSectionProps {
+  return {
+    headline: 'Advertise Your Properties',
+    subheadline: 'Reach high-intent buyers and grow your business with our platform',
+    primaryCTA: {
+      label: 'Get Started',
+      href: '/register',
+      variant: 'primary',
+    },
+    secondaryCTA: {
+      label: 'Learn More',
+      href: '/about',
+      variant: 'secondary',
+    },
+    stats: [
+      { value: '500', suffix: '+', label: 'Active Partners' },
+      { value: '10,000', suffix: '+', label: 'Properties' },
+      { value: '95', suffix: '%', label: 'Satisfaction' },
+    ],
+    ...overrides,
+  };
+}
+
+/**
+ * Arbitrary: generate a non-whitespace-only string
+ */
+const nonBlankString = (min: number, max: number) =>
+  fc.string({ minLength: min, maxLength: max }).filter(s => s.trim().length > 0);
+
 describe('Property 1: Hero section load performance', () => {
   let performanceMarks: string[] = [];
   let nowTick = 0;
@@ -76,12 +130,10 @@ describe('Property 1: Hero section load performance', () => {
   beforeEach(() => {
     performanceMarks = [];
     nowTick = 0;
-    // Mock performance.mark
     vi.spyOn(performance, 'mark').mockImplementation((name: string) => {
       performanceMarks.push(name);
       return {} as PerformanceMark;
     });
-    // Mock performance.measure
     vi.spyOn(performance, 'measure').mockImplementation(() => {
       return {} as PerformanceMeasure;
     });
@@ -101,63 +153,30 @@ describe('Property 1: Hero section load performance', () => {
   it('should render hero section within 100ms for any configuration', () => {
     fc.assert(
       fc.property(
-        // Generate random headline (30-70 characters)
-        fc.string({ minLength: 30, maxLength: 70 }),
-        // Generate random subheadline (100-150 characters)
-        fc.string({ minLength: 100, maxLength: 150 }),
-        // Generate random development name
-        fc.string({ minLength: 10, maxLength: 50 }),
-        // Generate random number of trust signals (0-4)
-        fc.integer({ min: 0, max: 4 }),
-        (headline, subheadline, developmentName, trustSignalCount) => {
-          // Create billboard
-          const billboard = {
-            imageUrl: '/development.jpg',
-            alt: 'Development image',
-            developmentName,
-            tagline: 'Luxury living',
-            href: '/development',
-          };
+        nonBlankString(30, 70),
+        nonBlankString(50, 150),
+        fc.array(
+          fc.record({
+            value: fc.stringOf(fc.constantFrom('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ','), { minLength: 1, maxLength: 6 }),
+            suffix: fc.constantFrom('+', '%', 'x'),
+            label: nonBlankString(5, 20),
+          }),
+          { minLength: 0, maxLength: 5 },
+        ),
+        (headline, subheadline, stats) => {
+          const props = buildProps({ headline, subheadline, stats });
 
-          // Create trust signals
-          const trustSignals = Array.from({ length: trustSignalCount }, (_, i) => ({
-            type: i % 2 === 0 ? 'logo' : ('text' as any),
-            content: `Trust Signal ${i}`,
-            imageUrl: i % 2 === 0 ? `/logo-${i}.png` : undefined,
-          }));
-
-          const props: HeroSectionProps = {
-            headline,
-            subheadline,
-            primaryCTA: {
-              label: 'Get Started',
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: 'Learn More',
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard,
-            trustSignals,
-          };
-
-          // Measure render time
           const startTime = performance.now();
           const { container } = render(<HeroSection {...props} />);
           const endTime = performance.now();
           const renderTime = endTime - startTime;
 
-          // Verify render time is under 1000ms (reasonable for JSDOM + complex component)
-          // Relaxed check for test environment
+          // Relaxed check for CI/JSDOM
           expect(renderTime).toBeLessThan(1000);
-
-          // Verify component rendered
           expect(container.querySelector('section')).toBeTruthy();
         },
       ),
-      { numRuns: 50 }, // Run 50 iterations for performance testing
+      { numRuns: 50 },
     );
   });
 
@@ -167,33 +186,17 @@ describe('Property 1: Hero section load performance', () => {
   it('should render critical content immediately for any configuration', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 30, maxLength: 70 }),
-        fc.string({ minLength: 100, maxLength: 150 }),
+        nonBlankString(30, 70),
+        nonBlankString(50, 150),
         fc.constantFrom('Get Started', 'Start Now', 'Join Today', 'Sign Up'),
         fc.constantFrom('Learn More', 'View Demo', 'Contact Us', 'See Pricing'),
         (headline, subheadline, primaryLabel, secondaryLabel) => {
-          const props: HeroSectionProps = {
+          const props = buildProps({
             headline,
             subheadline,
-            primaryCTA: {
-              label: primaryLabel,
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: secondaryLabel,
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard: {
-              imageUrl: '/development.jpg',
-              alt: 'Development',
-              developmentName: 'Test Development',
-              tagline: 'Luxury living',
-              href: '/development',
-            },
-            trustSignals: [],
-          };
+            primaryCTA: { label: primaryLabel, href: '/register', variant: 'primary' },
+            secondaryCTA: { label: secondaryLabel, href: '/about', variant: 'secondary' },
+          });
 
           const { container } = render(<HeroSection {...props} />);
 
@@ -203,11 +206,11 @@ describe('Property 1: Hero section load performance', () => {
           expect(headlineElement?.textContent).toBe(headline);
 
           // Verify subheadline is present
-          const subheadlineElement = container.querySelector('p');
+          const subheadlineElement = container.querySelector('#hero-subheadline');
           expect(subheadlineElement).toBeTruthy();
           expect(subheadlineElement?.textContent).toBe(subheadline);
 
-          // Verify CTAs are present
+          // Verify CTAs are present (via mock)
           const ctaGroup = container.querySelector('[data-testid="cta-button-group"]');
           expect(ctaGroup).toBeTruthy();
           expect(ctaGroup?.textContent).toContain(primaryLabel);
@@ -228,47 +231,15 @@ describe('Property 1: Hero section load performance', () => {
   it('should maintain stable layout dimensions for any configuration', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 30, maxLength: 70 }),
-        fc.string({ minLength: 100, maxLength: 150 }),
-        fc.string({ minLength: 10, maxLength: 50 }),
-        (headline, subheadline, developmentName) => {
-          const props: HeroSectionProps = {
-            headline,
-            subheadline,
-            primaryCTA: {
-              label: 'Get Started',
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: 'Learn More',
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard: {
-              imageUrl: '/development.jpg',
-              alt: 'Development',
-              developmentName,
-              tagline: 'Luxury living',
-              href: '/development',
-            },
-            trustSignals: [],
-          };
-
+        nonBlankString(30, 70),
+        nonBlankString(50, 150),
+        (headline, subheadline) => {
+          const props = buildProps({ headline, subheadline });
           const { container } = render(<HeroSection {...props} />);
           const section = container.querySelector('section');
 
-          // Verify section has minimum height set (prevents layout shift)
-          // Note: React inline styles convert camelCase, so we check the computed style
           expect(section).toBeTruthy();
-
-          // Check that section has overflow hidden (prevents content overflow)
           expect(section?.className).toContain('overflow-hidden');
-
-          // Verify section has overflow hidden (prevents content overflow)
-          expect(section?.className).toContain('overflow-hidden');
-
-          // Verify section has relative positioning for proper layout
           expect(section?.className).toContain('relative');
         },
       ),
@@ -277,50 +248,26 @@ describe('Property 1: Hero section load performance', () => {
   });
 
   /**
-   * Property: Hero section should handle empty trust signals gracefully
+   * Property: Hero section should handle empty stats gracefully
    */
-  it('should render efficiently with or without trust signals', () => {
+  it('should render efficiently with or without stats', () => {
     fc.assert(
-      fc.property(fc.boolean(), hasTrustSignals => {
-        const trustSignals = hasTrustSignals
+      fc.property(fc.boolean(), hasStats => {
+        const stats = hasStats
           ? [
-              { type: 'text' as const, content: 'Trusted by 1000+ partners' },
-              { type: 'logo' as const, content: 'Partner Logo', imageUrl: '/logo.png' },
+              { value: '500', suffix: '+', label: 'Active Partners' },
+              { value: '10,000', suffix: '+', label: 'Properties' },
             ]
           : [];
 
-        const props: HeroSectionProps = {
-          headline: 'Advertise Your Properties',
-          subheadline: 'Reach high-intent buyers and grow your business',
-          primaryCTA: {
-            label: 'Get Started',
-            href: '/register',
-            variant: 'primary',
-          },
-          secondaryCTA: {
-            label: 'Learn More',
-            href: '/about',
-            variant: 'secondary',
-          },
-          billboard: {
-            imageUrl: '/development.jpg',
-            alt: 'Development',
-            developmentName: 'Test Development',
-            tagline: 'Luxury living',
-            href: '/development',
-          },
-          trustSignals,
-        };
+        const props = buildProps({ stats });
 
         const startTime = performance.now();
         const { container } = render(<HeroSection {...props} />);
         const endTime = performance.now();
         const renderTime = endTime - startTime;
 
-        // Render budget in CI/JSDOM can vary.
         expect(renderTime).toBeLessThan(1000);
-
-        // Verify component rendered
         expect(container.querySelector('section')).toBeTruthy();
       }),
       { numRuns: 100 },
@@ -333,32 +280,10 @@ describe('Property 1: Hero section load performance', () => {
   it('should maintain semantic HTML structure for any configuration', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 30, maxLength: 70 }),
-        fc.string({ minLength: 100, maxLength: 150 }),
+        nonBlankString(30, 70),
+        nonBlankString(50, 150),
         (headline, subheadline) => {
-          const props: HeroSectionProps = {
-            headline,
-            subheadline,
-            primaryCTA: {
-              label: 'Get Started',
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: 'Learn More',
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard: {
-              imageUrl: '/development.jpg',
-              alt: 'Development',
-              developmentName: 'Test Development',
-              tagline: 'Luxury living',
-              href: '/development',
-            },
-            trustSignals: [],
-          };
-
+          const props = buildProps({ headline, subheadline });
           const { container } = render(<HeroSection {...props} />);
 
           // Should have semantic section element
@@ -386,82 +311,44 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should apply gradient background for any configuration', () => {
     fc.assert(
-      fc.property(fc.string({ minLength: 30, maxLength: 70 }), headline => {
-        const props: HeroSectionProps = {
-          headline,
-          subheadline: 'Test subheadline',
-          primaryCTA: {
-            label: 'Get Started',
-            href: '/register',
-            variant: 'primary',
-          },
-          secondaryCTA: {
-            label: 'Learn More',
-            href: '/about',
-            variant: 'secondary',
-          },
-          billboard: {
-            imageUrl: '/development.jpg',
-            alt: 'Development',
-            developmentName: 'Test Development',
-            tagline: 'Luxury living',
-            href: '/development',
-          },
-          trustSignals: [],
-        };
-
+      fc.property(nonBlankString(30, 70), headline => {
+        const props = buildProps({ headline });
         const { container } = render(<HeroSection {...props} />);
-        const section = container.querySelector('section');
 
-        // Should have gradient background
-        const style = section?.getAttribute('style');
-        expect(style).toContain('linear-gradient');
-        expect(style).toContain('135deg');
+        // The redesigned hero uses Tailwind gradient classes on bg div, not inline styles
+        const hasGradient = container.innerHTML.includes('bg-gradient-to-');
+        expect(hasGradient).toBe(true);
       }),
       { numRuns: 100 },
     );
   });
 
   /**
-   * Property: Hero section should render efficiently with different development names
+   * Property: Hero section should render efficiently with different stat values
    */
-  it('should render efficiently with any development name', () => {
+  it('should render efficiently with any stat configuration', () => {
     fc.assert(
-      fc.property(fc.string({ minLength: 10, maxLength: 100 }), developmentName => {
-        const props: HeroSectionProps = {
-          headline: 'Advertise Your Properties',
-          subheadline: 'Reach high-intent buyers and grow your business',
-          primaryCTA: {
-            label: 'Get Started',
-            href: '/register',
-            variant: 'primary',
-          },
-          secondaryCTA: {
-            label: 'Learn More',
-            href: '/about',
-            variant: 'secondary',
-          },
-          billboard: {
-            imageUrl: '/development.jpg',
-            alt: 'Development',
-            developmentName,
-            tagline: 'Luxury living',
-            href: '/development',
-          },
-          trustSignals: [],
-        };
+      fc.property(
+        fc.array(
+          fc.record({
+            value: fc.stringOf(fc.constantFrom('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ','), { minLength: 1, maxLength: 6 }),
+            suffix: fc.constantFrom('+', '%', 'x', ''),
+            label: nonBlankString(5, 20),
+          }),
+          { minLength: 1, maxLength: 6 },
+        ),
+        stats => {
+          const props = buildProps({ stats });
 
-        const startTime = performance.now();
-        const { container } = render(<HeroSection {...props} />);
-        const endTime = performance.now();
-        const renderTime = endTime - startTime;
+          const startTime = performance.now();
+          const { container } = render(<HeroSection {...props} />);
+          const endTime = performance.now();
+          const renderTime = endTime - startTime;
 
-        // Render budget in CI/JSDOM can vary.
-        expect(renderTime).toBeLessThan(1000);
-
-        // Verify component rendered
-        expect(container.querySelector('section')).toBeTruthy();
-      }),
+          expect(renderTime).toBeLessThan(1000);
+          expect(container.querySelector('section')).toBeTruthy();
+        },
+      ),
       { numRuns: 50 },
     );
   });
@@ -471,47 +358,15 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should apply responsive classes for any configuration', () => {
     fc.assert(
-      fc.property(fc.string({ minLength: 30, maxLength: 70 }), headline => {
-        const props: HeroSectionProps = {
-          headline,
-          subheadline: 'Test subheadline',
-          primaryCTA: {
-            label: 'Get Started',
-            href: '/register',
-            variant: 'primary',
-          },
-          secondaryCTA: {
-            label: 'Learn More',
-            href: '/about',
-            variant: 'secondary',
-          },
-          billboard: {
-            imageUrl: '/development.jpg',
-            alt: 'Development',
-            developmentName: 'Test Development',
-            tagline: 'Luxury living',
-            href: '/development',
-          },
-          trustSignals: [],
-        };
-
+      fc.property(nonBlankString(30, 70), headline => {
+        const props = buildProps({ headline });
         const { container } = render(<HeroSection {...props} />);
 
-        // Should have responsive grid classes
-        const grid = container.querySelector('.grid');
-        expect(grid).toBeTruthy();
-        if (grid) {
-          expect(grid.className).toContain('grid-cols-1');
-          expect(grid.className).toContain('lg:grid-cols-2');
-        }
-
-        // Should have responsive padding
-        const containerDiv = container.querySelector('.max-w-7xl');
+        // Should have responsive container with max-w-4xl (centered layout)
+        const containerDiv = container.querySelector('.max-w-4xl');
         expect(containerDiv).toBeTruthy();
         if (containerDiv) {
           expect(containerDiv.className).toContain('px-4');
-          expect(containerDiv.className).toContain('sm:px-6');
-          expect(containerDiv.className).toContain('lg:px-8');
         }
 
         // Headline should have responsive text sizes

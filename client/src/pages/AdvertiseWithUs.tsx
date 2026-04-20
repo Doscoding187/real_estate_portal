@@ -177,7 +177,12 @@ export default function AdvertiseWithUs() {
         {/* Trust Strip Section */}
         <SectionErrorBoundary sectionName="Trust Strip">
           <section id="trust-strip" aria-labelledby="trust-strip-heading">
-            <TrustStripSection />
+            <TrustStripSection badges={[
+              '500+ Active Partners',
+              '10,000+ Properties Promoted',
+              '50,000+ Verified Leads',
+              '95% Partner Satisfaction'
+            ]} />
           </section>
         </SectionErrorBoundary>
 
