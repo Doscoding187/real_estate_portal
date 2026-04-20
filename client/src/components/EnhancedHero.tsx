@@ -479,7 +479,7 @@ export function EnhancedHero({
 
       <div className="container relative z-10 flex flex-col py-3 md:py-24">
         {/* Hero Title */}
-        <div className="mt-1.5 mb-7 max-w-[22rem] text-left sm:mx-auto sm:mt-0 sm:mb-4 sm:max-w-4xl sm:text-center">
+        <div className="mt-1.5 mb-7 max-w-[22rem] text-center sm:mx-auto sm:mt-0 sm:mb-4 sm:max-w-4xl">
           {title ? (
             // Location / Context Title
             <h1 className="mb-3 text-2xl font-bold leading-tight text-blue-950 sm:text-3xl md:text-4xl lg:text-5xl">
@@ -1147,3 +1147,4 @@ export function EnhancedHero({
     </div>
   );
 }
+
