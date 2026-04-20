@@ -270,6 +270,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   interface PropertySpecs {
     ownershipType?: string;
     powerBackup?: string;
+    security?: string;
     securityFeatures?: string[];
     waterSupply?: string;
     internetAccess?: string;
@@ -317,6 +318,14 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     powerBackup:
       String(mergedDetailSpecs.powerBackup ?? parsedPropertySettings.powerBackup ?? '').trim() ||
       undefined,
+    security:
+      String(
+        mergedDetailSpecs.security ??
+          mergedDetailSpecs.securityLevel ??
+          parsedPropertySettings.security ??
+          parsedPropertySettings.securityLevel ??
+          '',
+      ).trim() || undefined,
     securityFeatures: Array.isArray(mergedDetailSpecs.securityFeatures)
       ? (mergedDetailSpecs.securityFeatures as string[])
       : Array.isArray(parsedPropertySettings.securityFeatures)
@@ -571,11 +580,11 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           icon: Zap,
         }
       : null,
-    specs.securityFeatures && specs.securityFeatures.length > 0
+    specs.security
       ? {
           key: 'security',
           label: 'Security',
-          value: specs.securityFeatures.map(feature => formatLabel(feature)).join(', '),
+          value: formatLabel(specs.security),
           icon: Shield,
         }
       : null,

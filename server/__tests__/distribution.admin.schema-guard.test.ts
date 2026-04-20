@@ -261,7 +261,7 @@ describe('distribution admin schema guards', () => {
       }),
     ).rejects.toMatchObject({
       code: 'BAD_REQUEST',
-      message: 'Only one bank_statement template can be configured per development.',
+      message: 'Only one bank_statement document can be configured per development.',
     });
 
     expect(mockGetDb).not.toHaveBeenCalled();

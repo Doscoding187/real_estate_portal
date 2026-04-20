@@ -461,6 +461,20 @@ export function AdditionalInformationStep() {
             'Select internet',
             Wifi,
           )}
+
+          {renderSelect(
+            'security',
+            'Security',
+            [
+              { value: 'standard', label: 'Standard Security' },
+              { value: 'complex_security', label: 'Complex Security' },
+              { value: 'estate_security', label: 'Estate Security' },
+              { value: 'paid_security', label: 'Paid Security' },
+              { value: 'none', label: 'None' },
+            ],
+            'Select security',
+            Shield,
+          )}
         </div>
       </Card>
 

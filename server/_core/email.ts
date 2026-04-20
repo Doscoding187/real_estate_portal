@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { ENV } from './env';
 
 let resendClient: Resend | null = null;
 
@@ -49,7 +50,7 @@ export async function sendVerificationEmail({
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Property Listify <onboarding@resend.dev>',
+      from: ENV.resendFromEmail || 'Property Listify <onboarding@resend.dev>',
       to: [to],
       subject: 'Verify your email - Property Listify',
       html: `
@@ -140,7 +141,7 @@ export async function sendPasswordResetEmail({
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Property Listify <onboarding@resend.dev>',
+      from: ENV.resendFromEmail || 'Property Listify <onboarding@resend.dev>',
       to: [to],
       subject: 'Reset your password - Property Listify',
       html: `

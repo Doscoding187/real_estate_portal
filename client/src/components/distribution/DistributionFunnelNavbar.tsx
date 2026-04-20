@@ -3,6 +3,7 @@ import { Building2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const REFERRAL_APPLY_PATH = '/distribution-network/apply';
+const REFERRAL_LOGIN_PATH = '/distribution-network/login';
 
 export function DistributionFunnelNavbar() {
   const [, setLocation] = useLocation();
@@ -38,7 +39,7 @@ export function DistributionFunnelNavbar() {
             variant="ghost"
             className="h-9 w-9 text-slate-600 hover:text-slate-900"
             aria-label="Sign in"
-            onClick={() => setLocation('/login')}
+            onClick={() => setLocation(REFERRAL_LOGIN_PATH)}
           >
             <LogIn className="h-4 w-4" />
           </Button>

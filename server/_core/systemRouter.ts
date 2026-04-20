@@ -66,7 +66,7 @@ function deriveDeliveryRecoveryState(row: {
   emailDelivered: number | boolean;
 }) {
   if (row.retryState === 'succeeded') return 'recovered';
-  if (!Boolean(row.emailRequested) || Boolean(row.emailDelivered)) return 'healthy';
+  if (!row.emailRequested || row.emailDelivered) return 'healthy';
   if (row.retryState === 'pending' || row.retryState === 'retrying') return 'recoverable';
   return 'terminal';
 }

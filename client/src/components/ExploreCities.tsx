@@ -196,8 +196,8 @@ export function ExploreCities({
     <section className="bg-white py-4 md:py-8">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-5 flex flex-col gap-2.5 text-left md:mb-10 md:flex-row md:items-end md:justify-between md:gap-4">
-          <div className="max-w-3xl">
+        <div className="mb-5 flex flex-col items-center gap-2.5 text-center md:mb-10 md:gap-3">
+          <div className="max-w-3xl text-center">
             <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
             <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">{displayDescription}</p>
           </div>
@@ -215,7 +215,6 @@ export function ExploreCities({
 
         {/* Grid Layout */}
         <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white via-white/90 to-transparent sm:hidden" />
           <div className="scrollbar-hide -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 lg:grid-cols-4">
             {displayedCities.map(city => (
               <Link

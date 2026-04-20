@@ -38,14 +38,21 @@ export type DealChecklistPayload = {
     documentCode: string;
     documentLabel: string;
     category: 'developer_document' | 'client_required_document';
+    templateFileUrl: string | null;
+    templateFileName: string | null;
+    templateUploadedAt: string | null;
     isRequired: boolean;
     sortOrder: number;
     isActive: boolean;
     status: DealDocumentStatus;
     receivedAt: string | null;
     verifiedAt: string | null;
+    submittedFileUrl: string | null;
+    submittedFileName: string | null;
+    submittedAt: string | null;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
+    submittedBy: { userId: number; name?: string } | null;
     notes: string | null;
   }>;
   computed: {
@@ -62,6 +69,8 @@ type UpsertDealDocumentStatusInput = {
   templateId: number;
   status: DealDocumentStatus;
   notes?: string | null;
+  submittedFileUrl?: string | null;
+  submittedFileName?: string | null;
 };
 
 function boolFromTinyInt(value: unknown) {
@@ -204,8 +213,12 @@ export async function getDealChecklist(
           status: distributionDealDocuments.status,
           receivedAt: distributionDealDocuments.receivedAt,
           verifiedAt: distributionDealDocuments.verifiedAt,
+          submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+          submittedFileName: distributionDealDocuments.submittedFileName,
+          submittedAt: distributionDealDocuments.submittedAt,
           receivedBy: distributionDealDocuments.receivedBy,
           verifiedBy: distributionDealDocuments.verifiedBy,
+          submittedBy: distributionDealDocuments.submittedBy,
           notes: distributionDealDocuments.notes,
         })
         .from(distributionDealDocuments)
@@ -223,6 +236,7 @@ export async function getDealChecklist(
     persistedByTemplateId.set(Number(row.developmentRequiredDocumentId), row);
     if (row.receivedBy) actorIds.add(Number(row.receivedBy));
     if (row.verifiedBy) actorIds.add(Number(row.verifiedBy));
+    if (row.submittedBy) actorIds.add(Number(row.submittedBy));
   }
 
   const actorDirectory = new Map<number, { name?: string }>();
@@ -253,12 +267,18 @@ export async function getDealChecklist(
       documentCode: String(template.documentCode),
       documentLabel: String(template.documentLabel || ''),
       category: template.category,
+      templateFileUrl: template.templateFileUrl || null,
+      templateFileName: template.templateFileName || null,
+      templateUploadedAt: template.templateUploadedAt || null,
       isRequired: Boolean(template.isRequired),
       sortOrder: Number(template.sortOrder || 0),
       isActive: Boolean(template.isActive),
       status,
       receivedAt: persisted?.receivedAt || null,
       verifiedAt: persisted?.verifiedAt || null,
+      submittedFileUrl: persisted?.submittedFileUrl || null,
+      submittedFileName: persisted?.submittedFileName || null,
+      submittedAt: persisted?.submittedAt || null,
       receivedBy: receivedById
         ? {
             userId: receivedById,
@@ -269,6 +289,12 @@ export async function getDealChecklist(
         ? {
             userId: verifiedById,
             name: actorDirectory.get(verifiedById)?.name,
+          }
+        : null,
+      submittedBy: persisted?.submittedBy
+        ? {
+            userId: Number(persisted.submittedBy),
+            name: actorDirectory.get(Number(persisted.submittedBy))?.name,
           }
         : null,
       notes: persisted?.notes || null,
@@ -368,8 +394,12 @@ export async function upsertDealDocumentStatus(
         status: distributionDealDocuments.status,
         receivedAt: distributionDealDocuments.receivedAt,
         verifiedAt: distributionDealDocuments.verifiedAt,
+        submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+        submittedFileName: distributionDealDocuments.submittedFileName,
+        submittedAt: distributionDealDocuments.submittedAt,
         receivedBy: distributionDealDocuments.receivedBy,
         verifiedBy: distributionDealDocuments.verifiedBy,
+        submittedBy: distributionDealDocuments.submittedBy,
         notes: distributionDealDocuments.notes,
       })
       .from(distributionDealDocuments)
@@ -384,17 +414,35 @@ export async function upsertDealDocumentStatus(
     const now = sqlDateNow();
     let receivedAt = existing?.receivedAt || null;
     let verifiedAt = existing?.verifiedAt || null;
+    let submittedAt = existing?.submittedAt || null;
     let receivedBy = existing?.receivedBy ? Number(existing.receivedBy) : null;
     let verifiedBy = existing?.verifiedBy ? Number(existing.verifiedBy) : null;
+    let submittedBy = existing?.submittedBy ? Number(existing.submittedBy) : null;
+    const submittedFileUrl =
+      typeof input.submittedFileUrl === 'undefined'
+        ? (existing?.submittedFileUrl ?? null)
+        : input.submittedFileUrl;
+    const submittedFileName =
+      typeof input.submittedFileName === 'undefined'
+        ? (existing?.submittedFileName ?? null)
+        : input.submittedFileName;
 
     if (input.status === 'received') {
       receivedAt = receivedAt || now;
       receivedBy = actorUserId;
+      if (submittedFileUrl) {
+        submittedAt = submittedAt || now;
+        submittedBy = actorUserId;
+      }
     } else if (input.status === 'verified') {
       receivedAt = receivedAt || now;
       receivedBy = receivedBy || actorUserId;
       verifiedAt = verifiedAt || now;
       verifiedBy = actorUserId;
+      if (submittedFileUrl) {
+        submittedAt = submittedAt || now;
+        submittedBy = submittedBy || actorUserId;
+      }
     }
 
     const notes = typeof input.notes === 'undefined' ? (existing?.notes ?? null) : input.notes;
@@ -406,6 +454,10 @@ export async function upsertDealDocumentStatus(
           status: input.status,
           receivedAt,
           verifiedAt,
+          submittedFileUrl,
+          submittedFileName,
+          submittedAt,
+          submittedBy,
           receivedBy,
           verifiedBy,
           notes,
@@ -420,6 +472,10 @@ export async function upsertDealDocumentStatus(
       status: input.status,
       receivedAt,
       verifiedAt,
+      submittedFileUrl,
+      submittedFileName,
+      submittedAt,
+      submittedBy,
       receivedBy,
       verifiedBy,
       notes: notes ?? null,

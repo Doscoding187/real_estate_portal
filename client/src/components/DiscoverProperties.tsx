@@ -234,9 +234,9 @@ export function DiscoverProperties({
   };
 
   return (
-    <div className="py-5 md:py-8 bg-gradient-to-b from-white to-muted/20">
+    <div className="py-4 md:py-5 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
-        <div className="mb-6 md:mb-8">
+        <div className="mb-5 md:mb-6">
           <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
@@ -500,7 +500,6 @@ export function DiscoverProperties({
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 rounded-r-2xl bg-gradient-to-l from-white via-white/80 to-transparent md:hidden" />
           </div>
         </div>
       </div>

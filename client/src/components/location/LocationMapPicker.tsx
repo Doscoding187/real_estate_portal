@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,6 +25,12 @@ export interface LocationData {
   province?: string;
   postalCode?: string;
   formattedAddress?: string;
+  placeId?: string;
+  addressComponents?: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>;
 }
 
 interface LocationMapPickerProps {
@@ -85,10 +91,32 @@ export function LocationMapPicker({
         province: province || undefined,
         postalCode: postalCode || undefined,
         formattedAddress: result.formatted_address,
+        placeId: result.place_id,
+        addressComponents: addressComponents.map(component => ({
+          long_name: component.long_name,
+          short_name: component.short_name,
+          types: component.types,
+        })),
       };
     },
     [],
   );
+
+  useEffect(() => {
+    if (
+      typeof initialLat === 'number' &&
+      Number.isFinite(initialLat) &&
+      typeof initialLng === 'number' &&
+      Number.isFinite(initialLng)
+    ) {
+      const nextPosition = { lat: initialLat, lng: initialLng };
+      setMarkerPosition(nextPosition);
+      if (mapRef.current) {
+        mapRef.current.panTo(nextPosition);
+        mapRef.current.setZoom(15);
+      }
+    }
+  }, [initialLat, initialLng]);
 
   const performGeocoding = useCallback(
     async (lat: number, lng: number) => {
@@ -211,6 +239,7 @@ export function LocationMapPicker({
             }}
             onPlaceChanged={handlePlaceSelect}
             options={{
+              fields: ['geometry', 'address_components', 'formatted_address', 'place_id'],
               componentRestrictions: { country: 'za' },
             }}
           >
