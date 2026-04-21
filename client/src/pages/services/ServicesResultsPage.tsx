@@ -10,6 +10,8 @@ import {
   isServiceCategory,
   slugifyLocationSegment,
   toServiceCategorySlug,
+  formatCategoryLabel,
+  formatArea,
   type IntentStage,
   type ServiceCategory,
 } from '@/features/services/catalog';
@@ -201,7 +203,7 @@ export default function ServicesResultsPage() {
             Match Results
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-            Providers matched to your request
+            Providers matched for {formatCategoryLabel(category)} in {formatArea(city, province, suburb)}
           </h1>
           <p className="text-slate-600">
             Compare provider quality, service fit, and response path before requesting quotes.
@@ -222,6 +224,7 @@ export default function ServicesResultsPage() {
             <ProviderCard
               key={item.provider.providerId}
               provider={item.provider}
+              matchScore={item.score}
               onViewProfile={providerId =>
                 emitEvent('provider_card_clicked', providerId, {
                   rankIndex,
@@ -324,6 +327,7 @@ export default function ServicesResultsPage() {
                 <ProviderCard
                   key={`fallback-${provider.providerId}`}
                   provider={provider}
+                  isFallback={true}
                   onViewProfile={providerId =>
                     emitEvent('provider_card_clicked', providerId, {
                       rankIndex,
@@ -360,18 +364,32 @@ export default function ServicesResultsPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>
-              <span className="font-medium text-slate-900">Lead ID:</span> {leadId || 'N/A'}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">Category:</span> {category}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">Stage:</span> {intentStage}
+              <span className="font-medium text-slate-900">Service:</span>{' '}
+              {formatCategoryLabel(category)}
             </p>
             <p>
               <span className="font-medium text-slate-900">Location:</span>{' '}
-              {[suburb, city, province].filter(Boolean).join(', ') || 'Not specified'}
+              {formatArea(city, province, suburb)}
             </p>
+            {(() => {
+              try {
+                const leadContext = sessionStorage.getItem('services-lead-context');
+                if (leadContext) {
+                  const parsed = JSON.parse(leadContext) as { notes?: string };
+                  if (parsed.notes) {
+                    return (
+                      <p>
+                        <span className="font-medium text-slate-900">Notes:</span>{' '}
+                        {parsed.notes}
+                      </p>
+                    );
+                  }
+                }
+              } catch {
+                // sessionStorage unavailable or invalid JSON — skip notes
+              }
+              return null;
+            })()}
             <div className="pt-2">
               <Button onClick={() => setLocation(`/services/request/${category}`)} variant="outline">
                 Edit request

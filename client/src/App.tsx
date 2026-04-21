@@ -83,6 +83,11 @@ const ServiceProviderReviewsPage = lazy(
 );
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
+const ProviderOnboardingWizard = lazy(() =>
+  import('./features/services/onboarding/ProviderOnboardingWizard').then(m => ({
+    default: m.ProviderOnboardingWizard,
+  })),
+);
 const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
@@ -428,7 +433,7 @@ function Router() {
           </Route>
           <Route path="/service/profile">
             <RequireRole role="service_provider">
-              <ProProfilePage />
+              <ProviderOnboardingWizard />
             </RequireRole>
           </Route>
           <Route path="/service/explore">
@@ -468,7 +473,10 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/set-password" component={SetPassword} />
+<<<<<<< HEAD
           <Route path="/activation-complete" component={ActivationComplete} />
+=======
+>>>>>>> b3a3ef52 (feat(services): marketplace overhaul — trust signals, onboarding wizard, enhanced cards)
           <Route path="/saved-search/manage" component={SavedSearchManagePage} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
           <Route path="/referral-upload/:token">

@@ -3,7 +3,9 @@ import { Link, useLocation, useRoute } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProviderBadges } from '@/components/services/ProviderBadges';
-import { providerIdFromSlug, type ServiceCategory } from '@/features/services/catalog';
+import { ProviderAvatar } from '@/components/services/ProviderAvatar';
+import { StarRating } from '@/components/services/StarRating';
+import { providerIdFromSlug, formatPriceRange, type ServiceCategory } from '@/features/services/catalog';
 import { trpc } from '@/lib/trpc';
 import { applySeo } from '@/lib/seo';
 
@@ -47,21 +49,35 @@ export default function ServiceProviderProfilePage() {
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
       <section className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Provider Profile
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-              {profile?.companyName || 'Loading provider...'}
-            </h1>
-            <p className="max-w-2xl text-slate-600">
-              {profile?.headline || profile?.bio || 'Profile details are being loaded.'}
-            </p>
-            <ProviderBadges
-              verificationStatus={profile?.verificationStatus}
-              moderationTier={profile?.moderationTier}
-              subscriptionTier={profile?.subscriptionTier}
+          <div className="flex items-start gap-4">
+            <ProviderAvatar
+              companyName={profile?.companyName || '?'}
+              logoUrl={profile?.logoUrl}
+              size="lg"
             />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Provider Profile
+              </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+                {profile?.companyName || 'Loading provider...'}
+              </h1>
+              <p className="max-w-2xl text-slate-600">
+                {profile?.headline || profile?.bio || 'Profile details are being loaded.'}
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <StarRating
+                  rating={profile?.averageRating ?? null}
+                  reviewCount={profile?.reviewCount ?? 0}
+                  showCount
+                />
+                <ProviderBadges
+                  verificationStatus={profile?.verificationStatus}
+                  moderationTier={profile?.moderationTier}
+                  subscriptionTier={profile?.subscriptionTier}
+                />
+              </div>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setLocation(`/services/request/${defaultCategory}?providerId=${providerId}`)}>
@@ -83,7 +99,14 @@ export default function ServiceProviderProfilePage() {
             {(profile?.services || []).map((service: any) => (
               <div key={`${service.code}-${service.displayName}`} className="rounded-md border p-3">
                 <p className="font-medium text-slate-900">{service.displayName}</p>
-                <p className="text-slate-600">{service.description || service.category}</p>
+                {service.description && (
+                  <p className="text-slate-600">{service.description}</p>
+                )}
+                <p className="mt-1 text-slate-500">
+                  {service.minPrice != null && service.maxPrice != null
+                    ? formatPriceRange(service.minPrice, service.maxPrice)
+                    : 'Price on request'}
+                </p>
               </div>
             ))}
             {(profile?.services || []).length === 0 && (
@@ -121,11 +144,17 @@ export default function ServiceProviderProfilePage() {
             <CardTitle>Recent Reviews</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {(profile?.reviews || []).slice(0, 4).map((review: any) => (
-              <article key={review.id} className="rounded-md border p-3">
-                <p className="font-medium text-slate-900">
-                  {review.rating}/5 {review.title ? `· ${review.title}` : ''}
-                </p>
+            {(profile?.reviews || []).slice(0, 5).map((review: any) => (
+              <article key={review.id} className="rounded-md border p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <StarRating rating={review.rating} size="sm" />
+                  {review.isVerified === 1 && (
+                    <span className="text-xs font-medium text-emerald-700">Verified review</span>
+                  )}
+                </div>
+                {review.title && (
+                  <p className="font-medium text-slate-900">{review.title}</p>
+                )}
                 <p className="text-slate-600">{review.content || 'No written review provided.'}</p>
               </article>
             ))}

@@ -192,3 +192,25 @@ export function providerIdFromSlug(slug: string) {
   const parts = slug.split(marker);
   return parts[parts.length - 1];
 }
+
+export const SA_PROVINCES = [
+  'Eastern Cape',
+  'Free State',
+  'Gauteng',
+  'KwaZulu-Natal',
+  'Limpopo',
+  'Mpumalanga',
+  'Northern Cape',
+  'North West',
+  'Western Cape',
+] as const;
+
+export type SAProvince = (typeof SA_PROVINCES)[number];
+
+/**
+ * Formats a ZAR price range as "R{min} – R{max}" with whole-number formatting.
+ * Requirements: 6.4, 9.8, 10.2
+ */
+export function formatPriceRange(min: number, max: number): string {
+  return `R${Math.round(min)} \u2013 R${Math.round(max)}`;
+}

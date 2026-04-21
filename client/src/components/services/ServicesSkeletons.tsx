@@ -1,6 +1,38 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * TrustBarSkeleton
+ *
+ * Renders three Skeleton blocks matching the TrustBar layout —
+ * a horizontal row of three skeleton blocks, one per trust signal.
+ *
+ * Requirements: 2.2
+ */
+export function TrustBarSkeleton() {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-6 rounded-xl border border-border bg-muted/40 px-6 py-4">
+      {/* Trust signal 1: Verified provider count */}
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-5 w-5 rounded-full" />
+        <Skeleton className="h-4 w-32" />
+      </div>
+
+      {/* Trust signal 2: Average platform rating */}
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-5 w-5 rounded-full" />
+        <Skeleton className="h-4 w-36" />
+      </div>
+
+      {/* Trust signal 3: Static location match copy */}
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-5 w-5 rounded-full" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </div>
+  );
+}
+
 export function ProviderCardSkeleton() {
   return (
     <Card className="border-slate-200 bg-white">
