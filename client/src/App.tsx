@@ -65,6 +65,7 @@ const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const SetPassword = lazy(() => import('./pages/SetPassword'));
 const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
@@ -81,6 +82,11 @@ const ServiceProviderReviewsPage = lazy(
 );
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
+const ProviderOnboardingWizard = lazy(() =>
+  import('./features/services/onboarding/ProviderOnboardingWizard').then(m => ({
+    default: m.ProviderOnboardingWizard,
+  })),
+);
 const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
@@ -125,7 +131,7 @@ const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
-const ReferrerDashboard = lazy(() => import('./pages/ReferrerDashboard'));
+const PartnerDashboardPage = lazy(() => import('./pages/distribution/PartnerDashboardPage'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
@@ -325,7 +331,7 @@ function Router() {
           </Route>
           <Route path="/agent/referrals">
             <RequireRole role="agent">
-              <Redirect to="/referrer/dashboard" />
+              <Redirect to="/distribution/partner" />
             </RequireRole>
           </Route>
           <Route path="/agents/:slug" component={AgentMicrosite} />
@@ -405,7 +411,7 @@ function Router() {
 
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
-          <Route path="/referrer/dashboard" component={ReferrerDashboard} />
+          <Route path="/referrer/dashboard" component={PartnerDashboardPage} />
           <Route path="/service/dashboard">
             <RequireRole role="service_provider">
               <ProDashboardPage />
@@ -413,7 +419,7 @@ function Router() {
           </Route>
           <Route path="/service/profile">
             <RequireRole role="service_provider">
-              <ProProfilePage />
+              <ProviderOnboardingWizard />
             </RequireRole>
           </Route>
           <Route path="/service/explore">
@@ -452,6 +458,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/set-password" component={SetPassword} />
           <Route path="/saved-search/manage" component={SavedSearchManagePage} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
           <Route path="/referral-upload/:token">
@@ -513,6 +520,7 @@ function Router() {
           />
           <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
+          <Route path="/distribution/partner" component={PartnerDashboardPage} />
           <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
           <Route
             path="/distribution/partner/accelerator"

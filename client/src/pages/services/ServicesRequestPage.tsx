@@ -2,15 +2,13 @@ import { useEffect, useMemo } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { LeadRequestWizard } from '@/components/services/LeadRequestWizard';
+import { LeadRequestFlow } from '@/features/services/LeadRequestFlow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import {
   formatCategoryLabel,
   serviceCategoryFromSlug,
-  type IntentStage,
-  type SourceSurface,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
@@ -33,8 +31,6 @@ export default function ServicesRequestPage() {
     .filter(Boolean)
     .join(', ');
   const providerId = query.get('providerId') || undefined;
-  const defaultIntentStage = (query.get('intentStage') || 'general') as IntentStage;
-  const defaultSourceSurface = (query.get('sourceSurface') || 'journey_injection') as SourceSurface;
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
@@ -112,12 +108,11 @@ export default function ServicesRequestPage() {
         </p>
       </header>
 
-      <LeadRequestWizard
+      <LeadRequestFlow
         defaultCategory={category}
         defaultLocation={defaultLocation}
-        defaultIntentStage={defaultIntentStage}
-        defaultSourceSurface={defaultSourceSurface}
         submitting={createLead.isPending}
+        error={createLead.error?.message ?? null}
         onSubmit={payload => {
           createLead.mutate({
             providerId,

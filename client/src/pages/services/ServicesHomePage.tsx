@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import {
@@ -8,7 +8,8 @@ import {
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { ServiceHeroSearch } from '@/components/services/ServiceHeroSearch';
-import { CategoryChips } from '@/components/services/CategoryChips';
+import { TrustBar } from '@/components/services/TrustBar';
+import { CategoryTileGrid } from '@/components/services/CategoryTileGrid';
 import { DemandCarousel } from '@/components/services/DemandCarousel';
 import { PopularProjectsGrid } from '@/components/services/PopularProjectsGrid';
 import { ProviderCard, type ProviderDirectoryItem } from '@/components/services/ProviderCard';
@@ -53,6 +54,7 @@ function getLastSearchLocation(): LastSearchLocation | null {
 
 export default function ServicesHomePage() {
   const [, setLocation] = useLocation();
+  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
   const lastLocation = useMemo(getLastSearchLocation, []);
   const hasKnownLocation = Boolean(lastLocation?.suburb || lastLocation?.city || lastLocation?.province);
 
@@ -120,12 +122,16 @@ export default function ServicesHomePage() {
         }}
       />
 
+      <TrustBar providers={providers} isLoading={isLoadingProviders} />
+
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Popular categories</h2>
         </div>
-        <CategoryChips
+        <CategoryTileGrid
+          selected={selectedCategory}
           onSelect={category => {
+            setSelectedCategory(category);
             setLocation(`/services/${category}`);
           }}
         />
