@@ -107,7 +107,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       expect(section).toBeTruthy();
 
       // Verify feature blocks are rendered
-      const featureBlocks = container.querySelectorAll('[data-testid="feature-block"]');
+      const featureBlocks = container.querySelectorAll('[role="listitem"]');
       expect(featureBlocks.length).toBeGreaterThan(0);
     });
 
@@ -156,7 +156,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       const { container } = render(<HeroSection {...props} />);
 
       // Component should render successfully (Flexbox is supported in all modern browsers)
-      const ctaGroup = container.querySelector('[data-testid="cta-button-group"]');
+      const ctaGroup = container.querySelector('.flex.flex-wrap.gap-4');
       expect(ctaGroup).toBeTruthy();
     });
 
@@ -407,10 +407,9 @@ describe('Cross-Browser Compatibility Tests', () => {
 
       const { container } = render(<HeroSection {...props} />);
 
-      // Check for gradient backgrounds (uses CSS variables in Tailwind)
-      const section = container.querySelector('section');
-      const style = section?.getAttribute('style');
-      expect(style).toBeTruthy();
+      // Check for gradient backgrounds (uses CSS variables in Tailwind via gradient classes)
+      const hasGradient = container.innerHTML.includes('bg-gradient-to-');
+      expect(hasGradient).toBe(true);
     });
 
     it('should use backdrop-filter for modern effects', () => {

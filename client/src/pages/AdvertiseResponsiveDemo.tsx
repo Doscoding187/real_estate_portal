@@ -123,17 +123,10 @@ export default function AdvertiseResponsiveDemo() {
       href: '/demo',
       variant: 'secondary' as const,
     },
-    billboard: {
-      imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
-      alt: 'Luxury Development',
-      developmentName: 'Sandton Heights',
-      tagline: 'Luxury Living in the Heart of Sandton',
-      href: '/developments/sandton-heights',
-    },
-    trustSignals: [
-      { type: 'text' as const, content: 'Trusted by 500+ Partners' },
-      { type: 'text' as const, content: '10,000+ Properties Promoted' },
-      { type: 'text' as const, content: '95% Partner Satisfaction' },
+    stats: [
+      { value: '500', suffix: '+', label: 'Trusted Partners' },
+      { value: '10,000', suffix: '+', label: 'Properties Promoted' },
+      { value: '95', suffix: '%', label: 'Partner Satisfaction' },
     ],
   };
 
