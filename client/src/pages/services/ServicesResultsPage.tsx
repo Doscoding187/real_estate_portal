@@ -101,6 +101,16 @@ export default function ServicesResultsPage() {
   const canLogEvents = leadId > 0;
   const hasLoggedRecommendations = useRef(false);
   const hasLoggedEmptyState = useRef(false);
+  const requestNotes = (() => {
+    try {
+      const leadContext = sessionStorage.getItem('services-lead-context');
+      if (!leadContext) return null;
+      const parsed = JSON.parse(leadContext) as { notes?: string };
+      return parsed.notes || null;
+    } catch {
+      return null;
+    }
+  })();
 
   const emitEvent = (
     type:
@@ -371,25 +381,11 @@ export default function ServicesResultsPage() {
               <span className="font-medium text-slate-900">Location:</span>{' '}
               {formatArea(city, province, suburb)}
             </p>
-            {(() => {
-              try {
-                const leadContext = sessionStorage.getItem('services-lead-context');
-                if (leadContext) {
-                  const parsed = JSON.parse(leadContext) as { notes?: string };
-                  if (parsed.notes) {
-                    return (
-                      <p>
-                        <span className="font-medium text-slate-900">Notes:</span>{' '}
-                        {parsed.notes}
-                      </p>
-                    );
-                  }
-                }
-              } catch {
-                // sessionStorage unavailable or invalid JSON — skip notes
-              }
-              return null;
-            })()}
+            {requestNotes && (
+              <p>
+                <span className="font-medium text-slate-900">Notes:</span> {requestNotes}
+              </p>
+            )}
             <div className="pt-2">
               <Button onClick={() => setLocation(`/services/request/${category}`)} variant="outline">
                 Edit request
@@ -401,3 +397,4 @@ export default function ServicesResultsPage() {
     </main>
   );
 }
+
