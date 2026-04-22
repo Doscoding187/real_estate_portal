@@ -3,15 +3,9 @@ import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { connect } from '@tidbcloud/serverless';
 import mysql from 'mysql2/promise';
-import * as dotenv from 'dotenv';
+import { loadAppRuntimeEnv } from '../_core/runtimeBootstrap';
 
-dotenv.config();
-if (process.env.NODE_ENV === 'test') {
-  dotenv.config({ path: '.env.test', override: true });
-}
-if (process.env.NODE_ENV === 'production') {
-  dotenv.config({ path: '.env.production', override: true });
-}
+loadAppRuntimeEnv({ cwd: process.cwd() });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,6 +15,8 @@ type SqlConnection = {
   execute: (statement: string) => Promise<any>;
   end?: () => Promise<void>;
 };
+
+const MIGRATION_LOCK_NAME = 'real_estate_portal_sql_migrations';
 
 function isMysqlUrl(url: string): boolean {
   return /^mysql:\/\//i.test(url);
@@ -88,11 +84,11 @@ export function buildMysqlMigrationConnectionConfig(databaseUrl: string) {
 
 async function createSqlConnection(databaseUrl: string): Promise<SqlConnection> {
   if (isMysqlUrl(databaseUrl)) {
-    const pool = mysql.createPool(buildMysqlMigrationConnectionConfig(databaseUrl));
+    const connection = await mysql.createConnection(buildMysqlMigrationConnectionConfig(databaseUrl));
 
     return {
-      execute: statement => pool.query(statement),
-      end: () => pool.end(),
+      execute: statement => connection.query(statement),
+      end: () => connection.end(),
     };
   }
 
@@ -137,6 +133,65 @@ async function queryRows(connection: SqlConnection, statement: string): Promise<
     return result.rows as Array<Record<string, unknown>>;
   }
   return [];
+}
+
+async function foreignKeyExists(
+  connection: SqlConnection,
+  tableName: string,
+  constraintName: string,
+): Promise<boolean> {
+  const rows = await queryRows(
+    connection,
+    `
+      SELECT COUNT(*) AS count_value
+      FROM information_schema.table_constraints
+      WHERE table_schema = DATABASE()
+        AND table_name = '${tableName.replace(/'/g, "''")}'
+        AND constraint_name = '${constraintName.replace(/'/g, "''")}'
+        AND constraint_type = 'FOREIGN KEY'
+    `,
+  );
+
+  return Number(getRowValue(rows[0] ?? {}, 'count_value') ?? 0) > 0;
+}
+
+async function rewriteStatementForCurrentSchema(
+  connection: SqlConnection,
+  statement: string,
+): Promise<string> {
+  const dropForeignKeyMatch = statement.match(
+    /^\s*ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s+DROP\s+FOREIGN\s+KEY\s+`?([a-zA-Z0-9_]+)`?\s*,\s*([\s\S]+)$/i,
+  );
+
+  if (!dropForeignKeyMatch) {
+    return statement;
+  }
+
+  const [, tableName, constraintName, remainingClause] = dropForeignKeyMatch;
+  const hasConstraint = await foreignKeyExists(connection, tableName, constraintName);
+
+  if (hasConstraint) {
+    return statement;
+  }
+
+  return `ALTER TABLE \`${tableName}\`\n${remainingClause.trim()}`;
+}
+
+async function acquireMigrationLock(connection: SqlConnection) {
+  const rows = await queryRows(connection, `SELECT GET_LOCK('${MIGRATION_LOCK_NAME}', 30) AS lock_status`);
+  const lockStatus = Number(getRowValue(rows[0] ?? {}, 'lock_status') ?? 0);
+
+  if (lockStatus !== 1) {
+    throw new Error(`Failed to acquire migration lock "${MIGRATION_LOCK_NAME}" within 30 seconds.`);
+  }
+}
+
+async function releaseMigrationLock(connection: SqlConnection) {
+  try {
+    await connection.execute(`DO RELEASE_LOCK('${MIGRATION_LOCK_NAME}')`);
+  } catch (error) {
+    console.warn(`[Migrations] Failed to release migration lock ${MIGRATION_LOCK_NAME}`, error);
+  }
 }
 
 async function tableExists(
@@ -185,22 +240,12 @@ function shouldIgnoreStatementError(error: unknown): boolean {
     message.includes('Duplicate column') ||
     message.includes('Duplicate key name') ||
     message.includes('Duplicate foreign key constraint name') ||
-    message.includes('already exists') ||
-    message.includes("Unknown column '") ||
-    message.includes("doesn't exist in table") ||
-    message.includes("Table '") ||
-    message.includes("Can't DROP")
+    message.includes('already exists')
   ) {
     return true;
   }
 
-  return [
-    'ER_DUP_FIELDNAME',
-    'ER_DUP_KEYNAME',
-    'ER_NO_SUCH_TABLE',
-    'ER_CANT_DROP_FIELD_OR_KEY',
-    'ER_FK_DUP_NAME',
-  ].includes(code);
+  return ['ER_DUP_FIELDNAME', 'ER_DUP_KEYNAME', 'ER_FK_DUP_NAME'].includes(code);
 }
 
 async function shouldSkipStatementForMissingPrereq(
@@ -257,6 +302,8 @@ export async function runSqlMigrations(options?: { filePattern?: RegExp }) {
 
   try {
     console.log('Running SQL migrations...');
+    await acquireMigrationLock(connection);
+    console.log(`   Migration lock acquired: ${MIGRATION_LOCK_NAME}`);
 
     const filePattern = options?.filePattern ?? /\.sql$/;
     const sqlFiles = readdirSync(migrationsDir)
@@ -286,9 +333,10 @@ export async function runSqlMigrations(options?: { filePattern?: RegExp }) {
       let skippedCount = 0;
 
       for (const statement of statements) {
+        const mysqlNormalizedStatement = mysqlDialect ? normalizeStatementForMysql(statement) : statement;
         const executableStatement = mysqlDialect
-          ? normalizeStatementForMysql(statement)
-          : statement;
+          ? await rewriteStatementForCurrentSchema(connection, mysqlNormalizedStatement)
+          : mysqlNormalizedStatement;
         const skipReason = await shouldSkipStatementForMissingPrereq(
           connection,
           file,
@@ -325,6 +373,7 @@ export async function runSqlMigrations(options?: { filePattern?: RegExp }) {
     console.error('SQL migration failed:', error);
     throw error;
   } finally {
+    await releaseMigrationLock(connection);
     await connection.end?.();
   }
 }

@@ -1,11 +1,4 @@
-import dotenv from 'dotenv';
-import path from 'path';
 import { randomUUID } from 'crypto';
-
-// Load .env first
-dotenv.config();
-// Load .env.local (overrides .env) - critical for secrets
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
 
 import { sql } from 'drizzle-orm';
 import express from 'express';
@@ -25,6 +18,7 @@ import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchem
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import sitemapRouter from '../routes/sitemap';
 import agentOnboardingRouter from '../routes/agentOnboarding';
+import { ENV } from './env';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -81,13 +75,15 @@ async function startServer() {
       forceRefresh: true,
     });
     console.log('[DistributionSchema] Snapshot', distributionSchemaSnapshot);
-    if (!distributionSchemaSnapshot.ready) {
-      console.warn(
-        '[DistributionSchema] Distribution admin routes are not fully ready in this environment.',
+    if (ENV.distributionNetworkEnabled && !distributionSchemaSnapshot.ready) {
+      const missing = distributionSchemaSnapshot.missingItems.join(', ');
+      throw new Error(
+        `[DistributionSchema] Blocking server startup because required distribution schema items are missing: ${missing}`,
       );
     }
   } catch (error) {
-    console.warn('[DistributionSchema] Failed to capture startup schema snapshot.', error);
+    console.error('[DistributionSchema] Failed startup schema gate.', error);
+    throw error;
   }
 
   const app = express();
