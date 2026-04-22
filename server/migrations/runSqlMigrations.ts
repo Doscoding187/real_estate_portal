@@ -155,6 +155,25 @@ async function foreignKeyExists(
   return Number(getRowValue(rows[0] ?? {}, 'count_value') ?? 0) > 0;
 }
 
+async function indexExists(
+  connection: SqlConnection,
+  tableName: string,
+  indexName: string,
+): Promise<boolean> {
+  const rows = await queryRows(
+    connection,
+    `
+      SELECT COUNT(*) AS count_value
+      FROM information_schema.statistics
+      WHERE table_schema = DATABASE()
+        AND table_name = '${tableName.replace(/'/g, "''")}'
+        AND index_name = '${indexName.replace(/'/g, "''")}'
+    `,
+  );
+
+  return Number(getRowValue(rows[0] ?? {}, 'count_value') ?? 0) > 0;
+}
+
 async function rewriteStatementForCurrentSchema(
   connection: SqlConnection,
   statement: string,
@@ -172,6 +191,32 @@ async function rewriteStatementForCurrentSchema(
 
   if (hasConstraint) {
     return statement;
+  }
+
+  return `ALTER TABLE \`${tableName}\`\n${remainingClause.trim()}`;
+}
+
+async function rewriteIndexStatementForCurrentSchema(
+  connection: SqlConnection,
+  statement: string,
+): Promise<string> {
+  const dropIndexMatch = statement.match(
+    /^\s*ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s+DROP\s+INDEX\s+`?([a-zA-Z0-9_]+)`?\s*(?:,\s*([\s\S]+))?$/i,
+  );
+
+  if (!dropIndexMatch) {
+    return statement;
+  }
+
+  const [, tableName, indexName, remainingClause] = dropIndexMatch;
+  const hasIndex = await indexExists(connection, tableName, indexName);
+
+  if (hasIndex) {
+    return statement;
+  }
+
+  if (!remainingClause?.trim()) {
+    return '';
   }
 
   return `ALTER TABLE \`${tableName}\`\n${remainingClause.trim()}`;
@@ -334,9 +379,17 @@ export async function runSqlMigrations(options?: { filePattern?: RegExp }) {
 
       for (const statement of statements) {
         const mysqlNormalizedStatement = mysqlDialect ? normalizeStatementForMysql(statement) : statement;
-        const executableStatement = mysqlDialect
+        const foreignKeyAdjustedStatement = mysqlDialect
           ? await rewriteStatementForCurrentSchema(connection, mysqlNormalizedStatement)
           : mysqlNormalizedStatement;
+        const executableStatement = mysqlDialect
+          ? await rewriteIndexStatementForCurrentSchema(connection, foreignKeyAdjustedStatement)
+          : foreignKeyAdjustedStatement;
+        if (!executableStatement.trim()) {
+          skippedCount += 1;
+          console.log(`     -> skipped statement (${statementPreview(mysqlNormalizedStatement)})`);
+          continue;
+        }
         const skipReason = await shouldSkipStatementForMissingPrereq(
           connection,
           file,
