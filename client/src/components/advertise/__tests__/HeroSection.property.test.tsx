@@ -16,7 +16,7 @@ import fc from 'fast-check';
 // Mock framer-motion to avoid animation delays in tests
 vi.mock('framer-motion', () => {
   const createMotionComponent = (Tag: string) => {
-    return ({ children, ...props }: any) => {
+    function MockMotionComponent({ children, ...props }: any) {
       // Strip all framer-motion specific props
       const {
         whileInView, whileHover, whileTap, initial, animate, exit,
@@ -26,8 +26,14 @@ vi.mock('framer-motion', () => {
       } = props;
       const Element = Tag as any;
       return <Element {...domProps}>{children}</Element>;
-    };
+    }
+    MockMotionComponent.displayName = `MockMotion(${Tag})`;
+    return MockMotionComponent;
   };
+  function MockAnimatePresence({ children }: any) {
+    return <>{children}</>;
+  }
+  MockAnimatePresence.displayName = 'MockAnimatePresence';
   return {
     motion: {
       div: createMotionComponent('div'),
@@ -38,7 +44,7 @@ vi.mock('framer-motion', () => {
       span: createMotionComponent('span'),
       button: createMotionComponent('button'),
     },
-    AnimatePresence: ({ children }: any) => <>{children}</>,
+    AnimatePresence: MockAnimatePresence,
   };
 });
 
