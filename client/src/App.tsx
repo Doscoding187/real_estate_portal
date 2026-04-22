@@ -473,10 +473,7 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/set-password" component={SetPassword} />
-<<<<<<< HEAD
           <Route path="/activation-complete" component={ActivationComplete} />
-=======
->>>>>>> b3a3ef52 (feat(services): marketplace overhaul — trust signals, onboarding wizard, enhanced cards)
           <Route path="/saved-search/manage" component={SavedSearchManagePage} />
           <Route path="/accept-invitation" component={AcceptInvitation} />
           <Route path="/referral-upload/:token">

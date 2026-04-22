@@ -12,9 +12,10 @@ import { type OnboardingState } from '../useOnboardingReducer';
 
 type CompletionScreenProps = {
   state: OnboardingState;
+  providerPublicPath: string;
 };
 
-export function CompletionScreen({ state }: CompletionScreenProps) {
+export function CompletionScreen({ state, providerPublicPath }: CompletionScreenProps) {
   const categoryLabel = state.primaryCategory
     ? formatCategoryLabel(state.primaryCategory)
     : 'your services';
@@ -32,7 +33,7 @@ export function CompletionScreen({ state }: CompletionScreenProps) {
       </div>
 
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <Link href="/services/provider/me">
+        <Link href={providerPublicPath}>
           <Button className="w-full" variant="default">
             View your public profile
           </Button>
