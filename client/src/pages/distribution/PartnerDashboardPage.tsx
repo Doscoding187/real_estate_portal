@@ -911,7 +911,7 @@ export default function PartnerDashboardPage() {
                     );
                   })}
 
-                  {!!matches.length ? (
+                  {matches.length > 0 ? (
                     <div className="mt-2 border-t border-[#1a1a18]/12 pt-2 text-[11px] text-[#6b6a64]">
                       Max affordability: {formatCurrency(assessment.outputs.purchasePrice)}
                     </div>

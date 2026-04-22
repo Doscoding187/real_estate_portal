@@ -83,6 +83,11 @@ const ServiceProviderReviewsPage = lazy(
 );
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
+const ProviderOnboardingWizard = lazy(() =>
+  import('./features/services/onboarding/ProviderOnboardingWizard').then(m => ({
+    default: m.ProviderOnboardingWizard,
+  })),
+);
 const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
@@ -428,7 +433,7 @@ function Router() {
           </Route>
           <Route path="/service/profile">
             <RequireRole role="service_provider">
-              <ProProfilePage />
+              <ProviderOnboardingWizard />
             </RequireRole>
           </Route>
           <Route path="/service/explore">
