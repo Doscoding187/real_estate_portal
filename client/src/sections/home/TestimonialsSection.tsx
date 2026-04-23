@@ -29,8 +29,8 @@ const testimonials = [
 
 export function TestimonialsSection() {
   return (
-    <section className="bg-gradient-to-b from-slate-50/50 to-white px-3 py-4 sm:px-4 md:px-6 md:py-8">
-      <div className="mb-5 text-left md:mb-12">
+    <section className="bg-gradient-to-b from-slate-50/50 to-white py-4 md:py-5">
+      <div className="mb-5 text-left md:mb-8">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-1 sm:mb-4 sm:px-4 sm:py-2">
           <Star className="h-4 w-4 fill-current text-yellow-500 sm:h-5 sm:w-5" />
           <span className="text-[11px] font-semibold text-yellow-700 sm:text-sm">
@@ -46,7 +46,6 @@ export function TestimonialsSection() {
       </div>
 
       <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white via-white/90 to-transparent md:hidden" />
         <div className="scrollbar-hide flex snap-x gap-3 overflow-x-auto px-0.5 pb-4 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:px-0">
           {testimonials.map((testimonial, idx) => (
             <div

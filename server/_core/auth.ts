@@ -391,12 +391,37 @@ class AuthService {
   /**
    * Forgot password - generate and send reset token
    */
-  async forgotPassword(email: string): Promise<void> {
-    const user = await db.getUserByEmail(email);
-    if (!user) {
+  async forgotPassword(email: string): Promise<boolean> {
+    const reset = await this.createPasswordReset(email);
+    if (!reset) {
       // Don't reveal that the user doesn't exist
-      return;
+      return false;
     }
+
+    const emailSent = await EmailService.sendEmail({
+      to: reset.user.email!,
+      subject: 'Password Reset Request',
+      html: `<p>You requested a password reset. Click the link below to reset your password:</p><a href="${reset.resetLink}">${reset.resetLink}</a><p>This link will expire in 1 hour.</p>`,
+      text: `You requested a password reset. Copy and paste this link into your browser to reset your password: ${reset.resetLink}`,
+    });
+
+    return emailSent;
+  }
+
+  /**
+   * Generate a password reset link without sending an email.
+   * Useful for admin-assisted onboarding when email delivery fails.
+   */
+  async generatePasswordResetLink(email: string): Promise<string | null> {
+    const reset = await this.createPasswordReset(email);
+    return reset?.resetLink ?? null;
+  }
+
+  private async createPasswordReset(
+    email: string,
+  ): Promise<{ user: User; resetLink: string } | null> {
+    const user = await db.getUserByEmail(email);
+    if (!user) return null;
 
     // Generate a random token
     const token = crypto.randomBytes(32).toString('hex');
@@ -408,14 +433,33 @@ class AuthService {
     // Store hashed token and expiry in the database
     await db.updateUserPasswordResetToken(user.id, hashedToken, expiresAt);
 
-    // Send email with reset link
     const resetLink = `${ENV.appUrl}/reset-password?token=${token}`;
+    return { user, resetLink };
+  }
+
+  /**
+   * First-time account activation password setup email for onboarding users.
+   */
+  async sendActivationSetPasswordEmail(email: string): Promise<void> {
+    const user = await db.getUserByEmail(email);
+    if (!user) {
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Onboarding links can reasonably be valid longer than a standard reset request.
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await db.updateUserPasswordResetToken(user.id, hashedToken, expiresAt);
+
+    const setupLink = `${ENV.appUrl}/set-password?token=${token}`;
 
     await EmailService.sendEmail({
       to: user.email!,
-      subject: 'Password Reset Request',
-      html: `<p>You requested a password reset. Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a><p>This link will expire in 1 hour.</p>`,
-      text: `You requested a password reset. Copy and paste this link into your browser to reset your password: ${resetLink}`,
+      subject: 'Activate your account - set your password',
+      html: `<p>Your referrer account has been approved. Click the link below to set your password and activate your account:</p><a href="${setupLink}">${setupLink}</a><p>This link will expire in 24 hours.</p>`,
+      text: `Your referrer account has been approved. Set your password to activate your account: ${setupLink}`,
     });
   }
 

@@ -26,6 +26,8 @@ export type ProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    templateFileUrl?: string | null;
+    templateFileName?: string | null;
     isRequired: boolean;
     sortOrder: number;
   }>;

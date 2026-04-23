@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
-import { ListingNavbar } from '@/components/ListingNavbar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Loader2 } from 'lucide-react';
@@ -9,6 +8,74 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
 import { toast } from 'sonner';
+import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
+
+const JOURNEY_STAGES = [
+  'viewing_scheduled',
+  'viewing_completed',
+  'application_submitted',
+  'contract_signed',
+  'bond_approved',
+  'commission_pending',
+  'commission_paid',
+] as const;
+
+function normalizeStage(stage: string | null | undefined) {
+  const value = String(stage || '').toLowerCase();
+  if (!value) return 'viewing_scheduled';
+  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
+  return value;
+}
+
+function getStageLabel(stage: string | null | undefined) {
+  return normalizeStage(stage)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function getStageProgress(stage: string | null | undefined) {
+  const normalized = normalizeStage(stage);
+  const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
+  if (index < 0) return { index: 0, percent: 0 };
+  return { index, percent: Math.round(((index + 1) / JOURNEY_STAGES.length) * 100) };
+}
+
+function getNextActionHint(input: {
+  status: string;
+  docProgress: { requiredCount: number; verifiedRequiredCount: number };
+}) {
+  const normalized = normalizeStage(input.status);
+  if (normalized === 'commission_paid') {
+    return 'Commission paid. Download supporting documents and submit your next referral.';
+  }
+  if (normalized === 'commission_pending') {
+    return 'Deal closed. Monitor payout approval and payment timing.';
+  }
+  if (normalized === 'bond_approved' || normalized === 'contract_signed') {
+    return 'Keep all required docs complete while payout milestone is processed.';
+  }
+  if (normalized === 'application_submitted') {
+    if (input.docProgress.verifiedRequiredCount < input.docProgress.requiredCount) {
+      return 'Upload and verify remaining required documents to avoid payout delays.';
+    }
+    return 'Application submitted. Track manager feedback and bond progression.';
+  }
+  return 'Coordinate buyer viewing and progress this referral to application stage.';
+}
+
+function formatOwnerRole(ownerRole: string | null | undefined) {
+  const value = String(ownerRole || '').toLowerCase();
+  if (!value) return 'Team';
+  return value.replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function normalizePhoneForWhatsApp(value: string | null | undefined) {
+  const digits = String(value || '').replace(/[^\d]/g, '');
+  if (!digits) return null;
+  if (digits.startsWith('0')) return `27${digits.slice(1)}`;
+  if (digits.startsWith('27')) return digits;
+  return digits;
+}
 
 function base64ToBlob(base64: string, mimeType: string) {
   const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
@@ -61,7 +128,7 @@ export default function PartnerReferralDetailPage() {
 
   if (loading || referralQuery.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
       </div>
     );
@@ -69,28 +136,26 @@ export default function PartnerReferralDetailPage() {
 
   if (referralQuery.error) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <ListingNavbar />
-        <div className="mx-auto max-w-4xl px-4 pb-8 pt-24">
+      <ReferralAppShell>
+        <main className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-7">
           <Card>
             <CardContent className="py-6 text-sm text-red-600">{referralQuery.error.message}</CardContent>
           </Card>
-        </div>
-      </div>
+        </main>
+      </ReferralAppShell>
     );
   }
 
   const referral = referralQuery.data;
   if (!referral) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <ListingNavbar />
-        <div className="mx-auto max-w-4xl px-4 pb-8 pt-24">
+      <ReferralAppShell>
+        <main className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-7">
           <Card>
             <CardContent className="py-6 text-sm text-slate-500">Referral not found.</CardContent>
           </Card>
-        </div>
-      </div>
+        </main>
+      </ReferralAppShell>
     );
   }
 
@@ -102,11 +167,18 @@ export default function PartnerReferralDetailPage() {
         calcVersion?: string | null;
       }
     | null;
+  const journeyProgress = getStageProgress(referral.status);
+  const nextActionHint =
+    referral.journey?.nextAction ||
+    getNextActionHint({
+      status: String(referral.status || ''),
+      docProgress: referral.docProgress,
+    });
+  const actionCode = String(referral.journey?.actionCode || '');
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <ListingNavbar />
-      <div className="mx-auto max-w-5xl px-4 pb-8 pt-24">
+    <ReferralAppShell>
+      <main className="mx-auto w-full max-w-5xl px-4 pb-8 pt-6 md:px-7">
         <Card className="mb-4">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -114,7 +186,7 @@ export default function PartnerReferralDetailPage() {
                 <CardTitle>{referral.development.name}</CardTitle>
                 <CardDescription>Deal #{referral.dealId}</CardDescription>
               </div>
-              <Badge>{referral.status}</Badge>
+              <Badge>{getStageLabel(referral.status)}</Badge>
             </div>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -139,6 +211,94 @@ export default function PartnerReferralDetailPage() {
                   : 'Download Qualification Pack'}
               </Button>
             ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-base">Journey to Commission</CardTitle>
+            <CardDescription>
+              Stage {journeyProgress.index + 1} of {JOURNEY_STAGES.length} ({journeyProgress.percent}
+              % complete)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3 h-2 overflow-hidden rounded bg-slate-100">
+              <div className="h-full rounded bg-blue-600" style={{ width: `${journeyProgress.percent}%` }} />
+            </div>
+            <div className="mb-3 flex flex-wrap gap-1">
+              {JOURNEY_STAGES.map(stage => {
+                const currentIndex = journeyProgress.index;
+                const stageIndex = JOURNEY_STAGES.indexOf(stage);
+                const reached = stageIndex <= currentIndex;
+                return (
+                  <span
+                    key={stage}
+                    className={`rounded px-2 py-1 text-[11px] ${
+                      reached ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {getStageLabel(stage)}
+                  </span>
+                );
+              })}
+            </div>
+            <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              {nextActionHint}
+            </div>
+            {referral.journey?.slaDueAt ? (
+              <p className={`mt-2 text-xs ${referral.journey?.atRisk ? 'text-red-600' : 'text-slate-600'}`}>
+                Owner: {formatOwnerRole(referral.journey.ownerRole)} • SLA due {String(referral.journey.slaDueAt)}
+              </p>
+            ) : null}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {actionCode === 'track_payout' ? (
+                <Button size="sm" onClick={() => setLocation('/distribution/partner/commissions')}>
+                  Open Commissions
+                </Button>
+              ) : null}
+              {(actionCode === 'follow_up_manager' || referral.journey?.ownerRole === 'manager') &&
+              referral.manager?.email ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const subject = encodeURIComponent(
+                      `Referral follow-up: Deal #${referral.dealId} - ${referral.development.name}`,
+                    );
+                    const body = encodeURIComponent(
+                      `Hi,\n\nI am following up on deal #${referral.dealId}.\nNext action: ${nextActionHint}\n\nThanks.`,
+                    );
+                    window.open(`mailto:${referral.manager?.email}?subject=${subject}&body=${body}`);
+                  }}
+                >
+                  Contact Manager
+                </Button>
+              ) : null}
+              {(() => {
+                const whatsappPhone = normalizePhoneForWhatsApp(referral.buyer?.phone || null);
+                if (!whatsappPhone) return null;
+                const msg = encodeURIComponent(
+                  `Hi ${referral.buyer?.name || ''}, quick update on your ${referral.development.name} referral. ${nextActionHint}`,
+                );
+                return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      window.open(`https://wa.me/${whatsappPhone}?text=${msg}`, '_blank', 'noopener,noreferrer')
+                    }
+                  >
+                    WhatsApp Buyer
+                  </Button>
+                );
+              })()}
+              {actionCode === 'submit_next_referral' ? (
+                <Button size="sm" variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
+                  Submit Next Referral
+                </Button>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 
@@ -234,7 +394,7 @@ export default function PartnerReferralDetailPage() {
             ) : null}
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </main>
+    </ReferralAppShell>
   );
 }

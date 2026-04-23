@@ -15,6 +15,7 @@ const {
   mockOnboardDevelopmentToPartnerNetworkUseMutation,
   mockGetBrandOnboardingPresetUseQuery,
   mockSetBrandOnboardingPresetUseMutation,
+  mockUploadPresignUseMutation,
   mockUseUtils,
   mockInvalidateReadiness,
   mockInvalidateDocs,
@@ -29,6 +30,7 @@ const {
   mockOnboardDevelopmentToPartnerNetworkUseMutation: vi.fn(),
   mockGetBrandOnboardingPresetUseQuery: vi.fn(),
   mockSetBrandOnboardingPresetUseMutation: vi.fn(),
+  mockUploadPresignUseMutation: vi.fn(),
   mockUseUtils: vi.fn(),
   mockInvalidateReadiness: vi.fn(),
   mockInvalidateDocs: vi.fn(),
@@ -67,6 +69,11 @@ vi.mock('@/lib/trpc', () => ({
         setBrandOnboardingPreset: {
           useMutation: () => mockSetBrandOnboardingPresetUseMutation(),
         },
+      },
+    },
+    upload: {
+      presign: {
+        useMutation: () => mockUploadPresignUseMutation(),
       },
     },
   },
@@ -152,6 +159,13 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     });
     mockSetBrandOnboardingPresetUseMutation.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ success: true }),
+      isPending: false,
+    });
+    mockUploadPresignUseMutation.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({
+        url: 'https://example-upload-url.test',
+        publicUrl: 'https://cdn.example.com/distribution-doc.pdf',
+      }),
       isPending: false,
     });
   });

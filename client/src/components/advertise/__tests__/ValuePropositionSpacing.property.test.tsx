@@ -17,8 +17,7 @@ import fc from 'fast-check';
 describe('ValuePropositionSection - Property 7: Feature block spacing consistency', () => {
   /**
    * Property 7: Feature block spacing consistency
-   * For any two adjacent feature blocks, the spacing between them should be equal
-   * to the spacing between any other pair of adjacent blocks
+   * The grid should use consistent gap tokens across breakpoints
    */
   it('should have consistent gap spacing in the grid', () => {
     const { container } = render(<ValuePropositionSection />);
@@ -26,44 +25,37 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
     // Find the grid container
     const gridContainers = container.querySelectorAll('div');
     const gridContainer = Array.from(gridContainers).find(div => {
-      // const style = window.getComputedStyle(div); // Unused
       return div.className.includes('grid');
     });
 
     expect(gridContainer).toBeDefined();
 
     if (gridContainer) {
-      // Check for grid classes
+      // Check for grid classes matching the redesigned component
       expect(gridContainer.className).toContain('grid');
-      expect(gridContainer.className).toContain('gap-6');
-      expect(gridContainer.className).toContain('md:gap-8');
+      expect(gridContainer.className).toContain('gap-8');
+      expect(gridContainer.className).toContain('lg:gap-12');
 
-      // Grid should use responsive columns
+      // Grid should use responsive columns (3-column layout)
       expect(gridContainer.className).toContain('grid-cols-1');
-      expect(gridContainer.className).toContain('sm:grid-cols-2');
-      expect(gridContainer.className).toContain('lg:grid-cols-4');
+      expect(gridContainer.className).toContain('md:grid-cols-3');
     }
   });
 
   /**
-   * Additional property: Grid maintains consistent spacing across different viewport sizes
+   * Additional property: Grid maintains consistent spacing across multiple renders
    */
   it('should maintain grid structure with consistent spacing', () => {
     fc.assert(
       fc.property(
-        // Generate random viewport-like scenarios
         fc.record({
-          // We can't actually change viewport in tests, but we can verify the grid structure
-          // remains consistent regardless of how many times we render
           renderCount: fc.integer({ min: 1, max: 5 }),
         }),
         testData => {
-          // Render multiple times to ensure consistency
           for (let i = 0; i < testData.renderCount; i++) {
             const { container, unmount } = render(<ValuePropositionSection />);
 
             try {
-              // Find the grid container
               const gridContainers = container.querySelectorAll('div');
               const gridContainer = Array.from(gridContainers).find(div => {
                 return div.className.includes('grid');
@@ -73,13 +65,12 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
 
               if (gridContainer) {
                 // Gap should always be set
-                expect(gridContainer.className).toContain('gap-6');
-                expect(gridContainer.className).toContain('md:gap-8');
+                expect(gridContainer.className).toContain('gap-8');
+                expect(gridContainer.className).toContain('lg:gap-12');
 
                 // Grid template should use responsive columns
                 expect(gridContainer.className).toContain('grid-cols-1');
-                expect(gridContainer.className).toContain('sm:grid-cols-2');
-                expect(gridContainer.className).toContain('lg:grid-cols-4');
+                expect(gridContainer.className).toContain('md:grid-cols-3');
               }
             } finally {
               unmount();
@@ -87,21 +78,21 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
           }
         },
       ),
-      { numRuns: 50 }, // Reduced runs since we're rendering multiple times per test
+      { numRuns: 50 },
     );
   });
 
   /**
    * Additional property: All feature blocks are rendered in the grid
    */
-  it('should render all four feature blocks with consistent spacing', () => {
+  it('should render all three feature blocks with consistent spacing', () => {
     const { container } = render(<ValuePropositionSection />);
 
-    // Find all feature blocks
-    const featureBlocks = container.querySelectorAll('.feature-block');
+    // Find all feature blocks via role="listitem"
+    const featureBlocks = container.querySelectorAll('[role="listitem"]');
 
-    // Should have exactly 4 feature blocks
-    expect(featureBlocks.length).toBe(4);
+    // Should have exactly 3 feature blocks (redesigned component)
+    expect(featureBlocks.length).toBe(3);
 
     // All feature blocks should be within the grid container
     const gridContainers = container.querySelectorAll('div');
@@ -113,15 +104,12 @@ describe('ValuePropositionSection - Property 7: Feature block spacing consistenc
 
     if (gridContainer) {
       // All feature blocks should be within the grid container
-      // Note: FeatureBlock might be nested inside wrapper divs
-      const featureBlocksInGrid = gridContainer.querySelectorAll('.feature-block');
-
-      expect(featureBlocksInGrid.length).toBe(4);
+      const featureBlocksInGrid = gridContainer.querySelectorAll('[role="listitem"]');
+      expect(featureBlocksInGrid.length).toBe(3);
 
       // Grid template should use responsive columns
       expect(gridContainer.className).toContain('grid-cols-1');
-      expect(gridContainer.className).toContain('sm:grid-cols-2');
-      expect(gridContainer.className).toContain('lg:grid-cols-4');
+      expect(gridContainer.className).toContain('md:grid-cols-3');
     }
   });
 

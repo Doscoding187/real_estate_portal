@@ -32,6 +32,7 @@ import { ENV } from './_core/env';
 import { protectedProcedure, publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { getDb } from './db';
 import { authService } from './_core/auth';
+import { EmailService } from './_core/emailService';
 import { ensureCommissionEntryForDeal } from './services/distributionCommissionService';
 import { buildDistributionManagerInviteUrl } from '../shared/distributionManagerInvite';
 import {
@@ -2757,6 +2758,8 @@ const adminDistributionRouter = router({
               'custom',
             ]),
             documentLabel: z.string().trim().min(2).max(160),
+            templateFileUrl: z.string().trim().url().max(2048).nullable().optional(),
+            templateFileName: z.string().trim().max(255).nullable().optional(),
             isRequired: z.boolean().default(true),
             sortOrder: z.number().int().min(0).default(0),
             isActive: z.boolean().default(true),
@@ -2772,6 +2775,8 @@ const adminDistributionRouter = router({
         category: document.category,
         documentCode: document.documentCode,
         documentLabel: normalizeRequiredDocumentLabel(document.documentLabel),
+        templateFileUrl: document.templateFileUrl?.trim() || null,
+        templateFileName: document.templateFileName?.trim() || null,
         isRequired: document.isRequired,
         sortOrder: typeof document.sortOrder === 'number' ? document.sortOrder : index,
         isActive: document.isActive,
@@ -2787,7 +2792,7 @@ const adminDistributionRouter = router({
       if (duplicateStandardCode) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Only one ${duplicateStandardCode.documentCode} template can be configured per development.`,
+          message: `Only one ${duplicateStandardCode.documentCode} document can be configured per development.`,
         });
       }
 
@@ -2815,6 +2820,11 @@ const adminDistributionRouter = router({
         developmentId: number;
         documentCode: string;
         documentLabel: string;
+        category: 'developer_document' | 'client_required_document';
+        templateFileUrl: string | null;
+        templateFileName: string | null;
+        templateUploadedAt: string | null;
+        templateUploadedBy: number | null;
         isRequired: boolean;
         sortOrder: number;
         isActive: boolean;
@@ -2840,6 +2850,18 @@ const adminDistributionRouter = router({
                   documentCode: document.documentCode,
                   documentLabel: document.documentLabel,
                   category: document.category,
+                  templateFileUrl:
+                    document.category === 'developer_document' ? document.templateFileUrl : null,
+                  templateFileName:
+                    document.category === 'developer_document' ? document.templateFileName : null,
+                  templateUploadedAt:
+                    document.category === 'developer_document' && document.templateFileUrl
+                      ? sql`CURRENT_TIMESTAMP`
+                      : null,
+                  templateUploadedBy:
+                    document.category === 'developer_document' && document.templateFileUrl
+                      ? null
+                      : null,
                   isRequired: document.isRequired ? 1 : 0,
                   sortOrder: document.sortOrder,
                   isActive: document.isActive ? 1 : 0,
@@ -2858,6 +2880,18 @@ const adminDistributionRouter = router({
               documentCode: document.documentCode,
               documentLabel: document.documentLabel,
               category: document.category,
+              templateFileUrl:
+                document.category === 'developer_document' ? document.templateFileUrl : null,
+              templateFileName:
+                document.category === 'developer_document' ? document.templateFileName : null,
+              templateUploadedAt:
+                document.category === 'developer_document' && document.templateFileUrl
+                  ? sql`CURRENT_TIMESTAMP`
+                  : null,
+              templateUploadedBy:
+                document.category === 'developer_document' && document.templateFileUrl
+                  ? null
+                  : null,
               isRequired: document.isRequired ? 1 : 0,
               sortOrder: document.sortOrder,
               isActive: document.isActive ? 1 : 0,
@@ -2883,6 +2917,10 @@ const adminDistributionRouter = router({
                 documentCode: developmentRequiredDocuments.documentCode,
                 documentLabel: developmentRequiredDocuments.documentLabel,
                 category: developmentRequiredDocuments.category,
+                templateFileUrl: developmentRequiredDocuments.templateFileUrl,
+                templateFileName: developmentRequiredDocuments.templateFileName,
+                templateUploadedAt: developmentRequiredDocuments.templateUploadedAt,
+                templateUploadedBy: developmentRequiredDocuments.templateUploadedBy,
                 isRequired: developmentRequiredDocuments.isRequired,
                 sortOrder: developmentRequiredDocuments.sortOrder,
                 isActive: developmentRequiredDocuments.isActive,
@@ -2900,6 +2938,17 @@ const adminDistributionRouter = router({
               String(row.category || 'client_required_document') === 'developer_document'
                 ? 'developer_document'
                 : 'client_required_document',
+            templateFileUrl:
+              typeof row.templateFileUrl === 'string' && row.templateFileUrl.trim()
+                ? row.templateFileUrl.trim()
+                : null,
+            templateFileName:
+              typeof row.templateFileName === 'string' && row.templateFileName.trim()
+                ? row.templateFileName.trim()
+                : null,
+            templateUploadedAt: row.templateUploadedAt || null,
+            templateUploadedBy:
+              typeof row.templateUploadedBy === 'number' ? Number(row.templateUploadedBy) : null,
             isRequired: boolFromTinyInt(row.isRequired),
             sortOrder: Number(row.sortOrder || 0),
             isActive: boolFromTinyInt(row.isActive),
@@ -3423,6 +3472,7 @@ const adminDistributionRouter = router({
       let userId = Number(existingUser?.id || 0);
       let userCreated = false;
       let activationEmailSent = false;
+      let activationResetLink: string | null = null;
 
       if (!userId) {
         const cleanFullName = String(application.fullName || '').trim();
@@ -3463,15 +3513,36 @@ const adminDistributionRouter = router({
         userCreated = true;
 
         try {
-          await authService.forgotPassword(normalizedEmail);
-          activationEmailSent = true;
+          const resetLink = await authService.generatePasswordResetLink(normalizedEmail);
+          activationResetLink = resetLink ? `${resetLink}&flow=onboarding` : null;
+          if (activationResetLink) {
+            activationEmailSent = await EmailService.sendReferrerActivationEmail(
+              normalizedEmail,
+              String(application.fullName || ''),
+              activationResetLink,
+            );
+          }
+          if (!activationEmailSent) {
+            console.warn(
+              '[distribution.reviewReferrerApplication] Activation onboarding email was not delivered.',
+              { applicationId: input.applicationId, userId },
+            );
+          }
         } catch (error) {
           console.warn(
-            '[distribution.reviewReferrerApplication] Failed to send activation reset email:',
+            '[distribution.reviewReferrerApplication] Failed to send activation onboarding email:',
             error,
           );
         }
       }
+
+      await db
+        .update(users)
+        .set({
+          emailVerified: 1,
+          emailVerificationToken: null,
+        })
+        .where(eq(users.id, userId));
 
       await db
         .insert(distributionIdentities)
@@ -3506,6 +3577,166 @@ const adminDistributionRouter = router({
         userId,
         userCreated,
         activationEmailSent,
+        activationResetLink,
+      };
+    }),
+
+  resendReferrerActivationEmail: superAdminProcedure
+    .input(
+      z.object({
+        applicationId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const [application] = await db
+        .select({
+          id: distributionReferrerApplications.id,
+          requestedIdentity: distributionReferrerApplications.requestedIdentity,
+          fullName: distributionReferrerApplications.fullName,
+          email: distributionReferrerApplications.email,
+          phone: distributionReferrerApplications.phone,
+          status: distributionReferrerApplications.status,
+          userId: distributionReferrerApplications.userId,
+        })
+        .from(distributionReferrerApplications)
+        .where(eq(distributionReferrerApplications.id, input.applicationId))
+        .limit(1);
+
+      if (!application) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Referrer application not found.' });
+      }
+
+      if (application.status !== 'approved') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Activation email can only be resent after approval.',
+        });
+      }
+
+      const normalizedEmail = String(application.email || '')
+        .trim()
+        .toLowerCase();
+
+      if (!normalizedEmail) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Application email is missing. Cannot resend activation email.',
+        });
+      }
+
+      let userId = Number(application.userId || 0);
+      let userCreated = false;
+      if (!userId) {
+        const [resolvedUser] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, normalizedEmail))
+          .limit(1);
+        userId = Number(resolvedUser?.id || 0);
+      }
+
+      if (!userId) {
+        const cleanFullName = String(application.fullName || '').trim();
+        const { firstName, lastName } = splitFullName(cleanFullName || normalizedEmail);
+        const tempPassword = `Tmp!${Math.random().toString(36).slice(-10)}Aa1`;
+        const passwordHash = await authService.hashPassword(tempPassword);
+
+        const [insertResult] = await db.insert(users).values({
+          email: normalizedEmail,
+          passwordHash,
+          name: cleanFullName || normalizedEmail,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          phone: application.phone ? String(application.phone).trim() : null,
+          loginMethod: 'email',
+          emailVerified: 1,
+          role: 'visitor',
+          isSubaccount: 0,
+        });
+
+        userId = Number((insertResult as any).insertId || 0);
+        if (!userId) {
+          const [resolvedUser] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, normalizedEmail))
+            .limit(1);
+          userId = Number(resolvedUser?.id || 0);
+        }
+
+        if (!userId) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Unable to resolve approved referrer account for resend.',
+          });
+        }
+
+        userCreated = true;
+      }
+
+      await db
+        .update(users)
+        .set({
+          emailVerified: 1,
+          emailVerificationToken: null,
+        })
+        .where(eq(users.id, userId));
+
+      await db
+        .insert(distributionIdentities)
+        .values({
+          userId,
+          identityType: application.requestedIdentity as DistributionIdentityType,
+          active: 1,
+          displayName: application.fullName || application.email,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            active: 1,
+            displayName: application.fullName || application.email,
+          },
+        });
+
+      let activationResetLink: string | null = null;
+      let activationEmailSent = false;
+      try {
+        const resetLink = await authService.generatePasswordResetLink(normalizedEmail);
+        activationResetLink = resetLink ? `${resetLink}&flow=onboarding` : null;
+        if (activationResetLink) {
+          activationEmailSent = await EmailService.sendReferrerActivationEmail(
+            normalizedEmail,
+            String(application.fullName || ''),
+            activationResetLink,
+          );
+        }
+        if (!activationEmailSent) {
+          console.warn(
+            '[distribution.resendReferrerActivationEmail] Activation onboarding email was not delivered.',
+            {
+              applicationId: input.applicationId,
+              userId,
+            },
+          );
+        }
+      } catch (error) {
+        console.warn(
+          '[distribution.resendReferrerActivationEmail] Failed to send activation onboarding email:',
+          error,
+        );
+      }
+
+      return {
+        success: true,
+        applicationId: input.applicationId,
+        userId,
+        email: normalizedEmail,
+        userCreated,
+        activationEmailSent,
+        activationResetLink,
       };
     }),
 
@@ -4944,6 +5175,8 @@ const managerDistributionRouter = router({
         templateId: z.number().int().positive(),
         status: z.enum(['pending', 'received', 'verified', 'rejected']),
         notes: z.string().max(2000).nullable().optional(),
+        submittedFileUrl: z.string().trim().url().max(2048).nullable().optional(),
+        submittedFileName: z.string().trim().max(255).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -4958,6 +5191,8 @@ const managerDistributionRouter = router({
           templateId: input.templateId,
           status: input.status,
           notes: input.notes,
+          submittedFileUrl: input.submittedFileUrl,
+          submittedFileName: input.submittedFileName,
         },
         ctx.user!.id,
         { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
@@ -6066,7 +6301,7 @@ const partnerDistributionRouter = router({
 
       return await listPartnerProgramTerms({
         brandProfileId: input?.brandProfileId,
-        includeDisabled: false,
+        includeDisabled: true,
       });
     }),
 

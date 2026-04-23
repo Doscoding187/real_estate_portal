@@ -272,7 +272,7 @@ describeWithDb('distribution.partner accelerator integration', () => {
     ).toBe(false);
   });
 
-  it('matching excludes developments that are not submission-ready', async () => {
+  it('matching includes referral-enabled developments even when manager assignment is missing', async () => {
     const actorUserId = await insertUser();
     const managerUserId = await insertUser('super_admin');
     const caller = createCaller(actorUserId, 'agent');
@@ -323,9 +323,8 @@ describeWithDb('distribution.partner accelerator integration', () => {
     });
     createdState.snapshotIds.push(String(matchResult.matchSnapshotId));
 
-    expect(matchResult.matches.map(match => Number(match.developmentId))).toContain(readyDevelopmentId);
-    expect(matchResult.matches.map(match => Number(match.developmentId))).not.toContain(
-      notReadyDevelopmentId,
-    );
+    const matchedDevelopmentIds = matchResult.matches.map(match => Number(match.developmentId));
+    expect(matchedDevelopmentIds).toContain(readyDevelopmentId);
+    expect(matchedDevelopmentIds).toContain(notReadyDevelopmentId);
   });
 });

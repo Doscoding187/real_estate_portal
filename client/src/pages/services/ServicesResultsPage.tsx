@@ -41,8 +41,8 @@ export default function ServicesResultsPage() {
   const [, params] = useRoute('/services/results/:leadId');
   const [, setLocation] = useLocation();
   const leadId = Number(params?.leadId || 0);
-  const query = useMemo(queryParams, []);
-  const sessionId = useMemo(getOrCreateServicesSessionId, []);
+  const query = useMemo(() => queryParams(), []);
+  const sessionId = useMemo(() => getOrCreateServicesSessionId(), []);
 
   const categoryParam = String(query.get('category') || '').toLowerCase();
   const category = isServiceCategory(categoryParam)
@@ -101,6 +101,16 @@ export default function ServicesResultsPage() {
   const canLogEvents = leadId > 0;
   const hasLoggedRecommendations = useRef(false);
   const hasLoggedEmptyState = useRef(false);
+  const requestNotes = (() => {
+    try {
+      const leadContext = sessionStorage.getItem('services-lead-context');
+      if (!leadContext) return null;
+      const parsed = JSON.parse(leadContext) as { notes?: string };
+      return parsed.notes || null;
+    } catch {
+      return null;
+    }
+  })();
 
   const emitEvent = (
     type:
@@ -371,25 +381,11 @@ export default function ServicesResultsPage() {
               <span className="font-medium text-slate-900">Location:</span>{' '}
               {formatArea(city, province, suburb)}
             </p>
-            {(() => {
-              try {
-                const leadContext = sessionStorage.getItem('services-lead-context');
-                if (leadContext) {
-                  const parsed = JSON.parse(leadContext) as { notes?: string };
-                  if (parsed.notes) {
-                    return (
-                      <p>
-                        <span className="font-medium text-slate-900">Notes:</span>{' '}
-                        {parsed.notes}
-                      </p>
-                    );
-                  }
-                }
-              } catch {
-                // sessionStorage unavailable or invalid JSON — skip notes
-              }
-              return null;
-            })()}
+            {requestNotes && (
+              <p>
+                <span className="font-medium text-slate-900">Notes:</span> {requestNotes}
+              </p>
+            )}
             <div className="pt-2">
               <Button onClick={() => setLocation(`/services/request/${category}`)} variant="outline">
                 Edit request

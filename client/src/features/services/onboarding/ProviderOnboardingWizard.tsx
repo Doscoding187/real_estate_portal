@@ -40,7 +40,10 @@ export function ProviderOnboardingWizard() {
 
   // Determine starting step from server status on first load
   const serverStep = status?.onboardingStep ?? 0;
-  const isComplete = serverStep >= TOTAL_STEPS;
+  const isComplete = status?.fullFeaturesUnlocked ?? false;
+  const providerPublicPath = status?.provider?.providerId
+    ? `/services/provider/${encodeURIComponent(status.provider.providerId)}`
+    : '/service/profile';
 
   // If provider has already completed onboarding, show the existing profile form
   if (isLoading) {
@@ -124,9 +127,7 @@ export function ProviderOnboardingWizard() {
             onBack={() => goToStep(4)}
           />
         )}
-        {currentStep === 6 && (
-          <CompletionScreen state={state} />
-        )}
+        {currentStep === 6 && <CompletionScreen state={state} providerPublicPath={providerPublicPath} />}
       </div>
     </main>
   );

@@ -214,7 +214,6 @@ export function HomeTrendingSection({
             <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
             <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
           </Carousel>
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/90 to-transparent md:hidden" />
         </div>
       ) : (
         <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
