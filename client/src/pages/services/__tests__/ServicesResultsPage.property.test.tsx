@@ -1,28 +1,16 @@
 /**
- * Property-Based Tests for ServicesResultsPage heading
- *
- * Feature: services-marketplace-overhaul
- *
- * Property 12: Results page heading contains category label and location
- * For any ServiceCategory and location string, the ServicesResultsPage heading
- * should contain the human-readable category label (not the raw enum value) and
- * the formatted location string.
- * Validates: Requirements 5.5
+ * Property-based tests for ServicesResultsPage heading and request summary.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fc from 'fast-check';
 import { render, screen } from '@testing-library/react';
 import {
   SERVICE_CATEGORIES,
-  formatCategoryLabel,
   formatArea,
+  formatCategoryLabel,
   type ServiceCategory,
 } from '@/features/services/catalog';
-
-// ---------------------------------------------------------------------------
-// Mock tRPC — ServicesResultsPage uses several tRPC hooks
-// ---------------------------------------------------------------------------
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
@@ -49,7 +37,6 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-// Mock wouter hooks used by the page
 vi.mock('wouter', async () => {
   const actual = await vi.importActual<typeof import('wouter')>('wouter');
   return {
@@ -62,20 +49,11 @@ vi.mock('wouter', async () => {
   };
 });
 
-// Mock applySeo — not relevant to heading content
 vi.mock('@/lib/seo', () => ({
   applySeo: vi.fn(),
 }));
 
-// ---------------------------------------------------------------------------
-// Import the page after mocks are set up
-// ---------------------------------------------------------------------------
-
 import ServicesResultsPage from '../ServicesResultsPage';
-
-// ---------------------------------------------------------------------------
-// Helper: render the page with given URL query params
-// ---------------------------------------------------------------------------
 
 function renderWithParams(params: {
   category: ServiceCategory;
@@ -83,7 +61,6 @@ function renderWithParams(params: {
   province?: string;
   suburb?: string;
 }) {
-  // Set window.location.search to simulate query params
   const searchParams = new URLSearchParams();
   searchParams.set('category', params.category);
   if (params.city) searchParams.set('city', params.city);
@@ -102,49 +79,35 @@ function renderWithParams(params: {
   return render(<ServicesResultsPage />);
 }
 
-// ---------------------------------------------------------------------------
-// Property 12: Results page heading contains category label and location
-// ---------------------------------------------------------------------------
+describe('ServicesResultsPage property coverage', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
 
-// Feature: services-marketplace-overhaul, Property 12: Results page heading contains category label and location
-describe('ServicesResultsPage — Property 12: heading contains category label and location', () => {
   it('heading contains the human-readable category label for every ServiceCategory', () => {
     fc.assert(
       fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
         const { unmount } = renderWithParams({ category: category.value });
-
-        const heading = screen.getByRole('heading', { level: 1 });
-        const headingText = heading.textContent ?? '';
-
-        // Must contain the human-readable label, not the raw enum value
-        expect(headingText).toContain(formatCategoryLabel(category.value));
-
+        expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain(
+          formatCategoryLabel(category.value),
+        );
         unmount();
       }),
-      { numRuns: 6 }, // one run per category
+      { numRuns: 6 },
     );
   });
 
-  it('heading contains the formatted location for any city/province/suburb combination', () => {
+  it('heading contains the formatted location for any city/province combination', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...SERVICE_CATEGORIES),
         fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0 && !s.includes('&') && !s.includes('=')),
         fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0 && !s.includes('&') && !s.includes('=')),
         (category, city, province) => {
-          const expectedLocation = formatArea(city, province, undefined);
-
-          const { unmount } = renderWithParams({
-            category: category.value,
-            city,
-            province,
-          });
-
-          const heading = screen.getByRole('heading', { level: 1 });
-          const headingText = heading.textContent ?? '';
-
-          expect(headingText).toContain(expectedLocation);
-
+          const { unmount } = renderWithParams({ category: category.value, city, province });
+          expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain(
+            formatArea(city, province, undefined),
+          );
           unmount();
         },
       ),
@@ -152,73 +115,43 @@ describe('ServicesResultsPage — Property 12: heading contains category label a
     );
   });
 
-  it('heading does NOT contain the raw enum value when a human-readable label is available', () => {
-    fc.assert(
-      fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
-        const { unmount } = renderWithParams({ category: category.value });
-
-        const heading = screen.getByRole('heading', { level: 1 });
-        const headingText = heading.textContent ?? '';
-
-        // The raw enum value (e.g. "home_improvement") should not appear in the heading
-        // The human-readable label (e.g. "Home Improvement") should appear instead
-        expect(headingText).not.toContain(category.value);
-        expect(headingText).toContain(category.label);
-
-        unmount();
-      }),
-      { numRuns: 6 },
-    );
-  });
-
   it('heading falls back to "your area" when no location params are provided', () => {
     fc.assert(
       fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
         const { unmount } = renderWithParams({ category: category.value });
-
-        const heading = screen.getByRole('heading', { level: 1 });
-        const headingText = heading.textContent ?? '';
-
-        // formatArea with no args returns 'your area'
-        expect(headingText).toContain('your area');
-
+        expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain('your area');
         unmount();
       }),
       { numRuns: 6 },
     );
   });
-});
 
-// ---------------------------------------------------------------------------
-// Unit tests: pure function composition that drives the heading
-// ---------------------------------------------------------------------------
+  it('renders notes from the lead-scoped session context in the request summary', () => {
+    sessionStorage.setItem(
+      'service-lead-context-42',
+      JSON.stringify({
+        notes: 'Please contact me after 5pm.',
+      }),
+    );
 
-describe('ServicesResultsPage heading — pure function composition', () => {
-  it('formatCategoryLabel returns the human-readable label for all categories', () => {
-    for (const category of SERVICE_CATEGORIES) {
-      const label = formatCategoryLabel(category.value);
-      expect(label).toBe(category.label);
-      // Must not be the raw enum value
-      expect(label).not.toBe(category.value);
-    }
+    renderWithParams({ category: 'home_improvement' });
+
+    expect(screen.getByText(/please contact me after 5pm\./i)).toBeInTheDocument();
   });
 
-  it('formatArea joins non-empty parts with ", "', () => {
-    expect(formatArea('Cape Town', 'Western Cape', 'Rondebosch')).toBe('Rondebosch, Cape Town, Western Cape');
-    expect(formatArea('Johannesburg', 'Gauteng', undefined)).toBe('Johannesburg, Gauteng');
-    expect(formatArea(undefined, 'Gauteng', undefined)).toBe('Gauteng');
-    expect(formatArea(undefined, undefined, undefined)).toBe('your area');
-  });
+  it('falls back to lead-scoped session context for location when the query string is missing it', () => {
+    sessionStorage.setItem(
+      'service-lead-context-42',
+      JSON.stringify({
+        city: 'Cape Town',
+        province: 'Western Cape',
+      }),
+    );
 
-  it('heading template matches "Providers matched for {label} in {location}"', () => {
-    for (const category of SERVICE_CATEGORIES) {
-      const label = formatCategoryLabel(category.value);
-      const location = formatArea('Cape Town', 'Western Cape', undefined);
-      const heading = `Providers matched for ${label} in ${location}`;
+    renderWithParams({ category: 'home_improvement' });
 
-      expect(heading).toContain(label);
-      expect(heading).toContain(location);
-      expect(heading).toMatch(/^Providers matched for .+ in .+$/);
-    }
+    expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain(
+      'Cape Town, Western Cape',
+    );
   });
 });

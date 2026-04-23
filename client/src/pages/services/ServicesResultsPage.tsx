@@ -37,23 +37,41 @@ function getOrCreateServicesSessionId() {
   }
 }
 
+function readLeadContext(leadId: number) {
+  try {
+    const keyedContext = sessionStorage.getItem(`service-lead-context-${leadId}`);
+    if (!keyedContext) return null;
+    return JSON.parse(keyedContext) as {
+      notes?: string;
+      city?: string;
+      province?: string;
+      suburb?: string;
+      intentStage?: IntentStage;
+      sourceSurface?: 'directory' | 'explore' | 'journey_injection' | 'agent_dashboard';
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function ServicesResultsPage() {
   const [, params] = useRoute('/services/results/:leadId');
   const [, setLocation] = useLocation();
   const leadId = Number(params?.leadId || 0);
   const query = useMemo(() => queryParams(), []);
   const sessionId = useMemo(() => getOrCreateServicesSessionId(), []);
+  const leadContext = useMemo(() => readLeadContext(leadId), [leadId]);
 
   const categoryParam = String(query.get('category') || '').toLowerCase();
   const category = isServiceCategory(categoryParam)
     ? (categoryParam as ServiceCategory)
     : ('home_improvement' as ServiceCategory);
-  const city = query.get('city') || undefined;
-  const province = query.get('province') || undefined;
-  const suburb = query.get('suburb') || undefined;
+  const city = query.get('city') || leadContext?.city || undefined;
+  const province = query.get('province') || leadContext?.province || undefined;
+  const suburb = query.get('suburb') || leadContext?.suburb || undefined;
   const unmatched = query.get('unmatched') === '1';
-  const intentStage = (query.get('intentStage') || 'general') as IntentStage;
-  const sourceSurface = (query.get('sourceSurface') || 'journey_injection') as
+  const intentStage = (query.get('intentStage') || leadContext?.intentStage || 'general') as IntentStage;
+  const sourceSurface = (query.get('sourceSurface') || leadContext?.sourceSurface || 'directory') as
     | 'directory'
     | 'explore'
     | 'journey_injection'
@@ -101,16 +119,7 @@ export default function ServicesResultsPage() {
   const canLogEvents = leadId > 0;
   const hasLoggedRecommendations = useRef(false);
   const hasLoggedEmptyState = useRef(false);
-  const requestNotes = (() => {
-    try {
-      const leadContext = sessionStorage.getItem('services-lead-context');
-      if (!leadContext) return null;
-      const parsed = JSON.parse(leadContext) as { notes?: string };
-      return parsed.notes || null;
-    } catch {
-      return null;
-    }
-  })();
+  const requestNotes = leadContext?.notes || null;
 
   const emitEvent = (
     type:
