@@ -62,7 +62,8 @@
     "db:migrate:test": "cross-env NODE_ENV=test drizzle-kit migrate --config drizzle.config.ts && pnpm migration:sql:test",
     "start:server": "tsx server/_core/start.ts",
     "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
-    "start:prod": "tsx scripts/start-production.ts",
+    "start:prod": "cross-env NODE_ENV=production tsx server/_core/start.ts",
+    "start:prod:with-migrations": "tsx scripts/start-production.ts",
     "start:prod:core": "cross-env NODE_ENV=production tsx server/_core/start.ts"
   },
   "dependencies": {
