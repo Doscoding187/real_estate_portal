@@ -8,10 +8,10 @@
 
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { WizardProgressIndicator } from '@/components/services/WizardProgressIndicator';
-import { toProviderSlug } from '@/features/services/catalog';
+import { SA_PROVINCES, toProviderSlug, type SAProvince } from '@/features/services/catalog';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 import { trpc } from '@/lib/trpc';
-import { useOnboardingReducer } from './useOnboardingReducer';
+import { isOnboardingStatePristine, useOnboardingReducer } from './useOnboardingReducer';
 import { BusinessBasicsStep } from './steps/BusinessBasicsStep';
 import { CompletionScreen } from './steps/CompletionScreen';
 import { CoverageAreasStep } from './steps/CoverageAreasStep';
@@ -68,6 +68,10 @@ function makeRowId(prefix: 'svc' | 'loc') {
     : `${prefix}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
+function toProvince(value?: string | null): SAProvince | '' {
+  return value && SA_PROVINCES.includes(value as SAProvince) ? (value as SAProvince) : '';
+}
+
 export function ProviderOnboardingWizard() {
   const { status, isLoading } = useServiceProviderOnboardingStatus();
   const [state, dispatch] = useOnboardingReducer();
@@ -91,6 +95,7 @@ export function ProviderOnboardingWizard() {
 
   useEffect(() => {
     if (hasHydratedProfileRef.current) return;
+    if (!isOnboardingStatePristine(state)) return;
 
     const profile = profileQuery.data as ProviderProfileData;
     if (!profile) return;
@@ -117,7 +122,7 @@ export function ProviderOnboardingWizard() {
           id: makeRowId('loc'),
           suburb: location.suburb || '',
           city: location.city || '',
-          province: location.province || '',
+          province: toProvince(location.province),
           radiusKm:
             location.radiusKm != null && Number.isFinite(Number(location.radiusKm))
               ? String(location.radiusKm)
@@ -127,7 +132,7 @@ export function ProviderOnboardingWizard() {
     });
 
     hasHydratedProfileRef.current = true;
-  }, [dispatch, profileQuery.data]);
+  }, [dispatch, profileQuery.data, state]);
 
   function goToStep(step: number) {
     dispatch({ type: 'SET_STEP', step });

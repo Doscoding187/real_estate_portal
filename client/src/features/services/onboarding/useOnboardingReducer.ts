@@ -112,6 +112,37 @@ export const initialOnboardingState: OnboardingState = {
   pendingStep: null,
 };
 
+export function isOnboardingStatePristine(state: OnboardingState) {
+  const hasEditedServiceRows =
+    state.services.length !== 1 ||
+    state.services[0]?.displayName !== '' ||
+    state.services[0]?.category !== 'home_improvement' ||
+    state.services[0]?.minPrice !== '' ||
+    state.services[0]?.maxPrice !== '';
+
+  const hasEditedLocationRows =
+    state.locations.length !== 1 ||
+    state.locations[0]?.suburb !== '' ||
+    state.locations[0]?.city !== '' ||
+    state.locations[0]?.province !== '' ||
+    state.locations[0]?.radiusKm !== '25';
+
+  return !(
+    state.companyName !== '' ||
+    state.primaryCategory !== null ||
+    state.bio !== '' ||
+    state.headline !== '' ||
+    state.contactEmail !== '' ||
+    state.contactPhone !== '' ||
+    state.websiteUrl !== '' ||
+    state.logoFile !== null ||
+    state.logoPreviewUrl !== null ||
+    state.selectedPlan !== null ||
+    hasEditedServiceRows ||
+    hasEditedLocationRows
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Reducer
 // ---------------------------------------------------------------------------

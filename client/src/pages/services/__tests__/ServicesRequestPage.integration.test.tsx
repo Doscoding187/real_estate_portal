@@ -101,9 +101,6 @@ describe('ServicesRequestPage integration', () => {
     expect(sessionStorage.getItem('service-lead-context-99')).toContain(
       'Need a full plumbing inspection before transfer.',
     );
-    expect(sessionStorage.getItem('services-lead-context')).toContain(
-      'Need a full plumbing inspection before transfer.',
-    );
   });
 
   it('renders the LeadRequestFlow with step 1 visible', () => {

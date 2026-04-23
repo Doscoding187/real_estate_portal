@@ -40,10 +40,8 @@ function getOrCreateServicesSessionId() {
 function readLeadContext(leadId: number) {
   try {
     const keyedContext = sessionStorage.getItem(`service-lead-context-${leadId}`);
-    const sharedContext = sessionStorage.getItem('services-lead-context');
-    const raw = keyedContext || sharedContext;
-    if (!raw) return null;
-    return JSON.parse(raw) as {
+    if (!keyedContext) return null;
+    return JSON.parse(keyedContext) as {
       notes?: string;
       city?: string;
       province?: string;

@@ -78,7 +78,6 @@ export default function ServicesRequestPage() {
           `service-lead-context-${leadId}`,
           leadContext,
         );
-        sessionStorage.setItem('services-lead-context', leadContext);
       } catch {
         // Non-fatal fallback if sessionStorage is unavailable.
       }
