@@ -142,7 +142,6 @@ const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
-const PartnerDashboardPage = lazy(() => import('./pages/distribution/PartnerDashboardPage'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
@@ -155,6 +154,7 @@ const ManagerDevelopmentDealsPage = lazy(
 const ManagerDealChecklistPage = lazy(
   () => import('./pages/distribution/ManagerDealChecklistPage'),
 );
+const PartnerDashboardPage = lazy(() => import('./pages/distribution/PartnerDashboardPage'));
 const PartnerSubmitReferralPage = lazy(
   () => import('./pages/distribution/PartnerSubmitReferralPage'),
 );

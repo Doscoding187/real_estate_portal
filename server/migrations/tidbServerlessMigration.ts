@@ -1,10 +1,6 @@
-import * as dotenv from 'dotenv';
+import { loadAppRuntimeEnv } from '../_core/runtimeBootstrap';
 
-// Load environment variables
-dotenv.config(); // Load .env
-if (process.env.NODE_ENV === 'production') {
-  dotenv.config({ path: '.env.production', override: true });
-}
+loadAppRuntimeEnv({ cwd: process.cwd() });
 // ============================================================================
 // TIDB CLOUD SERVERLESS MIGRATION - Development Wizard Fix
 // ============================================================================

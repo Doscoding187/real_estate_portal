@@ -17,7 +17,7 @@
     "build:frontend": "vite build",
     "build:backend": "echo 'Backend build not required; run with tsx directly'",
     "build:railway": "pnpm build:frontend",
-    "start": "cross-env NODE_ENV=production tsx server/_core/start.ts",
+    "start": "pnpm start:prod",
     "check": "tsc -p tsconfig.check.json --noEmit",
     "type-check": "pnpm run check",
     "lint": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
@@ -34,6 +34,7 @@
     "demo:gate": "pnpm build && pnpm vitest run server/__tests__/smoke.superadmin-publishing.test.ts",
     "test:integration": "vitest run tests/integration",
     "db:verify": "tsx scripts/db-contract-verify.ts",
+    "db:verify:distribution": "tsx scripts/db-verify-distribution-schema.ts",
     "agent-os:inventory:preflight": "npx tsx scripts/preflight-agent-os-inventory-cutover.ts",
     "db:verify:ci": "tsx scripts/db-contract-verify.ts --format=json",
     "schema:sanity": "node scripts/schema-sanity-check.mjs",
@@ -56,11 +57,14 @@
     "migration:sql:test": "cross-env NODE_ENV=test tsx server/migrations/runSqlMigrations.ts",
     "verify:showings": "tsx scripts/verify-showings-migration.ts",
     "verify:showings:production": "cross-env NODE_ENV=production tsx scripts/verify-showings-migration.ts",
-    "db:migrate": "pnpm migration:sql && pnpm migration:serverless:production",
+    "db:target": "tsx scripts/print-db-target.ts",
+    "db:migrate": "pnpm db:target && pnpm migration:sql && pnpm db:verify:distribution",
     "db:migrate:test": "cross-env NODE_ENV=test drizzle-kit migrate --config drizzle.config.ts && pnpm migration:sql:test",
     "start:server": "tsx server/_core/start.ts",
     "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
-    "start:prod": "pnpm db:migrate && cross-env NODE_ENV=production tsx server/_core/start.ts"
+    "start:prod": "cross-env NODE_ENV=production tsx server/_core/start.ts",
+    "start:prod:with-migrations": "tsx scripts/start-production.ts",
+    "start:prod:core": "cross-env NODE_ENV=production tsx server/_core/start.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

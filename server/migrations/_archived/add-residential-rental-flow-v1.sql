@@ -1,4 +1,5 @@
 -- Residential Rental Flow v1
+-- Archived: duplicated by Drizzle-managed schema history and baseline.
 -- Adds transaction type + rent range to developments, and rental terms to unit_types
 
 ALTER TABLE `developments`
