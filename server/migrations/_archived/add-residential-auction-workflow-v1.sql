@@ -1,4 +1,5 @@
 -- Add auction fields for development wizard (auction transaction)
+-- Archived: duplicated by Drizzle-managed schema history and baseline.
 
 ALTER TABLE `developments`
   ADD COLUMN `auction_start_date` datetime NULL AFTER `monthly_rent_to`,

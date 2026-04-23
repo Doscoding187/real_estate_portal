@@ -127,9 +127,7 @@ export function ProviderOnboardingWizard() {
             onBack={() => goToStep(4)}
           />
         )}
-        {currentStep === 6 && (
-          <CompletionScreen state={state} providerPublicPath={providerPublicPath} />
-        )}
+        {currentStep === 6 && <CompletionScreen state={state} providerPublicPath={providerPublicPath} />}
       </div>
     </main>
   );

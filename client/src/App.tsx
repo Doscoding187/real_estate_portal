@@ -142,7 +142,6 @@ const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
-const PartnerDashboardPage = lazy(() => import('./pages/distribution/PartnerDashboardPage'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
@@ -425,7 +424,9 @@ function Router() {
 
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
-          <Route path="/referrer/dashboard" component={PartnerDashboardPage} />
+          <Route path="/referrer/dashboard">
+            <Redirect to="/distribution/partner/referrals" />
+          </Route>
           <Route path="/service/dashboard">
             <RequireRole role="service_provider">
               <ProDashboardPage />
@@ -553,7 +554,9 @@ function Router() {
           />
           <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
-          <Route path="/distribution/partner" component={PartnerDashboardPage} />
+          <Route path="/distribution/partner">
+            <Redirect to="/distribution/partner/referrals" />
+          </Route>
           <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
           <Route
             path="/distribution/partner/accelerator"
