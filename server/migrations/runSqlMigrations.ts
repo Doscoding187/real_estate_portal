@@ -300,6 +300,14 @@ export function isLegacyShowingsBackfillStatement(statement: string): boolean {
   return /update\s+showings\s+s[\s\S]*p\.sourceListingId\s*=\s*s\.listingId/i.test(statement);
 }
 
+export function isDistributionCommissionBackfillStatement(statement: string): boolean {
+  return (
+    /update\s+`?distribution_deals`?\s+d[\s\S]*from\s+`?distribution_commission_entries`?\s+ce/i.test(
+      statement,
+    ) && /referrer_commission_amount/i.test(statement)
+  );
+}
+
 function shouldIgnoreStatementError(error: unknown): boolean {
   const message = String((error as any)?.message ?? '');
   const code = String((error as any)?.code ?? '');
@@ -329,6 +337,20 @@ async function shouldSkipStatementForMissingPrereq(
     const hasLegacyListingColumn = await columnExists(connection, 'showings', 'listingId');
     if (!hasLegacyListingColumn) {
       return 'missing column showings.listingId';
+    }
+  }
+
+  if (
+    fileName === '0039_add_distribution_dual_commission_tracks.sql' &&
+    isDistributionCommissionBackfillStatement(statement)
+  ) {
+    const hasCommissionEntries = await tableExists(
+      connection,
+      'distribution_commission_entries',
+      tableExistsCache,
+    );
+    if (!hasCommissionEntries) {
+      return 'missing table distribution_commission_entries';
     }
   }
 
