@@ -265,6 +265,25 @@ async function tableExists(
   return exists;
 }
 
+async function columnExists(
+  connection: SqlConnection,
+  tableName: string,
+  columnName: string,
+): Promise<boolean> {
+  const rows = await queryRows(
+    connection,
+    `
+      SELECT COUNT(*) AS count_value
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name = '${tableName.replace(/'/g, "''")}'
+        AND column_name = '${columnName.replace(/'/g, "''")}'
+    `,
+  );
+
+  return Number(getRowValue(rows[0] ?? {}, 'count_value') ?? 0) > 0;
+}
+
 function statementPreview(statement: string, maxLength = 180): string {
   const flattened = statement.replace(/\s+/g, ' ').trim();
   if (flattened.length <= maxLength) return flattened;
@@ -275,6 +294,10 @@ function normalizeStatementForMysql(statement: string): string {
   return statement
     .replace(/\bCREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\b/gi, 'CREATE INDEX')
     .replace(/\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b/gi, 'ADD COLUMN');
+}
+
+export function isLegacyShowingsBackfillStatement(statement: string): boolean {
+  return /update\s+showings\s+s[\s\S]*p\.sourceListingId\s*=\s*s\.listingId/i.test(statement);
 }
 
 function shouldIgnoreStatementError(error: unknown): boolean {
@@ -299,6 +322,16 @@ async function shouldSkipStatementForMissingPrereq(
   statement: string,
   tableExistsCache: Map<string, boolean>,
 ): Promise<string | null> {
+  if (
+    fileName === '0006_add_agent_os_inventory_bridge.sql' &&
+    isLegacyShowingsBackfillStatement(statement)
+  ) {
+    const hasLegacyListingColumn = await columnExists(connection, 'showings', 'listingId');
+    if (!hasLegacyListingColumn) {
+      return 'missing column showings.listingId';
+    }
+  }
+
   if (
     fileName !== '0045_create_distribution_referral_accelerator.sql' &&
     fileName !== '0046_distribution_referral_assessment_locking.sql' &&

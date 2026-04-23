@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildMysqlMigrationConnectionConfig } from '../runSqlMigrations';
+import {
+  buildMysqlMigrationConnectionConfig,
+  isLegacyShowingsBackfillStatement,
+} from '../runSqlMigrations';
 
 describe('buildMysqlMigrationConnectionConfig', () => {
   it('normalizes legacy boolean ssl query parameters for mysql2', () => {
@@ -28,5 +31,21 @@ describe('buildMysqlMigrationConnectionConfig', () => {
 
     expect(config.uri).toBe('mysql://user:pass@host:4000/db');
     expect(config.ssl).toEqual({ rejectUnauthorized: true });
+  });
+
+  it('detects the legacy showings backfill statement that depends on showings.listingId', () => {
+    expect(
+      isLegacyShowingsBackfillStatement(`UPDATE showings s
+JOIN properties p
+  ON p.sourceListingId = s.listingId
+SET s.propertyId = p.id
+WHERE s.propertyId IS NULL`),
+    ).toBe(true);
+
+    expect(
+      isLegacyShowingsBackfillStatement(`UPDATE showings
+SET scheduledAt = CURRENT_TIMESTAMP
+WHERE scheduledAt IS NULL`),
+    ).toBe(false);
   });
 });
