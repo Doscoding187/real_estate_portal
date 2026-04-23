@@ -181,8 +181,8 @@ export default function GetStartedRole() {
             ? `Strategy confirmation for ${roleConfig.label.toLowerCase()} with next-step preparation and package preview.`
             : `Role-specific onboarding for ${roleConfig.label.toLowerCase()} with tailored value positioning, plan preview, and setup path.`
         }
-        canonicalUrl={`https://platform.com${canonicalSuffix}`}
-        ogImage="https://platform.com/images/advertise-og-image.jpg"
+        canonicalUrl={canonicalSuffix}
+        ogImage="/images/advertise-og-image.jpg"
         ogType="website"
       />
       <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 px-4 py-10 sm:px-6 lg:px-8">

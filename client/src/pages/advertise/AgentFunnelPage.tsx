@@ -26,9 +26,9 @@ export default function AgentFunnelPage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 overflow-x-hidden">
       <SEOHead 
-        title="Estate Agent Advertising | Property Platform" 
+        title="Estate Agent Advertising | Property Listify" 
         description="Grow your real estate agency with verified leads and performance marketing." 
-        canonicalUrl="https://platform.com/advertise/sell/agents" 
+        canonicalUrl="/advertise/sell/agents" 
       />
       
       <EnhancedNavbar />

@@ -73,6 +73,7 @@ import { LiveDemandSection } from '@/components/advertise/LiveDemandSection';
 import { DemandCaptureModal } from '@/components/advertise/DemandCaptureModal';
 import { HeroSection } from '@/components/advertise/HeroSection';
 import { useMobileStickyCTA } from '@/components/advertise/MobileStickyCTA';
+import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 
 export default function AdvertiseWithUs() {
   // Set up analytics tracking (tracks page view and scroll depth automatically)
@@ -135,11 +136,11 @@ export default function AdvertiseWithUs() {
       <SEOHead
         title="Advertise With Us | Property Platform"
         description="Select your industry to explore tailored advertising and acquisition solutions on South Africa's fastest-growing property platform."
-        canonicalUrl="https://platform.com/advertise"
+        canonicalUrl={toAbsoluteUrl('/advertise')}
       />
       <StructuredData
-        pageUrl="https://platform.com/advertise"
-        organizationName="Property Platform"
+        pageUrl={toAbsoluteUrl('/advertise')}
+        organizationName="Property Listify"
       />
 
       <EnhancedNavbar />

@@ -121,8 +121,8 @@ export default function BookStrategy() {
       <SEOHead
         title="Book Strategy | Advertise With Us"
         description="Book a guided strategy session to position your property marketing for qualified buyer demand."
-        canonicalUrl="https://platform.com/book-strategy"
-        ogImage="https://platform.com/images/advertise-og-image.jpg"
+        canonicalUrl="/book-strategy"
+        ogImage="/images/advertise-og-image.jpg"
         ogType="website"
       />
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 py-10 sm:px-6 lg:px-8">

@@ -9,6 +9,7 @@
  */
 
 import { Helmet } from 'react-helmet-async';
+import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 
 interface StructuredDataProps {
   pageUrl?: string;
@@ -18,33 +19,37 @@ interface StructuredDataProps {
 }
 
 export function StructuredData({
-  pageUrl = 'https://platform.com/advertise',
-  organizationName = 'Property Platform',
-  organizationUrl = 'https://platform.com',
-  organizationLogo = 'https://platform.com/logo.png',
+  pageUrl = 'https://www.propertylistifysa.co.za/advertise',
+  organizationName = 'Property Listify',
+  organizationUrl = 'https://www.propertylistifysa.co.za',
+  organizationLogo = 'https://www.propertylistifysa.co.za/logo.png',
 }: StructuredDataProps) {
+  const resolvedPageUrl = toAbsoluteUrl(pageUrl);
+  const resolvedOrganizationUrl = toAbsoluteUrl(organizationUrl);
+  const resolvedOrganizationLogo = toAbsoluteUrl(organizationLogo);
+
   // WebPage Schema
   const webPageSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    '@id': `${pageUrl}#webpage`,
-    url: pageUrl,
+    '@id': `${resolvedPageUrl}#webpage`,
+    url: resolvedPageUrl,
     name: 'Advertise With Us',
     description:
       "Advertising opportunities for property professionals on South Africa's leading property platform",
     inLanguage: 'en-ZA',
     isPartOf: {
       '@type': 'WebSite',
-      '@id': `${organizationUrl}#website`,
-      url: organizationUrl,
+      '@id': `${resolvedOrganizationUrl}#website`,
+      url: resolvedOrganizationUrl,
       name: organizationName,
     },
     breadcrumb: {
-      '@id': `${pageUrl}#breadcrumb`,
+      '@id': `${resolvedPageUrl}#breadcrumb`,
     },
     potentialAction: {
       '@type': 'ReadAction',
-      target: [pageUrl],
+      target: [resolvedPageUrl],
     },
   };
 
@@ -52,18 +57,18 @@ export function StructuredData({
   const serviceSchema = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    '@id': `${pageUrl}#service`,
+    '@id': `${resolvedPageUrl}#service`,
     name: 'Property Advertising Platform',
     description:
       'Comprehensive advertising solutions for property developers, estate agents, banks, bond originators, and service providers',
     provider: {
       '@type': 'Organization',
-      '@id': `${organizationUrl}#organization`,
+      '@id': `${resolvedOrganizationUrl}#organization`,
       name: organizationName,
-      url: organizationUrl,
+      url: resolvedOrganizationUrl,
       logo: {
         '@type': 'ImageObject',
-        url: organizationLogo,
+        url: resolvedOrganizationLogo,
       },
     },
     serviceType: 'Property Advertising',
@@ -109,12 +114,12 @@ export function StructuredData({
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    '@id': `${organizationUrl}#organization`,
+    '@id': `${resolvedOrganizationUrl}#organization`,
     name: organizationName,
-    url: organizationUrl,
+    url: resolvedOrganizationUrl,
     logo: {
       '@type': 'ImageObject',
-      url: organizationLogo,
+      url: resolvedOrganizationLogo,
       width: 250,
       height: 60,
     },
@@ -135,19 +140,19 @@ export function StructuredData({
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    '@id': `${pageUrl}#breadcrumb`,
+    '@id': `${resolvedPageUrl}#breadcrumb`,
     itemListElement: [
       {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: organizationUrl,
+        item: resolvedOrganizationUrl,
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Advertise With Us',
-        item: pageUrl,
+        item: resolvedPageUrl,
       },
     ],
   };
