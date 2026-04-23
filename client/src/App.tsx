@@ -154,6 +154,7 @@ const ManagerDevelopmentDealsPage = lazy(
 const ManagerDealChecklistPage = lazy(
   () => import('./pages/distribution/ManagerDealChecklistPage'),
 );
+const PartnerDashboardPage = lazy(() => import('./pages/distribution/PartnerDashboardPage'));
 const PartnerSubmitReferralPage = lazy(
   () => import('./pages/distribution/PartnerSubmitReferralPage'),
 );
@@ -344,7 +345,7 @@ function Router() {
           </Route>
           <Route path="/agent/referrals">
             <RequireRole role="agent">
-              <Redirect to="/distribution/partner" />
+              <Redirect to="/distribution/partner/overview" />
             </RequireRole>
           </Route>
           <Route path="/agents/:slug" component={AgentMicrosite} />
@@ -425,7 +426,7 @@ function Router() {
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
           <Route path="/referrer/dashboard">
-            <Redirect to="/distribution/partner/referrals" />
+            <Redirect to="/distribution/partner/overview" />
           </Route>
           <Route path="/service/dashboard">
             <RequireRole role="service_provider">
@@ -555,8 +556,9 @@ function Router() {
           <Route path="/distribution/manager/deals/:dealId" component={ManagerDealChecklistPage} />
           <Route path="/distribution/manager/onboarding" component={ManagerInviteOnboardingPage} />
           <Route path="/distribution/partner">
-            <Redirect to="/distribution/partner/referrals" />
+            <Redirect to="/distribution/partner/overview" />
           </Route>
+          <Route path="/distribution/partner/overview" component={PartnerDashboardPage} />
           <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
           <Route
             path="/distribution/partner/accelerator"
