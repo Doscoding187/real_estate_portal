@@ -55,6 +55,7 @@ export type OnboardingState = {
 export type OnboardingAction =
   | { type: 'SET_STEP'; step: number }
   | { type: 'SET_FIELD'; field: keyof OnboardingState; value: unknown }
+  | { type: 'HYDRATE'; value: Partial<OnboardingState> }
   | { type: 'ADD_SERVICE' }
   | { type: 'REMOVE_SERVICE'; id: string }
   | { type: 'UPDATE_SERVICE'; id: string; field: keyof ServiceRow; value: string }
@@ -125,6 +126,20 @@ export function onboardingReducer(
 
     case 'SET_FIELD':
       return { ...state, [action.field]: action.value };
+
+    case 'HYDRATE':
+      return {
+        ...state,
+        ...action.value,
+        services:
+          action.value.services && action.value.services.length > 0
+            ? action.value.services
+            : state.services,
+        locations:
+          action.value.locations && action.value.locations.length > 0
+            ? action.value.locations
+            : state.locations,
+      };
 
     case 'ADD_SERVICE': {
       if (state.services.length >= 10) return state;

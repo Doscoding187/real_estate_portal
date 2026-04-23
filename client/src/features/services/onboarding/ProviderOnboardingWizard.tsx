@@ -8,10 +8,11 @@
  * Requirements: 7.1, 12.5, 13.1–13.7
  */
 
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { WizardProgressIndicator } from '@/components/services/WizardProgressIndicator';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 import { toProviderSlug } from '@/features/services/catalog';
+import { trpc } from '@/lib/trpc';
 import { useOnboardingReducer } from './useOnboardingReducer';
 import { BusinessBasicsStep } from './steps/BusinessBasicsStep';
 import { ProfileDetailsStep } from './steps/ProfileDetailsStep';
@@ -38,6 +39,11 @@ const ENCOURAGING_COPY: Record<number, string> = {
 export function ProviderOnboardingWizard() {
   const { status, isLoading } = useServiceProviderOnboardingStatus();
   const [state, dispatch] = useOnboardingReducer();
+  const profileQuery = trpc.servicesEngine.myProviderProfile.useQuery(undefined, {
+    enabled: Boolean(status?.hasProviderIdentity),
+    refetchOnWindowFocus: false,
+  });
+  const hasHydratedProfileRef = useRef(false);
 
   // Determine starting step from server status on first load
   const serverStep = status?.onboardingStep ?? 0;
@@ -69,6 +75,53 @@ export function ProviderOnboardingWizard() {
     : state.currentStep;
 
   const currentStep = Math.min(effectiveStep, TOTAL_STEPS + 1); // +1 for completion screen
+
+  useEffect(() => {
+    if (hasHydratedProfileRef.current) return;
+    const profile = profileQuery.data;
+    if (!profile) return;
+
+    dispatch({
+      type: 'HYDRATE',
+      value: {
+        companyName: profile.companyName || '',
+        primaryCategory: profile.services?.[0]?.category || null,
+        bio: profile.bio || '',
+        headline: profile.headline || '',
+        contactEmail: profile.contactEmail || '',
+        contactPhone: profile.contactPhone || '',
+        websiteUrl: profile.websiteUrl || '',
+        selectedPlan: profile.subscriptionTier || null,
+        services:
+          (profile.services || []).map((service: any) => ({
+            id:
+              typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+                ? crypto.randomUUID()
+                : `svc-${Math.random().toString(16).slice(2, 10)}`,
+            displayName: service.displayName || '',
+            category: service.category || 'home_improvement',
+            minPrice: service.minPrice != null ? String(service.minPrice) : '',
+            maxPrice: service.maxPrice != null ? String(service.maxPrice) : '',
+          })) || [],
+        locations:
+          (profile.locations || []).map((location: any) => ({
+            id:
+              typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+                ? crypto.randomUUID()
+                : `loc-${Math.random().toString(16).slice(2, 10)}`,
+            suburb: location.suburb || '',
+            city: location.city || '',
+            province: location.province || '',
+            radiusKm:
+              location.radiusKm != null && Number.isFinite(Number(location.radiusKm))
+                ? String(location.radiusKm)
+                : '25',
+          })) || [],
+      },
+    });
+
+    hasHydratedProfileRef.current = true;
+  }, [dispatch, profileQuery.data]);
 
   function goToStep(step: number) {
     dispatch({ type: 'SET_STEP', step });

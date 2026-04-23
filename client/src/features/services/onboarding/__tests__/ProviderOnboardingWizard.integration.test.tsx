@@ -34,6 +34,13 @@ vi.mock('@/lib/trpc', () => ({
           error: null,
         }),
       },
+      myProviderProfile: {
+        useQuery: () => ({
+          data: null,
+          isLoading: false,
+          error: null,
+        }),
+      },
       registerProviderIdentity: {
         useMutation: ({ onSuccess }: { onSuccess: (data: any) => void }) => ({
           mutate: () => { onSuccess({}); },
