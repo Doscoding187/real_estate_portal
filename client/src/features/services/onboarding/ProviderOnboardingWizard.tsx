@@ -11,6 +11,7 @@
 import { lazy, Suspense } from 'react';
 import { WizardProgressIndicator } from '@/components/services/WizardProgressIndicator';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
+import { toProviderSlug } from '@/features/services/catalog';
 import { useOnboardingReducer } from './useOnboardingReducer';
 import { BusinessBasicsStep } from './steps/BusinessBasicsStep';
 import { ProfileDetailsStep } from './steps/ProfileDetailsStep';
@@ -42,7 +43,7 @@ export function ProviderOnboardingWizard() {
   const serverStep = status?.onboardingStep ?? 0;
   const isComplete = status?.fullFeaturesUnlocked ?? false;
   const providerPublicPath = status?.provider?.providerId
-    ? `/services/provider/${encodeURIComponent(status.provider.providerId)}`
+    ? `/services/provider/${encodeURIComponent(toProviderSlug(status.provider.companyName, status.provider.providerId))}`
     : '/service/profile';
 
   // If provider has already completed onboarding, show the existing profile form

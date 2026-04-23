@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -31,6 +31,15 @@ export default function ServicesRequestPage() {
     .filter(Boolean)
     .join(', ');
   const providerId = query.get('providerId') || undefined;
+  const latestSubmissionRef = useRef<{
+    category: ServiceCategory;
+    intentStage: string;
+    sourceSurface: string;
+    suburb?: string;
+    city?: string;
+    province?: string;
+    notes?: string;
+  } | null>(null);
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
@@ -45,21 +54,37 @@ export default function ServicesRequestPage() {
   const createLead = trpc.servicesEngine.createLeadFromJourney.useMutation({
     onSuccess: data => {
       const leadId = Number(data.leadIds?.[0] || 0);
+      const latestSubmission = latestSubmissionRef.current;
+      const nextCategory = latestSubmission?.category || category;
+      const nextCity = latestSubmission?.city || '';
+      const nextProvince = latestSubmission?.province || '';
+      const nextSuburb = latestSubmission?.suburb || '';
+      const nextIntentStage = latestSubmission?.intentStage || 'general';
+      const nextSourceSurface = latestSubmission?.sourceSurface || 'directory';
+
       try {
+        const leadContext = JSON.stringify({
+          category: nextCategory,
+          providerIds: data.providerIds,
+          unmatched: Boolean(data.unmatched),
+          notes: latestSubmission?.notes || '',
+          city: nextCity,
+          province: nextProvince,
+          suburb: nextSuburb,
+          intentStage: nextIntentStage,
+          sourceSurface: nextSourceSurface,
+        });
         sessionStorage.setItem(
           `service-lead-context-${leadId}`,
-          JSON.stringify({
-            category,
-            providerIds: data.providerIds,
-            unmatched: Boolean(data.unmatched),
-          }),
+          leadContext,
         );
+        sessionStorage.setItem('services-lead-context', leadContext);
       } catch {
         // Non-fatal fallback if sessionStorage is unavailable.
       }
 
       setLocation(
-        `/services/results/${leadId}?category=${encodeURIComponent(category)}&city=${encodeURIComponent(query.get('city') || '')}&province=${encodeURIComponent(query.get('province') || '')}&suburb=${encodeURIComponent(query.get('suburb') || '')}&unmatched=${data.unmatched ? '1' : '0'}`,
+        `/services/results/${leadId}?category=${encodeURIComponent(nextCategory)}&city=${encodeURIComponent(nextCity)}&province=${encodeURIComponent(nextProvince)}&suburb=${encodeURIComponent(nextSuburb)}&intentStage=${encodeURIComponent(nextIntentStage)}&sourceSurface=${encodeURIComponent(nextSourceSurface)}&unmatched=${data.unmatched ? '1' : '0'}`,
       );
     },
     onError: error => {
@@ -114,6 +139,15 @@ export default function ServicesRequestPage() {
         submitting={createLead.isPending}
         error={createLead.error?.message ?? null}
         onSubmit={payload => {
+          latestSubmissionRef.current = {
+            category: payload.category,
+            sourceSurface: payload.sourceSurface,
+            intentStage: payload.intentStage,
+            province: payload.province,
+            city: payload.city,
+            suburb: payload.suburb,
+            notes: payload.notes,
+          };
           createLead.mutate({
             providerId,
             category: payload.category,
