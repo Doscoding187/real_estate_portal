@@ -16,6 +16,13 @@ type HomeMobileViewProps = {
   onBrowseProperties: () => void;
   onProvinceChange: (province: string) => void;
   onTabChange: (tab: string) => void;
+  popularCities: Array<{
+    name: string;
+    province: string;
+    slug: string;
+    provinceSlug: string;
+    propertyCount: string;
+  }>;
   provinces: string[];
   selectedProvince: string;
 };
@@ -26,6 +33,7 @@ export function HomeMobileView({
   onBrowseProperties,
   onProvinceChange,
   onTabChange,
+  popularCities,
   provinces,
   selectedProvince,
 }: HomeMobileViewProps) {
@@ -45,7 +53,7 @@ export function HomeMobileView({
         <DiscoverProperties />
         <TopLocalities />
         <TopDevelopers />
-        <ExploreCities />
+        <ExploreCities customLocations={popularCities} />
         <TestimonialsSection />
         <CTASection onBrowse={onBrowseProperties} />
       </ContentRail>

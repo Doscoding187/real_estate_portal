@@ -29,12 +29,14 @@ import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCa
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
+import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 // EnhancedHero not needed - using LocationHeroSection for location pages
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
   const provinceSlug = params.province;
   const [heroTab, setHeroTab] = useState<string>('buy');
+  const campaignHierarchy = buildCampaignSlugHierarchy(provinceSlug);
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
     const t = String(tabId || 'buy').toLowerCase();
@@ -56,7 +58,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
   // Fetch campaign for banner
   const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
     locationSlug: provinceSlug,
-    fallbacks: [],
+    fallbacks: campaignHierarchy.slice(1),
   });
 
   if (isLoading) {
