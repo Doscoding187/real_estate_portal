@@ -27,10 +27,7 @@ import {
   isServiceCategory,
   type ServiceCategory,
 } from '@/features/services/catalog';
-import {
-  DemandCarouselSkeleton,
-  ProviderCardSkeleton,
-} from '@/components/services/ServicesSkeletons';
+import { DemandCarouselSkeleton, ProviderCardSkeleton } from '@/components/services/ServicesSkeletons';
 import { applySeo } from '@/lib/seo';
 
 function toLocationQuery(location: string) {
@@ -459,7 +456,11 @@ export default function ServicesHomePage() {
                 Popular projects
               </h2>
             </div>
-            <Button variant="ghost" className="text-blue-700" onClick={() => setLocation(`/services/${selectedCategory}`)}>
+            <Button
+              variant="ghost"
+              className="text-blue-700"
+              onClick={() => setLocation(`/services/${selectedCategory}`)}
+            >
               See all services
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -504,7 +505,10 @@ export default function ServicesHomePage() {
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
             {REVIEW_TAGS.map(review => (
-              <div key={`${review.name}-${review.place}`} className="rounded-3xl border border-slate-200 bg-white p-6">
+              <div
+                key={`${review.name}-${review.place}`}
+                className="rounded-3xl border border-slate-200 bg-white p-6"
+              >
                 <div className="flex items-center gap-1 text-amber-500">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Star key={`${review.name}-${index}`} className="h-4 w-4 fill-current" />
@@ -598,10 +602,17 @@ export default function ServicesHomePage() {
               ))}
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button className="bg-white text-slate-950 hover:bg-slate-100" onClick={() => submitSearch(selectedCategory, searchLocation)}>
+              <Button
+                className="bg-white text-slate-950 hover:bg-slate-100"
+                onClick={() => submitSearch(selectedCategory, searchLocation)}
+              >
                 Start a request
               </Button>
-              <Button variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setLocation(`/services/${selectedCategory}`)}>
+              <Button
+                variant="outline"
+                className="border-white/20 bg-transparent text-white hover:bg-white/10"
+                onClick={() => setLocation(`/services/${selectedCategory}`)}
+              >
                 Explore providers
               </Button>
             </div>
@@ -616,7 +627,11 @@ export default function ServicesHomePage() {
                   <div key={provider.providerId} className="rounded-2xl bg-white/10 p-4">
                     <div className="font-semibold text-white">{provider.companyName}</div>
                     <div className="mt-1 text-xs text-blue-100/80">
-                      {(provider.services?.[0]?.displayName || 'General support') + ' · ' + ([provider.locations?.[0]?.city, provider.locations?.[0]?.province].filter(Boolean).join(', ') || 'National')}
+                      {(provider.services?.[0]?.displayName || 'General support') +
+                        ' · ' +
+                        ([provider.locations?.[0]?.city, provider.locations?.[0]?.province]
+                          .filter(Boolean)
+                          .join(', ') || 'National')}
                     </div>
                   </div>
                 ))}
@@ -646,7 +661,9 @@ export default function ServicesHomePage() {
           </div>
           <div className="grid gap-4">
             {isLoadingProviders &&
-              Array.from({ length: 3 }).map((_, index) => <ProviderCardSkeleton key={`services-provider-${index}`} />)}
+              Array.from({ length: 3 }).map((_, index) => (
+                <ProviderCardSkeleton key={`services-provider-${index}`} />
+              ))}
             {!isLoadingProviders &&
               providers.slice(0, 3).map(provider => (
                 <ProviderCard
@@ -704,13 +721,26 @@ export default function ServicesHomePage() {
                   type="button"
                   onClick={() =>
                     setLocation(
-                      `/services/${SERVICE_CATEGORIES.find(category => category.label === item.label)?.value || selectedCategory}`,
+                      `/services/${
+                        SERVICE_CATEGORIES.find(category => category.label === item.label)?.value ||
+                        selectedCategory
+                      }`,
                     )
                   }
                   className="overflow-hidden rounded-[24px] border border-slate-200 bg-white text-left transition hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)]"
                 >
                   <div className="flex h-32 items-center justify-center bg-[linear-gradient(135deg,#eff6ff_0%,#ecfdf5_100%)] text-4xl">
-                    {item.label === 'Home Improvement' ? '🔧' : item.label === 'Moving Services' ? '🚚' : item.label === 'Finance & Legal' ? '⚖️' : item.label === 'Inspection & Compliance' ? '🔍' : item.label === 'Insurance' ? '🛡️' : '📸'}
+                    {item.label === 'Home Improvement'
+                      ? '🔧'
+                      : item.label === 'Moving Services'
+                        ? '🚚'
+                        : item.label === 'Finance & Legal'
+                          ? '⚖️'
+                          : item.label === 'Inspection & Compliance'
+                            ? '🔍'
+                            : item.label === 'Insurance'
+                              ? '🛡️'
+                              : '📸'}
                   </div>
                   <div className="p-5">
                     <div className="font-['Sora'] text-lg font-semibold tracking-[-0.03em] text-slate-950">
@@ -809,10 +839,17 @@ export default function ServicesHomePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button className="bg-white text-slate-950 hover:bg-slate-100" onClick={() => submitSearch(selectedCategory, searchLocation)}>
+            <Button
+              className="bg-white text-slate-950 hover:bg-slate-100"
+              onClick={() => submitSearch(selectedCategory, searchLocation)}
+            >
               Find a pro
             </Button>
-            <Button variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setLocation('/pro/profile')}>
+            <Button
+              variant="outline"
+              className="border-white/20 bg-transparent text-white hover:bg-white/10"
+              onClick={() => setLocation('/service/profile')}
+            >
               Become a provider
             </Button>
           </div>

@@ -10,9 +10,9 @@ export default function AdvertiseSellPage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <SEOHead
-        title="Real Estate Advertising Solutions | Property Platform"
+        title="Real Estate Advertising Solutions | Property Listify"
         description="Advertising and client acquisition solutions tailored for estate agents, agencies, and property developers."
-        canonicalUrl="https://platform.com/advertise/sell"
+        canonicalUrl="/advertise/sell"
       />
       <EnhancedNavbar />
       

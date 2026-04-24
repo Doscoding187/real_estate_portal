@@ -418,7 +418,7 @@ export default function PartnerDevelopmentsPage() {
             <button
               type="button"
               className="text-[11px] font-medium text-[#1a5bbf] hover:underline"
-              onClick={() => setLocation('/distribution/partner')}
+              onClick={() => setLocation('/distribution/partner/overview')}
             >
               Back to overview
             </button>
