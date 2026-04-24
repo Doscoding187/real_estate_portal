@@ -43,7 +43,7 @@ export default function AgencyComingSoonPage() {
       <SEOHead
         title="Agency Solutions | Coming Soon"
         description="Enterprise-grade agency and brokerage management tools are on their way. Apply early for founding partner access."
-        canonicalUrl="https://platform.com/advertise/sell/agencies"
+        canonicalUrl="/advertise/sell/agencies"
       />
       <EnhancedNavbar />
 

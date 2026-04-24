@@ -26,7 +26,7 @@ type NavItem = {
 };
 
 const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
-  { label: 'Overview', href: '/distribution/partner', icon: Home },
+  { label: 'Overview', href: '/distribution/partner/overview', icon: Home },
   { label: 'Developments', href: '/distribution/partner/developments', icon: Building2 },
   { label: 'Accelerator', href: '/distribution/partner/accelerator', icon: Compass },
   { label: 'Submit Referral', href: '/distribution/partner/submit', icon: FilePlus2 },
@@ -34,10 +34,10 @@ const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Commissions', href: '/distribution/partner/commissions', icon: DollarSign },
 ];
 
-const REFERRAL_ALIASES = new Set(['/referrer/dashboard']);
+const REFERRAL_ALIASES = new Set(['/referrer/dashboard', '/distribution/partner']);
 
 function normalizeCurrentPath(path: string): string {
-  if (REFERRAL_ALIASES.has(path)) return '/distribution/partner';
+  if (REFERRAL_ALIASES.has(path)) return '/distribution/partner/overview';
   return path;
 }
 

@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
 import { toast } from 'sonner';
+import { ArrowRight, BadgeCheck, LockKeyhole, Sparkles } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { LeadRequestFlow } from '@/features/services/LeadRequestFlow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,6 @@ import {
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
-import { ArrowRight, BadgeCheck, LockKeyhole, Sparkles } from 'lucide-react';
 
 function currentQuery() {
   return new URLSearchParams(window.location.search);
@@ -34,6 +34,15 @@ export default function ServicesRequestPage() {
     .filter(Boolean)
     .join(', ');
   const providerId = query.get('providerId') || undefined;
+  const latestSubmissionRef = useRef<{
+    category: ServiceCategory;
+    intentStage: string;
+    sourceSurface: string;
+    suburb?: string;
+    city?: string;
+    province?: string;
+    notes?: string;
+  } | null>(null);
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
@@ -48,21 +57,33 @@ export default function ServicesRequestPage() {
   const createLead = trpc.servicesEngine.createLeadFromJourney.useMutation({
     onSuccess: data => {
       const leadId = Number(data.leadIds?.[0] || 0);
+      const latestSubmission = latestSubmissionRef.current;
+      const nextCategory = latestSubmission?.category || category;
+      const nextCity = latestSubmission?.city || '';
+      const nextProvince = latestSubmission?.province || '';
+      const nextSuburb = latestSubmission?.suburb || '';
+      const nextIntentStage = latestSubmission?.intentStage || 'general';
+      const nextSourceSurface = latestSubmission?.sourceSurface || 'directory';
+
       try {
-        sessionStorage.setItem(
-          `service-lead-context-${leadId}`,
-          JSON.stringify({
-            category,
-            providerIds: data.providerIds,
-            unmatched: Boolean(data.unmatched),
-          }),
-        );
+        const leadContext = JSON.stringify({
+          category: nextCategory,
+          providerIds: data.providerIds,
+          unmatched: Boolean(data.unmatched),
+          notes: latestSubmission?.notes || '',
+          city: nextCity,
+          province: nextProvince,
+          suburb: nextSuburb,
+          intentStage: nextIntentStage,
+          sourceSurface: nextSourceSurface,
+        });
+        sessionStorage.setItem(`service-lead-context-${leadId}`, leadContext);
       } catch {
         // Non-fatal fallback if sessionStorage is unavailable.
       }
 
       setLocation(
-        `/services/results/${leadId}?category=${encodeURIComponent(category)}&city=${encodeURIComponent(query.get('city') || '')}&province=${encodeURIComponent(query.get('province') || '')}&suburb=${encodeURIComponent(query.get('suburb') || '')}&unmatched=${data.unmatched ? '1' : '0'}`,
+        `/services/results/${leadId}?category=${encodeURIComponent(nextCategory)}&city=${encodeURIComponent(nextCity)}&province=${encodeURIComponent(nextProvince)}&suburb=${encodeURIComponent(nextSuburb)}&intentStage=${encodeURIComponent(nextIntentStage)}&sourceSurface=${encodeURIComponent(nextSourceSurface)}&unmatched=${data.unmatched ? '1' : '0'}`,
       );
     },
     onError: error => {
@@ -84,7 +105,8 @@ export default function ServicesRequestPage() {
             </CardHeader>
             <CardContent className="space-y-4 p-6">
               <p className="text-sm leading-6 text-slate-600">
-                We need your account to track provider matches, quote responses, and request updates.
+                We need your account to track provider matches, quote responses, and request
+                updates.
               </p>
               <div className="flex items-center gap-2">
                 <Link
@@ -157,7 +179,9 @@ export default function ServicesRequestPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     Service lane
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-slate-950">{categoryMeta.label}</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-950">
+                    {categoryMeta.label}
+                  </p>
                 </div>
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -186,7 +210,10 @@ export default function ServicesRequestPage() {
                   'Add the area where the work will happen.',
                   'Describe the job clearly so better-fit providers can respond.',
                 ].map((item, index) => (
-                  <div key={item} className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div
+                    key={item}
+                    className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-[#10294f]">
                       {index + 1}
                     </div>
@@ -195,7 +222,8 @@ export default function ServicesRequestPage() {
                 ))}
               </div>
               <p className="mt-5 text-sm leading-6 text-white/70">
-                We keep this flow short so you can reach matching results quickly without losing detail.
+                We keep this flow short so you can reach matching results quickly without losing
+                detail.
               </p>
             </div>
           </section>
@@ -207,6 +235,15 @@ export default function ServicesRequestPage() {
               submitting={createLead.isPending}
               error={createLead.error?.message ?? null}
               onSubmit={payload => {
+                latestSubmissionRef.current = {
+                  category: payload.category,
+                  sourceSurface: payload.sourceSurface,
+                  intentStage: payload.intentStage,
+                  province: payload.province,
+                  city: payload.city,
+                  suburb: payload.suburb,
+                  notes: payload.notes,
+                };
                 createLead.mutate({
                   providerId,
                   category: payload.category,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { toast } from 'sonner';
+import { ArrowRight, BadgeCheck, MapPinned, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProviderCard, type ProviderDirectoryItem } from '@/components/services/ProviderCard';
@@ -17,7 +18,6 @@ import {
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
-import { ArrowRight, BadgeCheck, MapPinned, Sparkles } from 'lucide-react';
 
 function queryParams() {
   return new URLSearchParams(window.location.search);
@@ -39,24 +39,42 @@ function getOrCreateServicesSessionId() {
   }
 }
 
+function readLeadContext(leadId: number) {
+  try {
+    const keyedContext = sessionStorage.getItem(`service-lead-context-${leadId}`);
+    if (!keyedContext) return null;
+    return JSON.parse(keyedContext) as {
+      notes?: string;
+      city?: string;
+      province?: string;
+      suburb?: string;
+      intentStage?: IntentStage;
+      sourceSurface?: 'directory' | 'explore' | 'journey_injection' | 'agent_dashboard';
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function ServicesResultsPage() {
   const [, params] = useRoute('/services/results/:leadId');
   const [, setLocation] = useLocation();
   const leadId = Number(params?.leadId || 0);
   const query = useMemo(() => queryParams(), []);
   const sessionId = useMemo(() => getOrCreateServicesSessionId(), []);
+  const leadContext = useMemo(() => readLeadContext(leadId), [leadId]);
 
   const categoryParam = String(query.get('category') || '').toLowerCase();
   const category = isServiceCategory(categoryParam)
     ? (categoryParam as ServiceCategory)
     : ('home_improvement' as ServiceCategory);
-  const city = query.get('city') || undefined;
-  const province = query.get('province') || undefined;
-  const suburb = query.get('suburb') || undefined;
+  const city = query.get('city') || leadContext?.city || undefined;
+  const province = query.get('province') || leadContext?.province || undefined;
+  const suburb = query.get('suburb') || leadContext?.suburb || undefined;
   const locationLabel = formatArea(city, province, suburb);
   const unmatched = query.get('unmatched') === '1';
-  const intentStage = (query.get('intentStage') || 'general') as IntentStage;
-  const sourceSurface = (query.get('sourceSurface') || 'journey_injection') as
+  const intentStage = (query.get('intentStage') || leadContext?.intentStage || 'general') as IntentStage;
+  const sourceSurface = (query.get('sourceSurface') || leadContext?.sourceSurface || 'directory') as
     | 'directory'
     | 'explore'
     | 'journey_injection'
@@ -99,22 +117,16 @@ export default function ServicesResultsPage() {
     onError: error => toast.error(error.message || 'Unable to send request'),
   });
 
-  const items = (recommendations.data || []) as Array<{ provider: ProviderDirectoryItem; score: number }>;
+  const items = (recommendations.data || []) as Array<{
+    provider: ProviderDirectoryItem;
+    score: number;
+  }>;
   const fallbackProviders = (fallbackProvidersQuery.data || []) as ProviderDirectoryItem[];
   const categoryMeta = getCategoryMeta(category);
   const canLogEvents = leadId > 0;
   const hasLoggedRecommendations = useRef(false);
   const hasLoggedEmptyState = useRef(false);
-  const requestNotes = (() => {
-    try {
-      const leadContext = sessionStorage.getItem('services-lead-context');
-      if (!leadContext) return null;
-      const parsed = JSON.parse(leadContext) as { notes?: string };
-      return parsed.notes || null;
-    } catch {
-      return null;
-    }
-  })();
+  const requestNotes = leadContext?.notes || null;
 
   const emitEvent = (
     type:
@@ -262,7 +274,9 @@ export default function ServicesResultsPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     Service lane
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-slate-950">{categoryMeta.label}</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-950">
+                    {categoryMeta.label}
+                  </p>
                 </div>
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -299,7 +313,10 @@ export default function ServicesResultsPage() {
                     'Use profiles and reviews to compare before sending a quote request.',
                     'If your area is thin, we still surface fallback providers where possible.',
                   ].map(item => (
-                    <div key={item} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/80">
+                    <div
+                      key={item}
+                      className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/80"
+                    >
                       {item}
                     </div>
                   ))}
@@ -325,7 +342,10 @@ export default function ServicesResultsPage() {
                     </p>
                   )}
                   <div className="pt-2">
-                    <Button onClick={() => setLocation(`/services/request/${category}`)} variant="outline">
+                    <Button
+                      onClick={() => setLocation(`/services/request/${category}`)}
+                      variant="outline"
+                    >
                       Edit request
                     </Button>
                   </div>
@@ -377,8 +397,8 @@ export default function ServicesResultsPage() {
                     <CardContent className="space-y-3 p-6 text-sm text-slate-700">
                       <p className="font-medium text-slate-900">We are expanding to this area.</p>
                       <p>
-                        No direct match yet. Submit your request anyway and we will queue it as unmatched while
-                        routing to the closest providers.
+                        No direct match yet. Submit your request anyway and we will queue it as
+                        unmatched while routing to the closest providers.
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -401,7 +421,10 @@ export default function ServicesResultsPage() {
                         >
                           Request anyway
                         </Button>
-                        <Button onClick={() => setLocation(`/services/request/${category}`)} variant="outline">
+                        <Button
+                          onClick={() => setLocation(`/services/request/${category}`)}
+                          variant="outline"
+                        >
                           Edit request
                         </Button>
                       </div>
@@ -412,7 +435,9 @@ export default function ServicesResultsPage() {
                           </p>
                           <div className="flex flex-wrap gap-2">
                             {citySuggestions.map(cityLabel => {
-                              const [cityName, provinceName] = cityLabel.split(',').map(value => value.trim());
+                              const [cityName, provinceName] = cityLabel
+                                .split(',')
+                                .map(value => value.trim());
                               if (!cityName || !provinceName) return null;
                               const citySlug = cityName.toLowerCase().replace(/\s+/g, '-');
                               const provinceSlug = provinceName.toLowerCase().replace(/\s+/g, '-');
@@ -441,40 +466,44 @@ export default function ServicesResultsPage() {
                     </CardContent>
                   </Card>
                 )}
-                {!recommendations.isLoading && items.length === 0 && fallbackProviders.length > 0 && (
-                  <section className="space-y-3 pt-2">
-                    <h2 className="text-lg font-semibold tracking-tight text-slate-900">Closest available providers</h2>
-                    {fallbackProviders.slice(0, 3).map((provider, rankIndex) => (
-                      <ProviderCard
-                        key={`fallback-${provider.providerId}`}
-                        provider={provider}
-                        isFallback={true}
-                        onViewProfile={providerId =>
-                          emitEvent('provider_card_clicked', providerId, {
-                            rankIndex,
-                            isFallback: true,
-                          })
-                        }
-                        onCta={providerId => {
-                          emitEvent('quote_requested', providerId, {
-                            rankIndex,
-                            isFallback: true,
-                          });
-                          createLead.mutate({
-                            providerId,
-                            category,
-                            sourceSurface: 'directory',
-                            intentStage,
-                            city,
-                            province,
-                            suburb,
-                            notes: `Fallback provider request from results page (lead ${leadId || 'n/a'})`,
-                          });
-                        }}
-                      />
-                    ))}
-                  </section>
-                )}
+                {!recommendations.isLoading &&
+                  items.length === 0 &&
+                  fallbackProviders.length > 0 && (
+                    <section className="space-y-3 pt-2">
+                      <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+                        Closest available providers
+                      </h2>
+                      {fallbackProviders.slice(0, 3).map((provider, rankIndex) => (
+                        <ProviderCard
+                          key={`fallback-${provider.providerId}`}
+                          provider={provider}
+                          isFallback={true}
+                          onViewProfile={providerId =>
+                            emitEvent('provider_card_clicked', providerId, {
+                              rankIndex,
+                              isFallback: true,
+                            })
+                          }
+                          onCta={providerId => {
+                            emitEvent('quote_requested', providerId, {
+                              rankIndex,
+                              isFallback: true,
+                            });
+                            createLead.mutate({
+                              providerId,
+                              category,
+                              sourceSurface: 'directory',
+                              intentStage,
+                              city,
+                              province,
+                              suburb,
+                              notes: `Fallback provider request from results page (lead ${leadId || 'n/a'})`,
+                            });
+                          }}
+                        />
+                      ))}
+                    </section>
+                  )}
               </div>
             </section>
 

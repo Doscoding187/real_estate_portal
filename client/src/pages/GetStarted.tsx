@@ -145,8 +145,8 @@ export default function GetStarted() {
       <SEOHead
         title="Get Started | Advertise With Us"
         description="Set up your advertiser growth profile with role-based onboarding for agents, agencies, developers, and private sellers."
-        canonicalUrl="https://platform.com/get-started"
-        ogImage="https://platform.com/images/advertise-og-image.jpg"
+        canonicalUrl="/get-started"
+        ogImage="/images/advertise-og-image.jpg"
         ogType="website"
       />
       <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 px-4 py-12 sm:px-6 lg:px-8">
