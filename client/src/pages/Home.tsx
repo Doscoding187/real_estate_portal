@@ -6,6 +6,7 @@ import { MetaControl } from '@/components/seo/MetaControl';
 import { HomeDesktopView } from '@/pages/home/HomeDesktopView';
 import { HomeMobileView } from '@/pages/home/HomeMobileView';
 import { useIsMobile } from '@/hooks/useMobile';
+import { trpc } from '@/lib/trpc';
 import {
   buildOrganizationStructuredData,
   buildWebsiteStructuredData,
@@ -19,6 +20,9 @@ export default function Home() {
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
   const [activeHeroTab, setActiveHeroTab] = useState<HeroTab | null>(null);
   const effectiveHeroTab = activeHeroTab ?? 'buy';
+  const { data: popularCitiesData } = trpc.locationPages.getPopularCities.useQuery({
+    limit: 12,
+  });
 
   const provinces = [
     'Gauteng',
@@ -71,6 +75,14 @@ export default function Home() {
       description: homeDescription,
     }),
   ];
+  const popularCities =
+    popularCitiesData?.map(city => ({
+      name: city.name,
+      province: city.provinceName,
+      slug: city.slug,
+      provinceSlug: city.provinceSlug,
+      propertyCount: `${city.listingCount.toLocaleString()} Properties`,
+    })) ?? [];
 
   return (
     <HomeLayout>
@@ -88,6 +100,7 @@ export default function Home() {
           onBrowseProperties={() => setLocation('/properties')}
           onProvinceChange={setSelectedProvince}
           onTabChange={handleTabChange}
+          popularCities={popularCities}
           provinces={provinces}
           selectedProvince={selectedProvince}
         />
@@ -98,6 +111,7 @@ export default function Home() {
           onBrowseProperties={() => setLocation('/properties')}
           onProvinceChange={setSelectedProvince}
           onTabChange={handleTabChange}
+          popularCities={popularCities}
           provinces={provinces}
           selectedProvince={selectedProvince}
         />

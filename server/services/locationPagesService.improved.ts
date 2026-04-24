@@ -7,6 +7,10 @@ import { locationPagesService as baseLocationPagesService } from './locationPage
  * while delegating core data fetching to the proven base implementation.
  */
 export const locationPagesService = {
+  async getPopularCities(limit?: number) {
+    return await baseLocationPagesService.getPopularCities(limit);
+  },
+
   async getProvinceData(provinceSlug: string) {
     return await baseLocationPagesService.getProvinceData(provinceSlug);
   },

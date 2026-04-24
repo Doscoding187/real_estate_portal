@@ -18,6 +18,54 @@ import { eq, and, desc, sql, like, inArray, count, avg } from 'drizzle-orm';
  * This version uses slug columns for better matching and performance
  */
 export const locationPagesService = {
+  async getPopularCities(limit = 12) {
+    const db = await getDb();
+
+    const listingCount = sql<number>`COUNT(${properties.id})`;
+
+    const rows = await db
+      .select({
+        id: cities.id,
+        name: cities.name,
+        slug: cities.slug,
+        provinceName: provinces.name,
+        provinceSlug: provinces.slug,
+        listingCount,
+      })
+      .from(cities)
+      .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+      .leftJoin(
+        properties,
+        and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
+      )
+      .groupBy(cities.id, cities.name, cities.slug, provinces.name, provinces.slug)
+      .orderBy(desc(listingCount), cities.name)
+      .limit(limit);
+
+    return rows
+      .map(row => ({
+        id: row.id,
+        name: row.name,
+        slug:
+          row.slug ||
+          row.name
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, ''),
+        provinceName: row.provinceName,
+        provinceSlug:
+          row.provinceSlug ||
+          row.provinceName
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, ''),
+        listingCount: Number(row.listingCount || 0),
+      }))
+      .filter(row => row.listingCount > 0);
+  },
+
   /**
    * Get data for Province Page (Level 1)
    */

@@ -34,6 +34,7 @@ import SearchResults from './SearchResults';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 
 export default function SuburbPage({
   params,
@@ -43,6 +44,9 @@ export default function SuburbPage({
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, suburb: suburbSlug, action, locationId } = params;
   const [heroTab, setHeroTab] = useState<string>('buy');
+  const campaignHierarchy = buildCampaignSlugHierarchy(
+    `${provinceSlug}/${citySlug}/${suburbSlug}`,
+  );
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
     const t = String(tabId || 'buy').toLowerCase();
@@ -83,7 +87,7 @@ export default function SuburbPage({
   // Fetch campaign for banner
   const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
     locationSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
-    fallbacks: [`${provinceSlug}/${citySlug}`, provinceSlug],
+    fallbacks: campaignHierarchy.slice(1),
   });
 
   if (isLoading) {

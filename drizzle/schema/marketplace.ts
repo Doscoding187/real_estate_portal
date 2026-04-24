@@ -293,6 +293,7 @@ export const heroCampaigns = mysqlTable(
   'hero_campaigns',
   {
     id: int().autoincrement().primaryKey(),
+    targetSlug: varchar('target_slug', { length: 255 }).notNull(),
     title: varchar({ length: 255 }).notNull(),
     subtitle: varchar({ length: 255 }),
     backgroundImageUrl: varchar('background_image_url', { length: 500 }).notNull(),
@@ -314,6 +315,7 @@ export const heroCampaigns = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
   },
   table => [
+    index('idx_hero_campaigns_slug').on(table.targetSlug),
     index('idx_hero_campaigns_active').on(table.startDate, table.endDate, table.isActive),
     index('idx_hero_campaigns_priority').on(table.priority),
   ],

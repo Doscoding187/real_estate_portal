@@ -4,6 +4,7 @@ import { locationPagesService } from './services/locationPagesService.improved';
 import { getDb } from './db';
 import { heroCampaigns } from '../drizzle/schema';
 import { and, eq, lte, gte, or, isNull, inArray } from 'drizzle-orm';
+import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 
 /**
  * Location Pages Router
@@ -166,6 +167,18 @@ export const locationPagesRouter = router({
       return await locationAnalyticsService.getTrendingSuburbs(input?.limit || 10);
     }),
 
+  getPopularCities: publicProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(24).default(12),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      return await locationPagesService.getPopularCities(input?.limit || 12);
+    }),
+
   /**
    * Get similar locations
    * Requirements 22.1-22.5: Display up to 5 similar locations with statistics
@@ -203,33 +216,54 @@ export const locationPagesRouter = router({
       const db = await getDb();
       const today = new Date();
 
-      // Combine primary slug with fallbacks to create priority list
-      // Priority: Primary -> Fallback 1 -> Fallback 2 -> ...
-      const targetSlugs = [input.locationSlug, ...input.fallbacks];
+      const resolvedTargetSlugs = buildCampaignSlugHierarchy(input.locationSlug, input.fallbacks);
 
-      // Fetch ALL active campaigns matching ANY of these slugs
-      const campaigns = await db
-        .select()
-        .from(heroCampaigns)
-        .where(
-          and(
-            inArray((heroCampaigns as any).targetSlug, targetSlugs),
-            eq(heroCampaigns.isActive, 1),
-            or(isNull(heroCampaigns.startDate), lte(heroCampaigns.startDate, today.toISOString())),
-            or(isNull(heroCampaigns.endDate), gte(heroCampaigns.endDate, today.toISOString())),
-          ),
-        );
+      try {
+        const resolvedCampaigns = await db
+          .select()
+          .from(heroCampaigns)
+          .where(
+            and(
+              inArray(heroCampaigns.targetSlug, resolvedTargetSlugs),
+              eq(heroCampaigns.isActive, 1),
+              or(
+                isNull(heroCampaigns.startDate),
+                lte(heroCampaigns.startDate, today.toISOString()),
+              ),
+              or(
+                isNull(heroCampaigns.endDate),
+                gte(heroCampaigns.endDate, today.toISOString()),
+              ),
+            ),
+          );
 
-      if (campaigns.length === 0) return null;
+        if (resolvedCampaigns.length === 0) {
+          return null;
+        }
 
-      // Sort by priority (index in targetSlugs array)
-      // Find the first slug in targetSlugs that has a corresponding campaign
-      for (const slug of targetSlugs) {
-        const match = campaigns.find(c => (c as any).targetSlug === slug);
-        if (match) return match;
+        for (const slug of resolvedTargetSlugs) {
+          const match = resolvedCampaigns.find(c => c.targetSlug === slug);
+          if (match) {
+            return {
+              ...match,
+              imageUrl: match.backgroundImageUrl,
+              landingPageUrl: match.ctaLink,
+              altText: match.title,
+            };
+          }
+        }
+
+        return null;
+      } catch (error) {
+        console.warn('[locationPages.getHeroCampaign] Falling back to null due to query error', {
+          locationSlug: input.locationSlug,
+          requestedFallbacks: input.fallbacks,
+          resolvedHierarchy: resolvedTargetSlugs,
+          error,
+        });
+        return null;
       }
 
-      return null;
     }),
 
   /**

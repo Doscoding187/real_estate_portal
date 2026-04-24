@@ -16,6 +16,13 @@ type HomeDesktopViewProps = {
   onBrowseProperties: () => void;
   onProvinceChange: (province: string) => void;
   onTabChange: (tab: string) => void;
+  popularCities: Array<{
+    name: string;
+    province: string;
+    slug: string;
+    provinceSlug: string;
+    propertyCount: string;
+  }>;
   provinces: string[];
   selectedProvince: string;
 };
@@ -26,6 +33,7 @@ export function HomeDesktopView({
   onBrowseProperties,
   onProvinceChange,
   onTabChange,
+  popularCities,
   provinces,
   selectedProvince,
 }: HomeDesktopViewProps) {
@@ -45,7 +53,7 @@ export function HomeDesktopView({
         <DiscoverProperties />
         <TopLocalities />
         <TopDevelopers />
-        <ExploreCities />
+        <ExploreCities customLocations={popularCities} />
         <TestimonialsSection />
         <CTASection onBrowse={onBrowseProperties} />
       </ContentRail>

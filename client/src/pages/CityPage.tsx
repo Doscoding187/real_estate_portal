@@ -36,6 +36,7 @@ import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarous
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
+import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 
 import SearchResults from './SearchResults';
 
@@ -47,6 +48,7 @@ export default function CityPage({
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, action, locationId } = params;
   const [heroTab, setHeroTab] = React.useState<string>('buy');
+  const campaignHierarchy = buildCampaignSlugHierarchy(`${provinceSlug}/${citySlug}`);
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
     const t = String(tabId || 'buy').toLowerCase();
@@ -107,7 +109,7 @@ export default function CityPage({
   // Fetch campaign for banner
   const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
     locationSlug: `${provinceSlug}/${citySlug}`,
-    fallbacks: [provinceSlug],
+    fallbacks: campaignHierarchy.slice(1),
   });
 
   if (isLoading) {
