@@ -130,8 +130,8 @@ export function LeadRequestFlow({
   const canContinueStep1 = state.category !== null;
 
   return (
-    <Card className="border-slate-200">
-      <CardContent className="space-y-6 pt-6">
+    <Card className="overflow-hidden border-[#0f3d91]/10 bg-white/90 shadow-[0_24px_90px_-50px_rgba(15,61,145,0.55)]">
+      <CardContent className="space-y-6 p-6 md:p-8">
         {/* Progress indicator — shown on every step */}
         <WizardProgressIndicator
           currentStep={state.step}
@@ -140,13 +140,21 @@ export function LeadRequestFlow({
         />
 
         {/* Step content — aria-live="polite" for accessibility */}
-        <div aria-live="polite" className="space-y-4">
+        <div aria-live="polite" className="rounded-[1.75rem] border border-slate-100 bg-[linear-gradient(180deg,_#ffffff,_#faf7f0)] p-5 md:p-6">
           {/* Step 1: Category selection */}
           {state.step === 1 && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-slate-900">
-                What service do you need?
-              </h2>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
+                  Step 1
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  What service do you need?
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Start by choosing the category that best matches the work.
+                </p>
+              </div>
               <CategoryTileGrid
                 selected={state.category}
                 onSelect={cat => setField('category', cat)}
@@ -157,7 +165,15 @@ export function LeadRequestFlow({
           {/* Step 2: Location inputs */}
           {state.step === 2 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-slate-900">Where are you located?</h2>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
+                  Step 2
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900">Where are you located?</h2>
+                <p className="text-sm text-slate-600">
+                  Providers use this to confirm coverage and travel range.
+                </p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <label
@@ -172,6 +188,7 @@ export function LeadRequestFlow({
                     onChange={e => setField('suburb', e.target.value)}
                     placeholder="e.g. Sandton"
                     autoComplete="address-level3"
+                    className="border-slate-200 bg-white"
                   />
                 </div>
                 <div className="space-y-1">
@@ -187,6 +204,7 @@ export function LeadRequestFlow({
                     onChange={e => setField('city', e.target.value)}
                     placeholder="e.g. Johannesburg"
                     autoComplete="address-level2"
+                    className="border-slate-200 bg-white"
                   />
                 </div>
               </div>
@@ -201,7 +219,7 @@ export function LeadRequestFlow({
                   id="lead-province"
                   value={state.province}
                   onChange={e => setField('province', e.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f3d91] focus-visible:ring-offset-2"
                 >
                   <option value="">Select a province</option>
                   {SA_PROVINCES.map(prov => (
@@ -217,18 +235,41 @@ export function LeadRequestFlow({
           {/* Step 3: Description */}
           {state.step === 3 && (
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Describe your project
-              </h2>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
+                  Step 3
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Describe your project
+                </h2>
+              </div>
+              <p className="text-sm text-slate-600">
+                Describe the project clearly so providers can judge fit faster.
+              </p>
               <Textarea
                 value={state.notes}
                 onChange={e => setField('notes', e.target.value)}
                 placeholder="Describe what you need — the more detail, the better your matches"
                 rows={5}
-                className="resize-none"
+                className="resize-none border-slate-200 bg-white"
               />
             </div>
           )}
+        </div>
+
+        <div className="grid gap-3 rounded-[1.5rem] border border-slate-100 bg-slate-50/80 p-4 text-sm text-slate-600 md:grid-cols-3">
+          <div>
+            <p className="font-semibold text-slate-900">Short flow</p>
+            <p className="mt-1">Three steps only, so you reach matching faster.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-900">Location aware</p>
+            <p className="mt-1">Your area helps us narrow to relevant providers.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-900">More detail, better fit</p>
+            <p className="mt-1">Clear notes improve provider quality and response speed.</p>
+          </div>
         </div>
 
         {/* Inline error — shown above submit button on step 3 */}
@@ -245,6 +286,7 @@ export function LeadRequestFlow({
             variant="outline"
             disabled={state.step === 1 || submitting}
             onClick={goBack}
+            className="rounded-full"
           >
             Back
           </Button>
@@ -254,6 +296,7 @@ export function LeadRequestFlow({
               type="button"
               disabled={state.step === 1 ? !canContinueStep1 : false}
               onClick={goNext}
+              className="rounded-full bg-[#0f3d91] hover:bg-[#0a2e6e]"
             >
               Continue
             </Button>
@@ -262,6 +305,7 @@ export function LeadRequestFlow({
               type="button"
               disabled={submitting}
               onClick={handleSubmit}
+              className="rounded-full bg-[#0f3d91] hover:bg-[#0a2e6e]"
             >
               {submitting ? (
                 <>
