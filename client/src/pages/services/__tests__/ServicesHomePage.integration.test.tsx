@@ -1,18 +1,12 @@
 /**
  * Integration Test: ServicesHomePage
  *
- * Asserts that TrustBar, CategoryCard grid, and ProviderCard list are all
- * present when the page renders with mocked tRPC data.
- *
- * Requirements: 1.1, 2.1
+ * Asserts that the redesigned services homepage still renders its core
+ * hero, category navigation, and provider proof points with mocked tRPC data.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-
-// ---------------------------------------------------------------------------
-// Mock tRPC
-// ---------------------------------------------------------------------------
 
 const mockProviders = [
   {
@@ -64,51 +58,43 @@ vi.mock('wouter', async () => {
 
 vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
-// ---------------------------------------------------------------------------
-// Import page after mocks
-// ---------------------------------------------------------------------------
-
 import ServicesHomePage from '../ServicesHomePage';
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('ServicesHomePage — integration', () => {
-  it('renders the TrustBar with verified provider count', () => {
+describe('ServicesHomePage - integration', () => {
+  it('renders the hero trust metrics with verified provider count', () => {
     render(<ServicesHomePage />);
 
-    // TrustBar shows verified count — 1 of 2 providers is verified
-    expect(screen.getByText(/verified providers/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/verified providers/i).length).toBeGreaterThan(0);
   });
 
-  it('renders the CategoryTileGrid with all six categories', () => {
+  it('renders the redesigned category navigation', () => {
     render(<ServicesHomePage />);
 
-    // CategoryTileGrid uses role="radiogroup"
-    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
-
-    // All six category tiles should be present
-    expect(screen.getByRole('radio', { name: /home improvement/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /moving/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /category/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /home improvement/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /moving services/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /general handyman/i })).toBeInTheDocument();
   });
 
-  it('renders at least one ProviderCard from the mocked data', () => {
+  it('renders provider proof points from the mocked data', () => {
     render(<ServicesHomePage />);
 
-    expect(screen.getByText('Cape Plumbing Co')).toBeInTheDocument();
-    expect(screen.getByText('Gauteng Movers')).toBeInTheDocument();
+    expect(screen.getAllByText('Cape Plumbing Co').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Gauteng Movers').length).toBeGreaterThan(0);
   });
 
-  it('renders the Verified badge for the verified provider', () => {
+  it('renders the verified badge for the verified provider', () => {
     render(<ServicesHomePage />);
 
     expect(screen.getByText('Verified')).toBeInTheDocument();
   });
 
-  it('renders the hero search section', () => {
+  it('renders the redesigned hero search section', () => {
     render(<ServicesHomePage />);
 
-    expect(screen.getByText(/what can we help you with today/i)).toBeInTheDocument();
+    expect(screen.getByText(/trusted pros for every stage of your/i)).toBeInTheDocument();
+    expect(screen.getByText(/property services marketplace/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/suburb, city, province/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /find a pro/i }).length).toBeGreaterThan(0);
   });
 });
