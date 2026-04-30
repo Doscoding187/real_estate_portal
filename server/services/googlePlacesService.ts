@@ -108,6 +108,7 @@ const AUTOCOMPLETE_API = 'https://maps.googleapis.com/maps/api/place/autocomplet
 const PLACE_DETAILS_API = 'https://maps.googleapis.com/maps/api/place/details/json';
 const NEARBY_SEARCH_API = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
 const GEOCODE_API = 'https://maps.googleapis.com/maps/api/geocode/json';
+let hasWarnedMissingGooglePlacesApiKey = false;
 
 // ============================================================================
 // Cache Implementation
@@ -167,7 +168,12 @@ export class GooglePlacesService {
 
   constructor() {
     // Validate API key
-    if (!GOOGLE_PLACES_API_KEY) {
+    if (
+      !GOOGLE_PLACES_API_KEY &&
+      process.env.NODE_ENV !== 'test' &&
+      !hasWarnedMissingGooglePlacesApiKey
+    ) {
+      hasWarnedMissingGooglePlacesApiKey = true;
       console.warn(
         '⚠️  GOOGLE_PLACES_API_KEY not configured. Google Places features will not work.',
       );

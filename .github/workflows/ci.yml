@@ -75,11 +75,6 @@ jobs:
         with:
           run_install: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -94,7 +89,7 @@ jobs:
         run: pnpm run lint:tsnocheck-baseline
 
       - name: Run ESLint
-        run: pnpm run lint
+        run: pnpm run lint:check
 
       - name: Run TypeScript type check
         run: pnpm run type-check
@@ -123,11 +118,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -177,11 +167,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

@@ -93,10 +93,22 @@ The SA Property Portal is a full-stack real estate platform that transforms anon
 
 ### Prerequisites
 
-- **Node.js 18+** and **pnpm**
+- **Node.js 22.x**. This is enforced by `package.json`.
+- **pnpm 10+**. pnpm is the supported package manager; do not use npm or yarn for installs.
 - **MySQL 8.0+**
 - **AWS S3 bucket** (for images)
 - **Stripe account** (for payments)
+
+### Recommended Git Workflow
+
+Keep `main` clean and create a fresh worktree for each task:
+
+```bash
+git fetch origin
+git worktree add ../listify-<task-name> -b codex/<task-name> origin/main
+```
+
+Do feature, fix, and hygiene work inside the task worktree. This keeps local setup experiments and generated files from leaking into unrelated changes.
 
 ### Setup Instructions
 
@@ -155,7 +167,7 @@ pnpm ts-node seed-plans.ts
 pnpm dev
 ```
 
-Access the application at `http://localhost:5173`
+Access the application at `http://localhost:3009`. The backend API runs on `http://localhost:5000`.
 
 ## 🎮 Using the Gamified Prospect Dashboard
 
@@ -221,8 +233,11 @@ pnpm test
 # Run E2E tests
 pnpm test:e2e
 
-# Lint code
-pnpm lint
+# Check lint without changing files
+pnpm lint:check
+
+# Auto-fix lint issues
+pnpm lint:fix
 
 # Type checking
 pnpm type-check
