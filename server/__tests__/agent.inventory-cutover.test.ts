@@ -5,12 +5,14 @@ const {
   mockGetPlatformSetting,
   mockGetAgentInventorySchedulingOptions,
   mockGetInventoryBridgeSchemaCapabilities,
+  mockGetRuntimeSchemaCapabilities,
   mockResolvePropertyForListing,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockGetPlatformSetting: vi.fn(),
   mockGetAgentInventorySchedulingOptions: vi.fn(),
   mockGetInventoryBridgeSchemaCapabilities: vi.fn(),
+  mockGetRuntimeSchemaCapabilities: vi.fn(),
   mockResolvePropertyForListing: vi.fn(),
 }));
 
@@ -29,6 +31,14 @@ vi.mock('../services/inventoryLinkResolver', () => ({
 vi.mock('../services/agentOsEventService', () => ({
   recordAgentOsEvent: vi.fn(),
 }));
+
+vi.mock('../services/runtimeSchemaCapabilities', async () => {
+  const actual = await vi.importActual('../services/runtimeSchemaCapabilities');
+  return {
+    ...actual,
+    getRuntimeSchemaCapabilities: mockGetRuntimeSchemaCapabilities,
+  };
+});
 
 import { agentRouter } from '../agentRouter';
 
@@ -59,6 +69,25 @@ function createSelectSequence(results: unknown[]) {
 describe('agent inventory cutover', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetRuntimeSchemaCapabilities.mockResolvedValue({
+      checkedAt: '2026-04-30T00:00:00.000Z',
+      demandEngineReady: false,
+      demandEngineDetails: {},
+      economicActorsReady: false,
+      economicActorsDetails: {},
+      showingsReady: true,
+      showingsDetails: {
+        table: true,
+        listingIdColumn: true,
+        propertyIdColumn: false,
+        leadIdColumn: false,
+        agentIdColumn: true,
+        scheduledTimeColumn: false,
+        scheduledAtColumn: true,
+        statusColumn: true,
+        notesColumn: true,
+      },
+    });
   });
 
   it('passes the legacy fallback setting into scheduling options resolution', async () => {

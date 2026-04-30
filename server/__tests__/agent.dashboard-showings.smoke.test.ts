@@ -5,7 +5,12 @@ import { agentRouter } from '../agentRouter';
 import { getDb } from '../db-connection';
 import { showings } from '../../drizzle/schema';
 
-describe('agent dashboard showings smoke', () => {
+const describeWithDb = process.env.DATABASE_URL
+  ? describe
+  : ((name: string, fn: () => void) =>
+      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe;
+
+describeWithDb('agent dashboard showings smoke', () => {
   let createdUserId: number | null = null;
   let createdAgentId: number | null = null;
   let createdPropertyId: number | null = null;
