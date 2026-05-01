@@ -331,7 +331,7 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     },
     readiness_requiredDocuments: {
       code: 'REQUIRED_DOCS_MISSING',
-      message: 'Required buyer documents are still being prepared.',
+      message: 'Application documents are still being prepared.',
     },
   };
 
@@ -479,7 +479,6 @@ export async function evaluateDevelopmentDistributionAccess(input: {
         eq(developmentRequiredDocuments.developmentId, developmentId),
         eq(developmentRequiredDocuments.isActive, 1),
         eq(developmentRequiredDocuments.isRequired, 1),
-        eq(developmentRequiredDocuments.category, 'client_required_document'),
       ),
     )
     .limit(1);

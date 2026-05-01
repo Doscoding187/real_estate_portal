@@ -244,11 +244,10 @@ describeWithDb('distribution.partner program terms', () => {
 
     const result = await caller.distribution.partner.getProgramTerms({ developmentId });
 
-    expect(result.requiredDocuments.map(document => document.sortOrder)).toEqual([0, 1, 2]);
+    expect(result.requiredDocuments.map(document => document.sortOrder)).toEqual([0, 1]);
     expect(result.requiredDocuments.map(document => document.documentLabel)).toEqual([
       'Proof of Address',
       'ID Document',
-      'Optional Supporting Doc',
     ]);
     expect(result.computed.requiredDocsSummary).toBe('2 required documents');
   });

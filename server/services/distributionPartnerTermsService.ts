@@ -46,6 +46,7 @@ export type PartnerProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    category: 'developer_document' | 'client_required_document';
     templateFileUrl: string | null;
     templateFileName: string | null;
     isRequired: boolean;
@@ -330,11 +331,12 @@ export async function listPartnerProgramTerms(
     docsByDevelopmentId.set(
       developmentId,
       templates
-        .filter(template => template.isActive && template.category === 'client_required_document')
+        .filter(template => template.isActive && template.isRequired)
         .map(template => ({
           templateId: Number(template.id),
           documentCode: String(template.documentCode),
           documentLabel: String(template.documentLabel || ''),
+          category: template.category,
           templateFileUrl: template.templateFileUrl || null,
           templateFileName: template.templateFileName || null,
           isRequired: Boolean(template.isRequired),
@@ -344,7 +346,7 @@ export async function listPartnerProgramTerms(
     sourceDocsByDevelopmentId.set(
       developmentId,
       templates
-        .filter(template => template.isActive && template.category === 'developer_document')
+        .filter(template => template.isActive && template.category === 'developer_document' && !template.isRequired)
         .map(template => ({
           templateId: Number(template.id),
           documentCode: String(template.documentCode),

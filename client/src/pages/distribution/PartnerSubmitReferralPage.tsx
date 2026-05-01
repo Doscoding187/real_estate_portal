@@ -184,7 +184,7 @@ export default function PartnerSubmitReferralPage() {
   function friendlyBlockerMessage(reason: EligibilityReason) {
     const code = String(reason.code || '').toUpperCase();
     if (code === 'REQUIRED_DOCS_MISSING') {
-      return 'Required buyer documents are still being prepared for this opportunity.';
+      return 'Application documents are still being prepared for this opportunity.';
     }
     if (code === 'NO_MANAGER_ASSIGNED') {
       return 'This opportunity is not accepting referrals yet.';
@@ -414,7 +414,7 @@ export default function PartnerSubmitReferralPage() {
                       <div className="rounded-md border border-primary/15 bg-primary/5 p-3 text-sm">
                         <p className="flex items-center gap-2 font-medium text-foreground">
                           <FileCheck2 className="h-4 w-4 text-primary" />
-                          Required documents
+                          Application documents
                         </p>
                         {selectedRequiredDocuments.length ? (
                           <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
@@ -424,7 +424,7 @@ export default function PartnerSubmitReferralPage() {
                           </ul>
                         ) : (
                           <p className="mt-2 text-xs text-slate-600">
-                            No buyer document checklist is published yet.
+                            No application document checklist is published yet.
                           </p>
                         )}
                       </div>
@@ -448,7 +448,7 @@ export default function PartnerSubmitReferralPage() {
                       <p className="mt-2">Buyer: {buyerName || buyerPhone || buyerEmail || 'Not captured yet'}</p>
                       <p>Opportunity: {selectedDevelopment?.developmentName || 'Not selected yet'}</p>
                       <p>Buyer fit: {[buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}</p>
-                      <p>Required documents: {selectedRequiredDocuments.length || 0}</p>
+                      <p>Application documents: {selectedRequiredDocuments.length || 0}</p>
                     </div>
                   ) : null}
 

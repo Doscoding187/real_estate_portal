@@ -174,7 +174,7 @@ const documentStarterPacks: Array<{
       { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
       { documentCode: 'proof_of_income', documentLabel: 'Latest payslip or proof of income', isRequired: true },
       { documentCode: 'bank_statement', documentLabel: '3 months bank statements', isRequired: true },
-      { documentCode: 'pre_approval', documentLabel: 'Bond pre-approval', isRequired: false },
+      { documentCode: 'pre_approval', documentLabel: 'Bond pre-approval', isRequired: true },
     ],
   },
   {
@@ -189,9 +189,21 @@ const documentStarterPacks: Array<{
     ],
   },
   {
-    id: 'developer-handout',
-    label: 'Supporting pack',
-    description: 'Unit plans, site maps, specifications, and other files referrers can share.',
+    id: 'developer-application',
+    label: 'Developer application pack',
+    description: 'Developer-specific forms the referrer downloads, gets signed, and re-uploads.',
+    category: 'developer_document',
+    documents: [
+      { documentCode: 'sale_agreement', documentLabel: 'Sale agreement', isRequired: true },
+      { documentCode: 'custom', documentLabel: 'Building contract', isRequired: true },
+      { documentCode: 'custom', documentLabel: 'Price tracker / price schedule', isRequired: true },
+      { documentCode: 'signed_offer_to_purchase', documentLabel: 'Offer to purchase', isRequired: true },
+    ],
+  },
+  {
+    id: 'supporting',
+    label: 'Supporting document pack',
+    description: 'Reference files the referrer can share, but that do not block the application.',
     category: 'developer_document',
     documents: [
       { documentCode: 'custom', documentLabel: 'Unit / house plans', isRequired: false },
@@ -308,7 +320,7 @@ export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadine
       {statusBadge(Boolean(state.payoutMilestone), 'Payout trigger: Set', 'Payout trigger: Missing')}
       {statusBadge(Boolean(state.currencyCode), 'Payout currency: Set', 'Payout currency: Missing')}
       {statusBadge(state.hasActivePrimaryManager, 'Manager: Assigned', 'Manager: Missing')}
-      {statusBadge(state.requiredRequiredDocsCount > 0, 'Buyer docs: Ready', 'Buyer docs: Missing')}
+      {statusBadge(state.requiredRequiredDocsCount > 0, 'Application docs: Ready', 'Application docs: Missing')}
     </div>
   );
 }
@@ -363,9 +375,9 @@ function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null
       help: 'Every buyer needs an accountable handler.',
     },
     {
-      label: 'Add buyer document checklist',
+      label: 'Add application document checklist',
       done: state.requiredRequiredDocsCount > 0,
-      help: 'The submit flow needs at least one required buyer document.',
+      help: 'The deal checklist needs at least one required application document.',
     },
   ];
 
@@ -582,7 +594,7 @@ function DevelopmentProgramConfigPanel({
     );
   }
 
-  function addDocument(category: RequiredDocumentDraft['category']) {
+  function addDocument(category: RequiredDocumentDraft['category'], isRequired = true) {
     setDocuments(current => [
       ...current,
       {
@@ -591,14 +603,14 @@ function DevelopmentProgramConfigPanel({
         documentLabel: '',
         templateFileUrl: null,
         templateFileName: null,
-        isRequired: true,
+        isRequired,
         isActive: true,
         sortOrder: current.length,
       },
     ]);
   }
 
-  function addSupportingDocument(label: string) {
+  function addDeveloperDocument(label: string, isRequired: boolean) {
     setDocuments(current => [
       ...current,
       {
@@ -607,7 +619,7 @@ function DevelopmentProgramConfigPanel({
         documentLabel: label,
         templateFileUrl: null,
         templateFileName: null,
-        isRequired: false,
+        isRequired,
         isActive: true,
         sortOrder: current.length,
       },
@@ -695,8 +707,15 @@ function DevelopmentProgramConfigPanel({
     rows: Array<{ document: RequiredDocumentDraft; index: number }>;
     addLabel: string;
     sectionId: string;
+    role: 'developer_application' | 'supporting' | 'buyer_application';
   }) {
-    const packs = documentStarterPacks.filter(pack => pack.category === input.category);
+    const packs = documentStarterPacks.filter(pack => {
+      if (input.role === 'developer_application') return pack.id === 'developer-application';
+      if (input.role === 'supporting') return pack.id === 'supporting';
+      return pack.category === input.category;
+    });
+    const isSupportingSection = input.role === 'supporting';
+    const isDeveloperApplicationSection = input.role === 'developer_application';
 
     return (
       <Card id={input.sectionId}>
@@ -724,7 +743,33 @@ function DevelopmentProgramConfigPanel({
               ))}
             </div>
           ) : null}
-          {input.category === 'developer_document' ? (
+          {isDeveloperApplicationSection ? (
+            <div className="rounded border border-dashed border-slate-300 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Common developer application forms
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Add custom forms with the developer's own terminology. These are required and will
+                appear on the deal checklist for signing and re-upload.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {['Sale agreement', 'Building contract', 'Price tracker', 'House plan acknowledgement'].map(label => (
+                  <Button
+                    key={label}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => addDeveloperDocument(label, true)}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {isSupportingSection ? (
             <div className="rounded border border-dashed border-slate-300 bg-slate-50 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Common supporting files
@@ -740,7 +785,7 @@ function DevelopmentProgramConfigPanel({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => addSupportingDocument(label)}
+                    onClick={() => addDeveloperDocument(label, false)}
                   >
                     <Plus className="mr-1 h-3.5 w-3.5" />
                     {label}
@@ -791,12 +836,13 @@ function DevelopmentProgramConfigPanel({
                 />
 
                 <div className="flex items-center gap-2 rounded border px-2 text-xs">
-                  <span>{input.category === 'developer_document' ? 'Shareable' : 'Required'}</span>
+                  <span>{isSupportingSection ? 'Shareable' : 'Required'}</span>
                   <Switch
-                    checked={input.category === 'developer_document' ? document.isActive : document.isRequired}
+                    checked={isSupportingSection ? document.isActive : document.isRequired}
+                    disabled={isDeveloperApplicationSection}
                     onCheckedChange={checked =>
                       updateDocumentAtIndex(index, item =>
-                        input.category === 'developer_document'
+                        isSupportingSection
                           ? { ...item, isActive: checked }
                           : { ...item, isRequired: checked },
                       )
@@ -831,12 +877,13 @@ function DevelopmentProgramConfigPanel({
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-xs font-medium text-slate-700">
-                      Upload supporting file
+                      {isSupportingSection ? 'Upload supporting file' : 'Upload application template'}
                     </label>
                     <div className="rounded border border-slate-200 bg-slate-50 p-2">
                       <p className="mb-2 text-xs text-slate-600">
-                        Use this for development-specific files like plans, site maps,
-                        specifications, price lists, or terms.
+                        {isSupportingSection
+                          ? 'Use this for development-specific files like plans, site maps, specifications, price lists, or terms.'
+                          : 'Use this for developer-specific forms the referrer must download, get signed, and re-upload.'}
                       </p>
                       <div className="flex flex-wrap items-center gap-2">
                       <Input
@@ -880,12 +927,14 @@ function DevelopmentProgramConfigPanel({
                         className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
                       >
                         <Upload className="h-3 w-3" />
-                        Supporting file ready
+                        {isSupportingSection ? 'Supporting file ready' : 'Application template ready'}
                         {document.templateFileName ? ` (${document.templateFileName})` : ''}
                       </a>
                     ) : (
                       <p className="text-xs text-slate-500">
-                        No supporting file uploaded yet. The label can still be saved as a placeholder.
+                        {isSupportingSection
+                          ? 'No supporting file uploaded yet. The label can still be saved as a placeholder.'
+                          : 'No application template uploaded yet. Upload the developer-specific form before expecting referrers to download it.'}
                       </p>
                     )}
                   </div>
@@ -900,7 +949,10 @@ function DevelopmentProgramConfigPanel({
             </div>
           ) : null}
 
-          <Button variant="outline" onClick={() => addDocument(input.category)}>
+          <Button
+            variant="outline"
+            onClick={() => addDocument(input.category, !isSupportingSection)}
+          >
             <Plus className="mr-2 h-4 w-4" />
             {input.addLabel}
           </Button>
@@ -1341,19 +1393,33 @@ function DevelopmentProgramConfigPanel({
       </Card>
 
       {renderDocumentSection({
-        title: 'Supporting Pack',
+        title: 'Development Application Documents',
         description:
-          'Referrers can share or download these development-side documents for buyers, such as offer templates, sales packs, house plans, or development terms.',
+          'Required developer-specific forms that affect the deal application, such as sale agreements, building contracts, price trackers, or house plan acknowledgements.',
         category: 'developer_document',
         rows: documents
           .map((document, index) => ({ document, index }))
-          .filter(item => item.document.category === 'developer_document'),
-        addLabel: 'Add Supporting File',
+          .filter(item => item.document.category === 'developer_document' && item.document.isRequired),
+        addLabel: 'Add Application Document',
         sectionId: 'section-developer-docs',
+        role: 'developer_application',
       })}
 
       {renderDocumentSection({
-        title: 'Buyer Required Documents',
+        title: 'Supporting Documents',
+        description:
+          'Optional reference files referrers can download or share with buyers. These do not block application progress.',
+        category: 'developer_document',
+        rows: documents
+          .map((document, index) => ({ document, index }))
+          .filter(item => item.document.category === 'developer_document' && !item.document.isRequired),
+        addLabel: 'Add Supporting File',
+        sectionId: 'section-supporting-docs',
+        role: 'supporting',
+      })}
+
+      {renderDocumentSection({
+        title: 'Buyer Application Documents',
         description:
           'Buyers must provide these documents before the referral can move cleanly through qualification.',
         category: 'client_required_document',
@@ -1362,6 +1428,7 @@ function DevelopmentProgramConfigPanel({
           .filter(item => item.document.category === 'client_required_document'),
         addLabel: 'Add Client Document',
         sectionId: 'section-client-docs',
+        role: 'buyer_application',
       })}
 
       <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-white p-3">

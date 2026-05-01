@@ -302,6 +302,7 @@ async function getRequiredTemplateIdsForDevelopment(db: DbExecutor, developmentI
       and(
         eq(developmentRequiredDocuments.developmentId, developmentId),
         eq(developmentRequiredDocuments.isActive, 1),
+        eq(developmentRequiredDocuments.isRequired, 1),
       ),
     );
   return rows.map(row => Number(row.id));

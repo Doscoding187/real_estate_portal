@@ -43,9 +43,9 @@ export async function getDevelopmentRequiredDocumentSummary(
     const [docsRow] = await db
       .select({
         requiredDocsCount:
-          sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 AND ${developmentRequiredDocuments.category} = 'client_required_document' THEN 1 ELSE 0 END), 0)`,
+          sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 AND ${developmentRequiredDocuments.isRequired} = 1 THEN 1 ELSE 0 END), 0)`,
         requiredRequiredDocsCount:
-          sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 AND ${developmentRequiredDocuments.category} = 'client_required_document' AND ${developmentRequiredDocuments.isRequired} = 1 THEN 1 ELSE 0 END), 0)`,
+          sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 AND ${developmentRequiredDocuments.isRequired} = 1 THEN 1 ELSE 0 END), 0)`,
       })
       .from(developmentRequiredDocuments)
       .where(eq(developmentRequiredDocuments.developmentId, developmentId));

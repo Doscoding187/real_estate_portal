@@ -14,6 +14,7 @@ type ProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    category?: 'developer_document' | 'client_required_document';
     templateFileUrl?: string | null;
     templateFileName?: string | null;
     isRequired: boolean;
@@ -122,8 +123,12 @@ export function ProgramRequirementsDialog({
               className="flex items-start justify-between gap-2 rounded border p-2"
             >
               <div>
-                <p className="font-medium">{document.documentLabel}</p>
-                <p className="text-xs text-slate-500">{document.documentCode}</p>
+                  <p className="font-medium">{document.documentLabel}</p>
+                  <p className="text-xs text-slate-500">
+                    {document.category === 'developer_document'
+                      ? 'Download, sign, and re-upload'
+                      : document.documentCode}
+                  </p>
                 {document.templateFileUrl ? (
                   <a
                     href={document.templateFileUrl}

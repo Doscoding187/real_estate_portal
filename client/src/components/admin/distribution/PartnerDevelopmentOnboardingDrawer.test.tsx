@@ -179,7 +179,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByText('Referral reward: Set')).toBeInTheDocument();
     expect(screen.getByText('Payout currency: Set')).toBeInTheDocument();
     expect(screen.getByText('Manager: Missing')).toBeInTheDocument();
-    expect(screen.getByText('Buyer docs: Ready')).toBeInTheDocument();
+    expect(screen.getByText('Application docs: Ready')).toBeInTheDocument();
   });
 
   it('separates developer and client document configuration sections', () => {
@@ -233,8 +233,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    expect(screen.getByText('Supporting Pack')).toBeInTheDocument();
-    expect(screen.getByText('Buyer Required Documents')).toBeInTheDocument();
+    expect(screen.getByText('Development Application Documents')).toBeInTheDocument();
+    expect(screen.getByText('Supporting Documents')).toBeInTheDocument();
+    expect(screen.getByText('Buyer Application Documents')).toBeInTheDocument();
     expect(screen.getByDisplayValue('House Plan')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bank Statements')).toBeInTheDocument();
   });
@@ -298,7 +299,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
               category: 'client_required_document',
               documentCode: 'pre_approval',
               documentLabel: 'Bond pre-approval',
-              isRequired: false,
+              isRequired: true,
             }),
           ]),
         }),
@@ -336,6 +337,39 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByText('Upload supporting file')).toBeInTheDocument();
     expect(
       screen.getByText(/No supporting file uploaded yet\. The label can still be saved as a placeholder\./i),
+    ).toBeInTheDocument();
+  });
+
+  it('adds required developer application documents for signing and re-upload', async () => {
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /building contract/i }));
+
+    expect(screen.getByDisplayValue('Building contract')).toBeInTheDocument();
+    expect(screen.getByText('Upload application template')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Upload the developer-specific form before expecting referrers to download it\./i),
     ).toBeInTheDocument();
   });
 
