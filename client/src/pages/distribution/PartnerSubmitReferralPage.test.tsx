@@ -99,6 +99,22 @@ describe('PartnerSubmitReferralPage', () => {
               {
                 templateId: 1,
                 documentLabel: 'Buyer ID document',
+                category: 'client_required_document',
+              },
+              {
+                templateId: 2,
+                documentLabel: 'Developer sale agreement',
+                category: 'developer_document',
+                templateFileUrl: 'https://example.com/sale-agreement.pdf',
+                templateFileName: 'sale-agreement.pdf',
+              },
+            ],
+            sourceDocuments: [
+              {
+                templateId: 3,
+                documentLabel: 'Unit / house plans',
+                fileUrl: 'https://example.com/plans.pdf',
+                fileName: 'plans.pdf',
               },
             ],
             opportunity: {
@@ -222,5 +238,22 @@ describe('PartnerSubmitReferralPage', () => {
 
     expect(screen.getByText('Ready Estate')).toBeInTheDocument();
     expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
+  });
+
+  it('separates buyer, developer application, and supporting documents in the wizard', () => {
+    mockSubmitReferralUseMutation.mockReturnValue({ isPending: false, mutate: vi.fn() });
+
+    render(<PartnerSubmitReferralPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByText('Buyer application documents')).toBeInTheDocument();
+    expect(screen.getByText('Developer application documents')).toBeInTheDocument();
+    expect(screen.getByText('Supporting documents')).toBeInTheDocument();
+    expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
+    expect(screen.getByText('Developer sale agreement')).toBeInTheDocument();
+    expect(screen.getByText('Unit / house plans')).toBeInTheDocument();
+    expect(screen.getByText(/Bond buyers usually need income proof/i)).toBeInTheDocument();
   });
 });

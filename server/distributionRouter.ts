@@ -68,6 +68,7 @@ import {
   createReferralDeal,
   getMyReferralDeal,
   listMyReferralDeals,
+  submitReferralDealDocument,
 } from './services/distributionReferralSubmissionService';
 import {
   createAffordabilityAssessment,
@@ -6407,6 +6408,34 @@ const partnerDistributionRouter = router({
         actorUserId: Number(ctx.user!.id),
         actorRole: String(ctx.user!.role || ''),
         dealId: input.dealId,
+      });
+    }),
+
+  submitReferralDocument: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        templateId: z.number().int().positive(),
+        submittedFileUrl: z.string().trim().url().max(2048),
+        submittedFileName: z.string().trim().max(255).nullable().optional(),
+        notes: z.string().trim().max(1000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await submitReferralDealDocument({
+        actorUserId: Number(ctx.user!.id),
+        actorRole: String(ctx.user!.role || ''),
+        dealId: input.dealId,
+        templateId: input.templateId,
+        submittedFileUrl: input.submittedFileUrl,
+        submittedFileName: input.submittedFileName ?? null,
+        notes: input.notes ?? null,
       });
     }),
 

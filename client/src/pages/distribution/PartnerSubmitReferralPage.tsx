@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { CheckCircle2, FileCheck2, Loader2, UserRound } from 'lucide-react';
+import { CheckCircle2, Download, FileCheck2, Loader2, UserRound } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ export default function PartnerSubmitReferralPage() {
   const [affordabilitySnapshot, setAffordabilitySnapshot] = useState('');
   const [notes, setNotes] = useState('');
   const [clientReference, setClientReference] = useState('');
+  const [buyerRoute, setBuyerRoute] = useState<'bond' | 'cash' | 'investor'>('bond');
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [eligibilityBlockers, setEligibilityBlockers] = useState<string[]>([]);
@@ -166,6 +167,13 @@ export default function PartnerSubmitReferralPage() {
     [availableItems, selectedDevelopmentId],
   );
   const selectedRequiredDocuments = selectedDevelopment?.requiredDocuments || [];
+  const selectedBuyerDocuments = selectedRequiredDocuments.filter(
+    (document: any) => document.category !== 'developer_document',
+  );
+  const selectedDeveloperApplicationDocuments = selectedRequiredDocuments.filter(
+    (document: any) => document.category === 'developer_document',
+  );
+  const selectedSupportingDocuments = selectedDevelopment?.sourceDocuments || [];
   const selectedIsReady =
     selectedDevelopment?.opportunity?.status === 'ready' ||
     (Boolean(selectedDevelopment?.program?.isActive) &&
@@ -180,6 +188,16 @@ export default function PartnerSubmitReferralPage() {
     .filter(Boolean)
     .join('\n');
   const steps = ['Buyer basics', 'Buyer fit', 'Documents', 'Review'];
+
+  function buyerRouteCopy() {
+    if (buyerRoute === 'cash') {
+      return 'Cash buyers usually need ID, proof of address, and proof of funds or bank confirmation. Developer forms still need to be signed and returned.';
+    }
+    if (buyerRoute === 'investor') {
+      return 'Investor buyers usually need affordability or proof-of-funds evidence plus the signed developer application pack.';
+    }
+    return 'Bond buyers usually need income proof, bank statements, and pre-approval or an affordability note before the manager can qualify them.';
+  }
 
   function friendlyBlockerMessage(reason: EligibilityReason) {
     const code = String(reason.code || '').toUpperCase();
@@ -391,6 +409,30 @@ export default function PartnerSubmitReferralPage() {
                         value={buyerIntent}
                         onChange={event => setBuyerIntent(event.target.value)}
                       />
+                      <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Buyer route</p>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                          {[
+                            { value: 'bond', label: 'Bond finance' },
+                            { value: 'cash', label: 'Cash buyer' },
+                            { value: 'investor', label: 'Investor' },
+                          ].map(option => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`rounded-md border px-3 py-2 text-xs font-semibold ${
+                                buyerRoute === option.value
+                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  : 'border-primary/15 bg-white text-foreground'
+                              }`}
+                              onClick={() => setBuyerRoute(option.value as typeof buyerRoute)}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">{buyerRouteCopy()}</p>
+                      </div>
                       <Input
                         placeholder="Preferred area or suburb"
                         value={preferredArea}
@@ -414,17 +456,91 @@ export default function PartnerSubmitReferralPage() {
                       <div className="rounded-md border border-primary/15 bg-primary/5 p-3 text-sm">
                         <p className="flex items-center gap-2 font-medium text-foreground">
                           <FileCheck2 className="h-4 w-4 text-primary" />
-                          Application documents
+                          Buyer application documents
                         </p>
-                        {selectedRequiredDocuments.length ? (
+                        <p className="mt-1 text-xs text-muted-foreground">{buyerRouteCopy()}</p>
+                        {selectedBuyerDocuments.length ? (
                           <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                            {selectedRequiredDocuments.map((document: any) => (
+                            {selectedBuyerDocuments.map((document: any) => (
                               <li key={document.templateId}>{document.documentLabel}</li>
                             ))}
                           </ul>
                         ) : (
                           <p className="mt-2 text-xs text-slate-600">
-                            No application document checklist is published yet.
+                            No buyer document checklist is published yet.
+                          </p>
+                        )}
+                      </div>
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+                        <p className="flex items-center gap-2 font-medium text-amber-950">
+                          <FileCheck2 className="h-4 w-4 text-amber-700" />
+                          Developer application documents
+                        </p>
+                        <p className="mt-1 text-xs text-amber-800">
+                          Download these templates, get the buyer to sign where needed, then upload the completed files on the referral detail page after submission.
+                        </p>
+                        {selectedDeveloperApplicationDocuments.length ? (
+                          <div className="mt-2 space-y-2">
+                            {selectedDeveloperApplicationDocuments.map((document: any) => (
+                              <div
+                                key={document.templateId}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded border border-amber-200 bg-white px-2 py-2 text-xs"
+                              >
+                                <span className="font-medium text-foreground">{document.documentLabel}</span>
+                                {document.templateFileUrl ? (
+                                  <a
+                                    href={document.templateFileUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                    Download template
+                                  </a>
+                                ) : (
+                                  <span className="text-muted-foreground">Template pending</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-xs text-amber-800">
+                            No developer application templates have been published yet.
+                          </p>
+                        )}
+                      </div>
+                      <div className="rounded-md border border-primary/15 bg-white p-3 text-sm">
+                        <p className="flex items-center gap-2 font-medium text-foreground">
+                          <Download className="h-4 w-4 text-primary" />
+                          Supporting documents
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          These files are for buyer education and sharing. They do not block the application.
+                        </p>
+                        {selectedSupportingDocuments.length ? (
+                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            {selectedSupportingDocuments.map((document: any) => (
+                              <a
+                                key={document.templateId}
+                                href={document.fileUrl || '#'}
+                                target={document.fileUrl ? '_blank' : undefined}
+                                rel="noreferrer"
+                                className={`rounded border border-primary/15 px-2 py-2 text-xs ${
+                                  document.fileUrl
+                                    ? 'text-primary hover:bg-primary/5'
+                                    : 'pointer-events-none text-muted-foreground'
+                                }`}
+                              >
+                                {document.documentLabel}
+                                <span className="block text-[10px] text-muted-foreground">
+                                  {document.fileName || 'File pending upload'}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            No supporting files have been uploaded yet.
                           </p>
                         )}
                       </div>
@@ -447,8 +563,10 @@ export default function PartnerSubmitReferralPage() {
                       <p className="font-medium text-foreground">Review buyer submission</p>
                       <p className="mt-2">Buyer: {buyerName || buyerPhone || buyerEmail || 'Not captured yet'}</p>
                       <p>Opportunity: {selectedDevelopment?.developmentName || 'Not selected yet'}</p>
-                      <p>Buyer fit: {[buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}</p>
-                      <p>Application documents: {selectedRequiredDocuments.length || 0}</p>
+                      <p>Buyer fit: {[buyerRoute, buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}</p>
+                      <p>Buyer documents: {selectedBuyerDocuments.length || 0}</p>
+                      <p>Developer application documents: {selectedDeveloperApplicationDocuments.length || 0}</p>
+                      <p>Supporting files: {selectedSupportingDocuments.length || 0}</p>
                     </div>
                   ) : null}
 

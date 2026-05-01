@@ -26,6 +26,7 @@ export type ProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
+    category?: 'developer_document' | 'client_required_document';
     templateFileUrl?: string | null;
     templateFileName?: string | null;
     isRequired: boolean;
