@@ -26,7 +26,7 @@ export function DevelopmentHeader({
       {/* Meta Badges Row */}
       <div className="flex flex-wrap items-center gap-2">
         {isNewLaunch && (
-          <Badge className="rounded-pill bg-blue-500 hover:bg-blue-600 text-white border-none px-3 py-1.5 text-xs font-bold shadow-sm tracking-wide">
+        <Badge className="rounded-pill bg-primary hover:bg-[var(--brand-blue-hover)] text-primary-foreground border-none px-3 py-1.5 text-xs font-bold shadow-sm tracking-wide">
             NEW LAUNCH
           </Badge>
         )}
@@ -66,7 +66,7 @@ export function DevelopmentHeader({
             </button>
             <button
               onClick={onShare}
-              className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-all shadow-sm"
+          className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-primary transition-all shadow-sm"
               aria-label="Share"
             >
               <Share2 className="h-4 w-4" />
@@ -75,8 +75,9 @@ export function DevelopmentHeader({
 
           {/* Primary CTA */}
           <Button
+            variant="conversion"
             onClick={onContact}
-            className="rounded-pill bg-orange-500 hover:bg-orange-600 text-white px-6 h-10 text-sm font-semibold shadow-sm transition-all"
+            className="rounded-pill px-6 h-10 text-sm font-semibold shadow-sm transition-all"
           >
             Contact Developer
           </Button>

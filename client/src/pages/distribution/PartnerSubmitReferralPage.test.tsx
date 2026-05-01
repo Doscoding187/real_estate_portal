@@ -73,6 +73,7 @@ vi.mock('@/lib/trpc', () => ({
 describe('PartnerSubmitReferralPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
 
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
@@ -93,6 +94,18 @@ describe('PartnerSubmitReferralPage', () => {
             program: {
               isActive: true,
               isReferralEnabled: true,
+            },
+            requiredDocuments: [
+              {
+                templateId: 1,
+                documentLabel: 'Buyer ID document',
+              },
+            ],
+            opportunity: {
+              status: 'ready',
+              reasonCodes: [],
+              nextAction: 'submit_referral',
+              friendlyMessage: 'Ready for buyer referrals.',
             },
           },
         ],
@@ -130,7 +143,10 @@ describe('PartnerSubmitReferralPage', () => {
     });
     
     const mainArea = screen.getByRole('main');
-    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Referral' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Buyer' }));
 
     await waitFor(() =>
       expect(mutateSpy).toHaveBeenCalledWith(
@@ -140,9 +156,7 @@ describe('PartnerSubmitReferralPage', () => {
         }),
       ),
     );
-    expect(
-      screen.getByText('Referrals are currently disabled for this development.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Referrals are currently closed for this opportunity.')).toBeInTheDocument();
   });
 
   it('shows duplicate referral action and links to existing deal', async () => {
@@ -166,7 +180,10 @@ describe('PartnerSubmitReferralPage', () => {
     });
     
     const mainArea = screen.getByRole('main');
-    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Referral' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Buyer' }));
 
     const viewExistingButton = await screen.findByRole('button', {
       name: 'View existing referral',
@@ -174,5 +191,36 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.click(viewExistingButton);
 
     expect(mockSetLocation).toHaveBeenCalledWith('/distribution/partner/referrals/77');
+  });
+
+  it('only shows submit-ready opportunities in the buyer wizard', () => {
+    mockListEligibleUseQuery.mockReturnValue({
+      data: {
+        items: [
+          {
+            developmentId: 101,
+            developmentName: 'Ready Estate',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: { isActive: true, isReferralEnabled: true },
+            requiredDocuments: [],
+            opportunity: {
+              status: 'ready',
+              reasonCodes: [],
+              nextAction: 'submit_referral',
+              friendlyMessage: 'Ready for buyer referrals.',
+            },
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
+    mockSubmitReferralUseMutation.mockReturnValue({ isPending: false, mutate: vi.fn() });
+
+    render(<PartnerSubmitReferralPage />);
+
+    expect(screen.getByText('Ready Estate')).toBeInTheDocument();
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
   });
 });

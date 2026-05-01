@@ -1079,13 +1079,14 @@ export function EnhancedNavbar() {
             <Link href="/advertise">
               <Button
                 size="sm"
+                variant="conversion"
                 className={`
                   ${
                     isAdvertisePage
-                      ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2'
-                      : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
+                      ? 'ring-2 ring-conversion/40 ring-offset-2'
+                      : ''
                   }
-                  text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600
+                  hover:scale-105 transition-all duration-200 font-bold
                 `}
                 aria-current={isAdvertisePage ? 'page' : undefined}
               >
@@ -1196,7 +1197,7 @@ export function EnhancedNavbar() {
                 <Link href="/advertise">
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-conversion px-3 py-3 text-sm font-semibold text-conversion-foreground shadow-sm transition-colors hover:bg-conversion-hover"
                   >
                     <Megaphone className="h-4 w-4" />
                     Advertise
@@ -1205,7 +1206,7 @@ export function EnhancedNavbar() {
                 <Link href="/explore/home">
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
                   >
                     <TrendingUp className="h-4 w-4" />
                     Explore

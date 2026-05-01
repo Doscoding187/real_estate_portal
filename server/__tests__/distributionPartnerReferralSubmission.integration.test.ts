@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
@@ -8,7 +8,10 @@ import {
   affordabilityAssessments,
   affordabilityMatchSnapshots,
   developerBrandProfiles,
+  developmentRequiredDocuments,
   developmentManagerAssignments,
+  distributionBrandPartnerships,
+  distributionDevelopmentAccess,
   developments,
   distributionDealDocuments,
   distributionDealEvents,
@@ -29,10 +32,13 @@ const createdState = {
   brandProfileIds: [] as number[],
   developmentIds: [] as number[],
   programIds: [] as number[],
+  brandPartnershipIds: [] as number[],
+  accessIds: [] as number[],
   assignmentIds: [] as number[],
   dealIds: [] as number[],
   assessmentIds: [] as string[],
   snapshotIds: [] as string[],
+  requiredDocumentIds: [] as number[],
 };
 
 function uniqueIds(values: number[]) {
@@ -128,6 +134,64 @@ async function insertProgram(input: {
   return programId;
 }
 
+async function insertNetworkAccess(developmentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [development] = await db
+    .select({ brandProfileId: developments.developerBrandProfileId })
+    .from(developments)
+    .where(eq(developments.id, developmentId))
+    .limit(1);
+  const brandProfileId = Number(development?.brandProfileId || 0);
+  if (!brandProfileId) throw new Error('Development brand profile missing');
+
+  const [existingPartnership] = await db
+    .select({ id: distributionBrandPartnerships.id })
+    .from(distributionBrandPartnerships)
+    .where(eq(distributionBrandPartnerships.brandProfileId, brandProfileId))
+    .limit(1);
+
+  let brandPartnershipId = Number(existingPartnership?.id || 0);
+  if (!brandPartnershipId) {
+    const [partnershipInsert] = await db.insert(distributionBrandPartnerships).values({
+      brandProfileId,
+      status: 'active',
+      partneredAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    });
+    brandPartnershipId = Number((partnershipInsert as any).insertId || 0);
+    createdState.brandPartnershipIds.push(brandPartnershipId);
+  }
+
+  const [existingAccess] = await db
+    .select({ id: distributionDevelopmentAccess.id })
+    .from(distributionDevelopmentAccess)
+    .where(
+      and(
+        eq(distributionDevelopmentAccess.developmentId, developmentId),
+        eq(distributionDevelopmentAccess.brandPartnershipId, brandPartnershipId),
+      ),
+    )
+    .limit(1);
+
+  const existingAccessId = Number(existingAccess?.id || 0);
+  if (existingAccessId) return existingAccessId;
+
+  const [accessInsert] = await db.insert(distributionDevelopmentAccess).values({
+    developmentId,
+    brandPartnershipId,
+    brandProfileId,
+    status: 'included',
+    submissionAllowed: 1,
+    excludedByMandate: 0,
+    excludedByExclusivity: 0,
+    includedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  });
+  const accessId = Number((accessInsert as any).insertId || 0);
+  createdState.accessIds.push(accessId);
+  return accessId;
+}
+
 async function insertManagerAssignment(input: {
   developmentId: number;
   managerUserId: number;
@@ -149,6 +213,25 @@ async function insertManagerAssignment(input: {
   const assignmentId = Number((insertResult as any).insertId || 0);
   createdState.assignmentIds.push(assignmentId);
   return assignmentId;
+}
+
+async function insertRequiredDocument(developmentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [insertResult] = await db.insert(developmentRequiredDocuments).values({
+    developmentId,
+    documentCode: 'id_document',
+    documentLabel: 'Buyer ID document',
+    category: 'client_required_document',
+    isRequired: 1,
+    isActive: 1,
+    sortOrder: 1,
+  });
+
+  const documentId = Number((insertResult as any).insertId || 0);
+  createdState.requiredDocumentIds.push(documentId);
+  return documentId;
 }
 
 async function insertAssessment(input: {
@@ -236,6 +319,25 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
         .where(inArray(developmentManagerAssignments.id, assignmentIds));
     }
 
+    const requiredDocumentIds = uniqueIds(createdState.requiredDocumentIds);
+    if (requiredDocumentIds.length) {
+      await db
+        .delete(developmentRequiredDocuments)
+        .where(inArray(developmentRequiredDocuments.id, requiredDocumentIds));
+    }
+
+    const accessIds = uniqueIds(createdState.accessIds);
+    if (accessIds.length) {
+      await db.delete(distributionDevelopmentAccess).where(inArray(distributionDevelopmentAccess.id, accessIds));
+    }
+
+    const brandPartnershipIds = uniqueIds(createdState.brandPartnershipIds);
+    if (brandPartnershipIds.length) {
+      await db
+        .delete(distributionBrandPartnerships)
+        .where(inArray(distributionBrandPartnerships.id, brandPartnershipIds));
+    }
+
     const programIds = uniqueIds(createdState.programIds);
     if (programIds.length) {
       await db.delete(distributionPrograms).where(inArray(distributionPrograms.id, programIds));
@@ -262,10 +364,13 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.brandProfileIds = [];
     createdState.developmentIds = [];
     createdState.programIds = [];
+    createdState.brandPartnershipIds = [];
+    createdState.accessIds = [];
     createdState.assignmentIds = [];
     createdState.dealIds = [];
     createdState.assessmentIds = [];
     createdState.snapshotIds = [];
+    createdState.requiredDocumentIds = [];
   });
 
   it('blocks submission when program is inactive or referrals are disabled', async () => {
@@ -341,6 +446,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isPrimary: true,
       isActive: true,
     });
+    await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
 
     const result = await caller.distribution.partner.submitReferral({
       developmentId,
@@ -373,12 +480,16 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isPrimary: false,
       isActive: true,
     });
+    await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
     await insertManagerAssignment({
       developmentId,
       managerUserId: primaryManagerId,
       isPrimary: true,
       isActive: true,
     });
+    await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
 
     const result = await caller.distribution.partner.submitReferral({
       developmentId,
@@ -407,6 +518,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isPrimary: true,
       isActive: true,
     });
+    await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
 
     const clientReference = `CLIENT-REF-${Date.now()}`;
     const first = await caller.distribution.partner.submitReferral({
@@ -444,6 +557,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isPrimary: true,
       isActive: true,
     });
+    await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
 
     const assessment = await insertAssessment({
       actorUserId: ownerUserId,
@@ -483,6 +598,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isPrimary: true,
       isActive: true,
     });
+    await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
 
     const assessment = await insertAssessment({
       actorUserId,
@@ -567,6 +684,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isPrimary: true,
       isActive: true,
     });
+    await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
 
     const actorADeal = await callerA.distribution.partner.submitReferral({
       developmentId,

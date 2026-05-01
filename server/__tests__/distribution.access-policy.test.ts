@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOpportunityReadiness,
   deriveInventoryState,
   summarizeDistributionBlockers,
   type DevelopmentDistributionAccessEvaluation,
@@ -22,6 +23,7 @@ function buildEvaluation(
     excludedByMandate: false,
     excludedByExclusivity: false,
     programExists: true,
+    programId: 40,
     programActive: true,
     referralEnabled: true,
     readiness: {
@@ -32,6 +34,12 @@ function buildEvaluation(
     inventoryState: 'enabled',
     submitReady: true,
     reasons: [],
+    opportunity: {
+      status: 'ready',
+      reasonCodes: [],
+      nextAction: 'submit_referral',
+      friendlyMessage: 'Ready for buyer referrals.',
+    },
     legacyFallbackUsed: false,
     ...overrides,
   };
@@ -115,5 +123,18 @@ describe('distribution access policy', () => {
     expect(summary.programBlockers).toEqual(
       expect.arrayContaining(['program_inactive', 'program_referral_disabled']),
     );
+  });
+
+  it('maps canonical blockers to referrer-safe opportunity metadata', () => {
+    const opportunity = buildOpportunityReadiness({
+      inventoryState: 'accessible',
+      reasons: ['readiness_primaryManagerAssignment', 'readiness_requiredDocuments'],
+    });
+
+    expect(opportunity.status).toBe('pending_setup');
+    expect(opportunity.reasonCodes).toEqual(
+      expect.arrayContaining(['NO_MANAGER_ASSIGNED', 'REQUIRED_DOCS_MISSING']),
+    );
+    expect(opportunity.friendlyMessage).not.toContain('readiness_');
   });
 });

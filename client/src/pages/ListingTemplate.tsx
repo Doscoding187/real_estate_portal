@@ -330,9 +330,9 @@ export default function ListingTemplate() {
                 </div>
 
                 <div className="space-y-3">
-                  <Button className="w-full" size="lg">
-                    Contact Agent
-                  </Button>
+              <Button variant="conversion" className="w-full" size="lg">
+                Contact Agent
+              </Button>
                   <Button variant="outline" className="w-full" size="lg">
                     <Heart className="h-5 w-5 mr-2" />
                     Save Property

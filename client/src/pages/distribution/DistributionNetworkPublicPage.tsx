@@ -200,7 +200,7 @@ export default function DistributionNetworkPublicPage() {
           <div className="container flex h-16 items-center justify-between">
             <Link href="/">
               <span className="flex cursor-pointer items-center gap-2 text-lg font-bold text-slate-900">
-                <Building2 className="h-5 w-5 text-blue-600" />
+                <Building2 className="h-5 w-5 text-primary" />
                 Property Listify
               </span>
             </Link>
@@ -216,7 +216,7 @@ export default function DistributionNetworkPublicPage() {
               </Button>
               <Button
                 size="sm"
-                className="border-0 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white hover:opacity-95"
+                variant="conversion"
                 onClick={() => revealAndScrollToForm()}
               >
                 Apply to Join
@@ -224,7 +224,7 @@ export default function DistributionNetworkPublicPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="hidden border-blue-200/70 text-blue-700 sm:inline-flex hover:bg-blue-50"
+                className="hidden border-primary/20 text-primary sm:inline-flex hover:bg-primary/5"
                 onClick={() => setLocation(REFERRAL_LOGIN_PATH)}
               >
                 Referrer Login
@@ -251,18 +251,18 @@ export default function DistributionNetworkPublicPage() {
             id="distribution-network-hero"
             className="relative overflow-hidden pb-12 pt-12 md:pb-16 md:pt-20 bg-slate-900 text-center"
           >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(14,165,233,0.15),transparent_40%),radial-gradient(circle_at_0%_30%,rgba(37,99,235,0.2),transparent_35%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(2,132,199,0.15),transparent_40%),radial-gradient(circle_at_0%_30%,rgba(0,92,168,0.22),transparent_35%)]" />
 
             <div className="container relative text-center">
-              <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-1.5 text-sm font-semibold tracking-wide text-blue-300 uppercase">
-                <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+              <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-semibold tracking-wide text-sky-200 uppercase">
+                <span className="h-2 w-2 rounded-full bg-conversion animate-pulse" />
                 Referral Network Now Open
               </div>
 
               <h1 className="mx-auto mb-6 max-w-5xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-5xl">
                 You Already Know Buyers.
                 <br />
-                <span className="bg-[linear-gradient(135deg,#67e8f9,#3b82f6)] bg-clip-text text-transparent">
+                <span className="bg-[linear-gradient(135deg,#67e8f9,var(--brand-blue))] bg-clip-text text-transparent">
                   Get Paid When They Buy Property.
                 </span>
               </h1>
@@ -287,7 +287,8 @@ export default function DistributionNetworkPublicPage() {
               <div className="mx-auto mb-4 flex w-full max-w-md flex-col items-center justify-center gap-4 sm:max-w-none sm:flex-row">
                 <Button
                   size="lg"
-                  className="h-14 border-0 bg-[linear-gradient(135deg,#3b82f6,#0ea5e9)] px-10 text-base font-bold text-white shadow-[0_12px_28px_-14px_rgba(59,130,246,0.6)] sm:w-auto hover:opacity-90 transition-transform hover:-translate-y-0.5"
+                  variant="conversion"
+                  className="h-14 px-10 text-base font-bold sm:w-auto transition-transform hover:-translate-y-0.5"
                   onClick={() => revealAndScrollToForm()}
                 >
                   Start Referring Now
@@ -367,7 +368,7 @@ export default function DistributionNetworkPublicPage() {
             <div className="container">
               <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
                 <div className="max-w-xl">
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
                     Smart Matching Tool
                   </div>
                   <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl leading-tight mb-5">
@@ -377,7 +378,7 @@ export default function DistributionNetworkPublicPage() {
                     Tell us about the buyer â€” income, location, bedroom needs â€” and we instantly
                     show you which developments fit and your estimated payout.
                   </p>
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg text-slate-700 font-medium">
+                  <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg text-slate-700 font-medium">
                     You don't need to know property details. You just need to know people. We handle
                     the rest.
                   </div>
@@ -394,7 +395,7 @@ export default function DistributionNetworkPublicPage() {
                       </label>
                       <div className="relative">
                         <select
-                          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                           value={matchIncome}
                           onChange={e => setMatchIncome(e.target.value)}
                         >
@@ -415,7 +416,7 @@ export default function DistributionNetworkPublicPage() {
                       </label>
                       <div className="relative">
                         <select
-                          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                           value={matchArea}
                           onChange={e => setMatchArea(e.target.value)}
                         >
@@ -464,7 +465,7 @@ export default function DistributionNetworkPublicPage() {
                               onClick={() => toggleBed(bed)}
                               className={`px-3.5 py-2 rounded-lg text-xs font-bold border transition-all select-none ${
                                 active
-                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-700'
                               }`}
                             >
@@ -508,7 +509,7 @@ export default function DistributionNetworkPublicPage() {
                           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
                             Potential Referral Fee
                           </p>
-                          <p className="text-2xl font-black text-blue-600">{matcherResult.payout}</p>
+                      <p className="text-2xl font-black text-conversion">{matcherResult.payout}</p>
                         </div>
                       </>
                     )}
@@ -545,7 +546,7 @@ export default function DistributionNetworkPublicPage() {
               <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="border-slate-200 bg-white hover:border-blue-300 transition-colors shadow-sm">
                   <CardContent className="p-6">
-                    <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                      <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Users className="h-5 w-5" />
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">
@@ -635,11 +636,11 @@ export default function DistributionNetworkPublicPage() {
                     const qualifyingThreshold = calculateQualifyingIncome(priceFrom);
 
                     const bgGradients = [
-                      'linear-gradient(140deg, #0f172a 0%, #1e3a8a 100%)',
+                      'linear-gradient(140deg, #0f172a 0%, var(--brand-blue) 100%)',
                       'linear-gradient(140deg, #064e3b 0%, #047857 100%)',
-                      'linear-gradient(140deg, #312e81 0%, #4f46e5 100%)',
+                      'linear-gradient(140deg, #312e81 0%, var(--info) 100%)',
                       'linear-gradient(140deg, #451a03 0%, #b45309 100%)',
-                      'linear-gradient(140deg, #172554 0%, #2563eb 100%)',
+                      'linear-gradient(140deg, #172554 0%, var(--brand-blue) 100%)',
                     ];
 
                     const defaultBg = bgGradients[i % bgGradients.length];
@@ -710,8 +711,8 @@ export default function DistributionNetworkPublicPage() {
                   })}
 
                   {/* Permanent CTA slot â€” always shown as the 6th card */}
-                  <div className="relative rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-slate-50 flex flex-col justify-center items-center text-center p-8 hover:border-blue-400 hover:shadow-md transition-all">
-                    <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center text-white mb-4 shadow-md">
+                  <div className="relative rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-slate-50 flex flex-col justify-center items-center text-center p-8 hover:border-primary/40 hover:shadow-md transition-all">
+                    <div className="h-14 w-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground mb-4 shadow-md">
                       <Unlock className="h-6 w-6" />
                     </div>
                     <h3 className="text-base font-bold text-slate-900 mb-2">Unlock More Developments</h3>
@@ -719,7 +720,8 @@ export default function DistributionNetworkPublicPage() {
                       Approved partners get access to our full portfolio. Apply to see everything available in your area.
                     </p>
                     <Button
-                      className="bg-blue-600 text-white hover:bg-blue-700 w-full font-bold"
+                      variant="conversion"
+                      className="w-full font-bold"
                       onClick={() => revealAndScrollToForm()}
                     >
                       Apply to Join
@@ -752,7 +754,7 @@ export default function DistributionNetworkPublicPage() {
                   <div className="hidden lg:block absolute top-8 left-[12%] right-[12%] h-[2px] bg-slate-200 border-t-2 border-dashed border-slate-300 z-0"></div>
 
                   <div className="relative z-10 text-center px-4">
-                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-slate-100 shadow-sm text-blue-600 font-black text-xl">
+                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-slate-100 shadow-sm text-primary font-black text-xl">
                       1
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">Know a buyer</h3>
@@ -763,7 +765,7 @@ export default function DistributionNetworkPublicPage() {
                   </div>
 
                   <div className="relative z-10 text-center px-4">
-                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-slate-100 shadow-sm text-blue-600 font-black text-xl">
+                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-slate-100 shadow-sm text-primary font-black text-xl">
                       2
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">
@@ -776,7 +778,7 @@ export default function DistributionNetworkPublicPage() {
                   </div>
 
                   <div className="relative z-10 text-center px-4">
-                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2563eb,#06b6d4)] border-[6px] border-blue-100 shadow-md text-white font-black text-xl">
+                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary border-[6px] border-primary/10 shadow-md text-primary-foreground font-black text-xl">
                       3
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">We qualify + match</h3>
@@ -851,7 +853,7 @@ export default function DistributionNetworkPublicPage() {
               <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3 mb-10">
                 <Card className="border-slate-200 bg-white shadow-sm hover:border-blue-200 transition-colors">
                   <CardContent className="p-6 sm:p-8">
-                    <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                    <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-primary">
                       Payout certainty
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">
@@ -866,7 +868,7 @@ export default function DistributionNetworkPublicPage() {
 
                 <Card className="border-slate-200 bg-white shadow-sm hover:border-blue-200 transition-colors">
                   <CardContent className="p-6 sm:p-8">
-                    <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                    <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-primary">
                       Settlement gate
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">
@@ -881,7 +883,7 @@ export default function DistributionNetworkPublicPage() {
 
                 <Card className="border-slate-200 bg-white shadow-sm hover:border-blue-200 transition-colors">
                   <CardContent className="p-6 sm:p-8">
-                    <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                    <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-primary">
                       Visibility
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">Clear Stage Tracking</h3>
@@ -897,7 +899,7 @@ export default function DistributionNetworkPublicPage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 block">
                   Maximum referral payout per transaction
                 </span>
-                <div className="text-5xl sm:text-6xl font-black text-blue-600 tracking-tight mb-4">
+                <div className="text-5xl sm:text-6xl font-black text-conversion tracking-tight mb-4">
                   R30,000
                 </div>
                 <p className="text-base text-slate-600 font-medium">
@@ -944,7 +946,7 @@ export default function DistributionNetworkPublicPage() {
 
           {/* FINAL CTA */}
           <section className="bg-slate-900 text-center py-20 px-6 relative overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.2),transparent_60%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,92,168,0.22),transparent_60%)]" />
             <div className="container relative z-10 max-w-3xl mx-auto text-center">
               <h2 className="mb-4 text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl">
                 Your Network Is Worth
@@ -959,7 +961,8 @@ export default function DistributionNetworkPublicPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button
                   size="lg"
-                  className="h-14 w-full border-0 bg-[linear-gradient(135deg,#3b82f6,#0ea5e9)] px-10 text-base font-bold text-white shadow-lg sm:w-auto hover:opacity-90 transition-transform hover:-translate-y-0.5"
+                  variant="conversion"
+                  className="h-14 w-full px-10 text-base font-bold sm:w-auto transition-transform hover:-translate-y-0.5"
                   onClick={() => revealAndScrollToForm()}
                 >
                   Start Referring Now

@@ -30,12 +30,26 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-blue-hover: var(--brand-blue-hover);
+  --color-conversion: var(--conversion);
+  --color-conversion-foreground: var(--conversion-foreground);
+  --color-conversion-hover: var(--conversion-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-surface: var(--surface);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -57,6 +71,22 @@
 }
 
 :root {
+  /* Layered Listify color system */
+  --brand-blue: #005ca8;
+  --brand-blue-hover: #004a8a;
+  --conversion: #ff7a00;
+  --conversion-hover: #e66d00;
+  --conversion-foreground: #ffffff;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #111827;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --info: #0284c7;
+  --info-foreground: #ffffff;
+  --surface: #f8fafc;
+
   /* Core surfaces */
   --background: oklch(1 0 0);
   --foreground: oklch(0.235 0.015 65);
@@ -68,7 +98,7 @@
   --popover-foreground: var(--foreground);
 
   /* Primary = brand blue (nav, buttons, links, focus ring) */
-  --primary: rgb(0 92 168);
+  --primary: var(--brand-blue);
   --primary-foreground: oklch(1 0 0);
 
   /* Secondary = neutral surface (secondary buttons, chips, panels) */
@@ -76,15 +106,15 @@
   --secondary-foreground: oklch(0.235 0.015 65);
 
   /* Muted */
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.48 0.01 286);
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
 
   /* Accent = soft blue wash (hover/selected backgrounds, not a CTA) */
   --accent: oklch(0.95 0.03 250);
   --accent-foreground: var(--foreground);
 
   /* Borders / inputs / radius */
-  --border: oklch(0.92 0.004 286.32);
+  --border: #e2e8f0;
   --input: var(--border);
   --radius: 0.65rem;
 
@@ -92,8 +122,8 @@
   --ring: var(--primary);
 
   /* Destructive */
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(1 0 0);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
 
   /* Charts — coherent blue-family oklch palette */
   --chart-1: oklch(0.72 0.14 250);
@@ -141,10 +171,16 @@
 }
 
 .dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
+  --brand-blue: #38bdf8;
+  --brand-blue-hover: #7dd3fc;
+  --primary: var(--brand-blue);
+  --primary-foreground: #0f172a;
+  --conversion: #fb923c;
+  --conversion-hover: #fdba74;
+  --conversion-foreground: #111827;
+  --surface: #0f172a;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.85 0.005 65);
   --card: oklch(0.21 0.006 285.885);

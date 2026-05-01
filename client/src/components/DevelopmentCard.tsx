@@ -120,7 +120,7 @@ export function DevelopmentCard({
           <div className="mb-5">
             <div className="flex items-start justify-between mb-2">
               <h3
-                className="text-xl sm:text-2xl font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-2 leading-tight"
+            className="text-xl sm:text-2xl font-bold text-slate-900 hover:text-primary transition-colors cursor-pointer flex items-center gap-2 leading-tight"
                 onClick={() => setLocation(`/development/${id}`)}
               >
                 {title}
@@ -216,7 +216,8 @@ export function DevelopmentCard({
           </div>
 
           <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 w-full sm:w-auto"
+            variant="conversion"
+            className="font-semibold px-6 py-2.5 w-full sm:w-auto"
             onClick={e => {
               e.stopPropagation();
               if (onContactClick) {

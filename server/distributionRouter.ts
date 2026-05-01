@@ -6289,6 +6289,7 @@ const partnerDistributionRouter = router({
       z
         .object({
           brandProfileId: z.number().int().positive().optional(),
+          includeUnavailable: z.boolean().default(false),
         })
         .optional(),
     )
@@ -6301,7 +6302,7 @@ const partnerDistributionRouter = router({
 
       return await listPartnerProgramTerms({
         brandProfileId: input?.brandProfileId,
-        includeDisabled: true,
+        includeDisabled: input?.includeUnavailable ?? false,
       });
     }),
 

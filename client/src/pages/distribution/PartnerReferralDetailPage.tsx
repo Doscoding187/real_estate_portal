@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { Loader2 } from 'lucide-react';
+import { FileText, Loader2, UserRound, WalletCards } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,21 +46,21 @@ function getNextActionHint(input: {
 }) {
   const normalized = normalizeStage(input.status);
   if (normalized === 'commission_paid') {
-    return 'Commission paid. Download supporting documents and submit your next referral.';
+    return 'Referral reward paid. Download supporting documents and submit your next buyer.';
   }
   if (normalized === 'commission_pending') {
-    return 'Deal closed. Monitor payout approval and payment timing.';
+    return 'Buyer converted. Monitor reward approval and payment timing.';
   }
   if (normalized === 'bond_approved' || normalized === 'contract_signed') {
-    return 'Keep all required docs complete while payout milestone is processed.';
+    return 'Keep all required documents complete while payout milestone is processed.';
   }
   if (normalized === 'application_submitted') {
     if (input.docProgress.verifiedRequiredCount < input.docProgress.requiredCount) {
-      return 'Upload and verify remaining required documents to avoid payout delays.';
+      return 'Upload and verify remaining required documents to avoid reward delays.';
     }
     return 'Application submitted. Track manager feedback and bond progression.';
   }
-  return 'Coordinate buyer viewing and progress this referral to application stage.';
+  return 'Coordinate buyer viewing and progress this buyer to application stage.';
 }
 
 function formatOwnerRole(ownerRole: string | null | undefined) {
@@ -178,23 +178,22 @@ export default function PartnerReferralDetailPage() {
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-5xl px-4 pb-8 pt-6 md:px-7">
-        <Card className="mb-4">
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <CardTitle>{referral.development.name}</CardTitle>
-                <CardDescription>Deal #{referral.dealId}</CardDescription>
-              </div>
-              <Badge>{getStageLabel(referral.status)}</Badge>
+      <main className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-6 md:px-7">
+        <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
+            <div>
+              <p className="text-[10px] font-semibold uppercase text-blue-100">Buyer referral</p>
+              <h1 className="mt-1 text-[28px] font-semibold">{referral.development.name}</h1>
+              <p className="mt-2 text-[13px] text-[#ece6da]">Deal #{referral.dealId}</p>
             </div>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
+            <Badge className="bg-white text-primary hover:bg-white">{getStageLabel(referral.status)}</Badge>
+          </div>
+          <CardContent className="flex flex-wrap gap-2 bg-primary/5 py-4">
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
-              Back to My Referrals
+              Back to My Buyers
             </Button>
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
-              Submit Another Referral
+              Submit Another Buyer
             </Button>
             {referral.matchSnapshotId ? (
               <Button
@@ -214,17 +213,20 @@ export default function PartnerReferralDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="mb-4">
+        <Card className="mb-5 border-primary/15 bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Journey to Commission</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <WalletCards className="h-4 w-4 text-primary" />
+              Buyer Status and Reward Progress
+            </CardTitle>
             <CardDescription>
               Stage {journeyProgress.index + 1} of {JOURNEY_STAGES.length} ({journeyProgress.percent}
               % complete)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-3 h-2 overflow-hidden rounded bg-slate-100">
-              <div className="h-full rounded bg-blue-600" style={{ width: `${journeyProgress.percent}%` }} />
+            <div className="mb-3 h-2 overflow-hidden rounded bg-[#e7dfd3]">
+              <div className="h-full rounded bg-primary" style={{ width: `${journeyProgress.percent}%` }} />
             </div>
             <div className="mb-3 flex flex-wrap gap-1">
               {JOURNEY_STAGES.map(stage => {
@@ -235,7 +237,7 @@ export default function PartnerReferralDetailPage() {
                   <span
                     key={stage}
                     className={`rounded px-2 py-1 text-[11px] ${
-                      reached ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'
+                      reached ? 'bg-primary/10 text-primary' : 'bg-[#f5f0e8] text-muted-foreground'
                     }`}
                   >
                     {getStageLabel(stage)}
@@ -243,7 +245,7 @@ export default function PartnerReferralDetailPage() {
                 );
               })}
             </div>
-            <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+            <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
               {nextActionHint}
             </div>
             {referral.journey?.slaDueAt ? (
@@ -261,7 +263,7 @@ export default function PartnerReferralDetailPage() {
               referral.manager?.email ? (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="conversion"
                   onClick={() => {
                     const subject = encodeURIComponent(
                       `Referral follow-up: Deal #${referral.dealId} - ${referral.development.name}`,
@@ -284,7 +286,7 @@ export default function PartnerReferralDetailPage() {
                 return (
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="conversion"
                     onClick={() =>
                       window.open(`https://wa.me/${whatsappPhone}?text=${msg}`, '_blank', 'noopener,noreferrer')
                     }
@@ -294,7 +296,7 @@ export default function PartnerReferralDetailPage() {
                 );
               })()}
               {actionCode === 'submit_next_referral' ? (
-                <Button size="sm" variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
+                <Button size="sm" variant="conversion" onClick={() => setLocation('/distribution/partner/submit')}>
                   Submit Next Referral
                 </Button>
               ) : null}
@@ -303,9 +305,12 @@ export default function PartnerReferralDetailPage() {
         </Card>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <Card>
+          <Card className="border-primary/15 bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Referral Summary</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <UserRound className="h-4 w-4 text-primary" />
+                Referral Summary
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>
@@ -372,14 +377,17 @@ export default function PartnerReferralDetailPage() {
           <PayoutRulesDisclosure developmentId={Number(referral.development.developmentId)} />
         </div>
 
-        <Card className="mt-4">
+        <Card className="mt-5 border-primary/15 bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Timeline</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4 text-primary" />
+              Timeline
+            </CardTitle>
             <CardDescription>Latest referral lifecycle events.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {(referral.timeline || []).map((event, index) => (
-              <div key={`${event.at}-${index}`} className="rounded border bg-white p-3">
+              <div key={`${event.at}-${index}`} className="rounded-md border border-primary/15 bg-primary/5/40 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium">{event.event}</p>
                   <Badge variant="secondary">{event.byRole}</Badge>

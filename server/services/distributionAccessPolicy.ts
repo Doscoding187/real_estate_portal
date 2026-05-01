@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 
 import {
+  developmentRequiredDocuments,
   developments,
   distributionManagerAssignments,
   distributionPrograms,
@@ -47,6 +48,7 @@ export type DevelopmentDistributionAccessEvaluation = {
   excludedByMandate: boolean;
   excludedByExclusivity: boolean;
   programExists: boolean;
+  programId: number | null;
   programActive: boolean;
   referralEnabled: boolean;
   readiness: {
@@ -57,6 +59,12 @@ export type DevelopmentDistributionAccessEvaluation = {
   inventoryState: DistributionInventoryState;
   submitReady: boolean;
   reasons: string[];
+  opportunity: {
+    status: 'ready' | 'pending_setup' | 'blocked';
+    reasonCodes: string[];
+    nextAction: 'submit_referral' | 'upload_docs' | 'contact_manager' | 'not_available';
+    friendlyMessage: string;
+  };
   legacyFallbackUsed: boolean;
 };
 
@@ -218,6 +226,162 @@ function buildReasons(input: {
   return Array.from(new Set(reasons));
 }
 
+export function mapDistributionReasonToOpportunityReason(reason: string) {
+  const normalized = reason.trim();
+  const map: Record<string, { code: string; message: string }> = {
+    missing_brand_profile_link: {
+      code: 'DEVELOPMENT_NOT_AVAILABLE',
+      message: 'This opportunity is not available for referrals yet.',
+    },
+    development_not_visible: {
+      code: 'DEVELOPMENT_NOT_AVAILABLE',
+      message: 'This opportunity is not available for referrals yet.',
+    },
+    missing_brand_partnership_row: {
+      code: 'NETWORK_SETUP_PENDING',
+      message: 'This opportunity is still being prepared.',
+    },
+    missing_development_access_row: {
+      code: 'NETWORK_SETUP_PENDING',
+      message: 'This opportunity is still being prepared.',
+    },
+    brand_partnership_pending: {
+      code: 'NETWORK_SETUP_PENDING',
+      message: 'This opportunity is still being prepared.',
+    },
+    brand_partnership_paused: {
+      code: 'NETWORK_PAUSED',
+      message: 'This opportunity is not accepting referrals right now.',
+    },
+    brand_partnership_ended: {
+      code: 'NETWORK_CLOSED',
+      message: 'This opportunity is not accepting referrals right now.',
+    },
+    development_access_listed: {
+      code: 'COMING_SOON',
+      message: 'Referral submissions are not open yet.',
+    },
+    development_access_paused: {
+      code: 'REFERRALS_PAUSED',
+      message: 'Referral submissions are paused for this opportunity.',
+    },
+    development_access_excluded: {
+      code: 'NOT_ACCEPTING_REFERRALS',
+      message: 'This opportunity is not accepting referrals right now.',
+    },
+    excluded_by_mandate: {
+      code: 'NOT_ACCEPTING_REFERRALS',
+      message: 'This opportunity is not accepting referrals right now.',
+    },
+    excluded_by_exclusivity: {
+      code: 'NOT_ACCEPTING_REFERRALS',
+      message: 'This opportunity is not accepting referrals right now.',
+    },
+    submission_not_allowed: {
+      code: 'SUBMISSIONS_CLOSED',
+      message: 'Referral submissions are currently closed for this opportunity.',
+    },
+    missing_program: {
+      code: 'PROGRAM_NOT_FOUND',
+      message: 'This opportunity is still being prepared.',
+    },
+    program_inactive: {
+      code: 'PROGRAM_INACTIVE',
+      message: 'This opportunity is not accepting referrals yet.',
+    },
+    program_referral_disabled: {
+      code: 'REFERRALS_DISABLED',
+      message: 'Referrals are currently closed for this opportunity.',
+    },
+    program_not_configured: {
+      code: 'PROGRAM_NOT_FOUND',
+      message: 'This opportunity is still being prepared.',
+    },
+    readiness_commissionModel: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral reward details are still being prepared.',
+    },
+    readiness_defaultCommissionPercent: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral reward details are still being prepared.',
+    },
+    readiness_defaultCommissionAmount: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral reward details are still being prepared.',
+    },
+    readiness_defaultCommissionPercent_or_defaultCommissionAmount: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral reward details are still being prepared.',
+    },
+    readiness_tierAccessPolicy: {
+      code: 'ACCESS_RULES_MISSING',
+      message: 'This opportunity is still being prepared.',
+    },
+    readiness_payoutMilestone: {
+      code: 'PAYOUT_MILESTONE_MISSING',
+      message: 'Referral payout timing is still being prepared.',
+    },
+    readiness_currencyCode: {
+      code: 'CURRENCY_MISSING',
+      message: 'Referral reward details are still being prepared.',
+    },
+    readiness_primaryManagerAssignment: {
+      code: 'NO_MANAGER_ASSIGNED',
+      message: 'This opportunity is not accepting referrals yet.',
+    },
+    readiness_requiredDocuments: {
+      code: 'REQUIRED_DOCS_MISSING',
+      message: 'Required buyer documents are still being prepared.',
+    },
+  };
+
+  return (
+    map[normalized] || {
+      code: normalized.toUpperCase().replace(/[^A-Z0-9]+/g, '_'),
+      message: 'This opportunity is not accepting referrals right now.',
+    }
+  );
+}
+
+export function buildOpportunityReadiness(input: {
+  inventoryState: DistributionInventoryState;
+  reasons: string[];
+}) {
+  const reasonCodes = Array.from(
+    new Set(input.reasons.map(reason => mapDistributionReasonToOpportunityReason(reason).code)),
+  );
+  const firstMessage =
+    input.reasons.map(reason => mapDistributionReasonToOpportunityReason(reason).message).find(Boolean) ||
+    'This opportunity is not accepting referrals right now.';
+
+  if (input.inventoryState === 'enabled') {
+    return {
+      status: 'ready' as const,
+      reasonCodes: [] as string[],
+      nextAction: 'submit_referral' as const,
+      friendlyMessage: 'Ready for buyer referrals.',
+    };
+  }
+
+  if (input.inventoryState === 'accessible' || input.inventoryState === 'ready') {
+    const needsManager = reasonCodes.includes('NO_MANAGER_ASSIGNED');
+    const needsDocs = reasonCodes.includes('REQUIRED_DOCS_MISSING');
+    return {
+      status: 'pending_setup' as const,
+      reasonCodes,
+      nextAction: needsDocs ? ('upload_docs' as const) : needsManager ? ('contact_manager' as const) : ('not_available' as const),
+      friendlyMessage: firstMessage,
+    };
+  }
+
+  return {
+    status: 'blocked' as const,
+    reasonCodes,
+    nextAction: 'not_available' as const,
+    friendlyMessage: firstMessage,
+  };
+}
+
 export async function evaluateDevelopmentDistributionAccess(input: {
   db: DbHandle;
   developmentId: number;
@@ -274,13 +438,22 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     : null;
   const access = await getDevelopmentAccessByDevelopmentId(input.db, input.developmentId);
 
-  const fallback = deriveLegacyFallback({
-    brandProfileId,
-    developmentVisible,
-    programExists,
-    programActive,
-    referralEnabled,
-  });
+  const fallback =
+    input.channel === 'submission'
+      ? {
+          partnershipStatus: null,
+          accessStatus: null,
+          submissionAllowed: false,
+          legacyFallbackUsed: false,
+          fallbackReason: null,
+        }
+      : deriveLegacyFallback({
+          brandProfileId,
+          developmentVisible,
+          programExists,
+          programActive,
+          referralEnabled,
+        });
 
   const developmentId = Number(development.id);
   const [managerSummary] =
@@ -298,20 +471,43 @@ export async function evaluateDevelopmentDistributionAccess(input: {
           .limit(1)
       : [{ count: 0 as unknown as number }];
 
+  const [requiredDocsSummary] = await input.db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(developmentRequiredDocuments)
+    .where(
+      and(
+        eq(developmentRequiredDocuments.developmentId, developmentId),
+        eq(developmentRequiredDocuments.isActive, 1),
+        eq(developmentRequiredDocuments.isRequired, 1),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+      ),
+    )
+    .limit(1);
+
   const readiness = program
-    ? getProgramActivationReadiness({
-        commissionModel: program.commissionModel,
-        defaultCommissionPercent:
-          program.defaultCommissionPercent === null
-            ? null
-            : Number(program.defaultCommissionPercent),
-        defaultCommissionAmount:
-          program.defaultCommissionAmount === null ? null : Number(program.defaultCommissionAmount),
-        tierAccessPolicy: program.tierAccessPolicy,
-        payoutMilestone: program.payoutMilestone,
-        currencyCode: program.currencyCode,
-        hasPrimaryManager: Number(managerSummary?.count || 0) > 0,
-      })
+    ? (() => {
+        const base = getProgramActivationReadiness({
+          commissionModel: program.commissionModel,
+          defaultCommissionPercent:
+            program.defaultCommissionPercent === null
+              ? null
+              : Number(program.defaultCommissionPercent),
+          defaultCommissionAmount:
+            program.defaultCommissionAmount === null ? null : Number(program.defaultCommissionAmount),
+          tierAccessPolicy: program.tierAccessPolicy,
+          payoutMilestone: program.payoutMilestone,
+          currencyCode: program.currencyCode,
+          hasPrimaryManager: Number(managerSummary?.count || 0) > 0,
+        });
+        const missingRequirements = [...base.missingRequirements];
+        if (Number(requiredDocsSummary?.count || 0) < 1) {
+          missingRequirements.push('requiredDocuments');
+        }
+        return {
+          canEnable: missingRequirements.length === 0,
+          missingRequirements,
+        };
+      })()
     : {
         canEnable: false,
         missingRequirements: ['program_missing'],
@@ -356,6 +552,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     legacyFallbackUsed,
     fallbackReason,
   });
+  const opportunity = buildOpportunityReadiness({ inventoryState, reasons });
 
   return {
     brandProfileId,
@@ -370,6 +567,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     excludedByMandate,
     excludedByExclusivity,
     programExists,
+    programId: program ? Number(program.id) : null,
     programActive,
     referralEnabled,
     readiness: {
@@ -380,6 +578,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     inventoryState,
     submitReady: inventoryState === 'enabled',
     reasons,
+    opportunity,
     legacyFallbackUsed,
   };
 }
@@ -444,10 +643,21 @@ export async function assertDevelopmentSubmissionEligible(input: {
 }) {
   const evaluation = await evaluateDevelopmentDistributionAccess(input);
   if (!evaluation.submitReady) {
-    throw new TRPCError({
+    const reasons = evaluation.reasons.map(reason => mapDistributionReasonToOpportunityReason(reason));
+    const error = new TRPCError({
       code: 'PRECONDITION_FAILED',
-      message: `Development cannot accept submissions: ${evaluation.reasons.join(', ')}`,
-    });
+      message: evaluation.opportunity.friendlyMessage,
+    }) as TRPCError & {
+      data?: {
+        errorCode: 'PROGRAM_NOT_ELIGIBLE';
+        reasons: Array<{ code: string; message: string }>;
+      };
+    };
+    error.data = {
+      errorCode: 'PROGRAM_NOT_ELIGIBLE',
+      reasons,
+    };
+    throw error;
   }
   return evaluation;
 }

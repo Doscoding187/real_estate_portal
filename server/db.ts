@@ -222,11 +222,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
 
     if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date().toISOString();
+      values.lastSignedIn = toMysqlDateTime();
     }
 
     if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date().toISOString();
+      updateSet.lastSignedIn = toMysqlDateTime();
     }
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({
@@ -325,7 +325,7 @@ export async function createUser(
     ...userData,
     createdAt: new Date(),
     updatedAt: new Date(),
-    lastSignedIn: new Date().toISOString(),
+    lastSignedIn: toMysqlDateTime(),
   });
 
   return Number(result[0].insertId);
@@ -350,7 +350,7 @@ export async function updateUserLastSignIn(userId: number): Promise<void> {
 
   await db
     .update(users)
-    .set({ lastSignedIn: new Date().toISOString() })
+    .set({ lastSignedIn: toMysqlDateTime() })
     .where(eq(users.id, userId));
 }
 

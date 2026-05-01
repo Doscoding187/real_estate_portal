@@ -13,16 +13,24 @@
 
 export const softUITokens = {
   colors: {
-    // Primary gradient (purple/indigo)
+    // Primary gradient for trust/system surfaces
     primary: {
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      light: '#f0f4ff',
-      base: '#667eea',
-      main: '#667eea',
-      dark: '#5a67d8',
-      subtle: '#e9ecff',
+      gradient: 'linear-gradient(135deg, var(--brand-blue) 0%, #0284c7 100%)',
+      light: '#e0f2fe',
+      base: 'var(--brand-blue)',
+      main: 'var(--brand-blue)',
+      dark: 'var(--brand-blue-hover)',
+      subtle: '#e0f2fe',
     },
-    // Secondary gradient (pink/red)
+    conversion: {
+      gradient: 'linear-gradient(135deg, var(--conversion) 0%, var(--conversion-hover) 100%)',
+      light: '#fff7ed',
+      base: 'var(--conversion)',
+      main: 'var(--conversion)',
+      dark: 'var(--conversion-hover)',
+      subtle: '#ffedd5',
+    },
+    // Secondary specialty accent retained for non-CTA marketing art
     secondary: {
       gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
       light: '#fff5f7',
@@ -47,10 +55,10 @@ export const softUITokens = {
     },
     // Accent colors for features
     accent: {
-      blue: '#3b82f6',
-      green: '#10b981',
-      yellow: '#f59e0b',
-      purple: '#8b5cf6',
+      blue: 'var(--info)',
+      green: 'var(--success)',
+      yellow: 'var(--warning)',
+      purple: 'var(--brand-blue)',
     },
   },
 
@@ -60,8 +68,8 @@ export const softUITokens = {
     softHover: '0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.12)',
     softLarge: '0 8px 24px rgba(0, 0, 0, 0.08), 0 16px 48px rgba(0, 0, 0, 0.12)',
     // Colored shadows for gradient buttons
-    primaryGlow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-    secondaryGlow: '0 4px 16px rgba(240, 147, 251, 0.3)',
+    primaryGlow: '0 4px 16px rgba(0, 92, 168, 0.28)',
+    secondaryGlow: '0 4px 16px rgba(255, 122, 0, 0.28)',
   },
 
   borderRadius: {

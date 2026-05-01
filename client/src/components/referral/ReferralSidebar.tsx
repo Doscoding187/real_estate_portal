@@ -113,20 +113,20 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   return (
     <aside
       className={cn(
-        'border-r border-[#1a1a18]/10 bg-white',
+        'border-r border-border bg-white',
         mode === 'desktop'
           ? 'hidden lg:fixed lg:inset-y-0 lg:z-20 lg:flex lg:w-[210px] lg:flex-col'
           : 'flex h-full w-[210px] flex-col',
       )}
     >
-      <div className="border-b border-[#1a1a18]/10 px-[18px] pb-[18px] pt-5">
-        <p className="text-[14px] font-semibold tracking-[-0.02em] text-[#1a1a18]">Property Listify</p>
-        <p className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-[#6b6a64]">
+      <div className="border-b border-border px-[18px] pb-[18px] pt-5">
+        <p className="text-[14px] font-semibold tracking-[-0.02em] text-foreground">Property Listify</p>
+        <p className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-muted-foreground">
           PARTNER WORKSPACE
         </p>
       </div>
 
-      <p className="px-[18px] pb-[5px] pt-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9e9d96]">
+      <p className="px-[18px] pb-[5px] pt-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Workspace
       </p>
 
@@ -141,19 +141,19 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
               className={cn(
                 'group flex w-full items-center gap-[10px] border-l-2 px-[18px] py-[9px] text-left text-[13px] font-medium transition',
                 isActive
-                  ? 'border-l-[#1a5bbf] bg-[#e8f0fb] text-[#1a5bbf]'
-                  : 'border-l-transparent text-[#6b6a64] hover:bg-[#f5f4f0] hover:text-[#1a1a18]',
+                  ? 'border-l-primary bg-primary/10 text-primary'
+                  : 'border-l-transparent text-muted-foreground hover:bg-surface hover:text-foreground',
               )}
             >
               <item.icon
                 className={cn(
                   'h-[15px] w-[15px] shrink-0',
-                  isActive ? 'text-[#1a5bbf]' : 'text-[#6b6a64] group-hover:text-[#1a1a18]',
+                  isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
                 )}
               />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {item.badge ? (
-                <span className="rounded-full bg-[#1a5bbf] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
                   {item.badge}
                 </span>
               ) : null}
@@ -162,23 +162,23 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
         })}
       </nav>
 
-      <div className="mt-auto border-t border-[#1a1a18]/10 px-[18px] py-[14px]">
+      <div className="mt-auto border-t border-border px-[18px] py-[14px]">
         <div className="flex items-center gap-[10px]">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8f0fb] text-[11px] font-semibold text-[#1a5bbf]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
             {initials}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[12px] font-semibold text-[#1a1a18]">
+            <p className="truncate text-[12px] font-semibold text-foreground">
               {user?.name || 'Referral Partner'}
             </p>
-            <p className="truncate text-[10px] text-[#6b6a64]">Partner Workspace</p>
+            <p className="truncate text-[10px] text-muted-foreground">Partner Workspace</p>
           </div>
         </div>
         <div className="mt-2 flex gap-1.5">
           <button
             type="button"
             onClick={() => setLocation('/distribution-network/apply')}
-            className="inline-flex items-center gap-1 rounded-md border border-[#1a1a18]/20 px-2 py-1 text-[10px] text-[#6b6a64] hover:bg-[#f5f4f0]"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground hover:bg-surface"
           >
             <CircleHelp className="h-3 w-3" />
             Help
@@ -186,7 +186,7 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="inline-flex items-center gap-1 rounded-md border border-[#1a1a18]/20 px-2 py-1 text-[10px] text-[#6b6a64] hover:bg-[#f5f4f0]"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground hover:bg-surface"
           >
             <LogOut className="h-3 w-3" />
             Logout
