@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 type ProgramTermsItem = {
   developmentName: string;
@@ -16,6 +17,14 @@ type ProgramTermsItem = {
     templateFileUrl?: string | null;
     templateFileName?: string | null;
     isRequired: boolean;
+    sortOrder: number;
+  }>;
+  sourceDocuments?: Array<{
+    templateId: number;
+    documentCode: string;
+    documentLabel: string;
+    fileUrl?: string | null;
+    fileName?: string | null;
     sortOrder: number;
   }>;
 };
@@ -35,6 +44,9 @@ export function ProgramRequirementsDialog({
     }
     return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
   });
+  const sourceDocuments = [...(item.sourceDocuments || [])].sort(
+    (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0),
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,11 +54,68 @@ export function ProgramRequirementsDialog({
         <DialogHeader>
           <DialogTitle>{item.developmentName} Requirements</DialogTitle>
           <DialogDescription>
-            Submit these documents to complete payout requirements.
+            Application documents are what the buyer must provide. Supporting files are what you can
+            share with the buyer before submitting.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2">
+        <div className="space-y-4">
+          <section>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Supporting pack</p>
+                <p className="text-xs text-slate-500">
+                  Plans, maps, specifications, price lists, and other buyer-facing files.
+                </p>
+              </div>
+              <Badge variant="secondary">
+                {sourceDocuments.length} file{sourceDocuments.length === 1 ? '' : 's'}
+              </Badge>
+            </div>
+            <div className="mt-2 space-y-2">
+              {sourceDocuments.map(document => (
+                <div
+                  key={document.templateId}
+                  className="flex items-center justify-between gap-2 rounded border bg-slate-50 p-2"
+                >
+                  <div>
+                    <p className="font-medium">{document.documentLabel}</p>
+                    <p className="text-xs text-slate-500">
+                      {document.fileName || 'File pending upload'}
+                    </p>
+                  </div>
+                  {document.fileUrl ? (
+                    <Button asChild size="sm" variant="outline">
+                      <a href={document.fileUrl} target="_blank" rel="noreferrer">
+                        Open
+                      </a>
+                    </Button>
+                  ) : (
+                    <Badge variant="secondary">Pending</Badge>
+                  )}
+                </div>
+              ))}
+              {!sourceDocuments.length ? (
+                <p className="rounded border border-dashed p-3 text-sm text-slate-500">
+                  No supporting files have been uploaded for this development yet.
+                </p>
+              ) : null}
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Application documents</p>
+                <p className="text-xs text-slate-500">
+                  These are the buyer documents needed for qualification and payout progress.
+                </p>
+              </div>
+              <Badge variant="secondary">
+                {orderedDocuments.filter(document => document.isRequired).length} required
+              </Badge>
+            </div>
+            <div className="mt-2 space-y-2">
           {orderedDocuments.map(document => (
             <div
               key={document.templateId}
@@ -73,8 +142,12 @@ export function ProgramRequirementsDialog({
             </div>
           ))}
           {!orderedDocuments.length ? (
-            <p className="text-sm text-slate-500">Terms not configured yet.</p>
+            <p className="rounded border border-dashed p-3 text-sm text-slate-500">
+              Application documents are not configured yet.
+            </p>
           ) : null}
+            </div>
+          </section>
         </div>
       </DialogContent>
     </Dialog>

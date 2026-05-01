@@ -73,9 +73,19 @@ export function PayoutRulesDisclosure({
             <span className="font-medium">{item.computed.payoutDisplay || 'Terms not configured yet'}</span>
           </p>
           <p>
-            <span className="text-slate-500">Documents required:</span>{' '}
+            <span className="text-slate-500">Application documents:</span>{' '}
             <span className="font-medium">
               {item.computed.requiredDocsSummary || 'Terms not configured yet'}
+            </span>
+          </p>
+          <p>
+            <span className="text-slate-500">Supporting pack:</span>{' '}
+            <span className="font-medium">
+              {(item.sourceDocuments || []).length
+                ? `${(item.sourceDocuments || []).length} file${
+                    (item.sourceDocuments || []).length === 1 ? '' : 's'
+                  }`
+                : 'No supporting files uploaded yet'}
             </span>
           </p>
           <Button size="sm" variant="outline" onClick={() => setRequirementsOpen(true)}>

@@ -190,12 +190,13 @@ const documentStarterPacks: Array<{
   },
   {
     id: 'developer-handout',
-    label: 'Developer handout pack',
-    description: 'Common development-side files referrers can share with buyers.',
+    label: 'Supporting pack',
+    description: 'Unit plans, site maps, specifications, and other files referrers can share.',
     category: 'developer_document',
     documents: [
-      { documentCode: 'sale_agreement', documentLabel: 'Development sales pack', isRequired: false },
-      { documentCode: 'signed_offer_to_purchase', documentLabel: 'Offer to purchase template', isRequired: false },
+      { documentCode: 'custom', documentLabel: 'Unit / house plans', isRequired: false },
+      { documentCode: 'custom', documentLabel: 'Site map', isRequired: false },
+      { documentCode: 'custom', documentLabel: 'Specifications', isRequired: false },
       { documentCode: 'transfer_documents', documentLabel: 'Transfer and costs guide', isRequired: false },
     ],
   },
@@ -597,6 +598,22 @@ function DevelopmentProgramConfigPanel({
     ]);
   }
 
+  function addSupportingDocument(label: string) {
+    setDocuments(current => [
+      ...current,
+      {
+        category: 'developer_document',
+        documentCode: 'custom',
+        documentLabel: label,
+        templateFileUrl: null,
+        templateFileName: null,
+        isRequired: false,
+        isActive: true,
+        sortOrder: current.length,
+      },
+    ]);
+  }
+
   function applyDocumentStarterPack(packId: string) {
     const pack = documentStarterPacks.find(item => item.id === packId);
     if (!pack) return;
@@ -707,6 +724,31 @@ function DevelopmentProgramConfigPanel({
               ))}
             </div>
           ) : null}
+          {input.category === 'developer_document' ? (
+            <div className="rounded border border-dashed border-slate-300 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Common supporting files
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Add the files each development normally needs, then upload the actual plan, map,
+                or specification PDF per row.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {['Unit / house plans', 'Site map', 'Specifications', 'Price list'].map(label => (
+                  <Button
+                    key={label}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => addSupportingDocument(label)}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {input.rows.map(({ document, index }, rowIndex) => (
             <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
@@ -749,11 +791,15 @@ function DevelopmentProgramConfigPanel({
                 />
 
                 <div className="flex items-center gap-2 rounded border px-2 text-xs">
-                  <span>Required</span>
+                  <span>{input.category === 'developer_document' ? 'Shareable' : 'Required'}</span>
                   <Switch
-                    checked={document.isRequired}
+                    checked={input.category === 'developer_document' ? document.isActive : document.isRequired}
                     onCheckedChange={checked =>
-                      updateDocumentAtIndex(index, item => ({ ...item, isRequired: checked }))
+                      updateDocumentAtIndex(index, item =>
+                        input.category === 'developer_document'
+                          ? { ...item, isActive: checked }
+                          : { ...item, isRequired: checked },
+                      )
                     }
                   />
                 </div>
@@ -784,8 +830,15 @@ function DevelopmentProgramConfigPanel({
               {input.category === 'developer_document' ? (
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs text-slate-600">Upload source document</label>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <label className="text-xs font-medium text-slate-700">
+                      Upload supporting file
+                    </label>
+                    <div className="rounded border border-slate-200 bg-slate-50 p-2">
+                      <p className="mb-2 text-xs text-slate-600">
+                        Use this for development-specific files like plans, site maps,
+                        specifications, price lists, or terms.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
                       <Input
                         type="file"
                         accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
@@ -817,6 +870,7 @@ function DevelopmentProgramConfigPanel({
                           Uploading...
                         </span>
                       ) : null}
+                      </div>
                     </div>
                     {document.templateFileUrl ? (
                       <a
@@ -826,11 +880,13 @@ function DevelopmentProgramConfigPanel({
                         className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
                       >
                         <Upload className="h-3 w-3" />
-                        Uploaded document
+                        Supporting file ready
                         {document.templateFileName ? ` (${document.templateFileName})` : ''}
                       </a>
                     ) : (
-                      <p className="text-xs text-slate-500">No document uploaded yet.</p>
+                      <p className="text-xs text-slate-500">
+                        No supporting file uploaded yet. The label can still be saved as a placeholder.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1285,14 +1341,14 @@ function DevelopmentProgramConfigPanel({
       </Card>
 
       {renderDocumentSection({
-        title: 'Developer Documents',
+        title: 'Supporting Pack',
         description:
           'Referrers can share or download these development-side documents for buyers, such as offer templates, sales packs, house plans, or development terms.',
         category: 'developer_document',
         rows: documents
           .map((document, index) => ({ document, index }))
           .filter(item => item.document.category === 'developer_document'),
-        addLabel: 'Add Developer Document',
+        addLabel: 'Add Supporting File',
         sectionId: 'section-developer-docs',
       })}
 

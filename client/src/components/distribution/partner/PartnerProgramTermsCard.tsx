@@ -31,6 +31,14 @@ export type ProgramTermsItem = {
     isRequired: boolean;
     sortOrder: number;
   }>;
+  sourceDocuments?: Array<{
+    templateId: number;
+    documentCode: string;
+    documentLabel: string;
+    fileUrl?: string | null;
+    fileName?: string | null;
+    sortOrder: number;
+  }>;
   computed: {
     commissionDisplay: string;
     payoutDisplay: string;
@@ -89,8 +97,18 @@ export function PartnerProgramTermsCard({
             <p className="font-medium">{fallbackTerm(item.computed.payoutDisplay)}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Required Documents</p>
+            <p className="text-xs text-slate-500">Application documents</p>
             <p className="font-medium">{fallbackTerm(item.computed.requiredDocsSummary)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Supporting pack</p>
+            <p className="font-medium">
+              {(item.sourceDocuments || []).length
+                ? `${(item.sourceDocuments || []).length} buyer-ready file${
+                    (item.sourceDocuments || []).length === 1 ? '' : 's'
+                  }`
+                : 'No supporting files uploaded yet'}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => setRequirementsOpen(true)}>

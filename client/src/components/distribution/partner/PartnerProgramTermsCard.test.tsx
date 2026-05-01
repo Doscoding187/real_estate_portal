@@ -46,6 +46,24 @@ const itemFixture: ProgramTermsItem = {
       sortOrder: 1,
     },
   ],
+  sourceDocuments: [
+    {
+      templateId: 201,
+      documentCode: 'custom',
+      documentLabel: 'Unit / house plans',
+      fileUrl: 'https://cdn.example.test/unit-plans.pdf',
+      fileName: 'unit-plans.pdf',
+      sortOrder: 0,
+    },
+    {
+      templateId: 202,
+      documentCode: 'custom',
+      documentLabel: 'Site map',
+      fileUrl: null,
+      fileName: null,
+      sortOrder: 1,
+    },
+  ],
   computed: {
     commissionDisplay: '2.5% referral fee',
     payoutDisplay: 'Paid after transfer registration',
@@ -61,6 +79,7 @@ describe('PartnerProgramTermsCard', () => {
     expect(screen.getByText('2.5% referral fee')).toBeInTheDocument();
     expect(screen.getByText('Paid after transfer registration')).toBeInTheDocument();
     expect(screen.getByText('2 required documents')).toBeInTheDocument();
+    expect(screen.getByText('2 buyer-ready files')).toBeInTheDocument();
     expect(screen.getByText('Referrals Enabled')).toBeInTheDocument();
   });
 
@@ -77,5 +96,9 @@ describe('PartnerProgramTermsCard', () => {
       .map(element => element.textContent);
 
     expect(orderedLabels).toEqual(['ID Document', 'Proof of Address', 'Optional Utility Bill']);
+    expect(within(dialog).getByText('Supporting pack')).toBeInTheDocument();
+    expect(within(dialog).getByText('Unit / house plans')).toBeInTheDocument();
+    expect(within(dialog).getByText('Site map')).toBeInTheDocument();
+    expect(within(dialog).getByText('Pending')).toBeInTheDocument();
   });
 });

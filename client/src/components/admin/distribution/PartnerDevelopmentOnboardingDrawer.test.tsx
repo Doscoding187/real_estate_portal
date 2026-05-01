@@ -233,7 +233,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    expect(screen.getByText('Developer Documents')).toBeInTheDocument();
+    expect(screen.getByText('Supporting Pack')).toBeInTheDocument();
     expect(screen.getByText('Buyer Required Documents')).toBeInTheDocument();
     expect(screen.getByDisplayValue('House Plan')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bank Statements')).toBeInTheDocument();
@@ -304,6 +304,39 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         }),
       ),
     );
+  });
+
+  it('adds custom supporting files for development-specific uploads', async () => {
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /unit \/ house plans/i }));
+
+    expect(screen.getByDisplayValue('Unit / house plans')).toBeInTheDocument();
+    expect(screen.getByText('Upload supporting file')).toBeInTheDocument();
+    expect(
+      screen.getByText(/No supporting file uploaded yet\. The label can still be saved as a placeholder\./i),
+    ).toBeInTheDocument();
   });
 
   it('shows blockers inline when enabling referral is rejected by server', async () => {
