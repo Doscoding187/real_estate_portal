@@ -546,9 +546,7 @@ export async function listPartnerProgramTerms(
   );
 
   return {
-    items: includeDisabled
-      ? evaluatedItems
-      : evaluatedItems.filter(item => item.opportunity.status === 'ready'),
+    items: evaluatedItems,
   };
 }
 
