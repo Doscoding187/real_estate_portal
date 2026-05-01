@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ArrowDown, ArrowUp, Loader2, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import {
@@ -92,11 +102,19 @@ type BrandOnboardingPreset = {
 };
 
 type ReadinessCounts = {
-  enabled: number;
+  live: number;
+  enabledBlocked: number;
   readyToEnable: number;
   blocked: number;
   loading: number;
 };
+
+type AdminReadinessStatus =
+  | 'loading'
+  | 'live'
+  | 'enabled_blocked'
+  | 'ready_to_enable'
+  | 'needs_setup';
 
 const payoutMilestones = [
   'attorney_instruction',
@@ -155,19 +173,31 @@ function statusBadge(value: boolean, trueLabel: string, falseLabel: string) {
   return <Badge variant={value ? 'default' : 'secondary'}>{value ? trueLabel : falseLabel}</Badge>;
 }
 
+function getAdminReadinessStatus(readiness?: ProgramReadiness | null): AdminReadinessStatus {
+  if (!readiness) return 'loading';
+  if (readiness.state.isReferralEnabled && readiness.canEnableReferral) return 'live';
+  if (readiness.state.isReferralEnabled && !readiness.canEnableReferral) return 'enabled_blocked';
+  if (readiness.canEnableReferral) return 'ready_to_enable';
+  return 'needs_setup';
+}
+
 function getBlockerSectionId(blockerCode: string) {
   return blockerSectionMap[blockerCode] || 'section-program';
 }
 
 function getPrimaryReadinessMessage(readiness?: ProgramReadiness | null) {
-  if (!readiness) return 'Loading readiness status...';
-  if (readiness.state.isReferralEnabled) {
+  const status = getAdminReadinessStatus(readiness);
+  if (status === 'loading') return 'Loading readiness status...';
+  if (status === 'live') {
     return 'Referrals are live for this development.';
   }
-  if (readiness.canEnableReferral) {
+  if (status === 'enabled_blocked') {
+    return 'Referrals are enabled, but buyer submissions are blocked until setup is complete.';
+  }
+  if (status === 'ready_to_enable') {
     return 'Ready to enable referrals.';
   }
-  return readiness.blockers[0]?.message || 'Complete onboarding configuration before enabling referrals.';
+  return readiness?.blockers[0]?.message || 'Complete onboarding configuration before enabling referrals.';
 }
 
 function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramReadiness | null | undefined>) {
@@ -177,16 +207,23 @@ function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramRead
         counts.loading += 1;
         return counts;
       }
-      if (readiness.state.isReferralEnabled) {
-        counts.enabled += 1;
-      } else if (readiness.canEnableReferral) {
-        counts.readyToEnable += 1;
-      } else {
-        counts.blocked += 1;
+      switch (getAdminReadinessStatus(readiness)) {
+        case 'live':
+          counts.live += 1;
+          break;
+        case 'enabled_blocked':
+          counts.enabledBlocked += 1;
+          break;
+        case 'ready_to_enable':
+          counts.readyToEnable += 1;
+          break;
+        case 'needs_setup':
+          counts.blocked += 1;
+          break;
       }
       return counts;
     },
-    { enabled: 0, readyToEnable: 0, blocked: 0, loading: 0 },
+    { live: 0, enabledBlocked: 0, readyToEnable: 0, blocked: 0, loading: 0 },
   );
 }
 
@@ -220,14 +257,98 @@ export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadine
 
   return (
     <div className="flex flex-wrap gap-1">
-      {statusBadge(state.programExists, 'Program: Exists', 'Program: Missing')}
-      {statusBadge(state.isActive, 'Active: On', 'Active: Off')}
-      {statusBadge(state.isReferralEnabled, 'Referral: Enabled', 'Referral: Disabled')}
-      {statusBadge(hasCommission, 'Commission: Set', 'Commission: Missing')}
-      {statusBadge(Boolean(state.payoutMilestone), 'Milestone: Set', 'Milestone: Missing')}
-      {statusBadge(Boolean(state.currencyCode), 'Currency: Set', 'Currency: Missing')}
+      {statusBadge(state.programExists, 'Setup: Created', 'Setup: Missing')}
+      {statusBadge(state.isActive, 'Setup: Active', 'Setup: Paused')}
+      {statusBadge(state.isReferralEnabled, 'Accepting referrals: On', 'Accepting referrals: Off')}
+      {statusBadge(hasCommission, 'Referral reward: Set', 'Referral reward: Missing')}
+      {statusBadge(Boolean(state.payoutMilestone), 'Payout trigger: Set', 'Payout trigger: Missing')}
+      {statusBadge(Boolean(state.currencyCode), 'Payout currency: Set', 'Payout currency: Missing')}
       {statusBadge(state.hasActivePrimaryManager, 'Manager: Assigned', 'Manager: Missing')}
-      {statusBadge(state.requiredRequiredDocsCount > 0, 'Docs: Configured', 'Docs: Missing')}
+      {statusBadge(state.requiredRequiredDocsCount > 0, 'Buyer docs: Ready', 'Buyer docs: Missing')}
+    </div>
+  );
+}
+
+function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null }) {
+  if (!readiness) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Skeleton key={index} className="h-9 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  const { state } = readiness;
+  const hasReward =
+    state.commissionModel === 'flat_percentage'
+      ? Boolean(state.defaultCommissionPercent && state.defaultCommissionPercent > 0)
+      : state.commissionModel === 'flat_amount'
+        ? Boolean(state.defaultCommissionAmount && state.defaultCommissionAmount > 0)
+        : false;
+  const checklist = [
+    {
+      label: 'Create referral setup',
+      done: state.programExists,
+      help: 'The development has a partner program record.',
+    },
+    {
+      label: 'Keep setup active',
+      done: state.isActive,
+      help: 'Paused programs cannot accept buyer submissions.',
+    },
+    {
+      label: 'Set referral reward',
+      done: hasReward,
+      help: 'Referrers need to know the reward before submitting buyers.',
+    },
+    {
+      label: 'Choose payout trigger',
+      done: Boolean(state.payoutMilestone),
+      help: 'This tells referrers when reward progress moves forward.',
+    },
+    {
+      label: 'Set payout currency',
+      done: Boolean(state.currencyCode),
+      help: 'Rewards must show a clear currency.',
+    },
+    {
+      label: 'Assign primary manager',
+      done: state.hasActivePrimaryManager,
+      help: 'Every buyer needs an accountable handler.',
+    },
+    {
+      label: 'Add buyer document checklist',
+      done: state.requiredRequiredDocsCount > 0,
+      help: 'The submit flow needs at least one required buyer document.',
+    },
+  ];
+
+  return (
+    <div className="space-y-2">
+      {checklist.map(item => (
+        <div
+          key={item.label}
+          className={`rounded border p-2 ${
+            item.done ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70'
+          }`}
+        >
+          <div className="flex items-start gap-2">
+            {item.done ? (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            ) : (
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            )}
+            <div>
+              <p className={item.done ? 'text-sm font-medium text-emerald-900' : 'text-sm font-medium text-amber-950'}>
+                {item.label}
+              </p>
+              <p className="text-xs text-slate-600">{item.help}</p>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -266,6 +387,7 @@ function DevelopmentProgramConfigPanel({
   const upsertProgramMutation = trpc.distribution.admin.upsertProgram.useMutation();
   const assignManagerMutation = trpc.distribution.admin.assignManagerToDevelopment.useMutation();
   const setDocsMutation = trpc.distribution.admin.setDevelopmentRequiredDocuments.useMutation();
+  const setReferralEnabledMutation = trpc.distribution.admin.setProgramReferralEnabled.useMutation();
   const onboardDevelopmentMutation =
     trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
   const setBrandPresetMutation = trpc.distribution.admin.setBrandOnboardingPreset.useMutation();
@@ -382,8 +504,10 @@ function DevelopmentProgramConfigPanel({
     upsertProgramMutation.isPending ||
     assignManagerMutation.isPending ||
     setDocsMutation.isPending ||
+    setReferralEnabledMutation.isPending ||
     setBrandPresetMutation.isPending ||
     isApplyingTemplate;
+  const readinessStatus = getAdminReadinessStatus(readinessQuery.data as ProgramReadiness | null);
 
   function getDocumentCodeOptions(category: RequiredDocumentDraft['category']) {
     return category === 'developer_document'
@@ -757,9 +881,10 @@ function DevelopmentProgramConfigPanel({
   }
 
   async function handleSave() {
+    const keepReferralsLive = readinessStatus === 'live';
     await saveConfigurationForDevelopment(
       development.developmentId,
-      Boolean(readinessQuery.data?.state.isReferralEnabled),
+      keepReferralsLive,
       true,
     );
 
@@ -768,7 +893,26 @@ function DevelopmentProgramConfigPanel({
       docsQuery.refetch(),
       Promise.resolve(onMutationSuccess([development.developmentId])),
     ]);
-    toast.success('Program configuration saved');
+    toast.success(keepReferralsLive ? 'Live referral setup saved' : 'Referral setup saved as draft');
+  }
+
+  async function handleEnableReferrals() {
+    try {
+      await saveConfigurationForDevelopment(development.developmentId, false, true);
+      await setReferralEnabledMutation.mutateAsync({
+        developmentId: development.developmentId,
+        enabled: true,
+      });
+
+      await Promise.all([
+        readinessQuery.refetch(),
+        docsQuery.refetch(),
+        Promise.resolve(onMutationSuccess([development.developmentId])),
+      ]);
+      toast.success('Referrals enabled');
+    } catch (error: any) {
+      toast.error(error?.message || 'Save setup first, then enable referrals when all blockers are clear');
+    }
   }
 
   async function handleApplyTemplateToOtherDevelopments() {
@@ -868,14 +1012,26 @@ function DevelopmentProgramConfigPanel({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Readiness</CardTitle>
-          <CardDescription>Server truth for referral enablement.</CardDescription>
+          <CardTitle className="text-base">Referral Setup Checklist</CardTitle>
+          <CardDescription>
+            Complete these items before buyers can be submitted for this development.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
           <ReadinessStatusChips readiness={readinessQuery.data as any} />
+          <ReadinessChecklist readiness={readinessQuery.data as any} />
+          {readinessStatus === 'enabled_blocked' ? (
+            <div className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+              <p className="font-medium">Enabled but not accepting submissions</p>
+              <p className="mt-1">
+                This development has the referral switch on, but setup is incomplete. Save the setup
+                as a draft or fix the blockers before enabling again.
+              </p>
+            </div>
+          ) : null}
           {readinessQuery.data?.canEnableReferral === false ? (
             <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-              <p className="mb-1 font-medium">Fix these blockers before enabling referrals:</p>
+              <p className="mb-1 font-medium">Next setup actions:</p>
               <div className="space-y-1">
                 {readinessQuery.data.blockers.map((blocker: any) => (
                   <div
@@ -902,7 +1058,7 @@ function DevelopmentProgramConfigPanel({
             </div>
           ) : (
             <p className="text-xs text-emerald-700">
-              {readinessQuery.data?.state.isReferralEnabled
+              {readinessStatus === 'live'
                 ? 'Referrals are enabled for this development.'
                 : 'Ready to enable referrals.'}
             </p>
@@ -912,12 +1068,12 @@ function DevelopmentProgramConfigPanel({
 
       <Card id="section-program">
         <CardHeader>
-          <CardTitle className="text-base">Program Configuration</CardTitle>
+          <CardTitle className="text-base">Referral Reward & Payout</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div id="section-commission" className="grid gap-2 md:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Commission model</p>
+              <p className="text-xs font-medium text-slate-700">Referral reward type</p>
               <Select
                 value={commissionModel}
                 onValueChange={value => setCommissionModel(value as 'flat_percentage' | 'flat_amount')}
@@ -926,14 +1082,14 @@ function DevelopmentProgramConfigPanel({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat_percentage">flat_percentage</SelectItem>
-                  <SelectItem value="flat_amount">flat_amount</SelectItem>
+                  <SelectItem value="flat_percentage">Percentage of sale</SelectItem>
+                  <SelectItem value="flat_amount">Fixed amount</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-slate-700">
-                {commissionModel === 'flat_percentage' ? 'Default %' : 'Default amount'}
+                {commissionModel === 'flat_percentage' ? 'Reward percentage' : 'Reward amount'}
               </p>
               <Input
                 type="number"
@@ -954,20 +1110,20 @@ function DevelopmentProgramConfigPanel({
 
           <div className="grid gap-2 md:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Tier access policy</p>
+              <p className="text-xs font-medium text-slate-700">Who can submit buyers?</p>
               <Select value={tierAccessPolicy} onValueChange={value => setTierAccessPolicy(value as any)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="restricted">restricted</SelectItem>
-                  <SelectItem value="open">open</SelectItem>
-                  <SelectItem value="invite_only">invite_only</SelectItem>
+                  <SelectItem value="restricted">Approved partners only</SelectItem>
+                  <SelectItem value="open">Open referrers and partners</SelectItem>
+                  <SelectItem value="invite_only">Invite-only partners</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1" id="section-payout">
-              <p className="text-xs font-medium text-slate-700">Payout milestone</p>
+              <p className="text-xs font-medium text-slate-700">When does payout progress?</p>
               <Select value={payoutMilestone} onValueChange={value => setPayoutMilestone(value as any)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -975,7 +1131,7 @@ function DevelopmentProgramConfigPanel({
                 <SelectContent>
                   {payoutMilestones.map(milestone => (
                     <SelectItem key={milestone} value={milestone}>
-                      {milestone}
+                      {milestone.replace(/_/g, ' ')}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -993,7 +1149,7 @@ function DevelopmentProgramConfigPanel({
 
           <div className="grid gap-2 md:grid-cols-2">
             <div className="space-y-1" id="section-currency">
-              <p className="text-xs font-medium text-slate-700">Currency code</p>
+              <p className="text-xs font-medium text-slate-700">Payout currency</p>
               <Input
                 value={currencyCode}
                 onChange={event => setCurrencyCode(event.target.value.toUpperCase())}
@@ -1001,7 +1157,10 @@ function DevelopmentProgramConfigPanel({
               />
             </div>
             <div className="flex items-end justify-between rounded border p-2">
-              <p className="text-xs font-medium text-slate-700">Program active</p>
+              <div>
+                <p className="text-xs font-medium text-slate-700">Setup active</p>
+                <p className="text-[11px] text-slate-500">Paused setups cannot accept buyers.</p>
+              </div>
               <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
           </div>
@@ -1059,6 +1218,15 @@ function DevelopmentProgramConfigPanel({
       })}
 
       <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-white p-3">
+        {readinessStatus === 'enabled_blocked' ? (
+          <p className="mr-auto max-w-[260px] text-xs text-red-600">
+            This setup is enabled but blocked. Saving now will keep it as a draft until it is ready.
+          </p>
+        ) : readinessStatus === 'ready_to_enable' ? (
+          <p className="mr-auto max-w-[260px] text-xs text-emerald-700">
+            Setup is ready. Save first, then enable referrals for buyers.
+          </p>
+        ) : null}
         {otherDevelopments.length ? (
           <Button variant="outline" onClick={handleApplyTemplateToOtherDevelopments} disabled={isSaving}>
             {isApplyingTemplate
@@ -1068,9 +1236,22 @@ function DevelopmentProgramConfigPanel({
                 }`}
           </Button>
         ) : null}
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'Saving...' : 'Save Configuration'}
+        <Button variant="outline" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? 'Saving...' : 'Save setup'}
         </Button>
+        {readinessStatus === 'live' ? (
+          <Button variant="outline" disabled>
+            Referrals live
+          </Button>
+        ) : (
+          <Button
+            variant="conversion"
+            onClick={handleEnableReferrals}
+            disabled={isSaving || readinessStatus !== 'ready_to_enable'}
+          >
+            {setReferralEnabledMutation.isPending ? 'Enabling...' : 'Enable referrals'}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -1099,10 +1280,29 @@ function DevelopmentOnboardingRow({
   const isReadinessLoading = readinessQuery.isLoading && !readinessQuery.data;
 
   const isReferralEnabled = Boolean(readinessQuery.data?.state.isReferralEnabled);
+  const readinessStatus = getAdminReadinessStatus(readinessQuery.data as ProgramReadiness | null);
   const blockers = inlineBlockers.length
     ? inlineBlockers
     : ((readinessQuery.data?.blockers || []) as Array<{ code: string; message: string }>);
   const primaryMessage = getPrimaryReadinessMessage(readinessQuery.data as ProgramReadiness | null);
+  const statusClassName =
+    readinessStatus === 'live'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : readinessStatus === 'enabled_blocked'
+        ? 'border-red-200 bg-red-50 text-red-700'
+        : readinessStatus === 'ready_to_enable'
+          ? 'border-blue-200 bg-blue-50 text-blue-700'
+          : 'border-amber-200 bg-amber-50 text-amber-900';
+  const statusLabel =
+    readinessStatus === 'live'
+      ? 'Live'
+      : readinessStatus === 'enabled_blocked'
+        ? 'Enabled but blocked'
+        : readinessStatus === 'ready_to_enable'
+          ? 'Ready for activation'
+          : isReadinessLoading
+            ? 'Loading readiness'
+            : 'Next action';
 
   useEffect(() => {
     onReadinessLoaded(
@@ -1166,7 +1366,10 @@ function DevelopmentOnboardingRow({
             <Switch
               checked={isReferralEnabled}
               onCheckedChange={checked => void handleToggle(checked)}
-              disabled={setReferralEnabledMutation.isPending}
+              disabled={
+                setReferralEnabledMutation.isPending ||
+                (!isReferralEnabled && readinessStatus !== 'ready_to_enable')
+              }
             />
           </div>
         </div>
@@ -1177,25 +1380,11 @@ function DevelopmentOnboardingRow({
       </div>
 
       <div
-        className={`mt-2 rounded border p-2 text-xs ${
-          isReferralEnabled
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-            : readinessQuery.data?.canEnableReferral
-              ? 'border-blue-200 bg-blue-50 text-blue-700'
-              : 'border-amber-200 bg-amber-50 text-amber-900'
-        }`}
+        className={`mt-2 rounded border p-2 text-xs ${statusClassName}`}
       >
-        <p className="font-medium">
-          {isReferralEnabled
-            ? 'Referral status'
-            : isReadinessLoading
-              ? 'Loading readiness'
-            : readinessQuery.data?.canEnableReferral
-              ? 'Ready for activation'
-              : 'Next action'}
-        </p>
+        <p className="font-medium">{statusLabel}</p>
         <p className="mt-1">{primaryMessage}</p>
-        {!isReadinessLoading && !isReferralEnabled && blockers.length ? (
+        {!isReadinessLoading && readinessStatus !== 'live' && blockers.length ? (
           <div className="mt-2 space-y-1">
             {(isSelected ? blockers : blockers.slice(0, 1)).map(blocker => (
               <div
@@ -1379,9 +1568,9 @@ export function PartnerDevelopmentOnboardingDrawer({
             <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Eligible Developments</CardTitle>
+                  <CardTitle className="text-base">Development Referral Setup</CardTitle>
                   <CardDescription>
-                    Configure each development and enable referrals when readiness is clear.
+                    Work through each development, resolve setup blockers, then turn on buyer referrals.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -1396,28 +1585,30 @@ export function PartnerDevelopmentOnboardingDrawer({
                     </div>
                     <div className="rounded border bg-emerald-50 p-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
-                        Referral live / ready
+                        Live
                       </p>
                       <p className="mt-1 text-2xl font-semibold text-emerald-900">
-                        {readinessCounts.enabled + readinessCounts.readyToEnable}
+                        {readinessCounts.live}
                       </p>
                       <p className="text-[11px] text-emerald-700">
-                        {readinessCounts.enabled} enabled, {readinessCounts.readyToEnable} ready to enable
+                        Accepting buyer referrals now
                       </p>
                     </div>
                     <div className="rounded border bg-amber-50 p-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-amber-700">
-                        Blocked
+                        Needs setup
                       </p>
                       <p className="mt-1 text-2xl font-semibold text-amber-900">
-                        {readinessCounts.loading ? '...' : readinessCounts.blocked}
+                        {readinessCounts.loading
+                          ? '...'
+                          : readinessCounts.blocked + readinessCounts.enabledBlocked}
                       </p>
                       <p className="text-[11px] text-amber-700">
                         {readinessCounts.loading
                           ? `${readinessCounts.loading} development${
                               readinessCounts.loading === 1 ? '' : 's'
                             } still loading readiness`
-                          : 'Needs onboarding setup before submissions can open'}
+                          : `${readinessCounts.readyToEnable} ready to enable, ${readinessCounts.enabledBlocked} enabled but blocked`}
                       </p>
                     </div>
                   </div>

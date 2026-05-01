@@ -173,13 +173,13 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
   it('renders readiness chips from readiness.state', () => {
     render(<ReadinessStatusChips readiness={readinessFixture as any} />);
 
-    expect(screen.getByText('Program: Exists')).toBeInTheDocument();
-    expect(screen.getByText('Active: On')).toBeInTheDocument();
-    expect(screen.getByText('Referral: Disabled')).toBeInTheDocument();
-    expect(screen.getByText('Commission: Set')).toBeInTheDocument();
-    expect(screen.getByText('Currency: Set')).toBeInTheDocument();
+    expect(screen.getByText('Setup: Created')).toBeInTheDocument();
+    expect(screen.getByText('Setup: Active')).toBeInTheDocument();
+    expect(screen.getByText('Accepting referrals: Off')).toBeInTheDocument();
+    expect(screen.getByText('Referral reward: Set')).toBeInTheDocument();
+    expect(screen.getByText('Payout currency: Set')).toBeInTheDocument();
     expect(screen.getByText('Manager: Missing')).toBeInTheDocument();
-    expect(screen.getByText('Docs: Configured')).toBeInTheDocument();
+    expect(screen.getByText('Buyer docs: Ready')).toBeInTheDocument();
   });
 
   it('separates developer and client document configuration sections', () => {
@@ -252,6 +252,19 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       mutateAsync,
       isPending: false,
     });
+    mockGetProgramReadinessUseQuery.mockReturnValue({
+      data: {
+        ...readinessFixture,
+        canEnableReferral: true,
+        blockers: [],
+        state: {
+          ...readinessFixture.state,
+          hasActivePrimaryManager: true,
+        },
+      },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
 
     render(
       <PartnerDevelopmentOnboardingDrawer
@@ -281,7 +294,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(screen.getByText('Referral enable blocked')).toBeInTheDocument();
-    expect(screen.getByText('Next action')).toBeInTheDocument();
+    expect(screen.getByText('Referral enable blocked')).toBeInTheDocument();
     expect(
       screen.getAllByText('Assign an active primary manager to this development.').length,
     ).toBeGreaterThan(0);
@@ -346,10 +359,63 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    expect(screen.getByText('Referral live / ready')).toBeInTheDocument();
-    expect(screen.getByText('Needs onboarding setup before submissions can open')).toBeInTheDocument();
-    expect(screen.getByText('0 enabled, 1 ready to enable')).toBeInTheDocument();
+    expect(screen.getByText('Live')).toBeInTheDocument();
+    expect(screen.getByText('Accepting buyer referrals now')).toBeInTheDocument();
+    expect(screen.getByText('1 ready to enable, 0 enabled but blocked')).toBeInTheDocument();
     expect(screen.getByText('Configuring: Sky City')).toBeInTheDocument();
+  });
+
+  it('does not treat enabled-but-blocked developments as live', () => {
+    mockGetProgramReadinessUseQuery.mockReturnValue({
+      data: {
+        ...readinessFixture,
+        canEnableReferral: false,
+        blockers: [
+          { code: 'PROGRAM_INACTIVE', message: 'Activate the program before enabling referrals.' },
+          { code: 'MANAGER_MISSING', message: 'Assign an active primary manager to this development.' },
+        ],
+        state: {
+          ...readinessFixture.state,
+          isActive: false,
+          isReferralEnabled: true,
+          hasActivePrimaryManager: false,
+          requiredDocsCount: 0,
+          requiredRequiredDocsCount: 0,
+        },
+      },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'River Quarter',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText('Enabled but blocked').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Referrals are enabled, but buyer submissions are blocked until setup is complete.').length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText('Referrals are live for this development.')).not.toBeInTheDocument();
+    expect(screen.getByText('0 ready to enable, 1 enabled but blocked')).toBeInTheDocument();
   });
 
   it('save config triggers readiness refetch', async () => {
@@ -401,7 +467,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Save Configuration'));
+    fireEvent.click(screen.getByText('Save setup'));
 
     await waitFor(() =>
       expect(onboardMutateAsync).toHaveBeenCalledWith(
@@ -414,6 +480,80 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     await waitFor(() => expect(readinessRefetch).toHaveBeenCalled());
     await waitFor(() => expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1001 }));
     await waitFor(() => expect(mockInvalidateDocs).toHaveBeenCalledWith({ developmentId: 1001 }));
+    await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
+  });
+
+  it('saves setup as draft before enabling referrals from the configuration panel', async () => {
+    const onboardMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
+    const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
+    const setReferralMutateAsync = vi.fn().mockResolvedValue({ success: true });
+    const onRefreshCatalog = vi.fn().mockResolvedValue(undefined);
+
+    mockGetProgramReadinessUseQuery.mockReturnValue({
+      data: {
+        ...readinessFixture,
+        canEnableReferral: true,
+        blockers: [],
+        state: {
+          ...readinessFixture.state,
+          hasActivePrimaryManager: true,
+        },
+      },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    mockOnboardDevelopmentToPartnerNetworkUseMutation.mockReturnValue({
+      mutateAsync: onboardMutateAsync,
+      isPending: false,
+    });
+    mockUpsertProgramUseMutation.mockReturnValue({
+      mutateAsync: upsertMutateAsync,
+      isPending: false,
+    });
+    mockSetProgramReferralEnabledUseMutation.mockReturnValue({
+      mutateAsync: setReferralMutateAsync,
+      isPending: false,
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={onRefreshCatalog}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Enable referrals'));
+
+    await waitFor(() =>
+      expect(upsertMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1001,
+          isReferralEnabled: false,
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(setReferralMutateAsync).toHaveBeenCalledWith({
+        developmentId: 1001,
+        enabled: true,
+      }),
+    );
     await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
   });
 
@@ -715,7 +855,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     );
 
     fireEvent.click(screen.getByText('Load Brand Preset'));
-    fireEvent.click(screen.getByText('Save Configuration'));
+    fireEvent.click(screen.getByText('Save setup'));
 
     await waitFor(() =>
       expect(upsertMutateAsync).toHaveBeenCalledWith(
