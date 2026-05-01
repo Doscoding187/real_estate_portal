@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Home, Search, UsersRound, WalletCards, Loader2 } from 'lucide-react';
 
 type PrequalFormValues = {
   grossIncomeMonthly: string;
@@ -471,6 +471,7 @@ export default function PartnerDashboardPage() {
     }
 
     for (const item of eligibleDevelopmentsQuery.data?.items || []) {
+      if (item.opportunity?.status && item.opportunity.status !== 'ready') continue;
       const developmentId = Number(item.developmentId || 0);
       if (!developmentId || grouped.has(developmentId)) continue;
       const commissionModel = item.program?.commissionModel ? String(item.program.commissionModel) : null;
@@ -508,6 +509,7 @@ export default function PartnerDashboardPage() {
     }
 
     for (const item of programTermsQuery.data?.items || []) {
+      if (item.opportunity?.status !== 'ready') continue;
       const developmentId = Number(item.developmentId || 0);
       if (!developmentId || grouped.has(developmentId)) continue;
       const commissionModel = item.program?.commissionModel ? String(item.program.commissionModel) : null;
@@ -552,8 +554,8 @@ export default function PartnerDashboardPage() {
     );
   }, [eligibleDevelopmentsQuery.data?.items, myAccessQuery.data, programTermsQuery.data?.items]);
 
-  const visibleStock = stockRows.slice(0, 3);
-  const hiddenStockCount = Math.max(0, stockRows.length - 3);
+  const visibleStock = stockRows.slice(0, 7);
+  const hiddenStockCount = Math.max(0, stockRows.length - visibleStock.length);
   const stockByDevelopmentId = useMemo(() => {
     const map = new Map<number, AccessStockRow>();
     for (const row of stockRows) {
@@ -636,7 +638,7 @@ export default function PartnerDashboardPage() {
       items.push({
         id: 'empty',
         urgency: 'info',
-        title: 'Run pre-qualification to create your first deal',
+        title: 'Match your first buyer',
         detail: 'Input buyer affordability and generate matching opportunities.',
         timeLabel: '-',
         onClick: () => setLocation('/distribution/partner/accelerator'),
@@ -658,19 +660,20 @@ export default function PartnerDashboardPage() {
 
   if (showLoadingState) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f0ede8]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6b6a64]" />
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-[1380px] px-4 pb-8 pt-5 md:px-7">
-        <section className="overflow-hidden rounded-xl border border-[#1a1a18]/12 bg-white">
-          <div className="flex flex-wrap items-start justify-between gap-4 px-7 pb-5 pt-6">
-            <div>
-              <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.06em] text-[#6b6a64]">
+      <main className="mx-auto w-full max-w-[1420px] px-4 pb-10 pt-5 md:px-7">
+        <section className="overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] text-white shadow-[0_18px_50px_rgba(0,92,168,0.22)]">
+          <div className="grid gap-6 px-6 py-6 md:grid-cols-[1.25fr_0.75fr] md:px-8">
+            <div className="flex min-h-[170px] flex-col justify-between">
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase text-blue-100">
                 {new Date().toLocaleDateString('en-ZA', {
                   weekday: 'short',
                   day: '2-digit',
@@ -679,61 +682,78 @@ export default function PartnerDashboardPage() {
                 })}{' '}
                 - Good morning
               </p>
-              <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-[#1a1a18]">
-                Your Network Engine
+              <h1 className="text-[30px] font-semibold leading-tight text-white md:text-[36px]">
+                My Buyer Referral Hub
               </h1>
-              <p className="mt-1 text-[13px] text-[#6b6a64]">
-                Pre-qualify a buyer to unlock matching stock and commission.
+              <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#ece6da]">
+                Add a buyer, see where they fit, and track every next step to payout.
               </p>
             </div>
-            <div className="flex gap-2 pt-1">
+              <div className="mt-6 flex flex-wrap gap-2">
               <Button
-                variant="outline"
-                className="rounded-md border-[#1a1a18]/22 bg-transparent text-[#1a1a18]"
+                variant="conversion"
+                  className="rounded-md"
                 onClick={() => setLocation('/distribution/partner/submit')}
               >
-                Submit Referral
+                  <UsersRound className="mr-2 h-4 w-4" />
+                Submit Buyer
               </Button>
               <Button
-                className="rounded-md bg-[#1a1a18] text-white hover:bg-[#2c2c28]"
+                  variant="conversion"
+                  className="rounded-md"
                 onClick={() =>
                   document.getElementById('prequal-engine')?.scrollIntoView({ behavior: 'smooth' })
                 }
               >
-                Pre-Qualify Buyer
+                  <Search className="mr-2 h-4 w-4" />
+                Match Buyer
               </Button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-white/20 bg-white/12 p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase text-blue-100">Today at a glance</p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <HeroMetric icon={<Home className="h-4 w-4" />} label="Can refer today" value={String(stockRows.length)} />
+                <HeroMetric icon={<UsersRound className="h-4 w-4" />} label="My buyers" value={String(activeDealsCount)} />
+                <HeroMetric icon={<WalletCards className="h-4 w-4" />} label="Potential reward" value={formatCurrency(potentialIncome, true)} />
+                <HeroMetric icon={<CheckCircle2 className="h-4 w-4" />} label="Docs needed" value={String(pendingDocReferrals.length)} tone="amber" />
+              </div>
+              <div className="mt-4 rounded-md bg-white/10 px-3 py-2 text-[12px] text-[#f4efe6]">
+                {attentionItems[0]?.title || 'You are ready to submit your next buyer.'}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 border-t border-[#1a1a18]/12 md:grid-cols-3 xl:grid-cols-7">
-            <KpiCell label="Network Access" value={String(statusQuery.data?.accessCount || 0)} note="Live developments" />
-            <KpiCell label="Active Deals" value={String(activeDealsCount)} note="In progress" />
-            <KpiCell label="Docs Pending" value={String(pendingDocReferrals.length)} note="Action needed" valueClassName="text-[#9a6500]" />
-            <KpiCell label="At Risk" value={String(atRiskReferrals.length)} note="Past SLA" valueClassName="text-[#DC2626]" />
-            <KpiCell label="Pending Income" value={formatCurrency(pendingIncome, true)} note="Awaiting approval" />
-            <KpiCell label="Paid Income" value={formatCurrency(paidIncome, true)} note="This quarter" valueClassName="text-[#1a7a40]" />
-            <KpiCell label="Potential Income" value={formatCurrency(potentialIncome, true)} note="From active deals" />
+          <div className="grid grid-cols-2 border-t border-white/15 bg-[#1e3a8a]/50 md:grid-cols-3 xl:grid-cols-7">
+            <KpiCell label="Available Opportunities" value={String(stockRows.length)} note="Can accept buyers" tone="light" />
+            <KpiCell label="My Buyers" value={String(activeDealsCount)} note="In progress" tone="light" />
+            <KpiCell label="Documents Needed" value={String(pendingDocReferrals.length)} note="Action needed" valueClassName="text-warning" />
+            <KpiCell label="Needs Attention" value={String(atRiskReferrals.length)} note="Past next step" valueClassName="text-danger" />
+            <KpiCell label="Pending Reward" value={formatCurrency(pendingIncome, true)} note="Awaiting approval" tone="light" />
+            <KpiCell label="Paid Reward" value={formatCurrency(paidIncome, true)} note="This quarter" valueClassName="text-success" />
+            <KpiCell label="Potential Reward" value={formatCurrency(potentialIncome, true)} note="From active buyers" tone="light" />
           </div>
         </section>
 
-        <section id="prequal-engine" className="mt-4 overflow-hidden rounded-xl border border-[#1a1a18]/12 bg-white">
-          <div className="flex items-center justify-between gap-4 border-b border-[#1a1a18]/12 px-6 py-5">
+        <section id="prequal-engine" className="mt-5 overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-4 border-b border-primary/15 bg-primary/5 px-6 py-5">
             <div>
-              <h2 className="text-[14px] font-semibold text-[#1a1a18]">Create a Deal</h2>
-              <p className="mt-0.5 text-[12px] text-[#6b6a64]">
-                Find what your buyer can afford and match them to live stock instantly.
+              <h2 className="text-[16px] font-semibold text-foreground">Help Me Match My Buyer</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Find what your buyer can afford and match them to ready opportunities.
               </p>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f7ee] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#1a7a40]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#1a7a40]" />
+            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-3 py-1 text-[10px] font-semibold uppercase text-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
               Core Feature
             </span>
           </div>
 
           <div className="grid md:grid-cols-2">
-            <div className="border-r border-[#1a1a18]/12 p-6">
+            <div className="border-r border-primary/15 p-6">
               <label className="mb-4 block">
-                <span className="mb-1.5 block text-[11px] font-medium text-[#6b6a64]">
+                <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                   Gross income monthly (required)
                 </span>
                 <Input
@@ -743,13 +763,13 @@ export default function PartnerDashboardPage() {
                     setPrequalValues(current => ({ ...current, grossIncomeMonthly: event.target.value }))
                   }
                   inputMode="numeric"
-                  className="border-[#1a1a18]/22 bg-white"
+                  className="border-border bg-white"
                 />
               </label>
 
               <div className="mb-4 grid gap-3 md:grid-cols-2">
                 <label>
-                  <span className="mb-1.5 block text-[11px] font-medium text-[#6b6a64]">
+                  <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                     Monthly expenses
                   </span>
                   <Input
@@ -759,11 +779,11 @@ export default function PartnerDashboardPage() {
                       setPrequalValues(current => ({ ...current, deductionsMonthly: event.target.value }))
                     }
                     inputMode="numeric"
-                    className="border-[#1a1a18]/22 bg-white"
+                    className="border-border bg-white"
                   />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-[11px] font-medium text-[#6b6a64]">
+                  <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                     Deposit available
                   </span>
                   <Input
@@ -773,25 +793,26 @@ export default function PartnerDashboardPage() {
                       setPrequalValues(current => ({ ...current, depositAmount: event.target.value }))
                     }
                     inputMode="numeric"
-                    className="border-[#1a1a18]/22 bg-white"
+                    className="border-border bg-white"
                   />
                 </label>
               </div>
 
               <label className="mb-4 block">
-                <span className="mb-1.5 block text-[11px] font-medium text-[#6b6a64]">
+                <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                   Preferred area
                 </span>
                 <Input
                   placeholder="e.g. Midrand, Centurion, Fourways"
                   value={prequalValues.area}
                   onChange={event => setPrequalValues(current => ({ ...current, area: event.target.value }))}
-                  className="border-[#1a1a18]/22 bg-white"
+                  className="border-border bg-white"
                 />
               </label>
 
               <Button
-                className="w-full rounded-md bg-[#1a1a18] text-white hover:bg-[#2c2c28]"
+                variant="conversion"
+                className="w-full rounded-md"
                 disabled={createAssessmentMutation.isPending}
                 onClick={() => {
                   const grossIncomeMonthly = parseMoneyInt(prequalValues.grossIncomeMonthly, 0);
@@ -812,32 +833,33 @@ export default function PartnerDashboardPage() {
               </Button>
             </div>
 
-            <div className="bg-[#f5f4f0] p-6">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b6a64]">
-                Matching Developments
+            <div className="bg-[#f8fbff] p-6">
+              <p className="mb-3 text-[10px] font-semibold uppercase text-muted-foreground">
+                Buyer Fit Matches
               </p>
 
               {!assessment ? (
-                <div className="flex min-h-[220px] flex-col items-center justify-center text-center text-[12px] text-[#9e9d96]">
+                <div className="flex min-h-[220px] flex-col items-center justify-center text-center text-[12px] text-muted-foreground">
                   Enter buyer details and run pre-qualification to see matching stock and estimated
                   commission.
                 </div>
               ) : (
                 <div>
-                  <div className="mb-3 rounded-md border border-[#1a1a18]/12 bg-white p-3">
-                    <p className="text-[11px] text-[#6b6a64]">
+                  <div className="mb-3 rounded-md border border-border bg-white p-3">
+                    <p className="text-[11px] text-muted-foreground">
                       Buyer can afford up to{' '}
-                      <span className="font-mono font-semibold text-[#1a1a18]">
+                      <span className="font-mono font-semibold text-foreground">
                         {formatCurrency(assessment.outputs.purchasePrice)}
                       </span>
                     </p>
-                    <p className="mt-1 text-[11px] text-[#6b6a64]">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       Max repayment: {formatCurrency(assessment.outputs.maxMonthlyRepayment)} -{' '}
                       {assessment.outputs.confidenceLabel}
                     </p>
                     <Button
                       size="sm"
-                      className="mt-2 rounded-md bg-[#1a1a18] text-white hover:bg-[#2c2c28]"
+                      variant="conversion"
+                      className="mt-2 rounded-md"
                       disabled={matchesQuery.isFetching}
                       onClick={() => {
                         if (!assessmentId) return;
@@ -860,44 +882,45 @@ export default function PartnerDashboardPage() {
                       purchasePrice: displayPrice,
                     });
                     return (
-                      <div key={match.developmentId} className="mb-2 rounded-md border border-[#1a1a18]/12 bg-white p-3">
-                        <p className="text-[13px] font-semibold text-[#1a1a18]">{match.developmentName}</p>
-                        <p className="text-[11px] text-[#6b6a64]">{match.area || 'N/A'}</p>
+                      <div key={match.developmentId} className="mb-2 rounded-md border border-border bg-white p-3">
+                        <p className="text-[13px] font-semibold text-foreground">{match.developmentName}</p>
+                        <p className="text-[11px] text-muted-foreground">{match.area || 'N/A'}</p>
                         <div className="mt-2 flex items-center justify-between">
-                          <p className="font-mono text-[13px] font-semibold text-[#1a1a18]">
+                          <p className="font-mono text-[13px] font-semibold text-foreground">
                             {formatCurrency(displayPrice)}
                           </p>
                           <span
                             className={
                               confidence === 'Strong'
-                                ? 'rounded-full bg-[#e8f7ee] px-2 py-0.5 text-[10px] font-semibold text-[#1a7a40]'
+                                ? 'rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success'
                                 : confidence === 'Medium'
-                                  ? 'rounded-full bg-[#fef5e4] px-2 py-0.5 text-[10px] font-semibold text-[#9a6500]'
-                                  : 'rounded-full bg-[#f0ede8] px-2 py-0.5 text-[10px] font-semibold text-[#6b6a64]'
+                                  ? 'rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning'
+                                  : 'rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-muted-foreground'
                             }
                           >
                             {confidence} match
                           </span>
                         </div>
-                        <p className="mt-1 text-[11px] text-[#1a7a40]">
+                        <p className="mt-1 text-[11px] text-success">
                           Est. commission: {formatCurrency(commissionAmount)}
                         </p>
                         <div className="mt-2 flex gap-2">
                           <Button
                             size="sm"
-                            className="rounded-md bg-[#1a1a18] text-white hover:bg-[#2c2c28]"
+                            variant="conversion"
+                            className="rounded-md"
                             onClick={() =>
                               setLocation(
                                 `/distribution/partner/submit?developmentId=${match.developmentId}&assessmentId=${assessmentId}`,
                               )
                             }
                           >
-                            Submit Deal
+                            Submit Buyer
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="rounded-md border-[#1a1a18]/22 text-[#1a1a18]"
+                            className="rounded-md border-border text-foreground"
                             onClick={() => {
                               const message = buildWhatsAppShareMessage(matches, assessment.outputs.purchasePrice);
                               const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
@@ -912,7 +935,7 @@ export default function PartnerDashboardPage() {
                   })}
 
                   {matches.length > 0 ? (
-                    <div className="mt-2 border-t border-[#1a1a18]/12 pt-2 text-[11px] text-[#6b6a64]">
+                    <div className="mt-2 border-t border-border pt-2 text-[11px] text-muted-foreground">
                       Max affordability: {formatCurrency(assessment.outputs.purchasePrice)}
                     </div>
                   ) : null}
@@ -922,59 +945,162 @@ export default function PartnerDashboardPage() {
           </div>
         </section>
 
-        <section className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Card className="border-[#1a1a18]/12 bg-white p-5 lg:col-span-2">
+        <section className="mt-5">
+          <Card className="border-primary/15 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-[#1a1a18]">Conversion Funnel</h3>
+              <h3 className="text-[15px] font-semibold text-foreground">Buyer Progress Funnel</h3>
               <button
                 type="button"
-                className="text-[12px] text-[#1a5bbf] hover:underline"
+                className="text-[12px] text-primary hover:underline"
                 onClick={() => setLocation('/distribution/partner/referrals')}
               >
                 Drill into pipeline -
               </button>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Stock Available</p>
-                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a1a18]">{stockRows.length}</p>
+              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Can Refer Today</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{stockRows.length}</p>
               </div>
-              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Submitted Deals</p>
-                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a1a18]">{referralItems.length}</p>
+              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Submitted Buyers</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{referralItems.length}</p>
               </div>
-              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">App+ Conversion</p>
-                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a5bbf]">
+              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">App+ Conversion</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-primary">
                   {formatPercent(submitToApplicationRate)}
                 </p>
               </div>
-              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Paid Conversion</p>
+              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Paid Conversion</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a7a40]">
                   {formatPercent(submitToPaidRate)}
                 </p>
               </div>
-              <div className="rounded-md border border-[#1a1a18]/12 bg-[#faf9f6] px-3 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">Submissions (7d)</p>
-                <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a1a18]">{submissionsLast7Days}</p>
+              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Submissions (7d)</p>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{submissionsLast7Days}</p>
               </div>
             </div>
           </Card>
+        </section>
 
-          <Card className="border-[#1a1a18]/12 bg-white p-5">
+        <section className="mt-5 rounded-lg border border-primary/15 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[17px] font-semibold text-foreground">What Can I Refer Today?</h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">Ready opportunities your buyers can be submitted to now.</p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-[12px] font-semibold text-white hover:bg-[var(--brand-blue-hover)]"
+              onClick={() => setLocation('/distribution/partner/developments')}
+            >
+              View all opportunities <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleStock.map(row => (
+              <article
+                key={row.developmentId}
+                className="overflow-hidden rounded-lg border border-primary/15 bg-white transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="relative flex h-32 items-center justify-center bg-primary/5">
+                  <span
+                    className={`absolute left-3 top-3 rounded px-2 py-1 text-[9px] font-bold uppercase text-white ${
+                      row.badge === 'Hot'
+                        ? 'bg-[#DC2626]'
+                        : row.badge === 'Fast payout'
+                          ? 'bg-[#059669]'
+                          : 'bg-[#D97706]'
+                    }`}
+                  >
+                    {row.badge}
+                  </span>
+                  {row.imageUrl ? (
+                    <img
+                      src={row.imageUrl}
+                      alt={row.developmentName}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Home className="h-12 w-12 text-foreground/25" />
+                  )}
+                </div>
+                <div className="p-4">
+                  <div>
+                    <p className="text-[14px] font-semibold text-foreground">{row.developmentName}</p>
+                    <p className="mt-1 text-[12px] text-muted-foreground">{row.location}</p>
+                    <div className="mt-4 grid gap-3">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Price range</p>
+                        <p className="mt-1 font-mono text-[15px] font-semibold text-foreground">
+                          {formatCurrencyRange(row.priceFrom, row.priceTo)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
+                        <p className="mt-1 text-[13px] font-semibold text-success">{row.commissionDisplay}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLocation('/distribution/partner/developments')}
+                      className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-[12px] font-semibold text-primary"
+                    >
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
+                      }
+                      className="rounded-md bg-conversion px-3 py-2 text-[12px] font-semibold text-conversion-foreground hover:bg-conversion-hover"
+                    >
+                      Submit Buyer
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setLocation('/distribution/partner/developments')}
+              className="min-h-[272px] rounded-lg border border-dashed border-primary/20 bg-primary/5 p-5 text-center text-[12px] text-primary hover:bg-primary/10"
+            >
+              <span className="mb-2 block text-[32px] font-light text-primary">
+                {hiddenStockCount > 0 ? `+${hiddenStockCount}` : 'All'}
+              </span>
+              <span className="block font-semibold">
+                {hiddenStockCount > 0 ? 'more opportunities available' : 'View all opportunities'}
+              </span>
+              <span className="mt-2 block text-[11px] text-[#475569]">
+                Open submit and explore modes.
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section className="mt-5 grid gap-4 lg:grid-cols-2">
+          <Card className="border-primary/15 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-[#1a1a18]">Your Deals in Motion</h3>
+              <h3 className="text-[13px] font-semibold text-foreground">My Buyers in Motion</h3>
               <button
                 type="button"
-                className="text-[12px] text-[#1a5bbf] hover:underline"
+                className="text-[12px] text-primary hover:underline"
                 onClick={() => setLocation('/distribution/partner/referrals')}
               >
                 Open full pipeline -
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-md border border-[#1a1a18]/12">
+            <div className="overflow-hidden rounded-md border border-border">
               <div className="flex">
                 {stageOrder.map((stage: string, index: number) => {
                   const hasItems = Number(stageCounts[stage] || 0) > 0;
@@ -984,19 +1110,19 @@ export default function PartnerDashboardPage() {
                       key={stage}
                       type="button"
                       onClick={() => setLocation('/distribution/partner/referrals')}
-                      className={`flex-1 border-r border-[#1a1a18]/12 px-3 py-3 text-left last:border-r-0 ${
-                        isActive ? 'bg-[#e8f0fb]' : 'bg-white hover:bg-[#f5f4f0]'
+                      className={`flex-1 border-r border-border px-3 py-3 text-left last:border-r-0 ${
+                        isActive ? 'bg-primary/10' : 'bg-white hover:bg-surface'
                       }`}
                     >
-                      <p className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.05em] ${isActive ? 'text-[#1a5bbf]' : 'text-[#6b6a64]'}`}>
+                      <p className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.05em] ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
                         {index < stageOrder.length - 1 ? formatStageLabel(stage) : 'Paid'}
                       </p>
-                      <p className={`font-mono text-[22px] leading-none ${isActive ? 'text-[#1a5bbf]' : 'text-[#1a1a18]'}`}>
+                      <p className={`font-mono text-[22px] leading-none ${isActive ? 'text-primary' : 'text-foreground'}`}>
                         {Number(stageCounts[stage] || 0)}
                       </p>
                       <span
                         className={`mt-2 block h-1.5 w-1.5 rounded-full ${
-                          isActive ? 'bg-[#1a5bbf]' : hasItems ? 'bg-[#1a1a18]' : 'bg-[#9e9d96]'
+                          isActive ? 'bg-primary' : hasItems ? 'bg-foreground' : 'bg-muted-foreground'
                         }`}
                       />
                     </button>
@@ -1006,37 +1132,37 @@ export default function PartnerDashboardPage() {
             </div>
 
             {staleDeal ? (
-              <div className="mt-3 rounded-md bg-[#e8f0fb] px-3 py-2">
-                <p className="text-[11px] font-semibold text-[#1a5bbf]">
-                  Deal stalled: {staleDeal.buyerName || 'Buyer'} needs action
+              <div className="mt-3 rounded-md bg-primary/10 px-3 py-2">
+                <p className="text-[11px] font-semibold text-primary">
+                  Buyer needs action: {staleDeal.buyerName || 'Buyer'}
                 </p>
-                <p className="mt-0.5 text-[11px] text-[#6b6a64]">
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {staleDeal.developmentName} - current stage {formatStageLabel(staleDeal.currentStage)}
                 </p>
               </div>
             ) : null}
           </Card>
 
-          <Card className="border-[#1a1a18]/12 bg-white p-5">
-            <h3 className="text-[13px] font-semibold text-[#1a1a18]">Your Earnings Engine</h3>
-            <p className="mt-1 font-mono text-[30px] font-semibold tracking-[-0.04em] text-[#1a1a18]">
+          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+            <h3 className="text-[13px] font-semibold text-foreground">Referral Reward Progress</h3>
+            <p className="mt-1 font-mono text-[30px] font-semibold text-foreground">
               {formatCurrency(totalIncomePipeline)}
             </p>
-            <p className="text-[11px] text-[#6b6a64]">Total in pipeline - {new Date().getFullYear()}</p>
+            <p className="text-[11px] text-muted-foreground">Total referral reward pipeline - {new Date().getFullYear()}</p>
 
             <div className="mt-4 grid grid-cols-3 gap-2">
               <EarningCell label="Pending" value={formatCurrency(pendingIncome, true)} valueClassName="text-[#9a6500]" />
-              <EarningCell label="Approved" value={formatCurrency(approvedIncome, true)} valueClassName="text-[#1a5bbf]" />
+              <EarningCell label="Approved" value={formatCurrency(approvedIncome, true)} valueClassName="text-primary" />
               <EarningCell label="Paid" value={formatCurrency(paidIncome, true)} valueClassName="text-[#1a7a40]" />
             </div>
 
-            <div className="mt-4 rounded-md border border-[#1a1a18]/12 bg-[#f5f4f0] p-3">
-              <p className="text-[11px] font-semibold text-[#1a1a18]">Next payout unlock</p>
-              <p className="mt-0.5 text-[11px] text-[#6b6a64]">
-                Close {unlockDealsRemaining} more deal{unlockDealsRemaining === 1 ? '' : 's'} to unlock approximately{' '}
+            <div className="mt-4 rounded-md border border-border bg-surface p-3">
+              <p className="text-[11px] font-semibold text-foreground">Next payout unlock</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Move {unlockDealsRemaining} more buyer{unlockDealsRemaining === 1 ? '' : 's'} forward to unlock approximately{' '}
                 <strong className="text-[#1a7a40]">{formatCurrency(nextUnlockAmount)}</strong>
               </p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#1a1a18]/15">
+              <div className="mt-2 h-1.5 overflow-hidden rounded bg-foreground/15">
                 <div
                   className="h-full rounded bg-[#1a7a40]"
                   style={{ width: `${Math.round(unlockProgress * 100)}%` }}
@@ -1046,102 +1172,13 @@ export default function PartnerDashboardPage() {
           </Card>
         </section>
 
-        <section className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Card className="border-[#1a1a18]/12 bg-white p-5">
+        <section className="mt-5">
+          <Card className="border-primary/15 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-[#1a1a18]">Deals You Can Close Today</h3>
+              <h3 className="text-[13px] font-semibold text-foreground">Your Next Moves</h3>
               <button
                 type="button"
-                className="text-[12px] text-[#1a5bbf] hover:underline"
-                onClick={() => setLocation('/distribution/partner/developments')}
-              >
-                View all stock -
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {visibleStock.map(row => (
-                <div
-                  key={row.developmentId}
-                  className="overflow-hidden rounded-md border border-[#1a1a18]/12 bg-white"
-                >
-                  <div className="relative flex h-20 items-center justify-center bg-[#f5f4f0]">
-                    <span
-                      className={`absolute left-2 top-2 rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-white ${
-                        row.badge === 'Hot'
-                          ? 'bg-[#DC2626]'
-                          : row.badge === 'Fast payout'
-                            ? 'bg-[#059669]'
-                            : 'bg-[#D97706]'
-                      }`}
-                    >
-                      {row.badge}
-                    </span>
-                    {row.imageUrl ? (
-                      <img
-                        src={row.imageUrl}
-                        alt={row.developmentName}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <svg width="48" height="36" viewBox="0 0 48 36" fill="none" className="text-[#1a1a18]/30">
-                        <rect x="6" y="12" width="36" height="22" rx="2" fill="currentColor" />
-                        <polygon points="24,2 42,14 6,14" fill="currentColor" />
-                        <rect x="19" y="22" width="10" height="12" fill="white" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="text-[12px] font-semibold text-[#1a1a18]">{row.developmentName}</p>
-                    <p className="mt-0.5 text-[10px] text-[#6b6a64]">{row.location}</p>
-                    <p className="mt-2 font-mono text-[13px] font-semibold text-[#1a1a18]">
-                      {formatCurrencyRange(row.priceFrom, row.priceTo)}
-                    </p>
-                    <p className="text-[10px] font-medium text-[#1a7a40]">
-                      Commission: {row.commissionDisplay}
-                    </p>
-                    <div className="mt-2 flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setLocation('/distribution/partner/developments')}
-                        className="flex-1 rounded border border-[#1a1a18]/12 bg-[#f5f4f0] px-2 py-1 text-[10px] font-semibold text-[#1a1a18]"
-                      >
-                        View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
-                        }
-                        className="flex-1 rounded bg-[#1a1a18] px-2 py-1 text-[10px] font-semibold text-white"
-                      >
-                        Match Buyer
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {hiddenStockCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setLocation('/distribution/partner/developments')}
-                  className="rounded-md border border-dashed border-[#1a1a18]/22 p-4 text-center text-[11px] text-[#6b6a64] hover:bg-[#f5f4f0]"
-                >
-                  <span className="mb-1 block text-[24px] font-light text-[#9e9d96]">+{hiddenStockCount}</span>
-                  more developments in your network
-                </button>
-              ) : null}
-            </div>
-          </Card>
-
-          <Card className="border-[#1a1a18]/12 bg-white p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-[#1a1a18]">Your Next Moves</h3>
-              <button
-                type="button"
-                className="text-[12px] text-[#1a5bbf] hover:underline"
+                className="text-[12px] text-primary hover:underline"
                 onClick={() => setLocation('/distribution/partner/referrals')}
               >
                 View all -
@@ -1153,7 +1190,7 @@ export default function PartnerDashboardPage() {
                 key={item.id}
                 type="button"
                 onClick={item.onClick}
-                className="flex w-full items-start gap-3 border-b border-[#1a1a18]/12 py-2.5 text-left last:border-b-0"
+                className="flex w-full items-start gap-3 border-b border-border py-2.5 text-left last:border-b-0"
               >
                 <span
                   className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
@@ -1165,10 +1202,10 @@ export default function PartnerDashboardPage() {
                   }`}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[12px] font-medium text-[#1a1a18]">{item.title}</span>
-                  <span className="mt-0.5 block text-[11px] text-[#6b6a64]">{item.detail}</span>
+                  <span className="block text-[12px] font-medium text-foreground">{item.title}</span>
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">{item.detail}</span>
                 </span>
-                <span className="pt-0.5 text-[10px] text-[#9e9d96]">{item.timeLabel}</span>
+                <span className="pt-0.5 text-[10px] text-muted-foreground">{item.timeLabel}</span>
               </button>
             ))}
           </Card>
@@ -1183,19 +1220,43 @@ function KpiCell({
   value,
   note,
   valueClassName,
+  tone,
 }: {
   label: string;
   value: string;
   note: string;
   valueClassName?: string;
+  tone?: 'light';
 }) {
   return (
-    <div className="border-r border-[#1a1a18]/12 px-4 py-4 last:border-r-0">
-      <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[#6b6a64]">{label}</p>
-      <p className={`mt-1 font-mono text-[21px] font-semibold leading-none text-[#1a1a18] ${valueClassName || ''}`}>
+    <div className={`border-r px-4 py-4 last:border-r-0 ${tone === 'light' ? 'border-white/10' : 'border-white/10'}`}>
+      <p className="text-[10px] font-medium uppercase text-[#bdb6aa]">{label}</p>
+      <p className={`mt-1 font-mono text-[21px] font-semibold leading-none text-white ${valueClassName || ''}`}>
         {value}
       </p>
-      <p className="mt-1 text-[10px] text-[#9e9d96]">{note}</p>
+      <p className="mt-1 text-[10px] text-blue-100">{note}</p>
+    </div>
+  );
+}
+
+function HeroMetric({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone?: 'amber';
+}) {
+  return (
+    <div className="rounded-md border border-white/20 bg-white/12 p-3">
+      <div className={tone === 'amber' ? 'mb-2 text-blue-100' : 'mb-2 text-blue-100'}>
+        {icon}
+      </div>
+      <p className="text-[10px] font-semibold uppercase text-blue-100">{label}</p>
+      <p className="mt-1 font-mono text-[20px] font-semibold leading-none text-white">{value}</p>
     </div>
   );
 }
@@ -1210,9 +1271,9 @@ function EarningCell({
   valueClassName?: string;
 }) {
   return (
-    <div className="rounded-md bg-[#f5f4f0] px-3 py-2">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-[#6b6a64]">{label}</p>
-      <p className={`mt-1 font-mono text-[17px] font-semibold text-[#1a1a18] ${valueClassName || ''}`}>
+    <div className="rounded-md bg-surface px-3 py-2">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{label}</p>
+      <p className={`mt-1 font-mono text-[17px] font-semibold text-foreground ${valueClassName || ''}`}>
         {value}
       </p>
     </div>

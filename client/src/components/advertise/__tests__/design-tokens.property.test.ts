@@ -30,12 +30,13 @@ describe('Design Token Consistency - Property Tests', () => {
           expect(typeof value).toBe('string');
           expect(value.length).toBeGreaterThan(0);
 
-          // Should be valid CSS color (hex, rgb, rgba, or gradient)
+          // Should be valid CSS color or canonical CSS custom property reference.
           const isValidColor =
             /^#[0-9A-Fa-f]{6}$/.test(value) || // hex
             /^#[0-9A-Fa-f]{3}$/.test(value) || // short hex
             /^rgb/.test(value) || // rgb/rgba
-            /^linear-gradient/.test(value); // gradient
+            /^linear-gradient/.test(value) || // gradient
+            /^var\(--[a-z0-9-]+\)$/.test(value); // CSS custom property
 
           expect(isValidColor).toBe(true);
         });

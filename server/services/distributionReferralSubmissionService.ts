@@ -13,7 +13,7 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { getAffordabilityMatches } from './affordabilityAssessmentService';
-import { validatePartnerSubmissionEligibility } from './distributionPartnerEligibilityService';
+import { assertDevelopmentSubmissionEligible } from './distributionAccessPolicy';
 import { getPartnerProgramTermsByDevelopmentId } from './distributionPartnerTermsService';
 
 const DUPLICATE_WINDOW_DAYS = 30;
@@ -319,11 +319,14 @@ export async function createReferralDeal(
   },
 ) {
   const db = await resolveDb();
-  const eligibility = await validatePartnerSubmissionEligibility({
-    developmentId: input.developmentId,
-    actorUserId: input.actorUserId,
-    actorRole: input.actorRole,
+  const eligibility = await assertDevelopmentSubmissionEligible({
     db,
+    developmentId: input.developmentId,
+    actor: {
+      role: input.actorRole === 'super_admin' ? 'admin' : 'referrer',
+      userId: input.actorUserId,
+    },
+    channel: 'submission',
   });
 
   const normalizedClientReference = String(input.clientReference || '').trim() || null;

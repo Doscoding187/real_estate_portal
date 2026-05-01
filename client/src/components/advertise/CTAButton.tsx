@@ -50,9 +50,9 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
 
   // Visual tokens only - keep gradients, shadows, colors
   const primaryStyles = {
-    background: softUITokens.colors.primary.gradient,
+    background: softUITokens.colors.conversion.gradient,
     color: softUITokens.colors.neutral.white,
-    boxShadow: softUITokens.shadows.soft,
+    boxShadow: '0 10px 24px rgba(255, 122, 0, 0.24)',
     borderRadius: softUITokens.borderRadius.soft,
     transition: `all ${softUITokens.transitions.base}`,
   };
@@ -67,7 +67,7 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
 
   const hoverStyles = isPrimary
     ? {
-        boxShadow: softUITokens.shadows.primaryGlow,
+        boxShadow: '0 12px 30px rgba(255, 122, 0, 0.32)',
         transform: 'translateY(-2px)',
       }
     : {

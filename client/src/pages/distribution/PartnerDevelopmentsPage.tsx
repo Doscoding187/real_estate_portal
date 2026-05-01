@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { Download, ExternalLink, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, Loader2, Search, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { trpc } from '@/lib/trpc';
@@ -14,6 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 
 const ALL_FILTER_VALUE = 'all';
+const VIEW_MODE_SUBMIT = 'submit';
+const VIEW_MODE_EXPLORE = 'explore';
 const BROCHURE_BOND_YEARS = 20;
 const BROCHURE_ANNUAL_INTEREST_RATE = 11.75;
 const BROCHURE_MIN_INCOME_RATIO = 0.3;
@@ -21,7 +23,7 @@ const BROCHURE_MIN_INCOME_RATIO = 0.3;
 function formatCurrency(value: number | null | undefined) {
   const numeric = Number(value || 0);
   if (!Number.isFinite(numeric) || numeric <= 0) return 'R 0';
-  return `R ${numeric.toLocaleString('en-ZA')}`;
+  return `R ${Math.round(numeric).toLocaleString('en-ZA')}`;
 }
 
 function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: number | null | undefined) {
@@ -39,9 +41,9 @@ function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: numb
 }
 
 function getOpportunityLabel(item: any) {
-  if (item.program?.isReferralEnabled) return 'Open for referral';
-  if (item.program?.isActive) return 'Launching soon';
-  return 'Preview stock';
+  if (item.opportunity?.status === 'ready') return 'Open for buyers';
+  if (item.opportunity?.status === 'pending_setup') return 'Coming soon';
+  return 'Not accepting referrals yet';
 }
 
 function estimateMonthlyInstallment(price: number | null | undefined) {
@@ -243,6 +245,9 @@ export default function PartnerDevelopmentsPage() {
   const [selectedBrandId, setSelectedBrandId] = useState<string>(ALL_FILTER_VALUE);
   const [selectedProvince, setSelectedProvince] = useState<string>(ALL_FILTER_VALUE);
   const [selectedCity, setSelectedCity] = useState<string>(ALL_FILTER_VALUE);
+  const [viewMode, setViewMode] = useState<typeof VIEW_MODE_SUBMIT | typeof VIEW_MODE_EXPLORE>(
+    VIEW_MODE_SUBMIT,
+  );
   const [searchText, setSearchText] = useState('');
   const [brochureItem, setBrochureItem] = useState<any | null>(null);
 
@@ -257,6 +262,13 @@ export default function PartnerDevelopmentsPage() {
   );
 
   const allItems = termsQuery.data?.items || [];
+  const modeItems = useMemo(
+    () =>
+      viewMode === VIEW_MODE_SUBMIT
+        ? allItems.filter(item => item.opportunity?.status === 'ready')
+        : allItems,
+    [allItems, viewMode],
+  );
 
   const brandOptions = useMemo(() => {
     const map = new Map<number, string>();
@@ -270,25 +282,25 @@ export default function PartnerDevelopmentsPage() {
 
   const provinceOptions = useMemo(
     () =>
-      Array.from(new Set(allItems.map(item => item.province).filter(Boolean) as string[])).sort((a, b) =>
+      Array.from(new Set(modeItems.map(item => item.province).filter(Boolean) as string[])).sort((a, b) =>
         a.localeCompare(b),
       ),
-    [allItems],
+    [modeItems],
   );
 
   const cityOptions = useMemo(() => {
     const baseItems =
       selectedProvince === ALL_FILTER_VALUE
-        ? allItems
-        : allItems.filter(item => String(item.province || '') === selectedProvince);
+        ? modeItems
+        : modeItems.filter(item => String(item.province || '') === selectedProvince);
     return Array.from(new Set(baseItems.map(item => item.city).filter(Boolean) as string[])).sort((a, b) =>
       a.localeCompare(b),
     );
-  }, [allItems, selectedProvince]);
+  }, [modeItems, selectedProvince]);
 
   const filteredItems = useMemo(() => {
     const needle = searchText.trim().toLowerCase();
-    return allItems.filter(item => {
+    return modeItems.filter(item => {
       if (
         selectedBrandId !== ALL_FILTER_VALUE &&
         Number(item.brand?.brandProfileId || 0) !== Number(selectedBrandId)
@@ -308,7 +320,7 @@ export default function PartnerDevelopmentsPage() {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [allItems, searchText, selectedBrandId, selectedProvince, selectedCity]);
+  }, [modeItems, searchText, selectedBrandId, selectedProvince, selectedCity]);
 
   const topDevelopments = useMemo(() => filteredItems.slice(0, 10), [filteredItems]);
 
@@ -318,7 +330,7 @@ export default function PartnerDevelopmentsPage() {
       const city = String(item.city || 'Unspecified city');
       const current = counters.get(city) || { total: 0, live: 0 };
       current.total += 1;
-      if (item.program?.isReferralEnabled) current.live += 1;
+      if (item.opportunity?.status === 'ready') current.live += 1;
       counters.set(city, current);
     }
     return Array.from(counters.entries())
@@ -341,7 +353,7 @@ export default function PartnerDevelopmentsPage() {
 
   if (loading || termsQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f0ede8]">
+      <div className="flex min-h-screen items-center justify-center bg-surface">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
       </div>
     );
@@ -349,29 +361,57 @@ export default function PartnerDevelopmentsPage() {
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 md:px-7">
-        <section className="rounded-xl border border-[#1a1a18]/12 bg-white">
-          <div className="border-b border-[#1a1a18]/12 px-5 py-4 md:px-6">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b6a64]">
-              Partner Workspace
+      <main className="mx-auto w-full max-w-[1420px] px-4 pb-10 pt-6 md:px-7">
+        <section className="overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-5 py-5 text-white md:px-6">
+            <p className="text-[10px] font-semibold uppercase text-blue-100">
+              Referrer Workspace
             </p>
-            <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.03em] text-[#1a1a18]">
-              Development Opportunities
+            <h1 className="mt-1 text-[28px] font-semibold text-white">
+              Available Opportunities
             </h1>
-            <p className="mt-1 text-[12px] text-[#6b6a64]">
-              Browse stock, compare unit types, and download a shareable brochure for clients.
+            <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
+              Use Submit mode for opportunities accepting buyers now, or Explore mode for what is coming.
             </p>
           </div>
 
-          <div className="grid gap-2 border-b border-[#1a1a18]/12 px-5 py-4 md:grid-cols-4 md:px-6">
-            <input
-              value={searchText}
-              onChange={event => setSearchText(event.target.value)}
-              placeholder="Search development, city, brand..."
-              className="h-9 rounded-md border border-[#1a1a18]/22 bg-white px-3 text-[12px] text-[#1a1a18] placeholder:text-[#9e9d96]"
-            />
+          <div className="flex flex-wrap gap-2 border-b border-primary/15 bg-primary/5 px-5 py-4 md:px-6">
+            <button
+              type="button"
+              className={`rounded-md border px-3 py-2 text-[12px] font-semibold ${
+                viewMode === VIEW_MODE_SUBMIT
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-primary/15 bg-white text-foreground'
+              }`}
+              onClick={() => setViewMode(VIEW_MODE_SUBMIT)}
+            >
+              Submit mode
+            </button>
+            <button
+              type="button"
+              className={`rounded-md border px-3 py-2 text-[12px] font-semibold ${
+                viewMode === VIEW_MODE_EXPLORE
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-primary/15 bg-white text-foreground'
+              }`}
+              onClick={() => setViewMode(VIEW_MODE_EXPLORE)}
+            >
+              Explore mode
+            </button>
+          </div>
+
+          <div className="grid gap-2 border-b border-primary/15 px-5 py-4 md:grid-cols-4 md:px-6">
+            <label className="relative">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                value={searchText}
+                onChange={event => setSearchText(event.target.value)}
+                placeholder="Search development, city, brand..."
+                className="h-9 w-full rounded-md border border-primary/15 bg-white pl-9 pr-3 text-[12px] text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
             <select
-              className="h-9 rounded-md border border-[#1a1a18]/22 bg-white px-3 text-[12px] text-[#1a1a18]"
+              className="h-9 rounded-md border border-primary/15 bg-white px-3 text-[12px] text-foreground"
               value={selectedBrandId}
               onChange={event => setSelectedBrandId(event.target.value)}
             >
@@ -383,7 +423,7 @@ export default function PartnerDevelopmentsPage() {
               ))}
             </select>
             <select
-              className="h-9 rounded-md border border-[#1a1a18]/22 bg-white px-3 text-[12px] text-[#1a1a18]"
+              className="h-9 rounded-md border border-primary/15 bg-white px-3 text-[12px] text-foreground"
               value={selectedProvince}
               onChange={event => setSelectedProvince(event.target.value)}
             >
@@ -395,7 +435,7 @@ export default function PartnerDevelopmentsPage() {
               ))}
             </select>
             <select
-              className="h-9 rounded-md border border-[#1a1a18]/22 bg-white px-3 text-[12px] text-[#1a1a18]"
+              className="h-9 rounded-md border border-primary/15 bg-white px-3 text-[12px] text-foreground"
               value={selectedCity}
               onChange={event => setSelectedCity(event.target.value)}
             >
@@ -409,15 +449,16 @@ export default function PartnerDevelopmentsPage() {
           </div>
 
           <div className="flex items-center justify-between px-5 py-3 md:px-6">
-            <p className="text-[11px] text-[#6b6a64]">
+            <p className="text-[11px] text-muted-foreground">
+              <SlidersHorizontal className="mr-1 inline h-3.5 w-3.5" />
               Showing{' '}
-              <span className="font-semibold text-[#1a1a18]">{topDevelopments.length}</span> of{' '}
-              <span className="font-semibold text-[#1a1a18]">{filteredItems.length}</span> development
+              <span className="font-semibold text-foreground">{topDevelopments.length}</span> of{' '}
+              <span className="font-semibold text-foreground">{filteredItems.length}</span> development
               {filteredItems.length === 1 ? '' : 's'} (top 10)
             </p>
             <button
               type="button"
-              className="text-[11px] font-medium text-[#1a5bbf] hover:underline"
+              className="text-[11px] font-medium text-primary hover:underline"
               onClick={() => setLocation('/distribution/partner/overview')}
             >
               Back to overview
@@ -432,19 +473,19 @@ export default function PartnerDevelopmentsPage() {
         ) : null}
 
         {!termsQuery.error && !filteredItems.length ? (
-          <section className="mt-4 rounded-xl border border-[#1a1a18]/12 bg-white px-5 py-8 text-center">
-            <p className="text-[13px] font-medium text-[#1a1a18]">No developments match this filter.</p>
-            <p className="mt-1 text-[12px] text-[#6b6a64]">
-              Clear filters to view all available opportunities.
+          <section className="mt-4 rounded-xl border border-border bg-white px-5 py-8 text-center">
+            <p className="text-[13px] font-medium text-foreground">No developments match this filter.</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              Clear filters or switch to Explore mode to view upcoming opportunities.
             </p>
           </section>
         ) : null}
 
-        <section className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {topDevelopments.map(item => (
-            <article key={item.developmentId} className="overflow-hidden rounded-xl border border-[#1a1a18]/12 bg-white">
-              <div className="relative h-36 bg-[#f5f4f0]">
-                <span className="absolute left-2 top-2 rounded bg-[#1a1a18] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em] text-white">
+            <article key={item.developmentId} className="overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <div className="relative h-40 bg-primary/5">
+                <span className="absolute left-3 top-3 rounded bg-primary px-2 py-1 text-[9px] font-semibold uppercase text-primary-foreground">
                   {getOpportunityLabel(item)}
                 </span>
                 {item.imageUrl ? (
@@ -455,7 +496,7 @@ export default function PartnerDevelopmentsPage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[#1a1a18]/35">
+                  <div className="flex h-full w-full items-center justify-center text-foreground/35">
                     <svg width="62" height="44" viewBox="0 0 62 44" fill="none">
                       <rect x="7" y="14" width="48" height="26" rx="2" fill="currentColor" />
                       <polygon points="31,3 56,15 6,15" fill="currentColor" />
@@ -466,25 +507,25 @@ export default function PartnerDevelopmentsPage() {
               </div>
 
               <div className="space-y-2 p-4">
-                <h2 className="text-[14px] font-semibold text-[#1a1a18]">{item.developmentName}</h2>
-                <p className="text-[11px] text-[#6b6a64]">
+                <h2 className="text-[14px] font-semibold text-foreground">{item.developmentName}</h2>
+                <p className="text-[11px] text-muted-foreground">
                   {[item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable'}
                 </p>
                 {item.brand?.brandName ? (
-                  <p className="text-[10px] text-[#9e9d96]">{item.brand.brandName}</p>
+                  <p className="text-[10px] text-muted-foreground">{item.brand.brandName}</p>
                 ) : null}
 
-                <p className="font-mono text-[14px] font-semibold text-[#1a1a18]">
+                <p className="font-mono text-[14px] font-semibold text-foreground">
                   {formatCurrencyRange(item.priceFrom, item.priceTo)}
                 </p>
-                <p className="text-[11px] text-[#6b6a64]">
+                <p className="text-[11px] text-muted-foreground">
                   Estimated installment from{' '}
                   {formatCurrency(
                     estimateMonthlyInstallment(pickRepresentativePrice(item.priceFrom, item.priceTo)),
                   )}
                 </p>
 
-                <p className="text-[10px] text-[#6b6a64]">
+                <p className="text-[10px] text-muted-foreground">
                   {Array.isArray(item.unitTypes) && item.unitTypes.length
                     ? `${item.unitTypes.length} unit type${item.unitTypes.length === 1 ? '' : 's'}`
                     : 'Unit type details available'}
@@ -495,34 +536,41 @@ export default function PartnerDevelopmentsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setBrochureItem(item)}
-                    className="text-[11px]"
+                    className="border-primary/15 text-[11px]"
                   >
                     View Brochure
                   </Button>
                   <Button
                     size="sm"
+                    variant={item.opportunity?.status === 'ready' ? 'conversion' : 'secondary'}
                     className="text-[11px]"
+                    disabled={item.opportunity?.status !== 'ready'}
                     onClick={() => setLocation(`/distribution/partner/submit?developmentId=${item.developmentId}`)}
                   >
-                    Submit Referral
+                    {item.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Coming Soon'}
                   </Button>
                 </div>
+                {item.opportunity?.status !== 'ready' ? (
+                  <p className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
+                    {item.opportunity?.friendlyMessage || 'Referral submissions are not open yet.'}
+                  </p>
+                ) : null}
               </div>
             </article>
           ))}
         </section>
 
         {!!citySummary.length && (
-          <section className="mt-4 rounded-xl border border-[#1a1a18]/12 bg-white px-5 py-4 md:px-6">
-            <h3 className="text-[12px] font-semibold text-[#1a1a18]">City Opportunity Summary</h3>
-            <p className="mt-0.5 text-[11px] text-[#6b6a64]">
+          <section className="mt-4 rounded-lg border border-primary/15 bg-white px-5 py-4 shadow-sm md:px-6">
+            <h3 className="text-[12px] font-semibold text-foreground">City Opportunity Summary</h3>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               Snapshot of where opportunities are concentrated.
             </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {citySummary.map(city => (
-                <div key={city.city} className="rounded border border-[#1a1a18]/12 bg-[#faf9f6] p-2.5">
-                  <p className="text-[11px] font-semibold text-[#1a1a18]">{city.city}</p>
-                  <p className="text-[10px] text-[#6b6a64]">
+                <div key={city.city} className="rounded border border-border bg-surface p-2.5">
+                  <p className="text-[11px] font-semibold text-foreground">{city.city}</p>
+                  <p className="text-[10px] text-muted-foreground">
                     {city.total} development{city.total === 1 ? '' : 's'}
                   </p>
                   <p className="mt-0.5 text-[10px] text-[#0f6a36]">
@@ -624,7 +672,7 @@ export default function PartnerDevelopmentsPage() {
               </div>
 
               <div className="rounded border p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Estimate Assumptions</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Estimate Assumptions</p>
                 <p className="mt-2 text-sm text-slate-700">
                   {BROCHURE_BOND_YEARS}-year bond at {BROCHURE_ANNUAL_INTEREST_RATE}% annual
                   interest. Qualifying income assumes repayment is{' '}
@@ -652,7 +700,7 @@ export default function PartnerDevelopmentsPage() {
                             href={doc.fileUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs font-medium text-[#1a5bbf] hover:underline"
+                            className="text-xs font-medium text-primary hover:underline"
                           >
                             Open
                           </a>
@@ -680,8 +728,11 @@ export default function PartnerDevelopmentsPage() {
                   <ExternalLink className="h-4 w-4" />
                   Pre-Qualify Buyer
                 </Button>
-                <Button onClick={() => setLocation(`/distribution/partner/submit?developmentId=${brochureItem.developmentId}`)}>
-                  Submit Referral
+                <Button
+                  disabled={brochureItem.opportunity?.status !== 'ready'}
+                  onClick={() => setLocation(`/distribution/partner/submit?developmentId=${brochureItem.developmentId}`)}
+                >
+                  {brochureItem.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Coming Soon'}
                 </Button>
               </div>
             </>

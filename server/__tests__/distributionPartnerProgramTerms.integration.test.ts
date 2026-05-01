@@ -191,7 +191,13 @@ describeWithDb('distribution.partner program terms', () => {
       defaultCommissionPercent: 1.75,
     });
 
-    const result = await caller.distribution.partner.listProgramTerms();
+    const result = await caller.distribution.partner.listProgramTerms({
+      developmentIds: [
+        enabledDevelopmentId,
+        referralDisabledDevelopmentId,
+        inactiveDevelopmentId,
+      ],
+    });
     const returnedDevelopmentIds = result.items.map(item => item.developmentId);
 
     expect(returnedDevelopmentIds).toEqual([enabledDevelopmentId]);

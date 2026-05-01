@@ -24,11 +24,13 @@ export const designTokens = {
     },
     // Soft accent colors (WCAG AA compliant)
     accent: {
-      primary: '#4f46e5', // Darker for better contrast (was #6366f1)
-      hover: '#4338ca', // Even darker for hover state
-      light: '#6366f1', // Lighter shade for backgrounds
-      subtle: '#e0e7ff',
-      gradient: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+      primary: 'var(--brand-blue)',
+      hover: 'var(--brand-blue-hover)',
+      conversion: 'var(--conversion)',
+      conversionHover: 'var(--conversion-hover)',
+      light: '#0284c7',
+      subtle: '#e0f2fe',
+      gradient: 'linear-gradient(135deg, var(--brand-blue) 0%, #0284c7 100%)',
     },
     // Glass/overlay effects
     glass: {
@@ -48,10 +50,10 @@ export const designTokens = {
     },
     // Status colors (WCAG AA compliant)
     status: {
-      success: '#047857', // Darker green for 4.5:1 contrast (was #10b981)
-      warning: '#b45309', // Darker orange for 4.5:1 contrast (was #f59e0b)
-      error: '#dc2626', // Darker red for better contrast (was #ef4444)
-      info: '#2563eb', // Darker blue for better contrast (was #3b82f6)
+      success: 'var(--success)',
+      warning: 'var(--warning)',
+      error: 'var(--danger)',
+      info: 'var(--info)',
     },
   },
 

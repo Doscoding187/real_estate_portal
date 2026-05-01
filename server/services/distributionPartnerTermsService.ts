@@ -7,6 +7,7 @@ import {
   unitTypes,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
 
 type ListPartnerProgramTermsInput = {
@@ -62,6 +63,12 @@ export type PartnerProgramTermsItem = {
     commissionDisplay: string;
     payoutDisplay: string;
     requiredDocsSummary: string;
+  };
+  opportunity: {
+    status: 'ready' | 'pending_setup' | 'blocked';
+    reasonCodes: string[];
+    nextAction: 'submit_referral' | 'upload_docs' | 'contact_manager' | 'not_available';
+    friendlyMessage: string;
   };
 };
 
@@ -505,10 +512,42 @@ export async function listPartnerProgramTerms(
         payoutDisplay: buildPayoutDisplay(payoutMilestone, payoutMilestoneNotes),
         requiredDocsSummary: buildRequiredDocsSummary(requiredDocuments),
       },
+      opportunity: {
+        status: 'blocked',
+        reasonCodes: ['NOT_AVAILABLE'],
+        nextAction: 'not_available',
+        friendlyMessage: 'This opportunity is not accepting referrals right now.',
+      },
     };
   });
 
-  return { items };
+  const evaluatedItems = await Promise.all(
+    items.map(async item => {
+      try {
+        const evaluation = await evaluateDevelopmentDistributionAccess({
+          db,
+          developmentId: item.developmentId,
+          actor: { role: 'referrer' },
+          channel: 'submission',
+        });
+        return {
+          ...item,
+          opportunity: evaluation.opportunity,
+          program: {
+            ...item.program,
+            isActive: evaluation.programActive,
+            isReferralEnabled: evaluation.referralEnabled,
+          },
+        };
+      } catch {
+        return item;
+      }
+    }),
+  );
+
+  return {
+    items: evaluatedItems,
+  };
 }
 
 export async function getPartnerProgramTermsByDevelopmentId(developmentId: number) {

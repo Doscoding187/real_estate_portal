@@ -7,7 +7,7 @@ import { ReferralTopNav } from '@/components/referral/ReferralTopNav';
 
 export function ReferralAppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-[#f0ede8] text-[#1a1a18]">
+    <div className="flex min-h-screen bg-surface text-foreground">
       <ReferralSidebar />
 
       <Sheet>

@@ -6,23 +6,28 @@
 export const publisherTheme = {
   // Primary Brand Colors
   primary: {
-    blue: 'oklch(54.6% .245 262.881)', // #4f46e5
-    blueLight: 'oklch(64.6% .245 262.881)',
-    blueDark: 'oklch(44.6% .245 262.881)',
-    gradient: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+    blue: 'var(--brand-blue)',
+    blueLight: '#0284c7',
+    blueDark: 'var(--brand-blue-hover)',
+    gradient: 'linear-gradient(135deg, var(--brand-blue) 0%, #0284c7 100%)',
     gradientSubtle:
-      'linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%)',
+      'linear-gradient(135deg, rgba(0, 92, 168, 0.1) 0%, rgba(2, 132, 199, 0.05) 100%)',
+  },
+  conversion: {
+    orange: 'var(--conversion)',
+    orangeDark: 'var(--conversion-hover)',
+    gradient: 'linear-gradient(135deg, var(--conversion) 0%, var(--conversion-hover) 100%)',
   },
 
   // Status Colors
   status: {
-    success: 'oklch(70% 0.15 145)', // Green
+    success: 'var(--success)',
     successLight: 'oklch(95% 0.05 145)',
-    warning: 'oklch(75% 0.15 85)', // Amber
+    warning: 'var(--warning)',
     warningLight: 'oklch(95% 0.05 85)',
-    error: 'oklch(65% 0.20 25)', // Red
+    error: 'var(--danger)',
     errorLight: 'oklch(95% 0.05 25)',
-    info: 'oklch(70% 0.12 240)', // Blue
+    info: 'var(--info)',
     infoLight: 'oklch(95% 0.05 240)',
   },
 
@@ -41,7 +46,7 @@ export const publisherTheme = {
     md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
     lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
     xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-    colored: '0 10px 15px -3px rgba(79, 70, 229, 0.2), 0 4px 6px -4px rgba(79, 70, 229, 0.1)',
+    colored: '0 10px 15px -3px rgba(0, 92, 168, 0.2), 0 4px 6px -4px rgba(0, 92, 168, 0.1)',
   },
 } as const;
 

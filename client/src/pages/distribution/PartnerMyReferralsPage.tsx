@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UsersRound, WalletCards } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,9 +42,9 @@ function getNextActionLabel(
   docProgress?: { requiredCount: number; verifiedRequiredCount: number },
 ) {
   const normalized = normalizeStage(stage);
-  if (normalized === 'commission_paid') return 'View payout';
-  if (normalized === 'commission_pending') return 'Track payout';
-  if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Prepare payout';
+  if (normalized === 'commission_paid') return 'View paid reward';
+  if (normalized === 'commission_pending') return 'Track reward';
+  if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Protect payout';
   if (normalized === 'application_submitted') {
     if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) {
       return 'Upload missing docs';
@@ -133,23 +133,26 @@ export default function PartnerMyReferralsPage() {
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 md:px-7">
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>My Referrals</CardTitle>
-            <CardDescription>Track referral status and required document progress.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
-              Submit New Referral
+      <main className="mx-auto w-full max-w-[1280px] px-4 pb-10 pt-6 md:px-7">
+        <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
+            <p className="text-[10px] font-semibold uppercase text-blue-100">Referral tracker</p>
+            <h1 className="mt-1 text-[28px] font-semibold">My Buyers</h1>
+            <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
+              Track buyer status, next steps, required documents, and referral reward progress.
+            </p>
+          </div>
+          <CardContent className="flex flex-wrap items-center gap-2 bg-primary/5 py-4">
+            <Button variant="conversion" onClick={() => setLocation('/distribution/partner/submit')}>
+              Submit Buyer
             </Button>
-            <Button variant="outline" onClick={() => setLocation('/distribution/partner/accelerator')}>
-              Open Referral Accelerator
+            <Button variant="conversion" onClick={() => setLocation('/distribution/partner/accelerator')}>
+              Match Buyer
             </Button>
             <label className="ml-auto flex items-center gap-2 text-sm">
               Status
               <select
-                className="h-9 rounded border border-input bg-background px-2"
+                className="h-9 rounded-md border border-primary/15 bg-white px-2"
                 value={statusFilter}
                 onChange={event => setStatusFilter(event.target.value)}
               >
@@ -172,25 +175,28 @@ export default function PartnerMyReferralsPage() {
           </CardContent>
         </Card>
 
-        <Card className="mb-4">
+        <Card className="mb-4 border-primary/15 bg-white shadow-sm">
           <CardHeader>
-            <CardTitle>Journey to Commission</CardTitle>
-            <CardDescription>Every referral moves from viewing to application to payout.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <WalletCards className="h-4 w-4 text-primary" />
+              Journey to Referral Reward
+            </CardTitle>
+            <CardDescription>Every buyer moves from review to site visit, sale, and payout.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded border bg-[#faf9f6] p-3">
+            <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
               <p className="text-xs text-slate-500">Pending</p>
               <p className="text-lg font-semibold text-amber-700">
                 R {Math.round(commissionSummary.pending).toLocaleString('en-ZA')}
               </p>
             </div>
-            <div className="rounded border bg-[#faf9f6] p-3">
+            <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
               <p className="text-xs text-slate-500">Approved</p>
               <p className="text-lg font-semibold text-blue-700">
                 R {Math.round(commissionSummary.approved).toLocaleString('en-ZA')}
               </p>
             </div>
-            <div className="rounded border bg-[#faf9f6] p-3">
+            <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
               <p className="text-xs text-slate-500">Paid</p>
               <p className="text-lg font-semibold text-green-700">
                 R {Math.round(commissionSummary.paid).toLocaleString('en-ZA')}
@@ -203,7 +209,7 @@ export default function PartnerMyReferralsPage() {
           <Card className="mb-4 border-red-200 bg-red-50">
             <CardContent className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-red-700">
               <p>
-                {atRiskCount} referral{atRiskCount === 1 ? '' : 's'} are past SLA and need immediate
+                {atRiskCount} buyer{atRiskCount === 1 ? '' : 's'} need immediate
                 follow-up.
               </p>
               <Button size="sm" onClick={() => setShowAtRiskOnly(true)}>
@@ -219,13 +225,16 @@ export default function PartnerMyReferralsPage() {
           </Card>
         ) : null}
 
-        <Card>
+        <Card className="border-primary/15 bg-white shadow-sm">
           <CardHeader>
-            <CardTitle>Referral Deals</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <UsersRound className="h-4 w-4 text-primary" />
+              Buyer Tracker
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {visibleItems.map((item: any) => (
-              <div key={item.dealId} className="w-full rounded border bg-white p-3 text-left">
+              <div key={item.dealId} className="w-full rounded-md border border-primary/15 bg-white p-3 text-left">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">{item.development.name}</p>
@@ -246,8 +255,8 @@ export default function PartnerMyReferralsPage() {
                     </Badge>
                   </div>
                 </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded bg-slate-100">
-                  <div className="h-full rounded bg-blue-600" style={{ width: `${getStageProgress(item.status)}%` }} />
+                <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#e7dfd3]">
+                  <div className="h-full rounded bg-primary" style={{ width: `${getStageProgress(item.status)}%` }} />
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {getQuickActions(String(item.journey?.actionCode || '')).map(action => {
@@ -270,7 +279,7 @@ export default function PartnerMyReferralsPage() {
                           variant="outline"
                           onClick={() => setLocation('/distribution/partner/submit')}
                         >
-                          Submit Referral
+                          Submit Buyer
                         </Button>
                       );
                     }

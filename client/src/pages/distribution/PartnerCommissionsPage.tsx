@@ -140,15 +140,15 @@ export default function PartnerCommissionsPage() {
             <CardDescription>Live totals from your current filtered view.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded border bg-[#faf9f6] p-3">
+            <div className="rounded border bg-surface p-3">
               <p className="text-xs text-slate-500">Pending</p>
               <p className="text-lg font-semibold text-amber-700">{formatCurrency(summary.pending)}</p>
             </div>
-            <div className="rounded border bg-[#faf9f6] p-3">
+            <div className="rounded border bg-surface p-3">
               <p className="text-xs text-slate-500">Approved</p>
               <p className="text-lg font-semibold text-blue-700">{formatCurrency(summary.approved)}</p>
             </div>
-            <div className="rounded border bg-[#faf9f6] p-3">
+            <div className="rounded border bg-surface p-3">
               <p className="text-xs text-slate-500">Paid</p>
               <p className="text-lg font-semibold text-green-700">{formatCurrency(summary.paid)}</p>
             </div>
@@ -206,7 +206,7 @@ export default function PartnerCommissionsPage() {
                     {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Buyer: {row.buyerName}</p> : null}
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-[#1a1a18]">{formatCurrency(row.commissionAmount, row.currency)}</p>
+                    <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
                     <div className="mt-1 flex flex-wrap justify-end gap-1">
                       <Badge variant="secondary">{formatStageLabel(row.entryStatus)}</Badge>
                       {row.triggerStage ? <Badge variant="outline">Trigger: {formatStageLabel(row.triggerStage)}</Badge> : null}

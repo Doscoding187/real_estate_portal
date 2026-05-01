@@ -146,7 +146,7 @@ export default function AgentDetail() {
                 <div className="flex flex-wrap gap-3">
                   <Button
                     onClick={() => setContactDialogOpen(true)}
-                    className="bg-white text-[#0F4C75] hover:bg-gray-100"
+                    variant="conversion"
                   >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Contact Agent
@@ -158,7 +158,7 @@ export default function AgentDetail() {
                     </Button>
                   )}
                   {agent.whatsapp && (
-                    <Button variant="outline" className="border-white text-white hover:bg-white/10">
+                    <Button variant="conversion">
                       WhatsApp
                     </Button>
                   )}
@@ -176,7 +176,7 @@ export default function AgentDetail() {
               <div className="grid grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-[#0F4C75] mb-1">
+                    <div className="text-3xl font-bold text-primary mb-1">
                       {agent.totalSales || 0}
                     </div>
                     <div className="text-sm text-muted-foreground">Properties Sold</div>
@@ -184,7 +184,7 @@ export default function AgentDetail() {
                 </Card>
                 <Card>
                   <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-[#0F4C75] mb-1">
+                    <div className="text-3xl font-bold text-primary mb-1">
                       {agent.yearsExperience || 0}+
                     </div>
                     <div className="text-sm text-muted-foreground">Years Experience</div>
@@ -192,7 +192,7 @@ export default function AgentDetail() {
                 </Card>
                 <Card>
                   <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-[#0F4C75] mb-1">
+                    <div className="text-3xl font-bold text-primary mb-1">
                       {agent.reviewCount || 0}
                     </div>
                     <div className="text-sm text-muted-foreground">Reviews</div>
@@ -245,19 +245,19 @@ export default function AgentDetail() {
                 <CardContent className="space-y-3">
                   {agent.phone && (
                     <div className="flex items-center gap-3">
-                      <Phone className="h-5 w-5 text-[#0F4C75]" />
+                      <Phone className="h-5 w-5 text-primary" />
                       <span>{agent.phone}</span>
                     </div>
                   )}
                   {agent.email && (
                     <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-[#0F4C75]" />
+                      <Mail className="h-5 w-5 text-primary" />
                       <span className="break-all">{agent.email}</span>
                     </div>
                   )}
                   {agent.licenseNumber && (
                     <div className="flex items-center gap-3">
-                      <Award className="h-5 w-5 text-[#0F4C75]" />
+                      <Award className="h-5 w-5 text-primary" />
                       <span>License: {agent.licenseNumber}</span>
                     </div>
                   )}
@@ -292,7 +292,7 @@ export default function AgentDetail() {
                     <div className="space-y-2">
                       {JSON.parse(agent.areasServed).map((area: string, idx: number) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-[#0F4C75]" />
+                          <MapPin className="h-4 w-4 text-primary" />
                           <span className="text-sm">{area}</span>
                         </div>
                       ))}
@@ -348,7 +348,7 @@ export default function AgentDetail() {
                 rows={4}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={createLead.isPending}>
+            <Button type="submit" variant="conversion" className="w-full" disabled={createLead.isPending}>
               {createLead.isPending ? 'Sending...' : 'Send Message'}
             </Button>
           </form>

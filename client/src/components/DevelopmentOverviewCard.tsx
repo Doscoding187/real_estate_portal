@@ -51,7 +51,7 @@ export function DevelopmentOverviewCard({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
-                  <Calculator className="h-4 w-4 text-blue-600" />
+                  <Calculator className="h-4 w-4 text-primary" />
                   Est. Repayment
                 </div>
                 <p className="mt-2 text-xl font-bold text-slate-900">
@@ -62,7 +62,7 @@ export function DevelopmentOverviewCard({
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
-                  <TrendingUp className="h-4 w-4 text-orange-600" />
+                  <TrendingUp className="h-4 w-4 text-conversion" />
                   Qualifying Income
                 </div>
                 <p className="mt-2 text-xl font-bold text-slate-900">
@@ -79,7 +79,7 @@ export function DevelopmentOverviewCard({
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-5">
             <div className="flex items-center gap-2 text-slate-900">
-              <Calendar className="h-4 w-4 text-orange-500" />
+              <Calendar className="h-4 w-4 text-conversion" />
               <h3 className="font-bold text-base">Development Details</h3>
             </div>
 
@@ -111,7 +111,7 @@ export function DevelopmentOverviewCard({
                 <Progress
                   value={soldPct ?? 0}
                   className="h-2.5 bg-slate-200"
-                  indicatorClassName="bg-orange-500"
+                  indicatorClassName="bg-conversion"
                 />
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium text-slate-700">{soldPct}% sold</span>

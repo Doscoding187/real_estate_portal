@@ -97,7 +97,7 @@ export default function DistributionReferralApplyPage() {
             </button>
             <Link
               href={REFERRAL_LOGIN_PATH}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              className="text-sm font-medium text-primary hover:text-[var(--brand-blue-hover)]"
             >
               Already have access? Referrer login
             </Link>
@@ -113,13 +113,13 @@ export default function DistributionReferralApplyPage() {
 
             <div className="container relative max-w-xl">
               <div className="mb-5 text-center">
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-1.5 text-sm font-medium text-blue-700">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
                   <ShieldCheck className="h-4 w-4" />
                   Distribution Referral Access
                 </div>
                 <h1 className="mt-2 text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">
                   Join the{' '}
-                  <span className="bg-[linear-gradient(135deg,#06b6d4,#2563eb)] bg-clip-text text-transparent">
+                  <span className="bg-[linear-gradient(135deg,var(--info),var(--brand-blue))] bg-clip-text text-transparent">
                     Referral Network
                   </span>
                 </h1>
@@ -133,7 +133,7 @@ export default function DistributionReferralApplyPage() {
                 <CardContent className="p-6 sm:p-8">
                   {submitted ? (
                     <div className="space-y-5 text-center py-4">
-                      <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
                         <Check className="h-7 w-7" />
                       </div>
                       <h2 className="text-2xl font-semibold text-slate-900">
@@ -144,7 +144,7 @@ export default function DistributionReferralApplyPage() {
                         email once approved.
                       </p>
                       <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                        <Button onClick={() => setLocation('/distribution-network')}>
+                        <Button variant="outline" onClick={() => setLocation('/distribution-network')}>
                           Explore Opportunities
                         </Button>
                         <Button variant="outline" onClick={() => setLocation(REFERRAL_LOGIN_PATH)}>
@@ -205,7 +205,8 @@ export default function DistributionReferralApplyPage() {
 
                       <div className="space-y-3">
                         <Button
-                          className="w-full h-11 bg-[linear-gradient(135deg,#2563eb,#06b6d4)] text-white"
+                          variant="conversion"
+                          className="w-full h-11"
                           disabled={!canSubmit || submitMutation.isPending}
                           onClick={handleSubmit}
                         >
@@ -214,7 +215,7 @@ export default function DistributionReferralApplyPage() {
                         </Button>
                         <Link
                           href={REFERRAL_LOGIN_PATH}
-                          className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700"
+                          className="block text-center text-sm font-medium text-primary hover:text-[var(--brand-blue-hover)]"
                         >
                           Already have access? Sign in
                         </Link>
