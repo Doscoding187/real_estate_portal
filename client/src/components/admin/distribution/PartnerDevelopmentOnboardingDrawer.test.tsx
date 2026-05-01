@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PartnerDevelopmentOnboardingDrawer,
@@ -234,9 +234,76 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     );
 
     expect(screen.getByText('Developer Documents')).toBeInTheDocument();
-    expect(screen.getByText('Client Required Documents')).toBeInTheDocument();
+    expect(screen.getByText('Buyer Required Documents')).toBeInTheDocument();
     expect(screen.getByDisplayValue('House Plan')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bank Statements')).toBeInTheDocument();
+  });
+
+  it('applies buyer starter packs to the required document checklist', async () => {
+    const docsMutateAsync = vi.fn().mockResolvedValue({ success: true });
+    mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: docsMutateAsync,
+      isPending: false,
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    const bondPack = screen.getByText('Bond buyer pack').closest('div');
+    expect(bondPack).not.toBeNull();
+    fireEvent.click(within(bondPack as HTMLElement).getByText('Use pack'));
+
+    expect(screen.getByDisplayValue('Latest payslip or proof of income')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('3 months bank statements')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Bond pre-approval')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Save setup'));
+
+    await waitFor(() =>
+      expect(docsMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1001,
+          documents: expect.arrayContaining([
+            expect.objectContaining({
+              category: 'client_required_document',
+              documentCode: 'proof_of_income',
+              documentLabel: 'Latest payslip or proof of income',
+            }),
+            expect.objectContaining({
+              category: 'client_required_document',
+              documentCode: 'bank_statement',
+              documentLabel: '3 months bank statements',
+            }),
+            expect.objectContaining({
+              category: 'client_required_document',
+              documentCode: 'pre_approval',
+              documentLabel: 'Bond pre-approval',
+              isRequired: false,
+            }),
+          ]),
+        }),
+      ),
+    );
   });
 
   it('shows blockers inline when enabling referral is rejected by server', async () => {

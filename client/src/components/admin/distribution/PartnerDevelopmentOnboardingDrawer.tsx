@@ -158,6 +158,49 @@ const documentCodeLabelMap: Record<RequiredDocumentDraft['documentCode'], string
   custom: 'Custom Document',
 };
 
+const documentStarterPacks: Array<{
+  id: string;
+  label: string;
+  description: string;
+  category: RequiredDocumentDraft['category'];
+  documents: Array<Pick<RequiredDocumentDraft, 'documentCode' | 'documentLabel' | 'isRequired'>>;
+}> = [
+  {
+    id: 'bond-buyer',
+    label: 'Bond buyer pack',
+    description: 'ID, income, bank statement, and pre-approval for financed buyers.',
+    category: 'client_required_document',
+    documents: [
+      { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
+      { documentCode: 'proof_of_income', documentLabel: 'Latest payslip or proof of income', isRequired: true },
+      { documentCode: 'bank_statement', documentLabel: '3 months bank statements', isRequired: true },
+      { documentCode: 'pre_approval', documentLabel: 'Bond pre-approval', isRequired: false },
+    ],
+  },
+  {
+    id: 'cash-buyer',
+    label: 'Cash buyer pack',
+    description: 'Lean checklist for buyers who do not need bond finance.',
+    category: 'client_required_document',
+    documents: [
+      { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
+      { documentCode: 'proof_of_address', documentLabel: 'Proof of address', isRequired: true },
+      { documentCode: 'bank_statement', documentLabel: 'Proof of funds or bank confirmation', isRequired: true },
+    ],
+  },
+  {
+    id: 'developer-handout',
+    label: 'Developer handout pack',
+    description: 'Common development-side files referrers can share with buyers.',
+    category: 'developer_document',
+    documents: [
+      { documentCode: 'sale_agreement', documentLabel: 'Development sales pack', isRequired: false },
+      { documentCode: 'signed_offer_to_purchase', documentLabel: 'Offer to purchase template', isRequired: false },
+      { documentCode: 'transfer_documents', documentLabel: 'Transfer and costs guide', isRequired: false },
+    ],
+  },
+];
+
 const blockerSectionMap: Record<string, string> = {
   PROGRAM_MISSING: 'section-program',
   PROGRAM_INACTIVE: 'section-program',
@@ -554,6 +597,32 @@ function DevelopmentProgramConfigPanel({
     ]);
   }
 
+  function applyDocumentStarterPack(packId: string) {
+    const pack = documentStarterPacks.find(item => item.id === packId);
+    if (!pack) return;
+
+    setDocuments(current => {
+      const retained = current.filter(document => document.category !== pack.category);
+      const nextPackDocuments = pack.documents.map((document, index) => ({
+        id: undefined,
+        category: pack.category,
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel,
+        templateFileUrl: null,
+        templateFileName: null,
+        isRequired: document.isRequired,
+        isActive: true,
+        sortOrder: retained.length + index,
+      }));
+
+      return [...retained, ...nextPackDocuments].map((document, index) => ({
+        ...document,
+        sortOrder: index,
+      }));
+    });
+    toast.success(`${pack.label} applied`);
+  }
+
   function resolveDocumentLabel(document: RequiredDocumentDraft) {
     const typedLabel = document.documentLabel.trim();
     if (typedLabel) return typedLabel;
@@ -610,6 +679,8 @@ function DevelopmentProgramConfigPanel({
     addLabel: string;
     sectionId: string;
   }) {
+    const packs = documentStarterPacks.filter(pack => pack.category === input.category);
+
     return (
       <Card id={input.sectionId}>
         <CardHeader>
@@ -617,6 +688,26 @@ function DevelopmentProgramConfigPanel({
           <CardDescription>{input.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
+          {packs.length ? (
+            <div className="grid gap-2 md:grid-cols-2">
+              {packs.map(pack => (
+                <div key={pack.id} className="rounded border border-blue-100 bg-blue-50/60 p-3">
+                  <p className="text-sm font-medium text-slate-900">{pack.label}</p>
+                  <p className="mt-1 text-xs text-slate-600">{pack.description}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => applyDocumentStarterPack(pack.id)}
+                  >
+                    Use pack
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {input.rows.map(({ document, index }, rowIndex) => (
             <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
               <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1.4fr)_auto_auto_auto]">
@@ -1196,7 +1287,7 @@ function DevelopmentProgramConfigPanel({
       {renderDocumentSection({
         title: 'Developer Documents',
         description:
-          'Define the development-side documents agents need to share with clients, such as offer to purchase, NCA forms, house plans, or development terms.',
+          'Referrers can share or download these development-side documents for buyers, such as offer templates, sales packs, house plans, or development terms.',
         category: 'developer_document',
         rows: documents
           .map((document, index) => ({ document, index }))
@@ -1206,9 +1297,9 @@ function DevelopmentProgramConfigPanel({
       })}
 
       {renderDocumentSection({
-        title: 'Client Required Documents',
+        title: 'Buyer Required Documents',
         description:
-          'Define the documents the buyer must submit back into the referral flow, such as ID copy, payslips, bank statements, and proof of address.',
+          'Buyers must provide these documents before the referral can move cleanly through qualification.',
         category: 'client_required_document',
         rows: documents
           .map((document, index) => ({ document, index }))
