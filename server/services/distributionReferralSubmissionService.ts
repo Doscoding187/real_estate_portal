@@ -302,6 +302,7 @@ async function getRequiredTemplateIdsForDevelopment(db: DbExecutor, developmentI
       and(
         eq(developmentRequiredDocuments.developmentId, developmentId),
         eq(developmentRequiredDocuments.isActive, 1),
+        eq(developmentRequiredDocuments.isRequired, 1),
       ),
     );
   return rows.map(row => Number(row.id));
@@ -552,6 +553,8 @@ type ReferralProgress = {
   verifiedRequiredCount: number;
 };
 
+type PartnerDealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+
 async function computeDealDocumentProgressMap(
   db: DbExecutor,
   input: {
@@ -630,6 +633,86 @@ async function computeDealDocumentProgressMap(
   }
 
   return progressMap;
+}
+
+async function listDealApplicationDocuments(
+  db: DbExecutor,
+  input: {
+    dealId: number;
+    developmentId: number;
+  },
+) {
+  const templates = (await db
+    .select({
+      templateId: developmentRequiredDocuments.id,
+      documentCode: developmentRequiredDocuments.documentCode,
+      documentLabel: developmentRequiredDocuments.documentLabel,
+      category: developmentRequiredDocuments.category,
+      templateFileUrl: developmentRequiredDocuments.templateFileUrl,
+      templateFileName: developmentRequiredDocuments.templateFileName,
+      isRequired: developmentRequiredDocuments.isRequired,
+      sortOrder: developmentRequiredDocuments.sortOrder,
+    })
+    .from(developmentRequiredDocuments)
+    .where(
+      and(
+        eq(developmentRequiredDocuments.developmentId, input.developmentId),
+        eq(developmentRequiredDocuments.isActive, 1),
+        eq(developmentRequiredDocuments.isRequired, 1),
+      ),
+    )
+    .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id)) as Array<any>;
+
+  if (!templates.length) return [];
+
+  const persistedRows = await db
+    .select({
+      templateId: distributionDealDocuments.developmentRequiredDocumentId,
+      status: distributionDealDocuments.status,
+      submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+      submittedFileName: distributionDealDocuments.submittedFileName,
+      submittedAt: distributionDealDocuments.submittedAt,
+      receivedAt: distributionDealDocuments.receivedAt,
+      verifiedAt: distributionDealDocuments.verifiedAt,
+      notes: distributionDealDocuments.notes,
+    })
+    .from(distributionDealDocuments)
+    .where(
+      and(
+        eq(distributionDealDocuments.dealId, input.dealId),
+        inArray(
+          distributionDealDocuments.developmentRequiredDocumentId,
+          templates.map(template => Number(template.templateId)),
+        ),
+      ),
+    );
+
+  const persistedByTemplateId = new Map<number, any>();
+  for (const row of persistedRows) {
+    persistedByTemplateId.set(Number(row.templateId), row);
+  }
+
+  return templates.map(template => {
+    const templateId = Number(template.templateId);
+    const persisted = persistedByTemplateId.get(templateId);
+    return {
+      templateId,
+      documentCode: String(template.documentCode),
+      documentLabel: String(template.documentLabel || ''),
+      category: template.category as 'developer_document' | 'client_required_document',
+      templateFileUrl: template.templateFileUrl || null,
+      templateFileName: template.templateFileName || null,
+      isRequired: Boolean(template.isRequired),
+      sortOrder: Number(template.sortOrder || 0),
+      status: (persisted?.status || 'pending') as PartnerDealDocumentStatus,
+      submittedFileUrl: persisted?.submittedFileUrl || null,
+      submittedFileName: persisted?.submittedFileName || null,
+      submittedAt: persisted?.submittedAt || null,
+      receivedAt: persisted?.receivedAt || null,
+      verifiedAt: persisted?.verifiedAt || null,
+      notes: persisted?.notes || null,
+    };
+  });
 }
 
 export async function listMyReferralDeals(
@@ -796,6 +879,10 @@ export async function getMyReferralDeal(
 
   // TODO(snapshotting): store immutable terms at submission time when program-term versioning is introduced.
   const programTerms = await getPartnerProgramTermsByDevelopmentId(Number(deal.developmentId));
+  const applicationDocuments = await listDealApplicationDocuments(db, {
+    dealId: Number(deal.dealId),
+    developmentId: Number(deal.developmentId),
+  });
 
   return {
     journey: buildJourneyGuidance({
@@ -840,6 +927,7 @@ export async function getMyReferralDeal(
           }
         : null,
     docProgress,
+    applicationDocuments,
     programTerms,
     timeline: events.map(event => {
       const metadata = parseJsonObject(event.metadata);
@@ -852,5 +940,113 @@ export async function getMyReferralDeal(
         metadata,
       };
     }),
+  };
+}
+
+export async function submitReferralDealDocument(
+  input: SubmissionActor & {
+    dealId: number;
+    templateId: number;
+    submittedFileUrl: string;
+    submittedFileName?: string | null;
+    notes?: string | null;
+  },
+) {
+  const db = await resolveDb();
+  const [deal] = await db
+    .select({
+      dealId: distributionDeals.id,
+      agentId: distributionDeals.agentId,
+      developmentId: distributionDeals.developmentId,
+    })
+    .from(distributionDeals)
+    .where(eq(distributionDeals.id, input.dealId))
+    .limit(1);
+
+  if (!deal) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Referral deal not found.',
+    });
+  }
+
+  if (input.actorRole !== 'super_admin' && Number(deal.agentId) !== Number(input.actorUserId)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You can only upload documents for referrals you submitted.',
+    });
+  }
+
+  const [template] = await db
+    .select({
+      id: developmentRequiredDocuments.id,
+    })
+    .from(developmentRequiredDocuments)
+    .where(
+      and(
+        eq(developmentRequiredDocuments.id, input.templateId),
+        eq(developmentRequiredDocuments.developmentId, Number(deal.developmentId)),
+        eq(developmentRequiredDocuments.isActive, 1),
+        eq(developmentRequiredDocuments.isRequired, 1),
+      ),
+    )
+    .limit(1);
+
+  if (!template) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'This application document is not available for this referral.',
+    });
+  }
+
+  await db
+    .insert(distributionDealDocuments)
+    .values({
+      dealId: input.dealId,
+      developmentRequiredDocumentId: input.templateId,
+      status: 'received',
+      receivedAt: sql`CURRENT_TIMESTAMP`,
+      receivedBy: input.actorUserId,
+      submittedFileUrl: input.submittedFileUrl,
+      submittedFileName: input.submittedFileName || null,
+      submittedAt: sql`CURRENT_TIMESTAMP`,
+      submittedBy: input.actorUserId,
+      notes: input.notes || null,
+    })
+    .onDuplicateKeyUpdate({
+      set: {
+        status: 'received',
+        receivedAt: sql`CURRENT_TIMESTAMP`,
+        receivedBy: input.actorUserId,
+        verifiedAt: null,
+        verifiedBy: null,
+        submittedFileUrl: input.submittedFileUrl,
+        submittedFileName: input.submittedFileName || null,
+        submittedAt: sql`CURRENT_TIMESTAMP`,
+        submittedBy: input.actorUserId,
+        notes: input.notes || null,
+      },
+    });
+
+  return {
+    success: true,
+    applicationDocuments: await listDealApplicationDocuments(db, {
+      dealId: Number(deal.dealId),
+      developmentId: Number(deal.developmentId),
+    }),
+    docProgress:
+      (
+        await computeDealDocumentProgressMap(db, {
+          dealRows: [
+            {
+              dealId: Number(deal.dealId),
+              developmentId: Number(deal.developmentId),
+            },
+          ],
+        })
+      ).get(Number(deal.dealId)) || {
+        requiredCount: 0,
+        verifiedRequiredCount: 0,
+      },
   };
 }

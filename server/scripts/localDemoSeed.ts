@@ -331,25 +331,113 @@ async function insertProgram(
 
 async function insertRequiredDocuments(connection: mysql.Connection, developmentId: number) {
   const docs = [
-    ['id_document', 'Buyer ID document', 1],
-    ['proof_of_income', 'Latest payslip or proof of income', 2],
-    ['bank_statement', '3 months bank statements', 3],
-    ['pre_approval', 'Bond pre-approval or affordability note', 4],
+    {
+      code: 'sale_agreement',
+      label: 'Developer sale agreement',
+      category: 'developer_document',
+      isRequired: 1,
+      sortOrder: 1,
+      fileUrl: 'http://localhost:3009/local-demo-docs/hillside-sale-agreement.pdf',
+      fileName: '[LOCAL DEMO] Hillside sale agreement.pdf',
+    },
+    {
+      code: 'custom',
+      label: 'Building contract',
+      category: 'developer_document',
+      isRequired: 1,
+      sortOrder: 2,
+      fileUrl: 'http://localhost:3009/local-demo-docs/hillside-building-contract.pdf',
+      fileName: '[LOCAL DEMO] Hillside building contract.pdf',
+    },
+    {
+      code: 'id_document',
+      label: 'Buyer ID document',
+      category: 'client_required_document',
+      isRequired: 1,
+      sortOrder: 3,
+      fileUrl: null,
+      fileName: null,
+    },
+    {
+      code: 'proof_of_income',
+      label: 'Bond buyer: latest payslip or proof of income',
+      category: 'client_required_document',
+      isRequired: 1,
+      sortOrder: 4,
+      fileUrl: null,
+      fileName: null,
+    },
+    {
+      code: 'bank_statement',
+      label: 'Bond or cash buyer: bank statements / proof of funds',
+      category: 'client_required_document',
+      isRequired: 1,
+      sortOrder: 5,
+      fileUrl: null,
+      fileName: null,
+    },
+    {
+      code: 'pre_approval',
+      label: 'Bond buyer: pre-approval or affordability note',
+      category: 'client_required_document',
+      isRequired: 1,
+      sortOrder: 6,
+      fileUrl: null,
+      fileName: null,
+    },
+    {
+      code: 'custom',
+      label: 'Unit / house plans',
+      category: 'developer_document',
+      isRequired: 0,
+      sortOrder: 20,
+      fileUrl: 'http://localhost:3009/local-demo-docs/hillside-unit-plans.pdf',
+      fileName: '[LOCAL DEMO] Hillside unit plans.pdf',
+    },
+    {
+      code: 'custom',
+      label: 'Site map',
+      category: 'developer_document',
+      isRequired: 0,
+      sortOrder: 21,
+      fileUrl: 'http://localhost:3009/local-demo-docs/hillside-site-map.pdf',
+      fileName: '[LOCAL DEMO] Hillside site map.pdf',
+    },
+    {
+      code: 'custom',
+      label: 'Specifications and finishes',
+      category: 'developer_document',
+      isRequired: 0,
+      sortOrder: 22,
+      fileUrl: 'http://localhost:3009/local-demo-docs/hillside-specifications.pdf',
+      fileName: '[LOCAL DEMO] Hillside specifications.pdf',
+    },
   ] as const;
 
   const ids: number[] = [];
-  for (const [code, label, sortOrder] of docs) {
+  for (const doc of docs) {
     const result = await execute(
       connection,
       `
         INSERT INTO development_required_documents
-          (development_id, document_code, document_label, category, is_required, sort_order, is_active)
+          (development_id, document_code, document_label, category, template_file_url, template_file_name, is_required, sort_order, is_active)
         VALUES
-          (?, ?, ?, 'client_required_document', 1, ?, 1)
+          (?, ?, ?, ?, ?, ?, ?, ?, 1)
       `,
-      [developmentId, code, label, sortOrder],
+      [
+        developmentId,
+        doc.code,
+        doc.label,
+        doc.category,
+        doc.fileUrl,
+        doc.fileName,
+        doc.isRequired,
+        doc.sortOrder,
+      ],
     );
-    ids.push(Number(result.insertId));
+    if (doc.isRequired) {
+      ids.push(Number(result.insertId));
+    }
   }
   return ids;
 }

@@ -40,7 +40,7 @@ describe('distributionRequiredDocumentsService', () => {
     });
   });
 
-  it('counts only client-required documents in readiness when categories exist', async () => {
+  it('counts active required application documents in readiness when categories exist', async () => {
     const db = {
       select() {
         return {

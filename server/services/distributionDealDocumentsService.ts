@@ -201,7 +201,7 @@ export async function getDealChecklist(
     .limit(1);
 
   const templates = (await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)).filter(
-    template => template.isActive && template.category === 'client_required_document',
+    template => template.isActive && template.isRequired,
   );
 
   const templateIds = templates.map(template => Number(template.id));
@@ -377,7 +377,7 @@ export async function upsertDealDocumentStatus(
     candidate =>
       candidate.id === input.templateId &&
       candidate.isActive &&
-      candidate.category === 'client_required_document',
+      candidate.isRequired,
   );
 
   if (!template) {

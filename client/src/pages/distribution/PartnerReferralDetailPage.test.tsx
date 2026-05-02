@@ -8,6 +8,8 @@ const {
   mockUseRoute,
   mockGetReferralUseQuery,
   mockExportPackUseMutation,
+  mockPresignUseMutation,
+  mockSubmitReferralDocumentUseMutation,
   mockMyPipelineUseQuery,
   mockStatusUseQuery,
   mockMyCommissionEntriesUseQuery,
@@ -17,6 +19,8 @@ const {
   mockUseRoute: vi.fn(),
   mockGetReferralUseQuery: vi.fn(),
   mockExportPackUseMutation: vi.fn(),
+  mockPresignUseMutation: vi.fn(),
+  mockSubmitReferralDocumentUseMutation: vi.fn(),
   mockMyPipelineUseQuery: vi.fn(),
   mockStatusUseQuery: vi.fn(),
   mockMyCommissionEntriesUseQuery: vi.fn(),
@@ -60,6 +64,9 @@ vi.mock('@/lib/trpc', () => ({
         exportQualificationPackPdfForReferral: {
           useMutation: (...args: unknown[]) => mockExportPackUseMutation(...args),
         },
+        submitReferralDocument: {
+          useMutation: (...args: unknown[]) => mockSubmitReferralDocumentUseMutation(...args),
+        },
       },
       referrer: {
         myPipeline: {
@@ -71,6 +78,11 @@ vi.mock('@/lib/trpc', () => ({
         myCommissionEntries: {
           useQuery: (...args: unknown[]) => mockMyCommissionEntriesUseQuery(...args),
         },
+      },
+    },
+    upload: {
+      presign: {
+        useMutation: (...args: unknown[]) => mockPresignUseMutation(...args),
       },
     },
   },
@@ -89,9 +101,12 @@ describe('PartnerReferralDetailPage', () => {
     mockMyPipelineUseQuery.mockReturnValue({ data: { stageCounts: {} } });
     mockStatusUseQuery.mockReturnValue({ data: { accessCount: 0 } });
     mockMyCommissionEntriesUseQuery.mockReturnValue({ data: [], isLoading: false, error: null });
+    mockPresignUseMutation.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mockSubmitReferralDocumentUseMutation.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     mockGetReferralUseQuery.mockReturnValue({
       isLoading: false,
       error: null,
+      refetch: vi.fn(),
       data: {
         dealId: 42,
         development: {
@@ -124,7 +139,38 @@ describe('PartnerReferralDetailPage', () => {
           requiredCount: 3,
           verifiedRequiredCount: 1,
         },
-        programTerms: null,
+        applicationDocuments: [
+          {
+            templateId: 11,
+            documentCode: 'sale_agreement',
+            documentLabel: 'Developer sale agreement',
+            category: 'developer_document',
+            templateFileUrl: 'https://example.com/template.pdf',
+            templateFileName: 'sale-agreement.pdf',
+            isRequired: true,
+            sortOrder: 1,
+            status: 'pending',
+          },
+          {
+            templateId: 12,
+            documentCode: 'id_document',
+            documentLabel: 'Buyer ID document',
+            category: 'client_required_document',
+            isRequired: true,
+            sortOrder: 2,
+            status: 'verified',
+          },
+        ],
+        programTerms: {
+          sourceDocuments: [
+            {
+              templateId: 20,
+              documentLabel: 'Unit / house plans',
+              fileUrl: 'https://example.com/plans.pdf',
+              fileName: 'plans.pdf',
+            },
+          ],
+        },
         timeline: [],
       },
     });
@@ -144,5 +190,20 @@ describe('PartnerReferralDetailPage', () => {
 
     fireEvent.click(button);
     expect(mutate).toHaveBeenCalledWith({ dealId: 42 });
+  });
+
+  it('shows application upload and supporting document sections', () => {
+    mockExportPackUseMutation.mockReturnValue({
+      isPending: false,
+      mutate: vi.fn(),
+    });
+
+    render(<PartnerReferralDetailPage />);
+
+    expect(screen.getByText('Application and Supporting Documents')).toBeInTheDocument();
+    expect(screen.getByText('Developer sale agreement')).toBeInTheDocument();
+    expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
+    expect(screen.getByText('Unit / house plans')).toBeInTheDocument();
+    expect(screen.getByText('Upload signed copy')).toBeInTheDocument();
   });
 });

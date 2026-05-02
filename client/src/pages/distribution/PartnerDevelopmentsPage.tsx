@@ -239,6 +239,18 @@ function downloadBrochure(item: any) {
   URL.revokeObjectURL(href);
 }
 
+function countRequiredApplicationDocs(item: any) {
+  return (Array.isArray(item.requiredDocuments) ? item.requiredDocuments : []).filter((doc: any) =>
+    Boolean(doc.isRequired),
+  ).length;
+}
+
+function countSupportingFiles(item: any) {
+  return (Array.isArray(item.sourceDocuments) ? item.sourceDocuments : []).filter((doc: any) =>
+    Boolean(doc.fileUrl),
+  ).length;
+}
+
 export default function PartnerDevelopmentsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -530,6 +542,24 @@ export default function PartnerDevelopmentsPage() {
                     ? `${item.unitTypes.length} unit type${item.unitTypes.length === 1 ? '' : 's'}`
                     : 'Unit type details available'}
                 </p>
+                <div className="grid grid-cols-2 gap-2 rounded-md border border-primary/10 bg-primary/5 p-2">
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase text-muted-foreground">
+                      Supporting pack
+                    </p>
+                    <p className="text-[11px] font-medium text-foreground">
+                      {countSupportingFiles(item)} file{countSupportingFiles(item) === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase text-muted-foreground">
+                      Application docs
+                    </p>
+                    <p className="text-[11px] font-medium text-foreground">
+                      {countRequiredApplicationDocs(item)} required
+                    </p>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <Button
@@ -685,7 +715,10 @@ export default function PartnerDevelopmentsPage() {
 
               {Array.isArray(brochureItem.sourceDocuments) && brochureItem.sourceDocuments.length ? (
                 <div className="rounded border p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Brochure Files</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Supporting Pack</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Development-specific files you can share with your buyer before submitting.
+                  </p>
                   <div className="mt-2 grid gap-2">
                     {brochureItem.sourceDocuments.map((doc: any) => (
                       <div
@@ -695,6 +728,9 @@ export default function PartnerDevelopmentsPage() {
                         <p className="text-sm text-slate-900">
                           {doc.documentLabel || 'Developer document'}
                         </p>
+                        {doc.fileName ? (
+                          <p className="text-xs text-slate-500">{doc.fileName}</p>
+                        ) : null}
                         {doc.fileUrl ? (
                           <a
                             href={doc.fileUrl}
@@ -712,6 +748,29 @@ export default function PartnerDevelopmentsPage() {
                   </div>
                 </div>
               ) : null}
+
+              <div className="rounded border p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Application Documents</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  These are the buyer documents needed before the referral can move through
+                  qualification.
+                </p>
+                <div className="mt-2 grid gap-2">
+                  {(Array.isArray(brochureItem.requiredDocuments) ? brochureItem.requiredDocuments : [])
+                    .sort((a: any, b: any) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+                    .map((doc: any) => (
+                      <div
+                        key={doc.templateId}
+                        className="flex items-center justify-between rounded border bg-slate-50 px-2.5 py-2"
+                      >
+                        <p className="text-sm text-slate-900">{doc.documentLabel}</p>
+                        <span className="text-xs text-slate-500">
+                          {doc.isRequired ? 'Required' : 'Optional'}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
 
               <div className="flex flex-wrap justify-end gap-2">
                 <Button variant="outline" onClick={() => downloadBrochure(brochureItem)} className="gap-1">

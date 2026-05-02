@@ -462,6 +462,66 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(Number(result.managerUserId)).toBe(Number(managerUserId));
   });
 
+  it('allows the submitting referrer to upload application documents for manager review', async () => {
+    const actorUserId = await insertUser('agent');
+    const managerUserId = await insertUser('agent');
+    const caller = createCaller(actorUserId, 'agent');
+
+    const developmentId = await insertDevelopment(`Document Upload ${Date.now()}`);
+    await insertProgram({
+      developmentId,
+      isActive: true,
+      isReferralEnabled: true,
+      tierAccessPolicy: 'open',
+    });
+    await insertManagerAssignment({
+      developmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
+    });
+    const documentId = await insertRequiredDocument(developmentId);
+    await insertNetworkAccess(developmentId);
+
+    const submitted = await caller.distribution.partner.submitReferral({
+      developmentId,
+      buyerName: 'Document Buyer',
+      buyerEmail: `document-buyer-${Date.now()}@example.com`,
+    });
+    createdState.dealIds.push(Number(submitted.dealId));
+
+    const result = await caller.distribution.partner.submitReferralDocument({
+      dealId: Number(submitted.dealId),
+      templateId: documentId,
+      submittedFileUrl: 'https://example.com/signed-id.pdf',
+      submittedFileName: 'signed-id.pdf',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.docProgress.requiredCount).toBe(1);
+    expect(result.docProgress.verifiedRequiredCount).toBe(0);
+    expect(result.applicationDocuments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          templateId: documentId,
+          status: 'received',
+          submittedFileName: 'signed-id.pdf',
+        }),
+      ]),
+    );
+
+    const detail = await caller.distribution.partner.getReferral({ dealId: Number(submitted.dealId) });
+    expect(detail.applicationDocuments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          templateId: documentId,
+          status: 'received',
+          submittedFileUrl: 'https://example.com/signed-id.pdf',
+        }),
+      ]),
+    );
+  });
+
   it('selects primary active manager for assignment', async () => {
     const actorUserId = await insertUser('agent');
     const nonPrimaryManagerId = await insertUser('agent');
