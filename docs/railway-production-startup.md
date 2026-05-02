@@ -1,4 +1,4 @@
-# Railway Production Startup (Distribution-Safe)
+# Railway Production Startup (Stable)
 
 Use this for the backend service that serves `api.propertylistifysa.co.za`.
 
@@ -6,33 +6,21 @@ Use this for the backend service that serves `api.propertylistifysa.co.za`.
 
 Set Railway service start command to:
 
-`pnpm start`
+`pnpm start:prod`
 
-In this repository, `pnpm start` now runs:
-
-1. `pnpm db:target`
-2. `pnpm db:migrate`
-3. `pnpm start:prod:core`
-
-That means every deploy will:
-
-- print DB target fingerprint
-- run SQL migrations
-- verify distribution schema readiness
-- start the API only after checks pass
+This keeps API boot independent from migration execution and avoids startup-loop failures when a migration check fails.
 
 ## Why this matters
 
-Distribution onboarding saves can fail with `412 PRECONDITION_FAILED` when schema is behind.  
-This startup path prevents drift by enforcing migration + verify before boot.
+If migrations are run inside startup and one step fails, the process exits and Railway serves `502 Bad Gateway`.  
+Browsers then often surface CORS errors as a secondary symptom because the app never returns normal headers.
 
 ## Deploy verification checklist
 
 After each deploy, confirm logs include:
 
-- `db:target` output with the expected production DB
-- successful `migration:sql`
-- `[db:verify:distribution] OK`
-- API boot success
+- server boot success on `NODE_ENV=production`
+- no startup retries/crash loop
+- healthy `GET /api/trpc/auth.me` from `https://www.propertylistifysa.co.za`
 
-If migration or verify fails, deployment should fail and API should not start on a partial schema.
+Use the release procedure in `docs/railway-release-procedure.md` for migration and schema checks.

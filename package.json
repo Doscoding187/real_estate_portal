@@ -61,6 +61,8 @@
     "verify:showings:production": "cross-env NODE_ENV=production tsx scripts/verify-showings-migration.ts",
     "db:target": "tsx scripts/print-db-target.ts",
     "db:migrate": "pnpm db:target && pnpm migration:sql && pnpm db:verify:distribution",
+    "release:predeploy:production": "cross-env NODE_ENV=production pnpm db:migrate",
+    "release:smoke:production": "cross-env NODE_ENV=production pnpm db:target && cross-env NODE_ENV=production pnpm db:verify:distribution",
     "db:migrate:local": "cross-env NODE_ENV=development pnpm db:target && cross-env NODE_ENV=development drizzle-kit migrate --config drizzle.config.ts && cross-env NODE_ENV=development tsx server/migrations/runSqlMigrations.ts && cross-env NODE_ENV=development pnpm db:verify:distribution",
     "db:migrate:dev": "pnpm db:migrate:local",
     "db:migrate:test": "cross-env NODE_ENV=test drizzle-kit migrate --config drizzle.config.ts && pnpm migration:sql:test",
