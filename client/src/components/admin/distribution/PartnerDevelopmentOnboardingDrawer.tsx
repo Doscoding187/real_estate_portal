@@ -1634,10 +1634,6 @@ function DevelopmentOnboardingRow({
 
       {isSelected ? (
         <>
-          <div className="mt-2">
-            <ReadinessStatusChips readiness={readinessQuery.data as any} />
-          </div>
-
           <div
             className={`mt-2 rounded border p-2 text-xs ${statusClassName}`}
           >
