@@ -17,7 +17,7 @@
     "build:frontend": "vite build",
     "build:backend": "echo 'Backend build not required; run with tsx directly'",
     "build:railway": "pnpm build:frontend",
-    "start": "pnpm start:prod:with-migrations",
+    "start": "pnpm start:prod",
     "check": "tsc -p tsconfig.check.json --noEmit",
     "type-check": "pnpm run check",
     "lint": "pnpm run lint:check",
