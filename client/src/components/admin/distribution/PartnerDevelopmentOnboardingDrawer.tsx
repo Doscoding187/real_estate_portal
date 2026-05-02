@@ -241,6 +241,15 @@ function getBlockerSectionId(blockerCode: string) {
   return blockerSectionMap[blockerCode] || 'section-program';
 }
 
+function isRequiredDocumentSchemaNotReadyError(error: any) {
+  const message = String(error?.message || '');
+  const trpcCode = String(error?.data?.code || error?.shape?.data?.code || '');
+  return (
+    trpcCode === 'PRECONDITION_FAILED' &&
+    message.includes('Required document schema is not ready yet')
+  );
+}
+
 function getPrimaryReadinessMessage(readiness?: ProgramReadiness | null) {
   const status = getAdminReadinessStatus(readiness);
   if (status === 'loading') return 'Loading readiness status...';
@@ -1047,7 +1056,7 @@ function DevelopmentProgramConfigPanel({
     targetDevelopmentId: number,
     targetReferralEnabled: boolean,
     preserveDocumentIds: boolean,
-  ) {
+  ): Promise<{ documentsSaved: boolean }> {
     await onboardDevelopmentMutation.mutateAsync({
       developmentId: targetDevelopmentId,
     });
@@ -1067,7 +1076,14 @@ function DevelopmentProgramConfigPanel({
       });
     }
 
-    await setDocsMutation.mutateAsync(buildDocumentsInput(targetDevelopmentId, preserveDocumentIds));
+    try {
+      await setDocsMutation.mutateAsync(buildDocumentsInput(targetDevelopmentId, preserveDocumentIds));
+    } catch (error: any) {
+      if (isRequiredDocumentSchemaNotReadyError(error)) {
+        return { documentsSaved: false };
+      }
+      throw error;
+    }
 
     await Promise.all([
       utils.distribution.admin.getProgramReadiness.invalidate({
@@ -1077,11 +1093,13 @@ function DevelopmentProgramConfigPanel({
         developmentId: targetDevelopmentId,
       }),
     ]);
+
+    return { documentsSaved: true };
   }
 
   async function handleSave() {
     const keepReferralsLive = readinessStatus === 'live';
-    await saveConfigurationForDevelopment(
+    const saveResult = await saveConfigurationForDevelopment(
       development.developmentId,
       keepReferralsLive,
       true,
@@ -1092,12 +1110,18 @@ function DevelopmentProgramConfigPanel({
       docsQuery.refetch(),
       Promise.resolve(onMutationSuccess([development.developmentId])),
     ]);
-    toast.success(keepReferralsLive ? 'Live referral setup saved' : 'Referral setup saved as draft');
+    if (saveResult.documentsSaved) {
+      toast.success(keepReferralsLive ? 'Live referral setup saved' : 'Referral setup saved as draft');
+    } else {
+      toast.error(
+        'Core setup saved, but document checklist was not saved. Run latest distribution DB migrations and retry Save setup.',
+      );
+    }
   }
 
   async function handleEnableReferrals() {
     try {
-      await saveConfigurationForDevelopment(development.developmentId, false, true);
+      const saveResult = await saveConfigurationForDevelopment(development.developmentId, false, true);
       await setReferralEnabledMutation.mutateAsync({
         developmentId: development.developmentId,
         enabled: true,
@@ -1108,7 +1132,13 @@ function DevelopmentProgramConfigPanel({
         docsQuery.refetch(),
         Promise.resolve(onMutationSuccess([development.developmentId])),
       ]);
-      toast.success('Referrals enabled');
+      if (saveResult.documentsSaved) {
+        toast.success('Referrals enabled');
+      } else {
+        toast.error(
+          'Referrals were enabled, but document checklist was not saved. Run latest distribution DB migrations and save setup again.',
+        );
+      }
     } catch (error: any) {
       toast.error(error?.message || 'Save setup first, then enable referrals when all blockers are clear');
     }
@@ -1120,16 +1150,28 @@ function DevelopmentProgramConfigPanel({
     setIsApplyingTemplate(true);
     try {
       const targetDevelopmentIds = otherDevelopments.map(row => row.developmentId);
+      let hasDocumentSchemaBlocker = false;
       for (const row of otherDevelopments) {
-        await saveConfigurationForDevelopment(row.developmentId, false, false);
+        const result = await saveConfigurationForDevelopment(row.developmentId, false, false);
+        if (!result.documentsSaved) {
+          hasDocumentSchemaBlocker = true;
+        }
       }
 
       await Promise.resolve(onMutationSuccess(targetDevelopmentIds));
-      toast.success(
-        `Applied onboarding defaults to ${otherDevelopments.length} development${
-          otherDevelopments.length === 1 ? '' : 's'
-        }. Referrals remain disabled on targets.`,
-      );
+      if (hasDocumentSchemaBlocker) {
+        toast.error(
+          `Applied core setup to ${otherDevelopments.length} development${
+            otherDevelopments.length === 1 ? '' : 's'
+          }, but document checklists were skipped. Run latest distribution DB migrations, then apply again.`,
+        );
+      } else {
+        toast.success(
+          `Applied onboarding defaults to ${otherDevelopments.length} development${
+            otherDevelopments.length === 1 ? '' : 's'
+          }. Referrals remain disabled on targets.`,
+        );
+      }
     } catch (error: any) {
       toast.error(error?.message || 'Failed to apply onboarding defaults');
     } finally {
@@ -1499,6 +1541,7 @@ function DevelopmentOnboardingRow({
     ? inlineBlockers
     : ((readinessQuery.data?.blockers || []) as Array<{ code: string; message: string }>);
   const primaryMessage = getPrimaryReadinessMessage(readinessQuery.data as ProgramReadiness | null);
+  const blockerCount = blockers.length;
   const statusClassName =
     readinessStatus === 'live'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -1589,50 +1632,63 @@ function DevelopmentOnboardingRow({
         </div>
       </div>
 
-      <div className="mt-2">
-        <ReadinessStatusChips readiness={readinessQuery.data as any} />
-      </div>
+      {isSelected ? (
+        <>
+          <div className="mt-2">
+            <ReadinessStatusChips readiness={readinessQuery.data as any} />
+          </div>
 
-      <div
-        className={`mt-2 rounded border p-2 text-xs ${statusClassName}`}
-      >
-        <p className="font-medium">{statusLabel}</p>
-        <p className="mt-1">{primaryMessage}</p>
-        {!isReadinessLoading && readinessStatus !== 'live' && blockers.length ? (
-          <div className="mt-2 space-y-1">
-            {(isSelected ? blockers : blockers.slice(0, 1)).map(blocker => (
-              <div
-                key={`${development.developmentId}-${blocker.code}`}
-                className="flex items-center justify-between gap-2"
-              >
-                <span>{blocker.message}</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-6 px-2 text-[11px]"
-                  onClick={() => {
-                    onConfigure();
-                    onFixNow(blocker.code);
-                  }}
-                >
-                  Fix now
-                </Button>
+          <div
+            className={`mt-2 rounded border p-2 text-xs ${statusClassName}`}
+          >
+            <p className="font-medium">{statusLabel}</p>
+            <p className="mt-1">{primaryMessage}</p>
+            {!isReadinessLoading && readinessStatus !== 'live' && blockers.length ? (
+              <div className="mt-2 space-y-1">
+                {blockers.map(blocker => (
+                  <div
+                    key={`${development.developmentId}-${blocker.code}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span>{blocker.message}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => {
+                        onConfigure();
+                        onFixNow(blocker.code);
+                      }}
+                    >
+                      Fix now
+                    </Button>
+                  </div>
+                ))}
               </div>
-            ))}
-            {!isSelected && blockers.length > 1 ? (
-              <p className="text-[11px] text-slate-600">
-                {blockers.length - 1} more blocker{blockers.length - 1 === 1 ? '' : 's'} inside
-                configuration.
+            ) : null}
+            {isReadinessLoading ? (
+              <p className="mt-2 text-[11px] text-slate-600">
+                Checking program, manager, payout, currency, and document readiness...
               </p>
             ) : null}
           </div>
-        ) : null}
-        {isReadinessLoading ? (
-          <p className="mt-2 text-[11px] text-slate-600">
-            Checking program, manager, payout, currency, and document readiness...
-          </p>
-        ) : null}
-      </div>
+        </>
+      ) : (
+        <div className="mt-2 flex items-center justify-between gap-2 rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs">
+          <span className="text-slate-700">
+            {isReadinessLoading
+              ? 'Checking setup status...'
+              : blockerCount > 0
+                ? `${blockerCount} setup blocker${blockerCount === 1 ? '' : 's'}`
+                : primaryMessage}
+          </span>
+          {!isReadinessLoading && blockerCount > 0 ? (
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={onConfigure}>
+              Open setup
+            </Button>
+          ) : null}
+        </div>
+      )}
 
       {inlineBlockers.length ? (
         <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
@@ -1745,7 +1801,7 @@ export function PartnerDevelopmentOnboardingDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-[1100px]">
+      <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-[1450px]">
         <SheetHeader className="border-b pb-4">
           <SheetTitle>Partner Development Onboarding</SheetTitle>
           <SheetDescription>
@@ -1779,7 +1835,7 @@ export function PartnerDevelopmentOnboardingDrawer({
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(420px,0.9fr)_minmax(0,1.6fr)]">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Development Referral Setup</CardTitle>
