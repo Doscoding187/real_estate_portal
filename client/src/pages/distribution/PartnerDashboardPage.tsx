@@ -68,6 +68,67 @@ type AttentionItem = {
   onClick: () => void;
 };
 
+type ReferralDocProgress = {
+  requiredCount: number;
+  uploadedRequiredCount: number;
+  verifiedRequiredCount: number;
+  pendingReviewCount: number;
+  rejectedCount: number;
+  missingCount: number;
+  uploadComplete: boolean;
+  verificationComplete: boolean;
+};
+
+type ReferralListItem = {
+  dealId: number;
+  status?: string | null;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  buyer?: { name?: string | null } | null;
+  development?: { name?: string | null } | null;
+  journey?: { atRisk?: boolean; nextAction?: string | null } | null;
+  docProgress: ReferralDocProgress;
+};
+
+const EMPTY_DOC_PROGRESS: ReferralDocProgress = {
+  requiredCount: 0,
+  uploadedRequiredCount: 0,
+  verifiedRequiredCount: 0,
+  pendingReviewCount: 0,
+  rejectedCount: 0,
+  missingCount: 0,
+  uploadComplete: true,
+  verificationComplete: true,
+};
+
+function getDocProgress(input: any): ReferralDocProgress {
+  const value = input?.docProgress;
+  if (!value || typeof value !== 'object') return EMPTY_DOC_PROGRESS;
+  return {
+    requiredCount: Number(value.requiredCount || 0),
+    uploadedRequiredCount: Number(value.uploadedRequiredCount || 0),
+    verifiedRequiredCount: Number(value.verifiedRequiredCount || 0),
+    pendingReviewCount: Number(value.pendingReviewCount || 0),
+    rejectedCount: Number(value.rejectedCount || 0),
+    missingCount: Number(value.missingCount || 0),
+    uploadComplete: Boolean(value.uploadComplete),
+    verificationComplete: Boolean(value.verificationComplete),
+  };
+}
+
+function toReferralListItem(input: any): ReferralListItem {
+  return {
+    dealId: Number(input?.dealId || 0),
+    status: input?.status ?? null,
+    createdAt: input?.createdAt,
+    updatedAt: input?.updatedAt,
+    buyer: input?.buyer ?? null,
+    development: input?.development ?? null,
+    journey: input?.journey ?? null,
+    docProgress: getDocProgress(input),
+  };
+}
+
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 
 const DEFAULT_PREQUAL_FORM: PrequalFormValues = {
@@ -315,19 +376,16 @@ export default function PartnerDashboardPage() {
   const stageOrder = pipelineQuery.data?.stageOrder || [];
   const stageCounts = (pipelineQuery.data?.stageCounts || {}) as Record<string, number>;
 
+  const referralItems = useMemo<ReferralListItem[]>(
+    () => (referralsQuery.data?.items || []).map((item: any) => toReferralListItem(item)),
+    [referralsQuery.data?.items],
+  );
   const pendingDocReferrals = useMemo(() => {
-    const items = referralsQuery.data?.items || [];
-    return items.filter((item: any) => {
-      const requiredCount = Number(item.docProgress?.requiredCount || 0);
-      const verifiedCount = Number(item.docProgress?.verifiedRequiredCount || 0);
-      return requiredCount > verifiedCount;
-    });
-  }, [referralsQuery.data?.items]);
-  const referralItems = referralsQuery.data?.items || [];
+    return referralItems.filter(item => item.docProgress.requiredCount > item.docProgress.verifiedRequiredCount);
+  }, [referralItems]);
   const atRiskReferrals = useMemo(() => {
-    const items = referralsQuery.data?.items || [];
-    return items.filter((item: any) => Boolean(item.journey?.atRisk));
-  }, [referralsQuery.data?.items]);
+    return referralItems.filter(item => Boolean(item.journey?.atRisk));
+  }, [referralItems]);
 
   const activeDealsCount = useMemo(() => {
     const excluded = new Set(['commission_paid', 'cancelled']);
@@ -383,23 +441,19 @@ export default function PartnerDashboardPage() {
       'commission_pending',
       'commission_paid',
     ]);
-    return referralItems.filter((item: any) =>
-      convertedStages.has(normalizePipelineStage(item.status)),
-    ).length;
+    return referralItems.filter(item => convertedStages.has(normalizePipelineStage(item.status))).length;
   }, [referralItems]);
 
   const paidReferralCount = useMemo(
     () =>
-      referralItems.filter(
-        (item: any) => normalizePipelineStage(item.status) === 'commission_paid',
-      ).length,
+      referralItems.filter(item => normalizePipelineStage(item.status) === 'commission_paid').length,
     [referralItems],
   );
 
   const submissionsLast7Days = useMemo(() => {
     const now = Date.now();
     const cutoff = now - 7 * 24 * 60 * 60 * 1000;
-    return referralItems.filter((item: any) => {
+    return referralItems.filter(item => {
       const created = toDate(item.createdAt);
       return Boolean(created && created.getTime() >= cutoff);
     }).length;
@@ -600,11 +654,12 @@ export default function PartnerDashboardPage() {
 
     const firstMissingDocs = pendingDocReferrals[0];
     if (firstMissingDocs) {
+      const docProgress = firstMissingDocs.docProgress;
       items.push({
         id: `docs-${firstMissingDocs.dealId}`,
         urgency: 'urgent',
         title: `${firstMissingDocs.buyer?.name || 'Buyer'} - docs overdue`,
-        detail: `${firstMissingDocs.development?.name || 'Deal'} - ${firstMissingDocs.docProgress?.verifiedRequiredCount || 0}/${firstMissingDocs.docProgress?.requiredCount || 0} verified`,
+        detail: `${firstMissingDocs.development?.name || 'Deal'} - ${docProgress.uploadedRequiredCount}/${docProgress.requiredCount} uploaded, ${docProgress.verifiedRequiredCount} verified`,
         timeLabel: 'Now',
         onClick: () => setLocation(`/distribution/partner/referrals/${Number(firstMissingDocs.dealId)}`),
       });

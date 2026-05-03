@@ -18,6 +18,42 @@ const JOURNEY_STAGES = [
   'commission_paid',
 ] as const;
 
+type ReferralDocProgress = {
+  requiredCount: number;
+  uploadedRequiredCount: number;
+  verifiedRequiredCount: number;
+  pendingReviewCount: number;
+  rejectedCount: number;
+  missingCount: number;
+  uploadComplete: boolean;
+  verificationComplete: boolean;
+};
+
+type ReferralListItem = {
+  dealId: number;
+  status?: string | null;
+  development?: { name?: string | null } | null;
+  journey?: {
+    nextAction?: string | null;
+    ownerRole?: string | null;
+    slaDueAt?: string | null;
+    atRisk?: boolean;
+    actionCode?: string | null;
+  } | null;
+  docProgress: ReferralDocProgress;
+};
+
+const EMPTY_DOC_PROGRESS: ReferralDocProgress = {
+  requiredCount: 0,
+  uploadedRequiredCount: 0,
+  verifiedRequiredCount: 0,
+  pendingReviewCount: 0,
+  rejectedCount: 0,
+  missingCount: 0,
+  uploadComplete: true,
+  verificationComplete: true,
+};
+
 function normalizeStage(stage: string | null | undefined) {
   const value = String(stage || '').toLowerCase();
   if (!value) return 'viewing_scheduled';
@@ -39,20 +75,45 @@ function getStageProgress(stage: string | null | undefined) {
 
 function getNextActionLabel(
   stage: string | null | undefined,
-  docProgress?: { requiredCount: number; verifiedRequiredCount: number },
+  docProgress: ReferralDocProgress,
 ) {
   const normalized = normalizeStage(stage);
   if (normalized === 'commission_paid') return 'View paid reward';
   if (normalized === 'commission_pending') return 'Track reward';
   if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Protect payout';
   if (normalized === 'application_submitted') {
-    if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) {
+    if (!docProgress.verificationComplete) {
       return 'Upload missing docs';
     }
     return 'Await approval';
   }
   if (normalized === 'cancelled') return 'Review outcome';
   return 'Move to next stage';
+}
+
+function getDocProgress(input: any): ReferralDocProgress {
+  const value = input?.docProgress;
+  if (!value || typeof value !== 'object') return EMPTY_DOC_PROGRESS;
+  return {
+    requiredCount: Number(value.requiredCount || 0),
+    uploadedRequiredCount: Number(value.uploadedRequiredCount || 0),
+    verifiedRequiredCount: Number(value.verifiedRequiredCount || 0),
+    pendingReviewCount: Number(value.pendingReviewCount || 0),
+    rejectedCount: Number(value.rejectedCount || 0),
+    missingCount: Number(value.missingCount || 0),
+    uploadComplete: Boolean(value.uploadComplete),
+    verificationComplete: Boolean(value.verificationComplete),
+  };
+}
+
+function toReferralListItem(input: any): ReferralListItem {
+  return {
+    dealId: Number(input?.dealId || 0),
+    status: input?.status ?? null,
+    development: input?.development ?? null,
+    journey: input?.journey ?? null,
+    docProgress: getDocProgress(input),
+  };
 }
 
 function formatOwnerRole(ownerRole: string | null | undefined) {
@@ -117,7 +178,9 @@ export default function PartnerMyReferralsPage() {
     { pending: 0, approved: 0, paid: 0 },
   );
 
-  const allItems = referralsQuery.data?.items || [];
+  const allItems: ReferralListItem[] = (referralsQuery.data?.items || []).map((item: any) =>
+    toReferralListItem(item),
+  );
   const atRiskCount = allItems.filter((item: any) => Boolean(item.journey?.atRisk)).length;
   const visibleItems = showAtRiskOnly
     ? allItems.filter((item: any) => Boolean(item.journey?.atRisk))
@@ -233,7 +296,7 @@ export default function PartnerMyReferralsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {visibleItems.map((item: any) => (
+            {visibleItems.map(item => (
               <div key={item.dealId} className="w-full rounded-md border border-primary/15 bg-white p-3 text-left">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
