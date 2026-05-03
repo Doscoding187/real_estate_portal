@@ -110,6 +110,32 @@ export const DEVELOPMENT_REQUIRED_DOCUMENT_CATEGORY_VALUES = [
   'developer_document',
   'client_required_document',
 ] as const;
+const DEVELOPMENT_DOCUMENT_TYPE_VALUES = [
+  'price_list',
+  'house_plan',
+  'brochure',
+  'site_map',
+  'spec_sheet',
+  'availability_sheet',
+  'other',
+] as const;
+const DEVELOPMENT_DOCUMENT_CATEGORY_VALUES = [
+  'sales_asset',
+  'technical_asset',
+  'legal_asset',
+  'application_template',
+  'other',
+] as const;
+const DEVELOPMENT_DOCUMENT_VISIBILITY_VALUES = ['internal', 'manager', 'referrer', 'public'] as const;
+const APPLICATION_REQUIREMENT_PROVIDER_VALUES = ['buyer', 'referrer', 'manager', 'developer'] as const;
+const DEAL_REQUIREMENT_STATUS_VALUES = [
+  'missing',
+  'uploaded',
+  'pending_review',
+  'verified',
+  'rejected',
+  'waived',
+] as const;
 const DISTRIBUTION_DEAL_DOCUMENT_STATUS_VALUES = [
   'pending',
   'received',
@@ -378,6 +404,90 @@ export const developmentRequiredDocuments = mysqlTable(
 );
 
 export const distributionProgramRequiredDocuments = developmentRequiredDocuments;
+
+export const developmentDocuments = mysqlTable(
+  'development_documents',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    title: varchar({ length: 255 }).notNull(),
+    documentType: mysqlEnum(
+      'document_type',
+      DEVELOPMENT_DOCUMENT_TYPE_VALUES as unknown as [string, ...string[]],
+    )
+      .default('other')
+      .notNull(),
+    category: mysqlEnum(
+      'category',
+      DEVELOPMENT_DOCUMENT_CATEGORY_VALUES as unknown as [string, ...string[]],
+    )
+      .default('other')
+      .notNull(),
+    storageKey: varchar('storage_key', { length: 512 }),
+    fileUrl: varchar('file_url', { length: 2048 }),
+    mimeType: varchar('mime_type', { length: 255 }),
+    fileSizeBytes: int('file_size_bytes'),
+    visibility: mysqlEnum(
+      'visibility',
+      DEVELOPMENT_DOCUMENT_VISIBILITY_VALUES as unknown as [string, ...string[]],
+    )
+      .default('internal')
+      .notNull(),
+    downloadable: tinyint().default(1).notNull(),
+    isActive: tinyint('is_active').default(1).notNull(),
+    version: int().default(1).notNull(),
+    replacedByDocumentId: int('replaced_by_document_id'),
+    uploadedBy: int('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index('idx_development_documents_development').on(table.developmentId),
+    index('idx_development_documents_active').on(table.isActive),
+    index('idx_development_documents_visibility').on(table.visibility),
+    index('idx_development_documents_type').on(table.documentType),
+  ],
+);
+
+export const applicationRequirements = mysqlTable(
+  'application_requirements',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    label: varchar({ length: 255 }).notNull(),
+    description: text(),
+    required: tinyint().default(1).notNull(),
+    provider: mysqlEnum(
+      'provider',
+      APPLICATION_REQUIREMENT_PROVIDER_VALUES as unknown as [string, ...string[]],
+    )
+      .default('buyer')
+      .notNull(),
+    documentCode: varchar('document_code', { length: 80 }),
+    acceptedFileTypesJson: json('accepted_file_types_json'),
+    linkedDevelopmentDocumentId: int('linked_development_document_id').references(
+      () => developmentDocuments.id,
+      { onDelete: 'set null' },
+    ),
+    sortOrder: int('sort_order').default(0).notNull(),
+    isActive: tinyint('is_active').default(1).notNull(),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index('idx_application_requirements_development').on(table.developmentId),
+    index('idx_application_requirements_active').on(table.isActive),
+    index('idx_application_requirements_required').on(table.required),
+    index('idx_application_requirements_provider').on(table.provider),
+    index('idx_application_requirements_order').on(table.developmentId, table.sortOrder),
+  ],
+);
 
 export const affordabilityAssessments = mysqlTable(
   'affordability_assessments',
@@ -662,6 +772,46 @@ export const distributionDealDocuments = mysqlTable(
 );
 
 export const distributionDealDocumentStatuses = distributionDealDocuments;
+
+export const dealRequirementStatuses = mysqlTable(
+  'deal_requirement_statuses',
+  {
+    id: int().autoincrement().primaryKey(),
+    dealId: int('deal_id')
+      .notNull()
+      .references(() => distributionDeals.id, { onDelete: 'cascade' }),
+    requirementId: int('requirement_id')
+      .notNull()
+      .references(() => applicationRequirements.id, { onDelete: 'cascade' }),
+    uploadedFileStorageKey: varchar('uploaded_file_storage_key', { length: 512 }),
+    uploadedFileUrl: varchar('uploaded_file_url', { length: 2048 }),
+    uploadedFileName: varchar('uploaded_file_name', { length: 255 }),
+    linkedDevelopmentDocumentId: int('linked_development_document_id').references(
+      () => developmentDocuments.id,
+      { onDelete: 'set null' },
+    ),
+    status: mysqlEnum(
+      'status',
+      DEAL_REQUIREMENT_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('missing')
+      .notNull(),
+    submittedBy: int('submitted_by').references(() => users.id, { onDelete: 'set null' }),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }),
+    reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
+    rejectionReason: text('rejection_reason'),
+    notes: text(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_deal_requirement_statuses_deal_requirement').on(table.dealId, table.requirementId),
+    index('idx_deal_requirement_statuses_deal').on(table.dealId),
+    index('idx_deal_requirement_statuses_status').on(table.status),
+    index('idx_deal_requirement_statuses_requirement').on(table.requirementId),
+  ],
+);
 
 export const distributionDealBankOutcomes = mysqlTable(
   'distribution_deal_bank_outcomes',

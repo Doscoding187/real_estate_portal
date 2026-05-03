@@ -59,6 +59,11 @@ import {
   getDealChecklist,
   upsertDealDocumentStatus,
 } from './services/distributionDealDocumentsService';
+import {
+  getDealChecklistV2,
+  upsertDealDocumentStatusV2,
+} from './services/distributionDealDocumentsV2Service';
+import { getDealReadinessByDealId } from './services/distributionDealReadinessService';
 import { assertDealIsMutable } from './services/distributionDealMutationGuards';
 import {
   getPartnerProgramTermsByDevelopmentId,
@@ -1475,6 +1480,84 @@ const listDealsInput = z.object({
   agentId: z.number().int().positive().optional(),
   stage: z.enum(DISTRIBUTION_DEAL_STAGE_VALUES).optional(),
   limit: z.number().int().min(1).max(200).default(50),
+});
+
+const referralDocProgressOutputSchema = z.object({
+  requiredCount: z.number(),
+  uploadedRequiredCount: z.number(),
+  verifiedRequiredCount: z.number(),
+  pendingReviewCount: z.number(),
+  rejectedCount: z.number(),
+  missingCount: z.number(),
+  uploadComplete: z.boolean(),
+  verificationComplete: z.boolean(),
+});
+
+const dealReadinessOutputSchema = z.object({
+  uploadComplete: z.boolean(),
+  verificationComplete: z.boolean(),
+  requiredTotal: z.number(),
+  uploadedCount: z.number(),
+  verifiedCount: z.number(),
+  waivedCount: z.number(),
+  pendingReviewCount: z.number(),
+  rejectedCount: z.number(),
+  missingCount: z.number(),
+});
+
+const managerDocsSummaryOutputSchema = z.object({
+  requiredCount: z.number(),
+  verifiedRequiredCount: z.number(),
+  hasRejections: z.boolean(),
+});
+
+const managerChecklistComputedOutputSchema = z.object({
+  requiredCount: z.number(),
+  verifiedRequiredCount: z.number(),
+  allRequiredVerified: z.boolean(),
+  payoutReady: z.boolean(),
+  blockers: z.array(z.string()),
+});
+
+const managerChecklistDocumentOutputSchema = z.object({
+  templateId: z.number(),
+  documentCode: z.string(),
+  documentLabel: z.string(),
+  category: z.enum(['developer_document', 'client_required_document']),
+  templateFileUrl: z.string().nullable(),
+  templateFileName: z.string().nullable(),
+  templateUploadedAt: z.string().nullable(),
+  isRequired: z.boolean(),
+  sortOrder: z.number(),
+  isActive: z.boolean(),
+  status: z.enum(['pending', 'received', 'verified', 'rejected']),
+  receivedAt: z.string().nullable(),
+  verifiedAt: z.string().nullable(),
+  submittedFileUrl: z.string().nullable(),
+  submittedFileName: z.string().nullable(),
+  submittedAt: z.string().nullable(),
+  receivedBy: z.object({ userId: z.number(), name: z.string().optional() }).nullable(),
+  verifiedBy: z.object({ userId: z.number(), name: z.string().optional() }).nullable(),
+  submittedBy: z.object({ userId: z.number(), name: z.string().optional() }).nullable(),
+  notes: z.string().nullable(),
+});
+
+const managerDealChecklistOutputSchema = z.object({
+  dealId: z.number(),
+  dealRef: z.string(),
+  buyerName: z.string().nullable(),
+  developmentId: z.number(),
+  developmentName: z.string(),
+  programId: z.number().nullable(),
+  payoutMilestone: z.string().nullable(),
+  currencyCode: z.string().nullable(),
+  commissionSummary: z.object({
+    commissionModel: z.string().nullable(),
+    defaultCommissionPercent: z.number().nullable(),
+    defaultCommissionAmount: z.number().nullable(),
+  }),
+  requiredDocuments: z.array(managerChecklistDocumentOutputSchema),
+  computed: managerChecklistComputedOutputSchema,
 });
 
 async function listDeals(input: z.infer<typeof listDealsInput>) {
@@ -5033,6 +5116,17 @@ const managerDistributionRouter = router({
         limit: z.number().int().min(1).max(500).default(100),
       }),
     )
+    .output(
+      z.array(
+        z.object({
+          dealId: z.number(),
+          dealRef: z.string(),
+          buyerName: z.string().nullable(),
+          createdAt: z.string(),
+          docs: managerDocsSummaryOutputSchema,
+        }),
+      ),
+    )
     .query(async ({ ctx, input }) => {
       assertDistributionEnabled();
       const db = await getDb();
@@ -5158,15 +5252,20 @@ const managerDistributionRouter = router({
         dealId: z.number().int().positive(),
       }),
     )
+    .output(managerDealChecklistOutputSchema)
     .query(async ({ ctx, input }) => {
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
       await assertDistributionIdentity(db, ctx.user!, 'manager');
 
-      return await getDealChecklist(input.dealId, ctx.user!.id, {
-        skipAssignmentCheck: ctx.user!.role === 'super_admin',
-      });
+      return ENV.distributionDocsV2ReadsEnabled
+        ? await getDealChecklistV2(input.dealId, ctx.user!.id, {
+            skipAssignmentCheck: ctx.user!.role === 'super_admin',
+          })
+        : await getDealChecklist(input.dealId, ctx.user!.id, {
+            skipAssignmentCheck: ctx.user!.role === 'super_admin',
+          });
     }),
 
   updateDealDocumentStatus: protectedProcedure
@@ -5180,24 +5279,38 @@ const managerDistributionRouter = router({
         submittedFileName: z.string().trim().max(255).nullable().optional(),
       }),
     )
+    .output(managerDealChecklistOutputSchema)
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
       await assertDistributionIdentity(db, ctx.user!, 'manager');
 
-      return await upsertDealDocumentStatus(
-        {
-          dealId: input.dealId,
-          templateId: input.templateId,
-          status: input.status,
-          notes: input.notes,
-          submittedFileUrl: input.submittedFileUrl,
-          submittedFileName: input.submittedFileName,
-        },
-        ctx.user!.id,
-        { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
-      );
+      return ENV.distributionDocsV2ReadsEnabled
+        ? await upsertDealDocumentStatusV2(
+            {
+              dealId: input.dealId,
+              templateId: input.templateId,
+              status: input.status,
+              notes: input.notes,
+              submittedFileUrl: input.submittedFileUrl,
+              submittedFileName: input.submittedFileName,
+            },
+            ctx.user!.id,
+            { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
+          )
+        : await upsertDealDocumentStatus(
+            {
+              dealId: input.dealId,
+              templateId: input.templateId,
+              status: input.status,
+              notes: input.notes,
+              submittedFileUrl: input.submittedFileUrl,
+              submittedFileName: input.submittedFileName,
+            },
+            ctx.user!.id,
+            { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
+          );
     }),
 
   listAgentsForDevelopment: protectedProcedure
@@ -6374,6 +6487,18 @@ const partnerDistributionRouter = router({
         })
         .optional(),
     )
+    .output(
+      z.object({
+        items: z.array(
+          z
+            .object({
+              docProgress: referralDocProgressOutputSchema,
+            })
+            .passthrough(),
+        ),
+        nextCursor: z.string().optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       assertDistributionEnabled();
       const db = await getDb();
@@ -6396,6 +6521,13 @@ const partnerDistributionRouter = router({
       z.object({
         dealId: z.number().int().positive(),
       }),
+    )
+    .output(
+      z
+        .object({
+          docProgress: referralDocProgressOutputSchema,
+        })
+        .passthrough(),
     )
     .query(async ({ ctx, input }) => {
       assertDistributionEnabled();
@@ -6420,6 +6552,15 @@ const partnerDistributionRouter = router({
         submittedFileName: z.string().trim().max(255).nullable().optional(),
         notes: z.string().trim().max(1000).nullable().optional(),
       }),
+    )
+    .output(
+      z
+        .object({
+          success: z.boolean(),
+          docProgress: referralDocProgressOutputSchema,
+          applicationDocuments: z.array(z.any()),
+        })
+        .passthrough(),
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
@@ -7241,6 +7382,20 @@ const referrerDistributionRouter = router({
         })
         .optional(),
     )
+    .output(
+      z.object({
+        stageOrder: z.array(z.string()),
+        stageCounts: z.record(z.number()),
+        deals: z.array(
+          z
+            .object({
+              documentsComplete: z.boolean(),
+              documentReadiness: dealReadinessOutputSchema.nullable(),
+            })
+            .passthrough(),
+        ),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       assertDistributionEnabled();
       const db = await getDb();
@@ -7280,10 +7435,22 @@ const referrerDistributionRouter = router({
         db,
         deals.map(deal => Number(deal.id)),
       );
-      const referralSnapshotsByDeal = await getReferralSubmissionSnapshotByDealIds(
-        db,
-        deals.map(deal => Number(deal.id)),
-      );
+      const referralSnapshotsByDeal = ENV.distributionDocsV2ReadsEnabled
+        ? new Map<number, ReferralSubmissionSnapshot>()
+        : await getReferralSubmissionSnapshotByDealIds(
+            db,
+            deals.map(deal => Number(deal.id)),
+          );
+      const readinessByDeal = new Map<number, Awaited<ReturnType<typeof getDealReadinessByDealId>>>();
+      if (ENV.distributionDocsV2ReadsEnabled) {
+        const readinessRows = await Promise.all(
+          deals.map(async deal => ({
+            dealId: Number(deal.id),
+            readiness: await getDealReadinessByDealId(Number(deal.id)),
+          })),
+        );
+        readinessRows.forEach(row => readinessByDeal.set(row.dealId, row.readiness));
+      }
 
       const stageCounts = Object.fromEntries(
         DISTRIBUTION_PIPELINE_STAGE_ORDER.map(stage => [stage, 0]),
@@ -7306,9 +7473,10 @@ const referrerDistributionRouter = router({
           validationAt: validation?.validatedAt || null,
           validationNotes: validation?.notes || null,
           attributionLockApplied: Boolean(validation?.attributionLockApplied),
-          documentsComplete: hasCompleteDocuments(
-            referralSnapshotsByDeal.get(Number(deal.id)) || null,
-          ),
+          documentsComplete: ENV.distributionDocsV2ReadsEnabled
+            ? Boolean(readinessByDeal.get(Number(deal.id))?.verificationComplete)
+            : hasCompleteDocuments(referralSnapshotsByDeal.get(Number(deal.id)) || null),
+          documentReadiness: readinessByDeal.get(Number(deal.id)) || null,
         };
       });
 

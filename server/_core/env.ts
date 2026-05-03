@@ -55,4 +55,6 @@ export const ENV = {
     process.env.RESEND_FROM_EMAIL ?? process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
   distributionNetworkEnabled:
     String(process.env.FEATURE_DISTRIBUTION_NETWORK ?? 'true').toLowerCase() === 'true',
+  distributionDocsV2ReadsEnabled:
+    String(process.env.FEATURE_DISTRIBUTION_DOCS_V2_READS ?? 'false').toLowerCase() === 'true',
 };

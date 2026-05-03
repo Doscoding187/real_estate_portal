@@ -1,20 +1,25 @@
 import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
+  applicationRequirements,
+  dealRequirementStatuses,
   affordabilityAssessments,
   developmentManagerAssignments,
   developmentRequiredDocuments,
   developments,
+  developmentDocuments,
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
   distributionPrograms,
   users,
 } from '../../drizzle/schema';
+import { ENV } from '../_core/env';
 import { getDb } from '../db';
 import { getAffordabilityMatches } from './affordabilityAssessmentService';
 import { assertDevelopmentSubmissionEligible } from './distributionAccessPolicy';
 import { getPartnerProgramTermsByDevelopmentId } from './distributionPartnerTermsService';
+import { transitionDealRequirementStatus } from './distributionDealRequirementStatusService';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 
@@ -100,14 +105,21 @@ function normalizeStage(stage: unknown) {
 
 function buildJourneyGuidance(input: {
   stage: unknown;
-  docProgress?: { requiredCount: number; verifiedRequiredCount: number };
+  docProgress?: {
+    requiredCount: number;
+    verifiedRequiredCount: number;
+    verificationComplete?: boolean;
+  };
   updatedAt?: unknown;
   createdAt?: unknown;
 }) {
   const stage = normalizeStage(input.stage);
   const requiredCount = Number(input.docProgress?.requiredCount || 0);
   const verifiedRequiredCount = Number(input.docProgress?.verifiedRequiredCount || 0);
-  const hasMissingDocs = requiredCount > verifiedRequiredCount;
+  const hasMissingDocs =
+    input.docProgress && typeof input.docProgress.verificationComplete === 'boolean'
+      ? !input.docProgress.verificationComplete
+      : requiredCount > verifiedRequiredCount;
 
   let nextAction = 'Continue moving this referral to the next milestone.';
   let ownerRole: JourneyOwnerRole = 'referrer';
@@ -550,7 +562,24 @@ export async function createReferralDeal(
 
 type ReferralProgress = {
   requiredCount: number;
+  uploadedRequiredCount: number;
   verifiedRequiredCount: number;
+  pendingReviewCount: number;
+  rejectedCount: number;
+  missingCount: number;
+  uploadComplete: boolean;
+  verificationComplete: boolean;
+};
+
+const EMPTY_REFERRAL_PROGRESS: ReferralProgress = {
+  requiredCount: 0,
+  uploadedRequiredCount: 0,
+  verifiedRequiredCount: 0,
+  pendingReviewCount: 0,
+  rejectedCount: 0,
+  missingCount: 0,
+  uploadComplete: true,
+  verificationComplete: true,
 };
 
 type PartnerDealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
@@ -566,6 +595,137 @@ async function computeDealDocumentProgressMap(
 
   const developmentIds = Array.from(new Set(input.dealRows.map(row => Number(row.developmentId))));
   const dealIds = input.dealRows.map(row => Number(row.dealId));
+
+  if (ENV.distributionDocsV2ReadsEnabled) {
+    const requirementRows = await db
+      .select({
+        requirementId: applicationRequirements.id,
+        developmentId: applicationRequirements.developmentId,
+        linkedDevelopmentDocumentId: applicationRequirements.linkedDevelopmentDocumentId,
+      })
+      .from(applicationRequirements)
+      .where(
+        and(
+          inArray(applicationRequirements.developmentId, developmentIds),
+          eq(applicationRequirements.isActive, 1),
+          eq(applicationRequirements.required, 1),
+        ),
+      );
+
+    const requiredRequirementIdsByDevelopment = new Map<number, Set<number>>();
+    const linkedDocIds = new Set<number>();
+    for (const row of requirementRows) {
+      const developmentId = Number(row.developmentId);
+      const current = requiredRequirementIdsByDevelopment.get(developmentId) || new Set<number>();
+      current.add(Number(row.requirementId));
+      requiredRequirementIdsByDevelopment.set(developmentId, current);
+      if (row.linkedDevelopmentDocumentId) linkedDocIds.add(Number(row.linkedDevelopmentDocumentId));
+    }
+
+    const activeLinkedDocIds = linkedDocIds.size
+      ? new Set<number>(
+          (
+            await db
+              .select({ id: developmentDocuments.id })
+              .from(developmentDocuments)
+              .where(
+                and(
+                  inArray(developmentDocuments.id, Array.from(linkedDocIds)),
+                  eq(developmentDocuments.isActive, 1),
+                ),
+              )
+          ).map((row: any) => Number(row.id)),
+        )
+      : new Set<number>();
+
+    const requirementMetaById = new Map<number, { linkedDevelopmentDocumentId: number | null }>();
+    for (const row of requirementRows) {
+      requirementMetaById.set(Number(row.requirementId), {
+        linkedDevelopmentDocumentId: row.linkedDevelopmentDocumentId
+          ? Number(row.linkedDevelopmentDocumentId)
+          : null,
+      });
+    }
+
+    const allRequirementIds = Array.from(
+      new Set(
+        Array.from(requiredRequirementIdsByDevelopment.values()).flatMap(ids => Array.from(ids)),
+      ),
+    );
+
+    const statusRows =
+      dealIds.length && allRequirementIds.length
+        ? await db
+            .select({
+              dealId: dealRequirementStatuses.dealId,
+              requirementId: dealRequirementStatuses.requirementId,
+              status: dealRequirementStatuses.status,
+            })
+            .from(dealRequirementStatuses)
+            .where(
+              and(
+                inArray(dealRequirementStatuses.dealId, dealIds),
+                inArray(dealRequirementStatuses.requirementId, allRequirementIds),
+              ),
+            )
+        : [];
+
+    const statusByDealRequirement = new Map<string, string>();
+    statusRows.forEach((row: any) => {
+      statusByDealRequirement.set(`${Number(row.dealId)}:${Number(row.requirementId)}`, String(row.status));
+    });
+
+    for (const row of input.dealRows) {
+      const requiredIds =
+        requiredRequirementIdsByDevelopment.get(Number(row.developmentId)) || new Set<number>();
+      let uploadedRequiredCount = 0;
+      let verifiedRequiredCount = 0;
+      let pendingReviewCount = 0;
+      let rejectedCount = 0;
+      let missingCount = 0;
+
+      for (const requirementId of requiredIds) {
+        const key = `${Number(row.dealId)}:${Number(requirementId)}`;
+        let status = statusByDealRequirement.get(key) || 'missing';
+        const meta = requirementMetaById.get(requirementId);
+        if (
+          status === 'missing' &&
+          meta?.linkedDevelopmentDocumentId &&
+          activeLinkedDocIds.has(Number(meta.linkedDevelopmentDocumentId))
+        ) {
+          status = 'verified';
+        }
+
+        if (
+          status === 'uploaded' ||
+          status === 'pending_review' ||
+          status === 'verified' ||
+          status === 'waived' ||
+          status === 'rejected'
+        ) {
+          uploadedRequiredCount += 1;
+        }
+        if (status === 'verified' || status === 'waived') verifiedRequiredCount += 1;
+        if (status === 'pending_review') pendingReviewCount += 1;
+        if (status === 'rejected') rejectedCount += 1;
+        if (status === 'missing') missingCount += 1;
+      }
+
+      const requiredCount = requiredIds.size;
+      progressMap.set(Number(row.dealId), {
+        requiredCount,
+        uploadedRequiredCount,
+        verifiedRequiredCount,
+        pendingReviewCount,
+        rejectedCount,
+        missingCount,
+        uploadComplete: requiredCount === uploadedRequiredCount,
+        verificationComplete: requiredCount === verifiedRequiredCount,
+      });
+    }
+
+    return progressMap;
+  }
 
   const templateRows = await db
     .select({
@@ -597,7 +757,7 @@ async function computeDealDocumentProgressMap(
     ),
   );
 
-  const verifiedRows =
+  const statusRows =
     dealIds.length && allRequiredTemplateIds.length
       ? await db
           .select({
@@ -614,21 +774,43 @@ async function computeDealDocumentProgressMap(
           )
       : [];
 
-  const verifiedSetByDeal = new Map<number, Set<number>>();
-  for (const row of verifiedRows) {
-    if (row.status !== 'verified') continue;
+  const statusSetByDeal = new Map<number, Map<number, string>>();
+  for (const row of statusRows) {
     const dealId = Number(row.dealId);
-    const current = verifiedSetByDeal.get(dealId) || new Set<number>();
-    current.add(Number(row.developmentRequiredDocumentId));
-    verifiedSetByDeal.set(dealId, current);
+    const dealMap = statusSetByDeal.get(dealId) || new Map<number, string>();
+    dealMap.set(Number(row.developmentRequiredDocumentId), String(row.status));
+    statusSetByDeal.set(dealId, dealMap);
   }
 
   for (const row of input.dealRows) {
-    const requiredTemplates = requiredTemplateIdsByDevelopment.get(Number(row.developmentId)) || new Set<number>();
-    const verifiedTemplates = verifiedSetByDeal.get(Number(row.dealId)) || new Set<number>();
+    const requiredTemplates =
+      requiredTemplateIdsByDevelopment.get(Number(row.developmentId)) || new Set<number>();
+    const dealStatuses = statusSetByDeal.get(Number(row.dealId)) || new Map<number, string>();
+    let uploadedRequiredCount = 0;
+    let verifiedRequiredCount = 0;
+    let pendingReviewCount = 0;
+    let rejectedCount = 0;
+    let missingCount = 0;
+
+    for (const templateId of requiredTemplates) {
+      const status = dealStatuses.get(templateId) || 'pending';
+      if (status === 'received' || status === 'verified' || status === 'rejected') uploadedRequiredCount += 1;
+      if (status === 'verified') verifiedRequiredCount += 1;
+      if (status === 'received') pendingReviewCount += 1;
+      if (status === 'rejected') rejectedCount += 1;
+      if (status === 'pending') missingCount += 1;
+    }
+
+    const requiredCount = requiredTemplates.size;
     progressMap.set(Number(row.dealId), {
-      requiredCount: requiredTemplates.size,
-      verifiedRequiredCount: verifiedTemplates.size,
+      requiredCount,
+      uploadedRequiredCount,
+      verifiedRequiredCount,
+      pendingReviewCount,
+      rejectedCount,
+      missingCount,
+      uploadComplete: requiredCount === uploadedRequiredCount,
+      verificationComplete: requiredCount === verifiedRequiredCount,
     });
   }
 
@@ -771,10 +953,7 @@ export async function listMyReferralDeals(
     items: pageRows.map(row => ({
       journey: buildJourneyGuidance({
         stage: row.status,
-        docProgress: progressMap.get(Number(row.dealId)) || {
-          requiredCount: 0,
-          verifiedRequiredCount: 0,
-        },
+        docProgress: progressMap.get(Number(row.dealId)) || EMPTY_REFERRAL_PROGRESS,
         updatedAt: row.updatedAt,
         createdAt: row.createdAt,
       }),
@@ -789,10 +968,7 @@ export async function listMyReferralDeals(
       affordabilityPurchasePrice: toNumberOrNull(row.affordabilityPurchasePrice),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      docProgress: progressMap.get(Number(row.dealId)) || {
-        requiredCount: 0,
-        verifiedRequiredCount: 0,
-      },
+      docProgress: progressMap.get(Number(row.dealId)) || EMPTY_REFERRAL_PROGRESS,
     })),
     nextCursor: hasMore ? String(pageRows[pageRows.length - 1]?.dealId || '') : undefined,
   };
@@ -857,10 +1033,7 @@ export async function getMyReferralDeal(
       },
     ],
   });
-  const docProgress = progressMap.get(Number(deal.dealId)) || {
-    requiredCount: 0,
-    verifiedRequiredCount: 0,
-  };
+  const docProgress = progressMap.get(Number(deal.dealId)) || EMPTY_REFERRAL_PROGRESS;
 
   const events = await db
     .select({
@@ -1028,6 +1201,26 @@ export async function submitReferralDealDocument(
       },
     });
 
+  if (ENV.distributionDocsV2ReadsEnabled) {
+    const [mapRows] = await db.execute(
+      `SELECT v2_requirement_id FROM distribution_docs_v2_requirement_map WHERE legacy_required_document_id = ? LIMIT 1`,
+      [input.templateId],
+    );
+    const mappedRequirementId = Array.isArray(mapRows) ? Number((mapRows[0] as any)?.v2_requirement_id || 0) : 0;
+    if (mappedRequirementId > 0) {
+      await transitionDealRequirementStatus({
+        dealId: input.dealId,
+        requirementId: mappedRequirementId,
+        toStatus: 'uploaded',
+        actorUserId: input.actorUserId,
+        actorRole: input.actorRole === 'super_admin' ? 'developer_admin' : 'referrer',
+        uploadedFileUrl: input.submittedFileUrl,
+        uploadedFileName: input.submittedFileName || null,
+        notes: input.notes || null,
+      });
+    }
+  }
+
   return {
     success: true,
     applicationDocuments: await listDealApplicationDocuments(db, {
@@ -1044,9 +1237,6 @@ export async function submitReferralDealDocument(
             },
           ],
         })
-      ).get(Number(deal.dealId)) || {
-        requiredCount: 0,
-        verifiedRequiredCount: 0,
-      },
+      ).get(Number(deal.dealId)) || EMPTY_REFERRAL_PROGRESS,
   };
 }

@@ -12,6 +12,12 @@ const REQUIRED_TABLES = [
   'distribution_programs',
   'development_manager_assignments',
   'development_required_documents',
+  'distribution_deals',
+  'distribution_deal_documents',
+  'distribution_deal_events',
+  'development_documents',
+  'application_requirements',
+  'deal_requirement_statuses',
 ] as const;
 
 const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
@@ -25,6 +31,18 @@ const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
   { table: 'distribution_development_access', column: 'submission_allowed' },
   { table: 'development_manager_assignments', column: 'manager_user_id' },
   { table: 'development_required_documents', column: 'category' },
+  { table: 'distribution_deal_events', column: 'deal_id' },
+  { table: 'distribution_deal_events', column: 'event_type' },
+  { table: 'distribution_deal_events', column: 'metadata' },
+  { table: 'distribution_deal_documents', column: 'deal_id' },
+  { table: 'distribution_deal_documents', column: 'development_required_document_id' },
+  { table: 'development_documents', column: 'development_id' },
+  { table: 'development_documents', column: 'visibility' },
+  { table: 'application_requirements', column: 'development_id' },
+  { table: 'application_requirements', column: 'provider' },
+  { table: 'deal_requirement_statuses', column: 'deal_id' },
+  { table: 'deal_requirement_statuses', column: 'requirement_id' },
+  { table: 'deal_requirement_statuses', column: 'status' },
 ];
 
 async function main() {
