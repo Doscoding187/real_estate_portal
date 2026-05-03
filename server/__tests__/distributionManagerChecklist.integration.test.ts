@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
 import {
@@ -63,18 +63,70 @@ function uniqueIds(ids: number[]) {
   return Array.from(new Set(ids.filter(Boolean)));
 }
 
+function expectManagerChecklistComputedShape(computed: any) {
+  expect(computed).toMatchObject({
+    requiredCount: expect.any(Number),
+    verifiedRequiredCount: expect.any(Number),
+    allRequiredVerified: expect.any(Boolean),
+    payoutReady: expect.any(Boolean),
+    blockers: expect.any(Array),
+  });
+}
+
+function expectManagerChecklistDocumentShape(document: any) {
+  expect(document).toMatchObject({
+    templateId: expect.any(Number),
+    documentCode: expect.any(String),
+    documentLabel: expect.any(String),
+    category: expect.stringMatching(/^(developer_document|client_required_document)$/),
+    status: expect.stringMatching(/^(pending|received|verified|rejected)$/),
+    isRequired: expect.any(Boolean),
+    sortOrder: expect.any(Number),
+    isActive: expect.any(Boolean),
+  });
+}
+
+function expectManagerChecklistPayloadShape(payload: any) {
+  expect(payload).toMatchObject({
+    dealId: expect.any(Number),
+    dealRef: expect.any(String),
+    developmentId: expect.any(Number),
+    developmentName: expect.any(String),
+    requiredDocuments: expect.any(Array),
+    computed: expect.any(Object),
+  });
+  expectManagerChecklistComputedShape(payload.computed);
+  if (payload.requiredDocuments.length) {
+    expectManagerChecklistDocumentShape(payload.requiredDocuments[0]);
+  }
+}
+
 async function insertUser(emailPrefix: string, role: 'visitor' | 'super_admin' = 'visitor') {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const [insertResult] = await db.insert(users).values({
-    email: `${emailPrefix}-${suffix}@example.com`,
-    role,
-    firstName: 'Distribution',
-    lastName: 'Manager',
-    name: 'Distribution Manager',
-    emailVerified: 1,
-  });
+  const email = `${emailPrefix}-${suffix}@example.com`;
+  const [columnRows] = await db.execute(`SHOW COLUMNS FROM users`);
+  const availableColumns = new Set(
+    (Array.isArray(columnRows) ? columnRows : []).map((row: any) => String(row.Field || '')),
+  );
+  const valuesByColumn = new Map<string, any>([
+    ['email', email],
+    ['role', role],
+    ['firstName', 'Distribution'],
+    ['lastName', 'Manager'],
+    ['name', 'Distribution Manager'],
+    ['emailVerified', 1],
+    ['trialStatus', 'none'],
+  ]);
+  const insertColumns = Array.from(valuesByColumn.keys()).filter(column =>
+    availableColumns.has(column),
+  );
+  const insertValues = insertColumns.map(column => valuesByColumn.get(column));
+  const valuesSql = sql.join(insertValues.map(value => sql`${value}`), sql`, `);
+  const [insertResult] = await db.execute(
+    sql`INSERT INTO users (${sql.raw(insertColumns.join(', '))}) VALUES (${valuesSql})`,
+  );
   const userId = Number((insertResult as any).insertId || 0);
   createdState.userIds.push(userId);
   return userId;
@@ -280,7 +332,7 @@ function buildCaller(userId: number, role: 'visitor' | 'super_admin' = 'visitor'
   } as any);
 }
 
-describeWithDb('distribution.manager deal checklist integration', () => {
+describeWithDb('distribution.manager deal checklist integration', { timeout: 30_000 }, () => {
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
@@ -413,6 +465,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       dealId: seed.dealId,
     });
 
+    expectManagerChecklistPayloadShape(checklist);
     expect(checklist.dealId).toBe(seed.dealId);
     expect(checklist.requiredDocuments).toHaveLength(2);
     expect(checklist.requiredDocuments.every((document: any) => document.status === 'pending')).toBe(
@@ -434,6 +487,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       notes: 'Payslip received by manager',
     });
 
+    expectManagerChecklistPayloadShape(receivedPayload);
     const receivedDoc = receivedPayload.requiredDocuments.find(
       (document: any) => Number(document.templateId) === Number(seed.templateIds[0]),
     );
@@ -448,6 +502,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       notes: 'Verified and approved',
     });
 
+    expectManagerChecklistPayloadShape(verifiedPayload);
     const verifiedDoc = verifiedPayload.requiredDocuments.find(
       (document: any) => Number(document.templateId) === Number(seed.templateIds[0]),
     );

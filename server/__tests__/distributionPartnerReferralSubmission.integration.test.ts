@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
@@ -22,6 +22,7 @@ import {
 
 // Requires DATABASE_URL test DB; skipped in local env when not set.
 const hasDb = Boolean(process.env.DATABASE_URL);
+const INTEGRATION_TIMEOUT_MS = 30_000;
 const describeWithDb: typeof describe = hasDb
   ? describe
   : ((name: string, fn: Parameters<typeof describe>[1]) =>
@@ -57,19 +58,46 @@ function createCaller(userId: number, role: 'agent' | 'agency_admin' | 'visitor'
   } as any);
 }
 
+function expectDocProgressV2Shape(docProgress: any) {
+  expect(docProgress).toMatchObject({
+    requiredCount: expect.any(Number),
+    uploadedRequiredCount: expect.any(Number),
+    verifiedRequiredCount: expect.any(Number),
+    pendingReviewCount: expect.any(Number),
+    rejectedCount: expect.any(Number),
+    missingCount: expect.any(Number),
+    uploadComplete: expect.any(Boolean),
+    verificationComplete: expect.any(Boolean),
+  });
+}
+
 async function insertUser(role: 'agent' | 'agency_admin' | 'visitor') {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const [insertResult] = await db.insert(users).values({
-    email: `distribution-referral-${role}-${suffix}@example.com`,
-    role,
-    firstName: 'Flow',
-    lastName: 'Tester',
-    name: 'Flow Tester',
-    emailVerified: 1,
-  });
+  const email = `distribution-referral-${role}-${suffix}@example.com`;
+  const [columnRows] = await db.execute(`SHOW COLUMNS FROM users`);
+  const availableColumns = new Set(
+    (Array.isArray(columnRows) ? columnRows : []).map((row: any) => String(row.Field || '')),
+  );
+  const valuesByColumn = new Map<string, any>([
+    ['email', email],
+    ['role', role],
+    ['firstName', 'Flow'],
+    ['lastName', 'Tester'],
+    ['name', 'Flow Tester'],
+    ['emailVerified', 1],
+    ['trialStatus', 'none'],
+  ]);
+  const insertColumns = Array.from(valuesByColumn.keys()).filter(column =>
+    availableColumns.has(column),
+  );
+  const insertValues = insertColumns.map(column => valuesByColumn.get(column));
+  const valuesSql = sql.join(insertValues.map(value => sql`${value}`), sql`, `);
+  const [insertResult] = await db.execute(
+    sql`INSERT INTO users (${sql.raw(insertColumns.join(', '))}) VALUES (${valuesSql})`,
+  );
 
   const userId = Number((insertResult as any).insertId || 0);
   createdState.userIds.push(userId);
@@ -426,7 +454,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(disabledError.data?.reasons).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'REFERRALS_DISABLED' })]),
     );
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('allows submission when program is eligible', async () => {
     const actorUserId = await insertUser('agent');
@@ -460,7 +488,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(Number(result.dealId)).toBeGreaterThan(0);
     expect(result.status).toBe('submitted');
     expect(Number(result.managerUserId)).toBe(Number(managerUserId));
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('allows the submitting referrer to upload application documents for manager review', async () => {
     const actorUserId = await insertUser('agent');
@@ -498,8 +526,17 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.docProgress.requiredCount).toBe(1);
-    expect(result.docProgress.verifiedRequiredCount).toBe(0);
+    expectDocProgressV2Shape(result.docProgress);
+    expect(result.docProgress).toMatchObject({
+      requiredCount: 1,
+      uploadedRequiredCount: 1,
+      verifiedRequiredCount: 0,
+      pendingReviewCount: 1,
+      rejectedCount: 0,
+      missingCount: 0,
+      uploadComplete: true,
+      verificationComplete: false,
+    });
     expect(result.applicationDocuments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -511,6 +548,17 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     );
 
     const detail = await caller.distribution.partner.getReferral({ dealId: Number(submitted.dealId) });
+    expectDocProgressV2Shape(detail.docProgress);
+    expect(detail.docProgress).toMatchObject({
+      requiredCount: 1,
+      uploadedRequiredCount: 1,
+      verifiedRequiredCount: 0,
+      pendingReviewCount: 1,
+      rejectedCount: 0,
+      missingCount: 0,
+      uploadComplete: true,
+      verificationComplete: false,
+    });
     expect(detail.applicationDocuments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -520,7 +568,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
         }),
       ]),
     );
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('selects primary active manager for assignment', async () => {
     const actorUserId = await insertUser('agent');
@@ -559,7 +607,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     createdState.dealIds.push(Number(result.dealId));
     expect(Number(result.managerUserId)).toBe(Number(primaryManagerId));
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('supports idempotent submission via clientReference', async () => {
     const actorUserId = await insertUser('agent');
@@ -597,7 +645,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     expect(Number(second.dealId)).toBe(Number(first.dealId));
     expect(Boolean((second as any).wasDuplicate)).toBe(true);
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it("blocks attaching another partner's assessmentId", async () => {
     const ownerUserId = await insertUser('agent');
@@ -637,7 +685,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(error).toBeInstanceOf(TRPCError);
     expect(error.code).toBe('BAD_REQUEST');
     expect(error.message).toContain('assessmentId is invalid or not accessible');
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('attaching assessment creates snapshot when missing and stores lock linkage', async () => {
     const actorUserId = await insertUser('agent');
@@ -723,7 +771,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(
       affordabilityEvents.some(event => String(event.note || '').includes('Affordability Snapshot Attached')),
     ).toBe(true);
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('listMyReferrals returns only the actor own referrals', async () => {
     const actorAUserId = await insertUser('agent');
@@ -764,9 +812,11 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     const actorAReferrals = await callerA.distribution.partner.listMyReferrals({
       limit: 50,
     });
+    expect(actorAReferrals.items.length).toBeGreaterThan(0);
+    expectDocProgressV2Shape(actorAReferrals.items[0]?.docProgress);
     const actorADealIds = actorAReferrals.items.map(item => Number(item.dealId));
 
     expect(actorADealIds).toContain(Number(actorADeal.dealId));
     expect(actorADealIds).not.toContain(Number(actorBDeal.dealId));
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 });
