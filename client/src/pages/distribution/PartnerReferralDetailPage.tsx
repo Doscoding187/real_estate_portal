@@ -42,7 +42,11 @@ function getStageProgress(stage: string | null | undefined) {
 
 function getNextActionHint(input: {
   status: string;
-  docProgress: { requiredCount: number; verifiedRequiredCount: number };
+  docProgress: {
+    requiredCount: number;
+    uploadedRequiredCount: number;
+    verifiedRequiredCount: number;
+  };
 }) {
   const normalized = normalizeStage(input.status);
   if (normalized === 'commission_paid') {
@@ -80,6 +84,29 @@ function normalizePhoneForWhatsApp(value: string | null | undefined) {
 function base64ToBlob(base64: string, mimeType: string) {
   const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
   return new Blob([bytes], { type: mimeType });
+}
+
+type ApplicationDocument = {
+  templateId: number;
+  category: string;
+  status: string;
+  submittedFileUrl?: string | null;
+  submittedFileName?: string | null;
+  label?: string | null;
+  required?: boolean;
+};
+
+function normalizeApplicationDocuments(input: unknown): ApplicationDocument[] {
+  if (!Array.isArray(input)) return [];
+  return input.map((document: any) => ({
+    templateId: Number(document?.templateId || 0),
+    category: String(document?.category || ''),
+    status: String(document?.status || ''),
+    submittedFileUrl: document?.submittedFileUrl ?? null,
+    submittedFileName: document?.submittedFileName ?? null,
+    label: document?.label ?? null,
+    required: Boolean(document?.required),
+  }));
 }
 
 export default function PartnerReferralDetailPage() {
@@ -219,14 +246,14 @@ export default function PartnerReferralDetailPage() {
       docProgress: referral.docProgress,
     });
   const actionCode = String(referral.journey?.actionCode || '');
-  const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
-    ? (referral as any).applicationDocuments
-    : [];
+  const applicationDocuments = normalizeApplicationDocuments(
+    (referral as { applicationDocuments?: unknown }).applicationDocuments,
+  );
   const buyerApplicationDocuments = applicationDocuments.filter(
-    (document: any) => document.category !== 'developer_document',
+    document => document.category !== 'developer_document',
   );
   const developerApplicationDocuments = applicationDocuments.filter(
-    (document: any) => document.category === 'developer_document',
+    document => document.category === 'developer_document',
   );
   const supportingDocuments = Array.isArray(referral.programTerms?.sourceDocuments)
     ? referral.programTerms.sourceDocuments
@@ -382,7 +409,11 @@ export default function PartnerReferralDetailPage() {
                 <span className="text-slate-500">Email:</span> {referral.buyer.email || 'Not provided'}
               </p>
               <p>
-                <span className="text-slate-500">Document progress:</span>{' '}
+                <span className="text-slate-500">Documents uploaded:</span>{' '}
+                {referral.docProgress.uploadedRequiredCount}/{referral.docProgress.requiredCount}
+              </p>
+              <p>
+                <span className="text-slate-500">Documents verified:</span>{' '}
                 {referral.docProgress.verifiedRequiredCount}/{referral.docProgress.requiredCount}
               </p>
               {referral.affordability?.purchasePriceEstimate ? (
