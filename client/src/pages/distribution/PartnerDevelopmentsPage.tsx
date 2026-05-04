@@ -40,6 +40,63 @@ function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: numb
   return 'Price on request';
 }
 
+function computeRewardAmount(item: any) {
+  const model = String(item?.program?.commissionModel || '');
+  const price = pickRepresentativePrice(item?.priceFrom, item?.priceTo) ?? 0;
+  if (model === 'flat_amount') {
+    return Math.max(0, Number(item?.program?.defaultCommissionAmount || 0));
+  }
+  if (model === 'flat_percentage') {
+    const percent = Number(item?.program?.defaultCommissionPercent || 0);
+    if (percent > 0 && price > 0) return Math.round((price * percent) / 100);
+  }
+  return 0;
+}
+
+function getRewardDisplay(item: any) {
+  const computed = String(item?.computed?.commissionDisplay || '').trim();
+  if (computed && !/^r\s*0\b/i.test(computed)) return computed.replace(/commission/gi, 'reward');
+  const amount = computeRewardAmount(item);
+  if (amount > 0) return `${formatCurrency(amount)} estimated reward`;
+  const percent = Number(item?.program?.defaultCommissionPercent || 0);
+  if (String(item?.program?.commissionModel || '') === 'flat_percentage' && percent > 0) {
+    return `${percent}% referral reward`;
+  }
+  return 'Reward configured';
+}
+
+function getPayoutDisplay(item: any) {
+  const computed = String(item?.computed?.payoutDisplay || '').trim();
+  if (computed) return computed;
+  const notes = String(item?.program?.payoutMilestoneNotes || '').trim();
+  if (notes) return notes;
+  const milestone = String(item?.program?.payoutMilestone || '').replace(/_/g, ' ');
+  if (milestone) return `Paid after ${milestone}`;
+  return 'Paid after qualifying sale milestone';
+}
+
+function getBuyerProfile(item: any) {
+  const location = [item.city, item.province].filter(Boolean).join(', ') || 'this area';
+  const price = pickRepresentativePrice(item.priceFrom, item.priceTo) ?? 0;
+  if (price >= 1800000) return `Upscale buyer looking in ${location}`;
+  if (price >= 1200000) return `Family or investor buyer looking in ${location}`;
+  if (price > 0) return `First-time or value buyer looking in ${location}`;
+  return `Buyer asking about ${location}`;
+}
+
+function getSellingPoints(item: any) {
+  const points = [
+    formatCurrencyRange(item.priceFrom, item.priceTo),
+    getBuyerProfile(item),
+    getRewardDisplay(item),
+  ];
+  const supportingFiles = countSupportingFiles(item);
+  const requiredDocs = countRequiredApplicationDocs(item);
+  if (supportingFiles > 0) points.push(`${supportingFiles} shareable sales file${supportingFiles === 1 ? '' : 's'}`);
+  if (requiredDocs > 0) points.push(`${requiredDocs} buyer document${requiredDocs === 1 ? '' : 's'} required`);
+  return points;
+}
+
 function getOpportunityLabel(item: any) {
   if (item.opportunity?.status === 'ready') return 'Open for buyers';
   if (item.opportunity?.status === 'pending_setup') return 'Coming soon';
@@ -86,6 +143,9 @@ function buildBrochureText(item: any) {
     `${location}`,
     '',
     `Price Range: ${formatCurrencyRange(item.priceFrom, item.priceTo)}`,
+    `Referral Reward: ${getRewardDisplay(item)}`,
+    `Payout Trigger: ${getPayoutDisplay(item)}`,
+    `Best Buyer: ${getBuyerProfile(item)}`,
     '',
     'Unit Options:',
   ];
@@ -530,11 +590,19 @@ export default function PartnerDevelopmentsPage() {
                 <p className="font-mono text-[14px] font-semibold text-foreground">
                   {formatCurrencyRange(item.priceFrom, item.priceTo)}
                 </p>
+                <div className="rounded-md border border-success/20 bg-success/5 p-2.5">
+                  <p className="text-[9px] font-semibold uppercase text-muted-foreground">Estimated reward</p>
+                  <p className="mt-1 text-[13px] font-semibold text-success">{getRewardDisplay(item)}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{getPayoutDisplay(item)}</p>
+                </div>
                 <p className="text-[11px] text-muted-foreground">
                   Estimated installment from{' '}
                   {formatCurrency(
                     estimateMonthlyInstallment(pickRepresentativePrice(item.priceFrom, item.priceTo)),
                   )}
+                </p>
+                <p className="rounded-md border border-primary/10 bg-primary/5 px-2.5 py-2 text-[11px] text-foreground">
+                  <span className="font-semibold">Best buyer:</span> {getBuyerProfile(item)}
                 </p>
 
                 <p className="text-[10px] text-muted-foreground">
@@ -559,6 +627,14 @@ export default function PartnerDevelopmentsPage() {
                       {countRequiredApplicationDocs(item)} required
                     </p>
                   </div>
+                </div>
+                <div className="rounded-md border border-primary/10 bg-white p-2">
+                  <p className="text-[9px] font-semibold uppercase text-muted-foreground">Sales angle</p>
+                  <ul className="mt-1 space-y-1 text-[10px] text-muted-foreground">
+                    {getSellingPoints(item).slice(0, 3).map(point => (
+                      <li key={point}>- {point}</li>
+                    ))}
+                  </ul>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -642,6 +718,12 @@ export default function PartnerDevelopmentsPage() {
                     {formatCurrencyRange(brochureItem.priceFrom, brochureItem.priceTo)}
                   </p>
                 </div>
+                <div className="rounded border bg-emerald-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Referral Reward</p>
+                  <p className="mt-1 text-sm font-semibold text-emerald-700">
+                    {getRewardDisplay(brochureItem)}
+                  </p>
+                </div>
                 <div className="rounded border bg-slate-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-slate-500">
                     Estimated Monthly Installment
@@ -653,6 +735,22 @@ export default function PartnerDevelopmentsPage() {
                       ),
                     )}
                   </p>
+                </div>
+                <div className="rounded border bg-slate-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Payout Trigger</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{getPayoutDisplay(brochureItem)}</p>
+                </div>
+              </div>
+
+              <div className="rounded border p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Sales Pack</p>
+                <p className="mt-2 text-sm font-medium text-slate-900">{getBuyerProfile(brochureItem)}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {getSellingPoints(brochureItem).map(point => (
+                    <div key={point} className="rounded border bg-slate-50 px-2.5 py-2 text-xs text-slate-700">
+                      {point}
+                    </div>
+                  ))}
                 </div>
               </div>
 
