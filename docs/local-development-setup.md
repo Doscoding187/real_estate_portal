@@ -172,6 +172,7 @@ Seed local-only demo data for visual testing:
 
 ```powershell
 pnpm db:seed:local
+pnpm db:verify:local-demo
 ```
 
 Reset only local demo data:
@@ -184,7 +185,10 @@ Seed the disposable test database:
 
 ```powershell
 pnpm db:seed:test
+pnpm db:verify:test-demo
 ```
+
+The verify commands are read-only preflights for browser and integration work. They confirm the demo accounts, referrer identities, developments, referral deals, and approved reward entry exist before you try authenticated `/distribution/partner/*` routes.
 
 The local demo seed is idempotent. It first removes only records it owns:
 
@@ -243,6 +247,8 @@ LOCAL-DEMO-AGENT-SUBMITTED   Agency-agent submitted referral
 1. Start the app:
 
 ```powershell
+pnpm db:seed:local
+pnpm db:verify:local-demo
 pnpm dev
 ```
 
