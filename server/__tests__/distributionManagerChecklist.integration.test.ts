@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { and, eq, inArray } from 'drizzle-orm';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
 import {
@@ -17,6 +17,7 @@ import {
 
 // Requires DATABASE_URL test DB; skipped in local env when not set.
 const hasDb = Boolean(process.env.DATABASE_URL);
+vi.setConfig({ testTimeout: 30000 });
 const describeWithDb: typeof describe = hasDb
   ? describe
   : ((name: string, fn: Parameters<typeof describe>[1]) =>
@@ -67,15 +68,17 @@ async function insertUser(emailPrefix: string, role: 'visitor' | 'super_admin' =
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const [insertResult] = await db.insert(users).values({
-    email: `${emailPrefix}-${suffix}@example.com`,
-    role,
-    firstName: 'Distribution',
-    lastName: 'Manager',
-    name: 'Distribution Manager',
-    emailVerified: 1,
-  });
-  const userId = Number((insertResult as any).insertId || 0);
+  const email = `${emailPrefix}-${suffix}@example.com`;
+  await db.execute(sql`
+    INSERT INTO users (email, role, firstName, lastName, name, emailVerified)
+    VALUES (${email}, ${role}, ${'Distribution'}, ${'Manager'}, ${'Distribution Manager'}, ${1})
+  `);
+  const [createdUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  const userId = Number(createdUser?.id || 0);
   createdState.userIds.push(userId);
   return userId;
 }

@@ -308,7 +308,7 @@ export function isDistributionCommissionBackfillStatement(statement: string): bo
   );
 }
 
-function shouldIgnoreStatementError(error: unknown): boolean {
+function shouldIgnoreStatementError(error: unknown, statement?: string): boolean {
   const message = String((error as any)?.message ?? '');
   const code = String((error as any)?.code ?? '');
 
@@ -317,6 +317,13 @@ function shouldIgnoreStatementError(error: unknown): boolean {
     message.includes('Duplicate key name') ||
     message.includes('Duplicate foreign key constraint name') ||
     message.includes('already exists')
+  ) {
+    return true;
+  }
+
+  if (
+    code === 'ER_BAD_FIELD_ERROR' &&
+    /^\s*ALTER\s+TABLE\s+`?[a-zA-Z0-9_]+`?\s+RENAME\s+COLUMN\s+/i.test(statement ?? '')
   ) {
     return true;
   }
@@ -461,7 +468,7 @@ export async function runSqlMigrations(options?: { filePattern?: RegExp }) {
           await connection.execute(executableStatement);
           executedCount += 1;
         } catch (error: any) {
-          if (shouldIgnoreStatementError(error)) {
+          if (shouldIgnoreStatementError(error, executableStatement)) {
             skippedCount += 1;
             console.log(`     -> skipped statement (${statementPreview(executableStatement)})`);
             continue;

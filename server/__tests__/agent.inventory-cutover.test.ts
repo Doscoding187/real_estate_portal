@@ -3,16 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   mockGetDb,
   mockGetPlatformSetting,
+  mockGetRuntimeSchemaCapabilities,
   mockGetAgentInventorySchedulingOptions,
   mockGetInventoryBridgeSchemaCapabilities,
-  mockGetRuntimeSchemaCapabilities,
   mockResolvePropertyForListing,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockGetPlatformSetting: vi.fn(),
+  mockGetRuntimeSchemaCapabilities: vi.fn(),
   mockGetAgentInventorySchedulingOptions: vi.fn(),
   mockGetInventoryBridgeSchemaCapabilities: vi.fn(),
-  mockGetRuntimeSchemaCapabilities: vi.fn(),
   mockResolvePropertyForListing: vi.fn(),
 }));
 
@@ -20,6 +20,14 @@ vi.mock('../db', () => ({
   getDb: mockGetDb,
   getPlatformSetting: mockGetPlatformSetting,
 }));
+
+vi.mock('../services/runtimeSchemaCapabilities', async () => {
+  const actual = await vi.importActual('../services/runtimeSchemaCapabilities');
+  return {
+    ...actual,
+    getRuntimeSchemaCapabilities: mockGetRuntimeSchemaCapabilities,
+  };
+});
 
 vi.mock('../services/inventoryLinkResolver', () => ({
   getAgentInventorySchedulingOptions: mockGetAgentInventorySchedulingOptions,
@@ -31,14 +39,6 @@ vi.mock('../services/inventoryLinkResolver', () => ({
 vi.mock('../services/agentOsEventService', () => ({
   recordAgentOsEvent: vi.fn(),
 }));
-
-vi.mock('../services/runtimeSchemaCapabilities', async () => {
-  const actual = await vi.importActual('../services/runtimeSchemaCapabilities');
-  return {
-    ...actual,
-    getRuntimeSchemaCapabilities: mockGetRuntimeSchemaCapabilities,
-  };
-});
 
 import { agentRouter } from '../agentRouter';
 
@@ -87,7 +87,7 @@ describe('agent inventory cutover', () => {
         statusColumn: true,
         notesColumn: true,
       },
-    });
+    } as any);
   });
 
   it('passes the legacy fallback setting into scheduling options resolution', async () => {
