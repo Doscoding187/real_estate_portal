@@ -7,7 +7,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowRight, CheckCircle2, Home, Search, UsersRound, WalletCards, Loader2 } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Home,
+  Search,
+  Target,
+  UsersRound,
+  WalletCards,
+  Loader2,
+} from 'lucide-react';
 
 type PrequalFormValues = {
   grossIncomeMonthly: string;
@@ -55,6 +64,9 @@ type AccessStockRow = {
   commissionModel: string | null;
   defaultCommissionPercent: number | null;
   defaultCommissionAmount: number | null;
+  payoutDisplay: string;
+  buyerProfile: string;
+  readinessLabel: string;
   imageUrl: string | null;
   badge: 'Hot' | 'High demand' | 'Fast payout';
 };
@@ -97,6 +109,14 @@ function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: numb
   if (hasFrom) return `From ${formatCurrency(from)}`;
   if (hasTo) return `Up to ${formatCurrency(to)}`;
   return 'Price not configured';
+}
+
+function pickRepresentativePrice(priceFrom: number | null | undefined, priceTo: number | null | undefined) {
+  const from = Number(priceFrom || 0);
+  const to = Number(priceTo || 0);
+  if (Number.isFinite(from) && from > 0) return from;
+  if (Number.isFinite(to) && to > 0) return to;
+  return 0;
 }
 
 function parseMoneyInt(value: string, fallbackValue = 0) {
@@ -181,9 +201,40 @@ function getCommissionDisplay(input: {
 }) {
   if (input.amount > 0) return formatCurrency(input.amount);
   if (String(input.commissionModel || '') === 'flat_percentage' && Number(input.defaultCommissionPercent || 0) > 0) {
-    return `${Number(input.defaultCommissionPercent)}% fee`;
+    return `${Number(input.defaultCommissionPercent)}% referral reward`;
   }
-  return 'Commission configured';
+  return 'Reward configured';
+}
+
+function getPayoutDisplay(item: any) {
+  const computed = String(item?.computed?.payoutDisplay || '').trim();
+  if (computed) return computed;
+  const notes = String(item?.program?.payoutMilestoneNotes || item?.payoutMilestoneNotes || '').trim();
+  if (notes) return notes;
+  const milestone = String(item?.program?.payoutMilestone || item?.payoutMilestone || '').replace(/_/g, ' ');
+  if (milestone) return `Paid after ${milestone}`;
+  return 'Paid after qualifying sale milestone';
+}
+
+function getBuyerProfile(priceFrom: number | null | undefined, priceTo: number | null | undefined, location: string) {
+  const representativePrice = pickRepresentativePrice(priceFrom, priceTo);
+  if (representativePrice >= 1800000) return `Upscale buyer in ${location}`;
+  if (representativePrice >= 1200000) return `Family or investor buyer in ${location}`;
+  if (representativePrice > 0) return `First-time or value buyer in ${location}`;
+  return `Buyer looking in ${location}`;
+}
+
+function getReadinessLabel(item: any) {
+  const requiredDocs = Array.isArray(item?.requiredDocuments)
+    ? item.requiredDocuments.filter((doc: any) => Boolean(doc.isRequired)).length
+    : 0;
+  const sourceDocs = Array.isArray(item?.sourceDocuments)
+    ? item.sourceDocuments.filter((doc: any) => Boolean(doc.fileUrl)).length
+    : 0;
+  if (requiredDocs > 0 && sourceDocs > 0) return `${requiredDocs} docs, ${sourceDocs} sales file${sourceDocs === 1 ? '' : 's'}`;
+  if (requiredDocs > 0) return `${requiredDocs} buyer docs required`;
+  if (sourceDocs > 0) return `${sourceDocs} sales file${sourceDocs === 1 ? '' : 's'} ready`;
+  return 'Application pack pending';
 }
 
 function buildWhatsAppShareMessage(
@@ -432,6 +483,7 @@ export default function PartnerDashboardPage() {
         const priceToRaw = Number(unitTypeCeiling || row.priceTo || priceFromRaw || 0);
         const priceFrom = Number.isFinite(priceFromRaw) && priceFromRaw > 0 ? priceFromRaw : null;
         const priceTo = Number.isFinite(priceToRaw) && priceToRaw > 0 ? priceToRaw : priceFrom;
+        const location = [row.city, row.province].filter(Boolean).join(' - ') || 'Location unavailable';
         const commissionModel = row.commissionModel ? String(row.commissionModel) : null;
         const defaultCommissionPercent =
           row.defaultCommissionPercent == null ? null : Number(row.defaultCommissionPercent);
@@ -441,7 +493,7 @@ export default function PartnerDashboardPage() {
           commissionModel,
           defaultCommissionPercent,
           defaultCommissionAmount,
-          purchasePrice: priceFrom || 0,
+          purchasePrice: pickRepresentativePrice(priceFrom, priceTo),
         });
         const commissionDisplay = getCommissionDisplay({
           amount: commissionAmount,
@@ -456,7 +508,7 @@ export default function PartnerDashboardPage() {
         grouped.set(developmentId, {
           developmentId,
           developmentName: row.developmentName || 'Development',
-          location: [row.city, row.province].filter(Boolean).join(' - ') || 'Location unavailable',
+          location,
           priceFrom,
           priceTo,
           commissionAmount,
@@ -464,6 +516,9 @@ export default function PartnerDashboardPage() {
           commissionModel,
           defaultCommissionPercent,
           defaultCommissionAmount,
+          payoutDisplay: getPayoutDisplay(row),
+          buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
+          readinessLabel: getReadinessLabel(row),
           imageUrl: row.imageUrl ? String(row.imageUrl) : null,
           badge,
         });
@@ -481,11 +536,14 @@ export default function PartnerDashboardPage() {
           : Number(item.program.defaultCommissionPercent);
       const defaultCommissionAmount =
         item.program?.defaultCommissionAmount == null ? null : Number(item.program.defaultCommissionAmount);
+      const priceFrom = item.priceFrom ? Number(item.priceFrom) : null;
+      const priceTo = item.priceTo ? Number(item.priceTo) : priceFrom;
+      const location = [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable';
       const commissionAmount = computeCommissionAmount({
         commissionModel,
         defaultCommissionPercent,
         defaultCommissionAmount,
-        purchasePrice: 0,
+        purchasePrice: pickRepresentativePrice(priceFrom, priceTo),
       });
       const commissionDisplay = getCommissionDisplay({
         amount: commissionAmount,
@@ -495,14 +553,17 @@ export default function PartnerDashboardPage() {
       grouped.set(developmentId, {
         developmentId,
         developmentName: item.developmentName || 'Development',
-        location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
-        priceFrom: item.priceFrom ? Number(item.priceFrom) : null,
-        priceTo: item.priceTo ? Number(item.priceTo) : item.priceFrom ? Number(item.priceFrom) : null,
+        location,
+        priceFrom,
+        priceTo,
         commissionAmount,
         commissionDisplay,
         commissionModel,
         defaultCommissionPercent,
         defaultCommissionAmount,
+        payoutDisplay: getPayoutDisplay(item),
+        buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
+        readinessLabel: getReadinessLabel(item),
         imageUrl: item.imageUrl ? String(item.imageUrl) : null,
         badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
       });
@@ -519,11 +580,14 @@ export default function PartnerDashboardPage() {
           : Number(item.program.defaultCommissionPercent);
       const defaultCommissionAmount =
         item.program?.defaultCommissionAmount == null ? null : Number(item.program.defaultCommissionAmount);
+      const priceFrom = item.priceFrom ? Number(item.priceFrom) : null;
+      const priceTo = item.priceTo ? Number(item.priceTo) : priceFrom;
+      const location = [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable';
       const commissionAmount = computeCommissionAmount({
         commissionModel,
         defaultCommissionPercent,
         defaultCommissionAmount,
-        purchasePrice: 0,
+        purchasePrice: pickRepresentativePrice(priceFrom, priceTo),
       });
       const commissionDisplay = getCommissionDisplay({
         amount: commissionAmount,
@@ -534,14 +598,17 @@ export default function PartnerDashboardPage() {
       grouped.set(developmentId, {
         developmentId,
         developmentName: item.developmentName || 'Development',
-        location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
-        priceFrom: item.priceFrom ? Number(item.priceFrom) : null,
-        priceTo: item.priceTo ? Number(item.priceTo) : item.priceFrom ? Number(item.priceFrom) : null,
+        location,
+        priceFrom,
+        priceTo,
         commissionAmount,
         commissionDisplay,
         commissionModel,
         defaultCommissionPercent,
         defaultCommissionAmount,
+        payoutDisplay: getPayoutDisplay(item),
+        buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
+        readinessLabel: getReadinessLabel(item),
         imageUrl: item.imageUrl ? String(item.imageUrl) : null,
         badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
       });
@@ -628,7 +695,7 @@ export default function PartnerDashboardPage() {
         id: `stock-${topStock.developmentId}`,
         urgency: 'info',
         title: `High opportunity - ${topStock.developmentName}`,
-        detail: `${formatCurrencyRange(topStock.priceFrom, topStock.priceTo)} - Commission ${formatCurrency(topStock.commissionAmount)}`,
+        detail: `${formatCurrencyRange(topStock.priceFrom, topStock.priceTo)} - Reward ${topStock.commissionDisplay}`,
         timeLabel: 'Today',
         onClick: () => setLocation('/distribution/partner/developments'),
       });
@@ -736,6 +803,108 @@ export default function PartnerDashboardPage() {
           </div>
         </section>
 
+        <section className="mt-5 grid gap-4 lg:grid-cols-3">
+          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="rounded-md bg-primary/10 p-2 text-primary">
+                <Target className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-[15px] font-semibold text-foreground">Find Opportunity</h2>
+                <p className="text-[12px] text-muted-foreground">What can I refer today?</p>
+              </div>
+            </div>
+            {visibleStock[0] ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[14px] font-semibold text-foreground">{visibleStock[0].developmentName}</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">{visibleStock[0].buyerProfile}</p>
+                </div>
+                <div className="rounded-md border border-primary/10 bg-primary/5 p-3">
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Estimated reward</p>
+                  <p className="mt-1 text-[16px] font-semibold text-success">{visibleStock[0].commissionDisplay}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{visibleStock[0].payoutDisplay}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setLocation('/distribution/partner/developments')}
+                >
+                  Open Sales Inventory
+                </Button>
+              </div>
+            ) : (
+              <p className="text-[13px] text-muted-foreground">No ready opportunities are available yet.</p>
+            )}
+          </Card>
+
+          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="rounded-md bg-primary/10 p-2 text-primary">
+                <Search className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-[15px] font-semibold text-foreground">Match Buyer</h2>
+                <p className="text-[12px] text-muted-foreground">Who fits which development?</p>
+              </div>
+            </div>
+            <p className="text-[13px] text-muted-foreground">
+              Run buying power once, then submit directly into the best-fit opportunity with the
+              assessment attached.
+            </p>
+            <div className="mt-4 rounded-md border border-primary/10 bg-primary/5 p-3">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">Current matcher</p>
+              <p className="mt-1 text-[13px] font-semibold text-foreground">
+                {matches.length ? `${matches.length} matched development${matches.length === 1 ? '' : 's'}` : 'Ready for next buyer'}
+              </p>
+            </div>
+            <Button
+              variant="conversion"
+              className="mt-4 w-full"
+              onClick={() => document.getElementById('prequal-engine')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Pre-Qualify Buyer
+            </Button>
+          </Card>
+
+          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="rounded-md bg-primary/10 p-2 text-primary">
+                <WalletCards className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-[15px] font-semibold text-foreground">Track Earnings</h2>
+                <p className="text-[12px] text-muted-foreground">What money is moving?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <EarningCell label="Pending" value={formatCurrency(pendingIncome, true)} valueClassName="text-[#9a6500]" />
+              <EarningCell label="Approved" value={formatCurrency(approvedIncome, true)} valueClassName="text-primary" />
+              <EarningCell label="Paid" value={formatCurrency(paidIncome, true)} valueClassName="text-[#1a7a40]" />
+            </div>
+            <div className="mt-4 rounded-md border border-primary/10 bg-primary/5 p-3">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">Needs action</p>
+              <p className="mt-1 text-[13px] font-semibold text-foreground">
+                {pendingDocReferrals[0]?.buyer?.name || staleDeal?.buyerName || 'No blocked buyer'}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {pendingDocReferrals[0]
+                  ? `${pendingDocReferrals[0].docProgress?.verifiedRequiredCount || 0}/${pendingDocReferrals[0].docProgress?.requiredCount || 0} docs verified`
+                  : staleDeal
+                    ? `Current stage: ${formatStageLabel(staleDeal.currentStage)}`
+                    : 'Your buyer pipeline is clean right now.'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="mt-4 w-full"
+              onClick={() => setLocation('/distribution/partner/referrals')}
+            >
+              Open Buyer Tracker
+            </Button>
+          </Card>
+        </section>
+
         <section id="prequal-engine" className="mt-5 overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-4 border-b border-primary/15 bg-primary/5 px-6 py-5">
             <div>
@@ -840,8 +1009,8 @@ export default function PartnerDashboardPage() {
 
               {!assessment ? (
                 <div className="flex min-h-[220px] flex-col items-center justify-center text-center text-[12px] text-muted-foreground">
-                  Enter buyer details and run pre-qualification to see matching stock and estimated
-                  commission.
+                  Enter buyer details and run pre-qualification to see matching stock, fit reasons,
+                  and estimated reward.
                 </div>
               ) : (
                 <div>
@@ -902,7 +1071,15 @@ export default function PartnerDashboardPage() {
                           </span>
                         </div>
                         <p className="mt-1 text-[11px] text-success">
-                          Est. commission: {formatCurrency(commissionAmount)}
+                          Est. reward: {getCommissionDisplay({
+                            amount: commissionAmount,
+                            commissionModel: linkedStock?.commissionModel,
+                            defaultCommissionPercent: linkedStock?.defaultCommissionPercent,
+                          })}
+                        </p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          Fit reason: {confidence.toLowerCase()} affordability fit
+                          {linkedStock?.buyerProfile ? ` for ${linkedStock.buyerProfile.toLowerCase()}` : ''}.
                         </p>
                         <div className="mt-2 flex gap-2">
                           <Button
@@ -1045,6 +1222,18 @@ export default function PartnerDashboardPage() {
                         <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
                         <p className="mt-1 text-[13px] font-semibold text-success">{row.commissionDisplay}</p>
                       </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Best buyer</p>
+                        <p className="mt-1 text-[12px] text-foreground">{row.buyerProfile}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Payout trigger</p>
+                        <p className="mt-1 text-[12px] text-foreground">{row.payoutDisplay}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Readiness</p>
+                        <p className="mt-1 text-[12px] text-foreground">{row.readinessLabel}</p>
+                      </div>
                     </div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2">
@@ -1053,7 +1242,7 @@ export default function PartnerDashboardPage() {
                       onClick={() => setLocation('/distribution/partner/developments')}
                       className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-[12px] font-semibold text-primary"
                     >
-                      View
+                      Sales Pack
                     </button>
                     <button
                       type="button"

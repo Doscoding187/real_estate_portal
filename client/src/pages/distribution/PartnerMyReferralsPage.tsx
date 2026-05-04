@@ -18,6 +18,16 @@ const JOURNEY_STAGES = [
   'commission_paid',
 ] as const;
 
+const JOURNEY_STAGE_LABELS: Record<(typeof JOURNEY_STAGES)[number], string> = {
+  viewing_scheduled: 'Submitted',
+  viewing_completed: 'Qualified / viewed',
+  application_submitted: 'Application',
+  contract_signed: 'Offer / sale',
+  bond_approved: 'Bond',
+  commission_pending: 'Reward pending',
+  commission_paid: 'Paid',
+};
+
 function normalizeStage(stage: string | null | undefined) {
   const value = String(stage || '').toLowerCase();
   if (!value) return 'viewing_scheduled';
@@ -61,17 +71,17 @@ function formatOwnerRole(ownerRole: string | null | undefined) {
   return value.replace(/\b\w/g, char => char.toUpperCase());
 }
 
-function getQuickActions(actionCode: string) {
+function getPrimaryAction(actionCode: string) {
   if (actionCode === 'track_payout') {
-    return ['open_commissions', 'open_deal'] as const;
+    return { label: 'Track Reward', route: '/distribution/partner/commissions', variant: 'default' as const };
   }
   if (actionCode === 'submit_next_referral') {
-    return ['submit_referral', 'open_deal'] as const;
+    return { label: 'Submit Buyer', route: '/distribution/partner/submit', variant: 'default' as const };
   }
   if (actionCode === 'follow_up_docs') {
-    return ['open_deal', 'open_submit'] as const;
+    return { label: 'Upload Missing Docs', route: null, variant: 'default' as const };
   }
-  return ['open_deal'] as const;
+  return { label: 'Open Buyer File', route: null, variant: 'outline' as const };
 }
 
 export default function PartnerMyReferralsPage() {
@@ -139,7 +149,7 @@ export default function PartnerMyReferralsPage() {
             <p className="text-[10px] font-semibold uppercase text-blue-100">Referral tracker</p>
             <h1 className="mt-1 text-[28px] font-semibold">My Buyers</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Track buyer status, next steps, required documents, and referral reward progress.
+              Track every buyer from submitted lead to qualified sale and paid reward.
             </p>
           </div>
           <CardContent className="flex flex-wrap items-center gap-2 bg-primary/5 py-4">
@@ -181,7 +191,9 @@ export default function PartnerMyReferralsPage() {
               <WalletCards className="h-4 w-4 text-primary" />
               Journey to Referral Reward
             </CardTitle>
-            <CardDescription>Every buyer moves from review to site visit, sale, and payout.</CardDescription>
+            <CardDescription>
+              Each buyer has one current stage, one next action, and one reward state.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
@@ -233,12 +245,19 @@ export default function PartnerMyReferralsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {visibleItems.map((item: any) => (
+            {visibleItems.map((item: any) => {
+              const primaryAction = getPrimaryAction(String(item.journey?.actionCode || ''));
+              const primaryRoute =
+                primaryAction.route || `/distribution/partner/referrals/${Number(item.dealId)}`;
+              return (
               <div key={item.dealId} className="w-full rounded-md border border-primary/15 bg-white p-3 text-left">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">{item.development.name}</p>
-                    <p className="text-xs text-slate-500">Deal #{item.dealId}</p>
+                    <p className="text-xs text-slate-500">
+                      Deal #{item.dealId}
+                      {item.buyer?.name ? ` | Buyer: ${item.buyer.name}` : ''}
+                    </p>
                     <p className="mt-1 text-xs text-slate-600">
                       Next action: {item.journey?.nextAction || getNextActionLabel(item.status, item.docProgress)}
                     </p>
@@ -258,45 +277,38 @@ export default function PartnerMyReferralsPage() {
                 <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#e7dfd3]">
                   <div className="h-full rounded bg-primary" style={{ width: `${getStageProgress(item.status)}%` }} />
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {getQuickActions(String(item.journey?.actionCode || '')).map(action => {
-                    if (action === 'open_commissions') {
-                      return (
-                        <Button
-                          key={action}
-                          size="sm"
-                          onClick={() => setLocation('/distribution/partner/commissions')}
-                        >
-                          Open Commissions
-                        </Button>
-                      );
-                    }
-                    if (action === 'submit_referral' || action === 'open_submit') {
-                      return (
-                        <Button
-                          key={action}
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setLocation('/distribution/partner/submit')}
-                        >
-                          Submit Buyer
-                        </Button>
-                      );
-                    }
+                <div className="mt-2 grid grid-cols-7 gap-1">
+                  {JOURNEY_STAGES.map(stage => {
+                    const currentIndex = JOURNEY_STAGES.indexOf(normalizeStage(item.status) as any);
+                    const stageIndex = JOURNEY_STAGES.indexOf(stage);
+                    const isComplete = currentIndex >= stageIndex;
                     return (
-                      <Button
-                        key={action}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setLocation(`/distribution/partner/referrals/${Number(item.dealId)}`)}
+                      <span
+                        key={stage}
+                        className={`rounded px-1.5 py-1 text-center text-[9px] font-medium ${
+                          isComplete ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'
+                        }`}
                       >
-                        Open Deal
-                      </Button>
+                        {JOURNEY_STAGE_LABELS[stage]}
+                      </span>
                     );
                   })}
                 </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-slate-500">
+                    Reward state follows the sale and payout milestones for this buyer.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant={primaryAction.variant}
+                    onClick={() => setLocation(primaryRoute)}
+                  >
+                    {primaryAction.label}
+                  </Button>
+                </div>
               </div>
-            ))}
+            );
+            })}
 
             {!referralsQuery.error && !visibleItems.length ? (
               <p className="py-6 text-center text-sm text-slate-500">
