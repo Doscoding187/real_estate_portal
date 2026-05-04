@@ -76,8 +76,6 @@ async function insertUser(role: 'agent' | 'agency_admin' | 'visitor') {
     ['lastName', 'Tester'],
     ['name', 'Flow Tester'],
     ['emailVerified', 1],
-    ['plan', 'free'],
-    ['trialStatus', 'none'],
   ]);
 
   const insertColumns = Array.from(valuesByColumn.keys()).filter(column =>
@@ -85,11 +83,15 @@ async function insertUser(role: 'agent' | 'agency_admin' | 'visitor') {
   );
   const insertValues = insertColumns.map(column => valuesByColumn.get(column));
   const valuesSql = sql.join(insertValues.map(value => sql`${value}`), sql`, `);
-  const [insertResult] = await db.execute(
+  await db.execute(
     sql`INSERT INTO users (${sql.raw(insertColumns.join(', '))}) VALUES (${valuesSql})`,
   );
-
-  const userId = Number((insertResult as any).insertId || 0);
+  const [createdUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  const userId = Number(createdUser?.id || 0);
   createdState.userIds.push(userId);
   return userId;
 }
