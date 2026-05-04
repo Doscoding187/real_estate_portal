@@ -52,4 +52,17 @@ describe('local demo seed safety guard', () => {
   it('requires the test seed to target listify_test', () => {
     expect(() => assertLocalSeedSafety(baseEnv, { target: 'test' })).toThrow(/listify_test/);
   });
+
+  it('allows explicit test seed against the isolated test database', () => {
+    expect(() =>
+      assertLocalSeedSafety(
+        {
+          ...baseEnv,
+          NODE_ENV: 'test',
+          DATABASE_URL: 'mysql://user:password@127.0.0.1:3307/listify_test',
+        },
+        { target: 'test' },
+      ),
+    ).not.toThrow();
+  });
 });

@@ -72,6 +72,8 @@
     "db:seed:local": "cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts seed local",
     "db:reset:local": "cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts reset local",
     "db:seed:test": "cross-env NODE_ENV=test LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts seed test",
+    "db:verify:local-demo": "cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/verifyLocalDemoSeed.ts local",
+    "db:verify:test-demo": "cross-env NODE_ENV=test LOCAL_SEED_ALLOWED=true tsx server/scripts/verifyLocalDemoSeed.ts test",
     "start:server": "tsx server/_core/start.ts",
     "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "start:prod": "cross-env NODE_ENV=production tsx server/_core/start.ts",

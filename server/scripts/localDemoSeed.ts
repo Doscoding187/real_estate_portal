@@ -8,13 +8,24 @@ type EnvLike = Record<string, string | undefined>;
 type SeedAction = 'seed' | 'reset';
 type SeedTarget = 'local' | 'test';
 
-const DEMO_PASSWORD = 'LocalDemo123!';
-const DEMO_EMAILS = [
+export const DEMO_PASSWORD = 'LocalDemo123!';
+export const DEMO_EMAILS = [
   'admin@listify.local',
   'developer@listify.local',
   'agent@listify.local',
   'referrer@listify.local',
   'buyer@listify.local',
+] as const;
+export const DEMO_DEVELOPMENT_SLUGS = [
+  'local-demo-hillside-gardens',
+  'local-demo-river-quarter',
+  'local-demo-mandate-locked-estate',
+] as const;
+export const DEMO_DEAL_EXTERNAL_REFS = [
+  'LOCAL-DEMO-SUBMITTED',
+  'LOCAL-DEMO-NEEDS-ACTION',
+  'LOCAL-DEMO-PAYOUT-PROGRESS',
+  'LOCAL-DEMO-AGENT-SUBMITTED',
 ] as const;
 
 const ALLOWED_LOCAL_HOSTS = new Set([
