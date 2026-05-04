@@ -10,8 +10,14 @@ const REQUIRED_TABLES = [
   'distribution_brand_partnerships',
   'distribution_development_access',
   'distribution_programs',
+  'distribution_deals',
+  'distribution_deal_documents',
+  'distribution_deal_events',
   'development_manager_assignments',
   'development_required_documents',
+  'development_documents',
+  'application_requirements',
+  'deal_requirement_statuses',
 ] as const;
 
 const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
@@ -25,6 +31,13 @@ const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
   { table: 'distribution_development_access', column: 'submission_allowed' },
   { table: 'development_manager_assignments', column: 'manager_user_id' },
   { table: 'development_required_documents', column: 'category' },
+  { table: 'distribution_deal_events', column: 'event_type' },
+  { table: 'distribution_deal_events', column: 'metadata' },
+  { table: 'development_documents', column: 'visibility' },
+  { table: 'application_requirements', column: 'provider' },
+  { table: 'application_requirements', column: 'linked_development_document_id' },
+  { table: 'deal_requirement_statuses', column: 'status' },
+  { table: 'deal_requirement_statuses', column: 'requirement_id' },
 ];
 
 async function main() {

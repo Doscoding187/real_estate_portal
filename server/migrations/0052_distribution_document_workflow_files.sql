@@ -1,7 +1,13 @@
 ALTER TABLE `development_required_documents`
-  ADD COLUMN IF NOT EXISTS `template_file_url` VARCHAR(2048) NULL AFTER `category`,
-  ADD COLUMN IF NOT EXISTS `template_file_name` VARCHAR(255) NULL AFTER `template_file_url`,
-  ADD COLUMN IF NOT EXISTS `template_uploaded_at` TIMESTAMP NULL AFTER `template_file_name`,
+  ADD COLUMN IF NOT EXISTS `template_file_url` VARCHAR(2048) NULL AFTER `category`;
+
+ALTER TABLE `development_required_documents`
+  ADD COLUMN IF NOT EXISTS `template_file_name` VARCHAR(255) NULL AFTER `template_file_url`;
+
+ALTER TABLE `development_required_documents`
+  ADD COLUMN IF NOT EXISTS `template_uploaded_at` TIMESTAMP NULL AFTER `template_file_name`;
+
+ALTER TABLE `development_required_documents`
   ADD COLUMN IF NOT EXISTS `template_uploaded_by` INT NULL AFTER `template_uploaded_at`;
 
 SET @has_template_uploaded_by_fk := (
@@ -24,9 +30,15 @@ EXECUTE add_template_uploaded_by_fk_stmt;
 DEALLOCATE PREPARE add_template_uploaded_by_fk_stmt;
 
 ALTER TABLE `distribution_deal_documents`
-  ADD COLUMN IF NOT EXISTS `submitted_file_url` VARCHAR(2048) NULL AFTER `verified_by`,
-  ADD COLUMN IF NOT EXISTS `submitted_file_name` VARCHAR(255) NULL AFTER `submitted_file_url`,
-  ADD COLUMN IF NOT EXISTS `submitted_at` TIMESTAMP NULL AFTER `submitted_file_name`,
+  ADD COLUMN IF NOT EXISTS `submitted_file_url` VARCHAR(2048) NULL AFTER `verified_by`;
+
+ALTER TABLE `distribution_deal_documents`
+  ADD COLUMN IF NOT EXISTS `submitted_file_name` VARCHAR(255) NULL AFTER `submitted_file_url`;
+
+ALTER TABLE `distribution_deal_documents`
+  ADD COLUMN IF NOT EXISTS `submitted_at` TIMESTAMP NULL AFTER `submitted_file_name`;
+
+ALTER TABLE `distribution_deal_documents`
   ADD COLUMN IF NOT EXISTS `submitted_by` INT NULL AFTER `submitted_at`;
 
 SET @has_submitted_by_fk := (
