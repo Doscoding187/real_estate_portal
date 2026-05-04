@@ -235,7 +235,8 @@ export default function PartnerSubmitReferralPage() {
             <p className="text-[10px] font-semibold uppercase text-blue-100">Guided buyer capture</p>
             <h1 className="mt-1 text-[28px] font-semibold">Submit Buyer</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Choose a ready opportunity, capture what matters, and see what happens next.
+              Choose a ready opportunity, capture the buyer fit, attach the right context, and start
+              reward tracking.
             </p>
           </div>
           <CardHeader>
@@ -287,7 +288,8 @@ export default function PartnerSubmitReferralPage() {
               <CardHeader>
                 <CardTitle className="text-base">Available Developments</CardTitle>
                 <CardDescription>
-                  {referralReadyItems.length} ready for buyer submission.
+                  {referralReadyItems.length} ready for buyer submission. Pick the inventory you want
+                  this buyer matched against.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -327,6 +329,11 @@ export default function PartnerSubmitReferralPage() {
                       <p className={`text-xs ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}>
                         {[item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable'}
                       </p>
+                      {item.computed?.commissionDisplay ? (
+                        <p className={`mt-1 text-xs font-semibold ${isSelected ? 'text-white' : 'text-green-700'}`}>
+                          Reward: {String(item.computed.commissionDisplay).replace(/commission/gi, 'reward')}
+                        </p>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -367,8 +374,8 @@ export default function PartnerSubmitReferralPage() {
                   </div>
                   <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-xs text-primary">
                     <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-                    Next steps after submission: review, buyer contact, qualification, site visit, offer,
-                    sale, then referral reward progress.
+                    Journey after submission: manager review, buyer qualification, site visit, offer,
+                    sale milestone, then reward progress.
                   </div>
                   {selectedDevelopment &&
                   !selectedIsReady ? (
@@ -559,14 +566,34 @@ export default function PartnerSubmitReferralPage() {
                   ) : null}
 
                   {currentStep === 3 ? (
-                    <div className="rounded-md border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">
+                    <div className="space-y-3 rounded-md border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">
                       <p className="font-medium text-foreground">Review buyer submission</p>
-                      <p className="mt-2">Buyer: {buyerName || buyerPhone || buyerEmail || 'Not captured yet'}</p>
-                      <p>Opportunity: {selectedDevelopment?.developmentName || 'Not selected yet'}</p>
-                      <p>Buyer fit: {[buyerRoute, buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}</p>
-                      <p>Buyer documents: {selectedBuyerDocuments.length || 0}</p>
-                      <p>Developer application documents: {selectedDeveloperApplicationDocuments.length || 0}</p>
-                      <p>Supporting files: {selectedSupportingDocuments.length || 0}</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="rounded border border-primary/10 bg-white p-2">
+                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Buyer</p>
+                          <p className="mt-1 text-foreground">{buyerName || buyerPhone || buyerEmail || 'Not captured yet'}</p>
+                        </div>
+                        <div className="rounded border border-primary/10 bg-white p-2">
+                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Opportunity</p>
+                          <p className="mt-1 text-foreground">{selectedDevelopment?.developmentName || 'Not selected yet'}</p>
+                        </div>
+                        <div className="rounded border border-primary/10 bg-white p-2">
+                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Buyer fit</p>
+                          <p className="mt-1 text-foreground">
+                            {[buyerRoute, buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}
+                          </p>
+                        </div>
+                        <div className="rounded border border-primary/10 bg-white p-2">
+                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Readiness</p>
+                          <p className="mt-1 text-foreground">
+                            {selectedBuyerDocuments.length || 0} buyer docs, {selectedDeveloperApplicationDocuments.length || 0} developer docs, {selectedSupportingDocuments.length || 0} sales files
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs">
+                        The buyer will appear in your tracker with document progress and reward status
+                        as soon as the referral is accepted.
+                      </p>
                     </div>
                   ) : null}
 

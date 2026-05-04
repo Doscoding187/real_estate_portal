@@ -107,15 +107,15 @@ export default function PartnerCommissionsPage() {
       <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 md:px-7">
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Commissions</CardTitle>
+            <CardTitle>Rewards</CardTitle>
             <CardDescription>Track your payout pipeline from pending review to paid.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
-              Open Referral Pipeline
+              Open Buyer Tracker
             </Button>
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
-              Submit New Referral
+              Submit Buyer
             </Button>
             <label className="ml-auto flex items-center gap-2 text-sm">
               Status
@@ -136,7 +136,7 @@ export default function PartnerCommissionsPage() {
 
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Commission Snapshot</CardTitle>
+            <CardTitle>Reward Snapshot</CardTitle>
             <CardDescription>Live totals from your current filtered view.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
@@ -160,10 +160,10 @@ export default function PartnerCommissionsPage() {
             <CardContent className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-amber-900">
               <p>
                 {staleSummary.pendingDelayed > 0
-                  ? `${staleSummary.pendingDelayed} pending entr${staleSummary.pendingDelayed === 1 ? 'y is' : 'ies are'} older than ${PENDING_STALE_DAYS} days. `
+                  ? `${staleSummary.pendingDelayed} pending reward entr${staleSummary.pendingDelayed === 1 ? 'y is' : 'ies are'} older than ${PENDING_STALE_DAYS} days. `
                   : ''}
                 {staleSummary.approvedDelayed > 0
-                  ? `${staleSummary.approvedDelayed} approved entr${staleSummary.approvedDelayed === 1 ? 'y is' : 'ies are'} older than ${APPROVED_STALE_DAYS} days.`
+                  ? `${staleSummary.approvedDelayed} approved reward entr${staleSummary.approvedDelayed === 1 ? 'y is' : 'ies are'} older than ${APPROVED_STALE_DAYS} days.`
                   : ''}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -190,7 +190,7 @@ export default function PartnerCommissionsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Payout Entries</CardTitle>
+            <CardTitle>Reward Entries</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {(commissionsQuery.data || []).map((row: any) => (
@@ -202,14 +202,14 @@ export default function PartnerCommissionsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">{row.developmentName || 'Development'}</p>
-                    <p className="text-xs text-slate-500">Deal #{row.dealId} | Stage {formatStageLabel(row.dealStage)}</p>
+                    <p className="text-xs text-slate-500">Deal #{row.dealId} | Buyer stage {formatStageLabel(row.dealStage)}</p>
                     {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Buyer: {row.buyerName}</p> : null}
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
                     <div className="mt-1 flex flex-wrap justify-end gap-1">
                       <Badge variant="secondary">{formatStageLabel(row.entryStatus)}</Badge>
-                      {row.triggerStage ? <Badge variant="outline">Trigger: {formatStageLabel(row.triggerStage)}</Badge> : null}
+                      {row.triggerStage ? <Badge variant="outline">Pays at: {formatStageLabel(row.triggerStage)}</Badge> : null}
                     </div>
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default function PartnerCommissionsPage() {
             ))}
 
             {!commissionsQuery.error && !(commissionsQuery.data || []).length ? (
-              <p className="py-6 text-center text-sm text-slate-500">No commission entries found for this filter yet.</p>
+              <p className="py-6 text-center text-sm text-slate-500">No reward entries found for this filter yet.</p>
             ) : null}
           </CardContent>
         </Card>

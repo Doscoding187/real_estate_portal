@@ -295,4 +295,14 @@ describe('PartnerDashboardPage', () => {
     expect(openSpy).toHaveBeenCalled();
     expect(openSpy.mock.calls[0]?.[0]).toContain('wa.me');
   });
+
+  it('renders the engagement lanes and opportunity reward actions', () => {
+    render(<PartnerDashboardPage />);
+
+    expect(screen.getByText('Find Opportunity')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Match Buyer' })).toBeInTheDocument();
+    expect(screen.getByText('Track Earnings')).toBeInTheDocument();
+    expect(screen.getByText('Open Sales Inventory')).toBeInTheDocument();
+    expect(screen.getAllByText(/R 25\s000/)).not.toHaveLength(0);
+  });
 });
