@@ -18,6 +18,6 @@ ALTER TABLE `agents`
 ALTER TABLE `agents`
   ADD COLUMN IF NOT EXISTS `profileCompletionFlags` TEXT NULL AFTER `profileCompletionScore`;
 
-CREATE UNIQUE INDEX IF NOT EXISTS `uq_agents_slug` ON `agents` (`slug`);
+CREATE UNIQUE INDEX `uq_agents_slug` ON `agents` (`slug`);
 
-CREATE INDEX IF NOT EXISTS `idx_agents_slug` ON `agents` (`slug`);
+CREATE INDEX `idx_agents_slug` ON `agents` (`slug`);
