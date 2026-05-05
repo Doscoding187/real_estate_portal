@@ -305,4 +305,43 @@ describe('PartnerDashboardPage', () => {
     expect(screen.getByText('Open Sales Inventory')).toBeInTheDocument();
     expect(screen.getAllByText(/R 25\s000/)).not.toHaveLength(0);
   });
+
+  it('shows five opportunity cards and keeps the final card as view all opportunities', () => {
+    mockReferrerMyAccessQuery.mockReturnValue({
+      data: Array.from({ length: 6 }, (_, index) => ({
+        developmentId: index + 1,
+        developmentName: `Demo Development ${index + 1}`,
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        priceFrom: 900000 + index * 100000,
+        priceTo: 1200000 + index * 100000,
+        accessStatus: 'active',
+        commissionModel: 'flat_amount',
+        defaultCommissionAmount: 25000,
+        defaultCommissionPercent: null,
+        unitTypes: [],
+      })),
+      isLoading: false,
+      error: null,
+    });
+    mockPartnerListEligibleDevelopmentsQuery.mockReturnValue({
+      data: { items: [] },
+      isLoading: false,
+      error: null,
+    });
+    mockPartnerListProgramTermsQuery.mockReturnValue({
+      data: { items: [] },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<PartnerDashboardPage />);
+
+    expect(screen.getAllByText('Demo Development 1')).not.toHaveLength(0);
+    expect(screen.getByText('Demo Development 5')).toBeInTheDocument();
+    expect(screen.queryByText('Demo Development 6')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /View all opportunities/i })).not.toHaveLength(0);
+    expect(screen.getByText('1 more development waiting in the sales inventory.')).toBeInTheDocument();
+    expect(screen.queryByText('Readiness')).not.toBeInTheDocument();
+  });
 });
