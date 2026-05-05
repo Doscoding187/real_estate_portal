@@ -719,7 +719,7 @@ export default function PartnerDashboardPage() {
   return (
     <ReferralAppShell>
       <main className="mx-auto w-full max-w-[1420px] px-4 pb-10 pt-5 md:px-7">
-        <section className="overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] text-white shadow-[0_18px_50px_rgba(0,92,168,0.22)]">
+        <section className="overflow-hidden rounded-lg border border-[#1d4ed8]/20 bg-gradient-to-br from-[#1d4ed8] via-[#2457f5] to-[#1e40af] text-white shadow-[0_18px_50px_rgba(37,83,235,0.22)]">
           <div className="grid gap-6 px-6 py-6 md:grid-cols-[1.25fr_0.75fr] md:px-8">
             <div className="flex min-h-[170px] flex-col justify-between">
               <div>
@@ -735,22 +735,22 @@ export default function PartnerDashboardPage() {
               <h1 className="text-[30px] font-semibold leading-tight text-white md:text-[36px]">
                 My Buyer Referral Hub
               </h1>
-              <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#ece6da]">
+              <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#dbeafe]">
                 Add a buyer, see where they fit, and track every next step to payout.
               </p>
             </div>
               <div className="mt-6 flex flex-wrap gap-2">
               <Button
                 variant="conversion"
-                  className="rounded-md"
+                  className="rounded-md bg-[#ff9500] text-white shadow-[0_8px_18px_rgba(255,149,0,0.24)] hover:bg-[#f08a00]"
                 onClick={() => setLocation('/distribution/partner/submit')}
               >
                   <UsersRound className="mr-2 h-4 w-4" />
                 Submit Buyer
               </Button>
               <Button
-                  variant="conversion"
-                  className="rounded-md"
+                  variant="outline"
+                  className="rounded-md border-white/50 bg-transparent text-white hover:bg-white/10 hover:text-white"
                 onClick={() =>
                   document.getElementById('prequal-engine')?.scrollIntoView({ behavior: 'smooth' })
                 }
@@ -761,7 +761,7 @@ export default function PartnerDashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-white/20 bg-white/12 p-4 shadow-sm">
+            <div className="rounded-lg border border-white/20 bg-white/12 p-4 shadow-sm backdrop-blur">
               <p className="text-[11px] font-semibold uppercase text-blue-100">Today at a glance</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <HeroMetric icon={<Home className="h-4 w-4" />} label="Can refer today" value={String(stockRows.length)} />
@@ -769,27 +769,27 @@ export default function PartnerDashboardPage() {
                 <HeroMetric icon={<WalletCards className="h-4 w-4" />} label="Potential reward" value={formatCurrency(potentialIncome, true)} />
                 <HeroMetric icon={<CheckCircle2 className="h-4 w-4" />} label="Docs needed" value={String(pendingDocReferrals.length)} tone="amber" />
               </div>
-              <div className="mt-4 rounded-md bg-white/10 px-3 py-2 text-[12px] text-[#f4efe6]">
+              <div className="mt-4 rounded-md border border-white/10 bg-white/10 px-3 py-2 text-[12px] text-[#eff6ff]">
                 {attentionItems[0]?.title || 'You are ready to submit your next buyer.'}
               </div>
             </div>
           </div>
+        </section>
 
-          <div className="grid grid-cols-2 border-t border-white/15 bg-[#1e3a8a]/50 md:grid-cols-3 xl:grid-cols-7">
-            <KpiCell label="Available Opportunities" value={String(stockRows.length)} note="Can accept buyers" tone="light" />
-            <KpiCell label="My Buyers" value={String(activeDealsCount)} note="In progress" tone="light" />
-            <KpiCell label="Documents Needed" value={String(pendingDocReferrals.length)} note="Action needed" valueClassName="text-warning" />
-            <KpiCell label="Needs Attention" value={String(atRiskReferrals.length)} note="Past next step" valueClassName="text-danger" />
-            <KpiCell label="Pending Reward" value={formatCurrency(pendingIncome, true)} note="Awaiting approval" tone="light" />
-            <KpiCell label="Paid Reward" value={formatCurrency(paidIncome, true)} note="This quarter" valueClassName="text-success" />
-            <KpiCell label="Potential Reward" value={formatCurrency(potentialIncome, true)} note="From active buyers" tone="light" />
-          </div>
+        <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
+          <KpiCell label="Available Opportunities" value={String(stockRows.length)} note="Can accept buyers" tone="blue" />
+          <KpiCell label="My Buyers" value={String(activeDealsCount)} note="In progress" tone="teal" />
+          <KpiCell label="Documents Needed" value={String(pendingDocReferrals.length)} note="Action needed" tone="orange" />
+          <KpiCell label="Needs Attention" value={String(atRiskReferrals.length)} note="Past next step" tone="red" />
+          <KpiCell label="Pending Reward" value={formatCurrency(pendingIncome, true)} note="Awaiting approval" tone="amber" />
+          <KpiCell label="Paid Reward" value={formatCurrency(paidIncome, true)} note="This quarter" tone="green" />
+          <KpiCell label="Potential Reward" value={formatCurrency(potentialIncome, true)} note="From active buyers" tone="purple" />
         </section>
 
         <section className="mt-5 grid gap-4 lg:grid-cols-3">
-          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+          <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
-              <span className="rounded-md bg-primary/10 p-2 text-primary">
+              <span className="rounded-md bg-[#e8f1ff] p-2 text-[#2563eb]">
                 <Target className="h-4 w-4" />
               </span>
               <div>
@@ -803,9 +803,9 @@ export default function PartnerDashboardPage() {
                   <p className="text-[14px] font-semibold text-foreground">{visibleStock[0].developmentName}</p>
                   <p className="mt-1 text-[12px] text-muted-foreground">{visibleStock[0].buyerProfile}</p>
                 </div>
-                <div className="rounded-md border border-primary/10 bg-primary/5 p-3">
+                <div className="rounded-md border border-[#eef2f7] bg-[#f8fafc] p-3">
                   <p className="text-[10px] font-semibold uppercase text-muted-foreground">Estimated reward</p>
-                  <p className="mt-1 text-[16px] font-semibold text-success">{visibleStock[0].commissionDisplay}</p>
+                  <p className="mt-1 text-[16px] font-semibold text-[#f28c00]">{visibleStock[0].commissionDisplay}</p>
                   <p className="mt-1 text-[11px] text-muted-foreground">{visibleStock[0].payoutDisplay}</p>
                 </div>
                 <Button
@@ -821,9 +821,9 @@ export default function PartnerDashboardPage() {
             )}
           </Card>
 
-          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+          <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
-              <span className="rounded-md bg-primary/10 p-2 text-primary">
+              <span className="rounded-md bg-[#dcfce7] p-2 text-[#059669]">
                 <Search className="h-4 w-4" />
               </span>
               <div>
@@ -835,7 +835,7 @@ export default function PartnerDashboardPage() {
               Run buying power once, then submit directly into the best-fit opportunity with the
               assessment attached.
             </p>
-            <div className="mt-4 rounded-md border border-primary/10 bg-primary/5 p-3">
+            <div className="mt-4 rounded-md border border-[#eef2f7] bg-[#f8fafc] p-3">
               <p className="text-[10px] font-semibold uppercase text-muted-foreground">Current matcher</p>
               <p className="mt-1 text-[13px] font-semibold text-foreground">
                 {matches.length ? `${matches.length} matched development${matches.length === 1 ? '' : 's'}` : 'Ready for next buyer'}
@@ -843,16 +843,16 @@ export default function PartnerDashboardPage() {
             </div>
             <Button
               variant="conversion"
-              className="mt-4 w-full"
+              className="mt-4 w-full rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
               onClick={() => document.getElementById('prequal-engine')?.scrollIntoView({ behavior: 'smooth' })}
             >
               Pre-Qualify Buyer
             </Button>
           </Card>
 
-          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+          <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
-              <span className="rounded-md bg-primary/10 p-2 text-primary">
+              <span className="rounded-md bg-[#dcfce7] p-2 text-[#16a34a]">
                 <WalletCards className="h-4 w-4" />
               </span>
               <div>
@@ -865,7 +865,7 @@ export default function PartnerDashboardPage() {
               <EarningCell label="Approved" value={formatCurrency(approvedIncome, true)} valueClassName="text-primary" />
               <EarningCell label="Paid" value={formatCurrency(paidIncome, true)} valueClassName="text-[#1a7a40]" />
             </div>
-            <div className="mt-4 rounded-md border border-primary/10 bg-primary/5 p-3">
+            <div className="mt-4 rounded-md border border-[#bfdbfe] bg-[#eaf4ff] p-3">
               <p className="text-[10px] font-semibold uppercase text-muted-foreground">Needs action</p>
               <p className="mt-1 text-[13px] font-semibold text-foreground">
                 {pendingDocReferrals[0]?.buyer?.name || staleDeal?.buyerName || 'No blocked buyer'}
@@ -888,8 +888,8 @@ export default function PartnerDashboardPage() {
           </Card>
         </section>
 
-        <section id="prequal-engine" className="mt-5 overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm">
-          <div className="flex items-center justify-between gap-4 border-b border-primary/15 bg-primary/5 px-6 py-5">
+        <section id="prequal-engine" className="mt-5 overflow-hidden rounded-lg border border-[#dbe5f3] bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-4 border-b border-[#eef2f7] bg-white px-6 py-5">
             <div>
               <h2 className="text-[16px] font-semibold text-foreground">Help Me Match My Buyer</h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
@@ -903,7 +903,7 @@ export default function PartnerDashboardPage() {
           </div>
 
           <div className="grid md:grid-cols-2">
-            <div className="border-r border-primary/15 p-6">
+            <div className="border-r border-[#eef2f7] p-6">
               <label className="mb-4 block">
                 <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                   Gross income monthly (required)
@@ -915,7 +915,7 @@ export default function PartnerDashboardPage() {
                     setPrequalValues(current => ({ ...current, grossIncomeMonthly: event.target.value }))
                   }
                   inputMode="numeric"
-                  className="border-border bg-white"
+                  className="border-[#e5edf7] bg-[#f8fafc]"
                 />
               </label>
 
@@ -931,7 +931,7 @@ export default function PartnerDashboardPage() {
                       setPrequalValues(current => ({ ...current, deductionsMonthly: event.target.value }))
                     }
                     inputMode="numeric"
-                    className="border-border bg-white"
+                    className="border-[#e5edf7] bg-[#f8fafc]"
                   />
                 </label>
                 <label>
@@ -945,7 +945,7 @@ export default function PartnerDashboardPage() {
                       setPrequalValues(current => ({ ...current, depositAmount: event.target.value }))
                     }
                     inputMode="numeric"
-                    className="border-border bg-white"
+                    className="border-[#e5edf7] bg-[#f8fafc]"
                   />
                 </label>
               </div>
@@ -958,13 +958,13 @@ export default function PartnerDashboardPage() {
                   placeholder="e.g. Midrand, Centurion, Fourways"
                   value={prequalValues.area}
                   onChange={event => setPrequalValues(current => ({ ...current, area: event.target.value }))}
-                  className="border-border bg-white"
+                  className="border-[#e5edf7] bg-[#f8fafc]"
                 />
               </label>
 
               <Button
                 variant="conversion"
-                className="w-full rounded-md"
+                className="w-full rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
                 disabled={createAssessmentMutation.isPending}
                 onClick={() => {
                   const grossIncomeMonthly = parseMoneyInt(prequalValues.grossIncomeMonthly, 0);
@@ -997,7 +997,7 @@ export default function PartnerDashboardPage() {
                 </div>
               ) : (
                 <div>
-                  <div className="mb-3 rounded-md border border-border bg-white p-3">
+                  <div className="mb-3 rounded-md border border-[#e5edf7] bg-white p-3">
                     <p className="text-[11px] text-muted-foreground">
                       Buyer can afford up to{' '}
                       <span className="font-mono font-semibold text-foreground">
@@ -1011,7 +1011,7 @@ export default function PartnerDashboardPage() {
                     <Button
                       size="sm"
                       variant="conversion"
-                      className="mt-2 rounded-md"
+                      className="mt-2 rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
                       disabled={matchesQuery.isFetching}
                       onClick={() => {
                         if (!assessmentId) return;
@@ -1034,7 +1034,7 @@ export default function PartnerDashboardPage() {
                       purchasePrice: displayPrice,
                     });
                     return (
-                      <div key={match.developmentId} className="mb-2 rounded-md border border-border bg-white p-3">
+                      <div key={match.developmentId} className="mb-2 rounded-md border border-[#e5edf7] bg-white p-3">
                         <p className="text-[13px] font-semibold text-foreground">{match.developmentName}</p>
                         <p className="text-[11px] text-muted-foreground">{match.area || 'N/A'}</p>
                         <div className="mt-2 flex items-center justify-between">
@@ -1053,7 +1053,7 @@ export default function PartnerDashboardPage() {
                             {confidence} match
                           </span>
                         </div>
-                        <p className="mt-1 text-[11px] text-success">
+                        <p className="mt-1 text-[11px] font-semibold text-[#f28c00]">
                           Est. reward: {getCommissionDisplay({
                             amount: commissionAmount,
                             commissionModel: linkedStock?.commissionModel,
@@ -1068,7 +1068,7 @@ export default function PartnerDashboardPage() {
                           <Button
                             size="sm"
                             variant="conversion"
-                            className="rounded-md"
+                            className="rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
                             onClick={() =>
                               setLocation(
                                 `/distribution/partner/submit?developmentId=${match.developmentId}&assessmentId=${assessmentId}`,
@@ -1106,7 +1106,7 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-5">
-          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+          <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold text-foreground">Buyer Progress Funnel</h3>
               <button
@@ -1118,27 +1118,27 @@ export default function PartnerDashboardPage() {
               </button>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+              <div className="rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Can Refer Today</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{stockRows.length}</p>
               </div>
-              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+              <div className="rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Submitted Buyers</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{referralItems.length}</p>
               </div>
-              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+              <div className="rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">App+ Conversion</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-primary">
                   {formatPercent(submitToApplicationRate)}
                 </p>
               </div>
-              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+              <div className="rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Paid Conversion</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-[#1a7a40]">
                   {formatPercent(submitToPaidRate)}
                 </p>
               </div>
-              <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
+              <div className="rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Submissions (7d)</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{submissionsLast7Days}</p>
               </div>
@@ -1146,7 +1146,7 @@ export default function PartnerDashboardPage() {
           </Card>
         </section>
 
-        <section className="mt-5 rounded-lg border border-primary/15 bg-white p-5 shadow-sm">
+        <section className="mt-5 rounded-lg border border-[#dbe5f3] bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-[17px] font-semibold text-foreground">What Can I Refer Today?</h3>
@@ -1154,7 +1154,7 @@ export default function PartnerDashboardPage() {
             </div>
             <button
               type="button"
-              className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-[12px] font-semibold text-white hover:bg-[var(--brand-blue-hover)]"
+              className="inline-flex items-center gap-1 rounded-md border border-[#bfdbfe] bg-white px-3 py-2 text-[12px] font-semibold text-[#2563eb] hover:bg-[#eff6ff]"
               onClick={() => setLocation('/distribution/partner/developments')}
             >
               View all opportunities <ArrowRight className="h-3.5 w-3.5" />
@@ -1165,16 +1165,16 @@ export default function PartnerDashboardPage() {
             {visibleStock.map(row => (
               <article
                 key={row.developmentId}
-                className="overflow-hidden rounded-lg border border-primary/15 bg-white transition hover:-translate-y-0.5 hover:shadow-md"
+                className="overflow-hidden rounded-lg border border-[#dbe5f3] bg-white transition hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div className="relative flex h-32 items-center justify-center bg-primary/5">
+                <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-[#fff7cc] to-[#ffedd5]">
                   <span
                     className={`absolute left-3 top-3 rounded px-2 py-1 text-[9px] font-bold uppercase text-white ${
                       row.badge === 'Hot'
-                        ? 'bg-[#DC2626]'
+                        ? 'bg-[#ef4444]'
                         : row.badge === 'Fast payout'
-                          ? 'bg-[#059669]'
-                          : 'bg-[#D97706]'
+                          ? 'bg-[#10b981]'
+                          : 'bg-[#f59e0b]'
                     }`}
                   >
                     {row.badge}
@@ -1187,7 +1187,7 @@ export default function PartnerDashboardPage() {
                       loading="lazy"
                     />
                   ) : (
-                    <Home className="h-12 w-12 text-foreground/25" />
+                    <Home className="h-12 w-12 text-[#f59e0b]/65" />
                   )}
                 </div>
                 <div className="p-4">
@@ -1203,7 +1203,7 @@ export default function PartnerDashboardPage() {
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
-                        <p className="mt-1 text-[13px] font-semibold text-success">{row.commissionDisplay}</p>
+                        <p className="mt-1 text-[13px] font-semibold text-[#f28c00]">{row.commissionDisplay}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase text-muted-foreground">Best buyer</p>
@@ -1219,7 +1219,7 @@ export default function PartnerDashboardPage() {
                     <button
                       type="button"
                       onClick={() => setLocation('/distribution/partner/developments')}
-                      className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-[12px] font-semibold text-primary"
+                      className="rounded-md border border-[#dbe5f3] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
                     >
                       Sales Pack
                     </button>
@@ -1228,7 +1228,7 @@ export default function PartnerDashboardPage() {
                       onClick={() =>
                         setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
                       }
-                      className="rounded-md bg-conversion px-3 py-2 text-[12px] font-semibold text-conversion-foreground hover:bg-conversion-hover"
+                      className="rounded-md bg-[#ff9500] px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#f08a00]"
                     >
                       Submit Buyer
                     </button>
@@ -1240,9 +1240,9 @@ export default function PartnerDashboardPage() {
             <button
               type="button"
               onClick={() => setLocation('/distribution/partner/developments')}
-              className="flex min-h-[272px] flex-col items-center justify-center rounded-lg border border-dashed border-primary/25 bg-gradient-to-b from-primary/5 to-white p-5 text-center text-[12px] text-primary transition hover:-translate-y-0.5 hover:bg-primary/10 hover:shadow-md"
+              className="flex min-h-[272px] flex-col items-center justify-center rounded-lg border border-dashed border-[#bfdbfe] bg-gradient-to-b from-[#f8fbff] to-[#eef6ff] p-5 text-center text-[12px] text-[#2563eb] transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#2563eb] shadow-sm">
                 <ArrowRight className="h-5 w-5" />
               </span>
               <span className="block text-[15px] font-semibold text-foreground">
@@ -1258,7 +1258,7 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-5 grid gap-4 lg:grid-cols-2">
-          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+          <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-[13px] font-semibold text-foreground">My Buyers in Motion</h3>
               <button
@@ -1270,7 +1270,7 @@ export default function PartnerDashboardPage() {
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-md border border-border">
+            <div className="overflow-hidden rounded-md border border-[#dbe5f3]">
               <div className="flex">
                 {stageOrder.map((stage: string, index: number) => {
                   const hasItems = Number(stageCounts[stage] || 0) > 0;
@@ -1280,8 +1280,8 @@ export default function PartnerDashboardPage() {
                       key={stage}
                       type="button"
                       onClick={() => setLocation('/distribution/partner/referrals')}
-                      className={`flex-1 border-r border-border px-3 py-3 text-left last:border-r-0 ${
-                        isActive ? 'bg-primary/10' : 'bg-white hover:bg-surface'
+                      className={`flex-1 border-r border-[#dbe5f3] px-3 py-3 text-left last:border-r-0 ${
+                        isActive ? 'bg-[#eaf4ff]' : 'bg-white hover:bg-[#f8fafc]'
                       }`}
                     >
                       <p className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.05em] ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -1302,7 +1302,7 @@ export default function PartnerDashboardPage() {
             </div>
 
             {staleDeal ? (
-              <div className="mt-3 rounded-md bg-primary/10 px-3 py-2">
+              <div className="mt-3 rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
                 <p className="text-[11px] font-semibold text-primary">
                   Buyer needs action: {staleDeal.buyerName || 'Buyer'}
                 </p>
@@ -1313,12 +1313,17 @@ export default function PartnerDashboardPage() {
             ) : null}
           </Card>
 
-          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+          <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <h3 className="text-[13px] font-semibold text-foreground">Referral Reward Progress</h3>
-            <p className="mt-1 font-mono text-[30px] font-semibold text-foreground">
-              {formatCurrency(totalIncomePipeline)}
-            </p>
-            <p className="text-[11px] text-muted-foreground">Total referral reward pipeline - {new Date().getFullYear()}</p>
+            <div className="mt-3 rounded-md border border-[#bfdbfe] bg-[#dcebff] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#334155]">
+                Total referral reward pipeline
+              </p>
+              <p className="mt-1 font-mono text-[30px] font-semibold text-foreground">
+                {formatCurrency(totalIncomePipeline)}
+              </p>
+              <p className="text-[11px] text-muted-foreground">{new Date().getFullYear()} reward pipeline</p>
+            </div>
 
             <div className="mt-4 grid grid-cols-3 gap-2">
               <EarningCell label="Pending" value={formatCurrency(pendingIncome, true)} valueClassName="text-[#9a6500]" />
@@ -1326,15 +1331,15 @@ export default function PartnerDashboardPage() {
               <EarningCell label="Paid" value={formatCurrency(paidIncome, true)} valueClassName="text-[#1a7a40]" />
             </div>
 
-            <div className="mt-4 rounded-md border border-border bg-surface p-3">
+            <div className="mt-4 rounded-md border border-[#fde68a] bg-[#fff7cc] p-3">
               <p className="text-[11px] font-semibold text-foreground">Next payout unlock</p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Move {unlockDealsRemaining} more buyer{unlockDealsRemaining === 1 ? '' : 's'} forward to unlock approximately{' '}
-                <strong className="text-[#1a7a40]">{formatCurrency(nextUnlockAmount)}</strong>
+                <strong className="text-[#f28c00]">{formatCurrency(nextUnlockAmount)}</strong>
               </p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded bg-foreground/15">
+              <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#fde68a]">
                 <div
-                  className="h-full rounded bg-[#1a7a40]"
+                  className="h-full rounded bg-[#f59e0b]"
                   style={{ width: `${Math.round(unlockProgress * 100)}%` }}
                 />
               </div>
@@ -1343,7 +1348,7 @@ export default function PartnerDashboardPage() {
         </section>
 
         <section className="mt-5">
-          <Card className="border-primary/15 bg-white p-5 shadow-sm">
+          <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-[13px] font-semibold text-foreground">Your Next Moves</h3>
               <button
@@ -1360,7 +1365,7 @@ export default function PartnerDashboardPage() {
                 key={item.id}
                 type="button"
                 onClick={item.onClick}
-                className="flex w-full items-start gap-3 border-b border-border py-2.5 text-left last:border-b-0"
+                className="flex w-full items-start gap-3 border-b border-[#eef2f7] py-2.5 text-left last:border-b-0 hover:bg-[#f8fafc]"
               >
                 <span
                   className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
@@ -1396,15 +1401,25 @@ function KpiCell({
   value: string;
   note: string;
   valueClassName?: string;
-  tone?: 'light';
+  tone?: 'blue' | 'teal' | 'orange' | 'red' | 'amber' | 'green' | 'purple';
 }) {
+  const toneClass = {
+    blue: 'border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]',
+    teal: 'border-[#bbf7d0] bg-[#ecfdf5] text-[#059669]',
+    orange: 'border-[#fed7aa] bg-[#fff7ed] text-[#f97316]',
+    red: 'border-[#fecaca] bg-[#fef2f2] text-[#ef4444]',
+    amber: 'border-[#fde68a] bg-[#fffbeb] text-[#d97706]',
+    green: 'border-[#bbf7d0] bg-[#ecfdf5] text-[#16a34a]',
+    purple: 'border-[#e9d5ff] bg-[#faf5ff] text-[#9333ea]',
+  }[tone || 'blue'];
+
   return (
-    <div className={`border-r px-4 py-4 last:border-r-0 ${tone === 'light' ? 'border-white/10' : 'border-white/10'}`}>
-      <p className="text-[10px] font-medium uppercase text-[#bdb6aa]">{label}</p>
-      <p className={`mt-1 font-mono text-[21px] font-semibold leading-none text-white ${valueClassName || ''}`}>
+    <div className={`rounded-lg border px-4 py-3 shadow-sm ${toneClass}`}>
+      <p className="text-[10px] font-semibold uppercase text-[#475569]">{label}</p>
+      <p className={`mt-1 font-mono text-[20px] font-semibold leading-none ${valueClassName || ''}`}>
         {value}
       </p>
-      <p className="mt-1 text-[10px] text-blue-100">{note}</p>
+      <p className="mt-1 text-[10px] text-[#64748b]">{note}</p>
     </div>
   );
 }
@@ -1441,7 +1456,7 @@ function EarningCell({
   valueClassName?: string;
 }) {
   return (
-    <div className="rounded-md bg-surface px-3 py-2">
+    <div className="rounded-md border border-[#eef2f7] bg-[#f8fafc] px-3 py-2">
       <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{label}</p>
       <p className={`mt-1 font-mono text-[17px] font-semibold text-foreground ${valueClassName || ''}`}>
         {value}
