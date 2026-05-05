@@ -54,8 +54,8 @@ export function ReferralTopNav() {
           <Button
             type="button"
             onClick={() => setLocation('/distribution/partner/accelerator')}
-            variant="conversion"
-            className="hidden h-[34px] rounded-md px-[14px] text-[12.5px] xl:inline-flex"
+            variant="outline"
+            className="hidden h-[34px] rounded-md border-[#ff9500]/40 px-[14px] text-[12.5px] font-medium text-[#b45309] hover:border-[#ff9500]/60 hover:bg-[#fff7ed] hover:text-[#92400e] xl:inline-flex"
           >
             <Compass className="h-3.5 w-3.5" />
             <span>Pre-Qualify Buyer</span>
