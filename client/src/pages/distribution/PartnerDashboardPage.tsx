@@ -66,7 +66,6 @@ type AccessStockRow = {
   defaultCommissionAmount: number | null;
   payoutDisplay: string;
   buyerProfile: string;
-  readinessLabel: string;
   imageUrl: string | null;
   badge: 'Hot' | 'High demand' | 'Fast payout';
 };
@@ -222,19 +221,6 @@ function getBuyerProfile(priceFrom: number | null | undefined, priceTo: number |
   if (representativePrice >= 1200000) return `Family or investor buyer in ${location}`;
   if (representativePrice > 0) return `First-time or value buyer in ${location}`;
   return `Buyer looking in ${location}`;
-}
-
-function getReadinessLabel(item: any) {
-  const requiredDocs = Array.isArray(item?.requiredDocuments)
-    ? item.requiredDocuments.filter((doc: any) => Boolean(doc.isRequired)).length
-    : 0;
-  const sourceDocs = Array.isArray(item?.sourceDocuments)
-    ? item.sourceDocuments.filter((doc: any) => Boolean(doc.fileUrl)).length
-    : 0;
-  if (requiredDocs > 0 && sourceDocs > 0) return `${requiredDocs} docs, ${sourceDocs} sales file${sourceDocs === 1 ? '' : 's'}`;
-  if (requiredDocs > 0) return `${requiredDocs} buyer docs required`;
-  if (sourceDocs > 0) return `${sourceDocs} sales file${sourceDocs === 1 ? '' : 's'} ready`;
-  return 'Application pack pending';
 }
 
 function buildWhatsAppShareMessage(
@@ -518,7 +504,6 @@ export default function PartnerDashboardPage() {
           defaultCommissionAmount,
           payoutDisplay: getPayoutDisplay(row),
           buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
-          readinessLabel: getReadinessLabel(row),
           imageUrl: row.imageUrl ? String(row.imageUrl) : null,
           badge,
         });
@@ -563,7 +548,6 @@ export default function PartnerDashboardPage() {
         defaultCommissionAmount,
         payoutDisplay: getPayoutDisplay(item),
         buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
-        readinessLabel: getReadinessLabel(item),
         imageUrl: item.imageUrl ? String(item.imageUrl) : null,
         badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
       });
@@ -608,7 +592,6 @@ export default function PartnerDashboardPage() {
         defaultCommissionAmount,
         payoutDisplay: getPayoutDisplay(item),
         buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
-        readinessLabel: getReadinessLabel(item),
         imageUrl: item.imageUrl ? String(item.imageUrl) : null,
         badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
       });
@@ -621,7 +604,7 @@ export default function PartnerDashboardPage() {
     );
   }, [eligibleDevelopmentsQuery.data?.items, myAccessQuery.data, programTermsQuery.data?.items]);
 
-  const visibleStock = stockRows.slice(0, 7);
+  const visibleStock = stockRows.slice(0, 5);
   const hiddenStockCount = Math.max(0, stockRows.length - visibleStock.length);
   const stockByDevelopmentId = useMemo(() => {
     const map = new Map<number, AccessStockRow>();
@@ -1230,10 +1213,6 @@ export default function PartnerDashboardPage() {
                         <p className="text-[10px] font-semibold uppercase text-muted-foreground">Payout trigger</p>
                         <p className="mt-1 text-[12px] text-foreground">{row.payoutDisplay}</p>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Readiness</p>
-                        <p className="mt-1 text-[12px] text-foreground">{row.readinessLabel}</p>
-                      </div>
                     </div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2">
@@ -1261,16 +1240,18 @@ export default function PartnerDashboardPage() {
             <button
               type="button"
               onClick={() => setLocation('/distribution/partner/developments')}
-              className="min-h-[272px] rounded-lg border border-dashed border-primary/20 bg-primary/5 p-5 text-center text-[12px] text-primary hover:bg-primary/10"
+              className="flex min-h-[272px] flex-col items-center justify-center rounded-lg border border-dashed border-primary/25 bg-gradient-to-b from-primary/5 to-white p-5 text-center text-[12px] text-primary transition hover:-translate-y-0.5 hover:bg-primary/10 hover:shadow-md"
             >
-              <span className="mb-2 block text-[32px] font-light text-primary">
-                {hiddenStockCount > 0 ? `+${hiddenStockCount}` : 'All'}
+              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <ArrowRight className="h-5 w-5" />
               </span>
-              <span className="block font-semibold">
-                {hiddenStockCount > 0 ? 'more opportunities available' : 'View all opportunities'}
+              <span className="block text-[15px] font-semibold text-foreground">
+                View all opportunities
               </span>
               <span className="mt-2 block text-[11px] text-[#475569]">
-                Open submit and explore modes.
+                {hiddenStockCount > 0
+                  ? `${hiddenStockCount} more development${hiddenStockCount === 1 ? '' : 's'} waiting in the sales inventory.`
+                  : 'Open the full sales inventory, brochures, and submit-ready opportunities.'}
               </span>
             </button>
           </div>
