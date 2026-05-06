@@ -888,6 +888,118 @@ export default function PartnerDashboardPage() {
           </Card>
         </section>
 
+        <section className="mt-5 rounded-lg border border-[#dbe5f3] bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[17px] font-semibold text-foreground">What Can I Refer Today?</h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">Ready opportunities your buyers can be submitted to now.</p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md border border-[#bfdbfe] bg-white px-3 py-2 text-[12px] font-semibold text-[#2563eb] hover:bg-[#eff6ff]"
+              onClick={() => setLocation('/distribution/partner/developments')}
+            >
+              View all opportunities <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleStock.map(row => (
+              <article
+                key={row.developmentId}
+                className="overflow-hidden rounded-lg border border-[#dbe5f3] bg-white transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-[#fff7cc] to-[#ffedd5]">
+                  <span
+                    className={`absolute left-3 top-3 rounded px-2 py-1 text-[9px] font-bold uppercase text-white ${
+                      row.badge === 'Hot'
+                        ? 'bg-[#ef4444]'
+                        : row.badge === 'Fast payout'
+                          ? 'bg-[#10b981]'
+                          : 'bg-[#f59e0b]'
+                    }`}
+                  >
+                    {row.badge}
+                  </span>
+                  {row.imageUrl ? (
+                    <img
+                      src={row.imageUrl}
+                      alt={row.developmentName}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Home className="h-12 w-12 text-[#f59e0b]/65" />
+                  )}
+                </div>
+                <div className="p-4">
+                  <div>
+                    <p className="text-[14px] font-semibold text-foreground">{row.developmentName}</p>
+                    <p className="mt-1 text-[12px] text-muted-foreground">{row.location}</p>
+
+                    <div className="mt-4 grid gap-3">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Price range</p>
+                        <p className="mt-1 font-mono text-[15px] font-semibold text-foreground">
+                          {formatCurrencyRange(row.priceFrom, row.priceTo)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
+                        <p className="mt-1 text-[13px] font-semibold text-[#f28c00]">{row.commissionDisplay}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Best buyer</p>
+                        <p className="mt-1 text-[12px] text-foreground">{row.buyerProfile}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Payout trigger</p>
+                        <p className="mt-1 text-[12px] text-foreground">{row.payoutDisplay}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLocation('/distribution/partner/developments')}
+                      className="rounded-md border border-[#dbe5f3] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                    >
+                      Sales Pack
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
+                      }
+                      className="rounded-md bg-[#ff9500] px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#f08a00]"
+                    >
+                      Submit Buyer
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setLocation('/distribution/partner/developments')}
+              className="flex min-h-[272px] flex-col items-center justify-center rounded-lg border border-dashed border-[#bfdbfe] bg-gradient-to-b from-[#f8fbff] to-[#eef6ff] p-5 text-center text-[12px] text-[#2563eb] transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#2563eb] shadow-sm">
+                <ArrowRight className="h-5 w-5" />
+              </span>
+              <span className="block text-[15px] font-semibold text-foreground">
+                View all opportunities
+              </span>
+              <span className="mt-2 block text-[11px] text-[#475569]">
+                {hiddenStockCount > 0
+                  ? `${hiddenStockCount} more development${hiddenStockCount === 1 ? '' : 's'} waiting in the sales inventory.`
+                  : 'Open the full sales inventory, brochures, and submit-ready opportunities.'}
+              </span>
+            </button>
+          </div>
+        </section>
+
         <section id="prequal-engine" className="mt-5 overflow-hidden rounded-lg border border-[#dbe5f3] bg-white shadow-sm">
           <div className="flex items-center justify-between gap-4 border-b border-[#eef2f7] bg-white px-6 py-5">
             <div>
@@ -1144,117 +1256,6 @@ export default function PartnerDashboardPage() {
               </div>
             </div>
           </Card>
-        </section>
-
-        <section className="mt-5 rounded-lg border border-[#dbe5f3] bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-[17px] font-semibold text-foreground">What Can I Refer Today?</h3>
-              <p className="mt-1 text-[12px] text-muted-foreground">Ready opportunities your buyers can be submitted to now.</p>
-            </div>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-md border border-[#bfdbfe] bg-white px-3 py-2 text-[12px] font-semibold text-[#2563eb] hover:bg-[#eff6ff]"
-              onClick={() => setLocation('/distribution/partner/developments')}
-            >
-              View all opportunities <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleStock.map(row => (
-              <article
-                key={row.developmentId}
-                className="overflow-hidden rounded-lg border border-[#dbe5f3] bg-white transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-[#fff7cc] to-[#ffedd5]">
-                  <span
-                    className={`absolute left-3 top-3 rounded px-2 py-1 text-[9px] font-bold uppercase text-white ${
-                      row.badge === 'Hot'
-                        ? 'bg-[#ef4444]'
-                        : row.badge === 'Fast payout'
-                          ? 'bg-[#10b981]'
-                          : 'bg-[#f59e0b]'
-                    }`}
-                  >
-                    {row.badge}
-                  </span>
-                  {row.imageUrl ? (
-                    <img
-                      src={row.imageUrl}
-                      alt={row.developmentName}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Home className="h-12 w-12 text-[#f59e0b]/65" />
-                  )}
-                </div>
-                <div className="p-4">
-                  <div>
-                    <p className="text-[14px] font-semibold text-foreground">{row.developmentName}</p>
-                    <p className="mt-1 text-[12px] text-muted-foreground">{row.location}</p>
-                    <div className="mt-4 grid gap-3">
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Price range</p>
-                        <p className="mt-1 font-mono text-[15px] font-semibold text-foreground">
-                          {formatCurrencyRange(row.priceFrom, row.priceTo)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
-                        <p className="mt-1 text-[13px] font-semibold text-[#f28c00]">{row.commissionDisplay}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Best buyer</p>
-                        <p className="mt-1 text-[12px] text-foreground">{row.buyerProfile}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Payout trigger</p>
-                        <p className="mt-1 text-[12px] text-foreground">{row.payoutDisplay}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setLocation('/distribution/partner/developments')}
-                      className="rounded-md border border-[#dbe5f3] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
-                    >
-                      Sales Pack
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
-                      }
-                      className="rounded-md bg-[#ff9500] px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#f08a00]"
-                    >
-                      Submit Buyer
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => setLocation('/distribution/partner/developments')}
-              className="flex min-h-[272px] flex-col items-center justify-center rounded-lg border border-dashed border-[#bfdbfe] bg-gradient-to-b from-[#f8fbff] to-[#eef6ff] p-5 text-center text-[12px] text-[#2563eb] transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#2563eb] shadow-sm">
-                <ArrowRight className="h-5 w-5" />
-              </span>
-              <span className="block text-[15px] font-semibold text-foreground">
-                View all opportunities
-              </span>
-              <span className="mt-2 block text-[11px] text-[#475569]">
-                {hiddenStockCount > 0
-                  ? `${hiddenStockCount} more development${hiddenStockCount === 1 ? '' : 's'} waiting in the sales inventory.`
-                  : 'Open the full sales inventory, brochures, and submit-ready opportunities.'}
-              </span>
-            </button>
-          </div>
         </section>
 
         <section className="mt-5 grid gap-4 lg:grid-cols-2">
