@@ -29,6 +29,7 @@ const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
   { table: 'distribution_development_access', column: 'development_id' },
   { table: 'distribution_development_access', column: 'brand_partnership_id' },
   { table: 'distribution_development_access', column: 'submission_allowed' },
+  { table: 'distribution_development_access', column: 'brochure_config_json' },
   { table: 'development_manager_assignments', column: 'manager_user_id' },
   { table: 'development_required_documents', column: 'category' },
   { table: 'distribution_deal_events', column: 'event_type' },

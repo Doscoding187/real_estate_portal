@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { Download, ExternalLink, Loader2, Search, SlidersHorizontal } from 'lucide-react';
+import { Check, Download, ExternalLink, Home, Loader2, Mail, MapPin, Phone, Search, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { trpc } from '@/lib/trpc';
@@ -19,6 +19,7 @@ const VIEW_MODE_EXPLORE = 'explore';
 const BROCHURE_BOND_YEARS = 20;
 const BROCHURE_ANNUAL_INTEREST_RATE = 11.75;
 const BROCHURE_MIN_INCOME_RATIO = 0.3;
+const BROCHURE_MAX_VISIBLE_UNITS = 8;
 
 function formatCurrency(value: number | null | undefined) {
   const numeric = Number(value || 0);
@@ -135,168 +136,226 @@ function pickRepresentativePrice(priceFrom: number | null | undefined, priceTo: 
   return null;
 }
 
-function buildBrochureText(item: any) {
-  const location = [item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable';
-  const unitTypes = Array.isArray(item.unitTypes) ? item.unitTypes : [];
-  const lines = [
-    `${item.developmentName}`,
-    `${location}`,
-    '',
-    `Price Range: ${formatCurrencyRange(item.priceFrom, item.priceTo)}`,
-    `Referral Reward: ${getRewardDisplay(item)}`,
-    `Payout Trigger: ${getPayoutDisplay(item)}`,
-    `Best Buyer: ${getBuyerProfile(item)}`,
-    '',
-    'Unit Options:',
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function parseTextList(value: unknown): string[] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .flatMap(item => parseTextList(item))
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>)
+      .flatMap(item => parseTextList(item))
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  const text = String(value || '').trim();
+  if (!text) return [];
+  if (text.startsWith('[') || text.startsWith('{')) {
+    try {
+      return parseTextList(JSON.parse(text));
+    } catch {
+      return [];
+    }
+  }
+
+  return text
+    .split(/\r?\n|,|;|\u2022/g)
+    .map(item => item.replace(/^[-*]+/, '').trim())
+    .filter(Boolean);
+}
+
+function getBrochureHighlights(item: any) {
+  const highlights = [
+    ...parseTextList(item.features),
+    ...parseTextList(item.amenities),
   ];
-
-  if (!unitTypes.length) {
-    lines.push('- Unit types available on request');
-  } else {
-    for (const unit of unitTypes.slice(0, 10)) {
-      const referencePrice = pickRepresentativePrice(unit.priceFrom, unit.priceTo);
-      const monthlyInstallment = estimateMonthlyInstallment(referencePrice);
-      const qualifyingIncome = estimateQualifyingIncome(monthlyInstallment);
-      lines.push(
-        `- ${unit.name}: ${formatCurrencyRange(unit.priceFrom, unit.priceTo)} | Est. installment ${formatCurrency(
-          monthlyInstallment,
-        )} | Qualifying income ${formatCurrency(qualifyingIncome)}`,
-      );
-    }
-  }
-
-  lines.push(
-    '',
-    `Estimate assumptions: ${BROCHURE_BOND_YEARS}-year bond at ${BROCHURE_ANNUAL_INTEREST_RATE}% annual interest. Income assumes repayment is ${Math.round(
-      BROCHURE_MIN_INCOME_RATIO * 100,
-    )}% of gross income.`,
-  );
-  return lines.join('\n');
+  const unique = Array.from(new Map(highlights.map(value => [value.toLowerCase(), value])).values());
+  if (unique.length) return unique.slice(0, 6);
+  return [
+    'Modern development living',
+    'Access to local amenities',
+    'Multiple unit options available',
+    'Indicative bond and income estimates included',
+  ];
 }
 
-function sanitizePdfText(value: string) {
-  return value.replace(/[^\x20-\x7E]/g, '?');
+function formatUnitSpecs(unit: any) {
+  const parts: string[] = [];
+  if (unit.unitSize) parts.push(`${Math.round(Number(unit.unitSize))}m2`);
+  if (unit.bedrooms) parts.push(`${Number(unit.bedrooms)} bed`);
+  if (unit.bathrooms) parts.push(`${Number(unit.bathrooms)} bath`);
+  return parts.join('  ');
 }
 
-function escapePdfText(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+function getBrochureUnitRows(item: any) {
+  const unitTypes = Array.isArray(item?.unitTypes) ? item.unitTypes : [];
+  const visibleUnits = unitTypes.slice(0, BROCHURE_MAX_VISIBLE_UNITS);
+  return {
+    visibleUnits,
+    hiddenUnitCount: Math.max(unitTypes.length - visibleUnits.length, 0),
+  };
 }
 
-function wrapText(value: string, maxLength: number) {
-  const text = value.trim();
-  if (!text) return [''];
-  if (text.length <= maxLength) return [text];
+function buildPrintableBrochureHtml(item: any) {
+  const location = [item.suburb, item.city, item.province].filter(Boolean).join(' | ');
+  const highlights = getBrochureHighlights(item);
+  const { visibleUnits, hiddenUnitCount } = getBrochureUnitRows(item);
+  const brandName = item.brand?.brandName || 'Listify Property';
+  const contactName = item.brochure?.contactName || 'Sales';
+  const contactPhone = item.brochure?.contactPhone || 'On request';
+  const contactEmail = item.brochure?.contactEmail || item.brand?.publicContactEmail || 'sales@listify.co.za';
+  const heroImage = item.imageUrl || '';
 
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let current = '';
+  const rows = visibleUnits.length
+    ? visibleUnits
+        .map((unit: any) => {
+          const referencePrice = pickRepresentativePrice(unit.priceFrom, unit.priceTo);
+          const monthlyInstallment = estimateMonthlyInstallment(referencePrice);
+          const qualifyingIncome = estimateQualifyingIncome(monthlyInstallment);
+          return `
+            <tr>
+              <td><span class="home-icon">&#8962;</span>${escapeHtml(formatUnitSpecs(unit) || unit.name || 'Unit')}</td>
+              <td>${escapeHtml(unit.name || 'Unit')}</td>
+              <td>${escapeHtml(formatCurrencyRange(unit.priceFrom, unit.priceTo))}</td>
+              <td>${escapeHtml(formatCurrency(monthlyInstallment))}</td>
+              <td>${escapeHtml(formatCurrency(qualifyingIncome))}</td>
+            </tr>`;
+        })
+        .join('')
+    : `<tr><td colspan="5">Unit options available on request.</td></tr>`;
 
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length <= maxLength) {
-      current = next;
-    } else {
-      if (current) lines.push(current);
-      if (word.length > maxLength) {
-        for (let i = 0; i < word.length; i += maxLength) {
-          lines.push(word.slice(i, i + maxLength));
-        }
-        current = '';
-      } else {
-        current = word;
-      }
-    }
-  }
-
-  if (current) lines.push(current);
-  return lines.length ? lines : [''];
-}
-
-function createSimplePdfBlob(text: string) {
-  const rawLines = text.split('\n');
-  const wrappedLines = rawLines.flatMap(line => wrapText(sanitizePdfText(line), 95));
-  const linesPerPage = 48;
-  const pages: string[][] = [];
-
-  for (let i = 0; i < wrappedLines.length; i += linesPerPage) {
-    pages.push(wrappedLines.slice(i, i + linesPerPage));
-  }
-  if (!pages.length) pages.push(['']);
-
-  const objects: string[] = [];
-  const catalogObj = 1;
-  const pagesObj = 2;
-  let nextObj = 3;
-  const pageObjs: number[] = [];
-  const contentObjs: number[] = [];
-
-  for (let i = 0; i < pages.length; i += 1) {
-    pageObjs.push(nextObj++);
-    contentObjs.push(nextObj++);
-  }
-  const fontObj = nextObj++;
-
-  objects[catalogObj] = `<< /Type /Catalog /Pages ${pagesObj} 0 R >>`;
-  objects[pagesObj] = `<< /Type /Pages /Kids [${pageObjs.map(id => `${id} 0 R`).join(' ')}] /Count ${pageObjs.length} >>`;
-
-  for (let i = 0; i < pages.length; i += 1) {
-    const pageObj = pageObjs[i];
-    const contentObj = contentObjs[i];
-    const commands = ['BT', '/F1 11 Tf', '50 790 Td', '14 TL'];
-    for (const line of pages[i]) {
-      commands.push(`(${escapePdfText(line)}) Tj`, 'T*');
-    }
-    commands.push('ET');
-    const stream = commands.join('\n');
-
-    objects[contentObj] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
-    objects[pageObj] =
-      `<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 595 842] ` +
-      `/Resources << /Font << /F1 ${fontObj} 0 R >> >> /Contents ${contentObj} 0 R >>`;
-  }
-
-  objects[fontObj] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
-
-  let pdf = '%PDF-1.4\n';
-  const offsets: number[] = [0];
-
-  for (let i = 1; i < nextObj; i += 1) {
-    offsets[i] = pdf.length;
-    pdf += `${i} 0 obj\n${objects[i]}\nendobj\n`;
-  }
-
-  const xrefStart = pdf.length;
-  pdf += `xref\n0 ${nextObj}\n`;
-  pdf += '0000000000 65535 f \n';
-  for (let i = 1; i < nextObj; i += 1) {
-    pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
-  }
-
-  pdf += `trailer\n<< /Size ${nextObj} /Root ${catalogObj} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-  return new Blob([pdf], { type: 'application/pdf' });
+  return `<!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(item.developmentName)} Brochure</title>
+        <style>
+          @page { size: A4; margin: 0; }
+          * { box-sizing: border-box; }
+          body { margin: 0; background: #f3f4f6; color: #111827; font-family: Arial, Helvetica, sans-serif; }
+          .sheet { width: 210mm; height: 297mm; margin: 0 auto; background: white; overflow: hidden; }
+          .header { height: 34mm; display: flex; align-items: center; justify-content: space-between; padding: 11mm 18mm 7mm; }
+          .brand { text-align: right; }
+          .brand img { max-height: 20mm; max-width: 52mm; object-fit: contain; margin-bottom: 3mm; }
+          .brand-name { font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+          .location { margin-top: 4px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+          h1 { margin: 0; max-width: 95mm; font-size: 29px; line-height: 1; letter-spacing: .04em; text-transform: uppercase; }
+          .hero { height: 82mm; background: #d1d5db; }
+          .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+          .hero-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 18px; }
+          .description { padding: 6mm 18mm 2mm; font-size: 11px; line-height: 1.4; color: #374151; }
+          .highlights { display: grid; grid-template-columns: 1fr 1fr; gap: 1.8mm 12mm; padding: 4mm 18mm 6mm; font-size: 13px; }
+          .highlight:before { content: "\\2713"; margin-right: 7px; font-weight: 700; }
+          table { width: 100%; border-collapse: collapse; border-top: 1.5px solid #111; border-bottom: 1.5px solid #111; }
+          th { padding: 2.1mm 4mm 1.6mm; font-size: 8px; text-align: left; text-transform: uppercase; color: #4b5563; border-bottom: 1px solid #111; }
+          td { padding: 2.15mm 4mm; font-size: 11px; font-weight: 700; border-bottom: 1px solid #111; vertical-align: middle; }
+          td:nth-child(4), td:nth-child(5) { font-size: 11px; }
+          .home-icon { color: #6b7280; display: inline-block; min-width: 9mm; font-size: 16px; }
+          .unit-note { padding: 2mm 18mm 0; font-size: 9px; color: #374151; }
+          .assumptions { padding: 3mm 18mm; font-size: 8.5px; color: #4b5563; border-bottom: 1px solid #d1d5db; }
+          .amenities { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5mm; padding: 6mm 18mm 5mm; border-bottom: 1px solid #d1d5db; text-align: center; }
+          .amenity { font-size: 9px; line-height: 1.05; color: #111827; }
+          .amenity-mark { margin: 0 auto 2mm; width: 10mm; height: 10mm; border: 1px solid #111; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+          .footer { display: flex; justify-content: space-between; align-items: center; padding: 6mm 18mm; }
+          .footer-brand { font-size: 14px; font-weight: 800; letter-spacing: .03em; color: #1f2937; }
+          .contact { text-align: right; }
+          .contact-title { font-size: 18px; font-weight: 800; letter-spacing: .14em; }
+          .contact-line { margin-top: 3mm; font-size: 11px; color: #374151; }
+          @media print {
+            body { background: white; }
+            .sheet { margin: 0; width: 210mm; height: 297mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <main class="sheet">
+          <section class="header">
+            <div>
+              <h1>${escapeHtml(item.developmentName)}</h1>
+              <div class="location">${escapeHtml(location || 'South Africa')}</div>
+            </div>
+            <div class="brand">
+              ${item.brand?.logoUrl ? `<img src="${escapeHtml(item.brand.logoUrl)}" alt="">` : ''}
+              <div class="brand-name">${escapeHtml(brandName)}</div>
+            </div>
+          </section>
+          <section class="hero">
+            ${heroImage ? `<img src="${escapeHtml(heroImage)}" alt="">` : '<div class="hero-empty">Development image</div>'}
+          </section>
+          ${
+            item.description
+              ? `<section class="description">${escapeHtml(String(item.description)).slice(0, 360)}</section>`
+              : ''
+          }
+          <section class="highlights">
+            ${highlights.map(text => `<div class="highlight">${escapeHtml(text)}</div>`).join('')}
+          </section>
+          <table>
+            <thead>
+              <tr>
+                <th>Unit</th>
+                <th>Type</th>
+                <th>Price</th>
+                <th>Est. Bond Payment</th>
+                <th>Qualifying Income</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          ${
+            hiddenUnitCount > 0
+              ? `<section class="unit-note">Additional unit options available on request. ${hiddenUnitCount} more option${
+                  hiddenUnitCount === 1 ? '' : 's'
+                } not shown on this A4 summary.</section>`
+              : ''
+          }
+          <section class="assumptions">
+            Estimates use a ${BROCHURE_BOND_YEARS}-year bond at ${BROCHURE_ANNUAL_INTEREST_RATE}% annual interest. Qualifying income assumes repayment is ${Math.round(
+              BROCHURE_MIN_INCOME_RATIO * 100,
+            )}% of gross monthly income. Figures are indicative and subject to lender approval.
+          </section>
+          <section class="amenities">
+            ${highlights
+              .slice(0, 6)
+              .map(text => `<div class="amenity"><div class="amenity-mark">&#10003;</div>${escapeHtml(text)}</div>`)
+              .join('')}
+          </section>
+          <section class="footer">
+            <div class="footer-brand">${escapeHtml(brandName)}</div>
+            <div class="contact">
+              <div class="contact-title">CONTACT ${escapeHtml(contactName).toUpperCase()}</div>
+              <div class="contact-line">${escapeHtml(contactPhone)} &nbsp; ${escapeHtml(contactEmail)}</div>
+            </div>
+          </section>
+        </main>
+      </body>
+    </html>`;
 }
 
 function downloadBrochure(item: any) {
-  const sourceDocs = Array.isArray(item.sourceDocuments) ? item.sourceDocuments : [];
-  const primarySource = sourceDocs.find((doc: any) => typeof doc.fileUrl === 'string' && doc.fileUrl);
-  if (primarySource?.fileUrl) {
-    window.open(primarySource.fileUrl, '_blank', 'noopener,noreferrer');
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    window.print();
     return;
   }
-  const text = buildBrochureText(item);
-  const blob = createSimplePdfBlob(text);
-  const href = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  const safeName = String(item.developmentName || 'development')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  anchor.href = href;
-  anchor.download = `${safeName || 'development'}-brochure.pdf`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(href);
+  printWindow.document.open();
+  printWindow.document.write(buildPrintableBrochureHtml(item));
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 350);
 }
 
 function countRequiredApplicationDocs(item: any) {
@@ -613,18 +672,24 @@ export default function PartnerDevelopmentsPage() {
                 <div className="grid grid-cols-2 gap-2 rounded-md border border-primary/10 bg-primary/5 p-2">
                   <div>
                     <p className="text-[9px] font-semibold uppercase text-muted-foreground">
-                      Supporting pack
+                      Bond estimate
                     </p>
                     <p className="text-[11px] font-medium text-foreground">
-                      {countSupportingFiles(item)} file{countSupportingFiles(item) === 1 ? '' : 's'}
+                      {formatCurrency(
+                        estimateMonthlyInstallment(pickRepresentativePrice(item.priceFrom, item.priceTo)),
+                      )}
                     </p>
                   </div>
                   <div>
                     <p className="text-[9px] font-semibold uppercase text-muted-foreground">
-                      Application docs
+                      Income from
                     </p>
                     <p className="text-[11px] font-medium text-foreground">
-                      {countRequiredApplicationDocs(item)} required
+                      {formatCurrency(
+                        estimateQualifyingIncome(
+                          estimateMonthlyInstallment(pickRepresentativePrice(item.priceFrom, item.priceTo)),
+                        ),
+                      )}
                     </p>
                   </div>
                 </div>
@@ -644,7 +709,7 @@ export default function PartnerDevelopmentsPage() {
                     onClick={() => setBrochureItem(item)}
                     className="border-primary/15 text-[11px]"
                   >
-                    View Brochure
+                    Open Brochure
                   </Button>
                   <Button
                     size="sm"
@@ -690,190 +755,177 @@ export default function PartnerDevelopmentsPage() {
       </main>
 
       <Dialog open={Boolean(brochureItem)} onOpenChange={open => !open && setBrochureItem(null)}>
-        <DialogContent className="max-h-[86vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[92vh] overflow-y-auto bg-slate-100 sm:max-w-5xl">
           {brochureItem ? (
             <>
               <DialogHeader>
                 <DialogTitle>{brochureItem.developmentName}</DialogTitle>
                 <DialogDescription>
-                  {[brochureItem.city, brochureItem.province].filter(Boolean).join(', ') ||
+                  {[brochureItem.suburb, brochureItem.city, brochureItem.province].filter(Boolean).join(' | ') ||
                     'Location unavailable'}
                 </DialogDescription>
               </DialogHeader>
 
-              {brochureItem.imageUrl ? (
-                <div className="overflow-hidden rounded border">
-                  <img
-                    src={brochureItem.imageUrl}
-                    alt={brochureItem.developmentName}
-                    className="h-52 w-full object-cover"
-                  />
-                </div>
-              ) : null}
+              <div className="mx-auto w-full max-w-[794px] overflow-hidden bg-white text-slate-950 shadow-xl">
+                <section className="flex min-h-[128px] items-center justify-between px-10 py-8">
+                  <div>
+                    <h2 className="max-w-[430px] text-[30px] font-black uppercase leading-none tracking-wide">
+                      {brochureItem.developmentName}
+                    </h2>
+                    <p className="mt-3 flex items-center gap-1 text-[11px] uppercase tracking-[0.18em] text-slate-600">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {[brochureItem.suburb, brochureItem.city, brochureItem.province].filter(Boolean).join(' | ') ||
+                        'South Africa'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    {brochureItem.brand?.logoUrl ? (
+                      <img
+                        src={brochureItem.brand.logoUrl}
+                        alt=""
+                        className="ml-auto max-h-14 max-w-44 object-contain"
+                      />
+                    ) : null}
+                    <p className="mt-2 text-[18px] font-black uppercase tracking-[0.16em]">
+                      {brochureItem.brand?.brandName || 'Listify Property'}
+                    </p>
+                  </div>
+                </section>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Price Range</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {formatCurrencyRange(brochureItem.priceFrom, brochureItem.priceTo)}
-                  </p>
-                </div>
-                <div className="rounded border bg-emerald-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Referral Reward</p>
-                  <p className="mt-1 text-sm font-semibold text-emerald-700">
-                    {getRewardDisplay(brochureItem)}
-                  </p>
-                </div>
-                <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Estimated Monthly Installment
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {formatCurrency(
-                      estimateMonthlyInstallment(
-                        pickRepresentativePrice(brochureItem.priceFrom, brochureItem.priceTo),
-                      ),
-                    )}
-                  </p>
-                </div>
-                <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Payout Trigger</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{getPayoutDisplay(brochureItem)}</p>
-                </div>
-              </div>
-
-              <div className="rounded border p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Sales Pack</p>
-                <p className="mt-2 text-sm font-medium text-slate-900">{getBuyerProfile(brochureItem)}</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {getSellingPoints(brochureItem).map(point => (
-                    <div key={point} className="rounded border bg-slate-50 px-2.5 py-2 text-xs text-slate-700">
-                      {point}
+                <section className="h-[348px] bg-slate-200">
+                  {brochureItem.imageUrl ? (
+                    <img
+                      src={brochureItem.imageUrl}
+                      alt={brochureItem.developmentName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                      Development image
                     </div>
-                  ))}
-                </div>
-              </div>
+                  )}
+                </section>
 
-              <div className="rounded border p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Unit Options</p>
-                {Array.isArray(brochureItem.unitTypes) && brochureItem.unitTypes.length ? (
-                  <div className="mt-2 overflow-hidden rounded border">
-                    <table className="w-full border-collapse text-xs">
-                      <thead className="bg-slate-100 text-slate-700">
-                        <tr>
-                          <th className="border-b px-2 py-2 text-left font-semibold">Unit Type</th>
-                          <th className="border-b px-2 py-2 text-left font-semibold">Price</th>
-                          <th className="border-b px-2 py-2 text-left font-semibold">
-                            Est. Installment
-                          </th>
-                          <th className="border-b px-2 py-2 text-left font-semibold">
-                            Qualifying Income
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {brochureItem.unitTypes.slice(0, 10).map((unit: any) => {
+                {brochureItem.description ? (
+                  <section className="px-10 pb-2 pt-6 text-[13px] leading-6 text-slate-700">
+                    {String(brochureItem.description).slice(0, 360)}
+                  </section>
+                ) : null}
+
+                <section className="grid grid-cols-2 gap-x-10 gap-y-2 px-10 py-6 text-[15px]">
+                  {getBrochureHighlights(brochureItem).slice(0, 6).map(highlight => (
+                    <p key={highlight} className="leading-6">
+                      <Check className="mr-2 inline h-4 w-4 stroke-[3]" />
+                      {highlight}
+                    </p>
+                  ))}
+                </section>
+
+                <section className="border-y border-slate-950">
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr className="text-[9px] uppercase tracking-wide text-slate-500">
+                        <th className="px-5 py-2 font-semibold">Unit</th>
+                        <th className="px-3 py-2 font-semibold">Price</th>
+                        <th className="px-3 py-2 font-semibold">Est. Bond Payment</th>
+                        <th className="px-5 py-2 font-semibold">Qualifying Income</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getBrochureUnitRows(brochureItem).visibleUnits.length ? (
+                        getBrochureUnitRows(brochureItem).visibleUnits.map((unit: any) => {
                           const referencePrice = pickRepresentativePrice(unit.priceFrom, unit.priceTo);
                           const monthlyInstallment = estimateMonthlyInstallment(referencePrice);
                           const qualifyingIncome = estimateQualifyingIncome(monthlyInstallment);
                           return (
-                            <tr key={unit.name} className="bg-white text-slate-800">
-                              <td className="border-b px-2 py-2">{unit.name || 'Unit'}</td>
-                              <td className="border-b px-2 py-2">
+                            <tr key={`${unit.name}-${unit.priceFrom}-${unit.priceTo}`} className="border-t border-slate-950">
+                              <td className="px-5 py-3 text-[14px]">
+                                <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-400 text-slate-500">
+                                  <Home className="h-4 w-4" />
+                                </span>
+                                <span className="font-semibold">
+                                  {formatUnitSpecs(unit) || unit.name || 'Unit'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 text-[14px] font-black">
                                 {formatCurrencyRange(unit.priceFrom, unit.priceTo)}
                               </td>
-                              <td className="border-b px-2 py-2">
-                                {formatCurrency(monthlyInstallment)}
+                              <td className="px-3 py-3">
+                                <p className="text-[10px] text-slate-500">Estimated Bond Payment</p>
+                                <p className="text-[14px] font-black">{formatCurrency(monthlyInstallment)}</p>
                               </td>
-                              <td className="border-b px-2 py-2">
-                                {formatCurrency(qualifyingIncome)}
+                              <td className="px-5 py-3">
+                                <p className="text-[10px] text-slate-500">Qualifying income</p>
+                                <p className="text-[14px] font-black">{formatCurrency(qualifyingIncome)}</p>
                               </td>
                             </tr>
                           );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-600">Unit option details available on request.</p>
-                )}
-              </div>
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-5 py-6 text-sm text-slate-600">
+                            Unit option details available on request.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </section>
 
-              <div className="rounded border p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Estimate Assumptions</p>
-                <p className="mt-2 text-sm text-slate-700">
-                  {BROCHURE_BOND_YEARS}-year bond at {BROCHURE_ANNUAL_INTEREST_RATE}% annual
-                  interest. Qualifying income assumes repayment is{' '}
-                  {Math.round(BROCHURE_MIN_INCOME_RATIO * 100)}% of gross monthly income.
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Figures are indicative and subject to lender approval.
-                </p>
-              </div>
+                {getBrochureUnitRows(brochureItem).hiddenUnitCount > 0 ? (
+                  <section className="border-b border-slate-200 px-10 py-2 text-[11px] text-slate-600">
+                    Additional unit options available on request. {getBrochureUnitRows(brochureItem).hiddenUnitCount}{' '}
+                    more option
+                    {getBrochureUnitRows(brochureItem).hiddenUnitCount === 1 ? '' : 's'} not shown on this A4
+                    summary.
+                  </section>
+                ) : null}
 
-              {Array.isArray(brochureItem.sourceDocuments) && brochureItem.sourceDocuments.length ? (
-                <div className="rounded border p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Supporting Pack</p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    Development-specific files you can share with your buyer before submitting.
+                <section className="border-b border-slate-200 px-10 py-3 text-[10px] leading-4 text-slate-500">
+                  Estimates use a {BROCHURE_BOND_YEARS}-year bond at {BROCHURE_ANNUAL_INTEREST_RATE}% annual
+                  interest. Qualifying income assumes repayment is {Math.round(BROCHURE_MIN_INCOME_RATIO * 100)}%
+                  of gross monthly income. Figures are indicative and subject to lender approval.
+                </section>
+
+                <section className="grid grid-cols-3 gap-4 border-b border-slate-200 px-10 py-6 text-center sm:grid-cols-6">
+                  {getBrochureHighlights(brochureItem).slice(0, 6).map(highlight => (
+                    <div key={`amenity-${highlight}`} className="text-[10px] leading-tight text-slate-700">
+                      <span className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full border border-slate-900 font-semibold">
+                        <Check className="h-4 w-4 stroke-[3]" />
+                      </span>
+                      {highlight}
+                    </div>
+                  ))}
+                </section>
+
+                <section className="flex items-center justify-between px-10 py-7">
+                  <p className="text-[18px] font-black tracking-wide text-slate-700">
+                    {brochureItem.brand?.brandName || 'Listify Property'}
                   </p>
-                  <div className="mt-2 grid gap-2">
-                    {brochureItem.sourceDocuments.map((doc: any) => (
-                      <div
-                        key={doc.templateId}
-                        className="flex items-center justify-between rounded border bg-slate-50 px-2.5 py-2"
-                      >
-                        <p className="text-sm text-slate-900">
-                          {doc.documentLabel || 'Developer document'}
-                        </p>
-                        {doc.fileName ? (
-                          <p className="text-xs text-slate-500">{doc.fileName}</p>
-                        ) : null}
-                        {doc.fileUrl ? (
-                          <a
-                            href={doc.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-medium text-primary hover:underline"
-                          >
-                            Open
-                          </a>
-                        ) : (
-                          <span className="text-xs text-slate-500">Pending upload</span>
-                        )}
-                      </div>
-                    ))}
+                  <div className="text-right">
+                    <p className="text-[18px] font-black uppercase tracking-[0.18em]">
+                      Contact {brochureItem.brochure?.contactName || 'Sales'}
+                    </p>
+                    <div className="mt-2 flex flex-wrap justify-end gap-4 text-[12px] text-slate-600">
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="h-3.5 w-3.5" />
+                        {brochureItem.brochure?.contactPhone || 'On request'}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Mail className="h-3.5 w-3.5" />
+                        {brochureItem.brochure?.contactEmail ||
+                          brochureItem.brand?.publicContactEmail ||
+                          'sales@listify.co.za'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ) : null}
-
-              <div className="rounded border p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Application Documents</p>
-                <p className="mt-1 text-xs text-slate-600">
-                  These are the buyer documents needed before the referral can move through
-                  qualification.
-                </p>
-                <div className="mt-2 grid gap-2">
-                  {(Array.isArray(brochureItem.requiredDocuments) ? brochureItem.requiredDocuments : [])
-                    .sort((a: any, b: any) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
-                    .map((doc: any) => (
-                      <div
-                        key={doc.templateId}
-                        className="flex items-center justify-between rounded border bg-slate-50 px-2.5 py-2"
-                      >
-                        <p className="text-sm text-slate-900">{doc.documentLabel}</p>
-                        <span className="text-xs text-slate-500">
-                          {doc.isRequired ? 'Required' : 'Optional'}
-                        </span>
-                      </div>
-                    ))}
-                </div>
+                </section>
               </div>
 
               <div className="flex flex-wrap justify-end gap-2">
                 <Button variant="outline" onClick={() => downloadBrochure(brochureItem)} className="gap-1">
                   <Download className="h-4 w-4" />
-                  Download Brochure
+                  Print / Download PDF
                 </Button>
                 <Button
                   variant="outline"

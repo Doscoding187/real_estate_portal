@@ -109,7 +109,8 @@ function parseSqlStatements(sql: string): string[] {
     })
     .join('\n');
 
-  const executablePrefix = /^(alter|create|drop|update|insert|delete|replace|truncate|rename|set)\b/i;
+  const executablePrefix =
+    /^(alter|create|drop|update|insert|delete|replace|truncate|rename|set|prepare|execute|deallocate)\b/i;
 
   return withoutLineComments
     .split(';')

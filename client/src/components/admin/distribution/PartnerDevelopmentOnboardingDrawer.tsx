@@ -101,6 +101,17 @@ type BrandOnboardingPreset = {
   documents: RequiredDocumentDraft[];
 };
 
+type BrochureConfigDraft = {
+  headline: string;
+  description: string;
+  highlightBulletsText: string;
+  amenityLabelsText: string;
+  heroImageUrl: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail: string;
+};
+
 type ReadinessCounts = {
   live: number;
   enabledBlocked: number;
@@ -301,6 +312,35 @@ function toFileBaseName(filename: string | null | undefined) {
   return withoutExt.trim();
 }
 
+function splitLines(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function joinLines(value: unknown) {
+  return Array.isArray(value)
+    ? value
+        .map(item => String(item || '').trim())
+        .filter(Boolean)
+        .join('\n')
+    : '';
+}
+
+function getEmptyBrochureConfig(): BrochureConfigDraft {
+  return {
+    headline: '',
+    description: '',
+    highlightBulletsText: '',
+    amenityLabelsText: '',
+    heroImageUrl: '',
+    contactName: '',
+    contactPhone: '',
+    contactEmail: '',
+  };
+}
+
 export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadiness | null }) {
   if (!readiness) {
     return (
@@ -440,6 +480,9 @@ function DevelopmentProgramConfigPanel({
   const docsQuery = trpc.distribution.admin.getDevelopmentRequiredDocuments.useQuery({
     developmentId: development.developmentId,
   });
+  const accessQuery = trpc.distribution.admin.getDevelopmentAccess.useQuery({
+    developmentId: development.developmentId,
+  });
   const brandPresetQuery = trpc.distribution.admin.getBrandOnboardingPreset.useQuery(
     {
       brandProfileId: Number(brandProfileId || 0),
@@ -452,6 +495,8 @@ function DevelopmentProgramConfigPanel({
   const upsertProgramMutation = trpc.distribution.admin.upsertProgram.useMutation();
   const assignManagerMutation = trpc.distribution.admin.assignManagerToDevelopment.useMutation();
   const setDocsMutation = trpc.distribution.admin.setDevelopmentRequiredDocuments.useMutation();
+  const setBrochureConfigMutation =
+    trpc.distribution.admin.setDevelopmentBrochureConfig.useMutation();
   const setReferralEnabledMutation = trpc.distribution.admin.setProgramReferralEnabled.useMutation();
   const onboardDevelopmentMutation =
     trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
@@ -473,6 +518,9 @@ function DevelopmentProgramConfigPanel({
   const [isActive, setIsActive] = useState(true);
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
+  const [brochureConfig, setBrochureConfig] = useState<BrochureConfigDraft>(
+    getEmptyBrochureConfig,
+  );
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
   const [uploadingDocumentIndex, setUploadingDocumentIndex] = useState<number | null>(null);
 
@@ -559,6 +607,20 @@ function DevelopmentProgramConfigPanel({
   }, [docsQuery.data, development.developmentId]);
 
   useEffect(() => {
+    const config = (accessQuery.data?.entity as any)?.brochureConfigJson || {};
+    setBrochureConfig({
+      headline: String(config.headline || ''),
+      description: String(config.description || ''),
+      highlightBulletsText: joinLines(config.highlightBullets),
+      amenityLabelsText: joinLines(config.amenityLabels),
+      heroImageUrl: String(config.heroImageUrl || ''),
+      contactName: String(config.contactName || ''),
+      contactPhone: String(config.contactPhone || ''),
+      contactEmail: String(config.contactEmail || ''),
+    });
+  }, [accessQuery.data, development.developmentId]);
+
+  useEffect(() => {
     if (!focusSection) return;
     const element = document.getElementById(focusSection);
     if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -569,6 +631,7 @@ function DevelopmentProgramConfigPanel({
     upsertProgramMutation.isPending ||
     assignManagerMutation.isPending ||
     setDocsMutation.isPending ||
+    setBrochureConfigMutation.isPending ||
     setReferralEnabledMutation.isPending ||
     setBrandPresetMutation.isPending ||
     isApplyingTemplate;
@@ -1052,6 +1115,19 @@ function DevelopmentProgramConfigPanel({
     };
   }
 
+  function buildBrochureConfigInput() {
+    return {
+      headline: brochureConfig.headline.trim() || null,
+      description: brochureConfig.description.trim() || null,
+      highlightBullets: splitLines(brochureConfig.highlightBulletsText).slice(0, 8),
+      amenityLabels: splitLines(brochureConfig.amenityLabelsText).slice(0, 8),
+      heroImageUrl: brochureConfig.heroImageUrl.trim() || null,
+      contactName: brochureConfig.contactName.trim() || null,
+      contactPhone: brochureConfig.contactPhone.trim() || null,
+      contactEmail: brochureConfig.contactEmail.trim() || null,
+    };
+  }
+
   async function saveConfigurationForDevelopment(
     targetDevelopmentId: number,
     targetReferralEnabled: boolean,
@@ -1064,6 +1140,13 @@ function DevelopmentProgramConfigPanel({
     const programResult = await upsertProgramMutation.mutateAsync(
       buildProgramInput(targetDevelopmentId, targetReferralEnabled),
     );
+
+    if (targetDevelopmentId === development.developmentId) {
+      await setBrochureConfigMutation.mutateAsync({
+        developmentId: targetDevelopmentId,
+        brochureConfig: buildBrochureConfigInput(),
+      });
+    }
 
     if (primaryManagerUserId) {
       await assignManagerMutation.mutateAsync({
@@ -1092,6 +1175,9 @@ function DevelopmentProgramConfigPanel({
       utils.distribution.admin.getDevelopmentRequiredDocuments.invalidate({
         developmentId: targetDevelopmentId,
       }),
+      utils.distribution.admin.getDevelopmentAccess.invalidate({
+        developmentId: targetDevelopmentId,
+      }),
     ]);
 
     return { documentsSaved: true };
@@ -1108,6 +1194,7 @@ function DevelopmentProgramConfigPanel({
     await Promise.all([
       readinessQuery.refetch(),
       docsQuery.refetch(),
+      accessQuery.refetch(),
       Promise.resolve(onMutationSuccess([development.developmentId])),
     ]);
     if (saveResult.documentsSaved) {
@@ -1130,6 +1217,7 @@ function DevelopmentProgramConfigPanel({
       await Promise.all([
         readinessQuery.refetch(),
         docsQuery.refetch(),
+        accessQuery.refetch(),
         Promise.resolve(onMutationSuccess([development.developmentId])),
       ]);
       if (saveResult.documentsSaved) {
@@ -1403,6 +1491,123 @@ function DevelopmentProgramConfigPanel({
                 <p className="text-[11px] text-slate-500">Paused setups cannot accept buyers.</p>
               </div>
               <Switch checked={isActive} onCheckedChange={setIsActive} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card id="section-brochure">
+        <CardHeader>
+          <CardTitle className="text-base">Buyer Brochure</CardTitle>
+          <CardDescription>
+            Control the buyer-facing brochure copy for this development. Empty fields fall back to the
+            published development content.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-700">Brochure headline</p>
+              <Input
+                value={brochureConfig.headline}
+                onChange={event =>
+                  setBrochureConfig(current => ({ ...current, headline: event.target.value }))
+                }
+                maxLength={120}
+                placeholder={development.developmentName}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-700">Hero image URL</p>
+              <Input
+                value={brochureConfig.heroImageUrl}
+                onChange={event =>
+                  setBrochureConfig(current => ({ ...current, heroImageUrl: event.target.value }))
+                }
+                placeholder="Use development hero image"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-slate-700">Brochure description</p>
+            <Textarea
+              value={brochureConfig.description}
+              onChange={event =>
+                setBrochureConfig(current => ({ ...current, description: event.target.value }))
+              }
+              maxLength={900}
+              rows={4}
+              placeholder="Short buyer-focused introduction for this development"
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-700">Buyer highlights</p>
+              <Textarea
+                value={brochureConfig.highlightBulletsText}
+                onChange={event =>
+                  setBrochureConfig(current => ({
+                    ...current,
+                    highlightBulletsText: event.target.value,
+                  }))
+                }
+                rows={6}
+                placeholder={'One highlight per line\nClose to schools\nModern finishes\nSecure estate access'}
+              />
+              <p className="text-[11px] text-slate-500">Up to 8 lines appear in the brochure.</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-700">Amenity labels</p>
+              <Textarea
+                value={brochureConfig.amenityLabelsText}
+                onChange={event =>
+                  setBrochureConfig(current => ({
+                    ...current,
+                    amenityLabelsText: event.target.value,
+                  }))
+                }
+                rows={6}
+                placeholder={'One amenity per line\nKids play parks\nSolar backup\nEasy highway access'}
+              />
+              <p className="text-[11px] text-slate-500">Used in the icon row near the brochure footer.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-700">Contact name</p>
+              <Input
+                value={brochureConfig.contactName}
+                onChange={event =>
+                  setBrochureConfig(current => ({ ...current, contactName: event.target.value }))
+                }
+                maxLength={120}
+                placeholder="Sales"
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-700">Contact phone</p>
+              <Input
+                value={brochureConfig.contactPhone}
+                onChange={event =>
+                  setBrochureConfig(current => ({ ...current, contactPhone: event.target.value }))
+                }
+                maxLength={50}
+                placeholder="On request"
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-700">Contact email</p>
+              <Input
+                value={brochureConfig.contactEmail}
+                onChange={event =>
+                  setBrochureConfig(current => ({ ...current, contactEmail: event.target.value }))
+                }
+                maxLength={320}
+                placeholder="Use brand public email"
+              />
             </div>
           </div>
         </CardContent>
@@ -1776,6 +1981,9 @@ export function PartnerDevelopmentOnboardingDrawer({
           ),
           ...developmentIds.map(developmentId =>
             utils.distribution.admin.getDevelopmentRequiredDocuments.invalidate({ developmentId }),
+          ),
+          ...developmentIds.map(developmentId =>
+            utils.distribution.admin.getDevelopmentAccess.invalidate({ developmentId }),
           ),
         ]);
       }
