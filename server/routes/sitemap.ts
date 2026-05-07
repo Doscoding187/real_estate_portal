@@ -31,11 +31,7 @@ type SitemapUrlEntry = {
 };
 
 function getFallbackBaseUrl(): string {
-  const candidates = [
-    process.env.FRONTEND_URL,
-    ENV.appUrl,
-    DEFAULT_PUBLIC_SITE_URL,
-  ];
+  const candidates = [process.env.FRONTEND_URL, ENV.appUrl, DEFAULT_PUBLIC_SITE_URL];
 
   for (const candidate of candidates) {
     if (!candidate) continue;
@@ -157,7 +153,9 @@ function sendXml(res: Response, xml: string) {
   res.status(200).send(xml);
 }
 
-function listingTypeToPathPrefix(listingType: string): '/property-for-sale' | '/property-to-rent' | null {
+function listingTypeToPathPrefix(
+  listingType: string,
+): '/property-for-sale' | '/property-to-rent' | null {
   if (listingType === 'sale') return '/property-for-sale';
   if (listingType === 'rent') return '/property-to-rent';
   return null;
@@ -183,12 +181,15 @@ router.get('/robots.txt', (_req, res) => {
 });
 
 router.get('/sitemap.xml', (req, res) => {
-  const xml = buildSitemapIndex([
-    '/sitemap-listings.xml',
-    '/sitemap-areas.xml',
-    '/sitemap-developments.xml',
-    '/sitemap-static.xml',
-  ], resolveBaseUrl(req));
+  const xml = buildSitemapIndex(
+    [
+      '/sitemap-listings.xml',
+      '/sitemap-areas.xml',
+      '/sitemap-developments.xml',
+      '/sitemap-static.xml',
+    ],
+    resolveBaseUrl(req),
+  );
 
   sendXml(res, xml);
 });
@@ -233,10 +234,7 @@ router.get('/sitemap-listings.xml', async (_req, res, next) => {
               })
               .from(listings)
               .where(
-                and(
-                  eq(listings.status, 'published'),
-                  sql`COALESCE(${listings.title}, '') <> ''`,
-                ),
+                and(eq(listings.status, 'published'), sql`COALESCE(${listings.title}, '') <> ''`),
               )
           ).map(row => ({
             loc: toAbsoluteUrl(
@@ -519,7 +517,10 @@ router.get('/sitemap-areas.xml', async (_req, res, next) => {
                 const suburbSlug = slugify(String(row.suburb || ''));
                 if (!prefix || !provinceSlug || !citySlug || !suburbSlug) return null;
                 return {
-                  loc: toAbsoluteUrl(`${prefix}/${provinceSlug}/${citySlug}/${suburbSlug}`, baseUrl),
+                  loc: toAbsoluteUrl(
+                    `${prefix}/${provinceSlug}/${citySlug}/${suburbSlug}`,
+                    baseUrl,
+                  ),
                   lastmod: row.updatedAt,
                   changefreq: 'daily',
                   priority: 0.7,
@@ -550,6 +551,107 @@ router.get('/sitemap-static.xml', async (_req, res, next) => {
       { loc: toAbsoluteUrl('/developers', baseUrl), changefreq: 'weekly', priority: 0.8 },
       { loc: toAbsoluteUrl('/advertise', baseUrl), changefreq: 'monthly', priority: 0.5 },
       { loc: toAbsoluteUrl('/services', baseUrl), changefreq: 'weekly', priority: 0.7 },
+      { loc: toAbsoluteUrl('/services/home-loans', baseUrl), changefreq: 'monthly', priority: 0.6 },
+      {
+        loc: toAbsoluteUrl('/services/property-valuation', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/services/legal-services', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/services/home-insurance', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/services/interior-design', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/insights/market-trends', baseUrl),
+        changefreq: 'weekly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/insights/property-insights', baseUrl),
+        changefreq: 'weekly',
+        priority: 0.6,
+      },
+      { loc: toAbsoluteUrl('/insights/blog', baseUrl), changefreq: 'weekly', priority: 0.5 },
+      {
+        loc: toAbsoluteUrl('/guides/buying-property', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/guides/selling-property', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/guides/renting-property', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.6,
+      },
+      {
+        loc: toAbsoluteUrl('/tools/property-valuation', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.5,
+      },
+      {
+        loc: toAbsoluteUrl('/tools/sold-house-prices', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.5,
+      },
+      {
+        loc: toAbsoluteUrl('/tools/affordability-calculator', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.5,
+      },
+      {
+        loc: toAbsoluteUrl('/tools/bond-calculator', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.5,
+      },
+      {
+        loc: toAbsoluteUrl('/tools/property-reports', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.5,
+      },
+      { loc: toAbsoluteUrl('/tools/area-guides', baseUrl), changefreq: 'monthly', priority: 0.5 },
+      {
+        loc: toAbsoluteUrl('/tools/sold-properties', baseUrl),
+        changefreq: 'monthly',
+        priority: 0.5,
+      },
+      {
+        loc: toAbsoluteUrl('/legal/consumer-rights', baseUrl),
+        changefreq: 'yearly',
+        priority: 0.4,
+      },
+      {
+        loc: toAbsoluteUrl('/legal/dispute-resolution', baseUrl),
+        changefreq: 'yearly',
+        priority: 0.4,
+      },
+      { loc: toAbsoluteUrl('/legal/terms', baseUrl), changefreq: 'yearly', priority: 0.3 },
+      { loc: toAbsoluteUrl('/legal/privacy', baseUrl), changefreq: 'yearly', priority: 0.3 },
+      { loc: toAbsoluteUrl('/legal/cookies', baseUrl), changefreq: 'yearly', priority: 0.3 },
+      { loc: toAbsoluteUrl('/legal/compliance', baseUrl), changefreq: 'yearly', priority: 0.3 },
+      { loc: toAbsoluteUrl('/support/help', baseUrl), changefreq: 'monthly', priority: 0.4 },
+      { loc: toAbsoluteUrl('/support/safety', baseUrl), changefreq: 'monthly', priority: 0.4 },
+      { loc: toAbsoluteUrl('/support/faq', baseUrl), changefreq: 'monthly', priority: 0.4 },
+      { loc: toAbsoluteUrl('/company/about', baseUrl), changefreq: 'yearly', priority: 0.4 },
+      { loc: toAbsoluteUrl('/company/contact', baseUrl), changefreq: 'yearly', priority: 0.4 },
+      { loc: toAbsoluteUrl('/company/careers', baseUrl), changefreq: 'yearly', priority: 0.3 },
+      { loc: toAbsoluteUrl('/company/press', baseUrl), changefreq: 'yearly', priority: 0.3 },
+      { loc: toAbsoluteUrl('/company/partners', baseUrl), changefreq: 'yearly', priority: 0.4 },
+      { loc: toAbsoluteUrl('/agencies', baseUrl), changefreq: 'weekly', priority: 0.7 },
       { loc: toAbsoluteUrl('/distribution-network', baseUrl), changefreq: 'weekly', priority: 0.6 },
     ];
 

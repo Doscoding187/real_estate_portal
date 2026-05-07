@@ -15,6 +15,7 @@ import { TrustStepsRow } from '@/components/services/TrustStepsRow';
 import { applySeo } from '@/lib/seo';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BadgeCheck, MapPinned, Sparkles } from 'lucide-react';
+import { getServiceTopicPage, ServiceTopicPage } from './ServiceTopicPage';
 
 function normalizeLocation(location: string) {
   const [suburb, city, province] = location
@@ -28,7 +29,9 @@ export default function ServicesCategoryPage() {
   const [, params] = useRoute('/services/:category');
   const [, setLocation] = useLocation();
   const categoryParam = String(params?.category || '').trim();
-  const category = serviceCategoryFromSlug(categoryParam) || ('home_improvement' as ServiceCategory);
+  const serviceTopic = getServiceTopicPage(slugifyLocationSegment(categoryParam));
+  const category =
+    serviceCategoryFromSlug(categoryParam) || ('home_improvement' as ServiceCategory);
 
   const initialQuery = useMemo(() => {
     const search = new URLSearchParams(window.location.search);
@@ -60,6 +63,10 @@ export default function ServicesCategoryPage() {
     });
   }, [category]);
 
+  if (serviceTopic && !serviceCategoryFromSlug(categoryParam)) {
+    return <ServiceTopicPage topic={serviceTopic} />;
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f4ec]">
       <div className="relative overflow-hidden">
@@ -80,11 +87,12 @@ export default function ServicesCategoryPage() {
 
               <div className="max-w-3xl space-y-4">
                 <h1 className="font-serif text-4xl leading-tight text-slate-950 md:text-6xl">
-                  Find trusted {formatCategoryLabel(category).toLowerCase()} through Service Listify.
+                  Find trusted {formatCategoryLabel(category).toLowerCase()} through Service
+                  Listify.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-700 md:text-lg">
-                  {categoryMeta.subtitle} Start with your location and move straight into comparison,
-                  quotes, and provider discovery.
+                  {categoryMeta.subtitle} Start with your location and move straight into
+                  comparison, quotes, and provider discovery.
                 </p>
               </div>
 
@@ -160,7 +168,10 @@ export default function ServicesCategoryPage() {
                     'Browse trusted providers before submitting your request.',
                     'Jump into the guided request flow when you are ready.',
                   ].map(item => (
-                    <div key={item} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/80">
+                    <div
+                      key={item}
+                      className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/80"
+                    >
                       {item}
                     </div>
                   ))}
@@ -181,7 +192,10 @@ export default function ServicesCategoryPage() {
                   Top {formatCategoryLabel(category)} providers
                 </h2>
               </div>
-              <Link href="/services" className="hidden text-sm font-semibold text-[#0f3d91] md:inline-flex md:items-center md:gap-2">
+              <Link
+                href="/services"
+                className="hidden text-sm font-semibold text-[#0f3d91] md:inline-flex md:items-center md:gap-2"
+              >
                 Back to all categories
                 <ArrowRight className="h-4 w-4" />
               </Link>

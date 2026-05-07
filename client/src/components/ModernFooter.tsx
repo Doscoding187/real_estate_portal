@@ -59,33 +59,33 @@ export function ModernFooter() {
       links: [
         { label: 'Find Estate Agents', href: '/agents' },
         { label: 'Find Agencies', href: '/agencies' },
-        { label: 'Property Valuation', href: '#' },
-        { label: 'Home Loans', href: '#' },
-        { label: 'Property Insurance', href: '#' },
-        { label: 'Legal Services', href: '#' },
+        { label: 'Property Valuation', href: '/services/property-valuation' },
+        { label: 'Home Loans', href: '/services/home-loans' },
+        { label: 'Property Insurance', href: '/services/home-insurance' },
+        { label: 'Legal Services', href: '/services/legal-services' },
       ],
     },
     {
       title: 'Tools & Resources',
       icon: Calculator,
       links: [
-        { label: 'Affordability Calculator', href: '#' },
-        { label: 'Bond Calculator', href: '#' },
-        { label: 'Property Reports', href: '#' },
-        { label: 'Market Trends', href: '#' },
-        { label: 'Area Guides', href: '#' },
-        { label: 'Sold Properties', href: '#' },
+        { label: 'Affordability Calculator', href: '/tools/affordability-calculator' },
+        { label: 'Bond Calculator', href: '/tools/bond-calculator' },
+        { label: 'Property Reports', href: '/tools/property-reports' },
+        { label: 'Market Trends', href: '/insights/market-trends' },
+        { label: 'Area Guides', href: '/tools/area-guides' },
+        { label: 'Sold Properties', href: '/tools/sold-properties' },
       ],
     },
     {
       title: 'Company',
       icon: Users,
       links: [
-        { label: 'About Us', href: '/about' },
-        { label: 'Contact Us', href: '/contact' },
-        { label: 'Careers', href: '/careers' },
-        { label: 'Press & Media', href: '/press' },
-        { label: 'Partner with Us', href: '/partners' },
+        { label: 'About Us', href: '/company/about' },
+        { label: 'Contact Us', href: '/company/contact' },
+        { label: 'Careers', href: '/company/careers' },
+        { label: 'Press & Media', href: '/company/press' },
+        { label: 'Partner with Us', href: '/company/partners' },
         { label: 'Advertise with Us', href: '/advertise' },
       ],
     },
@@ -93,24 +93,24 @@ export function ModernFooter() {
       title: 'Support',
       icon: BookOpen,
       links: [
-        { label: 'Help Center', href: '/help' },
-        { label: 'Buying Guide', href: '#' },
-        { label: 'Selling Guide', href: '#' },
-        { label: 'Renting Guide', href: '#' },
-        { label: 'Safety Tips', href: '/safety' },
-        { label: 'FAQs', href: '/faq' },
+        { label: 'Help Center', href: '/support/help' },
+        { label: 'Buying Guide', href: '/guides/buying-property' },
+        { label: 'Selling Guide', href: '/guides/selling-property' },
+        { label: 'Renting Guide', href: '/guides/renting-property' },
+        { label: 'Safety Tips', href: '/support/safety' },
+        { label: 'FAQs', href: '/support/faq' },
       ],
     },
     {
       title: 'Legal',
       icon: Shield,
       links: [
-        { label: 'Terms of Service', href: '/terms' },
-        { label: 'Privacy Policy', href: '/privacy' },
-        { label: 'Cookie Policy', href: '/cookies' },
-        { label: 'Compliance', href: '/compliance' },
-        { label: 'Consumer Rights', href: '#' },
-        { label: 'Dispute Resolution', href: '#' },
+        { label: 'Terms of Service', href: '/legal/terms' },
+        { label: 'Privacy Policy', href: '/legal/privacy' },
+        { label: 'Cookie Policy', href: '/legal/cookies' },
+        { label: 'Compliance', href: '/legal/compliance' },
+        { label: 'Consumer Rights', href: '/legal/consumer-rights' },
+        { label: 'Dispute Resolution', href: '/legal/dispute-resolution' },
       ],
     },
   ];
@@ -135,7 +135,7 @@ export function ModernFooter() {
   const contactInfo = [
     { icon: Phone, label: '+27 11 234 5678', href: 'tel:+27112345678' },
     { icon: Mail, label: 'info@propertylistify.co.za', href: 'mailto:info@propertylistify.co.za' },
-    { icon: MapPin, label: '123 Main St, Johannesburg, 2001', href: '#' },
+    { icon: MapPin, label: '123 Main St, Johannesburg, 2001', href: '/company/contact' },
   ];
 
   return (
@@ -154,7 +154,10 @@ export function ModernFooter() {
               inbox.
             </p>
 
-            <form onSubmit={handleSubscribe} className="mx-auto flex max-w-md flex-col gap-2.5 sm:flex-row">
+            <form
+              onSubmit={handleSubscribe}
+              className="mx-auto flex max-w-md flex-col gap-2.5 sm:flex-row"
+            >
               <Input
                 type="email"
                 placeholder="Enter your email address"
@@ -318,7 +321,9 @@ export function ModernFooter() {
         <div className="mt-8 rounded-[1.5rem] bg-slate-800 p-4 md:mt-12 md:p-6">
           <div className="flex flex-col items-center gap-5 lg:flex-row lg:gap-6">
             <div className="flex-1 text-center lg:text-left">
-              <h4 className="mb-2 text-lg font-bold text-white md:text-xl">Get the Property Listify App</h4>
+              <h4 className="mb-2 text-lg font-bold text-white md:text-xl">
+                Get the Property Listify App
+              </h4>
               <p className="text-sm text-slate-300 md:text-base">
                 Search for properties on the go. Available on iOS and Android.
               </p>

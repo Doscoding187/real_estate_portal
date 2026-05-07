@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 
 /**
  * LocationSchema Component
@@ -56,7 +57,7 @@ export function LocationSchema({
   aggregateRating,
   stats,
 }: LocationSchemaProps) {
-  const fullUrl = `https://propertylistify.com${url}`;
+  const fullUrl = toAbsoluteUrl(url);
 
   // BreadcrumbList Schema
   // Requirements 30.4: Include breadcrumb structured data showing location hierarchy
@@ -67,7 +68,7 @@ export function LocationSchema({
       '@type': 'ListItem',
       position: index + 1,
       name: crumb.name,
-      item: `https://propertylistify.com${crumb.url}`,
+      item: toAbsoluteUrl(crumb.url),
     })),
   };
 
