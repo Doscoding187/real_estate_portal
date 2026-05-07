@@ -81,6 +81,7 @@ const ServiceProviderProfilePage = lazy(
 const ServiceProviderReviewsPage = lazy(
   () => import('./pages/services/ServiceProviderReviewsPage'),
 );
+const NavLandingPage = lazy(() => import('./pages/NavLandingPage'));
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProviderOnboardingWizard = lazy(() =>
@@ -162,9 +163,7 @@ const PartnerMyReferralsPage = lazy(() => import('./pages/distribution/PartnerMy
 const PartnerReferralDetailPage = lazy(
   () => import('./pages/distribution/PartnerReferralDetailPage'),
 );
-const PartnerCommissionsPage = lazy(
-  () => import('./pages/distribution/PartnerCommissionsPage'),
-);
+const PartnerCommissionsPage = lazy(() => import('./pages/distribution/PartnerCommissionsPage'));
 const PartnerReferralAcceleratorPage = lazy(
   () => import('./pages/distribution/PartnerReferralAcceleratorPage'),
 );
@@ -468,6 +467,27 @@ function Router() {
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
 
+          {/* Thin SEO landing pages for non-listing engines */}
+          <Route path="/insights/:slug" component={NavLandingPage} />
+          <Route path="/guides/:slug" component={NavLandingPage} />
+          <Route path="/tools/:slug" component={NavLandingPage} />
+          <Route path="/legal/:slug" component={NavLandingPage} />
+          <Route path="/support/:slug" component={NavLandingPage} />
+          <Route path="/company/:slug" component={NavLandingPage} />
+          <Route path="/about" component={NavLandingPage} />
+          <Route path="/contact" component={NavLandingPage} />
+          <Route path="/careers" component={NavLandingPage} />
+          <Route path="/press" component={NavLandingPage} />
+          <Route path="/partners" component={NavLandingPage} />
+          <Route path="/help" component={NavLandingPage} />
+          <Route path="/safety" component={NavLandingPage} />
+          <Route path="/faq" component={NavLandingPage} />
+          <Route path="/terms" component={NavLandingPage} />
+          <Route path="/privacy" component={NavLandingPage} />
+          <Route path="/cookies" component={NavLandingPage} />
+          <Route path="/compliance" component={NavLandingPage} />
+          <Route path="/agencies" component={NavLandingPage} />
+
           <Route path="/compare" component={CompareProperties} />
 
           {/* Auth */}
@@ -532,9 +552,15 @@ function Router() {
           <Route path="/dashboard/settings">
             <Redirect to="/agent/settings" />
           </Route>
-          
+
           <Route path="/activation">
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
+            <Suspense
+              fallback={
+                <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              }
+            >
               <ActivationGate />
             </Suspense>
           </Route>

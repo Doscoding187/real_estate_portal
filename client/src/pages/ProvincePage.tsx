@@ -33,8 +33,12 @@ import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 // EnhancedHero not needed - using LocationHeroSection for location pages
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const provinceSlug = params.province;
+  const locationPathPrefix = location.startsWith('/property-to-rent')
+    ? '/property-to-rent'
+    : '/property-for-sale';
+  const locationCanonicalPath = `${locationPathPrefix}/${provinceSlug}`;
   const [heroTab, setHeroTab] = useState<string>('buy');
   const campaignHierarchy = buildCampaignSlugHierarchy(provinceSlug);
 
@@ -102,11 +106,11 @@ export default function ProvincePage({ params }: { params: { province: string } 
       <LocationSchema
         type="Province"
         name={province.name}
-        description={`Real estate in ${province.name}`}
-        url={`/${provinceSlug}`}
+        description={`Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${province.name}`}
+        url={locationCanonicalPath}
         breadcrumbs={[
           { name: 'Home', url: '/' },
-          { name: province.name, url: `/${provinceSlug}` },
+          { name: province.name, url: locationCanonicalPath },
         ]}
         stats={stats}
         image="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"

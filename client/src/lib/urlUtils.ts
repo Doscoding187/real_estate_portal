@@ -117,6 +117,7 @@ export interface SearchFilters {
 }
 
 import { generateIntentUrl, SearchIntent } from './searchIntent';
+import { toAbsoluteUrl } from './seo/structuredData';
 
 // Helper to bridge SearchFilters -> SearchIntent for URL generation
 function filtersToIntent(filters: SearchFilters): SearchIntent {
@@ -162,7 +163,7 @@ export function generateCanonicalUrl(filters: SearchFilters): string {
   // P24 canonical tags on search pages usually point to the version without sort orders etc., but keep vital filters.
   // For now, let's return the intent URL exactly as it represents the resource.
 
-  return `https://propertylistify.com${generateIntentUrl(intent)}`;
+  return toAbsoluteUrl(generateIntentUrl(intent));
 }
 
 // Parse URL params back to filters

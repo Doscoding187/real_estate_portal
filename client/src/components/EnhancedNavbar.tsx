@@ -184,8 +184,19 @@ function CityDropdownContent() {
               })
               .catch(err => console.error('Failed to save location:', err));
 
-            // Navigate to location page
-            window.location.href = `/search?location=${encodeURIComponent(location.name)}`;
+            const provinceSlug = location.provinceSlug;
+            const citySlug = location.type === 'city' ? location.slug : location.citySlug;
+            const suburbSlug = location.type === 'suburb' ? location.slug : undefined;
+
+            if (provinceSlug && citySlug && suburbSlug) {
+              window.location.href = `/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}`;
+            } else if (provinceSlug && citySlug) {
+              window.location.href = `/property-for-sale/${provinceSlug}/${citySlug}`;
+            } else if (provinceSlug) {
+              window.location.href = `/property-for-sale/${provinceSlug}`;
+            } else {
+              window.location.href = `/property-for-sale?city=${encodeURIComponent(location.name)}`;
+            }
           }}
           className="w-full"
         />
@@ -467,26 +478,26 @@ export function EnhancedNavbar() {
   ];
 
   const servicesOptions = [
-    { label: 'Home Loans', href: '#' },
-    { label: 'Property Valuation', href: '#' },
-    { label: 'Legal Services', href: '#' },
-    { label: 'Home Insurance', href: '#' },
-    { label: 'Interior Design', href: '#' },
+    { label: 'Home Loans', href: '/services/home-loans' },
+    { label: 'Property Valuation', href: '/services/property-valuation' },
+    { label: 'Legal Services', href: '/services/legal-services' },
+    { label: 'Home Insurance', href: '/services/home-insurance' },
+    { label: 'Interior Design', href: '/services/interior-design' },
   ];
 
   const sellersOptions = [
     { label: 'Agents', href: '/agents' },
     { label: 'Agencies', href: '/agencies' },
-    { label: 'Developers', href: '/developer' },
+    { label: 'Developers', href: '/developers' },
     { label: 'Property Owner (For sale by owner)', href: '/advertise' },
   ];
 
   const insightsOptions = [
-    { label: 'Market Trends', href: '#' },
-    { label: 'Property Insights', href: '#' },
-    { label: 'Buying Guide', href: '#' },
-    { label: 'Selling Guide', href: '#' },
-    { label: 'Blog', href: '#' },
+    { label: 'Market Trends', href: '/insights/market-trends' },
+    { label: 'Property Insights', href: '/insights/property-insights' },
+    { label: 'Buying Guide', href: '/guides/buying-property' },
+    { label: 'Selling Guide', href: '/guides/selling-property' },
+    { label: 'Blog', href: '/insights/blog' },
   ];
 
   const mobileMenuItems = [
@@ -905,7 +916,7 @@ export function EnhancedNavbar() {
                             </Link>
                           </li>
                           <li>
-                            <Link href="/developments">
+                            <Link href="/developers">
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
                                 Property Developers
                               </span>
@@ -957,28 +968,28 @@ export function EnhancedNavbar() {
                         </h4>
                         <ul className="space-y-3 text-sm pl-1">
                           <li>
-                            <Link href="#">
+                            <Link href="/tools/property-valuation">
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
                                 Property Valuation
                               </span>
                             </Link>
                           </li>
                           <li>
-                            <Link href="#">
+                            <Link href="/tools/sold-house-prices">
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
                                 Sold House Prices
                               </span>
                             </Link>
                           </li>
                           <li>
-                            <Link href="#">
+                            <Link href="/guides/selling-property">
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
                                 Seller Guide
                               </span>
                             </Link>
                           </li>
                           <li>
-                            <Link href="#">
+                            <Link href="/insights/market-trends">
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
                                 Market Trends
                               </span>
@@ -998,7 +1009,7 @@ export function EnhancedNavbar() {
                         <p className="text-sm text-slate-500 mb-4">
                           List your development and reach thousands of buyers.
                         </p>
-                        <Link href="/developer">
+                        <Link href="/advertise/sell/developers">
                           <Button
                             variant="outline"
                             size="sm"
@@ -1081,11 +1092,7 @@ export function EnhancedNavbar() {
                 size="sm"
                 variant="conversion"
                 className={`
-                  ${
-                    isAdvertisePage
-                      ? 'ring-2 ring-conversion/40 ring-offset-2'
-                      : ''
-                  }
+                  ${isAdvertisePage ? 'ring-2 ring-conversion/40 ring-offset-2' : ''}
                   hover:scale-105 transition-all duration-200 font-bold
                 `}
                 aria-current={isAdvertisePage ? 'page' : undefined}
