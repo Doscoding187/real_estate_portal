@@ -18,6 +18,7 @@ import {
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
+  distributionDevelopmentAccess,
   distributionIdentities,
   distributionManagerAssignments,
   distributionPrograms,
@@ -1364,6 +1365,17 @@ const upsertDevelopmentAccessInput = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
 });
 
+const developmentBrochureConfigSchema = z.object({
+  headline: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(900).nullable().optional(),
+  highlightBullets: z.array(z.string().trim().min(1).max(140)).max(8).default([]),
+  amenityLabels: z.array(z.string().trim().min(1).max(80)).max(8).default([]),
+  heroImageUrl: z.string().trim().url().max(2048).nullable().optional(),
+  contactName: z.string().trim().max(120).nullable().optional(),
+  contactPhone: z.string().trim().max(50).nullable().optional(),
+  contactEmail: z.string().trim().email().max(320).nullable().optional(),
+});
+
 const getBrandPartnershipInput = z.object({
   brandProfileId: z.number().int().positive(),
 });
@@ -2332,6 +2344,58 @@ const adminDistributionRouter = router({
             entity: result.entity,
             development: result.development,
             derivedState: result.evaluation,
+          };
+        },
+      );
+    }),
+
+  setDevelopmentBrochureConfig: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        brochureConfig: developmentBrochureConfigSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.setDevelopmentBrochureConfig',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.upsertDevelopmentAccess');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          const normalizedConfig = {
+            headline: input.brochureConfig.headline?.trim() || null,
+            description: input.brochureConfig.description?.trim() || null,
+            highlightBullets: input.brochureConfig.highlightBullets
+              .map(value => value.trim())
+              .filter(Boolean)
+              .slice(0, 8),
+            amenityLabels: input.brochureConfig.amenityLabels
+              .map(value => value.trim())
+              .filter(Boolean)
+              .slice(0, 8),
+            heroImageUrl: input.brochureConfig.heroImageUrl?.trim() || null,
+            contactName: input.brochureConfig.contactName?.trim() || null,
+            contactPhone: input.brochureConfig.contactPhone?.trim() || null,
+            contactEmail: input.brochureConfig.contactEmail?.trim() || null,
+          };
+
+          await db
+            .update(distributionDevelopmentAccess)
+            .set({
+              brochureConfigJson: normalizedConfig,
+              updatedBy: ctx.user.id,
+            } as any)
+            .where(eq(distributionDevelopmentAccess.developmentId, input.developmentId));
+
+          const result = await getDevelopmentAccessDetails(db, input.developmentId);
+          return {
+            success: true as const,
+            developmentId: input.developmentId,
+            brochureConfig: normalizedConfig,
+            entity: result.entity,
           };
         },
       );

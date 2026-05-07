@@ -9,9 +9,11 @@ const {
   mockGetProgramReadinessUseQuery,
   mockSetProgramReferralEnabledUseMutation,
   mockGetDevelopmentRequiredDocumentsUseQuery,
+  mockGetDevelopmentAccessUseQuery,
   mockUpsertProgramUseMutation,
   mockAssignManagerUseMutation,
   mockSetDevelopmentRequiredDocumentsUseMutation,
+  mockSetDevelopmentBrochureConfigUseMutation,
   mockOnboardDevelopmentToPartnerNetworkUseMutation,
   mockGetBrandOnboardingPresetUseQuery,
   mockSetBrandOnboardingPresetUseMutation,
@@ -19,14 +21,17 @@ const {
   mockUseUtils,
   mockInvalidateReadiness,
   mockInvalidateDocs,
+  mockInvalidateDevelopmentAccess,
   mockInvalidateBrandPreset,
 } = vi.hoisted(() => ({
   mockGetProgramReadinessUseQuery: vi.fn(),
   mockSetProgramReferralEnabledUseMutation: vi.fn(),
   mockGetDevelopmentRequiredDocumentsUseQuery: vi.fn(),
+  mockGetDevelopmentAccessUseQuery: vi.fn(),
   mockUpsertProgramUseMutation: vi.fn(),
   mockAssignManagerUseMutation: vi.fn(),
   mockSetDevelopmentRequiredDocumentsUseMutation: vi.fn(),
+  mockSetDevelopmentBrochureConfigUseMutation: vi.fn(),
   mockOnboardDevelopmentToPartnerNetworkUseMutation: vi.fn(),
   mockGetBrandOnboardingPresetUseQuery: vi.fn(),
   mockSetBrandOnboardingPresetUseMutation: vi.fn(),
@@ -34,6 +39,7 @@ const {
   mockUseUtils: vi.fn(),
   mockInvalidateReadiness: vi.fn(),
   mockInvalidateDocs: vi.fn(),
+  mockInvalidateDevelopmentAccess: vi.fn(),
   mockInvalidateBrandPreset: vi.fn(),
 }));
 
@@ -51,6 +57,9 @@ vi.mock('@/lib/trpc', () => ({
         getDevelopmentRequiredDocuments: {
           useQuery: (input: unknown) => mockGetDevelopmentRequiredDocumentsUseQuery(input),
         },
+        getDevelopmentAccess: {
+          useQuery: (input: unknown) => mockGetDevelopmentAccessUseQuery(input),
+        },
         getBrandOnboardingPreset: {
           useQuery: (input: unknown) => mockGetBrandOnboardingPresetUseQuery(input),
         },
@@ -65,6 +74,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         setDevelopmentRequiredDocuments: {
           useMutation: () => mockSetDevelopmentRequiredDocumentsUseMutation(),
+        },
+        setDevelopmentBrochureConfig: {
+          useMutation: () => mockSetDevelopmentBrochureConfigUseMutation(),
         },
         setBrandOnboardingPreset: {
           useMutation: () => mockSetBrandOnboardingPresetUseMutation(),
@@ -115,6 +127,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
           getDevelopmentRequiredDocuments: {
             invalidate: mockInvalidateDocs.mockResolvedValue(undefined),
           },
+          getDevelopmentAccess: {
+            invalidate: mockInvalidateDevelopmentAccess.mockResolvedValue(undefined),
+          },
           getBrandOnboardingPreset: {
             invalidate: mockInvalidateBrandPreset.mockResolvedValue(undefined),
           },
@@ -129,6 +144,11 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     });
     mockGetDevelopmentRequiredDocumentsUseQuery.mockReturnValue({
       data: [],
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    mockGetDevelopmentAccessUseQuery.mockReturnValue({
+      data: { success: true, entity: { brochureConfigJson: null } },
       isLoading: false,
       refetch: vi.fn().mockResolvedValue(undefined),
     });
@@ -149,6 +169,10 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       isPending: false,
     });
     mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ success: true }),
+      isPending: false,
+    });
+    mockSetDevelopmentBrochureConfigUseMutation.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ success: true }),
       isPending: false,
     });

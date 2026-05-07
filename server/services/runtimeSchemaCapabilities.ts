@@ -150,6 +150,7 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_development_access', columnName: 'brand_partnership_id' },
     { tableName: 'distribution_development_access', columnName: 'status' },
     { tableName: 'distribution_development_access', columnName: 'submission_allowed' },
+    { tableName: 'distribution_development_access', columnName: 'brochure_config_json' },
     { tableName: 'users' },
     { tableName: 'users', columnName: 'id' },
     { tableName: 'users', columnName: 'name' },
@@ -241,6 +242,7 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_development_access', columnName: 'excluded_by_exclusivity' },
     { tableName: 'distribution_development_access', columnName: 'reason_code' },
     { tableName: 'distribution_development_access', columnName: 'notes' },
+    { tableName: 'distribution_development_access', columnName: 'brochure_config_json' },
   ],
   'distribution.admin.getBrandPartnership': [
     { tableName: 'developer_brand_profiles' },

@@ -16,15 +16,37 @@ type ListPartnerProgramTermsInput = {
   includeDisabled?: boolean;
 };
 
+type BrochureConfig = {
+  headline?: string | null;
+  description?: string | null;
+  highlightBullets?: string[];
+  amenityLabels?: string[];
+  heroImageUrl?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+};
+
 export type PartnerProgramTermsItem = {
   developmentId: number;
   developmentName: string;
   city?: string | null;
   province?: string | null;
+  suburb?: string | null;
+  address?: string | null;
+  description?: string | null;
+  amenities?: string | null;
+  features?: unknown;
   priceFrom: number | null;
   priceTo: number | null;
   imageUrl: string | null;
-  brand: { brandProfileId: number; brandName: string } | null;
+  brochure: BrochureConfig;
+  brand: {
+    brandProfileId: number;
+    brandName: string;
+    logoUrl: string | null;
+    publicContactEmail: string | null;
+  } | null;
   program: {
     programId: number;
     isActive: boolean;
@@ -39,6 +61,9 @@ export type PartnerProgramTermsItem = {
   };
   unitTypes: Array<{
     name: string;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    unitSize: number | null;
     priceFrom: number | null;
     priceTo: number | null;
   }>;
@@ -262,8 +287,13 @@ export async function listPartnerProgramTerms(
     .select({
       developmentId: developments.id,
       developmentName: developments.name,
+      suburb: developments.suburb,
       city: developments.city,
       province: developments.province,
+      address: developments.address,
+      description: developments.description,
+      amenities: developments.amenities,
+      features: developments.features,
       developmentPriceFrom: developments.priceFrom,
       developmentPriceTo: developments.priceTo,
       developmentImages: developments.images,
@@ -281,6 +311,7 @@ export async function listPartnerProgramTerms(
       payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
       accessStatus: distributionDevelopmentAccess.status,
       submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
+      brochureConfigJson: distributionDevelopmentAccess.brochureConfigJson,
     })
     .from(developments)
     .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
@@ -311,16 +342,23 @@ export async function listPartnerProgramTerms(
         .select({
           id: developerBrandProfiles.id,
           brandName: developerBrandProfiles.brandName,
+          logoUrl: developerBrandProfiles.logoUrl,
+          publicContactEmail: developerBrandProfiles.publicContactEmail,
         })
         .from(developerBrandProfiles)
         .where(inArray(developerBrandProfiles.id, brandProfileIds))
     : [];
 
-  const brandById = new Map<number, { id: number; brandName: string }>();
+  const brandById = new Map<
+    number,
+    { id: number; brandName: string; logoUrl: string | null; publicContactEmail: string | null }
+  >();
   for (const row of brandRows) {
     brandById.set(Number(row.id), {
       id: Number(row.id),
       brandName: String(row.brandName || ''),
+      logoUrl: row.logoUrl || null,
+      publicContactEmail: row.publicContactEmail || null,
     });
   }
 
@@ -364,6 +402,9 @@ export async function listPartnerProgramTerms(
           developmentId: unitTypes.developmentId,
           name: unitTypes.name,
           displayOrder: unitTypes.displayOrder,
+          bedrooms: unitTypes.bedrooms,
+          bathrooms: unitTypes.bathrooms,
+          unitSize: unitTypes.unitSize,
           priceFrom: unitTypes.priceFrom,
           priceTo: unitTypes.priceTo,
           basePriceFrom: unitTypes.basePriceFrom,
@@ -385,6 +426,9 @@ export async function listPartnerProgramTerms(
     number,
     Array<{
       name: string;
+      bedrooms: number | null;
+      bathrooms: number | null;
+      unitSize: number | null;
       priceFrom: number | null;
       priceTo: number | null;
     }>
@@ -430,6 +474,9 @@ export async function listPartnerProgramTerms(
         const existing = currentUnitTypes[existingIndex];
         currentUnitTypes[existingIndex] = {
           name: unitName,
+          bedrooms: existing.bedrooms ?? toNumberOrNull(row.bedrooms),
+          bathrooms: existing.bathrooms ?? toNumberOrNull(row.bathrooms),
+          unitSize: existing.unitSize ?? toNumberOrNull(row.unitSize),
           priceFrom:
             existing.priceFrom === null
               ? unitPriceFrom
@@ -446,6 +493,9 @@ export async function listPartnerProgramTerms(
       } else {
         currentUnitTypes.push({
           name: unitName,
+          bedrooms: toNumberOrNull(row.bedrooms),
+          bathrooms: toNumberOrNull(row.bathrooms),
+          unitSize: toNumberOrNull(row.unitSize),
           priceFrom: unitPriceFrom,
           priceTo: unitPriceTo,
         });
@@ -474,17 +524,34 @@ export async function listPartnerProgramTerms(
     const rawPriceTo = unitPriceRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
     const priceTo =
       priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
+    const brochureConfig =
+      row.brochureConfigJson && typeof row.brochureConfigJson === 'object'
+        ? (row.brochureConfigJson as BrochureConfig)
+        : {};
 
     return {
       developmentId,
-      developmentName: String(row.developmentName || `Development #${developmentId}`),
+      developmentName:
+        String(brochureConfig.headline || '').trim() ||
+        String(row.developmentName || `Development #${developmentId}`),
+      suburb: row.suburb || null,
       city: row.city || null,
       province: row.province || null,
+      address: row.address || null,
+      description: brochureConfig.description?.trim() || row.description || null,
+      amenities: brochureConfig.amenityLabels?.length ? brochureConfig.amenityLabels : row.amenities || null,
+      features: brochureConfig.highlightBullets?.length ? brochureConfig.highlightBullets : row.features || null,
       priceFrom: priceFrom ?? null,
       priceTo: priceTo ?? null,
-      imageUrl: extractHeroImageUrl(row.developmentImages),
+      imageUrl: brochureConfig.heroImageUrl?.trim() || extractHeroImageUrl(row.developmentImages),
+      brochure: brochureConfig,
       brand: brandRecord
-        ? { brandProfileId: brandRecord.id, brandName: brandRecord.brandName }
+        ? {
+            brandProfileId: brandRecord.id,
+            brandName: brandRecord.brandName,
+            logoUrl: brandRecord.logoUrl,
+            publicContactEmail: brandRecord.publicContactEmail,
+          }
         : null,
       program: {
         programId: Number(row.programId || 0),

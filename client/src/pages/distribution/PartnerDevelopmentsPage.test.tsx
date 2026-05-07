@@ -2,17 +2,14 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerDevelopmentsPage from './PartnerDevelopmentsPage';
 
-const {
-  mockUseAuth,
-  mockUseLocation,
-  mockSetLocation,
-  mockListProgramTermsQuery,
-} = vi.hoisted(() => ({
-  mockUseAuth: vi.fn(),
-  mockUseLocation: vi.fn(),
-  mockSetLocation: vi.fn(),
-  mockListProgramTermsQuery: vi.fn(),
-}));
+const { mockUseAuth, mockUseLocation, mockSetLocation, mockListProgramTermsQuery } = vi.hoisted(
+  () => ({
+    mockUseAuth: vi.fn(),
+    mockUseLocation: vi.fn(),
+    mockSetLocation: vi.fn(),
+    mockListProgramTermsQuery: vi.fn(),
+  }),
+);
 
 vi.mock('@/_core/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth(),
@@ -56,10 +53,23 @@ describe('PartnerDevelopmentsPage', () => {
             developmentId: 101,
             developmentName: 'Hillside Gardens',
             city: 'Johannesburg',
+            suburb: 'Fourways',
             province: 'Gauteng',
+            description: 'Secure estate living close to schools, retail, and transport.',
             priceFrom: 1000000,
             priceTo: 1500000,
-            brand: { brandProfileId: 1, brandName: 'Ubuntu Homes' },
+            brand: {
+              brandProfileId: 1,
+              brandName: 'Ubuntu Homes',
+              publicContactEmail: 'sales@ubuntu.example',
+            },
+            brochure: {
+              contactName: 'Nomsa',
+              contactPhone: '071 000 0000',
+              contactEmail: 'nomsa@ubuntu.example',
+            },
+            features: ['Close to schools', 'Secure estate'],
+            amenities: ['Fibre ready'],
             program: {
               commissionModel: 'flat_percentage',
               defaultCommissionPercent: 1.5,
@@ -86,7 +96,16 @@ describe('PartnerDevelopmentsPage', () => {
                 fileName: 'brochure.pdf',
               },
             ],
-            unitTypes: [{ name: '2 Bed', priceFrom: 1000000, priceTo: 1200000 }],
+            unitTypes: [
+              {
+                name: '2 Bed',
+                bedrooms: 2,
+                bathrooms: 1,
+                unitSize: 62,
+                priceFrom: 1000000,
+                priceTo: 1200000,
+              },
+            ],
           },
         ],
       },
@@ -104,14 +123,24 @@ describe('PartnerDevelopmentsPage', () => {
     expect(screen.queryByText(/^R 0$/)).not.toBeInTheDocument();
   });
 
-  it('opens a practical brochure sales pack', () => {
+  it('opens a buyer-facing development brochure', () => {
     render(<PartnerDevelopmentsPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'View Brochure' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Brochure' }));
 
-    expect(screen.getByText('Sales Pack')).toBeInTheDocument();
-    expect(screen.getByText('Referral Reward')).toBeInTheDocument();
-    expect(screen.getByText('Application Documents')).toBeInTheDocument();
-    expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
+    expect(screen.getAllByText('Hillside Gardens')).not.toHaveLength(0);
+    expect(screen.getAllByText(/Fourways \| Johannesburg \| Gauteng/)).not.toHaveLength(0);
+    expect(screen.getByText(/Secure estate living close to schools/)).toBeInTheDocument();
+    expect(screen.getAllByText('Close to schools')).not.toHaveLength(0);
+    expect(screen.getAllByText('Secure estate')).not.toHaveLength(0);
+    expect(screen.getByText('62m2 2 bed 1 bath')).toBeInTheDocument();
+    expect(screen.getByText('R 1 000 000 - R 1 200 000')).toBeInTheDocument();
+    expect(screen.getAllByText('Estimated Bond Payment')).not.toHaveLength(0);
+    expect(screen.getAllByText('Qualifying income')).not.toHaveLength(0);
+    expect(screen.getByText('Contact Nomsa')).toBeInTheDocument();
+    expect(screen.getByText('Print / Download PDF')).toBeInTheDocument();
+    expect(screen.queryByText('Referral Reward')).not.toBeInTheDocument();
+    expect(screen.queryByText('Application Documents')).not.toBeInTheDocument();
+    expect(screen.queryByText('Buyer ID document')).not.toBeInTheDocument();
   });
 });
