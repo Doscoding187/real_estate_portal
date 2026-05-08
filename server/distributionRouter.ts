@@ -2360,7 +2360,7 @@ const adminDistributionRouter = router({
       return await runDistributionDbOperation(
         'distribution.admin.setDevelopmentBrochureConfig',
         async () => {
-          await assertDistributionSchemaReady('distribution.admin.upsertDevelopmentAccess');
+          await assertDistributionSchemaReady('distribution.admin.setDevelopmentBrochureConfig');
           assertDistributionEnabled();
           const db = await getDb();
           if (!db) throw new Error('Database not available');

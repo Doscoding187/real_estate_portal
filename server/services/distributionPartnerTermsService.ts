@@ -9,6 +9,10 @@ import {
 import { getDb } from '../db';
 import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import {
+  getDistributionSchemaReadinessSnapshot,
+  warnSchemaCapabilityOnce,
+} from './runtimeSchemaCapabilities';
 
 type ListPartnerProgramTermsInput = {
   brandProfileId?: number;
@@ -130,7 +134,11 @@ function extractHeroImageUrl(rawImages: unknown): string | null {
       const category = String((entry as any).category || '').toLowerCase();
       return category === 'hero' || category === 'featured';
     });
-    return normalize(hero) || normalize(list[0]) || (typeof list[0] === 'string' ? String(list[0]) : null);
+    return (
+      normalize(hero) ||
+      normalize(list[0]) ||
+      (typeof list[0] === 'string' ? String(list[0]) : null)
+    );
   };
 
   if (Array.isArray(rawImages)) {
@@ -142,10 +150,12 @@ function extractHeroImageUrl(rawImages: unknown): string | null {
     if (!trimmed) return null;
     if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
       if (trimmed.includes(',')) {
-        return trimmed
-          .split(',')
-          .map(item => item.trim())
-          .find(Boolean) || null;
+        return (
+          trimmed
+            .split(',')
+            .map(item => item.trim())
+            .find(Boolean) || null
+        );
       }
       return trimmed;
     }
@@ -162,7 +172,9 @@ function extractHeroImageUrl(rawImages: unknown): string | null {
   return normalize(rawImages);
 }
 
-function normalizeCommissionModel(value: unknown): PartnerProgramTermsItem['program']['commissionModel'] {
+function normalizeCommissionModel(
+  value: unknown,
+): PartnerProgramTermsItem['program']['commissionModel'] {
   const model = value ? String(value) : '';
   if (model === 'fixed_amount') return 'flat_amount';
   if (!model) return 'flat_amount';
@@ -252,6 +264,38 @@ function withConditions(conditions: SQL[]) {
   return and(...conditions) as SQL;
 }
 
+function isMissingBrochureConfigColumnError(error: unknown) {
+  let cursor: any = error;
+  const visited = new Set<unknown>();
+  while (cursor && typeof cursor === 'object' && !visited.has(cursor)) {
+    visited.add(cursor);
+    const code = String(cursor?.code || '').trim();
+    const message = String(cursor?.sqlMessage || cursor?.message || '').toLowerCase();
+    if (code === 'ER_BAD_FIELD_ERROR' && message.includes('brochure_config_json')) {
+      return true;
+    }
+    if (message.includes('unknown column') && message.includes('brochure_config_json')) {
+      return true;
+    }
+    cursor = cursor?.cause;
+  }
+  return false;
+}
+
+async function canReadBrochureConfigColumn() {
+  try {
+    const snapshot = await getDistributionSchemaReadinessSnapshot();
+    return Boolean(snapshot.operations['distribution.admin.setDevelopmentBrochureConfig']?.ready);
+  } catch (error) {
+    warnSchemaCapabilityOnce(
+      'distribution-partner-terms-brochure-config-readiness',
+      '[DistributionPartnerTerms] Could not verify brochure_config_json readiness. Continuing without brochure overrides.',
+      error,
+    );
+    return false;
+  }
+}
+
 export async function listPartnerProgramTerms(
   input: ListPartnerProgramTermsInput,
 ): Promise<{ items: PartnerProgramTermsItem[] }> {
@@ -283,8 +327,8 @@ export async function listPartnerProgramTerms(
     );
   }
 
-  const rows = await db
-    .select({
+  const selectPartnerRows = async (includeBrochureConfig: boolean) => {
+    const selectFields: Record<string, any> = {
       developmentId: developments.id,
       developmentName: developments.name,
       suburb: developments.suburb,
@@ -311,13 +355,42 @@ export async function listPartnerProgramTerms(
       payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
       accessStatus: distributionDevelopmentAccess.status,
       submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
-      brochureConfigJson: distributionDevelopmentAccess.brochureConfigJson,
-    })
-    .from(developments)
-    .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
-    .leftJoin(distributionDevelopmentAccess, eq(distributionDevelopmentAccess.developmentId, developments.id))
-    .where(withConditions(conditions))
-    .orderBy(developments.province, developments.city, developments.name);
+    };
+
+    if (includeBrochureConfig) {
+      selectFields.brochureConfigJson = distributionDevelopmentAccess.brochureConfigJson;
+    }
+
+    return (await db
+      .select(selectFields)
+      .from(developments)
+      .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
+      .leftJoin(
+        distributionDevelopmentAccess,
+        eq(distributionDevelopmentAccess.developmentId, developments.id),
+      )
+      .where(withConditions(conditions))
+      .orderBy(developments.province, developments.city, developments.name)) as Array<
+      Record<string, any>
+    >;
+  };
+
+  const includeBrochureConfig = await canReadBrochureConfigColumn();
+  let rows: Array<Record<string, any>>;
+  try {
+    rows = await selectPartnerRows(includeBrochureConfig);
+  } catch (error) {
+    if (!includeBrochureConfig || !isMissingBrochureConfigColumnError(error)) {
+      throw error;
+    }
+
+    warnSchemaCapabilityOnce(
+      'distribution-partner-terms-missing-brochure-config-column',
+      '[DistributionPartnerTerms] brochure_config_json is missing. Serving partner terms without brochure overrides until migration 0060 is applied.',
+      error,
+    );
+    rows = await selectPartnerRows(false);
+  }
 
   if (!rows.length) {
     return { items: [] };
@@ -384,7 +457,10 @@ export async function listPartnerProgramTerms(
     sourceDocsByDevelopmentId.set(
       developmentId,
       templates
-        .filter(template => template.isActive && template.category === 'developer_document' && !template.isRequired)
+        .filter(
+          template =>
+            template.isActive && template.category === 'developer_document' && !template.isRequired,
+        )
         .map(template => ({
           templateId: Number(template.id),
           documentCode: String(template.documentCode),
@@ -440,7 +516,8 @@ export async function listPartnerProgramTerms(
     const unitName = String(row.name || '').trim();
     const unitPriceFrom =
       toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
-    const fallbackTo = toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
+    const fallbackTo =
+      toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
     const unitPriceTo = fallbackTo ?? unitPriceFrom;
     if (unitPriceFrom === null && unitPriceTo === null) continue;
 
@@ -514,7 +591,8 @@ export async function listPartnerProgramTerms(
     const payoutMilestoneNotes = row.payoutMilestoneNotes ? String(row.payoutMilestoneNotes) : null;
 
     const requiredDocuments = docsByDevelopmentId.get(developmentId) || [];
-    const primaryBrandId = Number(row.developerBrandProfileId || 0) || Number(row.marketingBrandProfileId || 0);
+    const primaryBrandId =
+      Number(row.developerBrandProfileId || 0) || Number(row.marketingBrandProfileId || 0);
     const brandRecord = primaryBrandId ? brandById.get(primaryBrandId) : null;
     const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
     const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
@@ -539,8 +617,12 @@ export async function listPartnerProgramTerms(
       province: row.province || null,
       address: row.address || null,
       description: brochureConfig.description?.trim() || row.description || null,
-      amenities: brochureConfig.amenityLabels?.length ? brochureConfig.amenityLabels : row.amenities || null,
-      features: brochureConfig.highlightBullets?.length ? brochureConfig.highlightBullets : row.features || null,
+      amenities: brochureConfig.amenityLabels?.length
+        ? brochureConfig.amenityLabels
+        : row.amenities || null,
+      features: brochureConfig.highlightBullets?.length
+        ? brochureConfig.highlightBullets
+        : row.features || null,
       priceFrom: priceFrom ?? null,
       priceTo: priceTo ?? null,
       imageUrl: brochureConfig.heroImageUrl?.trim() || extractHeroImageUrl(row.developmentImages),
