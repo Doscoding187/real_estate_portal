@@ -131,13 +131,13 @@ describe('PartnerDevelopmentsPage', () => {
     expect(screen.getAllByText('Hillside Gardens')).not.toHaveLength(0);
     expect(screen.getAllByText(/Fourways \| Johannesburg \| Gauteng/)).not.toHaveLength(0);
     expect(screen.getByText(/Secure estate living close to schools/)).toBeInTheDocument();
-    expect(screen.getAllByText('Close to schools')).not.toHaveLength(0);
-    expect(screen.getAllByText('Secure estate')).not.toHaveLength(0);
+    expect(screen.getAllByText('Close To Schools')).not.toHaveLength(0);
+    expect(screen.getAllByText('Secure Estate')).not.toHaveLength(0);
     expect(screen.getByText('62m2 2 bed 1 bath')).toBeInTheDocument();
     expect(screen.getByText('R 1 000 000 - R 1 200 000')).toBeInTheDocument();
     expect(screen.getAllByText('Estimated Bond Payment')).not.toHaveLength(0);
     expect(screen.getAllByText('Qualifying income')).not.toHaveLength(0);
-    expect(screen.getByText('Contact Nomsa')).toBeInTheDocument();
+    expect(screen.queryByText('Contact Nomsa')).not.toBeInTheDocument();
     expect(screen.getByText('Print / Download PDF')).toBeInTheDocument();
     expect(screen.queryByText('Referral Reward')).not.toBeInTheDocument();
     expect(screen.queryByText('Application Documents')).not.toBeInTheDocument();
