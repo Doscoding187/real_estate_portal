@@ -72,6 +72,11 @@ function createNotReadySnapshot() {
         missingItems: ['distribution_development_access.status'],
         requiredItems: [],
       },
+      'distribution.admin.setDevelopmentBrochureConfig': {
+        ready: false,
+        missingItems: ['distribution_development_access.brochure_config_json'],
+        requiredItems: [],
+      },
       'distribution.admin.getBrandPartnership': {
         ready: false,
         missingItems: ['distribution_brand_partnerships.brand_profile_id'],
@@ -153,6 +158,24 @@ describe('distribution admin schema guards', () => {
     await expect(
       caller.admin.getDevelopmentAccess({
         developmentId: 99,
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('DISTRIBUTION_SCHEMA_NOT_READY'),
+    });
+    await expect(
+      caller.admin.setDevelopmentBrochureConfig({
+        developmentId: 99,
+        brochureConfig: {
+          headline: 'Buyer brochure',
+          description: null,
+          highlightBullets: [],
+          amenityLabels: [],
+          heroImageUrl: null,
+          contactName: null,
+          contactPhone: null,
+          contactEmail: null,
+        },
       }),
     ).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',

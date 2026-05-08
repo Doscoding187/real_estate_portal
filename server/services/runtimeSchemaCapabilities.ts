@@ -59,6 +59,7 @@ export type DistributionSchemaOperation =
   | 'distribution.admin.createManagerInvite'
   | 'distribution.admin.upsertBrandPartnership'
   | 'distribution.admin.upsertDevelopmentAccess'
+  | 'distribution.admin.setDevelopmentBrochureConfig'
   | 'distribution.admin.getBrandPartnership'
   | 'distribution.admin.getDevelopmentAccess'
   | 'distribution.admin.listDevelopmentAccess';
@@ -150,7 +151,6 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_development_access', columnName: 'brand_partnership_id' },
     { tableName: 'distribution_development_access', columnName: 'status' },
     { tableName: 'distribution_development_access', columnName: 'submission_allowed' },
-    { tableName: 'distribution_development_access', columnName: 'brochure_config_json' },
     { tableName: 'users' },
     { tableName: 'users', columnName: 'id' },
     { tableName: 'users', columnName: 'name' },
@@ -242,6 +242,10 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_development_access', columnName: 'excluded_by_exclusivity' },
     { tableName: 'distribution_development_access', columnName: 'reason_code' },
     { tableName: 'distribution_development_access', columnName: 'notes' },
+  ],
+  'distribution.admin.setDevelopmentBrochureConfig': [
+    { tableName: 'distribution_development_access' },
+    { tableName: 'distribution_development_access', columnName: 'development_id' },
     { tableName: 'distribution_development_access', columnName: 'brochure_config_json' },
   ],
   'distribution.admin.getBrandPartnership': [
