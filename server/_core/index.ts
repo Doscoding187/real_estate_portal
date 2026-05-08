@@ -77,13 +77,15 @@ async function startServer() {
     console.log('[DistributionSchema] Snapshot', distributionSchemaSnapshot);
     if (ENV.distributionNetworkEnabled && !distributionSchemaSnapshot.ready) {
       const missing = distributionSchemaSnapshot.missingItems.join(', ');
-      throw new Error(
-        `[DistributionSchema] Blocking server startup because required distribution schema items are missing: ${missing}`,
+      console.error(
+        `[DistributionSchema] Distribution routes will be guarded because required schema items are missing: ${missing}`,
       );
     }
   } catch (error) {
-    console.error('[DistributionSchema] Failed startup schema gate.', error);
-    throw error;
+    console.error(
+      '[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access.',
+      error,
+    );
   }
 
   const app = express();
