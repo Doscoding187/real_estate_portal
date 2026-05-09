@@ -84,7 +84,15 @@ type UnitTypeV2 = {
   baseMedia?: any;
 };
 
-export function FinalisationPhase() {
+interface FinalisationPhaseProps {
+  onSaveDraft?: () => Promise<void> | void;
+  isSavingDraft?: boolean;
+}
+
+export function FinalisationPhase({
+  onSaveDraft,
+  isSavingDraft = false,
+}: FinalisationPhaseProps = {}) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
@@ -1209,9 +1217,21 @@ export function FinalisationPhase() {
                 <Button
                   variant="outline"
                   className="w-full text-xs"
-                  onClick={() => toast.success('Draft saved')}
+                  disabled={isSavingDraft}
+                  onClick={async () => {
+                    if (!onSaveDraft) {
+                      toast.error('Draft save is unavailable');
+                      return;
+                    }
+
+                    try {
+                      await onSaveDraft();
+                    } catch {
+                      // Parent handler surfaces the save failure to the user.
+                    }
+                  }}
                 >
-                  Save Draft
+                  {isSavingDraft ? 'Saving...' : 'Save Draft'}
                 </Button>
               </div>
 

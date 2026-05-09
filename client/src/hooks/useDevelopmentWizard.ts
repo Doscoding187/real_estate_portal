@@ -558,6 +558,52 @@ export interface DevelopmentWizardState {
   previousStep: () => void;
 }
 
+type DraftSaveMutationInput = {
+  id?: number;
+  brandProfileId?: number;
+  draftData: any;
+};
+
+type DraftSaveMutationResult = {
+  id?: number;
+  success?: boolean;
+  draftData?: any;
+};
+
+export async function persistManualDevelopmentDraft({
+  saveDraft,
+  mutateDraft,
+  currentDraftId,
+  brandProfileId,
+  setCurrentDraftId,
+}: {
+  saveDraft: (saveCallback?: (data: any) => Promise<void>) => Promise<void>;
+  mutateDraft: (input: DraftSaveMutationInput) => Promise<DraftSaveMutationResult>;
+  currentDraftId?: number;
+  brandProfileId?: number;
+  setCurrentDraftId?: (id: number) => void;
+}) {
+  let saveResult: DraftSaveMutationResult | undefined;
+
+  await saveDraft(async draftData => {
+    saveResult = await mutateDraft({
+      ...(currentDraftId ? { id: currentDraftId } : {}),
+      ...(brandProfileId ? { brandProfileId } : {}),
+      draftData,
+    });
+  });
+
+  if (!saveResult?.success || !saveResult.id) {
+    throw new Error('Draft save failed');
+  }
+
+  if (!currentDraftId) {
+    setCurrentDraftId?.(saveResult.id);
+  }
+
+  return saveResult;
+}
+
 const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createActions>> = {
   currentPhase: 1,
   currentStep: 1,

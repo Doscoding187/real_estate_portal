@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useDevelopmentWizard } from './useDevelopmentWizard';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { persistManualDevelopmentDraft, useDevelopmentWizard } from './useDevelopmentWizard';
 
 describe('useDevelopmentWizard Validation Logic', () => {
   beforeEach(() => {
@@ -203,6 +203,65 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(draft.developmentData).toBeDefined();
       expect(draft._version).toBe('3.0');
       expect(draft._savedAt).toBeDefined();
+    });
+
+    it('manual save persists the canonical draft even when autosave is disabled', async () => {
+      const draftData = {
+        workflowId: 'residential_sale',
+        currentStepId: 'unit_types',
+        completedSteps: ['identity_market'],
+      };
+      const saveDraft = vi.fn(async callback => {
+        await callback?.(draftData);
+      });
+      const mutateDraft = vi.fn(async input => ({
+        id: 42,
+        success: true,
+        draftData: input.draftData,
+      }));
+      const setCurrentDraftId = vi.fn();
+
+      const result = await persistManualDevelopmentDraft({
+        saveDraft,
+        mutateDraft,
+        brandProfileId: 7,
+        setCurrentDraftId,
+      });
+
+      expect(saveDraft).toHaveBeenCalledTimes(1);
+      expect(mutateDraft).toHaveBeenCalledWith({
+        brandProfileId: 7,
+        draftData,
+      });
+      expect(setCurrentDraftId).toHaveBeenCalledWith(42);
+      expect(result.success).toBe(true);
+    });
+
+    it('manual save does not treat a failed server response as success', async () => {
+      const saveDraft = vi.fn(async callback => {
+        await callback?.({ workflowId: 'residential_sale' });
+      });
+      const mutateDraft = vi.fn(async input => ({
+        id: 42,
+        success: false,
+        draftData: input.draftData,
+      }));
+      const setCurrentDraftId = vi.fn();
+
+      await expect(
+        persistManualDevelopmentDraft({
+          saveDraft,
+          mutateDraft,
+          currentDraftId: 11,
+          setCurrentDraftId,
+        }),
+      ).rejects.toThrow('Draft save failed');
+
+      expect(mutateDraft).toHaveBeenCalledWith({
+        id: 11,
+        draftData: { workflowId: 'residential_sale' },
+      });
+      expect(setCurrentDraftId).not.toHaveBeenCalled();
     });
 
     it('hydrateDevelopment restores draft workflow state and completed steps', () => {

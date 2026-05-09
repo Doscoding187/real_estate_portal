@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 
@@ -7,6 +7,7 @@ import {
   useDevelopmentWizard,
   DEVELOPMENT_WIZARD_STORAGE_KEY,
   PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY,
+  persistManualDevelopmentDraft,
 } from '@/hooks/useDevelopmentWizard';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { DraftManager } from '@/components/wizard/DraftManager';
@@ -67,6 +68,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [apiError, setApiError] = useState<AppError | null>(null);
+  const utils = trpc.useUtils();
 
   const store = useDevelopmentWizard();
   const [persistReady, setPersistReady] = useState(() => {
@@ -149,6 +151,33 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       });
     },
   });
+
+  const handleManualSaveDraft = useCallback(async () => {
+    try {
+      setApiError(null);
+      const result = await persistManualDevelopmentDraft({
+        saveDraft,
+        mutateDraft: input => saveDraftMutation.mutateAsync(input),
+        currentDraftId,
+        brandProfileId,
+        setCurrentDraftId,
+      });
+
+      await Promise.all([
+        utils.developer.getDrafts.invalidate(),
+        result.id ? utils.developer.getDraft.invalidate({ id: result.id }) : Promise.resolve(),
+      ]);
+
+      toast.success('Draft saved');
+    } catch (error) {
+      const parsed = parseError(error);
+      setApiError(parsed);
+      toast.error('Unable to save draft', {
+        description: parsed.message,
+      });
+      throw error;
+    }
+  }, [brandProfileId, currentDraftId, saveDraft, saveDraftMutation, utils]);
 
   // Save on phase transition (only after hydration)
   const prevPhaseRef = useRef(currentPhase);
@@ -373,6 +402,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     return (
       <WizardEngine
         onExit={() => setShowExitDialog(true)}
+        onSaveDraft={handleManualSaveDraft}
+        isSavingDraft={saveDraftMutation.isPending}
         saveStatus={isSaving ? 'saving' : autoSaveError ? 'error' : 'saved'}
         lastSavedAt={lastSaved}
       />

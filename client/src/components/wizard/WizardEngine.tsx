@@ -30,11 +30,19 @@ const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
 interface WizardEngineProps {
   onExit?: () => void;
+  onSaveDraft?: () => Promise<void> | void;
+  isSavingDraft?: boolean;
   saveStatus?: 'saved' | 'saving' | 'error';
   lastSavedAt?: Date;
 }
 
-export function WizardEngine({ onExit, saveStatus, lastSavedAt }: WizardEngineProps) {
+export function WizardEngine({
+  onExit,
+  onSaveDraft,
+  isSavingDraft,
+  saveStatus,
+  lastSavedAt,
+}: WizardEngineProps) {
   const {
     workflowId,
     currentStepId,
@@ -127,7 +135,7 @@ export function WizardEngine({ onExit, saveStatus, lastSavedAt }: WizardEnginePr
             {' '}
             {/* Add bottom margin for fixed footer if we had one, or just spacing */}
             {StepComponent ? (
-              <StepComponent />
+              <StepComponent onSaveDraft={onSaveDraft} isSavingDraft={isSavingDraft} />
             ) : (
               <div className="text-center p-12 bg-slate-50 border border-dashed rounded-lg">
                 Component {currentStep.componentKey} not found
