@@ -1568,7 +1568,7 @@ export async function updateDevelopment(
   if (unitTypesData !== undefined) {
     if (Array.isArray(unitTypesData)) {
       if (unitTypesData.length === 0) {
-        console.warn('[updateDevelopment] Empty unitTypes - preserving existing (no delete)');
+        console.warn('[updateDevelopment] Empty unitTypes - deleting all existing unit types');
       }
       await persistUnitTypes(db, id, unitTypesData);
     } else {
@@ -1661,8 +1661,8 @@ export async function persistUnitTypes(
     );
   }
 
-  if (!unitTypesData || unitTypesData.length === 0) {
-    console.log('[persistUnitTypes] Empty payload - preserving existing units');
+  if (!unitTypesData) {
+    console.log('[persistUnitTypes] Missing payload - preserving existing units');
     return;
   }
 
@@ -1676,6 +1676,14 @@ export async function persistUnitTypes(
   const existingIds = new Set<string>(
     existingUnits.map((u: any) => String(u.id ?? '').trim()).filter(Boolean),
   );
+
+  if (unitTypesData.length === 0) {
+    if (existingIds.size > 0) {
+      console.log(`[persistUnitTypes] Empty array payload - deleting ${existingIds.size} units`);
+      await db.delete(unitTypes).where(eq(unitTypes.developmentId, developmentId));
+    }
+    return;
+  }
 
   const normalizedIncoming = unitTypesData.map(u => ({
     ...u,

@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useDevelopmentWizard } from './useDevelopmentWizard';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { persistManualDevelopmentDraft, useDevelopmentWizard } from './useDevelopmentWizard';
 
 describe('useDevelopmentWizard Validation Logic', () => {
   beforeEach(() => {
@@ -165,6 +165,182 @@ describe('useDevelopmentWizard Validation Logic', () => {
       const validation = result.current.validateForPublish();
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain('At least 1 image is required');
+    });
+  });
+
+  describe('Canonical draft snapshot', () => {
+    it('getDraftData includes workflow state, stepData, developmentData, and canonical unitTypes', () => {
+      const { result } = renderHook(() => useDevelopmentWizard());
+
+      act(() => {
+        result.current.initializeWorkflow('residential', 'for_sale');
+        useDevelopmentWizard.setState({
+          currentStepId: 'unit_types' as any,
+          completedSteps: ['identity_market', 'configuration'] as any,
+        });
+        result.current.saveWorkflowStepData('unit_types' as any, {
+          unitTypes: [
+            {
+              id: 'db-unit-1',
+              name: 'Type A',
+              bedrooms: 2,
+              bathrooms: 2,
+              priceFrom: 1500000,
+              totalUnits: 10,
+              availableUnits: 8,
+            },
+          ],
+        });
+      });
+
+      const draft = result.current.getDraftData();
+
+      expect(draft.workflowId).toBe('residential_sale');
+      expect(draft.currentStepId).toBe('unit_types');
+      expect(draft.completedSteps).toEqual(['identity_market', 'configuration']);
+      expect(draft.stepData.unit_types.unitTypes[0].id).toBe('db-unit-1');
+      expect(draft.unitTypes[0].id).toBe('db-unit-1');
+      expect(draft.developmentData).toBeDefined();
+      expect(draft._version).toBe('3.0');
+      expect(draft._savedAt).toBeDefined();
+    });
+
+    it('manual save persists the canonical draft even when autosave is disabled', async () => {
+      const draftData = {
+        workflowId: 'residential_sale',
+        currentStepId: 'unit_types',
+        completedSteps: ['identity_market'],
+      };
+      const saveDraft = vi.fn(async callback => {
+        await callback?.(draftData);
+      });
+      const mutateDraft = vi.fn(async input => ({
+        id: 42,
+        success: true,
+        draftData: input.draftData,
+      }));
+      const setCurrentDraftId = vi.fn();
+
+      const result = await persistManualDevelopmentDraft({
+        saveDraft,
+        mutateDraft,
+        brandProfileId: 7,
+        setCurrentDraftId,
+      });
+
+      expect(saveDraft).toHaveBeenCalledTimes(1);
+      expect(mutateDraft).toHaveBeenCalledWith({
+        brandProfileId: 7,
+        draftData,
+      });
+      expect(setCurrentDraftId).toHaveBeenCalledWith(42);
+      expect(result.success).toBe(true);
+    });
+
+    it('manual save does not treat a failed server response as success', async () => {
+      const saveDraft = vi.fn(async callback => {
+        await callback?.({ workflowId: 'residential_sale' });
+      });
+      const mutateDraft = vi.fn(async input => ({
+        id: 42,
+        success: false,
+        draftData: input.draftData,
+      }));
+      const setCurrentDraftId = vi.fn();
+
+      await expect(
+        persistManualDevelopmentDraft({
+          saveDraft,
+          mutateDraft,
+          currentDraftId: 11,
+          setCurrentDraftId,
+        }),
+      ).rejects.toThrow('Draft save failed');
+
+      expect(mutateDraft).toHaveBeenCalledWith({
+        id: 11,
+        draftData: { workflowId: 'residential_sale' },
+      });
+      expect(setCurrentDraftId).not.toHaveBeenCalled();
+    });
+
+    it('hydrateDevelopment restores draft workflow state and completed steps', () => {
+      const { result } = renderHook(() => useDevelopmentWizard());
+
+      act(() => {
+        result.current.hydrateDevelopment({
+          _version: '3.0',
+          workflowId: 'residential_sale',
+          currentStepId: 'unit_types',
+          completedSteps: ['identity_market', 'configuration'],
+          developmentType: 'residential',
+          developmentData: {
+            name: 'Drafted Development',
+            description: 'A draft with workflow state',
+            transactionType: 'for_sale',
+            status: 'selling',
+            location: {
+              address: '1 Main Road',
+              city: 'Cape Town',
+              province: 'Western Cape',
+            },
+            media: { photos: [], videos: [], documents: [] },
+          },
+          stepData: {
+            identity_market: {
+              name: 'Drafted Development',
+              transactionType: 'for_sale',
+            },
+            unit_types: {
+              unitTypes: [{ id: 'db-unit-1', name: 'Type A', bedrooms: 2, bathrooms: 2 }],
+            },
+          },
+          unitTypes: [{ id: 'db-unit-1', name: 'Type A', bedrooms: 2, bathrooms: 2 }],
+        });
+      });
+
+      expect(result.current.workflowId).toBe('residential_sale');
+      expect(result.current.currentStepId).toBe('unit_types');
+      expect(result.current.completedSteps).toEqual(['identity_market', 'configuration']);
+      expect(result.current.stepData.unit_types.unitTypes[0].id).toBe('db-unit-1');
+      expect(result.current.unitTypes[0].id).toBe('db-unit-1');
+    });
+
+    it('DB edit hydration ignores stale local workflow step', () => {
+      const { result } = renderHook(() => useDevelopmentWizard());
+
+      act(() => {
+        useDevelopmentWizard.setState({
+          workflowId: 'residential_rent' as any,
+          currentStepId: 'review_publish' as any,
+          completedSteps: ['configuration', 'identity_market', 'location'] as any,
+        });
+
+        result.current.hydrateDevelopment({
+          id: 123,
+          name: 'DB Development',
+          description: 'A DB edit row without a saved wizard snapshot',
+          developmentType: 'residential',
+          transactionType: 'for_sale',
+          status: 'selling',
+          address: '1 Main Road',
+          city: 'Cape Town',
+          province: 'Western Cape',
+          unitTypes: [{ id: 'db-unit-1', name: 'Type A', bedrooms: 2, bathrooms: 2 }],
+        });
+      });
+
+      expect(result.current.workflowId).toBeNull();
+      expect(result.current.currentStepId).toBeNull();
+      expect(result.current.completedSteps).toEqual([]);
+
+      act(() => {
+        result.current.initializeWorkflow('residential', 'for_sale');
+      });
+
+      expect(result.current.workflowId).toBe('residential_sale');
+      expect(result.current.currentStepId).toBe('configuration');
+      expect(result.current.currentStepId).not.toBe('review_publish');
     });
   });
 });
