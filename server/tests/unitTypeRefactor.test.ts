@@ -139,9 +139,18 @@ describeWithDb('Unit Type Refactoring Integration', () => {
     expect(Number(typeB.basePriceFrom)).toBe(2500000);
     expect(typeB.parkingType).toBe('garage');
     expect(typeB.parkingBays).toBe(2);
-  });
+  }, 30000);
 
   it('should handle UPSERT (Update existing unit)', async () => {
+    await developmentService.updateDevelopment(createdDevId, testUserId, {
+      name: 'Integration Test Dev Refactor Renamed',
+    } as any);
+
+    const renamed = await developmentService.getDevelopmentWithPhases(createdDevId);
+    expect(renamed.name).toBe('Integration Test Dev Refactor Renamed');
+    expect(renamed.description).toBe(TEST_DEV_DATA.description);
+    expect(renamed.city).toBe(TEST_DEV_DATA.city);
+
     const fetched = await developmentService.getDevelopmentWithPhases(createdDevId);
     const typeA = fetched.unitTypes.find(u => u.name === 'Type A - V2');
 
@@ -164,8 +173,20 @@ describeWithDb('Unit Type Refactoring Integration', () => {
     const updatedDev = await developmentService.getDevelopmentWithPhases(createdDevId);
     const updatedTypeA = updatedDev.unitTypes.find(u => u.name === 'Type A - V2');
 
+    expect(updatedDev.unitTypes).toHaveLength(1);
     expect(Number(updatedTypeA.basePriceFrom)).toBe(1600000);
     expect(updatedTypeA.parkingType).toBe('carport');
     expect(updatedTypeA.parkingBays).toBe(1);
-  });
+    expect(updatedTypeA.id).toBe(typeA.id);
+    expect(updatedDev.unitTypes.find(u => u.name === 'Type B - Garage')).toBeUndefined();
+  }, 30000);
+
+  it('should delete all unit types when update sends an explicit empty array', async () => {
+    await developmentService.updateDevelopment(createdDevId, testUserId, {
+      unitTypes: [],
+    } as any);
+
+    const updatedDev = await developmentService.getDevelopmentWithPhases(createdDevId);
+    expect(updatedDev.unitTypes).toHaveLength(0);
+  }, 30000);
 });

@@ -1468,8 +1468,23 @@ const createActions = (
 
     hydrateDevelopment: (data: any) =>
       set(state => {
-        const isDraft = data.draftData !== undefined;
-        const source = isDraft ? (data as any).draftData : data;
+        const hasCanonicalSnapshot = Boolean(
+          data?.workflowId || data?.currentStepId || data?.stepData || data?._version,
+        );
+        const isDraft = data.draftData !== undefined || (!data?.id && hasCanonicalSnapshot);
+        const source = data.draftData !== undefined ? (data as any).draftData : data;
+        const snapshotSource = source;
+        const sourceWorkflowId =
+          typeof snapshotSource?.workflowId === 'string' && snapshotSource.workflowId.trim()
+            ? snapshotSource.workflowId
+            : null;
+        const sourceCurrentStepId =
+          typeof snapshotSource?.currentStepId === 'string' && snapshotSource.currentStepId.trim()
+            ? snapshotSource.currentStepId
+            : null;
+        const sourceCompletedSteps = Array.isArray(snapshotSource?.completedSteps)
+          ? snapshotSource.completedSteps
+          : [];
 
         if (!source) {
           console.error('[hydrateDevelopment] No data provided');
@@ -1913,9 +1928,7 @@ const createActions = (
           max: toNumber(estateSpecs?.rightsAndTaxes?.max ?? source.ratesTo ?? 0, 0),
         };
 
-        const hydratedStepData = isDraft
-          ? (source.stepData ?? state.stepData)
-          : {
+        const reconstructedStepData = {
               identity_market: {
                 name: canonicalDevelopmentData.name,
                 subtitle: canonicalDevelopmentData.subtitle,
@@ -1954,6 +1967,20 @@ const createActions = (
               },
               unit_types: { unitTypes: hydratedUnitTypes },
             };
+        const hydratedStepData = snapshotSource?.stepData
+          ? {
+              ...reconstructedStepData,
+              ...snapshotSource.stepData,
+              unit_types: {
+                ...(reconstructedStepData.unit_types ?? {}),
+                ...(snapshotSource.stepData.unit_types ?? {}),
+                unitTypes:
+                  snapshotSource.stepData.unit_types?.unitTypes ??
+                  snapshotSource.unitTypes ??
+                  hydratedUnitTypes,
+              },
+            }
+          : reconstructedStepData;
 
         // ============================================================================
         // Return Complete Hydrated State
@@ -1964,7 +1991,7 @@ const createActions = (
           // Only set phase for draft resume (not edit mode)
           currentPhase: isDraft
             ? source.currentPhase || state.currentPhase || 1
-            : state.currentPhase,
+            : 1,
 
           developmentData: canonicalDevelopmentData,
           residentialConfig: hydratedResidentialConfig,
@@ -1977,6 +2004,9 @@ const createActions = (
           overview: hydratedOverview,
           classification: hydratedClassification,
           stepData: hydratedStepData,
+          workflowId: sourceWorkflowId,
+          currentStepId: sourceCurrentStepId,
+          completedSteps: sourceCompletedSteps,
 
           developmentType:
             source.developmentType === 'mixed_use'
@@ -2225,7 +2255,22 @@ const createActions = (
     // IMPORTANT: Canonical Draft Data Getter (Centralized Payload)
     getDraftData: () => {
       const state = get();
+      const canonicalUnitTypes = state.stepData?.unit_types?.unitTypes ?? state.unitTypes ?? [];
       return {
+        // Canonical workflow snapshot for server drafts.
+        workflowId: state.workflowId,
+        currentStepId: state.currentStepId,
+        completedSteps: state.completedSteps,
+        stepData: {
+          ...state.stepData,
+          unit_types: {
+            ...(state.stepData?.unit_types ?? {}),
+            unitTypes: canonicalUnitTypes,
+          },
+        },
+        currentPhase: state.currentPhase,
+        currentStep: state.currentStep,
+
         // Core data (persisted)
         developmentData: {
           ...state.developmentData,
@@ -2241,7 +2286,7 @@ const createActions = (
         // Spec Variation drafts
         unitTypeDraft: state.unitTypeDraft,
         overview: state.overview,
-        unitTypes: state.unitTypes,
+        unitTypes: canonicalUnitTypes,
         finalisation: state.finalisation,
 
         // Configuration slices
@@ -2254,7 +2299,7 @@ const createActions = (
         selectedAmenities: state.selectedAmenities,
         unitGroups: state.unitGroups,
 
-        // Metadata (NOT UI state like currentPhase)
+        // Metadata
         _version: '3.0', // Schema version for migrations
         _savedAt: Date.now(),
       };

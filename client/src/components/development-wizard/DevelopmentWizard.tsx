@@ -265,16 +265,29 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       editData.transactionType ?? editData.developmentData?.transactionType ?? 'for_sale';
 
     if (devType && txType) {
-      initializeWorkflow(devType, txType);
+      const hydratedState = useDevelopmentWizard.getState();
+      const sourceStepId =
+        typeof editData.currentStepId === 'string' && editData.currentStepId.trim()
+          ? editData.currentStepId
+          : null;
+      const sourceCompletedSteps = Array.isArray(editData.completedSteps)
+        ? editData.completedSteps
+        : [];
+      const stableWorkflowId = hydratedState.workflowId;
+
+      if (!stableWorkflowId) {
+        initializeWorkflow(devType, txType);
+      }
 
       const wizardData = useDevelopmentWizard.getState().getWizardData();
       const workflow = getWorkflow(wizardData);
       const visibleSteps = workflow ? getVisibleSteps(workflow, wizardData) : [];
 
       const preferredStepId =
-        wizardData.currentStepId ??
-        visibleSteps.find(step => !wizardData.completedSteps?.includes(step.id))?.id ??
-        visibleSteps[0]?.id;
+        sourceStepId && visibleSteps.some(step => step.id === sourceStepId)
+          ? sourceStepId
+          : (visibleSteps.find(step => !sourceCompletedSteps.includes(step.id))?.id ??
+            visibleSteps[0]?.id);
 
       if (preferredStepId) setWorkflowStep(preferredStepId);
     }
