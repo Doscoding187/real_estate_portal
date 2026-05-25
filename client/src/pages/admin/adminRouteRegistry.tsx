@@ -39,6 +39,7 @@ const CreateCampaignWizard = lazy(() => import('./CreateCampaignWizard'));
 const CampaignDetailsPage = lazy(() => import('./CampaignDetailsPage'));
 const CampaignInsights = lazy(() => import('./CampaignInsights'));
 const AnalyticsPage = lazy(() => import('./AnalyticsPage'));
+const LeadRoutingReviewPage = lazy(() => import('./LeadRoutingReviewPage'));
 const DiscoveryOpsPage = lazy(() => import('./DiscoveryOpsPage'));
 const AgentOsReadinessPage = lazy(() => import('./AgentOsReadinessPage'));
 const AgentInventoryBoundaryPage = lazy(() => import('./AgentInventoryBoundaryPage'));
@@ -111,6 +112,7 @@ const ROUTES = {
   marketingDetails: { path: '/admin/marketing/:id', render: () => <CampaignDetailsPage /> },
 
   analytics: { path: '/admin/analytics', render: () => <AnalyticsPage /> },
+  leadRoutingReview: { path: '/admin/lead-routing', render: () => <LeadRoutingReviewPage /> },
   discoveryOps: { path: '/admin/discovery-ops', render: () => <DiscoveryOpsPage /> },
   agentOsReadiness: { path: '/admin/agent-os-readiness', render: () => <AgentOsReadinessPage /> },
   inventoryBoundary: {
@@ -175,6 +177,7 @@ export const ADMIN_DASHBOARD_ROUTES: AdminDashboardRoute[] = [
   ROUTES.marketingDetails,
   ROUTES.marketing,
   ROUTES.analytics,
+  ROUTES.leadRoutingReview,
   ROUTES.discoveryOps,
   ROUTES.agentOsReadiness,
   ROUTES.inventoryBoundary,
@@ -237,6 +240,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: Activity,
     items: [
       { label: 'Platform Analytics', path: ROUTES.analytics.path, icon: BarChart3 },
+      { label: 'Lead Routing Review', path: ROUTES.leadRoutingReview.path, icon: Activity },
       { label: 'Discovery Ops', path: ROUTES.discoveryOps.path, icon: Activity },
       { label: 'Agent OS Readiness', path: ROUTES.agentOsReadiness.path, icon: CheckCircle },
       { label: 'Inventory Boundary', path: ROUTES.inventoryBoundary.path, icon: Layers },

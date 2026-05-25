@@ -109,6 +109,7 @@ const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
 const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
 const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
+const DevelopmentLeadFunnelPage = lazy(() => import('./pages/DevelopmentLeadFunnelPage'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 const DeveloperSetupWizardEnhanced = lazy(
   () => import('./components/developer/DeveloperSetupWizardEnhanced'),
@@ -369,6 +370,8 @@ function Router() {
 
           {/* Canonical Developments Root */}
           <Route path="/new-developments" component={DevelopmentsDemo} />
+          <Route path="/campaign/:slug" component={DevelopmentLeadFunnelPage} />
+          <Route path="/developments/qualify" component={DevelopmentLeadFunnelPage} />
           {/* Redirect Legacy /developments to /new-developments */}
           <Route
             path="/developments"

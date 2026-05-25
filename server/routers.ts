@@ -245,6 +245,7 @@ import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
+import { leadRoutingRouter } from './leadRoutingRouter';
 import { distributionRouter } from './distributionRouter';
 import { demandRouter } from './demandRouter';
 import { servicesEngineRouter } from './servicesEngineRouter';
@@ -293,6 +294,7 @@ export const appRouter = router({
   favorites: favoritesRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,
+  leadRouting: leadRoutingRouter,
   distribution: distributionRouter,
   demand: demandRouter,
   servicesEngine: servicesEngineRouter,
