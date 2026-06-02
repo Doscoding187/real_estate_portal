@@ -42,7 +42,7 @@ export const uploadRouter = router({
         // Build the public URL using CloudFront if configured, otherwise S3 bucket URL
         const cdnUrl =
           ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-        const publicUrl = `${cdnUrl}/${result.key}`;
+        const publicUrl = result.publicUrl || `${cdnUrl}/${result.key}`;
 
         return {
           url: result.uploadUrl,

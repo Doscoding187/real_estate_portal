@@ -132,3 +132,6 @@ rg-meta-output*.txt
 vitest.*.timestamp-*.mjs
 trpc-*.txt
 mcps/
+
+# Local manual QA uploads
+local-uploads/

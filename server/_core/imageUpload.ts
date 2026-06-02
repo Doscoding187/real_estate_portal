@@ -11,6 +11,7 @@ import { PutObjectCommand, S3Client, DeleteObjectCommand } from '@aws-sdk/client
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
+import { createLocalUploadTarget } from './localUpload';
 
 // Check if AWS S3 is configured
 const useS3 = Boolean(
@@ -207,8 +208,13 @@ export async function generatePresignedUploadUrl(
   filename: string,
   contentType: string,
   propertyId: string,
-): Promise<{ uploadUrl: string; key: string }> {
+): Promise<{ uploadUrl: string; key: string; publicUrl?: string }> {
   if (!useS3 || !s3Client) {
+    if (!ENV.isProduction) {
+      console.log('[Upload] AWS S3 not configured; using local development upload storage.');
+      return createLocalUploadTarget(filename, contentType, propertyId);
+    }
+
     throw new Error(
       'AWS S3 is not configured. Please check your environment variables (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET_NAME)',
     );

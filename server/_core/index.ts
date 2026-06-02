@@ -14,6 +14,7 @@ import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
+import { registerLocalUploadRoutes } from './localUpload';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import sitemapRouter from '../routes/sitemap';
@@ -190,6 +191,7 @@ async function startServer() {
   registerAuthRoutes(app);
   app.use('/api/agent', agentOnboardingRouter);
   registerHealthEndpoint(app);
+  registerLocalUploadRoutes(app);
   registerVersionEndpoint(app);
 
   app.get('/api/test', async (req, res) => {

@@ -581,7 +581,7 @@ export const listingRouter = router({
         const { ENV } = await import('./_core/env');
         const cdnUrl =
           ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-        const publicUrl = `${cdnUrl}/${result.key}`;
+        const publicUrl = result.publicUrl || `${cdnUrl}/${result.key}`;
 
         return {
           uploadUrl: result.uploadUrl,
