@@ -738,7 +738,7 @@ export interface Property {
   city: string;
   province: string;
   propertyType: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
-  listingType: 'sale' | 'rent';
+  listingType: 'sale' | 'rent' | 'auction';
   listingSource?: 'manual' | 'development';
   listerType?: 'agent' | 'agency' | 'private';
   bedrooms?: number;
@@ -895,6 +895,7 @@ export interface DevelopmentDerivedListing {
   id: string;
   unitTypeId: string;
   developmentId: number;
+  unitDisplayOrder?: number;
   rankingScore?: number;
   href?: string;
   title: string;
@@ -984,6 +985,7 @@ export interface SearchCardResult {
   suburb: string;
   province: string;
   price: number;
+  priceTo?: number;
   image: string;
   images: ImageUrls[];
   description?: string;
@@ -1001,6 +1003,7 @@ export interface SearchCardResult {
   developerBrand?: SearchCardDeveloperBrandRef;
   highlights: string[];
   badges?: string[];
+  availableUnits?: number;
   imageCount?: number;
   videoCount?: number;
   transactionType?: string;
@@ -1009,6 +1012,8 @@ export interface SearchCardResult {
   longitude?: number;
   propertyId?: number;
   developmentId?: number;
+  unitTypeId?: string;
+  unitDisplayOrder?: number;
 }
 
 // Saved search

@@ -7,9 +7,31 @@ import type {
   DevelopmentNature,
   MarketingRole,
 } from '@/types/wizardTypes';
-import { AMENITY_REGISTRY } from '@/config/amenityRegistry';
 import { WorkflowId, WizardStepId, WizardData } from '@/lib/types/wizard-workflows';
 import { WORKFLOWS, getWorkflow, getVisibleSteps } from '@/lib/workflows';
+import { normalizeDevelopmentTransactionType } from '@/lib/developmentTransactionPayload';
+import {
+  buildCanonicalDraftSnapshot,
+  buildUnitTypesStepData,
+  getCanonicalUnitTypesFromState,
+  normalizeUnitTypesForState,
+} from '@/lib/developmentDraftSnapshot';
+import {
+  buildHydratedDevelopmentDataUpdates,
+  buildHydratedStepData,
+  hydrateDevelopmentConfigs,
+  normalizeHydratedUnitTypeForState,
+} from '@/lib/developmentHydrationAdapter';
+import {
+  firstDefined,
+  getCanonicalDevelopmentEditTargetId,
+  getCanonicalDevelopmentConfiguration,
+  getCanonicalDevelopmentUnitTypes,
+  isPlainObject,
+  parseCanonicalJsonValue,
+} from '../../../shared/developmentCanonicalSelectors';
+import { normalizeDevelopmentWorkflowState } from '../../../shared/developmentWorkflow';
+import { getDevelopmentPublishReadinessSummary } from '../../../shared/developmentReadiness';
 
 export const DEVELOPMENT_WIZARD_STORAGE_KEY = 'development-wizard-storage-v2';
 export const PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY = 'publisher-development-wizard-storage-v1';
@@ -132,15 +154,21 @@ const normalizeTransactionType = (
   type: any,
 ): import('@/types/wizardTypes').TransactionType | undefined => {
   if (!type) return undefined;
-  if (type === 'sale') return 'for_sale';
-  if (type === 'rent') return 'for_rent';
-  return type as import('@/types/wizardTypes').TransactionType;
+  return normalizeDevelopmentTransactionType(type) as import('@/types/wizardTypes').TransactionType;
 };
 
 const getCompatibleTransactionTypes = (devType: string) => {
   if (devType === 'commercial') return ['for_sale', 'for_rent', 'auction'];
   if (devType === 'residential') return ['for_sale', 'for_rent', 'auction'];
   return ['for_sale', 'for_rent'];
+};
+
+const resolveHydrationUnitTypes = (snapshotSource: any, source: any) => {
+  return getCanonicalDevelopmentUnitTypes({
+    ...source,
+    stepData: snapshotSource?.stepData,
+    unitTypes: source?.unitTypes,
+  });
 };
 
 // UNIT TYPE DEFINITION
@@ -453,6 +481,7 @@ export interface DevelopmentWizardState {
   developerId?: number;
   draftId?: number;
   editingId?: number; // ID of development being edited
+  persistedEditSnapshot?: Record<string, any> | null;
 
   // NEW: Unit Type Draft (Persistence against accidental closing)
   unitTypeDraft?: Partial<UnitType> | null;
@@ -506,6 +535,7 @@ export interface DevelopmentWizardState {
 
   // Hydration (For Edit Mode)
   hydrateDevelopment: (data: any) => void;
+  markEditSnapshotPersisted: () => void;
 
   // Legacy Actions (Stubs/Aliases)
   setDevelopmentData: (data: any) => void;
@@ -541,6 +571,7 @@ export interface DevelopmentWizardState {
     txType: 'for_sale' | 'for_rent' | 'auction',
   ) => void;
   getDraftData: () => any; // Returns the consolidated draft data
+  getPersistedEditSnapshot: () => Record<string, any> | null;
 
   // Canonical-first getter for unitTypes (prevents stale UI reads)
   getUnitTypes: () => UnitType[];
@@ -673,6 +704,7 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
   documents: [],
   infrastructure: [],
   phaseDetails: {},
+  persistedEditSnapshot: null,
 
   // Workflow Defaults
   workflowId: null,
@@ -818,6 +850,62 @@ const createActions = (
 
       transactionType,
     } as WizardData;
+  };
+
+  const buildCanonicalDraftDataFromState = (
+    state: DevelopmentWizardState,
+    options: { savedAt?: number } = {},
+  ) => {
+    const canonicalSnapshot = buildCanonicalDraftSnapshot({
+      state,
+      normalizeTransactionType,
+      fallbackDevelopmentData: initialState.developmentData,
+    });
+
+    return {
+      // Canonical workflow snapshot for server drafts.
+      workflowId: canonicalSnapshot.workflowId,
+      currentStepId: canonicalSnapshot.currentStepId,
+      completedSteps: canonicalSnapshot.completedSteps,
+      stepData: canonicalSnapshot.stepData,
+      currentPhase: state.currentPhase,
+      currentStep: state.currentStep,
+      ...(canonicalSnapshot.editingId
+        ? {
+            editingId: canonicalSnapshot.editingId,
+            developmentId: canonicalSnapshot.developmentId,
+          }
+        : {}),
+
+      // Core data (persisted)
+      developmentData: canonicalSnapshot.developmentData,
+      classification: state.classification,
+      // Workflow-Specific Fields (Phase 2B)
+      name: canonicalSnapshot.developmentData.name,
+      status: canonicalSnapshot.developmentData.status,
+      marketingRole: canonicalSnapshot.developmentData.marketingRole,
+      ownershipTypes: canonicalSnapshot.developmentData.ownershipTypes,
+
+      // Spec Variation drafts
+      unitTypeDraft: state.unitTypeDraft,
+      overview: state.overview,
+      unitTypes: canonicalSnapshot.unitTypes,
+      finalisation: state.finalisation,
+
+      // Configuration slices
+      listingIdentity: state.listingIdentity,
+      developmentType: state.developmentType,
+      residentialConfig: state.residentialConfig,
+      landConfig: state.landConfig,
+      commercialConfig: state.commercialConfig,
+
+      selectedAmenities: state.selectedAmenities,
+      unitGroups: state.unitGroups,
+
+      // Metadata
+      _version: '3.0',
+      ...(options.savedAt !== undefined ? { _savedAt: options.savedAt } : {}),
+    };
   };
 
   return {
@@ -1011,7 +1099,8 @@ const createActions = (
     setResidentialConfig: (data: Partial<DevelopmentWizardState['residentialConfig']>) =>
       set(state => {
         const nextResidentialConfig = { ...state.residentialConfig, ...data };
-        const derivedPropertyTypes = derivePropertyTypesFromResidentialConfig(nextResidentialConfig);
+        const derivedPropertyTypes =
+          derivePropertyTypesFromResidentialConfig(nextResidentialConfig);
 
         if (!derivedPropertyTypes) {
           return { residentialConfig: nextResidentialConfig };
@@ -1043,47 +1132,53 @@ const createActions = (
     // Unit Actions
     addUnitType: (unitType: Omit<UnitType, 'id'>) =>
       set(state => {
+        const currentUnits = getCanonicalUnitTypesFromState(state);
         const newUnit = {
           ...unitType,
           id: `unit-${Date.now()}`,
           specs: [],
-          displayOrder: state.unitTypes.length,
+          displayOrder: currentUnits.length,
           isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         } as UnitType;
 
-        const nextUnits = [...state.unitTypes, newUnit];
+        const nextUnits = normalizeUnitTypesForState(
+          state,
+          [...currentUnits, newUnit],
+          normalizeTransactionType,
+        );
         return {
           unitTypes: nextUnits,
-          stepData: {
-            ...state.stepData,
-            unit_types: { ...state.stepData?.unit_types, unitTypes: nextUnits },
-          },
+          stepData: buildUnitTypesStepData(state, nextUnits),
         };
       }),
 
     updateUnitType: (id: string, updates: Partial<UnitType>) =>
       set(state => {
-        const nextUnits = state.unitTypes.map(u => (u.id === id ? { ...u, ...updates } : u));
+        const currentUnits = getCanonicalUnitTypesFromState(state);
+        const nextUnits = normalizeUnitTypesForState(
+          state,
+          currentUnits.map(u => (u.id === id ? { ...u, ...updates } : u)),
+          normalizeTransactionType,
+        );
         return {
           unitTypes: nextUnits,
-          stepData: {
-            ...state.stepData,
-            unit_types: { ...state.stepData?.unit_types, unitTypes: nextUnits },
-          },
+          stepData: buildUnitTypesStepData(state, nextUnits),
         };
       }),
 
     removeUnitType: (id: string) =>
       set(state => {
-        const nextUnits = state.unitTypes.filter(u => u.id !== id);
+        const currentUnits = getCanonicalUnitTypesFromState(state);
+        const nextUnits = normalizeUnitTypesForState(
+          state,
+          currentUnits.filter(u => u.id !== id),
+          normalizeTransactionType,
+        );
         return {
           unitTypes: nextUnits,
-          stepData: {
-            ...state.stepData,
-            unit_types: { ...state.stepData?.unit_types, unitTypes: nextUnits },
-          },
+          stepData: buildUnitTypesStepData(state, nextUnits),
         };
       }),
 
@@ -1171,131 +1266,15 @@ const createActions = (
     validateForPublish: () => {
       const state = get();
       const wizardData = buildWizardData(state); // Use canonical source
-      const errors: string[] = [];
-
-      // Identity (canonical)
-      if (!wizardData.name) errors.push('Development Name is required');
-
-      // Location (canonical)
-      if (!wizardData.location?.address) errors.push('Location Address is required');
-
-      // Media (canonical) - at least 1 image total
-      const photosCount = wizardData.media?.photos?.length ?? 0;
-      const heroImage =
-        (wizardData as any).heroImage ||
-        wizardData.media?.heroImage?.url ||
-        (typeof wizardData.media?.heroImage === 'string' ? wizardData.media?.heroImage : undefined);
-      if ((heroImage ? 1 : 0) + photosCount === 0) {
-        errors.push('At least 1 image is required');
-      }
-
-      // Classification (selector state - not in wizardData by design)
-      if (!state.classification?.type) errors.push('Classification Type is required');
-
-      // Marketing Summary (canonical)
-      const highlightsLen = wizardData.highlights?.length ?? 0;
-      if (highlightsLen < 3) errors.push('Add at least 3 highlights');
-
-      const descLen = String(wizardData.description ?? '').trim().length;
-      if (descLen === 0) {
-        errors.push('Description is required');
-      } else if (descLen < 50) {
-        errors.push('Description must be at least 50 characters');
-      }
-
-      const status = wizardData.status ?? state.developmentData.status;
-      if (!status) {
-        errors.push('Development status is required');
-      }
-
-      if (status === 'launching-soon' || status === 'selling') {
-        if (!wizardData.launchDate) {
-          errors.push('Launch date is required for this status');
-        }
-        if (!wizardData.completionDate) {
-          errors.push('Expected completion date is required for this status');
-        }
-      }
-
-      const ownershipTypes = wizardData.ownershipTypes ?? state.developmentData.ownershipTypes ?? [];
-      if (!Array.isArray(ownershipTypes) || ownershipTypes.length === 0) {
-        errors.push('Select at least one ownership type');
-      }
-
-      if (wizardData.handoverDuringConstruction && !wizardData.expectedFirstHandoverDate) {
-        errors.push(
-          'Expected first handover date is required when handovers occur during construction',
-        );
-      }
-
-      // Unit Types (canonical)
-      if (state.classification?.type !== 'land') {
-        const units = wizardData.unitTypes ?? [];
-        if (units.length === 0) {
-          errors.push('Add at least one unit type');
-        } else {
-          const transactionType =
-            wizardData.transactionType ??
-            state.transactionType ??
-            state.developmentData.transactionType;
-          const isRent = transactionType === 'for_rent';
-          const isAuction = transactionType === 'auction';
-
-          if (isRent) {
-            const validRents = units.every((u: any) => {
-              const from = Number(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0);
-              const to = Number(u?.monthlyRentTo ?? 0);
-              return from > 0 || to > 0;
-            });
-            if (!validRents) errors.push('All unit types must have a monthly rent');
-          } else if (isAuction) {
-            const now = Date.now();
-            const validAuctionUnits = units.every((u: any) => {
-              const startingBid = Number(u?.startingBid ?? 0);
-              const reservePrice = u?.reservePrice != null ? Number(u.reservePrice) : undefined;
-              const startDate = u?.auctionStartDate ? new Date(u.auctionStartDate) : null;
-              const endDate = u?.auctionEndDate ? new Date(u.auctionEndDate) : null;
-
-              if (!startingBid || startingBid <= 0) return false;
-              if (
-                reservePrice != null &&
-                Number.isFinite(reservePrice) &&
-                reservePrice > 0 &&
-                reservePrice < startingBid
-              )
-                return false;
-              if (!startDate || Number.isNaN(startDate.getTime())) return false;
-              if (!endDate || Number.isNaN(endDate.getTime())) return false;
-              if (endDate.getTime() <= startDate.getTime()) return false;
-              if (startDate.getTime() < now) return false;
-              return true;
-            });
-            if (!validAuctionUnits) errors.push('All unit types must have valid auction terms');
-          } else {
-            const validPrices = units.every((u: any) => (u.priceFrom || 0) > 0);
-            if (!validPrices) errors.push('All unit types must have a base price');
-          }
-
-          const validInventory = units.every((u: any) => {
-            const total = Number(u?.totalUnits ?? 0);
-            const available = Number(u?.availableUnits ?? 0);
-            const reserved = Number(u?.reservedUnits ?? 0);
-            if (
-              !Number.isFinite(total) ||
-              !Number.isFinite(available) ||
-              !Number.isFinite(reserved)
-            ) {
-              return false;
-            }
-            if (total < 0 || available < 0 || reserved < 0) return false;
-            return available + reserved <= total;
-          });
-
-          if (!validInventory) {
-            errors.push('Each unit type must have total >= available + reserved');
-          }
-        }
-      }
+      const readiness = getDevelopmentPublishReadinessSummary(wizardData, {
+        classification: state.classification,
+        transactionType:
+          wizardData.transactionType ??
+          state.transactionType ??
+          state.developmentData.transactionType,
+        nowMs: Date.now(),
+      });
+      const errors = readiness.messages;
 
       return { isValid: errors.length === 0, errors };
     },
@@ -1318,6 +1297,7 @@ const createActions = (
           currentStep: 1,
           completedSteps: [],
           stepErrors: {},
+          persistedEditSnapshot: null,
         };
         const wizardData = buildWizardData({ ...state, ...newState });
         const workflow = getWorkflow(wizardData);
@@ -1339,6 +1319,7 @@ const createActions = (
         editingId: undefined,
         draftId: undefined,
         developerId: undefined,
+        persistedEditSnapshot: null,
         currentStepId: null,
         workflowId: null,
         completedSteps: [],
@@ -1429,8 +1410,14 @@ const createActions = (
         //    Only when saving the unit_types step and the payload includes unitTypes
         const nextUnitTypes =
           stepId === 'unit_types' && Array.isArray((data as any).unitTypes)
-            ? (data as any).unitTypes
-            : state.unitTypes;
+            ? normalizeUnitTypesForState(state, (data as any).unitTypes, normalizeTransactionType)
+            : getCanonicalUnitTypesFromState(state);
+        if (stepId === 'unit_types' && Array.isArray((data as any).unitTypes)) {
+          nextStepData.unit_types = {
+            ...(nextStepData.unit_types ?? {}),
+            unitTypes: nextUnitTypes,
+          };
+        }
 
         // 4) Keep developmentType in its proper authoritative place
         const nextDevelopmentType =
@@ -1468,271 +1455,56 @@ const createActions = (
 
     hydrateDevelopment: (data: any) =>
       set(state => {
-        const isDraft = data.draftData !== undefined;
-        const source = isDraft ? (data as any).draftData : data;
+        const hasCanonicalSnapshot = Boolean(
+          data?.workflowId || data?.currentStepId || data?.stepData || data?._version,
+        );
+        const isDraft = data.draftData !== undefined || (!data?.id && hasCanonicalSnapshot);
+        const source = data.draftData !== undefined ? (data as any).draftData : data;
+        const snapshotSource = source;
+        const workflowState = normalizeDevelopmentWorkflowState(snapshotSource ?? {});
 
         if (!source) {
           console.error('[hydrateDevelopment] No data provided');
           return state;
         }
 
-        const parse = (val: any, def: any) => {
-          if (val === null || val === undefined || val === '') return def;
-          if (typeof val === 'string') {
-            try {
-              const parsed = JSON.parse(val);
-              if (typeof parsed === 'string') {
-                const trimmed = parsed.trim();
-                if (
-                  (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
-                  (trimmed.startsWith('{') && trimmed.endsWith('}'))
-                ) {
-                  try {
-                    return JSON.parse(trimmed);
-                  } catch {
-                    return def;
-                  }
-                }
-              }
-              return parsed;
-            } catch {
-              return def;
-            }
-          }
-          return val;
-        };
+        const parse = parseCanonicalJsonValue as (val: any, def: any) => any;
 
-        const toNumber = (value: any, fallback: number) => {
-          const num = Number(value);
-          return Number.isFinite(num) ? num : fallback;
-        };
-
-        const normalizeAmenityKeys = (value: unknown): string[] => {
-          const list = (() => {
-            if (Array.isArray(value)) return value;
-            if (value && typeof value === 'object') {
-              const standard = Array.isArray((value as any).standard)
-                ? (value as any).standard
-                : [];
-              const additional = Array.isArray((value as any).additional)
-                ? (value as any).additional
-                : [];
-              return [...standard, ...additional];
-            }
-            return [];
-          })();
-
-          if (list.length === 0) return [];
-
-          const byKey = new Set(AMENITY_REGISTRY.map(item => item.key));
-          const byLabel = new Map(
-            AMENITY_REGISTRY.map(item => [item.label.toLowerCase(), item.key]),
-          );
-
-          return list
-            .map(item => String(item ?? '').trim())
-            .filter(Boolean)
-            .map(item => {
-              if (byKey.has(item)) return item;
-              const mapped = byLabel.get(item.toLowerCase());
-              return mapped ?? item;
-            });
-        };
-
-        // ============================================================================
-        // Helper: Map incoming media to canonical shape
-        // ============================================================================
-        const mapIncomingMediaToCanonical = (src: any) => {
-          const parsedMedia = parse(src.media, { photos: [], videos: [], documents: [] });
-
-          // Fallback to legacy 'images' column if 'media' column is empty
-          if ((!parsedMedia.photos || parsedMedia.photos.length === 0) && src.images) {
-            const legacyImages = parse(src.images, []);
-            if (Array.isArray(legacyImages) && legacyImages.length > 0) {
-              parsedMedia.photos = legacyImages.map((url: string | any) => {
-                if (typeof url === 'string')
-                  return { id: `img-${Math.random()}`, url, category: 'general', type: 'image' };
-                return url;
-              });
-            }
-          }
-
-          // Restore heroImage if missing but present in photos
-          if (!parsedMedia.heroImage && parsedMedia.photos?.length > 0) {
-            const manualHero =
-              parsedMedia.photos.find((p: any) => p.category === 'featured' || p.isPrimary) ||
-              parsedMedia.photos[0];
-
-            if (manualHero) {
-              parsedMedia.heroImage = { ...manualHero, category: 'featured', isPrimary: true };
-            }
-          }
-
-          return {
-            heroImage: parsedMedia.heroImage,
-            photos: parsedMedia.photos || [],
-            videos: parsedMedia.videos || [],
-            documents: parsedMedia.documents || parsedMedia.brochures || [],
-          };
-        };
-
+        const hasSnapshotStepData = isPlainObject(snapshotSource?.stepData);
+        const snapshotStepData = hasSnapshotStepData ? snapshotSource.stepData : {};
+        const draftEditTargetId = getCanonicalDevelopmentEditTargetId(source);
+        const { sourceSelectorPayload, updates, normalizedAmenities } =
+          buildHydratedDevelopmentDataUpdates({
+            source,
+            snapshotStepData,
+            currentDevelopmentData: state.developmentData,
+            normalizeTransactionType,
+          });
+        const canonicalSourceConfiguration =
+          getCanonicalDevelopmentConfiguration(sourceSelectorPayload);
+        const sourceDevelopmentType = firstDefined(
+          canonicalSourceConfiguration.developmentType,
+          source.developmentType,
+          source.developmentData?.developmentType,
+        );
+        const hydratedDevelopmentType =
+          sourceDevelopmentType === 'mixed_use'
+            ? 'mixed'
+            : sourceDevelopmentType || state.developmentType || 'residential';
         // ============================================================================
         // Build Canonical Updates (Dual Support: source.developmentData OR flat DB)
         // ============================================================================
-        const rawAmenities = source.amenities
-          ? parse(source.amenities, [])
-          : (source.developmentData?.amenities ?? state.developmentData.amenities ?? []);
-        const normalizedAmenities = normalizeAmenityKeys(rawAmenities);
-
-        const updates: Partial<typeof state.developmentData> = {
-          // Identity
-          name: source.name ?? source.developmentData?.name ?? '',
-          subtitle: source.subtitle ?? source.tagline ?? source.developmentData?.subtitle ?? '',
-          description: source.description ?? source.developmentData?.description ?? '',
-
-          // Status & Dates
-          status: source.status ?? source.developmentData?.status ?? state.developmentData.status,
-          nature: source.nature ?? source.developmentData?.nature ?? state.developmentData.nature,
-          launchDate: source.launchDate
-            ? new Date(source.launchDate)
-            : source.developmentData?.launchDate
-              ? new Date(source.developmentData.launchDate)
-              : state.developmentData.launchDate,
-          completionDate: source.completionDate
-            ? new Date(source.completionDate)
-            : source.developmentData?.completionDate
-              ? new Date(source.developmentData.completionDate)
-              : state.developmentData.completionDate,
-          expectedFirstHandoverDate: source.expectedFirstHandoverDate
-            ? new Date(source.expectedFirstHandoverDate)
-            : source.developmentData?.expectedFirstHandoverDate
-              ? new Date(source.developmentData.expectedFirstHandoverDate)
-              : state.developmentData.expectedFirstHandoverDate,
-          handoverDuringConstruction:
-            source.handoverDuringConstruction ??
-            source.developmentData?.handoverDuringConstruction ??
-            state.developmentData.handoverDuringConstruction,
-
-          // Transaction & Ownership
-          transactionType:
-            normalizeTransactionType(
-              source.transactionType ?? source.developmentData?.transactionType,
-            ) ?? state.developmentData.transactionType,
-          ownershipType:
-            source.ownershipType ??
-            source.developmentData?.ownershipType ??
-            state.developmentData.ownershipType,
-          ownershipTypes:
-            source.ownershipTypes ??
-            source.developmentData?.ownershipTypes ??
-            state.developmentData.ownershipTypes ??
-            [],
-          structuralType:
-            source.structuralType ??
-            source.developmentData?.structuralType ??
-            state.developmentData.structuralType,
-          floors: source.floors ?? source.developmentData?.floors ?? state.developmentData.floors,
-
-          // Property Types
-          propertyTypes:
-            typeof source.propertyTypes === 'string'
-              ? parse(source.propertyTypes, [])
-              : (source.propertyTypes ??
-                source.developmentData?.propertyTypes ??
-                state.developmentData.propertyTypes),
-
-          // Location (Always strings, never null)
-          location: {
-            address:
-              source.address ??
-              source.location?.address ??
-              source.developmentData?.location?.address ??
-              '',
-            suburb:
-              source.suburb ??
-              source.location?.suburb ??
-              source.developmentData?.location?.suburb ??
-              '',
-            city:
-              source.city ?? source.location?.city ?? source.developmentData?.location?.city ?? '',
-            province:
-              source.province ??
-              source.location?.province ??
-              source.developmentData?.location?.province ??
-              '',
-            postalCode:
-              source.postalCode ??
-              source.location?.postalCode ??
-              source.developmentData?.location?.postalCode ??
-              '',
-            latitude: String(
-              source.latitude ??
-                source.location?.latitude ??
-                source.developmentData?.location?.latitude ??
-                '',
-            ),
-            longitude: String(
-              source.longitude ??
-                source.location?.longitude ??
-                source.developmentData?.location?.longitude ??
-                '',
-            ),
-          },
-
-          // Media (Canonical shape)
-          media: source.developmentData?.media
-            ? source.developmentData.media
-            : mapIncomingMediaToCanonical(source),
-
-          // Marketing fields (CRITICAL: must never be undefined)
-          highlights: source.highlights
-            ? parse(source.highlights, [])
-            : (source.developmentData?.highlights ?? state.developmentData.highlights ?? []),
-          amenities: normalizedAmenities,
-        };
-
         // Use normalizer to guarantee field preservation
         const canonicalDevelopmentData = normalizeDevelopmentData(state.developmentData, updates);
 
         // ============================================================================
         // Hydrate Configuration Objects
         // ============================================================================
-        const hydratedResidentialConfig = parse(source.residentialConfig, {
-          unitMix: { studios: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourPlusBed: 0 },
-          priceRange: { min: null, max: null },
-          sizeRange: { min: null, max: null },
-          parkingOptions: [],
-          levy: { from: null, to: null },
-          rates: { from: null, to: null },
-          residentialType: null,
-          freeholdCategory: null,
-          communityTypes: [],
-        });
-
-        const hydratedLandConfig = parse(source.landConfig, {
-          totalStands: null,
-          availableStands: null,
-          erfSizeFrom: null,
-          erfSizeTo: null,
-          priceFrom: null,
-          priceTo: null,
-          serviced: null,
-          zoningType: null,
-          buildingRestrictions: null,
-          landType: null,
-          infrastructure: [],
-        });
-
-        const hydratedCommercialConfig = parse(source.commercialConfig, {
-          totalSpace: null,
-          availableSpace: null,
-          spaceUnits: 'sqm',
-          rentalRate: null,
-          tenantType: [],
-          parkingRatio: null,
-          commercialType: null,
-          features: [],
-        });
+        const {
+          residentialConfig: hydratedResidentialConfig,
+          landConfig: hydratedLandConfig,
+          commercialConfig: hydratedCommercialConfig,
+        } = hydrateDevelopmentConfigs(source, parse);
 
         // mixedUseConfig not used - removed to prevent phantom state
 
@@ -1747,224 +1519,63 @@ const createActions = (
         // ============================================================================
         let hydratedUnitTypes: any[] = [];
 
-        if (Array.isArray(source.unitTypes)) {
-          hydratedUnitTypes = source.unitTypes.map((u: any, idx: number) => {
+        const sourceUnitTypes = resolveHydrationUnitTypes(snapshotSource, source);
+
+        if (Array.isArray(sourceUnitTypes)) {
+          hydratedUnitTypes = sourceUnitTypes.map((u: any, idx: number) => {
             if (!u.id) {
               console.warn(`[hydrateDevelopment] Unit ${idx} missing ID, generating...`);
-              u.id = `unit-${Date.now()}-${idx}`;
             }
 
-            const parsedSpecifications = parse(u.specifications, {
-              builtInFeatures: {},
-              finishes: {},
-              electrical: {},
-            });
-            const storedClassification = parsedSpecifications?.classification ?? {};
-            const structuralTypeValue = u.structuralType || undefined;
-            const inferredUnitCategory =
-              ['freestanding-house', 'simplex', 'duplex', 'townhouse', 'plot-and-plan'].includes(
-                String(structuralTypeValue || ''),
-              )
-                ? 'house'
-                : 'apartment';
-            const unitCategory =
-              u.unitCategory === 'house' || u.unitCategory === 'apartment'
-                ? u.unitCategory
-                : storedClassification?.category === 'house' ||
-                    storedClassification?.category === 'apartment'
-                  ? storedClassification.category
-                  : inferredUnitCategory;
-            const unitSubType =
-              typeof u.unitSubType === 'string' && u.unitSubType.trim().length > 0
-                ? u.unitSubType
-                : typeof storedClassification?.subType === 'string' &&
-                    storedClassification.subType.trim().length > 0
-                  ? storedClassification.subType
-                  : structuralTypeValue || (unitCategory === 'house' ? 'freestanding-house' : 'apartment');
-
-            return {
-              id: u.id,
-              label: u.label || u.name || 'Unnamed Unit',
-              name: u.name || u.label || 'Unnamed Unit',
-              configDescription: u.configDescription || u.description || '',
-
-              // Layout - Numbers, not null
-              floors: u.floors || undefined,
-              bedrooms: Number(u.bedrooms ?? 0),
-              bathrooms: Number(u.bathrooms ?? 0),
-              unitSize: Number(u.unitSize ?? u.floorSize ?? 0),
-              yardSize: u.yardSize ? Number(u.yardSize) : undefined,
-
-              // Type - Enums, undefined when unknown
-              ownershipType: u.ownershipType || undefined,
-              structuralType: structuralTypeValue,
-              unitCategory,
-              unitSubType,
-
-              // Parking - Required fields with safe defaults
-              parkingType: u.parkingType ?? 'none',
-              parkingBays: Number(u.parkingBays ?? u.parkingSpaces ?? 0),
-
-              // Pricing - Numbers, not null
-              priceFrom: Number(u.priceFrom ?? u.basePriceFrom ?? 0),
-              priceTo: Number(u.priceTo ?? u.basePriceTo ?? u.priceFrom ?? u.basePriceFrom ?? 0),
-              basePriceFrom: u.basePriceFrom ? Number(u.basePriceFrom) : undefined,
-              basePriceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
-              monthlyRentFrom: u.monthlyRentFrom ? Number(u.monthlyRentFrom) : undefined,
-              monthlyRentTo: u.monthlyRentTo ? Number(u.monthlyRentTo) : undefined,
-              leaseTerm: u.leaseTerm || undefined,
-              isFurnished: u.isFurnished ?? undefined,
-              depositRequired: u.depositRequired ? Number(u.depositRequired) : undefined,
-              startingBid: u.startingBid != null ? Number(u.startingBid) : undefined,
-              reservePrice: u.reservePrice != null ? Number(u.reservePrice) : undefined,
-              auctionStartDate: u.auctionStartDate || undefined,
-              auctionEndDate: u.auctionEndDate || undefined,
-              auctionStatus: u.auctionStatus || undefined,
-
-              // Availability - Numbers, not null
-              availableUnits: Number(u.availableUnits ?? 0),
-              reservedUnits: Number(u.reservedUnits ?? 0),
-              totalUnits: Number(u.totalUnits ?? 0),
-              completionDate: u.completionDate || undefined,
-
-              // Complex fields
-              amenities: parse(u.amenities, { standard: [], additional: [] }),
-              specifications: parsedSpecifications,
-              baseMedia: parse(u.baseMedia, { gallery: [], floorPlans: [], renders: [] }),
-              features: parse(u.features, {
-                kitchen: [],
-                bathroom: [],
-                flooring: [],
-                storage: [],
-                climate: [],
-                security: [],
-                outdoor: [],
-                other: [],
-              }),
-              extras: parse(u.extras, []),
-              specs: parse(u.specs, []),
-
-              // New JSON Fields
-              baseFeatures: parse(u.baseFeatures, {}),
-              baseFinishes: parse(u.baseFinishes, {}),
-              specOverrides: parse(u.specOverrides, {}),
-
-              // Notes
-              virtualTourLink: u.virtualTourLink || '',
-              transferCostsIncluded: !!u.transferCostsIncluded,
-              internalNotes: u.internalNotes || '',
-              isActive: u.isActive !== false,
-              displayOrder: u.displayOrder ?? idx,
-            };
+            return normalizeHydratedUnitTypeForState(
+              u,
+              idx,
+              canonicalDevelopmentData.transactionType,
+              parse,
+            );
           });
         } else {
-          console.warn('[hydrateDevelopment] No unitTypes array found');
+          hydratedUnitTypes = getCanonicalUnitTypesFromState(state);
         }
 
         // ============================================================================
         // Hydrate Marketing/Overview
         // ============================================================================
         const hydratedOverview = {
-          status: source.status || 'planning',
-          description: source.description || '',
-          highlights: source.highlights ? parse(source.highlights, []) : [],
-          amenities: source.amenities ? parse(source.amenities, []) : [],
-          features: parse(source.features || source.keyFeatures, []),
+          status: (canonicalDevelopmentData.status || 'planning') as any,
+          description: canonicalDevelopmentData.description || '',
+          highlights: canonicalDevelopmentData.highlights ?? [],
+          amenities: canonicalDevelopmentData.amenities ?? [],
+          features: (canonicalDevelopmentData as any).features ?? [],
         };
 
         // ============================================================================
         // Hydrate Classification
         // ============================================================================
         const hydratedClassification = {
-          type:
-            source.developmentType === 'mixed_use'
-              ? 'mixed'
-              : source.developmentType || 'residential',
+          type: hydratedDevelopmentType,
           subType: source.customClassification || '',
-          ownership: source.ownershipType || '',
+          ownership: (canonicalDevelopmentData.ownershipType || '') as any,
         };
 
-        const ownershipTypesFromSource = (() => {
-          const raw =
-            source.ownershipTypes ??
-            source.developmentData?.ownershipTypes ??
-            source.ownershipType ??
-            source.developmentData?.ownershipType;
-          if (typeof raw === 'string') {
-            const trimmed = raw.trim();
-            if (trimmed.startsWith('[')) {
-              const parsed = parse(trimmed, []);
-              if (Array.isArray(parsed)) return parsed;
-            }
-            return trimmed ? [trimmed] : [];
-          }
-          if (Array.isArray(raw)) return raw;
-          if (raw) return [raw];
-          return [];
-        })();
-
-        const estateSpecs = parse(source.estateSpecs, {});
-        const resolvedLevyRange = {
-          min: toNumber(estateSpecs?.levyRange?.min ?? source.monthlyLevyFrom ?? 0, 0),
-          max: toNumber(estateSpecs?.levyRange?.max ?? source.monthlyLevyTo ?? 0, 0),
-        };
-        const resolvedRightsAndTaxes = {
-          min: toNumber(estateSpecs?.rightsAndTaxes?.min ?? source.ratesFrom ?? 0, 0),
-          max: toNumber(estateSpecs?.rightsAndTaxes?.max ?? source.ratesTo ?? 0, 0),
-        };
-
-        const hydratedStepData = isDraft
-          ? (source.stepData ?? state.stepData)
-          : {
-              identity_market: {
-                name: canonicalDevelopmentData.name,
-                subtitle: canonicalDevelopmentData.subtitle,
-                status: canonicalDevelopmentData.status,
-                nature: canonicalDevelopmentData.nature,
-                transactionType: canonicalDevelopmentData.transactionType,
-                ownershipTypes: ownershipTypesFromSource,
-                marketingRole: canonicalDevelopmentData.marketingRole,
-                completionDate: canonicalDevelopmentData.completionDate,
-                launchDate: canonicalDevelopmentData.launchDate,
-                expectedFirstHandoverDate: canonicalDevelopmentData.expectedFirstHandoverDate,
-                handoverDuringConstruction: canonicalDevelopmentData.handoverDuringConstruction,
-              },
-              location: { ...canonicalDevelopmentData.location },
-              governance_finances: {
-                hasGoverningBody: estateSpecs?.hasHOA ?? false,
-                governanceType: estateSpecs?.governanceType ?? '',
-                levyRange: resolvedLevyRange,
-                architecturalGuidelines: estateSpecs?.architecturalGuidelines ?? false,
-                guidelinesSummary: estateSpecs?.guidelinesSummary ?? '',
-                rightsAndTaxes: resolvedRightsAndTaxes,
-              },
-              amenities_features: {
-                amenities: normalizedAmenities,
-              },
-              marketing_summary: {
-                description: canonicalDevelopmentData.description,
-                tagline: canonicalDevelopmentData.subtitle ?? '',
-                keySellingPoints: canonicalDevelopmentData.highlights ?? [],
-              },
-              development_media: {
-                heroImage: canonicalDevelopmentData.media?.heroImage,
-                photos: canonicalDevelopmentData.media?.photos ?? [],
-                videos: canonicalDevelopmentData.media?.videos ?? [],
-                documents: canonicalDevelopmentData.media?.documents ?? [],
-              },
-              unit_types: { unitTypes: hydratedUnitTypes },
-            };
+        const hydratedStepData = buildHydratedStepData({
+          source,
+          snapshotStepData,
+          hasSnapshotStepData,
+          canonicalDevelopmentData,
+          hydratedDevelopmentType,
+          hydratedUnitTypes,
+          parse,
+        });
 
         // ============================================================================
         // Return Complete Hydrated State
         // ============================================================================
-        return {
+        const nextHydratedState: DevelopmentWizardState = {
           ...state,
           // CRITICAL: Don't force currentPhase - let Wizard orchestrator decide
           // Only set phase for draft resume (not edit mode)
-          currentPhase: isDraft
-            ? source.currentPhase || state.currentPhase || 1
-            : state.currentPhase,
+          currentPhase: isDraft ? source.currentPhase || state.currentPhase || 1 : 1,
 
           developmentData: canonicalDevelopmentData,
           residentialConfig: hydratedResidentialConfig,
@@ -1977,15 +1588,34 @@ const createActions = (
           overview: hydratedOverview,
           classification: hydratedClassification,
           stepData: hydratedStepData,
+          workflowId: workflowState.workflowId as WorkflowId | null,
+          currentStepId: workflowState.currentStepId as WizardStepId | null,
+          completedSteps: workflowState.completedSteps as WizardStepId[],
 
-          developmentType:
-            source.developmentType === 'mixed_use'
-              ? 'mixed'
-              : source.developmentType || 'residential',
+          developmentType: hydratedDevelopmentType,
 
           // Legacy compatibility
-          editingId: isDraft ? undefined : source.id,
+          editingId: isDraft ? draftEditTargetId : source.id,
           developerId: source.developerId,
+        };
+
+        const shouldCapturePersistedEditSnapshot = Boolean(
+          nextHydratedState.editingId || source.id,
+        );
+
+        return {
+          ...nextHydratedState,
+          persistedEditSnapshot: shouldCapturePersistedEditSnapshot
+            ? buildCanonicalDraftDataFromState(nextHydratedState)
+            : null,
+        };
+      }),
+
+    markEditSnapshotPersisted: () =>
+      set(state => {
+        if (!state.editingId) return {};
+        return {
+          persistedEditSnapshot: buildCanonicalDraftDataFromState(state),
         };
       }),
 
@@ -2171,9 +1801,18 @@ const createActions = (
       }),
 
     deleteUnitType: (id: string) =>
-      set(state => ({
-        unitTypes: state.unitTypes.filter(u => u.id !== id),
-      })),
+      set(state => {
+        const currentUnits = getCanonicalUnitTypesFromState(state);
+        const nextUnits = normalizeUnitTypesForState(
+          state,
+          currentUnits.filter(u => u.id !== id),
+          normalizeTransactionType,
+        );
+        return {
+          unitTypes: nextUnits,
+          stepData: buildUnitTypesStepData(state, nextUnits),
+        };
+      }),
 
     duplicateUnitType: (_id: string) => {
       /* No-op for now */
@@ -2225,39 +1864,11 @@ const createActions = (
     // IMPORTANT: Canonical Draft Data Getter (Centralized Payload)
     getDraftData: () => {
       const state = get();
-      return {
-        // Core data (persisted)
-        developmentData: {
-          ...state.developmentData,
-          transactionType: normalizeTransactionType(state.developmentData.transactionType),
-        },
-        classification: state.classification,
-        // Workflow-Specific Fields (Phase 2B)
-        name: state.developmentData.name,
-        status: state.developmentData.status,
-        marketingRole: state.developmentData.marketingRole,
-        ownershipTypes: state.developmentData.ownershipTypes,
+      return buildCanonicalDraftDataFromState(state, { savedAt: Date.now() });
+    },
 
-        // Spec Variation drafts
-        unitTypeDraft: state.unitTypeDraft,
-        overview: state.overview,
-        unitTypes: state.unitTypes,
-        finalisation: state.finalisation,
-
-        // Configuration slices
-        listingIdentity: state.listingIdentity,
-        developmentType: state.developmentType,
-        residentialConfig: state.residentialConfig,
-        landConfig: state.landConfig,
-        commercialConfig: state.commercialConfig,
-
-        selectedAmenities: state.selectedAmenities,
-        unitGroups: state.unitGroups,
-
-        // Metadata (NOT UI state like currentPhase)
-        _version: '3.0', // Schema version for migrations
-        _savedAt: Date.now(),
-      };
+    getPersistedEditSnapshot: () => {
+      return get().persistedEditSnapshot ?? null;
     },
 
     // Canonical-first getter for unitTypes (prevents stale UI reads)

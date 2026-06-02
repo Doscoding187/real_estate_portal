@@ -32,7 +32,12 @@ export interface DevelopmentResultCardProps {
   builderName?: string | null;
   builderLogoUrl?: string | null;
   description?: string | null;
-  configurations?: Array<{ label?: string; priceFrom?: number | null }>;
+  configurations?: Array<{
+    label?: string;
+    listingType?: 'sale' | 'rent' | 'auction' | null;
+    priceFrom?: number | null;
+    priceTo?: number | null;
+  }>;
   images?: DevelopmentImage[];
 }
 
@@ -54,6 +59,27 @@ function formatShortPrice(value?: number | null) {
   if (value >= 1_000_000) return `R${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `R${Math.round(value / 1_000)}K`;
   return `R${value.toLocaleString()}`;
+}
+
+export function formatDevelopmentConfigurationPrice(config: {
+  listingType?: 'sale' | 'rent' | 'auction' | null;
+  priceFrom?: number | null;
+  priceTo?: number | null;
+}) {
+  const priceFrom =
+    typeof config.priceFrom === 'number' && config.priceFrom > 0 ? config.priceFrom : null;
+  const priceTo = typeof config.priceTo === 'number' && config.priceTo > 0 ? config.priceTo : null;
+
+  if (!priceFrom) return '-';
+
+  const formatted =
+    priceTo && priceTo > priceFrom
+      ? `${formatShortPrice(priceFrom)} - ${formatShortPrice(priceTo)}`
+      : formatShortPrice(priceFrom);
+
+  if (config.listingType === 'rent') return `${formatted}/mo`;
+  if (config.listingType === 'auction') return `Bid from ${formatted}`;
+  return `From ${formatted}`;
 }
 
 function toTitleCaseWords(value: string) {
@@ -102,10 +128,7 @@ export function DevelopmentResultCard({
     .slice(0)
     .map(cfg => ({
       label: cfg.label || '-',
-      price:
-        typeof cfg.priceFrom === 'number' && cfg.priceFrom > 0
-          ? `From ${formatShortPrice(cfg.priceFrom)}`
-          : '-',
+      price: formatDevelopmentConfigurationPrice(cfg),
     }));
 
   useEffect(() => {

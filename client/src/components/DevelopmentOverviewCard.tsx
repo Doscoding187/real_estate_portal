@@ -10,6 +10,11 @@ interface DevelopmentOverviewCardProps {
   priceTo?: number;
   monthlyRepayment: number;
   minimumIncome: number;
+  priceLabel?: string;
+  repaymentLabel?: string;
+  incomeLabel?: string;
+  repaymentSuffix?: string;
+  estimationNote?: string;
   constructionStatus?: string;
   completionDate?: string;
   salesMetrics?: {
@@ -25,6 +30,11 @@ export function DevelopmentOverviewCard({
   priceTo,
   monthlyRepayment,
   minimumIncome,
+  priceLabel = 'Price From',
+  repaymentLabel = 'Est. Repayment',
+  incomeLabel = 'Qualifying Income',
+  repaymentSuffix = ' / month',
+  estimationNote = 'Estimated using a 20-year bond term and standard prime lending rate.',
   constructionStatus = 'Now Selling',
   completionDate,
   salesMetrics,
@@ -42,7 +52,7 @@ export function DevelopmentOverviewCard({
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <div className="space-y-5">
             <div>
-              <p className="text-slate-500 text-sm font-medium mb-1">Price From</p>
+              <p className="text-slate-500 text-sm font-medium mb-1">{priceLabel}</p>
               <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight">
                 {priceRange}
               </h2>
@@ -52,18 +62,18 @@ export function DevelopmentOverviewCard({
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
                   <Calculator className="h-4 w-4 text-primary" />
-                  Est. Repayment
+                  {repaymentLabel}
                 </div>
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatSARandShort(monthlyRepayment)}
-                  <span className="text-sm font-medium text-slate-500"> / month</span>
+                  <span className="text-sm font-medium text-slate-500">{repaymentSuffix}</span>
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
                   <TrendingUp className="h-4 w-4 text-conversion" />
-                  Qualifying Income
+                  {incomeLabel}
                 </div>
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatSARandShort(minimumIncome)}
@@ -72,9 +82,7 @@ export function DevelopmentOverviewCard({
               </div>
             </div>
 
-            <p className="text-xs text-slate-500">
-              Estimated using a 20-year bond term and standard prime lending rate.
-            </p>
+            <p className="text-xs text-slate-500">{estimationNote}</p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-5">

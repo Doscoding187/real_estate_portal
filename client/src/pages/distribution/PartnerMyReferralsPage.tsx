@@ -181,7 +181,7 @@ export default function PartnerMyReferralsPage() {
               <WalletCards className="h-4 w-4 text-primary" />
               Journey to Referral Reward
             </CardTitle>
-            <CardDescription>Every buyer moves from review to site visit, sale, and payout.</CardDescription>
+            <CardDescription>Every buyer moves from review to site visit, agreement, and payout.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">

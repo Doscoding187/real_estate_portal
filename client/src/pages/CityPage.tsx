@@ -47,6 +47,10 @@ export default function CityPage({
 }) {
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, action, locationId } = params;
+  const locationPathPrefix = location.startsWith('/property-to-rent')
+    ? '/property-to-rent'
+    : '/property-for-sale';
+  const locationCanonicalPath = `${locationPathPrefix}/${provinceSlug}/${citySlug}`;
   const [heroTab, setHeroTab] = React.useState<string>('buy');
   const campaignHierarchy = buildCampaignSlugHierarchy(`${provinceSlug}/${citySlug}`);
 
@@ -177,12 +181,12 @@ export default function CityPage({
       <LocationSchema
         type="City"
         name={city.name}
-        description={`Properties for sale in ${city.name}`}
-        url={`/${provinceSlug}/${citySlug}`}
+        description={`Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${city.name}`}
+        url={locationCanonicalPath}
         breadcrumbs={[
           { name: 'Home', url: '/' },
-          { name: city.provinceName || provinceSlug, url: `/${provinceSlug}` },
-          { name: city.name, url: `/${provinceSlug}/${citySlug}` },
+          { name: city.provinceName || provinceSlug, url: `${locationPathPrefix}/${provinceSlug}` },
+          { name: city.name, url: locationCanonicalPath },
         ]}
         geo={{
           latitude: Number(city.latitude),

@@ -16,10 +16,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { UnitType } from '@/hooks/useDevelopmentWizard';
+import { calculatePriceFrom } from '../../../../shared/developmentDerived';
 
 type DevelopmentPreviewData = {
   developmentData?: {
     name?: string;
+    transactionType?: string;
     location?: { address?: string; city?: string };
     media?: { heroImage?: { url?: string } };
   };
@@ -90,6 +92,76 @@ const formatParkingLabel = (unit: UnitType): string | null => {
     : null;
 };
 
+type PreviewTransactionType = 'sale' | 'rent' | 'auction';
+
+const toSharedPreviewTransactionType = (
+  transactionType: PreviewTransactionType,
+): 'for_sale' | 'for_rent' | 'auction' => {
+  if (transactionType === 'rent') return 'for_rent';
+  if (transactionType === 'auction') return 'auction';
+  return 'for_sale';
+};
+
+export const normalizePreviewTransactionType = (value: unknown): PreviewTransactionType => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) return 'rent';
+  if (['auction', 'auctions', 'on_auction'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+const formatPreviewCurrency = (value: number | null): string | null => {
+  if (value === null || value <= 0) return null;
+  return `R ${value.toLocaleString('en-ZA')}`;
+};
+
+export const getPreviewUnitPricing = (
+  unit: Partial<UnitType> | undefined,
+  transactionType: unknown,
+): { heading: string; value: string } => {
+  const normalized = normalizePreviewTransactionType(transactionType);
+
+  if (normalized === 'rent') {
+    const range = calculatePriceFrom(unit ?? {}, 'for_rent');
+    const from = range.priceFrom > 0 ? range.priceFrom : null;
+    const to = range.priceTo ?? null;
+    const fromLabel = formatPreviewCurrency(from);
+    const toLabel = to !== null && from !== null && to > from ? formatPreviewCurrency(to) : null;
+
+    return {
+      heading: 'Monthly Rent',
+      value: fromLabel ? (toLabel ? `${fromLabel} - ${toLabel}/mo` : `${fromLabel}/mo`) : 'TBD',
+    };
+  }
+
+  if (normalized === 'auction') {
+    const range = calculatePriceFrom(unit ?? {}, 'auction');
+    const from = range.priceFrom > 0 ? range.priceFrom : null;
+    const to = parseNumber(unit?.reservePrice);
+    const fromLabel = formatPreviewCurrency(from);
+    const toLabel = to !== null && from !== null && to > from ? formatPreviewCurrency(to) : null;
+
+    return {
+      heading: 'Starting Bid',
+      value: fromLabel ? (toLabel ? `${fromLabel} - ${toLabel}` : fromLabel) : 'TBD',
+    };
+  }
+
+  const range = calculatePriceFrom(unit ?? {}, toSharedPreviewTransactionType(normalized));
+  const from = range.priceFrom > 0 ? range.priceFrom : null;
+  const to = range.priceTo ?? null;
+  const fromLabel = formatPreviewCurrency(from);
+  const toLabel = to !== null && from !== null && to > from ? formatPreviewCurrency(to) : null;
+
+  return {
+    heading: 'Starting From',
+    value: fromLabel ? (toLabel ? `${fromLabel} - ${toLabel}` : fromLabel) : 'TBD',
+  };
+};
+
 export const DevelopmentPreview: React.FC = () => {
   const [data, setData] = useState<DevelopmentPreviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +195,7 @@ export const DevelopmentPreview: React.FC = () => {
 
   const { developmentData, overview, unitTypes, classification } = data;
   const heroImage = developmentData?.media?.heroImage;
+  const primaryPricing = getPreviewUnitPricing(unitTypes?.[0], developmentData?.transactionType);
 
   const handleShare = () => {
     // In a real app, this would generate a public ID/link
@@ -178,10 +251,8 @@ export const DevelopmentPreview: React.FC = () => {
             </div>
             {!isMobile && (
               <div className="hidden md:block text-right text-white min-w-fit ml-4">
-                <div className="text-sm opacity-80">Starting From</div>
-                <div className="text-3xl font-bold whitespace-nowrap">
-                  R {unitTypes?.[0]?.basePriceFrom?.toLocaleString() || 'TBD'}
-                </div>
+                <div className="text-sm opacity-80">{primaryPricing.heading}</div>
+                <div className="text-3xl font-bold whitespace-nowrap">{primaryPricing.value}</div>
               </div>
             )}
           </div>
@@ -203,11 +274,9 @@ export const DevelopmentPreview: React.FC = () => {
               <div
                 className={`text-xs uppercase font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
               >
-                Starting From
+                {primaryPricing.heading}
               </div>
-              <div className="text-2xl font-bold text-blue-500">
-                R {unitTypes?.[0]?.basePriceFrom?.toLocaleString() || 'TBD'}
-              </div>
+              <div className="text-2xl font-bold text-blue-500">{primaryPricing.value}</div>
             </div>
           )}
 
@@ -260,6 +329,7 @@ export const DevelopmentPreview: React.FC = () => {
                 const houseSizeLabel = formatSizeValue(houseSizeSource);
                 const yardSizeLabel = formatSizeValue(yardSizeSource);
                 const parkingLabel = formatParkingLabel(unit);
+                const unitPricing = getPreviewUnitPricing(unit, developmentData?.transactionType);
 
                 return (
                   <div
@@ -276,7 +346,7 @@ export const DevelopmentPreview: React.FC = () => {
                         <span
                           className={`font-bold text-blue-500 ${isMobile ? 'text-base' : 'text-lg'}`}
                         >
-                          R {unit.basePriceFrom?.toLocaleString()}
+                          {unitPricing.value}
                         </span>
                       </div>
 

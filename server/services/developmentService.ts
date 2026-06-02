@@ -6,6 +6,23 @@ import { getDb } from '../db-connection';
 import { generateUniqueSlug } from '../_core/utils/slug';
 import { normalizeForPublish, validateNormalizedPayload } from './publishNormalizer';
 import type { NormalizedDevelopmentPayload, WizardData } from './publishNormalizer';
+import { buildDevelopmentCanonicalEditSnapshot } from '../lib/developmentCanonicalSnapshot';
+import {
+  flattenCanonicalDevelopmentPayload,
+  isCanonicalPartialDevelopmentUpdate,
+} from '../lib/canonicalDevelopmentPayload';
+import { resolveDevelopmentUpdateIntent } from '../lib/developmentUpdateIntent';
+import {
+  buildDevelopmentTransactionAggregates as buildSharedDevelopmentTransactionAggregates,
+  calculatePriceFrom,
+  compareDevelopmentUnitsForPublicDisplay,
+  normalizeDevelopmentTransactionType,
+} from '../../shared/developmentDerived';
+import { getDevelopmentPublishReadinessSummary } from '../../shared/developmentReadiness';
+import {
+  buildDevelopmentWorkflowStateColumns,
+  buildPublishedDevelopmentWorkflowStateColumns,
+} from '../lib/developmentWorkflowPersistence';
 
 import {
   developments,
@@ -123,16 +140,80 @@ function normalizeAmenities(amenities: unknown): string[] {
 type TransactionType = 'for_sale' | 'for_rent' | 'auction';
 
 function normalizeTransactionType(input: unknown): TransactionType {
-  const s = String(input ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '_')
-    .replace(/-/g, '_');
+  return normalizeDevelopmentTransactionType(input);
+}
 
-  if (['for_rent', 'rent', 'to_rent', 'rental'].includes(s)) return 'for_rent';
-  if (['auction', 'auctions'].includes(s)) return 'auction';
+async function validatePersistedDevelopmentForPublish(developmentId: number): Promise<void> {
+  const fullDev = await getDevelopmentWithPhases(developmentId);
+  if (!fullDev) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Development not found',
+    });
+  }
 
-  return 'for_sale';
+  const readiness = getDevelopmentPublishReadinessSummary(fullDev, {
+    classification: {
+      type:
+        fullDev.developmentType === 'land' ? 'land' : (fullDev.developmentType ?? 'residential'),
+    },
+    transactionType: fullDev.transactionType,
+    nowMs: Date.now(),
+  });
+
+  if (!readiness.isReady) {
+    const validationErrors = Object.entries(readiness.fieldErrors).map(([field, message]) => ({
+      field,
+      message,
+    }));
+    const first = validationErrors[0];
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: first?.message ?? 'Publish validation failed',
+      cause: {
+        errors: readiness.messages,
+        validationErrors,
+        fields: readiness.fieldErrors,
+      } as any,
+    });
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+export type PublicDevelopmentListingType = 'sale' | 'rent' | 'auction';
+
+export type PublicDevelopmentConfiguration = {
+  unitTypeId?: string;
+  label: string;
+  listingType: PublicDevelopmentListingType;
+  priceFrom: number | null;
+  priceTo: number | null;
+};
+
+function mapTransactionTypeToListingType(transactionType: unknown): PublicDevelopmentListingType {
+  const normalized = normalizeTransactionType(transactionType);
+  if (normalized === 'for_rent') return 'rent';
+  if (normalized === 'auction') return 'auction';
+  return 'sale';
+}
+
+export function resolvePublicDevelopmentConfiguration(unit: any): PublicDevelopmentConfiguration {
+  const transactionType = normalizeTransactionType(unit?.transactionType);
+  const listingType = mapTransactionTypeToListingType(transactionType);
+  const priceRange = calculatePriceFrom(unit, transactionType);
+  const priceFrom = priceRange.priceFrom > 0 ? priceRange.priceFrom : null;
+  const priceTo = priceRange.priceTo ?? priceFrom;
+
+  return {
+    ...(unit?.id ? { unitTypeId: String(unit.id) } : {}),
+    label: String(unit?.label || ''),
+    listingType,
+    priceFrom,
+    priceTo,
+  };
 }
 
 // ===========================================================================
@@ -143,6 +224,23 @@ function boolToInt(value: unknown): 0 | 1 {
   if (value === true) return 1;
   if (value === false) return 0;
   return value ? 1 : 0;
+}
+
+function normalizeOptionalTinyIntFlag(value: unknown): 0 | 1 | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'number') return value === 0 ? 0 : 1;
+
+  const normalized = String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (!normalized) return null;
+  if (['0', 'false', 'no', 'n', 'excluded', 'not_included'].includes(normalized)) return 0;
+  if (['1', 'true', 'yes', 'y', 'included'].includes(normalized)) return 1;
+
+  return boolToInt(value);
 }
 
 function sanitizeString(value: unknown): string | null {
@@ -218,6 +316,59 @@ function stringifyJsonValue(value: unknown, fallback: unknown): string {
   }
 }
 
+function mergeRangeValue(
+  specs: Record<string, any>,
+  rangeKey: 'levyRange' | 'rightsAndTaxes',
+  side: 'min' | 'max',
+  value: unknown,
+) {
+  specs[rangeKey] = {
+    ...(specs[rangeKey] && typeof specs[rangeKey] === 'object' && !Array.isArray(specs[rangeKey])
+      ? specs[rangeKey]
+      : {}),
+    [side]: sanitizeDecimal(value),
+  };
+}
+
+function buildDevelopmentGovernanceEstateSpecs(
+  developmentData: Record<string, any>,
+  estateSpecsData: unknown,
+): { estateSpecs: Record<string, any>; hasOwnedFields: boolean } {
+  const estateSpecs =
+    estateSpecsData === undefined
+      ? {}
+      : parseJsonMaybeTwice<Record<string, any>>(estateSpecsData, {});
+  const specs =
+    estateSpecs && typeof estateSpecs === 'object' && !Array.isArray(estateSpecs)
+      ? { ...estateSpecs }
+      : {};
+  let hasOwnedFields = estateSpecsData !== undefined;
+
+  if (developmentData.monthlyLevyFrom !== undefined) {
+    mergeRangeValue(specs, 'levyRange', 'min', developmentData.monthlyLevyFrom);
+    hasOwnedFields = true;
+  }
+  if (developmentData.monthlyLevyTo !== undefined) {
+    mergeRangeValue(specs, 'levyRange', 'max', developmentData.monthlyLevyTo);
+    hasOwnedFields = true;
+  }
+  if (developmentData.ratesFrom !== undefined) {
+    mergeRangeValue(specs, 'rightsAndTaxes', 'min', developmentData.ratesFrom);
+    hasOwnedFields = true;
+  }
+  if (developmentData.ratesTo !== undefined) {
+    mergeRangeValue(specs, 'rightsAndTaxes', 'max', developmentData.ratesTo);
+    hasOwnedFields = true;
+  }
+  if (developmentData.transferCostsIncluded !== undefined) {
+    specs.transferCostsIncluded =
+      normalizeOptionalTinyIntFlag(developmentData.transferCostsIncluded) === 1;
+    hasOwnedFields = true;
+  }
+
+  return { estateSpecs: specs, hasOwnedFields };
+}
+
 function createError(message: string, code: string, meta?: Record<string, unknown>): TRPCError {
   return new TRPCError({
     code: code as any,
@@ -236,79 +387,16 @@ function handleDatabaseError(error: unknown, context?: Record<string, unknown>):
   });
 }
 
-function computeRentRangeFromUnits(unitTypes?: Array<Record<string, unknown>> | null): {
-  monthlyRentFrom: number | null;
-  monthlyRentTo: number | null;
-} {
-  if (!Array.isArray(unitTypes) || unitTypes.length === 0) {
-    return { monthlyRentFrom: null, monthlyRentTo: null };
-  }
-
-  let minFrom: number | null = null;
-  let maxTo: number | null = null;
-
-  for (const unit of unitTypes) {
-    const from = sanitizeDecimal((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent);
-    const to = sanitizeDecimal((unit as any).monthlyRentTo);
-    if (from !== null) minFrom = minFrom === null ? from : Math.min(minFrom, from);
-    if (to !== null) maxTo = maxTo === null ? to : Math.max(maxTo, to);
-  }
-
-  return { monthlyRentFrom: minFrom, monthlyRentTo: maxTo };
-}
-
-function computeAuctionRangeFromUnits(unitTypes?: Array<Record<string, unknown>> | null): {
-  auctionStartDate: string | null;
-  auctionEndDate: string | null;
-  startingBidFrom: number | null;
-  reservePriceFrom: number | null;
-} {
-  if (!Array.isArray(unitTypes) || unitTypes.length === 0) {
-    return {
-      auctionStartDate: null,
-      auctionEndDate: null,
-      startingBidFrom: null,
-      reservePriceFrom: null,
-    };
-  }
-
-  let earliestStart: string | null = null;
-  let latestEnd: string | null = null;
-  let minStartingBid: number | null = null;
-  let minReservePrice: number | null = null;
-
-  for (const unit of unitTypes) {
-    const startingBid = sanitizeDecimal((unit as any).startingBid);
-    const reservePrice = sanitizeDecimal((unit as any).reservePrice);
-    const startDate = sanitizeDate((unit as any).auctionStartDate);
-    const endDate = sanitizeDate((unit as any).auctionEndDate);
-
-    if (startingBid !== null) {
-      minStartingBid =
-        minStartingBid === null ? startingBid : Math.min(minStartingBid, startingBid);
-    }
-    if (reservePrice !== null) {
-      minReservePrice =
-        minReservePrice === null ? reservePrice : Math.min(minReservePrice, reservePrice);
-    }
-    if (startDate) {
-      if (!earliestStart || startDate < earliestStart) {
-        earliestStart = startDate;
-      }
-    }
-    if (endDate) {
-      if (!latestEnd || endDate > latestEnd) {
-        latestEnd = endDate;
-      }
-    }
-  }
-
-  return {
-    auctionStartDate: earliestStart,
-    auctionEndDate: latestEnd,
-    startingBidFrom: minStartingBid,
-    reservePriceFrom: minReservePrice,
-  };
+export function buildDevelopmentTransactionAggregates(
+  transactionType: unknown,
+  developmentData: Record<string, unknown> = {},
+  unitTypesData?: Array<Record<string, unknown>> | null,
+) {
+  return buildSharedDevelopmentTransactionAggregates(
+    transactionType,
+    developmentData,
+    unitTypesData,
+  );
 }
 
 // ===========================================================================
@@ -495,29 +583,37 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
     .select()
     .from(unitTypes)
     .where(and(eq(unitTypes.developmentId, dev.id), eq(unitTypes.isActive, 1)))
-    .orderBy(unitTypes.basePriceFrom);
+    .orderBy(unitTypes.displayOrder);
 
-  const unitsWithMedia = units.map((u: any) => {
-    let baseMedia = u.baseMedia;
+  const unitsWithMedia = units
+    .sort((left: any, right: any) =>
+      compareDevelopmentUnitsForPublicDisplay(
+        left,
+        right,
+        normalizeTransactionType(dev.transactionType),
+      ),
+    )
+    .map((u: any) => {
+      let baseMedia = u.baseMedia;
 
-    if (typeof baseMedia === 'string') {
-      try {
-        baseMedia = JSON.parse(baseMedia);
-        if (typeof baseMedia === 'string') baseMedia = JSON.parse(baseMedia);
-      } catch {
-        baseMedia = { gallery: [] };
+      if (typeof baseMedia === 'string') {
+        try {
+          baseMedia = JSON.parse(baseMedia);
+          if (typeof baseMedia === 'string') baseMedia = JSON.parse(baseMedia);
+        } catch {
+          baseMedia = { gallery: [] };
+        }
       }
-    }
 
-    const gallery = Array.isArray(baseMedia?.gallery) ? baseMedia.gallery : [];
-    const primary = gallery[0];
+      const gallery = Array.isArray(baseMedia?.gallery) ? baseMedia.gallery : [];
+      const primary = gallery[0];
 
-    return {
-      ...u,
-      baseMedia,
-      primaryImageUrl: primary?.url ?? null,
-    };
-  });
+      return {
+        ...u,
+        baseMedia,
+        primaryImageUrl: primary?.url ?? null,
+      };
+    });
 
   // Sales metrics (drives progress bar vs "Sales data unavailable")
   let salesMetrics: null | {
@@ -556,14 +652,26 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
     }
   }
 
+  const images = parseJsonField(dev.images);
+  const videos = parseJsonField(dev.videos);
+  const floorPlans = parseJsonField(dev.floorPlans);
+  const brochures = parseJsonField(dev.brochures);
+
   return {
     ...dev,
     developerDisplay: buildDeveloperDisplay(dev),
 
-    images: parseJsonField(dev.images),
-    videos: parseJsonField(dev.videos),
-    floorPlans: parseJsonField(dev.floorPlans),
-    brochures: parseJsonField(dev.brochures),
+    images,
+    videos,
+    floorPlans,
+    brochures,
+    media: {
+      photos: images,
+      videos,
+      floorPlans,
+      brochures,
+      documents: brochures,
+    },
     amenities: normalizeAmenities(dev.amenities),
 
     estateSpecs:
@@ -580,6 +688,8 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 }
 
 export async function getPublicDevelopment(id: number) {
+  // Legacy ID lookup: current public detail routes use getPublicDevelopmentBySlug.
+  // Keep as a compatibility bridge until route/import checks prove it can be removed.
   const db = await getDb();
   if (!db) return null;
 
@@ -640,11 +750,19 @@ export async function listPublicDevelopments(options: {
       slug: developments.slug,
       description: developments.description,
       images: developments.images,
+      videos: developments.videos,
+      floorPlans: developments.floorPlans,
+      brochures: developments.brochures,
       city: developments.city,
       suburb: developments.suburb,
       province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
+      monthlyRentFrom: developments.monthlyRentFrom,
+      monthlyRentTo: developments.monthlyRentTo,
+      startingBidFrom: developments.startingBidFrom,
+      reservePriceFrom: developments.reservePriceFrom,
+      transactionType: developments.transactionType,
       status: developments.status,
       isFeatured: developments.isFeatured,
       rating: developments.rating,
@@ -665,10 +783,7 @@ export async function listPublicDevelopments(options: {
       developerBrandProfiles,
       eq(developments.developerBrandProfileId, developerBrandProfiles.id),
     )
-    .leftJoin(
-      distributionPrograms,
-      eq(developments.id, distributionPrograms.developmentId),
-    )
+    .leftJoin(distributionPrograms, eq(developments.id, distributionPrograms.developmentId))
     .where(and(...conditions))
     .orderBy(desc(developments.createdAt))
     .limit(limit);
@@ -678,27 +793,28 @@ export async function listPublicDevelopments(options: {
     developmentIds.length > 0
       ? await db
           .select({
+            id: unitTypes.id,
             developmentId: unitTypes.developmentId,
             name: unitTypes.name,
             bedrooms: unitTypes.bedrooms,
             structuralType: unitTypes.structuralType,
             basePriceFrom: unitTypes.basePriceFrom,
+            basePriceTo: unitTypes.basePriceTo,
+            monthlyRentFrom: unitTypes.monthlyRentFrom,
+            monthlyRentTo: unitTypes.monthlyRentTo,
+            startingBid: unitTypes.startingBid,
+            reservePrice: unitTypes.reservePrice,
             displayOrder: unitTypes.displayOrder,
             developmentType: developments.developmentType,
+            transactionType: developments.transactionType,
           })
           .from(unitTypes)
           .leftJoin(developments, eq(unitTypes.developmentId, developments.id))
           .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
-          .orderBy(unitTypes.displayOrder, unitTypes.basePriceFrom)
+          .orderBy(unitTypes.displayOrder)
       : [];
 
-  const unitsByDevelopment = new Map<
-    number,
-    Array<{
-      label: string;
-      priceFrom: number | null;
-    }>
-  >();
+  const unitsByDevelopment = new Map<number, PublicDevelopmentConfiguration[]>();
 
   const mapUnitKind = (structuralType: unknown, developmentType: unknown) => {
     const s = String(structuralType || '').toLowerCase();
@@ -717,26 +833,65 @@ export async function listPublicDevelopments(options: {
     const kind = mapUnitKind(unit.structuralType, unit.developmentType);
     const label =
       unit.name || (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
-    unitsByDevelopment.get(devId)!.push({
-      label,
-      priceFrom: unit.basePriceFrom != null ? Number(unit.basePriceFrom) : null,
-    });
+    unitsByDevelopment.get(devId)!.push(
+      resolvePublicDevelopmentConfiguration({
+        ...unit,
+        label,
+      }),
+    );
   }
 
-  return results.map((d: any) => ({
-    ...d,
-    images: parseJsonField(d.images),
-    highlights: parseJsonField(d.highlights),
-    rating: d.rating != null ? Number(d.rating) : null,
-    isFeatured: Number(d.isFeatured || 0) === 1,
-    builderName: d.brandName || d.developerName || null,
-    builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
-    commissionModel: d.commissionModel || null,
-    referrerCommissionType: d.referrerCommissionType || null,
-    referrerCommissionValue: d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
-    referrerCommissionAmount: d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
-    configurations: unitsByDevelopment.get(Number(d.id)) || [],
-  }));
+  Array.from(unitsByDevelopment.entries()).forEach(([devId, configurations]) => {
+    const sourceUnits = (unitRows as any[]).filter(unit => Number(unit.developmentId) === devId);
+    const transactionType = normalizeTransactionType(sourceUnits[0]?.transactionType);
+    unitsByDevelopment.set(
+      devId,
+      configurations
+        .map((configuration, index) => ({ configuration, source: sourceUnits[index] }))
+        .sort((left, right) =>
+          compareDevelopmentUnitsForPublicDisplay(left.source, right.source, transactionType),
+        )
+        .map(item => item.configuration),
+    );
+  });
+
+  return results.map((d: any) => {
+    const images = parseJsonField(d.images);
+    const videos = parseJsonField(d.videos);
+    const floorPlans = parseJsonField(d.floorPlans);
+    const brochures = parseJsonField(d.brochures);
+
+    return {
+      ...d,
+      monthlyRentFrom: d.monthlyRentFrom != null ? Number(d.monthlyRentFrom) : null,
+      monthlyRentTo: d.monthlyRentTo != null ? Number(d.monthlyRentTo) : null,
+      startingBidFrom: d.startingBidFrom != null ? Number(d.startingBidFrom) : null,
+      reservePriceFrom: d.reservePriceFrom != null ? Number(d.reservePriceFrom) : null,
+      images,
+      videos,
+      floorPlans,
+      brochures,
+      media: {
+        photos: images,
+        videos,
+        floorPlans,
+        brochures,
+        documents: brochures,
+      },
+      highlights: parseJsonField(d.highlights),
+      rating: d.rating != null ? Number(d.rating) : null,
+      isFeatured: Number(d.isFeatured || 0) === 1,
+      builderName: d.brandName || d.developerName || null,
+      builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
+      commissionModel: d.commissionModel || null,
+      referrerCommissionType: d.referrerCommissionType || null,
+      referrerCommissionValue:
+        d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
+      referrerCommissionAmount:
+        d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
+      configurations: unitsByDevelopment.get(Number(d.id)) || [],
+    };
+  });
 }
 
 // ===========================================================================
@@ -749,6 +904,8 @@ export async function createDevelopment(
   metadata: DevelopmentMetadata = {},
   operatingContext?: { brandProfileId: number } | null,
 ) {
+  data = flattenCanonicalDevelopmentPayload(data as Record<string, any>) as CreateDevelopmentData;
+
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -785,7 +942,8 @@ export async function createDevelopment(
   let resolvedBrandProfileId: number | null = null;
   let effectiveOwnerType: 'platform' | 'developer' = ownerType || 'developer';
 
-  // If super admin, bypass ALL checks
+  // Super admins bypass ownership checks, but DB-row publish readiness still uses the shared
+  // canonical bridge so public listings are not published with missing commercial basics.
   if (user?.role === 'super_admin') {
     // Super admin mode - use brand profile from context or metadata
     resolvedBrandProfileId =
@@ -906,10 +1064,15 @@ export async function createDevelopment(
   );
   const isSuperAdminBrandCreation = user?.role === 'super_admin' && !!resolvedBrandProfileId;
   const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  const rentRange =
-    normalizedTransactionType === 'for_rent' ? computeRentRangeFromUnits(unitTypesData) : null;
-  const auctionRange =
-    normalizedTransactionType === 'auction' ? computeAuctionRangeFromUnits(unitTypesData) : null;
+  const transactionAggregates = buildDevelopmentTransactionAggregates(
+    normalizedTransactionType,
+    developmentData as Record<string, unknown>,
+    unitTypesData as Array<Record<string, unknown>> | null,
+  );
+  const governanceEstateSpecs = buildDevelopmentGovernanceEstateSpecs(
+    developmentData as Record<string, any>,
+    estateSpecsData,
+  );
 
   const insertPayload: Record<string, any> = {
     // Use resolved identity for ownership
@@ -974,30 +1137,16 @@ export async function createDevelopment(
     latitude: (developmentData as any).latitude || null,
     longitude: (developmentData as any).longitude || null,
 
-    priceFrom: sanitizeInt((developmentData as any).priceFrom),
-    priceTo: sanitizeInt((developmentData as any).priceTo),
-    monthlyRentFrom:
-      normalizedTransactionType === 'for_rent'
-        ? (rentRange?.monthlyRentFrom ?? null)
-        : sanitizeDecimal((developmentData as any).monthlyRentFrom),
-    monthlyRentTo:
-      normalizedTransactionType === 'for_rent'
-        ? (rentRange?.monthlyRentTo ?? null)
-        : sanitizeDecimal((developmentData as any).monthlyRentTo),
-    auctionStartDate:
-      normalizedTransactionType === 'auction' ? (auctionRange?.auctionStartDate ?? null) : null,
-    auctionEndDate:
-      normalizedTransactionType === 'auction' ? (auctionRange?.auctionEndDate ?? null) : null,
-    startingBidFrom:
-      normalizedTransactionType === 'auction' ? (auctionRange?.startingBidFrom ?? null) : null,
-    reservePriceFrom:
-      normalizedTransactionType === 'auction' ? (auctionRange?.reservePriceFrom ?? null) : null,
+    ...transactionAggregates,
     totalUnits: sanitizeInt((developmentData as any).totalUnits),
     availableUnits: sanitizeInt((developmentData as any).availableUnits),
     totalDevelopmentArea: sanitizeInt((developmentData as any).totalDevelopmentArea),
     customClassification: sanitizeString((developmentData as any).customClassification),
 
-    estateSpecs: (developmentData as any).estateSpecs || null,
+    estateSpecs: governanceEstateSpecs.hasOwnedFields
+      ? stringifyJsonValue(governanceEstateSpecs.estateSpecs, {})
+      : null,
+    launchDate: sanitizeDate((developmentData as any).launchDate),
     completionDate: sanitizeDate((developmentData as any).completionDate),
 
     ownershipType: sanitizeEnum(
@@ -1029,7 +1178,15 @@ export async function createDevelopment(
     monthlyLevyTo: sanitizeDecimal((developmentData as any).monthlyLevyTo),
     ratesFrom: sanitizeDecimal((developmentData as any).ratesFrom),
     ratesTo: sanitizeDecimal((developmentData as any).ratesTo),
-    transferCostsIncluded: (developmentData as any).transferCostsIncluded || null,
+    transferCostsIncluded: normalizeOptionalTinyIntFlag(
+      (developmentData as any).transferCostsIncluded,
+    ),
+    ...(isSuperAdminBrandCreation
+      ? buildPublishedDevelopmentWorkflowStateColumns({
+          ...(developmentData as Record<string, any>),
+          transactionType: normalizedTransactionType,
+        })
+      : buildDevelopmentWorkflowStateColumns(developmentData as Record<string, any>)),
   };
 
   if (Array.isArray(videosData) && videosData.length > 0) {
@@ -1164,8 +1321,14 @@ export async function updateDevelopment(
   data: CreateDevelopmentData,
   operatingContext?: { brandProfileId: number } | null,
 ) {
+  data = flattenCanonicalDevelopmentPayload(data as Record<string, any>, {
+    mode: isCanonicalPartialDevelopmentUpdate(data) ? 'partial_update' : 'full',
+  }) as CreateDevelopmentData;
+  const updateIntent = resolveDevelopmentUpdateIntent(data);
+
   console.log('[updateDevelopment] Starting update for development:', id);
   console.log('[updateDevelopment] Payload keys:', Object.keys(data));
+  console.log('[updateDevelopment] Unit types update mode:', updateIntent.unitTypesMode);
 
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -1211,6 +1374,7 @@ export async function updateDevelopment(
     images: imagesData,
     ...developmentData
   } = data as any;
+  const effectiveUnitTypesData = updateIntent.unitTypesMode === 'none' ? undefined : unitTypesData;
 
   const updatePayload: Record<string, any> = {};
 
@@ -1230,6 +1394,8 @@ export async function updateDevelopment(
     updatePayload.tagline = sanitizeString(developmentData.tagline);
   if (developmentData.subtitle !== undefined)
     updatePayload.subtitle = sanitizeString(developmentData.subtitle);
+
+  Object.assign(updatePayload, buildDevelopmentWorkflowStateColumns(developmentData));
 
   // ---------------------------------------------------------------------------
   // Categorization / types
@@ -1264,6 +1430,8 @@ export async function updateDevelopment(
   // ---------------------------------------------------------------------------
   // Status / dates
   // ---------------------------------------------------------------------------
+  if (developmentData.launchDate !== undefined)
+    updatePayload.launchDate = sanitizeDate(developmentData.launchDate);
   if (developmentData.completionDate !== undefined)
     updatePayload.completionDate = sanitizeDate(developmentData.completionDate);
   if (developmentData.marketingRole !== undefined) {
@@ -1352,6 +1520,12 @@ export async function updateDevelopment(
       updatePayload[field] = (developmentData as any)[field];
   });
 
+  if (developmentData.transferCostsIncluded !== undefined) {
+    updatePayload.transferCostsIncluded = normalizeOptionalTinyIntFlag(
+      developmentData.transferCostsIncluded,
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Media / amenities / json-ish columns
   // NOTE: your DB snapshot showed:
@@ -1433,24 +1607,14 @@ export async function updateDevelopment(
     );
 
   // ---------------------------------------------------------------------------
-  // Estate specs merge (keep transferCostsIncluded inside estateSpecs)
+  // Governance finance mirrors preserve canonical step data for edit hydration.
   // ---------------------------------------------------------------------------
-  const extraSpecs: any = {};
-  if (developmentData.transferCostsIncluded !== undefined) {
-    extraSpecs.transferCostsIncluded = developmentData.transferCostsIncluded;
-  }
-
-  if (estateSpecsData !== undefined || Object.keys(extraSpecs).length > 0) {
-    let currentSpecs: any = estateSpecsData;
-    if (typeof currentSpecs === 'string') {
-      try {
-        currentSpecs = JSON.parse(currentSpecs);
-      } catch {
-        currentSpecs = {};
-      }
-    }
-    const finalSpecs = { ...(currentSpecs || {}), ...extraSpecs };
-    updatePayload.estateSpecs = JSON.stringify(finalSpecs);
+  const governanceEstateSpecs = buildDevelopmentGovernanceEstateSpecs(
+    developmentData as Record<string, any>,
+    estateSpecsData,
+  );
+  if (governanceEstateSpecs.hasOwnedFields) {
+    updatePayload.estateSpecs = stringifyJsonValue(governanceEstateSpecs.estateSpecs, {});
   }
 
   // ---------------------------------------------------------------------------
@@ -1510,19 +1674,47 @@ export async function updateDevelopment(
     (developmentData.transactionType
       ? normalizeTransactionType(developmentData.transactionType)
       : undefined);
+  const previousTransactionType =
+    effectiveTransactionType && developmentData.transactionType !== undefined
+      ? await getCurrentDevelopmentTransactionTypeForUpdate(
+          db,
+          id,
+          developerProfileId,
+          superAdminBrandProfileId,
+        )
+      : null;
+  const transactionTypeChanged =
+    Boolean(effectiveTransactionType && previousTransactionType) &&
+    previousTransactionType !== effectiveTransactionType;
 
-  if (effectiveTransactionType === 'for_rent' && Array.isArray(unitTypesData)) {
-    const rentRange = computeRentRangeFromUnits(unitTypesData);
-    updatePayload.monthlyRentFrom = rentRange.monthlyRentFrom;
-    updatePayload.monthlyRentTo = rentRange.monthlyRentTo;
+  if (
+    transactionTypeChanged &&
+    updateIntent.deleteMissingUnitTypes === false &&
+    Array.isArray(effectiveUnitTypesData)
+  ) {
+    await assertPartialTransactionSwitchOwnsFullInventory(db, id, effectiveUnitTypesData);
   }
 
-  if (effectiveTransactionType === 'auction' && Array.isArray(unitTypesData)) {
-    const auctionRange = computeAuctionRangeFromUnits(unitTypesData);
-    updatePayload.auctionStartDate = auctionRange.auctionStartDate;
-    updatePayload.auctionEndDate = auctionRange.auctionEndDate;
-    updatePayload.startingBidFrom = auctionRange.startingBidFrom;
-    updatePayload.reservePriceFrom = auctionRange.reservePriceFrom;
+  const aggregateUnitTypesData = Array.isArray(effectiveUnitTypesData)
+    ? await resolveUnitTypesForUpdateAggregates(db, id, effectiveUnitTypesData, {
+        deleteMissing: updateIntent.deleteMissingUnitTypes,
+      })
+    : undefined;
+
+  if (
+    effectiveTransactionType &&
+    shouldRecomputeDevelopmentTransactionAggregates(developmentData, effectiveUnitTypesData, {
+      transactionTypeChanged,
+    })
+  ) {
+    Object.assign(
+      updatePayload,
+      buildDevelopmentTransactionAggregates(
+        effectiveTransactionType,
+        developmentData as Record<string, unknown>,
+        aggregateUnitTypesData,
+      ),
+    );
   }
 
   updatePayload.updatedAt = mysqlDateTime();
@@ -1565,14 +1757,16 @@ export async function updateDevelopment(
   }
 
   // Unit types (safe persistence helper handles no-wipe)
-  if (unitTypesData !== undefined) {
-    if (Array.isArray(unitTypesData)) {
-      if (unitTypesData.length === 0) {
-        console.warn('[updateDevelopment] Empty unitTypes - preserving existing (no delete)');
+  if (effectiveUnitTypesData !== undefined) {
+    if (Array.isArray(effectiveUnitTypesData)) {
+      if (effectiveUnitTypesData.length === 0) {
+        console.warn('[updateDevelopment] Empty unitTypes - deleting all existing unit types');
       }
-      await persistUnitTypes(db, id, unitTypesData);
+      await persistUnitTypes(db, id, effectiveUnitTypesData, {
+        deleteMissing: updateIntent.deleteMissingUnitTypes,
+      });
     } else {
-      console.warn('[updateDevelopment] unitTypes is not an array:', typeof unitTypesData);
+      console.warn('[updateDevelopment] unitTypes is not an array:', typeof effectiveUnitTypesData);
     }
   } else {
     console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
@@ -1632,15 +1826,234 @@ const asDateTimeOrNull = (v: unknown): string | null => {
   return parsed.toISOString().slice(0, 19).replace('T', ' ');
 };
 
-const normalizeParkingKind = (v: unknown): 'none' | 'carport' | 'garage' | '1' | '2' => {
+const normalizeParkingKind = (v: unknown): 'none' | 'open' | 'covered' | 'carport' | 'garage' => {
   const s = String(v ?? '')
     .trim()
     .toLowerCase();
-  if (['none', 'carport', 'garage', '1', '2'].includes(s)) return s as any;
+  if (s === '1' || s === '2') return 'open';
+  if (['none', 'open', 'covered', 'carport', 'garage'].includes(s)) return s as any;
   return 'none';
 };
 
 const mysqlDateTime = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+const mergeUnitObjectField = (existingValue: unknown, incomingValue: unknown) => {
+  if (incomingValue === undefined) return existingValue;
+  if (incomingValue === null) return incomingValue;
+
+  const existingObject = parseJsonMaybeTwice<Record<string, unknown>>(existingValue, {});
+  const incomingObject = parseJsonMaybeTwice<Record<string, unknown>>(incomingValue, {});
+  if (
+    existingObject &&
+    incomingObject &&
+    typeof existingObject === 'object' &&
+    typeof incomingObject === 'object' &&
+    !Array.isArray(existingObject) &&
+    !Array.isArray(incomingObject)
+  ) {
+    return { ...existingObject, ...incomingObject };
+  }
+
+  return incomingValue;
+};
+
+const MERGED_UNIT_OBJECT_FIELDS = new Set([
+  'baseMedia',
+  'specifications',
+  'specOverrides',
+  'baseFeatures',
+  'baseFinishes',
+  'amenities',
+  'features',
+]);
+
+const mergeDefinedUnitFields = (
+  existingUnit: Record<string, any>,
+  incomingUnit: Record<string, any>,
+) => {
+  const merged = { ...existingUnit };
+  for (const [key, value] of Object.entries(incomingUnit)) {
+    if (value !== undefined) {
+      merged[key] = MERGED_UNIT_OBJECT_FIELDS.has(key)
+        ? mergeUnitObjectField(existingUnit[key], value)
+        : value;
+    }
+  }
+  if (incomingUnit.basePriceFrom !== undefined && incomingUnit.priceFrom === undefined) {
+    merged.priceFrom = incomingUnit.basePriceFrom;
+  }
+  if (incomingUnit.priceFrom !== undefined && incomingUnit.basePriceFrom === undefined) {
+    merged.basePriceFrom = incomingUnit.priceFrom;
+  }
+  if (incomingUnit.basePriceTo !== undefined && incomingUnit.priceTo === undefined) {
+    merged.priceTo = incomingUnit.basePriceTo;
+  }
+  if (incomingUnit.priceTo !== undefined && incomingUnit.basePriceTo === undefined) {
+    merged.basePriceTo = incomingUnit.priceTo;
+  }
+  return merged;
+};
+
+export const DEVELOPMENT_TRANSACTION_AGGREGATE_FIELDS = [
+  'priceFrom',
+  'priceTo',
+  'monthlyRentFrom',
+  'monthlyRentTo',
+  'auctionStartDate',
+  'auctionEndDate',
+  'startingBidFrom',
+  'reservePriceFrom',
+] as const;
+
+export function hasExplicitDevelopmentAggregateInput(
+  developmentData: Record<string, any>,
+): boolean {
+  return DEVELOPMENT_TRANSACTION_AGGREGATE_FIELDS.some(
+    field => developmentData[field] !== undefined,
+  );
+}
+
+export function shouldRecomputeDevelopmentTransactionAggregates(
+  developmentData: Record<string, any>,
+  unitTypesData: unknown,
+  options: { transactionTypeChanged?: boolean } = {},
+): boolean {
+  return (
+    Array.isArray(unitTypesData) ||
+    hasExplicitDevelopmentAggregateInput(developmentData) ||
+    options.transactionTypeChanged === true
+  );
+}
+
+async function getCurrentDevelopmentTransactionTypeForUpdate(
+  db: any,
+  developmentId: number,
+  developerProfileId: number | null,
+  superAdminBrandProfileId: number | null,
+): Promise<TransactionType | null> {
+  const ownershipCondition =
+    superAdminBrandProfileId !== null
+      ? and(
+          eq(developments.id, developmentId),
+          eq(developments.developerBrandProfileId, superAdminBrandProfileId),
+        )
+      : and(eq(developments.id, developmentId), eq(developments.developerId, developerProfileId!));
+
+  const [currentDevelopment] = await db
+    .select({ transactionType: developments.transactionType })
+    .from(developments)
+    .where(ownershipCondition)
+    .limit(1);
+
+  return currentDevelopment ? normalizeTransactionType(currentDevelopment.transactionType) : null;
+}
+
+async function resolveUnitTypesForUpdateAggregates(
+  db: any,
+  developmentId: number,
+  incomingUnits: unknown[],
+  options: { deleteMissing?: boolean } = {},
+): Promise<Array<Record<string, unknown>>> {
+  if (incomingUnits.length === 0) return [];
+
+  const existingUnits = await db
+    .select()
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, developmentId));
+  const existingIds = new Set<string>(
+    existingUnits.map((unit: any) => String(unit.id ?? '').trim()).filter(Boolean),
+  );
+  const existingUnitsById = new Map<string, Record<string, any>>(
+    existingUnits
+      .map((unit: any) => [String(unit.id ?? '').trim(), unit] as const)
+      .filter(([unitId]) => Boolean(unitId)),
+  );
+  const normalizedIncoming = incomingUnits.filter(isRecord).map(unit => ({
+    ...unit,
+    normalizedId: unit.id ? String(unit.id).trim() : null,
+  }));
+  const matchingIncomingIds = new Set<string>(
+    normalizedIncoming
+      .filter(unit => unit.normalizedId && existingIds.has(unit.normalizedId))
+      .map(unit => unit.normalizedId!),
+  );
+  const safeToDelete =
+    options.deleteMissing !== false && (existingIds.size === 0 || matchingIncomingIds.size > 0);
+  const mergedIncoming = normalizedIncoming.map(unit => {
+    const { normalizedId, ...incomingUnit } = unit;
+    const existingUnit = normalizedId ? existingUnitsById.get(normalizedId) : undefined;
+    return existingUnit ? mergeDefinedUnitFields(existingUnit, incomingUnit) : incomingUnit;
+  });
+
+  if (safeToDelete) {
+    return mergedIncoming;
+  }
+
+  const incomingIds = new Set<string>(
+    normalizedIncoming.map(unit => unit.normalizedId).filter(Boolean) as string[],
+  );
+  const preservedExistingUnits = existingUnits.filter((unit: any) => {
+    const unitId = String(unit.id ?? '').trim();
+    return unitId && !incomingIds.has(unitId);
+  });
+
+  return [...preservedExistingUnits, ...mergedIncoming];
+}
+
+async function assertPartialTransactionSwitchOwnsFullInventory(
+  db: any,
+  developmentId: number,
+  incomingUnits: unknown[],
+) {
+  const existingUnits = await db
+    .select({ id: unitTypes.id })
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, developmentId));
+  const existingIds = new Set<string>(
+    existingUnits.map((unit: any) => String(unit.id ?? '').trim()).filter(Boolean),
+  );
+
+  if (existingIds.size === 0) return;
+
+  const incomingIds = new Set<string>(
+    incomingUnits
+      .filter(isRecord)
+      .map(unit => (unit.id ? String(unit.id).trim() : ''))
+      .filter(Boolean),
+  );
+  const missingIds = Array.from(existingIds).filter(id => !incomingIds.has(id));
+
+  if (missingIds.length > 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message:
+        'Changing transaction type from a partial unit_types save requires a full unit_types snapshot.',
+      cause: {
+        missingUnitTypeIds: missingIds,
+      } as any,
+    });
+  }
+}
+
+const asJsonArrayValue = (value: unknown): unknown[] => {
+  const parsed = parseJsonMaybeTwice<unknown>(value, []);
+  return Array.isArray(parsed) ? parsed : [];
+};
+
+const asJsonObjectValue = (value: unknown, fallback: Record<string, unknown>) => {
+  const parsed = parseJsonMaybeTwice<unknown>(value, fallback);
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    return parsed as Record<string, unknown>;
+  }
+  return fallback;
+};
+
+const asSafeUnitTypeId = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 36) return null;
+  return /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(trimmed) ? trimmed : null;
+};
 
 // ===========================================================================
 // PERSIST UNIT TYPES (SAFETY: no accidental wipe on ID mismatch)
@@ -1650,6 +2063,7 @@ export async function persistUnitTypes(
   db: any,
   developmentId: number,
   unitTypesData: any[],
+  options: { deleteMissing?: boolean } = {},
 ): Promise<void> {
   console.log(
     `[persistUnitTypes] Processing ${unitTypesData?.length ?? 0} units for development ${developmentId}`,
@@ -1661,13 +2075,13 @@ export async function persistUnitTypes(
     );
   }
 
-  if (!unitTypesData || unitTypesData.length === 0) {
-    console.log('[persistUnitTypes] Empty payload - preserving existing units');
+  if (!unitTypesData) {
+    console.log('[persistUnitTypes] Missing payload - preserving existing units');
     return;
   }
 
   const existingUnits = await db
-    .select({ id: unitTypes.id })
+    .select()
     .from(unitTypes)
     .where(eq(unitTypes.developmentId, developmentId));
 
@@ -1676,6 +2090,35 @@ export async function persistUnitTypes(
   const existingIds = new Set<string>(
     existingUnits.map((u: any) => String(u.id ?? '').trim()).filter(Boolean),
   );
+  const existingUnitsById = new Map<string, Record<string, any>>(
+    existingUnits
+      .map((u: any) => [String(u.id ?? '').trim(), u] as const)
+      .filter(([id]) => Boolean(id)),
+  );
+
+  if (unitTypesData.length === 0) {
+    if (options.deleteMissing === false) {
+      console.log('[persistUnitTypes] Empty patch payload - preserving existing units');
+      return;
+    }
+    if (existingIds.size > 0) {
+      console.log(`[persistUnitTypes] Empty array payload - deleting ${existingIds.size} units`);
+      await db.delete(unitTypes).where(eq(unitTypes.developmentId, developmentId));
+    }
+    return;
+  }
+
+  const [developmentTransaction] = await db
+    .select({ transactionType: developments.transactionType })
+    .from(developments)
+    .where(eq(developments.id, developmentId))
+    .limit(1);
+  const effectiveTransactionType = normalizeTransactionType(
+    developmentTransaction?.transactionType,
+  );
+  const isSaleUnit = effectiveTransactionType === 'for_sale';
+  const isRentUnit = effectiveTransactionType === 'for_rent';
+  const isAuctionUnit = effectiveTransactionType === 'auction';
 
   const normalizedIncoming = unitTypesData.map(u => ({
     ...u,
@@ -1688,8 +2131,10 @@ export async function persistUnitTypes(
       .map(u => u.normalizedId!),
   );
 
-  // ✅ Only delete if we have proof the client is sending real DB IDs, OR there are no existing units.
-  const safeToDelete = existingIds.size === 0 || matchingIncomingIds.size > 0;
+  // Full-sync inventory updates may delete omitted rows. Partial patch payloads preserve
+  // omitted rows, whether they came from canonical stepData or the temporary legacy bridge.
+  const safeToDelete =
+    options.deleteMissing !== false && (existingIds.size === 0 || matchingIncomingIds.size > 0);
 
   if (safeToDelete) {
     const idsToDelete: string[] = Array.from(existingIds).filter(
@@ -1701,6 +2146,15 @@ export async function persistUnitTypes(
         .delete(unitTypes)
         .where(and(eq(unitTypes.developmentId, developmentId), inArray(unitTypes.id, idsToDelete)));
     }
+  } else if (options.deleteMissing === false) {
+    console.log(
+      '[persistUnitTypes] Unit types patch - preserving omitted existing units.',
+      {
+        existingCount: existingIds.size,
+        incomingCount: normalizedIncoming.length,
+        matchingIncomingCount: matchingIncomingIds.size,
+      },
+    );
   } else {
     console.warn(
       '[persistUnitTypes] SAFETY TRIP: No incoming IDs match existing DB IDs. Skipping deletion to prevent data loss.',
@@ -1712,9 +2166,13 @@ export async function persistUnitTypes(
     );
   }
 
-  for (const unit of normalizedIncoming) {
+  for (const [unitIndex, unit] of normalizedIncoming.entries()) {
     const isNewUnit = !unit.normalizedId || !existingIds.has(unit.normalizedId);
-    const unitId = isNewUnit ? randomUUID() : unit.normalizedId!;
+    const unitId = isNewUnit
+      ? (asSafeUnitTypeId(unit.normalizedId) ?? randomUUID())
+      : unit.normalizedId!;
+    const existingUnit = isNewUnit ? null : existingUnitsById.get(unitId);
+    const unitData = existingUnit ? mergeDefinedUnitFields(existingUnit, unit) : unit;
 
     if (unitId.length > 36) {
       throw new Error(
@@ -1722,29 +2180,55 @@ export async function persistUnitTypes(
       );
     }
 
-    const kind = normalizeParkingKind(unit.parkingType);
-    const rawBays = asInt(unit.parkingBays ?? unit.parkingSpaces ?? 0, 0);
+    const legacyParkingBays =
+      String(unitData.parkingType ?? '').trim() === '1'
+        ? 1
+        : String(unitData.parkingType ?? '').trim() === '2'
+          ? 2
+          : 0;
+    const kind = normalizeParkingKind(unitData.parkingType);
+    const rawBays = asInt(unitData.parkingBays ?? unitData.parkingSpaces ?? legacyParkingBays, 0);
     const parkingBays = kind === 'none' ? 0 : rawBays;
     const parkingType = kind === 'none' ? null : kind;
 
     const basePriceFrom = (() => {
-      const v = asDecimalOrNull(unit.basePriceFrom);
-      if (v !== null) return v;
+      if (!isSaleUnit) return 0;
 
-      const fallback = asDecimalOrNull(unit.priceFrom);
-      if (fallback !== null) return fallback;
+      const incomingBasePrice = asDecimalOrNull(unit.basePriceFrom);
+      if (unit.basePriceFrom !== undefined && incomingBasePrice !== null) return incomingBasePrice;
 
-      if (asDecimalOrNull(unit.monthlyRentFrom) !== null) return 0;
+      const incomingCanonicalPrice = asDecimalOrNull(unit.priceFrom);
+      if (unit.priceFrom !== undefined && incomingCanonicalPrice !== null) {
+        return incomingCanonicalPrice;
+      }
+
+      const storedBasePrice = asDecimalOrNull(unitData.basePriceFrom);
+      if (storedBasePrice !== null) return storedBasePrice;
+
+      const storedCanonicalPrice = asDecimalOrNull(unitData.priceFrom);
+      if (storedCanonicalPrice !== null) return storedCanonicalPrice;
 
       console.warn(`UnitType ${unitId}: basePriceFrom missing, defaulting to 0`);
       return 0;
     })();
+    const basePriceTo = (() => {
+      if (!isSaleUnit) return null;
 
-    const totalUnits = Math.max(0, sanitizeInt(unit.totalUnits) ?? 0);
-    const availableUnits = Math.max(0, sanitizeInt(unit.availableUnits) ?? 0);
-    const reservedUnits = Math.max(0, sanitizeInt((unit as any).reservedUnits) ?? 0);
+      const incomingBasePrice = asDecimalOrNull(unit.basePriceTo);
+      if (unit.basePriceTo !== undefined && incomingBasePrice !== null) return incomingBasePrice;
+
+      const incomingCanonicalPrice = asDecimalOrNull(unit.priceTo);
+      if (unit.priceTo !== undefined && incomingCanonicalPrice !== null)
+        return incomingCanonicalPrice;
+
+      return asDecimalOrNull(unitData.basePriceTo ?? unitData.priceTo);
+    })();
+
+    const totalUnits = Math.max(0, sanitizeInt(unitData.totalUnits) ?? 0);
+    const availableUnits = Math.max(0, sanitizeInt(unitData.availableUnits) ?? 0);
+    const reservedUnits = Math.max(0, sanitizeInt((unitData as any).reservedUnits) ?? 0);
     if (availableUnits + reservedUnits > totalUnits) {
-      const unitName = String(unit.label || unit.name || unitId).trim() || 'Unnamed Unit';
+      const unitName = String(unitData.label || unitData.name || unitId).trim() || 'Unnamed Unit';
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Unit "${unitName}" has invalid inventory: available + reserved cannot exceed total.`,
@@ -1755,17 +2239,17 @@ export async function persistUnitTypes(
       developmentId,
 
       // Keep both label+name populated for legacy UI compatibility
-      label: unit.label || unit.name || 'Unnamed Unit',
-      name: unit.name || unit.label || 'Unnamed Unit',
+      label: unitData.label || unitData.name || 'Unnamed Unit',
+      name: unitData.name || unitData.label || 'Unnamed Unit',
 
       // ✅ Avoid empty-string enums (store null instead)
       ownershipType: sanitizeEnum(
-        unit.ownershipType,
+        unitData.ownershipType,
         ['full-title', 'sectional-title', 'leasehold', 'life-rights'],
         null,
       ),
       structuralType: sanitizeEnum(
-        unit.structuralType,
+        unitData.structuralType,
         [
           'apartment',
           'freestanding-house',
@@ -1778,34 +2262,38 @@ export async function persistUnitTypes(
         ],
         null,
       ),
-      floors: sanitizeEnum(unit.floors, ['single-storey', 'double-storey', 'triplex'], null),
+      floors: sanitizeEnum(unitData.floors, ['single-storey', 'double-storey', 'triplex'], null),
 
       // Parking
       parkingType,
       parkingBays,
 
       // Numbers (keep DB happy)
-      bedrooms: sanitizeInt(unit.bedrooms) ?? 0,
-      bathrooms: asDecimalOrNull(unit.bathrooms) ?? 1.0,
+      bedrooms: sanitizeInt(unitData.bedrooms) ?? 0,
+      bathrooms: asDecimalOrNull(unitData.bathrooms) ?? 1.0,
 
-      yardSize: sanitizeInt(unit.yardSize),
-      unitSize: sanitizeInt(unit.unitSize),
+      yardSize: sanitizeInt(unitData.yardSize),
+      unitSize: sanitizeInt(unitData.unitSize),
 
-      priceFrom: asDecimalOrNull(unit.priceFrom),
-      priceTo: asDecimalOrNull(unit.priceTo),
+      priceFrom: isSaleUnit ? asDecimalOrNull(unitData.priceFrom) : null,
+      priceTo: isSaleUnit ? asDecimalOrNull(unitData.priceTo) : null,
       basePriceFrom,
-      basePriceTo: asDecimalOrNull(unit.basePriceTo),
-      monthlyRentFrom: asDecimalOrNull(unit.monthlyRentFrom ?? unit.monthlyRent),
-      monthlyRentTo: asDecimalOrNull(unit.monthlyRentTo),
-      leaseTerm: asStringOrNull(unit.leaseTerm),
-      isFurnished: (unit.isFurnished ?? unit.furnished) ? 1 : 0,
-      depositRequired: asDecimalOrNull(unit.depositRequired ?? unit.deposit),
-      startingBid: asDecimalOrNull(unit.startingBid),
-      reservePrice: asDecimalOrNull(unit.reservePrice),
-      auctionStartDate: asDateTimeOrNull(unit.auctionStartDate),
-      auctionEndDate: asDateTimeOrNull(unit.auctionEndDate),
+      basePriceTo,
+      monthlyRentFrom: isRentUnit
+        ? asDecimalOrNull(unitData.monthlyRentFrom ?? unitData.monthlyRent)
+        : null,
+      monthlyRentTo: isRentUnit ? asDecimalOrNull(unitData.monthlyRentTo) : null,
+      leaseTerm: isRentUnit ? asStringOrNull(unitData.leaseTerm) : null,
+      isFurnished: isRentUnit && (unitData.isFurnished ?? unitData.furnished) ? 1 : 0,
+      depositRequired: isRentUnit
+        ? asDecimalOrNull(unitData.depositRequired ?? unitData.deposit)
+        : null,
+      startingBid: isAuctionUnit ? asDecimalOrNull(unitData.startingBid) : null,
+      reservePrice: isAuctionUnit ? asDecimalOrNull(unitData.reservePrice) : null,
+      auctionStartDate: isAuctionUnit ? asDateTimeOrNull(unitData.auctionStartDate) : null,
+      auctionEndDate: isAuctionUnit ? asDateTimeOrNull(unitData.auctionEndDate) : null,
       auctionStatus: sanitizeEnum(
-        unit.auctionStatus,
+        isAuctionUnit ? unitData.auctionStatus : null,
         ['scheduled', 'active', 'sold', 'passed_in', 'withdrawn'],
         'scheduled',
       ),
@@ -1814,39 +2302,42 @@ export async function persistUnitTypes(
       totalUnits,
       reservedUnits,
 
-      completionDate: asDateOnlyOrNull(unit.completionDate),
+      completionDate: asDateOnlyOrNull(unitData.completionDate),
 
-      internalNotes: asStringOrNull(unit.internalNotes),
-      configDescription: asStringOrNull(unit.configDescription),
-      virtualTourLink: asStringOrNull(unit.virtualTourLink),
-      description: asStringOrNull(unit.description),
+      internalNotes: asStringOrNull(unitData.internalNotes),
+      configDescription: asStringOrNull(unitData.configDescription),
+      virtualTourLink: asStringOrNull(unitData.virtualTourLink),
+      description: asStringOrNull(unitData.description),
 
-      transferCostsIncluded: unit.transferCostsIncluded ? 1 : 0,
+      transferCostsIncluded: unitData.transferCostsIncluded ? 1 : 0,
 
       // JSON-ish columns stored as strings (safe for MySQL)
-      extras: JSON.stringify(unit.extras || []),
-      specifications: JSON.stringify(unit.specifications || {}),
-      specOverrides: JSON.stringify(unit.specOverrides || {}),
-      baseFeatures: JSON.stringify(unit.baseFeatures || {}),
-      baseFinishes: JSON.stringify(unit.baseFinishes || {}),
-      amenities: JSON.stringify(unit.amenities || { standard: [], additional: [] }),
+      extras: JSON.stringify(asJsonArrayValue(unitData.extras)),
+      specifications: JSON.stringify(asJsonObjectValue(unitData.specifications, {})),
+      specOverrides: JSON.stringify(asJsonObjectValue(unitData.specOverrides, {})),
+      baseFeatures: JSON.stringify(asJsonObjectValue(unitData.baseFeatures, {})),
+      baseFinishes: JSON.stringify(asJsonObjectValue(unitData.baseFinishes, {})),
+      amenities: JSON.stringify(
+        asJsonObjectValue(unitData.amenities, { standard: [], additional: [] }),
+      ),
 
       // ✅ keep as OBJECT (stringified), never flatten to gallery array
       baseMedia: JSON.stringify({
         gallery: [],
         floorPlans: [],
         renders: [],
-        ...(unit.baseMedia || {}),
+        ...asJsonObjectValue(unitData.baseMedia, {}),
       }),
 
-      features: JSON.stringify(unit.features || {}),
+      features: JSON.stringify(asJsonObjectValue(unitData.features, {})),
 
       updatedAt: mysqlDateTime(),
       isActive: 1,
+      displayOrder: sanitizeInt(unitData.displayOrder) ?? unitIndex,
     };
 
     console.log(`[persistUnitTypes] Unit ${unitId} PROCESSED:`, {
-      incoming_unitSize: unit.unitSize,
+      incoming_unitSize: unitData.unitSize,
       final_unitSize: unitPayload.unitSize,
       final_yardSize: unitPayload.yardSize,
     });
@@ -1957,7 +2448,7 @@ async function persistDevelopmentPhases(
 }
 
 // ===========================================================================
-// GET DEVELOPMENT WITH PHASES (unchanged core, but safe parses)
+// GET DEVELOPMENT WITH PHASES (safe parses + canonical edit snapshot)
 // ===========================================================================
 
 export async function getDevelopmentWithPhases(id: number) {
@@ -1973,7 +2464,11 @@ export async function getDevelopmentWithPhases(id: number) {
 
   try {
     const [unitTypesRes, phasesRes] = await Promise.all([
-      db.select().from(unitTypes).where(eq(unitTypes.developmentId, id)),
+      db
+        .select()
+        .from(unitTypes)
+        .where(eq(unitTypes.developmentId, id))
+        .orderBy(unitTypes.displayOrder),
       db.select().from(developmentPhases).where(eq(developmentPhases.developmentId, id)),
     ]);
 
@@ -2000,9 +2495,10 @@ export async function getDevelopmentWithPhases(id: number) {
     return val;
   };
 
-  // images/videos/brochures in this service are stored as JSON string (array), so keep parsing resilient
+  // images/videos/floorPlans/brochures in this service are stored as JSON string (array), so keep parsing resilient
   const dbImages = parse((dev as any).images, []);
   const dbVideos = parse((dev as any).videos, []);
+  const dbFloorPlans = parse((dev as any).floorPlans, []);
   const dbBrochures = parse((dev as any).brochures, []);
 
   // your table uses: amenities=text, highlights=json, features=json
@@ -2012,18 +2508,47 @@ export async function getDevelopmentWithPhases(id: number) {
   const dbFeatures = parseJsonMaybeTwice((dev as any).features, []);
 
   const heroImage = Array.isArray(dbImages) ? ((dbImages[0] as any)?.url ?? dbImages[0]) : null;
+  const media = {
+    photos: Array.isArray(dbImages) ? dbImages : [],
+    videos: Array.isArray(dbVideos) ? dbVideos : [],
+    floorPlans: Array.isArray(dbFloorPlans) ? dbFloorPlans : [],
+    brochures: Array.isArray(dbBrochures) ? dbBrochures : [],
+    documents: Array.isArray(dbBrochures) ? dbBrochures : [],
+    heroImage: heroImage ? { url: heroImage } : undefined,
+  };
+  const estateSpecs = parse((dev as any).estateSpecs, {});
+  const specifications = parse((dev as any).specifications, {});
+  const residentialConfig = parse((dev as any).residentialConfig, {});
+  const landConfig = parse((dev as any).landConfig, {});
+  const commercialConfig = parse((dev as any).commercialConfig, {});
+  const mixedUseConfig = parse((dev as any).mixedUseConfig, {});
+  const hydratedUnitTypes = (unitTypesData || []).map(u => ({
+    ...u,
+    extras: parse((u as any).extras, []),
+    specifications: parse((u as any).specifications, {}),
+    amenities: parse((u as any).amenities, { standard: [], additional: [] }),
+    baseFeatures: parse((u as any).baseFeatures, {}),
+    baseFinishes: parse((u as any).baseFinishes, {}),
+    specOverrides: parse((u as any).specOverrides, {}),
+    features: parse((u as any).features, {}),
+    baseMedia: parse((u as any).baseMedia, { gallery: [], floorPlans: [], renders: [] }),
+  }));
+  const canonicalSnapshot = buildDevelopmentCanonicalEditSnapshot({
+    dev,
+    media,
+    amenities: Array.isArray(dbAmenities) ? dbAmenities : [],
+    highlights: Array.isArray(dbHighlights) ? dbHighlights : [],
+    features: Array.isArray(dbFeatures) ? dbFeatures : [],
+    unitTypes: hydratedUnitTypes,
+    parseJson: parse,
+  });
 
   return {
     ...dev,
+    ...canonicalSnapshot,
 
     images: dbImages,
-
-    media: {
-      photos: Array.isArray(dbImages) ? dbImages : [],
-      videos: Array.isArray(dbVideos) ? dbVideos : [],
-      brochures: Array.isArray(dbBrochures) ? dbBrochures : [],
-      heroImage: heroImage ? { url: heroImage } : undefined,
-    },
+    media,
 
     // match actual column types
     amenities: Array.isArray(dbAmenities) ? dbAmenities : [],
@@ -2031,20 +2556,15 @@ export async function getDevelopmentWithPhases(id: number) {
     features: Array.isArray(dbFeatures) ? dbFeatures : [],
 
     // keep these safe (they often flip between TEXT/JSON depending on migrations)
-    estateSpecs: parse((dev as any).estateSpecs, {}),
-    specifications: parse((dev as any).specifications, {}),
-    residentialConfig: parse((dev as any).residentialConfig, {}),
-    landConfig: parse((dev as any).landConfig, {}),
-    commercialConfig: parse((dev as any).commercialConfig, {}),
-    mixedUseConfig: parse((dev as any).mixedUseConfig, {}),
+    estateSpecs,
+    specifications,
+    residentialConfig,
+    landConfig,
+    commercialConfig,
+    mixedUseConfig,
 
-    unitTypes: (unitTypesData || []).map(u => ({
-      ...u,
-      extras: parse((u as any).extras, []),
-      specifications: parse((u as any).specifications, {}),
-      amenities: parse((u as any).amenities, { standard: [], additional: [] }),
-      baseMedia: parse((u as any).baseMedia, { gallery: [], floorPlans: [], renders: [] }),
-    })),
+    // Legacy root shape remains DB-compatible while stepData.unit_types is the canonical edit source.
+    unitTypes: hydratedUnitTypes,
 
     phases: (phasesData || []).map(p => ({
       ...p,
@@ -2243,13 +2763,6 @@ async function publishDevelopment(
       });
     }
 
-    if (!String(existingDev.description ?? '').trim()) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Description is required before publishing',
-      });
-    }
-
     console.log('[publishDevelopment] Development found:', {
       id: existingDev.id,
       name: existingDev.name,
@@ -2265,6 +2778,8 @@ async function publishDevelopment(
       });
     }
 
+    await validatePersistedDevelopmentForPublish(id);
+
     // Publish it
     console.log('[publishDevelopment] About to execute UPDATE query for development:', id);
 
@@ -2273,7 +2788,11 @@ async function publishDevelopment(
       const publishedAtFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
       const updateResult = await db
         .update(developments)
-        .set({ isPublished: 1, publishedAt: publishedAtFormatted })
+        .set({
+          isPublished: 1,
+          publishedAt: publishedAtFormatted,
+          ...buildPublishedDevelopmentWorkflowStateColumns(existingDev),
+        })
         .where(eq(developments.id, id));
 
       console.log(
@@ -2328,10 +2847,7 @@ async function publishDevelopment(
   }
 
   const [ownedDevelopment] = await db
-    .select({
-      id: developments.id,
-      description: developments.description,
-    })
+    .select()
     .from(developments)
     .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
     .limit(1);
@@ -2343,18 +2859,17 @@ async function publishDevelopment(
     });
   }
 
-  if (!String(ownedDevelopment.description ?? '').trim()) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Description is required before publishing',
-    });
-  }
+  await validatePersistedDevelopmentForPublish(id);
 
   // Format datetime for MySQL (YYYY-MM-DD HH:MM:SS)
   const publishedAtFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
   await db
     .update(developments)
-    .set({ isPublished: 1, publishedAt: publishedAtFormatted })
+    .set({
+      isPublished: 1,
+      publishedAt: publishedAtFormatted,
+      ...buildPublishedDevelopmentWorkflowStateColumns(ownedDevelopment),
+    })
     .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)));
 
   const [updated] = await db
@@ -2377,13 +2892,22 @@ async function approveDevelopment(id: number, adminId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const [existingDev] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
+  if (!existingDev) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+  }
+
+  const now = mysqlDateTime();
+
   await db
     .update(developments)
     .set({
       approvalStatus: 'approved',
       isPublished: true as any,
-      approvedAt: mysqlDateTime(),
+      publishedAt: (existingDev as any).publishedAt ?? now,
+      approvedAt: now,
       approvedBy: adminId,
+      ...buildPublishedDevelopmentWorkflowStateColumns(existingDev),
     })
     .where(eq(developments.id, id));
 }
@@ -2530,6 +3054,8 @@ export async function publishDevelopmentStrict(
         slug,
         isPublished: 1,
         publishedAt: mysqlDateTime(),
+        ...buildPublishedDevelopmentWorkflowStateColumns(wizardState as Record<string, any>),
+        amenities: JSON.stringify(normalizeAmenities((normalized as any).amenities)),
 
         // ✅ hard defaults to satisfy DB NOT NULL + no default
         views: 0,
@@ -2574,72 +3100,17 @@ export async function publishDevelopmentStrict(
   }
 }
 
-function validateForPublish(wizardState: WizardData): void {
-  const errors: Record<string, string> = {};
-
-  if (!Array.isArray(wizardState.unitTypes) || wizardState.unitTypes.length === 0) {
-    errors['unitTypes'] = 'At least one unit type is required';
-  }
-
-  const images = (wizardState as any).images;
-  const hasHeroImage =
-    (Array.isArray(images) && images.length > 0) ||
-    (typeof images === 'string' && images.trim() !== '');
-
-  if (!hasHeroImage) {
-    errors['media.heroImage'] = 'At least one photo (Hero Image) is required';
-  }
-
-  const description = String(
-    (wizardState as any).description ?? (wizardState as any).developmentData?.description ?? '',
-  ).trim();
-  if (!description) {
-    errors['description'] = 'Description is required before publishing';
-  }
-
-  const transactionType =
+export function validateForPublish(wizardState: WizardData): void {
+  const transactionType = normalizeTransactionType(
     (wizardState as any).transactionType ||
-    (wizardState as any).developmentData?.transactionType ||
-    'for_sale';
-
-  if (transactionType === 'for_rent' && Array.isArray(wizardState.unitTypes)) {
-    const hasRent = wizardState.unitTypes.some((u: any) => {
-      const from = Number(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0);
-      const to = Number(u?.monthlyRentTo ?? 0);
-      return from > 0 || to > 0;
-    });
-    if (!hasRent) {
-      errors['unitTypes.monthlyRentFrom'] = 'At least one unit type must include monthly rent';
-    }
-  }
-
-  if (transactionType === 'auction' && Array.isArray(wizardState.unitTypes)) {
-    const now = Date.now();
-    const validAuctionUnits = wizardState.unitTypes.every((u: any) => {
-      const startingBid = Number(u?.startingBid ?? 0);
-      const reservePrice = u?.reservePrice != null ? Number(u.reservePrice) : undefined;
-      const startDate = u?.auctionStartDate ? new Date(u.auctionStartDate) : null;
-      const endDate = u?.auctionEndDate ? new Date(u.auctionEndDate) : null;
-
-      if (!startingBid || startingBid <= 0) return false;
-      if (
-        reservePrice != null &&
-        Number.isFinite(reservePrice) &&
-        reservePrice > 0 &&
-        reservePrice < startingBid
-      )
-        return false;
-      if (!startDate || Number.isNaN(startDate.getTime())) return false;
-      if (!endDate || Number.isNaN(endDate.getTime())) return false;
-      if (endDate.getTime() <= startDate.getTime()) return false;
-      if (startDate.getTime() < now) return false;
-      return true;
-    });
-
-    if (!validAuctionUnits) {
-      errors['unitTypes.startingBid'] = 'All unit types must include valid auction terms';
-    }
-  }
+      (wizardState as any).developmentData?.transactionType ||
+      'for_sale',
+  );
+  const readiness = getDevelopmentPublishReadinessSummary(wizardState, {
+    transactionType,
+    nowMs: Date.now(),
+  });
+  const errors = readiness.fieldErrors;
 
   if (Object.keys(errors).length > 0) {
     throw new TRPCError({

@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import PartnerDashboardPage from './PartnerDashboardPage';
+import PartnerDashboardPage, {
+  getPartnerDashboardPricingContext,
+  normalizePartnerDashboardTransactionType,
+} from './PartnerDashboardPage';
 
 const TEST_ASSESSMENT_ID = '11111111-1111-1111-1111-111111111111';
 
@@ -100,6 +103,47 @@ vi.mock('@/lib/trpc', () => ({
     },
   },
 }));
+
+describe('PartnerDashboardPage pricing helpers', () => {
+  it('normalizes unsupported transaction types to sale', () => {
+    expect(normalizePartnerDashboardTransactionType('rental')).toBe('rent');
+    expect(normalizePartnerDashboardTransactionType('auction')).toBe('auction');
+    expect(normalizePartnerDashboardTransactionType('leasehold')).toBe('sale');
+  });
+
+  it('labels rental and auction prices without purchase-price copy', () => {
+    const rentContext = getPartnerDashboardPricingContext({
+      transactionType: 'rent',
+      priceFrom: 13500,
+      priceTo: 16000,
+    });
+    expect({
+      ...rentContext,
+      displayText: rentContext.displayText.replace(/\s/g, ' '),
+      shareText: rentContext.shareText.replace(/\s/g, ' '),
+    }).toMatchObject({
+      label: 'Monthly rent',
+      displayText: 'R 13 500 - R 16 000 / month',
+      shareText: 'Rent from R 13 500 / month',
+      referencePrice: 13500,
+    });
+
+    const auctionContext = getPartnerDashboardPricingContext({
+      transactionType: 'auction',
+      priceFrom: 900000,
+    });
+    expect({
+      ...auctionContext,
+      displayText: auctionContext.displayText.replace(/\s/g, ' '),
+      shareText: auctionContext.shareText.replace(/\s/g, ' '),
+    }).toMatchObject({
+      label: 'Starting bid',
+      displayText: 'R 900 000',
+      shareText: 'Bid from R 900 000',
+      referencePrice: 900000,
+    });
+  });
+});
 
 describe('PartnerDashboardPage', () => {
   beforeEach(() => {

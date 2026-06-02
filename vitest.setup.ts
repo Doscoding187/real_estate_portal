@@ -121,6 +121,15 @@ beforeAll(async () => {
               );
             };
 
+            const hasDevelopmentLaunchDate = async () =>
+              (await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'developments'
+                  AND column_name = 'launch_date'
+              `)) > 0;
+
             try {
               const [lockRows] = await connection.query(
                 `SELECT GET_LOCK('${lockName}', 180) AS lock_acquired`,
@@ -131,18 +140,25 @@ beforeAll(async () => {
                 throw new Error('Could not acquire migration lock for test DB setup');
               }
 
-              const readyBefore = await hasCanonicalShowingsSchema();
-              if (!readyBefore) {
+              const showingsReadyBefore = await hasCanonicalShowingsSchema();
+              if (!showingsReadyBefore) {
                 const { runSqlMigrations } = await import('./server/migrations/runSqlMigrations');
                 await runSqlMigrations({
                   filePattern: /^\d+_.*\.sql$/,
                 });
               }
 
-              const readyAfter = await hasCanonicalShowingsSchema();
-              if (!readyAfter) {
+              if (!(await hasDevelopmentLaunchDate())) {
+                const { runSqlMigrations } = await import('./server/migrations/runSqlMigrations');
+                await runSqlMigrations({
+                  filePattern: /^0062_.*\.sql$/,
+                });
+              }
+
+              const showingsReadyAfter = await hasCanonicalShowingsSchema();
+              if (!showingsReadyAfter || !(await hasDevelopmentLaunchDate())) {
                 throw new Error(
-                  'Canonical showings schema is still missing after running SQL migrations',
+                  'Required SQL migration schema is still missing after running SQL migrations',
                 );
               }
 

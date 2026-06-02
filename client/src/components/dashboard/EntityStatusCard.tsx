@@ -9,6 +9,8 @@ import { formatCurrency } from '@/lib/utils';
 import { getQualityTier } from '@/lib/quality';
 import { withApiBase, getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 
+type EntityCardTransactionType = 'sale' | 'rent' | 'auction';
+
 interface EntityStatusCardProps {
   type: 'listing' | 'development';
   data: any; // Listing or Development object
@@ -19,6 +21,58 @@ interface EntityStatusCardProps {
   onView?: (id: number) => void;
   onViewEnquiries?: (id: number) => void;
   className?: string;
+}
+
+function normalizeEntityCardTransactionType(value: unknown): EntityCardTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+function toPositiveNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+export function getEntityStatusCardPriceDisplay(type: 'listing' | 'development', data: any) {
+  if (type === 'listing') {
+    const price =
+      toPositiveNumber(data?.pricing?.askingPrice) ||
+      toPositiveNumber(data?.pricing?.monthlyRent) ||
+      toPositiveNumber(data?.pricing?.startingBid);
+    return price !== null ? formatCurrency(price) : null;
+  }
+
+  const transactionType = normalizeEntityCardTransactionType(data?.transactionType);
+  const priceFrom =
+    transactionType === 'rent'
+      ? toPositiveNumber(data?.monthlyRentFrom ?? data?.monthlyRent)
+      : transactionType === 'auction'
+        ? toPositiveNumber(data?.startingBidFrom ?? data?.startingBid)
+        : toPositiveNumber(data?.priceFrom ?? data?.basePriceFrom);
+  const priceTo =
+    transactionType === 'rent'
+      ? toPositiveNumber(data?.monthlyRentTo)
+      : transactionType === 'auction'
+        ? toPositiveNumber(data?.reservePriceFrom ?? data?.reservePrice)
+        : toPositiveNumber(data?.priceTo ?? data?.basePriceTo);
+
+  if (priceFrom === null) return null;
+
+  const prefix =
+    transactionType === 'rent' ? 'Rent ' : transactionType === 'auction' ? 'Starting bid ' : '';
+  if (priceTo !== null && priceTo > priceFrom) {
+    return `${prefix}${formatCurrency(priceFrom)} - ${formatCurrency(priceTo)}`;
+  }
+  return `${prefix}${formatCurrency(priceFrom)}`;
 }
 
 export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
@@ -83,23 +137,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   // Use robust helper for developments, or direct prop for listings
   const image = isListing ? data.primaryImage : getPrimaryDevelopmentImageUrl(data.images);
 
-  const priceFrom = isListing
-    ? data.pricing?.askingPrice || data.pricing?.monthlyRent
-    : data.priceFrom;
-  const priceTo = !isListing ? data.priceTo : null;
-
-  // Format price display - show range for developments if both values exist
-  const formatPriceDisplay = () => {
-    if (!priceFrom) return null;
-
-    // If we have both priceFrom and priceTo (for developments), show range
-    if (!isListing && priceTo && priceTo > priceFrom) {
-      return `${formatCurrency(priceFrom)} - ${formatCurrency(priceTo)}`;
-    }
-
-    // Otherwise just show the single price
-    return formatCurrency(priceFrom);
-  };
+  const priceDisplay = getEntityStatusCardPriceDisplay(type, data);
 
   return (
     <Card
@@ -206,9 +244,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                 <span>{data.address || data.city || 'No location set'}</span>
               </div>
 
-              {formatPriceDisplay() && (
-                <p className="font-semibold text-lg text-slate-900">{formatPriceDisplay()}</p>
-              )}
+              {priceDisplay && <p className="font-semibold text-lg text-slate-900">{priceDisplay}</p>}
 
               {/* Rejection Feedback */}
               {isRejected && (

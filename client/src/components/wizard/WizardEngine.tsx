@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { DevelopmentTypePhase } from '../development-wizard/phases/DevelopmentTypePhase';
 import { ResidentialConfigPhase } from '../development-wizard/phases/ResidentialConfigPhase';
 import { IdentityPhase } from '../development-wizard/phases/IdentityPhase';
@@ -32,9 +32,21 @@ interface WizardEngineProps {
   onExit?: () => void;
   saveStatus?: 'saved' | 'saving' | 'error';
   lastSavedAt?: Date;
+  onManualSaveDraft?: () => void | Promise<void>;
+  isManualSaveDraftPending?: boolean;
+  onSaveProgress?: () => void | Promise<void>;
+  isSaveProgressPending?: boolean;
 }
 
-export function WizardEngine({ onExit, saveStatus, lastSavedAt }: WizardEngineProps) {
+export function WizardEngine({
+  onExit,
+  saveStatus,
+  lastSavedAt,
+  onManualSaveDraft,
+  isManualSaveDraftPending,
+  onSaveProgress,
+  isSaveProgressPending,
+}: WizardEngineProps) {
   const {
     workflowId,
     currentStepId,
@@ -127,7 +139,10 @@ export function WizardEngine({ onExit, saveStatus, lastSavedAt }: WizardEnginePr
             {' '}
             {/* Add bottom margin for fixed footer if we had one, or just spacing */}
             {StepComponent ? (
-              <StepComponent />
+              <StepComponent
+                onManualSaveDraft={onManualSaveDraft}
+                isManualSaveDraftPending={isManualSaveDraftPending}
+              />
             ) : (
               <div className="text-center p-12 bg-slate-50 border border-dashed rounded-lg">
                 Component {currentStep.componentKey} not found
@@ -136,7 +151,7 @@ export function WizardEngine({ onExit, saveStatus, lastSavedAt }: WizardEnginePr
           </div>
 
           {/* Navigation Footer */}
-          <div className="flex justify-between pt-6 border-t border-slate-200 mt-8">
+          <div className="flex items-center justify-between gap-3 pt-6 border-t border-slate-200 mt-8">
             <Button
               variant="outline"
               onClick={goWorkflowBack}
@@ -147,16 +162,31 @@ export function WizardEngine({ onExit, saveStatus, lastSavedAt }: WizardEnginePr
               Back
             </Button>
 
-            {currentStepIndex < visibleSteps.length - 1 && (
-              <Button
-                onClick={goWorkflowNext}
-                size="lg"
-                className="px-8 h-12 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
+            <div className="flex items-center gap-3">
+              {onSaveProgress && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onSaveProgress}
+                  disabled={isSaveProgressPending}
+                  className="h-12 px-5"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {isSaveProgressPending ? 'Saving...' : 'Save Progress'}
+                </Button>
+              )}
+
+              {currentStepIndex < visibleSteps.length - 1 && (
+                <Button
+                  onClick={goWorkflowNext}
+                  size="lg"
+                  className="px-8 h-12 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </main>

@@ -26,6 +26,19 @@ const DEFAULT_MAX_RETRY_COUNT = RETRY_DELAYS_MS.length;
 
 type ListingSourceFilter = 'manual' | 'development' | 'all';
 
+function normalizeSavedSearchListingType(value: unknown): Property['listingType'] | undefined {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['sale', 'sell', 'for_sale'].includes(normalized)) return 'sale';
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) return 'rent';
+  if (['auction', 'auctions'].includes(normalized)) return 'auction';
+
+  return undefined;
+}
+
 type ManualNotificationMatch = Pick<
   Property,
   'id' | 'title' | 'price' | 'city' | 'suburb' | 'listingType' | 'listingSource' | 'listedDate'
@@ -209,12 +222,7 @@ function normalizeSavedSearchCriteria(criteria: Record<string, unknown>): Normal
         ? (multiple as Property['propertyType'][])
         : undefined;
     })(),
-    listingType: (() => {
-      const listingType = toString(criteria.listingType);
-      return listingType === 'sale' || listingType === 'rent'
-        ? (listingType as Property['listingType'])
-        : undefined;
-    })(),
+    listingType: normalizeSavedSearchListingType(criteria.listingType),
     minPrice: toNumber(criteria.minPrice),
     maxPrice: toNumber(criteria.maxPrice),
     minBedrooms: toNumber(criteria.minBedrooms),
@@ -312,6 +320,10 @@ function formatPrice(price: number | null | undefined, listingType: SavedSearchN
     maximumFractionDigits: 0,
   }).format(price);
 
+  if (listingType === 'auction') {
+    return `Starting bid ${formatted}`;
+  }
+
   return listingType === 'rent' ? `${formatted} / month` : formatted;
 }
 
@@ -396,10 +408,18 @@ function getSavedSearchMatchSourceLabel(match: SavedSearchNotificationMatch): st
     return 'New development';
   }
 
+  if (match.listingType === 'auction') {
+    return 'Auction listing';
+  }
+
   return match.listingType === 'rent' ? 'Rental listing' : 'Property listing';
 }
 
 function getSavedSearchMatchStatusLabel(match: SavedSearchNotificationMatch): string {
+  if (match.listingType === 'auction') {
+    return 'On auction';
+  }
+
   return match.listingType === 'rent' ? 'To rent' : 'For sale';
 }
 
@@ -609,7 +629,7 @@ function normalizeHistoryPreviewMatches(value: unknown): SavedSearchNotification
       const suburb = toString(candidate.suburb);
       const href = toString(candidate.href);
       const image = toString(candidate.image) ?? null;
-      const listingType = toString(candidate.listingType);
+      const listingType = normalizeSavedSearchListingType(candidate.listingType);
       const listingSource = toString(candidate.listingSource);
       const listedDateValue = candidate.listedDate;
       const listedDate =
@@ -624,7 +644,6 @@ function normalizeHistoryPreviewMatches(value: unknown): SavedSearchNotification
         !title ||
         !href ||
         !listingType ||
-        (listingType !== 'sale' && listingType !== 'rent') ||
         !listingSource ||
         (listingSource !== 'manual' && listingSource !== 'development') ||
         !listedDate ||

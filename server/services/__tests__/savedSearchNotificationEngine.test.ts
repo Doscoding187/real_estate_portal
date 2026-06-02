@@ -216,6 +216,78 @@ describe('savedSearchNotificationEngine', () => {
     });
   });
 
+  it('normalizes auction saved-search criteria before querying manual and development results', async () => {
+    mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+    mockDbWhere.mockResolvedValueOnce([
+      {
+        id: 16,
+        userId: 7,
+        name: 'Auction alerts',
+        criteria: {
+          city: 'Pretoria',
+          listingType: 'auctions',
+          listingSource: 'all',
+        },
+        notificationFrequency: 'daily',
+        createdAt: '2026-03-21T08:00:00.000Z',
+        updatedAt: '2026-03-21T08:00:00.000Z',
+        lastNotifiedAt: null,
+      },
+    ]);
+    mockSearchProperties.mockResolvedValueOnce({
+      total: 1,
+      properties: [
+        {
+          id: '77',
+          title: 'Auction Apartment in Pretoria',
+          price: 850000,
+          city: 'Pretoria',
+          suburb: 'Hatfield',
+          listingType: 'auction',
+          listedDate: new Date('2026-03-21T09:00:00.000Z'),
+          images: [],
+        },
+      ],
+    });
+    mockSearchDevelopmentListings.mockResolvedValueOnce({
+      total: 0,
+      items: [],
+      page: 1,
+      pageSize: 100,
+      hasMore: false,
+    });
+
+    await savedSearchNotificationEngine.processDueNotifications({
+      userId: 7,
+      now: new Date('2026-03-21T10:00:00.000Z'),
+    });
+
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({
+        city: 'Pretoria',
+        listingType: 'auction',
+      }),
+      'date_desc',
+      1,
+      100,
+    );
+    expect(mockSearchDevelopmentListings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        city: 'Pretoria',
+        listingType: 'auction',
+      }),
+      'date_desc',
+      1,
+      100,
+    );
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('Starting bid'),
+        html: expect.stringContaining('Starting bid'),
+      }),
+    );
+  });
+
   it('skips notification emission when no new matches exist since lastNotifiedAt', async () => {
     mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
     mockSearchProperties.mockResolvedValue({

@@ -46,12 +46,32 @@ import {
   LeadStageSchema,
   SlaStatusSchema,
 } from '../shared/developerFunnel';
+import {
+  getDevelopmentPublishReadinessSummary,
+  getDevelopmentUnitPublishReadinessIssues,
+} from '../shared/developmentReadiness';
+import { DEVELOPMENT_UNIT_ID_MAX_LENGTH } from '../shared/developmentUnitIdentity';
 import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
+import {
+  deriveCanonicalDraftMetadata,
+  deriveDraftProgressMetadata,
+} from './lib/developmentWorkflowProgress';
 import { requireUser } from './_core/requireUser';
 import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
+
+function withCanonicalDraftMetadata<T extends Record<string, any>>(draft: T, draftData: any) {
+  const draftMeta = deriveCanonicalDraftMetadata(draftData);
+  return {
+    ...draft,
+    draftData,
+    draftMeta,
+    progress: draftMeta.progress,
+    currentStep: draftMeta.currentStep,
+  };
+}
 
 function assertDeveloperDistributionEnabled() {
   if (!ENV.distributionNetworkEnabled) {
@@ -183,31 +203,130 @@ function normalizeUnitType(raw: any) {
   };
 }
 
+type DevelopmentPayloadTransactionType = 'for_sale' | 'for_rent' | 'auction';
+
+function normalizeDevelopmentPayloadTransactionType(value: unknown): DevelopmentPayloadTransactionType {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['for_rent', 'rent', 'to_rent', 'rental', 'rent_to_buy'].includes(normalized)) {
+    return 'for_rent';
+  }
+
+  if (['auction', 'auctions'].includes(normalized)) {
+    return 'auction';
+  }
+
+  return 'for_sale';
+}
+
+export type HomeFeedListingType = 'sale' | 'rent' | 'auction';
+
+export function normalizeHomeFeedListingType(value: unknown): HomeFeedListingType {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) {
+    return 'rent';
+  }
+  if (['auction', 'auctions'].includes(normalized)) {
+    return 'auction';
+  }
+  return 'sale';
+}
+
+function toHomeFeedPrice(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+export function resolveDevelopmentHomeFeedPricing(dev: any): {
+  listingType: HomeFeedListingType;
+  priceFrom: number;
+  priceTo: number;
+} {
+  const listingType = normalizeHomeFeedListingType(dev?.transactionType ?? dev?.listingType);
+
+  let priceFrom = 0;
+  let priceTo = 0;
+
+  if (listingType === 'rent') {
+    priceFrom = toHomeFeedPrice(dev?.monthlyRentFrom ?? dev?.monthlyRent);
+    priceTo = toHomeFeedPrice(dev?.monthlyRentTo ?? priceFrom);
+  } else if (listingType === 'auction') {
+    priceFrom = toHomeFeedPrice(dev?.startingBidFrom ?? dev?.startingBid);
+    priceTo = toHomeFeedPrice(dev?.reservePriceFrom ?? dev?.reservePrice ?? priceFrom);
+  } else {
+    priceFrom = toHomeFeedPrice(dev?.priceFrom ?? dev?.basePriceFrom);
+    priceTo = toHomeFeedPrice(dev?.priceTo ?? dev?.basePriceTo ?? priceFrom);
+  }
+
+  if (priceTo < priceFrom) {
+    priceTo = priceFrom;
+  }
+
+  return {
+    listingType,
+    priceFrom,
+    priceTo,
+  };
+}
+
 /**
  * Strict publish validation helper
  * Validates enums, required fields, and unit types before allowing publish.
  * Returns structured errors with field keys for UI highlighting.
+ *
+ * Compatibility/removal candidate: repository import checks currently show no active route callers.
+ * Keep this bridged to shared canonical publish readiness until removal is proven safe.
  */
-function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
+export function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
   interface ValidationError {
     field: string;
     message: string;
   }
 
   const errors: ValidationError[] = [];
+  const transactionType = normalizeDevelopmentPayloadTransactionType(
+    fullDev?.transactionType ??
+      fullDev?.developmentData?.transactionType ??
+      fullDev?.transaction_type ??
+      'for_sale',
+  );
+  const unitTypesRaw = Array.isArray(fullDev?.unitTypes) ? fullDev.unitTypes : [];
+  const devType = fullDev?.developmentType ?? fullDev?.developmentData?.developmentType;
+  const isLand = devType === 'land';
+  const readiness = getDevelopmentPublishReadinessSummary(fullDev, {
+    transactionType,
+    requireDates: false,
+    requireFutureStart: false,
+    requireUnitTypes: verifiedUnitCount === undefined,
+  });
 
-  // Name validation
-  const name = fullDev?.name ?? fullDev?.developmentData?.name;
-  if (!name || String(name).trim().length < 2) {
-    errors.push({ field: 'name', message: 'Development name is required.' });
+  readiness.issues.forEach(issue => {
+    if (!('fieldMessage' in issue)) return;
+    if (issue.field === 'unitTypes' && verifiedUnitCount !== undefined) return;
+    errors.push({
+      field: issue.field ?? 'publish',
+      message: issue.fieldMessage,
+    });
+  });
+
+  if (verifiedUnitCount !== undefined && !isLand && verifiedUnitCount <= 0) {
+    errors.push({
+      field: 'unitTypes',
+      message: 'No unit types found. Please ensure you have added and saved at least one unit type.',
+    });
   }
 
-  // Location validation
-  const address = fullDev?.address ?? fullDev?.developmentData?.location?.address;
+  // Legacy row-level location validation until this helper is removed.
   const city = fullDev?.city ?? fullDev?.developmentData?.location?.city;
   const province = fullDev?.province ?? fullDev?.developmentData?.location?.province;
 
-  if (!address) errors.push({ field: 'location.address', message: 'Address is required.' });
   if (!city) errors.push({ field: 'location.city', message: 'City is required.' });
   if (!province) errors.push({ field: 'location.province', message: 'Province is required.' });
 
@@ -220,41 +339,7 @@ function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
     });
   }
 
-  // Hero image validation (support both media.heroImage and developments.images[0])
-  const heroFromMedia =
-    fullDev?.media?.heroImage?.url ?? fullDev?.developmentData?.media?.heroImage?.url;
-
-  const images = Array.isArray(fullDev?.images) ? fullDev.images : [];
-  const heroFromImages = (images?.[0] as any)?.url ?? images?.[0];
-
-  if (!heroFromMedia && !heroFromImages) {
-    errors.push({ field: 'media.heroImage', message: 'A hero image is required.' });
-  }
-
-  // Unit type validation (skip for land)
-  const devType = fullDev?.developmentType ?? fullDev?.developmentData?.developmentType;
-  const isLand = devType === 'land';
-  const transactionType =
-    fullDev?.transactionType ??
-    fullDev?.developmentData?.transactionType ??
-    fullDev?.transaction_type ??
-    'for_sale';
-  const isRent = transactionType === 'for_rent';
-  const unitTypesRaw = Array.isArray(fullDev?.unitTypes) ? fullDev.unitTypes : [];
-
   if (!isLand) {
-    // If verifiedUnitCount is provided, trust it. Otherwise fallback to array check.
-    const hasUnits =
-      verifiedUnitCount !== undefined ? verifiedUnitCount > 0 : unitTypesRaw.length > 0;
-
-    if (!hasUnits) {
-      errors.push({
-        field: 'unitTypes',
-        message:
-          'No unit types found. Please ensure you have added and saved at least one unit type.',
-      });
-    }
-
     unitTypesRaw.forEach((raw: any, idx: number) => {
       const u = normalizeUnitType(raw);
       const unitPrefix = `unitTypes[${idx}]`;
@@ -302,62 +387,91 @@ function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
         });
       }
 
-      const total = Number(u?.totalUnits ?? 0);
-      const available = Number(u?.availableUnits ?? 0);
-      const reserved = Number(u?.reservedUnits ?? 0);
+      const readinessIssues = getDevelopmentUnitPublishReadinessIssues(u, transactionType, {
+        requireDates: false,
+        requireFutureStart: false,
+      });
 
-      if (!Number.isFinite(total) || total < 0) {
-        errors.push({
-          field: `${unitPrefix}.totalUnits`,
-          message: `Unit "${unitLabel}" has invalid total units.`,
-        });
-      }
-      if (!Number.isFinite(available) || available < 0) {
-        errors.push({
-          field: `${unitPrefix}.availableUnits`,
-          message: `Unit "${unitLabel}" has invalid available units.`,
-        });
-      }
-      if (!Number.isFinite(reserved) || reserved < 0) {
-        errors.push({
-          field: `${unitPrefix}.reservedUnits`,
-          message: `Unit "${unitLabel}" has invalid reserved units.`,
-        });
-      }
-      if (
-        Number.isFinite(total) &&
-        Number.isFinite(available) &&
-        Number.isFinite(reserved) &&
-        available + reserved > total
-      ) {
-        errors.push({
-          field: `${unitPrefix}.reservedUnits`,
-          message: `Unit "${unitLabel}" must satisfy available + reserved <= total units.`,
-        });
-      }
-
-      if (isRent) {
-        const rentFrom = Number(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0);
-        const rentTo = Number(u?.monthlyRentTo ?? 0);
-        if (
-          (!Number.isFinite(rentFrom) || rentFrom <= 0) &&
-          (!Number.isFinite(rentTo) || rentTo <= 0)
-        ) {
+      readinessIssues.forEach(issue => {
+        if (issue.code === 'invalid_total_units') {
+          errors.push({
+            field: `${unitPrefix}.totalUnits`,
+            message: `Unit "${unitLabel}" has invalid total units.`,
+          });
+        }
+        if (issue.code === 'invalid_available_units') {
+          errors.push({
+            field: `${unitPrefix}.availableUnits`,
+            message: `Unit "${unitLabel}" has invalid available units.`,
+          });
+        }
+        if (issue.code === 'invalid_reserved_units') {
+          errors.push({
+            field: `${unitPrefix}.reservedUnits`,
+            message: `Unit "${unitLabel}" has invalid reserved units.`,
+          });
+        }
+        if (issue.code === 'invalid_inventory_counts') {
+          errors.push({
+            field: `${unitPrefix}.reservedUnits`,
+            message: `Unit "${unitLabel}" must satisfy available + reserved <= total units.`,
+          });
+        }
+        if (issue.code === 'missing_monthly_rent') {
           errors.push({
             field: `${unitPrefix}.monthlyRentFrom`,
             message: `Unit "${unitLabel}" must have a valid monthly rent > 0.`,
           });
         }
-      } else {
-        // Base price validation (Wizard v2)
-        const bp = Number(u?.basePriceFrom ?? 0);
-        if (!Number.isFinite(bp) || bp <= 0) {
+        if (issue.code === 'invalid_monthly_rent_range') {
+          errors.push({
+            field: `${unitPrefix}.monthlyRentTo`,
+            message: `Unit "${unitLabel}" monthly rent upper range must be greater than or equal to monthly rent from.`,
+          });
+        }
+        if (issue.code === 'missing_starting_bid') {
+          errors.push({
+            field: `${unitPrefix}.startingBid`,
+            message: `Unit "${unitLabel}" must have a valid starting bid > 0.`,
+          });
+        }
+        if (issue.code === 'invalid_reserve_price_range') {
+          errors.push({
+            field: `${unitPrefix}.reservePrice`,
+            message: `Unit "${unitLabel}" reserve price must be greater than or equal to starting bid.`,
+          });
+        }
+        if (issue.code === 'invalid_auction_start_date') {
+          errors.push({
+            field: `${unitPrefix}.auctionStartDate`,
+            message: `Unit "${unitLabel}" has an invalid auction start date.`,
+          });
+        }
+        if (issue.code === 'invalid_auction_end_date') {
+          errors.push({
+            field: `${unitPrefix}.auctionEndDate`,
+            message: `Unit "${unitLabel}" has an invalid auction end date.`,
+          });
+        }
+        if (issue.code === 'invalid_auction_date_order') {
+          errors.push({
+            field: `${unitPrefix}.auctionEndDate`,
+            message: `Unit "${unitLabel}" auction end date must be after the start date.`,
+          });
+        }
+        if (issue.code === 'missing_sale_price') {
           errors.push({
             field: `${unitPrefix}.basePriceFrom`,
             message: `Unit "${unitLabel}" must have a valid base price > 0.`,
           });
         }
-      }
+        if (issue.code === 'invalid_sale_price_range') {
+          errors.push({
+            field: `${unitPrefix}.basePriceTo`,
+            message: `Unit "${unitLabel}" price upper range must be greater than or equal to base price.`,
+          });
+        }
+      });
     });
   }
 
@@ -705,8 +819,7 @@ export const developerRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const sanitized = sanitizeDraftData(input.draftData ?? {});
-      const currentStep = Math.max(0, Number((sanitized as any).currentPhase ?? 0));
-      const progress = Math.min(100, Math.max(0, Math.round((currentStep / 11) * 100)));
+      const { currentStep, progress } = deriveDraftProgressMetadata(sanitized as any);
       const draftName =
         String((sanitized as any).developmentData?.name ?? (sanitized as any).name ?? '').trim() ||
         'Untitled Draft';
@@ -740,7 +853,12 @@ export const developerRouter = router({
               ),
             );
 
-          return { id: input.id, success: true, draftData: sanitized };
+          return {
+            id: input.id,
+            success: true,
+            draftData: sanitized,
+            draftMeta: deriveCanonicalDraftMetadata(sanitized as any),
+          };
         }
 
         const insertResult = await dbConn.insert(developmentDrafts).values({
@@ -757,10 +875,16 @@ export const developerRouter = router({
           id: Number(inserted?.insertId ?? 0),
           success: true,
           draftData: sanitized,
+          draftMeta: deriveCanonicalDraftMetadata(sanitized as any),
         };
       } catch (error) {
         console.warn('[developer.saveDraft] Falling back to safe response:', error);
-        return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
+        return {
+          id: input.id ?? Date.now(),
+          success: false,
+          draftData: sanitized,
+          draftMeta: deriveCanonicalDraftMetadata(sanitized as any),
+        };
       }
     }),
 
@@ -782,10 +906,8 @@ export const developerRouter = router({
 
         if (!draft) return null;
 
-        return {
-          ...draft,
-          draftData: sanitizeDraftData((draft as any).draftData ?? {}),
-        };
+        const draftData = sanitizeDraftData((draft as any).draftData ?? {});
+        return withCanonicalDraftMetadata(draft as any, draftData);
       } catch (error) {
         console.warn('[developer.getDraft] Returning null due to error:', error);
         return null;
@@ -804,10 +926,10 @@ export const developerRouter = router({
         .where(eq(developmentDrafts.developerId, profile.id))
         .orderBy(desc(developmentDrafts.lastModified));
 
-      return drafts.map((draft: any) => ({
-        ...draft,
-        draftData: sanitizeDraftData(draft?.draftData ?? {}),
-      }));
+      return drafts.map((draft: any) => {
+        const draftData = sanitizeDraftData(draft?.draftData ?? {});
+        return withCanonicalDraftMetadata(draft, draftData);
+      });
     } catch (error) {
       console.warn('[developer.getDrafts] Returning empty list due to error:', error);
       return [];
@@ -921,7 +1043,7 @@ export const developerRouter = router({
         priceTo: number;
         image: string;
         href: string;
-        listingType?: 'sale' | 'rent';
+        listingType?: HomeFeedListingType;
         bedrooms?: number | null;
         bathrooms?: number | null;
         area?: number | null;
@@ -945,17 +1067,22 @@ export const developerRouter = router({
         return '';
       };
 
-      const mapDevelopment = (dev: any) => ({
-        id: String(dev.id),
-        kind: 'development' as const,
-        title: dev.name,
-        city: dev.city || '',
-        suburb: dev.suburb || '',
-        priceFrom: Number(dev.priceFrom || 0),
-        priceTo: Number(dev.priceTo || 0),
-        image: normalizeDevImage(dev.images),
-        href: `/development/${dev.slug || dev.id}`,
-      });
+      const mapDevelopment = (dev: any) => {
+        const pricing = resolveDevelopmentHomeFeedPricing(dev);
+
+        return {
+          id: String(dev.id),
+          kind: 'development' as const,
+          title: dev.name,
+          city: dev.city || '',
+          suburb: dev.suburb || '',
+          priceFrom: pricing.priceFrom,
+          priceTo: pricing.priceTo,
+          listingType: pricing.listingType,
+          image: normalizeDevImage(dev.images),
+          href: `/development/${dev.slug || dev.id}`,
+        };
+      };
 
       const listingMediaBaseUrl =
         ENV.cloudFrontUrl ||
@@ -1042,15 +1169,13 @@ export const developerRouter = router({
             ? propertyType.charAt(0).toUpperCase() + propertyType.slice(1).toLowerCase()
             : 'Property';
 
-        if (bedrooms > 0) {
-          return String(prop.listingType || '').toLowerCase() === 'rent'
-            ? `${bedrooms} Bedroom ${normalizedType} to Rent`
-            : `${bedrooms} Bedroom ${normalizedType}`;
-        }
+        const listingType = normalizeHomeFeedListingType(prop.listingType);
+        const suffix =
+          listingType === 'rent' ? ' to Rent' : listingType === 'auction' ? ' on Auction' : '';
 
-        return String(prop.listingType || '').toLowerCase() === 'rent'
-          ? `${normalizedType} to Rent`
-          : normalizedType;
+        return bedrooms > 0
+          ? `${bedrooms} Bedroom ${normalizedType}${suffix}`
+          : `${normalizedType}${suffix}`;
       };
 
       const mapListing = (prop: any): ListingFeedItem => ({
@@ -1063,7 +1188,7 @@ export const developerRouter = router({
         priceTo: Number(prop.price || 0),
         image: normalizeListingImage(prop),
         href: `/property/${prop.id}`,
-        listingType: String(prop.listingType || 'sale').toLowerCase() === 'rent' ? 'rent' : 'sale',
+        listingType: normalizeHomeFeedListingType(prop.listingType),
         bedrooms: Number(prop.bedrooms || 0) || null,
         bathrooms: Number(prop.bathrooms || 0) || null,
         area: Number(prop.floorSize || prop.area || 0) || null,
@@ -1089,7 +1214,7 @@ export const developerRouter = router({
           (item.development?.slug
             ? `/development/${item.development.slug}/unit/${item.unitTypeId}`
             : `/development/${item.developmentId}/unit/${item.unitTypeId}`),
-        listingType: item.listingType === 'rent' ? 'rent' : 'sale',
+        listingType: normalizeHomeFeedListingType(item.listingType),
         bedrooms: Number(item.bedrooms || 0) || null,
         bathrooms: Number(item.bathrooms || 0) || null,
         unitSize: Number(item.floorSize || 0) || null,
@@ -1354,7 +1479,7 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         developerBrandProfileId: z.number().int().positive().optional(),
-        unitId: z.string().trim().max(36).optional(),
+        unitId: z.string().trim().max(DEVELOPMENT_UNIT_ID_MAX_LENGTH).optional(),
         unitName: z.string().trim().max(255).optional(),
         unitPriceFrom: z.number().nonnegative().optional(),
         unitBedrooms: z.number().int().nonnegative().optional(),

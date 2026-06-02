@@ -12,6 +12,8 @@ type SeoPageData = {
   siteName: string;
 };
 
+type AreaSeoTransaction = 'sale' | 'rent' | 'auction';
+
 function titleCase(value: string): string {
   return value
     .split(' ')
@@ -47,16 +49,48 @@ function absoluteUrl(pathname: string): string {
   return new URL(pathname, CANONICAL_PUBLIC_ORIGIN).toString();
 }
 
-function buildAreaSeoData(transactionLabel: 'Sale' | 'Rent', segments: string[]): SeoPageData | null {
+function getAreaSeoLabels(transaction: AreaSeoTransaction) {
+  if (transaction === 'rent') {
+    return {
+      rootPath: 'property-to-rent',
+      titlePhrase: 'Property to Rent',
+      descriptionPhrase: 'property to rent',
+      fallbackTitle: 'Property to Rent in South Africa',
+      fallbackDescription: 'Browse houses, apartments, and rentals across South Africa on Property Listify.',
+    };
+  }
+
+  if (transaction === 'auction') {
+    return {
+      rootPath: 'property-for-sale',
+      queryString: '?listingType=auction',
+      titlePhrase: 'Properties on Auction',
+      descriptionPhrase: 'properties on auction',
+      fallbackTitle: 'Properties on Auction in South Africa',
+      fallbackDescription:
+        'Browse auction properties, homes, apartments, and developments across South Africa on Property Listify.',
+    };
+  }
+
+  return {
+    rootPath: 'property-for-sale',
+    titlePhrase: 'Property for Sale',
+    descriptionPhrase: 'property for sale',
+    fallbackTitle: 'Property for Sale in South Africa',
+    fallbackDescription:
+      'Browse homes, apartments, and developments for sale across South Africa on Property Listify.',
+  };
+}
+
+function buildAreaSeoData(transaction: AreaSeoTransaction, segments: string[]): SeoPageData | null {
   const [province, city, suburb] = segments.map(humanizeSegment);
-  const canonicalPath = `/${
-    transactionLabel === 'Sale' ? 'property-for-sale' : 'property-to-rent'
-  }/${segments.join('/')}`;
+  const labels = getAreaSeoLabels(transaction);
+  const canonicalPath = `/${labels.rootPath}/${segments.join('/')}${labels.queryString ?? ''}`;
 
   if (province && city && suburb) {
     return {
-      title: `Property for ${transactionLabel} in ${suburb}, ${city}, ${province} | ${DEFAULT_SITE_NAME}`,
-      description: `Browse property for ${transactionLabel.toLowerCase()} in ${suburb}, ${city}, ${province}, including homes, apartments, and new developments on ${DEFAULT_SITE_NAME}.`,
+      title: `${labels.titlePhrase} in ${suburb}, ${city}, ${province} | ${DEFAULT_SITE_NAME}`,
+      description: `Browse ${labels.descriptionPhrase} in ${suburb}, ${city}, ${province}, including homes, apartments, and new developments on ${DEFAULT_SITE_NAME}.`,
       canonicalUrl: absoluteUrl(canonicalPath),
       robots: 'index, follow',
       siteName: DEFAULT_SITE_NAME,
@@ -65,8 +99,8 @@ function buildAreaSeoData(transactionLabel: 'Sale' | 'Rent', segments: string[])
 
   if (province && city) {
     return {
-      title: `Property for ${transactionLabel} in ${city}, ${province} | ${DEFAULT_SITE_NAME}`,
-      description: `Explore property for ${transactionLabel.toLowerCase()} in ${city}, ${province}, including residential listings, rentals, and developments on ${DEFAULT_SITE_NAME}.`,
+      title: `${labels.titlePhrase} in ${city}, ${province} | ${DEFAULT_SITE_NAME}`,
+      description: `Explore ${labels.descriptionPhrase} in ${city}, ${province}, including residential listings, rentals, and developments on ${DEFAULT_SITE_NAME}.`,
       canonicalUrl: absoluteUrl(canonicalPath),
       robots: 'index, follow',
       siteName: DEFAULT_SITE_NAME,
@@ -75,8 +109,8 @@ function buildAreaSeoData(transactionLabel: 'Sale' | 'Rent', segments: string[])
 
   if (province) {
     return {
-      title: `Property for ${transactionLabel} in ${province} | ${DEFAULT_SITE_NAME}`,
-      description: `Find property for ${transactionLabel.toLowerCase()} across ${province}, including houses, apartments, and developments on ${DEFAULT_SITE_NAME}.`,
+      title: `${labels.titlePhrase} in ${province} | ${DEFAULT_SITE_NAME}`,
+      description: `Find ${labels.descriptionPhrase} across ${province}, including houses, apartments, and developments on ${DEFAULT_SITE_NAME}.`,
       canonicalUrl: absoluteUrl(canonicalPath),
       robots: 'index, follow',
       siteName: DEFAULT_SITE_NAME,
@@ -90,6 +124,7 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
   const parsedUrl = new URL(requestUrl, CANONICAL_PUBLIC_ORIGIN);
   const pathname = normalizePathname(parsedUrl.pathname);
   const pathSegments = pathname.split('/').filter(Boolean);
+  const listingType = parsedUrl.searchParams.get('listingType')?.trim().toLowerCase();
 
   if (pathname === '/') {
     return {
@@ -197,12 +232,15 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
   }
 
   if (pathSegments[0] === 'property-for-sale') {
+    const isAuction = listingType === 'auction' || listingType === 'auctions';
+    const transaction = isAuction ? 'auction' : 'sale';
+    const labels = getAreaSeoLabels(transaction);
+
     return (
-      buildAreaSeoData('Sale', pathSegments.slice(1)) || {
-        title: `Property for Sale in South Africa | ${DEFAULT_SITE_NAME}`,
-        description:
-          'Browse homes, apartments, and developments for sale across South Africa on Property Listify.',
-        canonicalUrl: absoluteUrl(pathname),
+      buildAreaSeoData(transaction, pathSegments.slice(1)) || {
+        title: `${labels.fallbackTitle} | ${DEFAULT_SITE_NAME}`,
+        description: labels.fallbackDescription,
+        canonicalUrl: absoluteUrl(`${pathname}${labels.queryString ?? ''}`),
         robots: 'index, follow',
         siteName: DEFAULT_SITE_NAME,
       }
@@ -210,11 +248,12 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
   }
 
   if (pathSegments[0] === 'property-to-rent') {
+    const labels = getAreaSeoLabels('rent');
+
     return (
-      buildAreaSeoData('Rent', pathSegments.slice(1)) || {
-        title: `Property to Rent in South Africa | ${DEFAULT_SITE_NAME}`,
-        description:
-          'Browse houses, apartments, and rentals across South Africa on Property Listify.',
+      buildAreaSeoData('rent', pathSegments.slice(1)) || {
+        title: `${labels.fallbackTitle} | ${DEFAULT_SITE_NAME}`,
+        description: labels.fallbackDescription,
         canonicalUrl: absoluteUrl(pathname),
         robots: 'index, follow',
         siteName: DEFAULT_SITE_NAME,

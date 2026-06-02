@@ -86,6 +86,7 @@ type MatchUnitOption = {
   unitTypeId: string | null;
   unitName: string;
   bedrooms: number | null;
+  transactionType: DevelopmentTransactionType;
   priceFrom: number;
   priceTo: number;
   fitRatio: number;
@@ -99,6 +100,7 @@ type MatchItem = {
   province: string | null;
   suburb: string | null;
   logoUrl: string | null;
+  transactionType: DevelopmentTransactionType;
   purchasePrice: number;
   bestFitRatio: number;
   developmentPriority: number;
@@ -111,6 +113,8 @@ type MatchSnapshotPayload = {
   purchasePrice: number;
   matches: MatchItem[];
 };
+
+type DevelopmentTransactionType = 'sale' | 'rent' | 'auction';
 
 function withConditions(conditions: SQL[]) {
   if (!conditions.length) return sql`1 = 1`;
@@ -131,6 +135,96 @@ function toNumberOrNull(value: unknown) {
 
 function toWholeRand(value: number) {
   return Math.round(value);
+}
+
+export function normalizeAffordabilityMatchTransactionType(value: unknown): DevelopmentTransactionType {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'rent' || normalized === 'rental' || normalized === 'for_rent' || normalized === 'to-rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction') return 'auction';
+  return 'sale';
+}
+
+export function resolveAffordabilityMatchPricing(input: {
+  transactionType?: unknown;
+  purchaseCeiling: number;
+  monthlyRepaymentCeiling: number;
+  unitPriceFrom?: unknown;
+  unitPriceTo?: unknown;
+  unitMonthlyRentFrom?: unknown;
+  unitMonthlyRentTo?: unknown;
+  unitStartingBid?: unknown;
+  unitReservePrice?: unknown;
+  developmentPriceFrom?: unknown;
+  developmentPriceTo?: unknown;
+  developmentMonthlyRentFrom?: unknown;
+  developmentMonthlyRentTo?: unknown;
+  developmentStartingBidFrom?: unknown;
+  developmentReservePriceFrom?: unknown;
+}) {
+  const transactionType = normalizeAffordabilityMatchTransactionType(input.transactionType);
+  const purchaseCeiling = Math.max(0, Number(input.purchaseCeiling || 0));
+  const monthlyRepaymentCeiling = Math.max(0, Number(input.monthlyRepaymentCeiling || 0));
+
+  if (transactionType === 'rent') {
+    const priceFrom =
+      toNumberOrNull(input.unitMonthlyRentFrom) ??
+      toNumberOrNull(input.developmentMonthlyRentFrom) ??
+      toNumberOrNull(input.unitPriceFrom) ??
+      toNumberOrNull(input.developmentPriceFrom);
+    const priceTo =
+      toNumberOrNull(input.unitMonthlyRentTo) ??
+      toNumberOrNull(input.developmentMonthlyRentTo) ??
+      toNumberOrNull(input.unitPriceTo) ??
+      toNumberOrNull(input.developmentPriceTo) ??
+      priceFrom;
+    return {
+      transactionType,
+      priceFrom,
+      priceTo,
+      ceiling: monthlyRepaymentCeiling,
+      isEligible: priceFrom !== null && monthlyRepaymentCeiling > 0 && priceFrom <= monthlyRepaymentCeiling,
+      fitRatio: monthlyRepaymentCeiling > 0 && priceFrom !== null ? priceFrom / monthlyRepaymentCeiling : 0,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const priceFrom =
+      toNumberOrNull(input.unitStartingBid) ??
+      toNumberOrNull(input.developmentStartingBidFrom) ??
+      toNumberOrNull(input.unitPriceFrom) ??
+      toNumberOrNull(input.developmentPriceFrom);
+    const priceTo =
+      toNumberOrNull(input.unitReservePrice) ??
+      toNumberOrNull(input.developmentReservePriceFrom) ??
+      toNumberOrNull(input.unitPriceTo) ??
+      toNumberOrNull(input.developmentPriceTo) ??
+      priceFrom;
+    return {
+      transactionType,
+      priceFrom,
+      priceTo,
+      ceiling: purchaseCeiling,
+      isEligible: priceFrom !== null && purchaseCeiling > 0 && priceFrom <= purchaseCeiling,
+      fitRatio: purchaseCeiling > 0 && priceFrom !== null ? priceFrom / purchaseCeiling : 0,
+    };
+  }
+
+  const priceFrom = toNumberOrNull(input.unitPriceFrom) ?? toNumberOrNull(input.developmentPriceFrom);
+  const priceTo =
+    toNumberOrNull(input.unitPriceTo) ??
+    toNumberOrNull(input.unitPriceFrom) ??
+    toNumberOrNull(input.developmentPriceTo) ??
+    priceFrom;
+  return {
+    transactionType,
+    priceFrom,
+    priceTo,
+    ceiling: purchaseCeiling,
+    isEligible: priceFrom !== null && purchaseCeiling > 0 && priceFrom <= purchaseCeiling,
+    fitRatio: purchaseCeiling > 0 && priceFrom !== null ? priceFrom / purchaseCeiling : 0,
+  };
 }
 
 function parseJsonField<T>(value: unknown, fallbackValue: T): T {
@@ -380,6 +474,7 @@ function sanitizeMatchUnitOption(value: MatchUnitOption): MatchUnitOption {
     unitTypeId: value.unitTypeId,
     unitName: value.unitName,
     bedrooms: value.bedrooms,
+    transactionType: normalizeAffordabilityMatchTransactionType(value.transactionType),
     priceFrom: Math.max(0, toWholeRand(value.priceFrom)),
     priceTo: Math.max(0, toWholeRand(value.priceTo)),
     fitRatio: Number(value.fitRatio.toFixed(4)),
@@ -389,6 +484,7 @@ function sanitizeMatchUnitOption(value: MatchUnitOption): MatchUnitOption {
 function sanitizeMatchItem(value: MatchItem): MatchItem {
   return {
     ...value,
+    transactionType: normalizeAffordabilityMatchTransactionType(value.transactionType),
     purchasePrice: toWholeRand(value.purchasePrice),
     bestFitRatio: Number(value.bestFitRatio.toFixed(4)),
     developmentPriority: Number(value.developmentPriority || 0),
@@ -443,7 +539,7 @@ function buildPdfFromLines(lines: string[]) {
   return Buffer.from(pdf, 'utf8');
 }
 
-function makeQualificationPdfLines(input: {
+export function makeQualificationPdfLines(input: {
   assessment: SerializedAssessmentRecord;
   snapshot: MatchSnapshotPayload;
 }) {
@@ -480,7 +576,7 @@ function makeQualificationPdfLines(input: {
     'Results',
     `Max monthly repayment: ${formatCurrency(assessment.outputs.maxMonthlyRepayment)}`,
     `Indicative loan amount: ${formatCurrency(assessment.outputs.indicativeLoanAmount)}`,
-    `Indicative purchase price: ${formatCurrency(assessment.outputs.purchasePrice)}`,
+    `Indicative affordability ceiling: ${formatCurrency(assessment.outputs.purchasePrice)}`,
     `Confidence: ${assessment.outputs.confidenceLabel}`,
     '',
     'Matches',
@@ -492,9 +588,15 @@ function makeQualificationPdfLines(input: {
     snapshot.matches.forEach((match, matchIndex) => {
       lines.push(`${matchIndex + 1}. ${match.developmentName} (${match.area})`);
       match.unitOptions.slice(0, 4).forEach(unit => {
-        lines.push(
-          `   - ${unit.unitName}: ${formatCurrency(unit.priceFrom)} to ${formatCurrency(unit.priceTo)}`,
-        );
+        const transactionType = normalizeAffordabilityMatchTransactionType(unit.transactionType);
+        const label =
+          transactionType === 'rent'
+            ? 'Monthly rent'
+            : transactionType === 'auction'
+              ? 'Starting bid'
+              : 'Price';
+        const suffix = transactionType === 'rent' ? ' / month' : '';
+        lines.push(`   - ${unit.unitName}: ${label} ${formatCurrency(unit.priceFrom)} to ${formatCurrency(unit.priceTo)}${suffix}`);
       });
     });
   }
@@ -688,8 +790,13 @@ async function buildFreshMatchSnapshot(
       suburb: developments.suburb,
       latitude: developments.latitude,
       longitude: developments.longitude,
+      transactionType: developments.transactionType,
       developmentPriceFrom: developments.priceFrom,
       developmentPriceTo: developments.priceTo,
+      developmentMonthlyRentFrom: developments.monthlyRentFrom,
+      developmentMonthlyRentTo: developments.monthlyRentTo,
+      developmentStartingBidFrom: developments.startingBidFrom,
+      developmentReservePriceFrom: developments.reservePriceFrom,
       isFeatured: developments.isFeatured,
       developerBrandProfileId: developments.developerBrandProfileId,
       marketingBrandProfileId: developments.marketingBrandProfileId,
@@ -698,6 +805,10 @@ async function buildFreshMatchSnapshot(
       unitBedrooms: unitTypes.bedrooms,
       unitPriceFrom: unitTypes.basePriceFrom,
       unitPriceTo: unitTypes.basePriceTo,
+      unitMonthlyRentFrom: unitTypes.monthlyRentFrom,
+      unitMonthlyRentTo: unitTypes.monthlyRentTo,
+      unitStartingBid: unitTypes.startingBid,
+      unitReservePrice: unitTypes.reservePrice,
     })
     .from(distributionPrograms)
     .innerJoin(developments, eq(distributionPrograms.developmentId, developments.id))
@@ -758,17 +869,29 @@ async function buildFreshMatchSnapshot(
     if (developerBrandProfileId > 0) brandIds.add(developerBrandProfileId);
     if (marketingBrandProfileId > 0) brandIds.add(marketingBrandProfileId);
 
-    const unitPriceFrom =
-      toNumberOrNull(row.unitPriceFrom) ?? toNumberOrNull(row.developmentPriceFrom) ?? null;
-    const unitPriceTo =
-      toNumberOrNull(row.unitPriceTo) ??
-      toNumberOrNull(row.unitPriceFrom) ??
-      toNumberOrNull(row.developmentPriceTo) ??
-      unitPriceFrom;
+    const pricing = resolveAffordabilityMatchPricing({
+      transactionType: row.transactionType,
+      purchaseCeiling: purchasePrice,
+      monthlyRepaymentCeiling: Number(assessment.outputs.maxMonthlyRepayment || 0),
+      unitPriceFrom: row.unitPriceFrom,
+      unitPriceTo: row.unitPriceTo,
+      unitMonthlyRentFrom: row.unitMonthlyRentFrom,
+      unitMonthlyRentTo: row.unitMonthlyRentTo,
+      unitStartingBid: row.unitStartingBid,
+      unitReservePrice: row.unitReservePrice,
+      developmentPriceFrom: row.developmentPriceFrom,
+      developmentPriceTo: row.developmentPriceTo,
+      developmentMonthlyRentFrom: row.developmentMonthlyRentFrom,
+      developmentMonthlyRentTo: row.developmentMonthlyRentTo,
+      developmentStartingBidFrom: row.developmentStartingBidFrom,
+      developmentReservePriceFrom: row.developmentReservePriceFrom,
+    });
 
-    if (unitPriceFrom === null || unitPriceFrom > purchasePrice) {
+    if (!pricing.isEligible || pricing.priceFrom === null) {
       continue;
     }
+    const unitPriceFrom = pricing.priceFrom;
+    const unitPriceTo = pricing.priceTo ?? pricing.priceFrom;
 
     const current =
       grouped.get(developmentId) ||
@@ -784,22 +907,23 @@ async function buildFreshMatchSnapshot(
         province: row.province || null,
         suburb: row.suburb || null,
         logoUrl: null,
+        transactionType: pricing.transactionType,
         purchasePrice,
         bestFitRatio: 0,
         developmentPriority: Number(row.isFeatured || 0) === 1 ? 0 : 1,
         unitOptions: [],
       } as MatchItem);
 
-    const fitRatio = purchasePrice > 0 ? unitPriceFrom / purchasePrice : 0;
     current.unitOptions.push({
       unitTypeId: row.unitTypeId ? String(row.unitTypeId) : null,
       unitName: String(row.unitTypeName || 'Development pricing'),
       bedrooms: toNumberOrNull(row.unitBedrooms),
+      transactionType: pricing.transactionType,
       priceFrom: toWholeRand(unitPriceFrom),
       priceTo: toWholeRand(unitPriceTo || unitPriceFrom),
-      fitRatio,
+      fitRatio: pricing.fitRatio,
     });
-    current.bestFitRatio = Math.max(current.bestFitRatio, fitRatio);
+    current.bestFitRatio = Math.max(current.bestFitRatio, pricing.fitRatio);
     grouped.set(developmentId, current);
   }
 

@@ -45,6 +45,25 @@ describe('properties.search contract', () => {
         priceFrom: 1200000,
         priceTo: 2500000,
         images: [],
+        videos: ['https://example.com/demo-video.mp4'],
+        floorPlans: ['https://example.com/demo-floorplan.pdf'],
+        brochures: ['https://example.com/demo-brochure.pdf'],
+        media: {
+          photos: [],
+          videos: ['https://example.com/demo-video.mp4'],
+          floorPlans: ['https://example.com/demo-floorplan.pdf'],
+          brochures: ['https://example.com/demo-brochure.pdf'],
+          documents: ['https://example.com/demo-brochure.pdf'],
+        },
+        configurations: [
+          {
+            unitTypeId: 'demo-unit-1',
+            label: 'Demo Unit',
+            listingType: 'sale',
+            priceFrom: 1200000,
+            priceTo: 2500000,
+          },
+        ],
         developerBrandProfileId: 1,
       },
     ]);
@@ -92,5 +111,124 @@ describe('properties.search contract', () => {
     expect((result as any).developments).toBeDefined();
     expect(Array.isArray((result as any).developments.items)).toBe(true);
     expect(typeof (result as any).developments.total).toBe('number');
+    expect((result as any).developments.items[0]).toMatchObject({
+      videos: ['https://example.com/demo-video.mp4'],
+      floorPlans: ['https://example.com/demo-floorplan.pdf'],
+      brochures: ['https://example.com/demo-brochure.pdf'],
+      media: {
+        documents: ['https://example.com/demo-brochure.pdf'],
+      },
+      configurations: [
+        expect.objectContaining({
+          unitTypeId: 'demo-unit-1',
+        }),
+      ],
+    });
+  });
+
+  it.each([
+    ['sale', 'for_sale'],
+    ['rent', 'for_rent'],
+    ['rent_to_buy', 'for_rent'],
+    ['auction', 'auction'],
+  ] as const)(
+    'passes %s listing intent through to included public developments',
+    async (listingType, transactionType) => {
+      const caller = appRouter.createCaller({
+        req: { headers: {} },
+        res: {},
+        user: null,
+      } as any);
+
+      await caller.properties.search({
+        city: 'cape-town',
+        province: 'western-cape',
+        listingType,
+        limit: 20,
+        offset: 0,
+        includeDevelopments: true,
+      });
+
+      expect(mockListPublicDevelopments).toHaveBeenCalledWith(
+        expect.objectContaining({
+          city: 'cape-town',
+          province: 'western-cape',
+          transactionType,
+        }),
+      );
+    },
+  );
+
+  it('does not pass unsupported listing types into public development filters', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await caller.properties.search({
+      listingType: 'shared_living',
+      limit: 20,
+      offset: 0,
+      includeDevelopments: true,
+    });
+
+    expect(mockListPublicDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transactionType: undefined,
+      }),
+    );
+  });
+
+  it.each([
+    ['sale', 'for_sale'],
+    ['rent', 'for_rent'],
+    ['rent_to_buy', 'for_rent'],
+    ['auction', 'auction'],
+  ] as const)(
+    'passes %s listing intent through to direct public development search',
+    async (listingType, transactionType) => {
+      const caller = appRouter.createCaller({
+        req: { headers: {} },
+        res: {},
+        user: null,
+      } as any);
+
+      await caller.properties.searchDevelopments({
+        city: 'cape-town',
+        province: 'western-cape',
+        listingType,
+        limit: 20,
+        offset: 0,
+      });
+
+      expect(mockListPublicDevelopments).toHaveBeenCalledWith(
+        expect.objectContaining({
+          city: 'cape-town',
+          province: 'western-cape',
+          transactionType,
+        }),
+      );
+    },
+  );
+
+  it('does not constrain direct public development search for unsupported listing types', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await caller.properties.searchDevelopments({
+      listingType: 'shared_living',
+      limit: 20,
+      offset: 0,
+    });
+
+    expect(mockListPublicDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transactionType: undefined,
+      }),
+    );
   });
 });

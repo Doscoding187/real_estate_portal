@@ -24,7 +24,60 @@ vi.mock('../../db-connection', () => ({
   getDb: mockGetDb,
 }));
 
-import { developmentDerivedListingService } from '../developmentDerivedListingService';
+import {
+  developmentDerivedListingService,
+  mapListingTypeFilterToDevelopmentTransactionType,
+  mapTransactionTypeToListingType,
+  normalizeDevelopmentTransactionType,
+} from '../developmentDerivedListingService';
+
+const buildSearchRow = (overrides: Record<string, unknown>) => ({
+  developmentId: 900,
+  developmentName: 'Derived Sort Estate',
+  developmentSlug: 'derived-sort-estate',
+  developmentStatus: 'selling',
+  developmentType: 'residential',
+  transactionType: 'for_sale',
+  city: 'Johannesburg',
+  suburb: 'Berea',
+  province: 'Gauteng',
+  completionDate: '2027-05-01 00:00:00',
+  legacyStatus: 'ready',
+  constructionPhase: 'completed',
+  developmentImages: '[]',
+  developmentCreatedAt: '2026-03-20 10:00:00',
+  developerId: 7,
+  developerBrandProfileId: 9,
+  developerName: 'Builder Group',
+  developerLogo: null,
+  brandName: 'Builder Group',
+  brandSlug: 'builder-group',
+  brandLogoUrl: null,
+  brandPublicContactEmail: 'sales@builder-group.com',
+  unitTypeId: 'unit-sort',
+  unitName: 'Sort Test Unit',
+  structuralType: 'apartment',
+  bedrooms: 2,
+  bathrooms: 1,
+  unitSize: 70,
+  yardSize: 0,
+  priceFrom: null,
+  priceTo: null,
+  basePriceFrom: null,
+  basePriceTo: null,
+  monthlyRentFrom: null,
+  monthlyRentTo: null,
+  startingBid: null,
+  reservePrice: null,
+  auctionStatus: 'scheduled',
+  availableUnits: 1,
+  reservedUnits: 0,
+  totalUnits: 1,
+  unitDisplayOrder: 0,
+  unitBaseMedia: '{}',
+  unitCreatedAt: '2026-03-21 09:00:00',
+  ...overrides,
+});
 
 describe('DevelopmentDerivedListingService', () => {
   beforeEach(() => {
@@ -84,6 +137,15 @@ describe('DevelopmentDerivedListingService', () => {
         unitCreatedAt: '2026-03-21 09:00:00',
       },
     ]);
+  });
+
+  it('normalizes development transaction aliases for filters and public cards', () => {
+    expect(normalizeDevelopmentTransactionType('to-rent')).toBe('for_rent');
+    expect(normalizeDevelopmentTransactionType('auctions')).toBe('auction');
+    expect(mapTransactionTypeToListingType('auction')).toBe('auction');
+    expect(mapListingTypeFilterToDevelopmentTransactionType('to-rent')).toBe('for_rent');
+    expect(mapListingTypeFilterToDevelopmentTransactionType('auctions')).toBe('auction');
+    expect(mapListingTypeFilterToDevelopmentTransactionType('unexpected')).toBeNull();
   });
 
   it('maps public unit types into development-derived listings', async () => {
@@ -423,5 +485,250 @@ describe('DevelopmentDerivedListingService', () => {
     expect(result.items[0].unitTypeId).toBe('unit-alberton');
     expect(result.items[0].city).toBe('Alberton');
     expect(result.items[0].province).toBe('Gauteng');
+  });
+
+  it('maps auction developments to auction listing cards with starting bid pricing', async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      {
+        developmentId: 51,
+        developmentName: 'Auction Yard',
+        developmentSlug: 'auction-yard',
+        developmentStatus: 'launching-soon',
+        developmentType: 'residential',
+        transactionType: 'auction',
+        city: 'Pretoria',
+        suburb: 'Menlyn',
+        province: 'Gauteng',
+        completionDate: '2027-05-01 00:00:00',
+        legacyStatus: 'pre_launch',
+        constructionPhase: 'off_plan',
+        developmentCreatedAt: '2026-03-20 09:00:00',
+        developerBrandProfileId: 9,
+        brandName: 'Builder Group',
+        brandSlug: 'builder-group',
+        unitTypeId: 'unit-auction',
+        unitName: '',
+        structuralType: 'house',
+        bedrooms: 3,
+        bathrooms: 2,
+        unitSize: 120,
+        yardSize: 300,
+        priceFrom: '3500000.00',
+        priceTo: '3900000.00',
+        basePriceFrom: '3500000.00',
+        basePriceTo: '3900000.00',
+        monthlyRentFrom: null,
+        monthlyRentTo: null,
+        startingBid: '2750000.00',
+        reservePrice: '3000000.00',
+        auctionStatus: 'scheduled',
+        availableUnits: 1,
+        totalUnits: 1,
+        unitBaseMedia: '{}',
+        unitCreatedAt: '2026-03-21 09:00:00',
+      },
+    ]);
+
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Pretoria',
+        province: 'Gauteng',
+        listingType: 'auction',
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items[0]).toMatchObject({
+      listingType: 'auction',
+      transactionType: 'auction',
+      title: '3 Bedroom House on Auction',
+      price: 2750000,
+      priceTo: 3000000,
+    });
+    expect(result.cards[0]).toMatchObject({
+      listingType: 'auction',
+      transactionType: 'auction',
+      title: '3 Bedroom House on Auction',
+      price: 2750000,
+      priceTo: 3000000,
+    });
+  });
+
+  it('sorts rental and auction development listings by derived commercial entry price', async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      buildSearchRow({
+        developmentId: 71,
+        transactionType: 'for_rent',
+        unitTypeId: 'rent-high',
+        unitName: 'High Rent With Cheap Sale Shadow',
+        priceFrom: '100000.00',
+        basePriceFrom: '100000.00',
+        monthlyRentFrom: '22000.00',
+      }),
+      buildSearchRow({
+        developmentId: 72,
+        transactionType: 'for_rent',
+        unitTypeId: 'rent-low',
+        unitName: 'Low Rent With Expensive Sale Shadow',
+        priceFrom: '9000000.00',
+        basePriceFrom: '9000000.00',
+        monthlyRentFrom: '15000.00',
+      }),
+    ]);
+
+    const rentalResult = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        listingType: 'rent',
+      },
+      'price_asc',
+      1,
+      20,
+    );
+
+    mockOrderBy.mockResolvedValueOnce([
+      buildSearchRow({
+        developmentId: 81,
+        transactionType: 'auction',
+        unitTypeId: 'auction-high',
+        unitName: 'Higher Starting Bid',
+        priceFrom: '500000.00',
+        basePriceFrom: '500000.00',
+        startingBid: '950000.00',
+        reservePrice: '1200000.00',
+      }),
+      buildSearchRow({
+        developmentId: 82,
+        transactionType: 'auction',
+        unitTypeId: 'auction-low',
+        unitName: 'Lower Starting Bid',
+        priceFrom: '9000000.00',
+        basePriceFrom: '9000000.00',
+        startingBid: '750000.00',
+        reservePrice: '1500000.00',
+      }),
+    ]);
+
+    const auctionResult = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        listingType: 'auction',
+      },
+      'price_asc',
+      1,
+      20,
+    );
+
+    expect(rentalResult.items.map(item => item.unitTypeId)).toEqual(['rent-low', 'rent-high']);
+    expect(rentalResult.items.map(item => item.price)).toEqual([15000, 22000]);
+    expect(auctionResult.items.map(item => item.unitTypeId)).toEqual([
+      'auction-low',
+      'auction-high',
+    ]);
+    expect(auctionResult.items.map(item => item.price)).toEqual([750000, 950000]);
+  });
+
+  it('keeps same-development public listings in canonical unit display order for default search', async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      buildSearchRow({
+        unitTypeId: 'display-second',
+        unitName: 'Display Second',
+        unitDisplayOrder: 1,
+        unitCreatedAt: '2026-03-21 09:00:00',
+        priceFrom: '1250000.00',
+      }),
+      buildSearchRow({
+        unitTypeId: 'display-first',
+        unitName: 'Display First',
+        unitDisplayOrder: 0,
+        unitCreatedAt: '2026-03-21 09:00:00',
+        priceFrom: '1250000.00',
+      }),
+    ]);
+
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        listingType: 'sale',
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items.map(item => item.unitTypeId)).toEqual(['display-first', 'display-second']);
+    expect(result.items.map(item => item.unitDisplayOrder)).toEqual([0, 1]);
+    expect(result.cards?.map(card => card.unitTypeId)).toEqual(['display-first', 'display-second']);
+    expect(result.cards?.map(card => card.unitDisplayOrder)).toEqual([0, 1]);
+  });
+
+  it('uses shared derived helpers for public price ranges and availability', async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      {
+        developmentId: 61,
+        developmentName: 'Range Guard',
+        developmentSlug: 'range-guard',
+        developmentStatus: 'selling',
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        city: 'Cape Town',
+        suburb: 'Gardens',
+        province: 'Western Cape',
+        completionDate: '2027-05-01 00:00:00',
+        legacyStatus: 'ready',
+        constructionPhase: 'completed',
+        developmentCreatedAt: '2026-03-20 09:00:00',
+        developerBrandProfileId: 9,
+        brandName: 'Builder Group',
+        brandSlug: 'builder-group',
+        unitTypeId: 'unit-inverted-range',
+        unitName: 'Inverted Range Test',
+        structuralType: 'apartment',
+        bedrooms: 2,
+        bathrooms: 1,
+        unitSize: 68,
+        yardSize: 0,
+        priceFrom: '1500000.00',
+        priceTo: '1200000.00',
+        basePriceFrom: '1500000.00',
+        basePriceTo: '1200000.00',
+        monthlyRentFrom: null,
+        monthlyRentTo: null,
+        startingBid: null,
+        auctionStatus: 'scheduled',
+        availableUnits: 9,
+        reservedUnits: 4,
+        totalUnits: 5,
+        unitBaseMedia: '{}',
+        unitCreatedAt: '2026-03-21 09:00:00',
+      },
+    ]);
+
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Cape Town',
+        province: 'Western Cape',
+        listingType: 'sale',
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items[0]).toMatchObject({
+      price: 1500000,
+      priceTo: undefined,
+      availableUnits: 1,
+    });
+    expect(result.cards[0]).toMatchObject({
+      price: 1500000,
+      availableUnits: 1,
+    });
+    expect(result.cards[0]).not.toHaveProperty('priceTo');
   });
 });

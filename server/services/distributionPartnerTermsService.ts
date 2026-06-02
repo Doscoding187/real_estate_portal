@@ -16,15 +16,44 @@ type ListPartnerProgramTermsInput = {
   includeDisabled?: boolean;
 };
 
+type BrochureConfig = {
+  headline?: string | null;
+  description?: string | null;
+  highlightBullets?: string[];
+  amenityLabels?: string[];
+  heroImageUrl?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+};
+
+type PartnerTermsTransactionType = 'sale' | 'rent' | 'auction';
+
 export type PartnerProgramTermsItem = {
   developmentId: number;
   developmentName: string;
   city?: string | null;
   province?: string | null;
+  suburb?: string | null;
+  address?: string | null;
+  description?: string | null;
+  amenities?: string | null;
+  features?: unknown;
+  transactionType: PartnerTermsTransactionType;
   priceFrom: number | null;
   priceTo: number | null;
+  monthlyRentFrom: number | null;
+  monthlyRentTo: number | null;
+  startingBidFrom: number | null;
+  reservePriceFrom: number | null;
   imageUrl: string | null;
-  brand: { brandProfileId: number; brandName: string } | null;
+  brochure: BrochureConfig;
+  brand: {
+    brandProfileId: number;
+    brandName: string;
+    logoUrl: string | null;
+    publicContactEmail: string | null;
+  } | null;
   program: {
     programId: number;
     isActive: boolean;
@@ -39,8 +68,16 @@ export type PartnerProgramTermsItem = {
   };
   unitTypes: Array<{
     name: string;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    unitSize: number | null;
+    transactionType: PartnerTermsTransactionType;
     priceFrom: number | null;
     priceTo: number | null;
+    monthlyRentFrom: number | null;
+    monthlyRentTo: number | null;
+    startingBid: number | null;
+    reservePrice: number | null;
   }>;
   requiredDocuments: Array<{
     templateId: number;
@@ -87,6 +124,52 @@ function toPositiveNumberOrNull(value: unknown) {
   const numeric = toNumberOrNull(value);
   if (numeric === null || numeric <= 0) return null;
   return numeric;
+}
+
+export function normalizePartnerTermsTransactionType(value: unknown): PartnerTermsTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function resolvePartnerTermsPriceRange(input: {
+  transactionType: unknown;
+  priceFrom?: unknown;
+  priceTo?: unknown;
+  basePriceFrom?: unknown;
+  basePriceTo?: unknown;
+  monthlyRentFrom?: unknown;
+  monthlyRentTo?: unknown;
+  startingBid?: unknown;
+  reservePrice?: unknown;
+  startingBidFrom?: unknown;
+  reservePriceFrom?: unknown;
+}) {
+  const transactionType = normalizePartnerTermsTransactionType(input.transactionType);
+  const from =
+    transactionType === 'rent'
+      ? toPositiveNumberOrNull(input.monthlyRentFrom)
+      : transactionType === 'auction'
+        ? toPositiveNumberOrNull(input.startingBid ?? input.startingBidFrom)
+        : toPositiveNumberOrNull(input.priceFrom) ?? toPositiveNumberOrNull(input.basePriceFrom);
+  const to =
+    transactionType === 'rent'
+      ? (toPositiveNumberOrNull(input.monthlyRentTo) ?? from)
+      : transactionType === 'auction'
+        ? (toPositiveNumberOrNull(input.reservePrice ?? input.reservePriceFrom) ?? from)
+        : (toPositiveNumberOrNull(input.priceTo) ?? toPositiveNumberOrNull(input.basePriceTo) ?? from);
+
+  return {
+    transactionType,
+    priceFrom: from,
+    priceTo: from !== null && to !== null && to < from ? from : to,
+  };
 }
 
 function extractHeroImageUrl(rawImages: unknown): string | null {
@@ -262,10 +345,20 @@ export async function listPartnerProgramTerms(
     .select({
       developmentId: developments.id,
       developmentName: developments.name,
+      suburb: developments.suburb,
       city: developments.city,
       province: developments.province,
+      address: developments.address,
+      description: developments.description,
+      amenities: developments.amenities,
+      features: developments.features,
+      transactionType: developments.transactionType,
       developmentPriceFrom: developments.priceFrom,
       developmentPriceTo: developments.priceTo,
+      developmentMonthlyRentFrom: developments.monthlyRentFrom,
+      developmentMonthlyRentTo: developments.monthlyRentTo,
+      developmentStartingBidFrom: developments.startingBidFrom,
+      developmentReservePriceFrom: developments.reservePriceFrom,
       developmentImages: developments.images,
       developerBrandProfileId: developments.developerBrandProfileId,
       marketingBrandProfileId: developments.marketingBrandProfileId,
@@ -281,6 +374,7 @@ export async function listPartnerProgramTerms(
       payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
       accessStatus: distributionDevelopmentAccess.status,
       submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
+      brochureConfigJson: distributionDevelopmentAccess.brochureConfigJson,
     })
     .from(developments)
     .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
@@ -311,16 +405,23 @@ export async function listPartnerProgramTerms(
         .select({
           id: developerBrandProfiles.id,
           brandName: developerBrandProfiles.brandName,
+          logoUrl: developerBrandProfiles.logoUrl,
+          publicContactEmail: developerBrandProfiles.publicContactEmail,
         })
         .from(developerBrandProfiles)
         .where(inArray(developerBrandProfiles.id, brandProfileIds))
     : [];
 
-  const brandById = new Map<number, { id: number; brandName: string }>();
+  const brandById = new Map<
+    number,
+    { id: number; brandName: string; logoUrl: string | null; publicContactEmail: string | null }
+  >();
   for (const row of brandRows) {
     brandById.set(Number(row.id), {
       id: Number(row.id),
       brandName: String(row.brandName || ''),
+      logoUrl: row.logoUrl || null,
+      publicContactEmail: row.publicContactEmail || null,
     });
   }
 
@@ -364,10 +465,17 @@ export async function listPartnerProgramTerms(
           developmentId: unitTypes.developmentId,
           name: unitTypes.name,
           displayOrder: unitTypes.displayOrder,
+          bedrooms: unitTypes.bedrooms,
+          bathrooms: unitTypes.bathrooms,
+          unitSize: unitTypes.unitSize,
           priceFrom: unitTypes.priceFrom,
           priceTo: unitTypes.priceTo,
           basePriceFrom: unitTypes.basePriceFrom,
           basePriceTo: unitTypes.basePriceTo,
+          monthlyRentFrom: unitTypes.monthlyRentFrom,
+          monthlyRentTo: unitTypes.monthlyRentTo,
+          startingBid: unitTypes.startingBid,
+          reservePrice: unitTypes.reservePrice,
         })
         .from(unitTypes)
         .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
@@ -385,19 +493,44 @@ export async function listPartnerProgramTerms(
     number,
     Array<{
       name: string;
+      bedrooms: number | null;
+      bathrooms: number | null;
+      unitSize: number | null;
+      transactionType: PartnerTermsTransactionType;
       priceFrom: number | null;
       priceTo: number | null;
+      monthlyRentFrom: number | null;
+      monthlyRentTo: number | null;
+      startingBid: number | null;
+      reservePrice: number | null;
     }>
   >();
+
+  const transactionTypeByDevelopment = new Map<number, PartnerTermsTransactionType>(
+    rows.map(row => [
+      Number(row.developmentId),
+      normalizePartnerTermsTransactionType(row.transactionType),
+    ]),
+  );
 
   for (const row of unitRows) {
     const developmentId = Number(row.developmentId || 0);
     if (!developmentId) continue;
     const unitName = String(row.name || '').trim();
-    const unitPriceFrom =
-      toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
-    const fallbackTo = toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
-    const unitPriceTo = fallbackTo ?? unitPriceFrom;
+    const transactionType = transactionTypeByDevelopment.get(developmentId) || 'sale';
+    const unitRange = resolvePartnerTermsPriceRange({
+      transactionType,
+      priceFrom: row.priceFrom,
+      priceTo: row.priceTo,
+      basePriceFrom: row.basePriceFrom,
+      basePriceTo: row.basePriceTo,
+      monthlyRentFrom: row.monthlyRentFrom,
+      monthlyRentTo: row.monthlyRentTo,
+      startingBid: row.startingBid,
+      reservePrice: row.reservePrice,
+    });
+    const unitPriceFrom = unitRange.priceFrom;
+    const unitPriceTo = unitRange.priceTo;
     if (unitPriceFrom === null && unitPriceTo === null) continue;
 
     const current = unitPriceRangeByDevelopment.get(developmentId) || {
@@ -430,6 +563,10 @@ export async function listPartnerProgramTerms(
         const existing = currentUnitTypes[existingIndex];
         currentUnitTypes[existingIndex] = {
           name: unitName,
+          bedrooms: existing.bedrooms ?? toNumberOrNull(row.bedrooms),
+          bathrooms: existing.bathrooms ?? toNumberOrNull(row.bathrooms),
+          unitSize: existing.unitSize ?? toNumberOrNull(row.unitSize),
+          transactionType,
           priceFrom:
             existing.priceFrom === null
               ? unitPriceFrom
@@ -442,12 +579,24 @@ export async function listPartnerProgramTerms(
               : unitPriceTo === null
                 ? existing.priceTo
                 : Math.max(existing.priceTo, unitPriceTo),
+          monthlyRentFrom: existing.monthlyRentFrom ?? toPositiveNumberOrNull(row.monthlyRentFrom),
+          monthlyRentTo: existing.monthlyRentTo ?? toPositiveNumberOrNull(row.monthlyRentTo),
+          startingBid: existing.startingBid ?? toPositiveNumberOrNull(row.startingBid),
+          reservePrice: existing.reservePrice ?? toPositiveNumberOrNull(row.reservePrice),
         };
       } else {
         currentUnitTypes.push({
           name: unitName,
+          bedrooms: toNumberOrNull(row.bedrooms),
+          bathrooms: toNumberOrNull(row.bathrooms),
+          unitSize: toNumberOrNull(row.unitSize),
+          transactionType,
           priceFrom: unitPriceFrom,
           priceTo: unitPriceTo,
+          monthlyRentFrom: toPositiveNumberOrNull(row.monthlyRentFrom),
+          monthlyRentTo: toPositiveNumberOrNull(row.monthlyRentTo),
+          startingBid: toPositiveNumberOrNull(row.startingBid),
+          reservePrice: toPositiveNumberOrNull(row.reservePrice),
         });
       }
       unitTypesByDevelopment.set(developmentId, currentUnitTypes);
@@ -466,25 +615,52 @@ export async function listPartnerProgramTerms(
     const requiredDocuments = docsByDevelopmentId.get(developmentId) || [];
     const primaryBrandId = Number(row.developerBrandProfileId || 0) || Number(row.marketingBrandProfileId || 0);
     const brandRecord = primaryBrandId ? brandById.get(primaryBrandId) : null;
+    const transactionType = normalizePartnerTermsTransactionType(row.transactionType);
     const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
-    const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
-    const developmentPriceTo = toPositiveNumberOrNull(row.developmentPriceTo);
-    const priceFrom = unitPriceRange?.priceFrom ?? developmentPriceFrom;
-    const fallbackPriceTo = developmentPriceTo ?? developmentPriceFrom;
-    const rawPriceTo = unitPriceRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
-    const priceTo =
-      priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
+    const developmentRange = resolvePartnerTermsPriceRange({
+      transactionType,
+      priceFrom: row.developmentPriceFrom,
+      priceTo: row.developmentPriceTo,
+      monthlyRentFrom: row.developmentMonthlyRentFrom,
+      monthlyRentTo: row.developmentMonthlyRentTo,
+      startingBidFrom: row.developmentStartingBidFrom,
+      reservePriceFrom: row.developmentReservePriceFrom,
+    });
+    const priceFrom = unitPriceRange?.priceFrom ?? developmentRange.priceFrom;
+    const priceTo = unitPriceRange?.priceTo ?? developmentRange.priceTo;
+    const brochureConfig =
+      row.brochureConfigJson && typeof row.brochureConfigJson === 'object'
+        ? (row.brochureConfigJson as BrochureConfig)
+        : {};
 
     return {
       developmentId,
-      developmentName: String(row.developmentName || `Development #${developmentId}`),
+      developmentName:
+        String(brochureConfig.headline || '').trim() ||
+        String(row.developmentName || `Development #${developmentId}`),
+      suburb: row.suburb || null,
       city: row.city || null,
       province: row.province || null,
+      address: row.address || null,
+      description: brochureConfig.description?.trim() || row.description || null,
+      amenities: brochureConfig.amenityLabels?.length ? brochureConfig.amenityLabels : row.amenities || null,
+      features: brochureConfig.highlightBullets?.length ? brochureConfig.highlightBullets : row.features || null,
+      transactionType,
       priceFrom: priceFrom ?? null,
       priceTo: priceTo ?? null,
-      imageUrl: extractHeroImageUrl(row.developmentImages),
+      monthlyRentFrom: toPositiveNumberOrNull(row.developmentMonthlyRentFrom),
+      monthlyRentTo: toPositiveNumberOrNull(row.developmentMonthlyRentTo),
+      startingBidFrom: toPositiveNumberOrNull(row.developmentStartingBidFrom),
+      reservePriceFrom: toPositiveNumberOrNull(row.developmentReservePriceFrom),
+      imageUrl: brochureConfig.heroImageUrl?.trim() || extractHeroImageUrl(row.developmentImages),
+      brochure: brochureConfig,
       brand: brandRecord
-        ? { brandProfileId: brandRecord.id, brandName: brandRecord.brandName }
+        ? {
+            brandProfileId: brandRecord.id,
+            brandName: brandRecord.brandName,
+            logoUrl: brandRecord.logoUrl,
+            publicContactEmail: brandRecord.publicContactEmail,
+          }
         : null,
       program: {
         programId: Number(row.programId || 0),

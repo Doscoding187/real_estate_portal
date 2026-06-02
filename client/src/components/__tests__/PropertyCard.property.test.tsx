@@ -498,4 +498,28 @@ describe('PropertyCard - Property-Based Tests', () => {
       expect(screen.getByText('Test Location')).toBeDefined();
     });
   });
+
+  describe('Development auction cards', () => {
+    it('displays auction development pricing as a starting bid', () => {
+      render(
+        <PropertyCard
+          id="dev-51-unit-auction"
+          title="Auction Villa"
+          price={2750000}
+          location="Menlyn, Pretoria"
+          image="https://example.com/auction.jpg"
+          listingType="auction"
+          transactionType="auction"
+          listingSource="development"
+          development={{ id: 51, name: 'Auction Yard', slug: 'auction-yard' }}
+          developerBrand={{ id: 9, brandName: 'Builder Group', slug: 'builder-group' }}
+        />,
+      );
+
+      expect(screen.getByText('Auction Development')).toBeDefined();
+      expect(
+        screen.getByText(content => content.replace(/\s+/g, ' ').startsWith('Starting bid R 2 750 000')),
+      ).toBeDefined();
+    });
+  });
 });

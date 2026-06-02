@@ -75,6 +75,8 @@ export interface PropertyCardProps {
   agent?: AgentInfo;
   developerBrand?: DeveloperBrandInfo; // Developer brand profile when linked
   development?: DevelopmentInfo;
+  unitTypeId?: string;
+  unitDisplayOrder?: number;
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
@@ -105,6 +107,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   agent,
   developerBrand,
   development,
+  unitTypeId,
+  unitDisplayOrder,
   badges,
   imageCount = 15,
   videoCount = 2,
@@ -150,9 +154,19 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     (isDevelopmentListing && (developmentHref || developerProfileHref)
       ? developmentHref || developerProfileHref || `/property/${id}`
       : `/property/${id}`);
+  const normalizedListingType = String(listingType || transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  const isAuctionListing =
+    normalizedListingType === 'auction' ||
+    normalizedListingType === 'auctions' ||
+    String(transactionType || '').toLowerCase() === 'auction';
   const priceLabel =
     price > 0
-      ? isDevelopmentListing
+      ? isAuctionListing
+        ? `Starting bid ${formatCurrency(price)}`
+        : isDevelopmentListing
         ? `From ${formatCurrency(price)}`
         : formatCurrency(price)
       : 'Price on request';
@@ -188,6 +202,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   return (
     <div
       className="group relative w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col cursor-pointer"
+      data-listing-source={resolvedListingSource}
+      data-unit-type-id={unitTypeId || undefined}
+      data-unit-display-order={typeof unitDisplayOrder === 'number' ? unitDisplayOrder : undefined}
       onClick={() => setLocation(listingHref)}
     >
       {/* Image  Section */}
@@ -338,8 +355,14 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             {!suppressBadges && (
               <div className="mb-3 flex flex-wrap gap-2">
                 {isDevelopmentListing ? (
-                  <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">
-                    New Development
+                  <Badge
+                    className={
+                      isAuctionListing
+                        ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-50'
+                        : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50'
+                    }
+                  >
+                    {isAuctionListing ? 'Auction Development' : 'New Development'}
                   </Badge>
                 ) : isPrivateListing ? (
                   <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">

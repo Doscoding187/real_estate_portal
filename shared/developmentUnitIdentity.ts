@@ -1,0 +1,1 @@
+export const DEVELOPMENT_UNIT_ID_MAX_LENGTH = 36;

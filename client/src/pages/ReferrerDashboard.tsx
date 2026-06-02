@@ -15,6 +15,8 @@ import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutR
 const PRIME_RATE = 11.75;
 const BOND_TERM_YEARS = 20;
 
+type ReferrerTransactionType = 'sale' | 'rent' | 'auction';
+
 type UnitTypeSummary = {
   name: string;
   isActive: boolean;
@@ -22,8 +24,13 @@ type UnitTypeSummary = {
   bathrooms: number | null;
   unitSize: number | null;
   yardSize: number | null;
+  transactionType?: string | null;
   priceFrom: number | null;
   priceTo: number | null;
+  monthlyRentFrom?: number | null;
+  monthlyRentTo?: number | null;
+  startingBid?: number | null;
+  reservePrice?: number | null;
 };
 
 function formatMoney(value: number | null) {
@@ -52,6 +59,116 @@ function parseTagList(raw: unknown): string[] {
     }
   }
   return [];
+}
+
+function toPositiveNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+export function normalizeReferrerTransactionType(value: unknown): ReferrerTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function getUnitReferralPricingContext(
+  unit: Partial<UnitTypeSummary>,
+  fallbackTransactionType: unknown,
+) {
+  const transactionType = normalizeReferrerTransactionType(
+    unit.transactionType ?? fallbackTransactionType,
+  );
+
+  if (transactionType === 'rent') {
+    const from = toPositiveNumber(unit.monthlyRentFrom);
+    const to = toPositiveNumber(unit.monthlyRentTo) ?? from;
+    return {
+      transactionType,
+      label: 'Monthly rent',
+      rangeLabel: from && to && to > from ? `${formatMoney(from)} - ${formatMoney(to)}` : formatMoney(from),
+      estimateLabel: 'Monthly rent',
+      qualifyingLabel: 'Qualifying income',
+      paymentAmount: from,
+      affordabilityAnchor: from,
+      usesBondEstimate: false,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const from = toPositiveNumber(unit.startingBid);
+    const to = toPositiveNumber(unit.reservePrice) ?? from;
+    const paymentAmount =
+      from && from > 0 ? calculateMonthlyRepayment(from, PRIME_RATE, BOND_TERM_YEARS) : null;
+    return {
+      transactionType,
+      label: 'Starting bid',
+      rangeLabel: from && to && to > from ? `${formatMoney(from)} - ${formatMoney(to)}` : formatMoney(from),
+      estimateLabel: 'Est. bond repayment',
+      qualifyingLabel: 'Indicative income',
+      paymentAmount,
+      affordabilityAnchor: from,
+      usesBondEstimate: true,
+    };
+  }
+
+  const from = toPositiveNumber(unit.priceFrom);
+  const to = toPositiveNumber(unit.priceTo) ?? from;
+  const paymentAmount =
+    from && from > 0 ? calculateMonthlyRepayment(from, PRIME_RATE, BOND_TERM_YEARS) : null;
+  return {
+    transactionType,
+    label: 'Price range',
+    rangeLabel: from && to && to > from ? `${formatMoney(from)} - ${formatMoney(to)}` : formatMoney(from),
+    estimateLabel: 'Est. repayment',
+    qualifyingLabel: 'Qualifying income',
+    paymentAmount,
+    affordabilityAnchor: from,
+    usesBondEstimate: true,
+  };
+}
+
+export function getDevelopmentReferralPricingContext(development: Record<string, unknown> | null) {
+  const transactionType = normalizeReferrerTransactionType(development?.transactionType);
+
+  if (transactionType === 'rent') {
+    const from = toPositiveNumber(development?.monthlyRentFrom ?? development?.priceFrom);
+    const to = toPositiveNumber(development?.monthlyRentTo ?? development?.priceTo) ?? from;
+    return {
+      transactionType,
+      label: 'Development Rent Range',
+      rangeLabel: from && to && to > from ? `${formatMoney(from)} - ${formatMoney(to)}` : formatMoney(from),
+      affordabilityLabel: 'Estimated monthly rent capacity',
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const from = toPositiveNumber(development?.startingBidFrom ?? development?.priceFrom);
+    const to = toPositiveNumber(development?.reservePriceFrom ?? development?.priceTo) ?? from;
+    return {
+      transactionType,
+      label: 'Development Starting Bid Range',
+      rangeLabel: from && to && to > from ? `${formatMoney(from)} - ${formatMoney(to)}` : formatMoney(from),
+      affordabilityLabel: 'Estimated max bid affordability',
+    };
+  }
+
+  const from = toPositiveNumber(development?.priceFrom);
+  const to = toPositiveNumber(development?.priceTo) ?? from;
+  return {
+    transactionType,
+    label: 'Development Price Range',
+    rangeLabel: from && to && to > from ? `${formatMoney(from)} - ${formatMoney(to)}` : formatMoney(from),
+    affordabilityLabel: 'Estimated max affordability',
+  };
 }
 
 export default function ReferrerDashboard() {
@@ -107,7 +224,8 @@ export default function ReferrerDashboard() {
       const mergedUnits = [...existing.unitTypes, ...(row.unitTypes || [])];
       const uniqueUnits = new Map<string, UnitTypeSummary>();
       for (const unit of mergedUnits) {
-        const key = `${unit.name}|${unit.priceFrom ?? 'na'}|${unit.priceTo ?? 'na'}`;
+        const unitPricing = getUnitReferralPricingContext(unit, row.transactionType);
+        const key = `${unit.name}|${unitPricing.transactionType}|${unitPricing.rangeLabel}`;
         uniqueUnits.set(key, unit);
       }
 
@@ -161,6 +279,9 @@ export default function ReferrerDashboard() {
   const selectedDevelopment = filteredDevelopments.find(
     dev => Number(dev.developmentId) === Number(selectedDevelopmentId),
   );
+  const selectedDevelopmentPricing = getDevelopmentReferralPricingContext(
+    selectedDevelopment || null,
+  );
 
   const totalUnitTypes = groupedDevelopments.reduce(
     (total, dev) => total + (dev.unitTypes?.length || 0),
@@ -184,8 +305,13 @@ export default function ReferrerDashboard() {
 
   const qualifyingUnits = ((selectedDevelopment?.unitTypes || []) as UnitTypeSummary[]).filter(
     unit => {
-      const priceAnchor = unit.priceFrom ?? unit.priceTo ?? null;
-      return typeof priceAnchor === 'number' && priceAnchor <= maxAffordablePrice;
+      const pricing = getUnitReferralPricingContext(unit, selectedDevelopment?.transactionType);
+      const comparisonLimit =
+        pricing.transactionType === 'rent' ? maxMonthlyRepaymentBudget : maxAffordablePrice;
+      return (
+        typeof pricing.affordabilityAnchor === 'number' &&
+        pricing.affordabilityAnchor <= comparisonLimit
+      );
     },
   );
 
@@ -314,10 +440,11 @@ export default function ReferrerDashboard() {
                     <CardContent className="space-y-4">
                       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         <div className="rounded-md border p-2.5">
-                          <p className="text-[11px] text-slate-500">Development Price Range</p>
+                          <p className="text-[11px] text-slate-500">
+                            {selectedDevelopmentPricing.label}
+                          </p>
                           <p className="mt-1 text-sm font-semibold leading-tight">
-                            {formatMoney(selectedDevelopment.priceFrom)} -{' '}
-                            {formatMoney(selectedDevelopment.priceTo)}
+                            {selectedDevelopmentPricing.rangeLabel}
                           </p>
                         </div>
                         <div className="rounded-md border p-2.5">
@@ -370,15 +497,11 @@ export default function ReferrerDashboard() {
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                           {selectedDevelopment.unitTypes.map(
                             (unit: UnitTypeSummary, idx: number) => {
-                              const basePrice = unit.priceFrom ?? unit.priceTo ?? null;
-                              const monthlyRepayment =
-                                basePrice && basePrice > 0
-                                  ? calculateMonthlyRepayment(
-                                      basePrice,
-                                      PRIME_RATE,
-                                      BOND_TERM_YEARS,
-                                    )
-                                  : null;
+                              const unitPricing = getUnitReferralPricingContext(
+                                unit,
+                                selectedDevelopment.transactionType,
+                              );
+                              const monthlyRepayment = unitPricing.paymentAmount;
                               const qualifyingIncome =
                                 monthlyRepayment !== null
                                   ? Math.ceil(monthlyRepayment / 0.3)
@@ -400,15 +523,15 @@ export default function ReferrerDashboard() {
                                   <div className="space-y-2 text-sm">
                                     <p className="flex items-center gap-2">
                                       <Home className="h-4 w-4 text-slate-500" />
-                                      {formatMoney(unit.priceFrom)} - {formatMoney(unit.priceTo)}
+                                      {unitPricing.label}: {unitPricing.rangeLabel}
                                     </p>
                                     <p className="flex items-center gap-2">
                                       <Banknote className="h-4 w-4 text-slate-500" />
-                                      Est. repayment: {formatMoney(monthlyRepayment)}
+                                      {unitPricing.estimateLabel}: {formatMoney(monthlyRepayment)}
                                     </p>
                                     <p className="flex items-center gap-2">
                                       <Building2 className="h-4 w-4 text-slate-500" />
-                                      Qualifying income: {formatMoney(qualifyingIncome)}
+                                      {unitPricing.qualifyingLabel}: {formatMoney(qualifyingIncome)}
                                     </p>
                                   </div>
                                 </div>
@@ -466,7 +589,12 @@ export default function ReferrerDashboard() {
                           <p>Disposable income: {formatMoney(disposableIncome)}</p>
                           <p>Repayment budget: {formatMoney(maxMonthlyRepaymentBudget)}</p>
                           <p className="font-semibold">
-                            Estimated max affordability: {formatMoney(maxAffordablePrice)}
+                            {selectedDevelopmentPricing.affordabilityLabel}:{' '}
+                            {formatMoney(
+                              selectedDevelopmentPricing.transactionType === 'rent'
+                                ? maxMonthlyRepaymentBudget
+                                : maxAffordablePrice,
+                            )}
                           </p>
                         </div>
                         <div className="space-y-2">
@@ -479,7 +607,14 @@ export default function ReferrerDashboard() {
                                 key={`${unit.name}-${idx}`}
                                 className="rounded border px-3 py-2 text-sm"
                               >
-                                {unit.name} ({formatMoney(unit.priceFrom ?? unit.priceTo ?? null)})
+                                {unit.name} (
+                                {
+                                  getUnitReferralPricingContext(
+                                    unit,
+                                    selectedDevelopment?.transactionType,
+                                  ).rangeLabel
+                                }
+                                )
                               </div>
                             ))
                           ) : (
@@ -534,7 +669,11 @@ export default function ReferrerDashboard() {
                               buyerName: prospectName.trim(),
                               buyerEmail: prospectEmail.trim() || null,
                               buyerPhone: prospectPhone.trim() || null,
-                              notes: `Affordability estimate: ${formatMoney(maxAffordablePrice)}`,
+                              notes: `Affordability estimate: ${formatMoney(
+                                selectedDevelopmentPricing.transactionType === 'rent'
+                                  ? maxMonthlyRepaymentBudget
+                                  : maxAffordablePrice,
+                              )}`,
                               referralContext: {
                                 prospect: {
                                   grossMonthlyIncome: grossIncome || null,

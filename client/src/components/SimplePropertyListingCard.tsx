@@ -11,7 +11,7 @@ export interface SimplePropertyListingCardProps {
   city: string;
   suburb?: string;
   price: number;
-  listingType?: 'sale' | 'rent';
+  listingType?: 'sale' | 'rent' | 'auction';
   image?: string;
   href?: string;
   bedrooms?: number | null;
@@ -46,15 +46,20 @@ export function SimplePropertyListingCard({
   const locationLabel = suburb ? `${suburb}, ${city}` : city;
   const resolvedImage = withApiBase(image);
   const visibleBadges = badges?.filter(Boolean).slice(0, 2) ?? [];
-  const listingBadgeLabel = listingType === 'rent' ? 'For Rent' : 'For Sale';
+  const listingBadgeLabel =
+    listingType === 'rent' ? 'For Rent' : listingType === 'auction' ? 'Auction' : 'For Sale';
   const listingBadgeClass =
     listingType === 'rent'
       ? 'bg-emerald-600/95 text-white'
+      : listingType === 'auction'
+        ? 'bg-amber-600/95 text-white'
       : 'bg-[#1e1b4b]/95 text-white';
   const priceLabel =
     price > 0
       ? listingType === 'rent'
         ? `${formatCurrency(price)} / month`
+        : listingType === 'auction'
+          ? `Starting bid ${formatCurrency(price)}`
         : formatCurrency(price)
       : 'Price on request';
   const specItems = [
@@ -143,7 +148,11 @@ export function SimplePropertyListingCard({
 
       <div className="p-4">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-          {listingType === 'rent' ? 'Monthly rental' : 'Property listing'}
+          {listingType === 'rent'
+            ? 'Monthly rental'
+            : listingType === 'auction'
+              ? 'Auction listing'
+              : 'Property listing'}
         </div>
         <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">{priceLabel}</div>
 
@@ -171,6 +180,8 @@ export function SimplePropertyListingCard({
             <span>
               {listingType === 'rent'
                 ? 'Rental details available on the listing page'
+                : listingType === 'auction'
+                  ? 'Auction details available on the listing page'
                 : 'Property details available on the listing page'}
             </span>
           </div>

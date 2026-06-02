@@ -30,6 +30,7 @@ interface DevelopmentLeadDialogProps {
     unitId?: string;
     unitName?: string;
     unitPriceFrom?: number;
+    unitPriceLabel?: string;
     unitBedrooms?: number;
     unitBathrooms?: number;
   } | null;
@@ -276,7 +277,7 @@ export function DevelopmentLeadDialog({
                 <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Price From
+                      {unitContext.unitPriceLabel || 'Price From'}
                     </p>
                     <p className="mt-2 text-base font-bold text-white">
                       {unitContext.unitPriceFrom

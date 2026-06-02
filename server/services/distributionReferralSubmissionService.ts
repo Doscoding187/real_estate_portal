@@ -25,6 +25,8 @@ type SubmissionActor = {
 
 type DbExecutor = any;
 
+type ReferralAttachmentTransactionType = 'sale' | 'rent' | 'auction';
+
 function toNumberOrNull(value: unknown) {
   if (value === null || typeof value === 'undefined') return null;
   const numberValue = Number(value);
@@ -33,6 +35,56 @@ function toNumberOrNull(value: unknown) {
 
 function toSqlDateTime(input: Date) {
   return input.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function normalizeReferralAttachmentTransactionType(value: unknown): ReferralAttachmentTransactionType {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'rent' || normalized === 'rental' || normalized === 'for_rent' || normalized === 'to-rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction') return 'auction';
+  return 'sale';
+}
+
+export function resolveReferralAssessmentAttachment(input: {
+  snapshot: {
+    matchSnapshotId: string;
+    purchasePrice?: number | null;
+    matches?: Array<{
+      developmentId?: number | string | null;
+      transactionType?: unknown;
+      unitOptions?: Array<{
+        transactionType?: unknown;
+        priceFrom?: number | null;
+        priceTo?: number | null;
+      }>;
+    }>;
+  };
+  developmentId: number;
+}) {
+  const purchasePrice = Math.max(0, Math.round(Number(input.snapshot.purchasePrice || 0)));
+  const selectedMatch = (input.snapshot.matches || []).find(
+    match => Number(match.developmentId || 0) === Number(input.developmentId),
+  );
+  const selectedUnit = selectedMatch?.unitOptions?.[0] || null;
+  const transactionType = normalizeReferralAttachmentTransactionType(
+    selectedUnit?.transactionType || selectedMatch?.transactionType,
+  );
+  const listingPriceFrom = toNumberOrNull(selectedUnit?.priceFrom);
+  const listingPriceTo = toNumberOrNull(selectedUnit?.priceTo) ?? listingPriceFrom;
+  const commissionBaseAmount =
+    transactionType === 'rent' || transactionType === 'auction'
+      ? listingPriceFrom
+      : (listingPriceFrom ?? purchasePrice);
+
+  return {
+    matchSnapshotId: String(input.snapshot.matchSnapshotId),
+    purchasePrice,
+    transactionType,
+    listingPriceFrom,
+    listingPriceTo,
+    commissionBaseAmount: commissionBaseAmount === null ? purchasePrice || null : Math.round(commissionBaseAmount),
+  };
 }
 
 function parseJsonObject(value: unknown): Record<string, unknown> | null {
@@ -375,6 +427,10 @@ export async function createReferralDeal(
         assessmentId: string;
         matchSnapshotId: string;
         purchasePrice: number;
+        transactionType: ReferralAttachmentTransactionType;
+        listingPriceFrom: number | null;
+        listingPriceTo: number | null;
+        commissionBaseAmount: number | null;
         assumptionsSummary: {
           interestRateAnnual: number | null;
           termMonths: number | null;
@@ -421,11 +477,19 @@ export async function createReferralDeal(
       actorRole: input.actorRole,
       db,
     });
+    const attachmentPricing = resolveReferralAssessmentAttachment({
+      snapshot,
+      developmentId: input.developmentId,
+    });
     const assumptionsJson = parseJsonObject(assessment.assumptionsJson) || {};
     assessmentAttachment = {
       assessmentId: normalizedAssessmentId,
-      matchSnapshotId: String(snapshot.matchSnapshotId),
-      purchasePrice: Math.max(0, Math.round(Number(snapshot.purchasePrice || 0))),
+      matchSnapshotId: attachmentPricing.matchSnapshotId,
+      purchasePrice: attachmentPricing.purchasePrice,
+      transactionType: attachmentPricing.transactionType,
+      listingPriceFrom: attachmentPricing.listingPriceFrom,
+      listingPriceTo: attachmentPricing.listingPriceTo,
+      commissionBaseAmount: attachmentPricing.commissionBaseAmount,
       assumptionsSummary: {
         interestRateAnnual: toNumberOrNull(assumptionsJson.interestRateAnnual),
         termMonths: toNumberOrNull(assumptionsJson.termMonths),
@@ -444,7 +508,7 @@ export async function createReferralDeal(
       affordabilityAssessmentId: assessmentAttachment?.assessmentId || null,
       affordabilityMatchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
       affordabilityPurchasePrice: assessmentAttachment?.purchasePrice ?? null,
-      commissionBaseAmount: assessmentAttachment?.purchasePrice ?? null,
+      commissionBaseAmount: assessmentAttachment?.commissionBaseAmount ?? null,
       affordabilityAssumptionsJson: assessmentAttachment?.assumptionsSummary as any,
       externalRef: normalizedClientReference,
       buyerName,
@@ -502,6 +566,10 @@ export async function createReferralDeal(
           assessmentId: assessmentAttachment.assessmentId,
           matchSnapshotId: assessmentAttachment.matchSnapshotId,
           purchasePrice: assessmentAttachment.purchasePrice,
+          transactionType: assessmentAttachment.transactionType,
+          listingPriceFrom: assessmentAttachment.listingPriceFrom,
+          listingPriceTo: assessmentAttachment.listingPriceTo,
+          commissionBaseAmount: assessmentAttachment.commissionBaseAmount,
           assumptions: assessmentAttachment.assumptionsSummary,
         } as any,
         notes: 'Affordability Snapshot Attached',
@@ -883,6 +951,19 @@ export async function getMyReferralDeal(
     dealId: Number(deal.dealId),
     developmentId: Number(deal.developmentId),
   });
+  const timeline = events.map(event => {
+    const metadata = parseJsonObject(event.metadata);
+    const isAssessmentAttachment = metadata?.source === 'partner.attachAssessment';
+    return {
+      at: event.at,
+      event: isAssessmentAttachment ? 'Affordability Snapshot Attached' : String(event.event || 'system'),
+      byRole: event.actorRole ? String(event.actorRole) : 'system',
+      note: event.note || null,
+      metadata,
+    };
+  });
+  const assessmentAttachmentMetadata =
+    timeline.find(event => event.metadata?.source === 'partner.attachAssessment')?.metadata || null;
 
   return {
     journey: buildJourneyGuidance({
@@ -923,23 +1004,19 @@ export async function getMyReferralDeal(
       deal.assessmentId && deal.matchSnapshotId
         ? {
             purchasePriceEstimate: toNumberOrNull(deal.affordabilityPurchasePrice),
+            transactionType: assessmentAttachmentMetadata?.transactionType
+              ? String(assessmentAttachmentMetadata.transactionType)
+              : null,
+            listingPriceFrom: toNumberOrNull(assessmentAttachmentMetadata?.listingPriceFrom),
+            listingPriceTo: toNumberOrNull(assessmentAttachmentMetadata?.listingPriceTo),
+            commissionBaseAmount: toNumberOrNull(assessmentAttachmentMetadata?.commissionBaseAmount),
             assumptions: parseJsonObject(deal.affordabilityAssumptionsJson),
           }
         : null,
     docProgress,
     applicationDocuments,
     programTerms,
-    timeline: events.map(event => {
-      const metadata = parseJsonObject(event.metadata);
-      const isAssessmentAttachment = metadata?.source === 'partner.attachAssessment';
-      return {
-        at: event.at,
-        event: isAssessmentAttachment ? 'Affordability Snapshot Attached' : String(event.event || 'system'),
-        byRole: event.actorRole ? String(event.actorRole) : 'system',
-        note: event.note || null,
-        metadata,
-      };
-    }),
+    timeline,
   };
 }
 

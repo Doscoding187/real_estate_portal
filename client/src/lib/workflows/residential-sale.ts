@@ -169,11 +169,19 @@ const residentialSaleSteps: WizardStep[] = [
                 field: `unitTypes.${id}.bathrooms`,
                 message: `${label} is missing bathrooms`,
               });
-            if (!u.priceFrom || u.priceFrom <= 0)
+            const priceFrom = Number(u.basePriceFrom ?? u.priceFrom ?? 0);
+            const priceTo = Number(u.basePriceTo ?? u.priceTo ?? 0);
+            if (!Number.isFinite(priceFrom) || priceFrom <= 0)
               errors.push({
                 field: `unitTypes.${id}.priceFrom`,
                 message: `${label} is missing a base price`,
               });
+            if (Number.isFinite(priceTo) && priceTo > 0 && priceTo < priceFrom) {
+              errors.push({
+                field: `unitTypes.${id}.priceTo`,
+                message: `${label} price upper range must be greater than or equal to base price`,
+              });
+            }
           });
         }
       }

@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { resolveDevelopmentDraftProgressDisplay } from '@/lib/developmentWorkflowProgress';
 
 export default function MyDrafts() {
   const [, setLocation] = useLocation();
@@ -68,10 +69,6 @@ export default function MyDrafts() {
     if (draftToDelete) {
       deleteDraft.mutate({ id: draftToDelete });
     }
-  };
-
-  const calculateProgress = (currentStep: number) => {
-    return Math.round((currentStep / 6) * 100);
   };
 
   const getProgressColor = (progress: number) => {
@@ -127,8 +124,17 @@ export default function MyDrafts() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {draftItems.map((draft: any) => {
             const draftData = draft.draftData as any;
-            const progress = draft.progress || calculateProgress(draft.currentStep);
+            const progressDisplay = resolveDevelopmentDraftProgressDisplay(draft);
+            const progress = progressDisplay.progress;
             const progressColor = getProgressColor(progress);
+            const city = draftData?.developmentData?.location?.city ?? draftData?.city;
+            const province = draftData?.developmentData?.location?.province ?? draftData?.province;
+            const locationSummary =
+              [city, province].filter(Boolean).join(', ') ||
+              draftData?.developmentData?.location?.address ||
+              draftData?.address ||
+              'No location set';
+            const unitTypes = draftData?.stepData?.unit_types?.unitTypes ?? draftData?.unitTypes ?? [];
 
             return (
               <Card key={draft.id} className="hover:shadow-lg transition-shadow">
@@ -138,9 +144,7 @@ export default function MyDrafts() {
                       <CardTitle className="text-lg line-clamp-1">
                         {draft.draftName || 'Untitled Development'}
                       </CardTitle>
-                      <CardDescription className="mt-1">
-                        {draftData.address || draftData.city || 'No location set'}
-                      </CardDescription>
+                      <CardDescription className="mt-1">{locationSummary}</CardDescription>
                     </div>
                     <Building2 className="w-5 h-5 text-slate-400 flex-shrink-0" />
                   </div>
@@ -151,7 +155,10 @@ export default function MyDrafts() {
                   <div className="mb-4">
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span className="text-slate-600">Progress</span>
-                      <span className="font-semibold text-slate-900">{progress}%</span>
+                      <span className="font-semibold text-slate-900">
+                        {progressDisplay.stepLabel ? `${progressDisplay.stepLabel} · ` : ''}
+                        {progress}%
+                      </span>
                     </div>
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div
@@ -163,18 +170,18 @@ export default function MyDrafts() {
 
                   {/* Draft Details */}
                   <div className="space-y-2 text-sm">
-                    {draftData.city && draftData.province && (
+                    {city && province && (
                       <div className="flex items-center text-slate-600">
                         <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
                         <span className="line-clamp-1">
-                          {draftData.city}, {draftData.province}
+                          {city}, {province}
                         </span>
                       </div>
                     )}
-                    {draftData.unitTypes && draftData.unitTypes.length > 0 && (
+                    {unitTypes.length > 0 && (
                       <div className="flex items-center text-slate-600">
                         <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span>{draftData.unitTypes.length} unit type(s)</span>
+                        <span>{unitTypes.length} unit type(s)</span>
                       </div>
                     )}
                     <div className="flex items-center text-slate-500">

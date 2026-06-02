@@ -9,6 +9,7 @@ import { PROVINCE_SLUGS } from './locationUtils';
 
 export type TransactionType = 'for-sale' | 'to-rent' | 'developments';
 export type GeographyLevel = 'province' | 'city' | 'locality' | 'development' | 'country';
+export type ListingTypeIntent = 'sale' | 'rent' | 'auction';
 
 export interface GeographyIntent {
   level: GeographyLevel;
@@ -29,6 +30,28 @@ export interface SearchIntent {
   geography: GeographyIntent;
   filters: Record<string, any>; // The query params refing the search
   defaults: SearchDefaults;
+}
+
+export function normalizeSearchListingType(value: unknown): ListingTypeIntent | null {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['sale', 'sell', 'for_sale'].includes(normalized)) return 'sale';
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) return 'rent';
+  if (['auction', 'auctions'].includes(normalized)) return 'auction';
+
+  return null;
+}
+
+export function deriveSearchListingType(
+  intent: Pick<SearchIntent, 'transactionType' | 'filters'>,
+): ListingTypeIntent {
+  return (
+    normalizeSearchListingType(intent.filters?.listingType) ??
+    (intent.transactionType === 'to-rent' ? 'rent' : 'sale')
+  );
 }
 
 /**
@@ -160,8 +183,9 @@ export function resolveSearchIntent(
     filters[key] = value;
   });
 
-  // Ensure listingType matches transactionType (Synchronization)
-  filters.listingType = transactionType === 'to-rent' ? 'rent' : 'sale';
+  const explicitListingType = normalizeSearchListingType(searchParams.get('listingType'));
+  filters.listingType =
+    explicitListingType || (transactionType === 'to-rent' ? 'rent' : 'sale');
 
   return {
     transactionType,
@@ -212,8 +236,13 @@ export function generateIntentUrl(intent: SearchIntent): string {
   })();
 
   Object.entries(filters).forEach(([key, value]) => {
-    // Skip internal keys that shouldn't appear in URL
-    if (key === 'listingType') return;
+    // Skip internal listing intent except for auction, which shares the sale URL root.
+    if (key === 'listingType') {
+      if (normalizeSearchListingType(value) === 'auction') {
+        queryParams.set('listingType', 'auction');
+      }
+      return;
+    }
     if (key === 'suburb') return;
     if (!value) return;
 

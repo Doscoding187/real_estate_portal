@@ -28,7 +28,7 @@ type TrendingItem = {
   priceTo: number;
   image: string;
   href: string;
-  listingType?: 'sale' | 'rent';
+  listingType?: 'sale' | 'rent' | 'auction';
   bedrooms?: number | null;
   bathrooms?: number | null;
   area?: number | null;
@@ -167,6 +167,7 @@ export function HomeTrendingSection({
                         image={item.image || ''}
                         href={item.href}
                         price={item.priceFrom}
+                        listingType={item.listingType}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
                         area={item.area}
@@ -185,6 +186,7 @@ export function HomeTrendingSection({
                         href={item.href}
                         priceFrom={item.priceFrom}
                         priceTo={item.priceTo}
+                        listingType={item.listingType}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
                         unitSize={item.unitSize}

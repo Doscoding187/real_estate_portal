@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 
@@ -17,6 +17,10 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { getVisibleSteps, getWorkflow } from '@/lib/workflows';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
+import {
+  buildDevelopmentEditProgressPayload,
+  normalizeAmenitiesPayload,
+} from '@/lib/developmentSubmitPayload';
 
 import {
   AlertDialog,
@@ -67,6 +71,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [apiError, setApiError] = useState<AppError | null>(null);
+  const [isManualSavingDraft, setIsManualSavingDraft] = useState(false);
+  const [isSavingProgress, setIsSavingProgress] = useState(false);
 
   const store = useDevelopmentWizard();
   const [persistReady, setPersistReady] = useState(() => {
@@ -117,6 +123,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   // --- Autosave (currently disabled in your code) ---
   const saveDraftMutation = trpc.developer.saveDraft.useMutation();
+  const updateDevelopmentMutation = trpc.developer.updateDevelopment.useMutation();
+  const updatePublisherDevelopmentMutation = trpc.superAdminPublisher.updateDevelopment.useMutation();
 
   const stateToWatch = useMemo(
     () => ({
@@ -163,6 +171,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const isSuperAdmin = user?.role === 'super_admin';
   const { context: publisherContext } = usePublisherContext();
   const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.brandProfileId;
+  const effectiveDraftBrandProfileId = publisherContext?.brandProfileId ?? brandProfileId;
   const persistStorageKey = shouldUsePublisherApi
     ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
     : DEVELOPMENT_WIZARD_STORAGE_KEY;
@@ -265,16 +274,26 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       editData.transactionType ?? editData.developmentData?.transactionType ?? 'for_sale';
 
     if (devType && txType) {
-      initializeWorkflow(devType, txType);
+      const hydratedState = useDevelopmentWizard.getState();
+      const stableWorkflowId = hydratedState.workflowId;
+      const sourceStepId = hydratedState.currentStepId;
+      const sourceCompletedSteps = Array.isArray(hydratedState.completedSteps)
+        ? hydratedState.completedSteps
+        : [];
+
+      if (!stableWorkflowId) {
+        initializeWorkflow(devType, txType);
+      }
 
       const wizardData = useDevelopmentWizard.getState().getWizardData();
       const workflow = getWorkflow(wizardData);
       const visibleSteps = workflow ? getVisibleSteps(workflow, wizardData) : [];
 
       const preferredStepId =
-        wizardData.currentStepId ??
-        visibleSteps.find(step => !wizardData.completedSteps?.includes(step.id))?.id ??
-        visibleSteps[0]?.id;
+        sourceStepId && visibleSteps.some(step => step.id === sourceStepId)
+          ? sourceStepId
+          : (visibleSteps.find(step => !sourceCompletedSteps.includes(step.id))?.id ??
+            visibleSteps[0]?.id);
 
       if (preferredStepId) setWorkflowStep(preferredStepId);
     }
@@ -337,6 +356,115 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     }
   };
 
+  const handleManualSaveDraft = useCallback(async () => {
+    if (isManualSavingDraft) return;
+    setIsManualSavingDraft(true);
+    try {
+      await saveDraft(async data => {
+        const result = await saveDraftMutation.mutateAsync({
+          ...(currentDraftId ? { id: currentDraftId } : {}),
+          ...(effectiveDraftBrandProfileId ? { brandProfileId: effectiveDraftBrandProfileId } : {}),
+          draftData: data,
+        });
+
+        if (result?.id) setCurrentDraftId(result.id);
+        if (result?.success === false) {
+          throw new Error('Draft could not be persisted');
+        }
+      });
+      toast.success('Draft saved');
+    } catch (error) {
+      console.error('[DevelopmentWizard] Manual draft save failed:', error);
+      toast.error('Failed to save draft');
+    } finally {
+      setIsManualSavingDraft(false);
+    }
+  }, [
+    currentDraftId,
+    effectiveDraftBrandProfileId,
+    isManualSavingDraft,
+    saveDraft,
+    saveDraftMutation,
+  ]);
+
+  const handleSaveProgress = useCallback(async () => {
+    if (isSavingProgress) return;
+
+    const currentState = useDevelopmentWizard.getState();
+    const editingId = currentState.editingId;
+    if (!editingId) {
+      toast.error('Save Progress is only available while editing an existing development.');
+      return;
+    }
+
+    const previousCanonicalSnapshot = currentState.getPersistedEditSnapshot();
+    if (!previousCanonicalSnapshot) {
+      toast.error('Reload this development before saving progress.');
+      return;
+    }
+
+    setIsSavingProgress(true);
+    try {
+      const canonicalSnapshot = currentState.getDraftData();
+      const amenities =
+        normalizeAmenitiesPayload(
+          canonicalSnapshot.stepData?.amenities_features?.amenities ??
+            canonicalSnapshot.developmentData?.amenities ??
+            canonicalSnapshot.selectedAmenities,
+        ) ?? [];
+      const payload = buildDevelopmentEditProgressPayload(
+        {
+          canonicalSnapshot,
+          amenities,
+          residentialConfig: canonicalSnapshot.residentialConfig,
+          landConfig: canonicalSnapshot.landConfig,
+          commercialConfig: canonicalSnapshot.commercialConfig,
+          mixedUseConfig: canonicalSnapshot.mixedUseConfig,
+          specifications: canonicalSnapshot.specifications,
+          fallbackOwnershipType: canonicalSnapshot.developmentData?.ownershipType,
+        },
+        { previousCanonicalSnapshot },
+      );
+
+      if (shouldUsePublisherApi) {
+        const publisherBrandProfileId = publisherContext?.brandProfileId;
+        if (typeof publisherBrandProfileId !== 'number') {
+          throw new Error('Publisher brand context is required.');
+        }
+
+        await updatePublisherDevelopmentMutation.mutateAsync({
+          brandProfileId: publisherBrandProfileId,
+          developmentId: editingId,
+          data: {
+            ...payload,
+            brandProfileId: publisherBrandProfileId,
+            developerBrandProfileId: publisherBrandProfileId,
+            devOwnerType: 'platform',
+          },
+        });
+      } else {
+        await updateDevelopmentMutation.mutateAsync({
+          id: editingId,
+          data: payload,
+        });
+      }
+
+      useDevelopmentWizard.getState().markEditSnapshotPersisted();
+      toast.success('Progress saved');
+    } catch (error) {
+      console.error('[DevelopmentWizard] Save progress failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save progress');
+    } finally {
+      setIsSavingProgress(false);
+    }
+  }, [
+    isSavingProgress,
+    publisherContext?.brandProfileId,
+    shouldUsePublisherApi,
+    updateDevelopmentMutation,
+    updatePublisherDevelopmentMutation,
+  ]);
+
   const renderPhase = () => {
     if (isEditMode && isEditLoading) {
       return (
@@ -362,6 +490,10 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         onExit={() => setShowExitDialog(true)}
         saveStatus={isSaving ? 'saving' : autoSaveError ? 'error' : 'saved'}
         lastSavedAt={lastSaved}
+        onManualSaveDraft={handleManualSaveDraft}
+        isManualSaveDraftPending={isManualSavingDraft}
+        onSaveProgress={isEditMode ? handleSaveProgress : undefined}
+        isSaveProgressPending={isSavingProgress}
       />
     );
   };

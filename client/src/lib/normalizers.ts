@@ -3,6 +3,25 @@ import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import type { SearchCardResult } from '@/../../shared/types';
 
+export type CardListingType = 'sale' | 'rent' | 'auction';
+
+export function normalizeCardListingType(value: unknown): CardListingType {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) return 'rent';
+  if (['auction', 'auctions'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+function getFallbackTransactionType(listingType: CardListingType): string {
+  if (listingType === 'rent') return 'Rent';
+  if (listingType === 'auction') return 'Auction';
+  return 'Sale';
+}
+
 // Normalizes raw API property objects to the props expected by PropertyCard.
 export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -41,6 +60,8 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
       Number(raw.pricing.startingBid) ||
       price;
   }
+
+  const listingType = normalizeCardListingType(raw.listingType || raw.action || raw.transactionType);
 
   // Determine building/floor area (house size, apartment size, floor size)
   const area =
@@ -234,11 +255,11 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     propertyType: raw.propertyType
       ? raw.propertyType.charAt(0).toUpperCase() + raw.propertyType.slice(1).replace('_', ' ')
       : undefined,
-    listingType: raw.listingType || raw.action || 'sale',
+    listingType,
     listingSource,
     listerType,
     status: raw.status === 'available' ? 'Ready to Move' : raw.status, // Map backend status to UI status
-    transactionType: raw.transactionType || (raw.listingType === 'rent' ? 'Rent' : 'Sale'),
+    transactionType: raw.transactionType || getFallbackTransactionType(listingType),
     agent,
     developerBrand,
     development,
@@ -280,6 +301,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
 }
 
 export function searchCardResultToPropertyCardProps(card: SearchCardResult): PropertyCardProps {
+  const listingType = normalizeCardListingType(card.listingType || card.transactionType);
   const developerBrand =
     card.developerBrand &&
     typeof card.developerBrand.id === 'number' &&
@@ -310,7 +332,7 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
     propertyType: card.propertyType
       ? card.propertyType.charAt(0).toUpperCase() + card.propertyType.slice(1).replace('_', ' ')
       : undefined,
-    listingType: card.listingType,
+    listingType,
     listingSource: card.listingSource,
     listerType: card.listerType,
     status: undefined,
@@ -330,6 +352,8 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
         : undefined,
     developerBrand,
     development: card.development,
+    unitTypeId: card.unitTypeId,
+    unitDisplayOrder: card.unitDisplayOrder,
     badges: card.badges,
     imageCount: card.imageCount,
     videoCount: card.videoCount,

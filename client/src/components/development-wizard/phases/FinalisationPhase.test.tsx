@@ -1,0 +1,314 @@
+import React from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolveDevelopmentUpdateIntent } from '../../../../../server/lib/developmentUpdateIntent';
+
+const testState = vi.hoisted(() => {
+  const navigateMock = vi.fn();
+  const toastSuccessMock = vi.fn();
+  const toastErrorMock = vi.fn();
+  const createDevelopmentMock = vi.fn();
+  const updateDevelopmentMock = vi.fn();
+  const publishDevelopmentMock = vi.fn();
+  const createPublisherDevelopmentMock = vi.fn();
+  const updatePublisherDevelopmentMock = vi.fn();
+  const publishPublisherDevelopmentMock = vi.fn();
+  const resetMock = vi.fn();
+  const setPhaseMock = vi.fn();
+
+  const canonicalSnapshot = {
+    workflowId: 'residential_rent',
+    currentStepId: 'review_publish',
+    completedSteps: ['configuration', 'identity_market', 'location', 'unit_types'],
+    developmentData: {
+      name: 'Finalisation Edit Rental',
+      description: 'A resumed canonical edit draft that should update existing inventory.',
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      status: 'selling',
+      ownershipTypes: ['sectional-title'],
+      location: {
+        address: '11 Edit Road',
+        suburb: 'Sea Point',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8005',
+      },
+      media: {
+        heroImage: {
+          id: 'hero-edit',
+          url: 'https://example.com/edit-hero.jpg',
+          type: 'image',
+        },
+        photos: [],
+        videos: [],
+        documents: [],
+      },
+    },
+    stepData: {
+      configuration: {
+        developmentType: 'residential',
+        transactionType: 'for_rent',
+      },
+      identity_market: {
+        name: 'Finalisation Edit Rental',
+        transactionType: 'for_rent',
+        status: 'selling',
+        ownershipTypes: ['sectional-title'],
+      },
+      location: {
+        address: '11 Edit Road',
+        suburb: 'Sea Point',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8005',
+      },
+      amenities_features: {
+        amenities: ['Pool'],
+      },
+      unit_types: {
+        selectedUnitId: 'db-rent-unit-final',
+        unitTypes: [
+          {
+            id: 'db-rent-unit-final',
+            name: 'Final Rent Type',
+            bedrooms: 2,
+            bathrooms: 2,
+            monthlyRentFrom: 16_000,
+            monthlyRentTo: 19_000,
+            basePriceFrom: 2_000_000,
+            totalUnits: 12,
+            availableUnits: 7,
+            reservedUnits: 2,
+          },
+        ],
+      },
+    },
+    unitTypes: [
+      {
+        id: 'db-rent-unit-final',
+        name: 'Final Rent Type',
+        bedrooms: 2,
+        bathrooms: 2,
+        monthlyRentFrom: 16_000,
+        monthlyRentTo: 19_000,
+        basePriceFrom: 2_000_000,
+        totalUnits: 12,
+        availableUnits: 7,
+        reservedUnits: 2,
+      },
+    ],
+  };
+
+  const wizardData = {
+    ...canonicalSnapshot.developmentData,
+    workflowId: canonicalSnapshot.workflowId,
+    currentStepId: canonicalSnapshot.currentStepId,
+    completedSteps: canonicalSnapshot.completedSteps,
+    stepData: canonicalSnapshot.stepData,
+    unitTypes: canonicalSnapshot.unitTypes,
+    amenities: ['Pool'],
+    media: canonicalSnapshot.developmentData.media,
+  };
+
+  const wizardState = {
+    editingId: 987,
+    persistedEditSnapshot: canonicalSnapshot,
+    getPersistedEditSnapshot: vi.fn(() => canonicalSnapshot),
+    classification: { type: 'residential' },
+    listingIdentity: undefined,
+    residentialConfig: { residentialType: 'apartment' },
+    landConfig: undefined,
+    commercialConfig: undefined,
+    mixedUseConfig: undefined,
+    specifications: undefined,
+    developmentData: {
+      ...canonicalSnapshot.developmentData,
+      amenities: ['Pool'],
+    },
+    stepData: canonicalSnapshot.stepData,
+    selectedAmenities: [],
+    getWizardData: () => wizardData,
+    getDraftData: () => canonicalSnapshot,
+    validateForPublish: () => ({ isValid: true, errors: [] }),
+    getCardFieldRecommendations: () => [],
+    setPhase: setPhaseMock,
+    reset: resetMock,
+  };
+
+  return {
+    createDevelopmentMock,
+    createPublisherDevelopmentMock,
+    navigateMock,
+    publishDevelopmentMock,
+    publishPublisherDevelopmentMock,
+    resetMock,
+    toastErrorMock,
+    toastSuccessMock,
+    updateDevelopmentMock,
+    updatePublisherDevelopmentMock,
+    wizardState,
+  };
+});
+
+vi.mock('@/hooks/useDevelopmentWizard', () => ({
+  useDevelopmentWizard: (selector?: (state: typeof testState.wizardState) => unknown) =>
+    selector ? selector(testState.wizardState) : testState.wizardState,
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    developer: {
+      createDevelopment: { useMutation: () => ({ mutateAsync: testState.createDevelopmentMock }) },
+      updateDevelopment: { useMutation: () => ({ mutateAsync: testState.updateDevelopmentMock }) },
+      publishDevelopment: {
+        useMutation: () => ({ mutateAsync: testState.publishDevelopmentMock }),
+      },
+    },
+    superAdminPublisher: {
+      createDevelopment: {
+        useMutation: () => ({ mutateAsync: testState.createPublisherDevelopmentMock }),
+      },
+      updateDevelopment: {
+        useMutation: () => ({ mutateAsync: testState.updatePublisherDevelopmentMock }),
+      },
+      publishDevelopment: {
+        useMutation: () => ({ mutateAsync: testState.publishPublisherDevelopmentMock }),
+      },
+    },
+  },
+}));
+
+vi.mock('@/_core/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 1, role: 'property_developer' } }),
+}));
+
+vi.mock('@/hooks/usePublisherContext', () => ({
+  usePublisherContext: () => ({ context: null }),
+}));
+
+vi.mock('wouter', () => ({
+  useLocation: () => ['/developer/developments', testState.navigateMock],
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: testState.toastSuccessMock,
+    error: testState.toastErrorMock,
+  },
+}));
+
+vi.mock('canvas-confetti', () => ({
+  default: vi.fn(),
+}));
+
+import { FinalisationPhase } from './FinalisationPhase';
+
+describe('FinalisationPhase', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    testState.wizardState.editingId = 987;
+    testState.wizardState.persistedEditSnapshot = testState.wizardState.getDraftData();
+    testState.wizardState.getPersistedEditSnapshot.mockReturnValue(
+      testState.wizardState.persistedEditSnapshot,
+    );
+    testState.createDevelopmentMock.mockResolvedValue({ development: { id: 123 } });
+    testState.updateDevelopmentMock.mockResolvedValue({ success: true });
+    testState.publishDevelopmentMock.mockResolvedValue({ success: true });
+    testState.createPublisherDevelopmentMock.mockResolvedValue({ development: { id: 123 } });
+    testState.updatePublisherDevelopmentMock.mockResolvedValue({ success: true });
+    testState.publishPublisherDevelopmentMock.mockResolvedValue({ success: true });
+  });
+
+  it('uses canonical update payloads for edit-mode publish', async () => {
+    render(<FinalisationPhase />);
+
+    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+
+    await waitFor(() => expect(testState.updateDevelopmentMock).toHaveBeenCalledTimes(1));
+
+    expect(testState.createDevelopmentMock).not.toHaveBeenCalled();
+    expect(testState.updateDevelopmentMock).toHaveBeenCalledWith({
+      id: 987,
+      data: expect.objectContaining({
+        workflowId: 'residential_rent',
+        currentStepId: 'review_publish',
+        name: 'Finalisation Edit Rental',
+        transactionType: 'for_rent',
+        monthlyRentFrom: 16_000,
+        monthlyRentTo: 19_000,
+      }),
+    });
+
+    const payload = testState.updateDevelopmentMock.mock.calls[0][0].data;
+    expect(testState.wizardState.getPersistedEditSnapshot).toHaveBeenCalled();
+    expect(resolveDevelopmentUpdateIntent(payload)).toMatchObject({
+      unitTypesMode: 'canonical_full_sync',
+      deleteMissingUnitTypes: true,
+    });
+    expect(payload.unitTypes[0]).toMatchObject({
+      id: 'db-rent-unit-final',
+      name: 'Final Rent Type',
+      monthlyRentFrom: 16_000,
+      monthlyRentTo: 19_000,
+      totalUnits: 12,
+      availableUnits: 7,
+      reservedUnits: 2,
+    });
+    expect(payload.unitTypes[0]).not.toHaveProperty('basePriceFrom');
+    expect(payload.stepData.unit_types.unitTypes[0]).toEqual(payload.unitTypes[0]);
+    expect(payload.images).toEqual([
+      { url: 'https://example.com/edit-hero.jpg', category: 'hero' },
+    ]);
+    expect(testState.publishDevelopmentMock).toHaveBeenCalledWith({ id: 987 });
+    expect(testState.resetMock).toHaveBeenCalled();
+    expect(testState.navigateMock).toHaveBeenCalledWith('/developer/developments');
+  });
+
+  it('publishes a resumed create-mode canonical draft without legacy phase fields or stale unit prices', async () => {
+    testState.wizardState.editingId = undefined;
+
+    render(<FinalisationPhase />);
+
+    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+
+    await waitFor(() => expect(testState.createDevelopmentMock).toHaveBeenCalledTimes(1));
+
+    expect(testState.updateDevelopmentMock).not.toHaveBeenCalled();
+    const payload = testState.createDevelopmentMock.mock.calls[0][0];
+
+    expect(payload).toMatchObject({
+      workflowId: 'residential_rent',
+      currentStepId: 'review_publish',
+      completedSteps: ['configuration', 'identity_market', 'location', 'unit_types'],
+      name: 'Finalisation Edit Rental',
+      transactionType: 'for_rent',
+      monthlyRentFrom: 16_000,
+      monthlyRentTo: 19_000,
+      totalUnits: 12,
+      availableUnits: 7,
+    });
+    expect(payload).not.toHaveProperty('currentPhase');
+    expect(payload).not.toHaveProperty('currentStep');
+    expect(payload).not.toHaveProperty('editingId');
+    expect(payload).not.toHaveProperty('developmentId');
+    expect(payload.developmentData).not.toHaveProperty('currentPhase');
+    expect(payload.developmentData).not.toHaveProperty('editingId');
+    expect(payload.unitTypes[0]).toMatchObject({
+      id: 'db-rent-unit-final',
+      name: 'Final Rent Type',
+      monthlyRentFrom: 16_000,
+      monthlyRentTo: 19_000,
+      totalUnits: 12,
+      availableUnits: 7,
+      reservedUnits: 2,
+    });
+    expect(payload.unitTypes[0]).not.toHaveProperty('basePriceFrom');
+    expect(payload.unitTypes[0]).not.toHaveProperty('priceFrom');
+    expect(payload.stepData.unit_types.unitTypes[0]).toEqual(payload.unitTypes[0]);
+    expect(testState.publishDevelopmentMock).toHaveBeenCalledWith({ id: 123 });
+    expect(testState.navigateMock).toHaveBeenCalledWith('/developer/developments');
+  });
+});

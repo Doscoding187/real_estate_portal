@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DevelopmentLeadDialog } from './DevelopmentLeadDialog';
+import { DEVELOPMENT_UNIT_ID_MAX_LENGTH } from '../../../../shared/developmentUnitIdentity';
 
 const mutateMock = vi.fn();
 
@@ -34,20 +35,24 @@ describe('DevelopmentLeadDialog', () => {
     mutateMock.mockReset();
   });
 
-  it('submits unit context with info requests', () => {
+  it('submits canonical unit context with info requests', () => {
+    const canonicalUnitId = '123e4567-e89b-12d3-a456-426614174000';
+
+    expect(canonicalUnitId).toHaveLength(DEVELOPMENT_UNIT_ID_MAX_LENGTH);
+
     render(
       <DevelopmentLeadDialog
         open
         onOpenChange={() => {}}
         mode="info"
-        ctaLocation="unit_floor_plan_dialog_unit-1_info"
+        ctaLocation={`unit_floor_plan_dialog_${canonicalUnitId}_info`}
         development={{
           id: 77,
           name: 'Cosmopolitan Projects',
           developerBrandProfileId: 13,
         }}
         unitContext={{
-          unitId: 'unit-1',
+          unitId: canonicalUnitId,
           unitName: 'Type A',
           unitPriceFrom: 1299000,
           unitBedrooms: 3,
@@ -73,7 +78,7 @@ describe('DevelopmentLeadDialog', () => {
       expect.objectContaining({
         developmentId: 77,
         developerBrandProfileId: 13,
-        unitId: 'unit-1',
+        unitId: canonicalUnitId,
         unitName: 'Type A',
         unitPriceFrom: 1299000,
         unitBedrooms: 3,

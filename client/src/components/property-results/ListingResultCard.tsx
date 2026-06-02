@@ -34,6 +34,8 @@ export interface ListingResultCardData {
   agencyId?: number;
   developerBrandProfileId?: number;
   developmentId?: number;
+  unitTypeId?: string;
+  unitDisplayOrder?: number;
   contactPhone?: string;
   contactWhatsapp?: string;
   contactEmail?: string;
@@ -116,6 +118,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     <>
       <div
         className="group w-full max-w-[780px] cursor-pointer overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-[840px] lg:rounded-[26px]"
+        data-listing-source={resolvedListingSource}
+        data-unit-type-id={data.unitTypeId || undefined}
+        data-unit-display-order={
+          typeof data.unitDisplayOrder === 'number' ? data.unitDisplayOrder : undefined
+        }
         onClick={() => setLocation(listingHref)}
       >
         <div className="flex flex-col sm:flex-row">

@@ -60,7 +60,12 @@ import {
   SearchFilters,
   unslugify,
 } from '@/lib/urlUtils';
-import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
+import {
+  deriveSearchListingType,
+  resolveSearchIntent,
+  generateIntentUrl,
+  SearchIntent,
+} from '@/lib/searchIntent';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import type { SearchCardResult } from '@/../../shared/types';
 
@@ -115,7 +120,7 @@ export default function SearchResults({
       ...(searchIntent.geography.city && { city: searchIntent.geography.city }),
       ...(searchIntent.geography.suburb && { suburb: searchIntent.geography.suburb }),
       ...(searchIntent.geography.locationId && { locationId: searchIntent.geography.locationId }),
-      listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale',
+      listingType: deriveSearchListingType(searchIntent),
     };
   }, [searchIntent]);
 
@@ -340,10 +345,11 @@ export default function SearchResults({
   };
 
   const handleClearAllFilters = () => {
+    const listingType = deriveSearchListingType(searchIntent);
     // Keep only listing type (which is transactional)
     const updatedIntent = {
       ...searchIntent,
-      filters: {}, // Clear all optional filters
+      filters: listingType === 'auction' ? { listingType } : {}, // Clear optional filters
     };
     setLocation(generateIntentUrl(updatedIntent));
   };
@@ -591,6 +597,8 @@ export default function SearchResults({
                                 agencyId: card.identity.agencyId,
                                 developerBrandProfileId: card.identity.developerBrandProfileId,
                                 developmentId: card.developmentId,
+                                unitTypeId: card.unitTypeId,
+                                unitDisplayOrder: card.unitDisplayOrder,
                                 postedBy: card.identity.name,
                                 agentAvatarUrl: card.identity.avatarUrl || undefined,
                                 contactPhone: card.identity.phone || undefined,

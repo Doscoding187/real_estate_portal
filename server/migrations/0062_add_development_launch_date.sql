@@ -1,0 +1,2 @@
+ALTER TABLE developments
+  ADD COLUMN IF NOT EXISTS launch_date TIMESTAMP NULL AFTER videos;

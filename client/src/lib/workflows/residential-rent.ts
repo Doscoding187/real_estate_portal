@@ -141,13 +141,16 @@ const residentialRentSteps: WizardStep[] = [
 
           const rentFrom = Number(u.monthlyRentFrom ?? u.monthlyRent ?? 0);
           const rentTo = Number(u.monthlyRentTo ?? 0);
-          if (
-            (!Number.isFinite(rentFrom) || rentFrom <= 0) &&
-            (!Number.isFinite(rentTo) || rentTo <= 0)
-          ) {
+          if (!Number.isFinite(rentFrom) || rentFrom <= 0) {
             errors.push({
               field: `unitTypes.${id}.monthlyRentFrom`,
               message: `${label} is missing a monthly rent`,
+            });
+          }
+          if (Number.isFinite(rentTo) && rentTo > 0 && rentTo < rentFrom) {
+            errors.push({
+              field: `unitTypes.${id}.monthlyRentTo`,
+              message: `${label} monthly rent upper range must be greater than or equal to monthly rent from`,
             });
           }
         });

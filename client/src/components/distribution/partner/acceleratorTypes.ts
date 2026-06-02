@@ -58,6 +58,7 @@ export type AcceleratorMatchItem = {
   province: string | null;
   suburb: string | null;
   logoUrl: string | null;
+  transactionType?: 'sale' | 'rent' | 'auction' | string | null;
   purchasePrice: number;
   bestFitRatio: number;
   developmentPriority: number;
@@ -65,6 +66,7 @@ export type AcceleratorMatchItem = {
     unitTypeId: string | null;
     unitName: string;
     bedrooms: number | null;
+    transactionType?: 'sale' | 'rent' | 'auction' | string | null;
     priceFrom: number;
     priceTo: number;
     fitRatio: number;

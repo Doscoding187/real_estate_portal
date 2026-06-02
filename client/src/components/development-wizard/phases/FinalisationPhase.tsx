@@ -37,54 +37,21 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
-import type { OwnershipType } from '@/types/wizardTypes';
+import {
+  buildDevelopmentEditSavePayload,
+  buildDevelopmentSubmitPayload,
+  normalizeAmenitiesPayload,
+} from '@/lib/developmentSubmitPayload';
 
-type ParkingType = 'none' | 'open' | 'covered' | 'carport' | 'garage';
+interface FinalisationPhaseProps {
+  onManualSaveDraft?: () => void | Promise<void>;
+  isManualSaveDraftPending?: boolean;
+}
 
-type UnitTypeV2 = {
-  id?: string;
-  name: string;
-  description?: string;
-  bedrooms: number;
-  bathrooms: number;
-  unitSize?: number;
-  yardSize?: number;
-  basePriceFrom: number;
-  extras?: Array<{ price: number; [key: string]: any }>;
-  monthlyRentFrom?: number;
-  monthlyRentTo?: number;
-  leaseTerm?: string;
-  isFurnished?: boolean;
-  depositRequired?: number;
-  startingBid?: number;
-  reservePrice?: number;
-  auctionStartDate?: string;
-  auctionEndDate?: string;
-  auctionStatus?: 'scheduled' | 'active' | 'sold' | 'passed_in' | 'withdrawn';
-  features?: {
-    kitchen?: string[];
-    bathroom?: string[];
-    flooring?: string[];
-    storage?: string[];
-    climate?: string[];
-    security?: string[];
-    outdoor?: string[];
-    other?: string[];
-  };
-  parkingType: ParkingType;
-  parkingBays: number;
-  totalUnits?: number;
-  availableUnits?: number;
-  reservedUnits?: number;
-  isActive?: boolean;
-  structuralType?: string;
-  unitCategory?: 'house' | 'apartment';
-  unitSubType?: string;
-  specifications?: Record<string, any>;
-  baseMedia?: any;
-};
-
-export function FinalisationPhase() {
+export function FinalisationPhase({
+  onManualSaveDraft,
+  isManualSaveDraftPending = false,
+}: FinalisationPhaseProps = {}) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
@@ -100,29 +67,6 @@ export function FinalisationPhase() {
   const wizardData = store.getWizardData();
   const isRent = wizardData.transactionType === 'for_rent';
   const isAuction = wizardData.transactionType === 'auction';
-
-  const normalizeAmenitiesPayload = (value: unknown): string[] | undefined => {
-    if (!value) return undefined;
-    if (Array.isArray(value)) return value.filter(Boolean).map(String);
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (!trimmed) return undefined;
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
-      } catch {
-        // fall through to treat as plain string
-      }
-      return [trimmed];
-    }
-    if (typeof value === 'object') {
-      const standard = Array.isArray((value as any).standard) ? (value as any).standard : [];
-      const additional = Array.isArray((value as any).additional) ? (value as any).additional : [];
-      const merged = [...standard, ...additional].filter(Boolean).map(String);
-      return merged.length ? merged : undefined;
-    }
-    return undefined;
-  };
 
   const stepAmenities = normalizeAmenitiesPayload(stepAmenitiesRaw);
   const developmentAmenities = normalizeAmenitiesPayload(developmentAmenitiesRaw);
@@ -165,48 +109,10 @@ export function FinalisationPhase() {
   // Run validation
   const validationResult = validateForPublish();
   const errors = validationResult?.errors || [];
-  const warnings: string[] = getCardFieldRecommendations().filter(message => !errors.includes(message));
+  const warnings: string[] = getCardFieldRecommendations().filter(
+    message => !errors.includes(message),
+  );
   const canPublish = errors.length === 0;
-
-  // Extract images from canonical media state (Phase 2I - Phase 2G canonical shape)
-  const extractImages = (): { url: string; category?: string }[] => {
-    const images: { url: string; category?: string }[] = [];
-
-    // Hero image first (Phase 2G: heroImage is a string URL)
-    const heroUrl = wizardData.heroImage as string | undefined;
-    if (heroUrl) images.push({ url: heroUrl, category: 'hero' });
-
-    // Then photos from canonical media (skip hero duplicates)
-    const photos = (wizardData.media as any)?.photos ?? [];
-    photos.forEach((p: { url: string; category?: string }) => {
-      if (p?.url && p.url !== heroUrl) images.push({ url: p.url, category: p.category });
-    });
-
-    return images;
-  };
-
-  // Extract video URLs from canonical media
-  const extractVideoUrls = (): string[] => {
-    const videos = (wizardData.media as any)?.videos ?? [];
-    return videos
-      .map((v: string | { url: string }) => (typeof v === 'string' ? v : v.url))
-      .filter(Boolean) as string[];
-  };
-
-  // Extract document/brochure URLs from canonical media
-  const extractDocumentUrls = (): string[] => {
-    const documents = (wizardData.media as any)?.documents ?? [];
-    return documents
-      .map((d: string | { url: string }) => (typeof d === 'string' ? d : d.url))
-      .filter(Boolean) as string[];
-  };
-
-  // Helper to normalize strings for Zod (avoids null or empty string errors)
-  const asOptionalString = (v: unknown): string | undefined => {
-    if (typeof v !== 'string') return undefined;
-    const s = v.trim();
-    return s.length ? s : undefined;
-  };
 
   const formatDate = (value?: string | Date) => {
     if (!value) return 'TBD';
@@ -231,249 +137,68 @@ export function FinalisationPhase() {
     return values.map(value => value.replace(/-/g, ' ')).join(', ');
   }, [wizardData]);
 
-  const normalizeOwnershipType = (value: unknown): OwnershipType | undefined => {
-    if (Array.isArray(value)) {
-      const first = value.find(v => typeof v === 'string' && v.trim().length > 0);
-      return first as OwnershipType | undefined;
-    }
-    if (typeof value === 'string' && value.trim().length > 0) return value as OwnershipType;
-    return undefined;
+  const isLand = wizardData.developmentType === 'land';
+
+  const toDisplayInt = (value: unknown, fallback = 0) => {
+    const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
   };
 
-  // ---------- V2 UNIT TYPES (KILL LEGACY FIELDS AT THE SOURCE) ----------
-  const normalizeParkingType = (raw: any): ParkingType => {
-    const s = String(raw ?? '')
-      .trim()
-      .toLowerCase();
-    const allowed: ParkingType[] = ['none', 'open', 'covered', 'carport', 'garage'];
-    if (allowed.includes(s as ParkingType)) return s as ParkingType;
-
-    // Legacy mappings we’ve seen in your project
-    if (s === '' || s === 'null' || s === 'undefined') return 'none';
-    if (s === '1' || s === '2') return 'open';
-    if (s === 'street') return 'open';
-    return 'none';
+  const toDisplayNumber = (value: unknown, fallback = 0) => {
+    const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+    return Number.isFinite(parsed) ? parsed : fallback;
   };
 
-  const toInt = (v: any, fallback: number) => {
-    const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
-    if (!Number.isFinite(n)) return fallback;
-    return Math.trunc(n);
+  const computeDisplayExtrasTotal = (extras: unknown) =>
+    Array.isArray(extras)
+      ? extras.reduce((sum, extra: any) => {
+          const price = toDisplayNumber(extra?.price, 0);
+          return sum + (price > 0 ? price : 0);
+        }, 0)
+      : 0;
+
+  const computeDisplayUnitTotalFrom = (unit: any) => {
+    const base = toDisplayNumber(unit?.basePriceFrom ?? unit?.priceFrom, 0);
+    return base + computeDisplayExtrasTotal(unit?.extras);
   };
 
-  const toNumber = (v: any, fallback: number) => {
-    const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
-    if (!Number.isFinite(n)) return fallback;
-    return n;
-  };
+  const getDisplayUnitRentFrom = (unit: any) =>
+    toDisplayNumber(unit?.monthlyRentFrom ?? unit?.monthlyRent ?? 0, 0);
 
-  const normalizeDateString = (value: any): string | undefined => {
-    if (!value) return undefined;
-    if (typeof value === 'string') return value;
-    if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
-    return undefined;
-  };
-
-  const computeExtrasTotal = (extras: any): number => {
-    if (!Array.isArray(extras)) return 0;
-    return extras.reduce((sum, e) => {
-      const p = toNumber(e?.price, 0);
-      return sum + (p > 0 ? p : 0);
-    }, 0);
-  };
-
-  const computeUnitTotalFrom = (u: any): number => {
-    const base = toNumber(u?.basePriceFrom ?? u?.priceFrom, 0);
-    const extrasTotal = computeExtrasTotal(u?.extras);
-    const total = base + extrasTotal;
-    return Number.isFinite(total) ? total : 0;
-  };
-
-  const getUnitRentFrom = (u: any): number => {
-    return toNumber(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0, 0);
-  };
-
-  const getUnitRentTo = (u: any): number => {
-    const rentTo = toNumber(u?.monthlyRentTo ?? 0, 0);
-    const rentFrom = getUnitRentFrom(u);
+  const getDisplayUnitRentTo = (unit: any) => {
+    const rentTo = toDisplayNumber(unit?.monthlyRentTo ?? 0, 0);
+    const rentFrom = getDisplayUnitRentFrom(unit);
     return rentTo > 0 ? rentTo : rentFrom;
   };
 
-  const normalizeUnitTypesV2 = (rawUnits: any[]): UnitTypeV2[] => {
-    if (!Array.isArray(rawUnits)) return [];
-
-    return rawUnits.map((u: any) => {
-      const basePriceFrom = toNumber(u?.basePriceFrom ?? u?.priceFrom, 0);
-      const monthlyRentFrom = toNumber(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0, 0);
-      const monthlyRentTo = toNumber(u?.monthlyRentTo ?? 0, 0);
-      const startingBid = toNumber(u?.startingBid ?? 0, 0);
-      const reservePrice = toNumber(u?.reservePrice ?? 0, 0);
-      const auctionStartDate = normalizeDateString(u?.auctionStartDate);
-      const auctionEndDate = normalizeDateString(u?.auctionEndDate);
-      const auctionStatus = typeof u?.auctionStatus === 'string' ? u.auctionStatus : undefined;
-
-      const parkingBays = Math.max(0, toInt(u?.parkingBays, 0));
-      const parkingType = normalizeParkingType(u?.parkingType);
-
-      const unitSizeSource = u?.unitSize ?? u?.floorSize ?? u?.unit_size ?? u?.size;
-      const unitSize = unitSizeSource != null ? toInt(unitSizeSource, 0) : undefined;
-      const yardSizeSource = u?.yardSize ?? u?.erfSize ?? u?.yard_size ?? u?.landSize;
-      const yardSize = yardSizeSource != null ? toInt(yardSizeSource, 0) : undefined;
-
-      const totalUnits = u?.totalUnits != null ? Math.max(0, toInt(u.totalUnits, 0)) : undefined;
-      const availableUnits =
-        u?.availableUnits != null ? Math.max(0, toInt(u.availableUnits, 0)) : undefined;
-      const reservedUnits =
-        u?.reservedUnits != null ? Math.max(0, toInt(u.reservedUnits, 0)) : undefined;
-      const specifications =
-        u?.specifications && typeof u.specifications === 'object' ? u.specifications : undefined;
-      const classification = specifications?.classification ?? {};
-      const unitCategory =
-        u?.unitCategory === 'house' || u?.unitCategory === 'apartment'
-          ? u.unitCategory
-          : classification?.category === 'house' || classification?.category === 'apartment'
-            ? classification.category
-            : undefined;
-      const unitSubType =
-        typeof u?.unitSubType === 'string' && u.unitSubType.trim().length > 0
-          ? u.unitSubType
-          : typeof classification?.subType === 'string' && classification.subType.trim().length > 0
-            ? classification.subType
-            : undefined;
-
-      const v2: UnitTypeV2 = {
-        id: typeof u?.id === 'string' ? u.id : undefined,
-        name: String(u?.name ?? '').trim() || 'Unnamed Unit',
-        description: typeof u?.description === 'string' ? u.description : undefined,
-        bedrooms: Math.max(0, toInt(u?.bedrooms, 0)),
-        bathrooms: Math.max(0, toNumber(u?.bathrooms, 0)),
-        unitSize: unitSize && unitSize > 0 ? unitSize : undefined,
-        yardSize: yardSize && yardSize > 0 ? yardSize : undefined,
-        basePriceFrom: basePriceFrom > 0 ? basePriceFrom : 0,
-        extras: Array.isArray(u?.extras) ? u.extras : undefined,
-        monthlyRentFrom: monthlyRentFrom > 0 ? monthlyRentFrom : undefined,
-        monthlyRentTo: monthlyRentTo > 0 ? monthlyRentTo : undefined,
-        leaseTerm: typeof u?.leaseTerm === 'string' ? u.leaseTerm : undefined,
-        isFurnished: typeof u?.isFurnished === 'boolean' ? u.isFurnished : undefined,
-        depositRequired: u?.depositRequired != null ? toNumber(u.depositRequired, 0) : undefined,
-        startingBid: startingBid > 0 ? startingBid : undefined,
-        reservePrice: reservePrice > 0 ? reservePrice : undefined,
-        auctionStartDate,
-        auctionEndDate,
-        auctionStatus,
-        features: typeof u?.features === 'object' && u?.features ? u.features : undefined,
-        parkingType,
-        parkingBays: parkingType === 'none' ? 0 : parkingBays,
-        totalUnits,
-        availableUnits,
-        reservedUnits,
-        isActive: typeof u?.isActive === 'boolean' ? u.isActive : undefined,
-        structuralType: u?.structuralType,
-        unitCategory,
-        unitSubType,
-        specifications,
-        baseMedia: u?.baseMedia,
-      };
-
-      return v2;
-    });
-  };
-
-  const canonicalUnitTypesRaw = (wizardData.unitTypes ?? []) as any[];
-  const isLand = wizardData.developmentType === 'land';
-
-  const canonicalUnitTypesV2: UnitTypeV2[] = useMemo(() => {
-    if (isLand) return [];
-    return normalizeUnitTypesV2(canonicalUnitTypesRaw);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLand, canonicalUnitTypesRaw]);
-
-  const computedInventory = useMemo(() => {
-    if (isLand || canonicalUnitTypesV2.length === 0) {
-      return { totalUnits: undefined as number | undefined, availableUnits: undefined as number | undefined };
-    }
-
-    const totalUnits = canonicalUnitTypesV2.reduce((sum, unit) => {
-      return sum + Math.max(0, Number(unit.totalUnits ?? 0));
-    }, 0);
-    const availableUnits = canonicalUnitTypesV2.reduce((sum, unit) => {
-      return sum + Math.max(0, Number(unit.availableUnits ?? 0));
-    }, 0);
-
-    return { totalUnits, availableUnits };
-  }, [isLand, canonicalUnitTypesV2]);
-
-  const computedDevPriceFromTo = useMemo(() => {
-    if (isLand)
-      return {
-        priceFrom: undefined as number | undefined,
-        priceTo: undefined as number | undefined,
-      };
-    const totals = canonicalUnitTypesRaw.map(computeUnitTotalFrom).filter(n => n > 0);
-    if (totals.length === 0) return { priceFrom: undefined, priceTo: undefined };
-    return { priceFrom: Math.min(...totals), priceTo: Math.max(...totals) };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLand, canonicalUnitTypesRaw]);
-
-  const computedDevRentFromTo = useMemo(() => {
-    if (isLand)
-      return {
-        monthlyRentFrom: undefined as number | undefined,
-        monthlyRentTo: undefined as number | undefined,
-      };
-    const rentRanges = canonicalUnitTypesRaw
-      .map(u => {
-        const from = getUnitRentFrom(u);
-        const to = getUnitRentTo(u);
-        const resolvedFrom = from > 0 ? from : to;
-        const resolvedTo = to > 0 ? to : from;
-        return { from: resolvedFrom, to: resolvedTo };
-      })
-      .filter(r => r.from > 0 || r.to > 0);
-
-    if (rentRanges.length === 0) return { monthlyRentFrom: undefined, monthlyRentTo: undefined };
-
-    const mins = rentRanges.map(r => r.from).filter(n => n > 0);
-    const maxs = rentRanges.map(r => r.to).filter(n => n > 0);
-
-    return {
-      monthlyRentFrom: mins.length ? Math.min(...mins) : undefined,
-      monthlyRentTo: maxs.length ? Math.max(...maxs) : undefined,
+  const previewAuctionRange = useMemo(() => {
+    const emptyRange = {
+      auctionStartDate: undefined as Date | undefined,
+      auctionEndDate: undefined as Date | undefined,
+      startingBidFrom: undefined as number | undefined,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLand, canonicalUnitTypesRaw]);
 
-  const computedDevAuctionRange = useMemo(() => {
-    if (isLand)
-      return {
-        auctionStartDate: undefined as Date | undefined,
-        auctionEndDate: undefined as Date | undefined,
-        startingBidFrom: undefined as number | undefined,
-        reservePriceFrom: undefined as number | undefined,
-      };
+    if (isLand) return emptyRange;
 
-    const starts = canonicalUnitTypesRaw
-      .map(u => (u?.auctionStartDate ? new Date(u.auctionStartDate) : null))
-      .filter((d: Date | null) => d && !Number.isNaN(d.getTime())) as Date[];
-    const ends = canonicalUnitTypesRaw
-      .map(u => (u?.auctionEndDate ? new Date(u.auctionEndDate) : null))
-      .filter((d: Date | null) => d && !Number.isNaN(d.getTime())) as Date[];
-    const startingBids = canonicalUnitTypesRaw
-      .map(u => Number(u?.startingBid ?? 0))
-      .filter(n => Number.isFinite(n) && n > 0);
-    const reservePrices = canonicalUnitTypesRaw
-      .map(u => Number(u?.reservePrice ?? 0))
-      .filter(n => Number.isFinite(n) && n > 0);
+    const rawUnits = (wizardData.unitTypes ?? []) as any[];
+    const starts = rawUnits
+      .map(unit => (unit?.auctionStartDate ? new Date(unit.auctionStartDate) : null))
+      .filter((date): date is Date => Boolean(date && !Number.isNaN(date.getTime())));
+    const ends = rawUnits
+      .map(unit => (unit?.auctionEndDate ? new Date(unit.auctionEndDate) : null))
+      .filter((date): date is Date => Boolean(date && !Number.isNaN(date.getTime())));
+    const bids = rawUnits.map(unit => toDisplayNumber(unit?.startingBid, 0)).filter(bid => bid > 0);
 
     return {
       auctionStartDate: starts.length
-        ? new Date(Math.min(...starts.map(d => d.getTime())))
+        ? new Date(Math.min(...starts.map(date => date.getTime())))
         : undefined,
-      auctionEndDate: ends.length ? new Date(Math.max(...ends.map(d => d.getTime()))) : undefined,
-      startingBidFrom: startingBids.length ? Math.min(...startingBids) : undefined,
-      reservePriceFrom: reservePrices.length ? Math.min(...reservePrices) : undefined,
+      auctionEndDate: ends.length
+        ? new Date(Math.max(...ends.map(date => date.getTime())))
+        : undefined,
+      startingBidFrom: bids.length ? Math.min(...bids) : undefined,
     };
-  }, [isLand, canonicalUnitTypesRaw]);
+  }, [isLand, wizardData.unitTypes]);
 
   const handlePublish = async () => {
     const amenitiesPayload = reviewAmenities;
@@ -496,202 +221,33 @@ export function FinalisationPhase() {
     setIsPublishing(true);
 
     try {
-      const images = extractImages();
-      const videos = extractVideoUrls();
-      const brochures = extractDocumentUrls();
-
-      // Build features array (includes config prefixes for hydration)
-      const features: string[] = [];
-      if (residentialConfig?.residentialType)
-        features.push(`cfg:res_type:${residentialConfig.residentialType}`);
-      residentialConfig?.communityTypes?.forEach(c => features.push(`cfg:comm_type:${c}`));
-
-      // Map security features to config string
-      (residentialConfig as { securityFeatures?: string[] })?.securityFeatures?.forEach(
-        (s: string) => features.push(`cfg:sec_feat:${s}`),
-      );
-
-      if (isAuction && (wizardData as any).auctionType) {
-        features.push(`cfg:auction_type:${(wizardData as any).auctionType}`);
-      }
-
-      if ((store as { landConfig?: { landType?: string } }).landConfig?.landType)
-        features.push(
-          `cfg:land_type:${(store as { landConfig: { landType: string } }).landConfig.landType}`,
-        );
-      (store as { landConfig?: { infrastructure?: string[] } }).landConfig?.infrastructure?.forEach(
-        i => features.push(`cfg:infra:${i}`),
-      );
-
-      if (
-        (store as { commercialConfig?: { commercialType?: string } }).commercialConfig
-          ?.commercialType
-      )
-        features.push(
-          `cfg:comm_use:${(store as { commercialConfig: { commercialType: string } }).commercialConfig.commercialType}`,
-        );
-      (store as { commercialConfig?: { features?: string[] } }).commercialConfig?.features?.forEach(
-        f => features.push(`cfg:comm_feat:${f}`),
-      );
-
-      // Governance features from canonical wizardData
-      if (wizardData.hasGoverningBody !== undefined) {
-        features.push(`cfg:hoa:${wizardData.hasGoverningBody}`);
-      }
-      if ((wizardData as any).governanceType) {
-        features.push(`cfg:governance_type:${(wizardData as any).governanceType}`);
-      }
-
-      // CONSTRUCT PAYLOAD (Canonical WizardData First)
-      const payload: any = {
-        // Identity
-        name: wizardData.name ?? 'Untitled Development',
-      };
-
-      // DEBUG LOG FOR USER
-      console.log('[EDIT SAVE] payload.unitTypes[0]:', canonicalUnitTypesV2?.[0]);
-
-      const ownershipSource =
-        Array.isArray((wizardData as any).ownershipTypes) &&
-        (wizardData as any).ownershipTypes.length > 0
-          ? (wizardData as any).ownershipTypes
-          : ((wizardData as any).ownershipType ?? (store as any).developmentData?.ownershipType);
-
-      Object.assign(payload, {
-        tagline: (wizardData as any).tagline ?? wizardData.subtitle,
-        subtitle: wizardData.subtitle ?? (wizardData as any).tagline,
-        description: wizardData.description,
-        developmentType: (wizardData.developmentType ?? 'residential') as any,
-        transactionType: wizardData.transactionType,
-        ownershipType: normalizeOwnershipType(ownershipSource),
-
-        // Location
-        address: wizardData.location?.address,
-        city: wizardData.location?.city || 'Unknown',
-        province: wizardData.location?.province || 'Unknown',
-        suburb: wizardData.location?.suburb,
-        postalCode: wizardData.location?.postalCode,
-        latitude: wizardData.location?.latitude,
-        longitude: wizardData.location?.longitude,
-
-        // Financials (🔥 FIX: compute from basePriceFrom + extras; stop using legacy priceFrom/priceTo)
-        priceFrom: isRent
-          ? undefined
-          : (computedDevPriceFromTo.priceFrom ?? (wizardData as any).priceFrom),
-        priceTo: isRent
-          ? undefined
-          : (computedDevPriceFromTo.priceTo ?? (wizardData as any).priceTo),
-        monthlyRentFrom: isRent
-          ? (computedDevRentFromTo.monthlyRentFrom ?? (wizardData as any).monthlyRentFrom)
-          : (wizardData as any).monthlyRentFrom,
-        monthlyRentTo: isRent
-          ? (computedDevRentFromTo.monthlyRentTo ?? (wizardData as any).monthlyRentTo)
-          : (wizardData as any).monthlyRentTo,
-        auctionStartDate: isAuction
-          ? (computedDevAuctionRange.auctionStartDate?.toISOString() ??
-            (wizardData as any).auctionStartDate)
-          : (wizardData as any).auctionStartDate,
-        auctionEndDate: isAuction
-          ? (computedDevAuctionRange.auctionEndDate?.toISOString() ??
-            (wizardData as any).auctionEndDate)
-          : (wizardData as any).auctionEndDate,
-        startingBidFrom: isAuction
-          ? (computedDevAuctionRange.startingBidFrom ?? (wizardData as any).startingBidFrom)
-          : (wizardData as any).startingBidFrom,
-        reservePriceFrom: isAuction
-          ? (computedDevAuctionRange.reservePriceFrom ?? (wizardData as any).reservePriceFrom)
-          : (wizardData as any).reservePriceFrom,
-        monthlyLevyFrom: (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min,
-        monthlyLevyTo: (wizardData as any).monthlyLevyTo ?? (wizardData as any).levyRange?.max,
-        ratesFrom: (wizardData as any).ratesFrom ?? (wizardData as any).rightsAndTaxes?.min,
-        ratesTo: (wizardData as any).ratesTo ?? (wizardData as any).rightsAndTaxes?.max,
-
-        // Dates & Status
-        completionDate: asOptionalString((wizardData as any).completionDate),
-        launchDate: asOptionalString((wizardData as any).launchDate),
-        status: wizardData.status as any,
-
-        // Metrics
-        totalUnits: computedInventory.totalUnits ?? (wizardData as any).totalUnits,
-        availableUnits: computedInventory.availableUnits ?? (wizardData as any).availableUnits,
-        totalDevelopmentArea: (wizardData as any).totalDevelopmentArea,
-
-        // Stand/Floor Sizes (left as-is; backend can ignore)
-        erfSizeFrom: (wizardData as any).erfSizeFrom,
-        erfSizeTo: (wizardData as any).erfSizeTo,
-        floorSizeFrom: (wizardData as any).floorSizeFrom,
-        floorSizeTo: (wizardData as any).floorSizeTo,
-        bedroomsFrom: (wizardData as any).bedroomsFrom,
-        bedroomsTo: (wizardData as any).bedroomsTo,
-        bathroomsFrom: (wizardData as any).bathroomsFrom,
-        bathroomsTo: (wizardData as any).bathroomsTo,
-
-        // Features (Booleans)
-        petsAllowed: (wizardData as any).petsAllowed,
-        fibreReady: (wizardData as any).fibreReady,
-        solarReady: (wizardData as any).solarReady,
-        waterBackup: (wizardData as any).waterBackup,
-        backupPower: (wizardData as any).backupPower,
-        gatedCommunity: (wizardData as any).gatedCommunity,
-        featured: (wizardData as any).featured,
-        isPhasedDevelopment: (wizardData as any).isPhasedDevelopment,
-
-        // Collections
+      const canonicalSnapshot = store.getDraftData();
+      const payloadInput = {
+        wizardData: wizardData as any,
         amenities: amenitiesPayload,
-        features,
-        highlights: wizardData.highlights ?? [],
-
-        // ✅ FIX: Send ONLY V2 unit types to server (kills legacy leaks)
-        unitTypes: canonicalUnitTypesV2,
-
-        // Config Objects (Preserved as JSON)
-        estateSpecs:
-          (wizardData as any).hasGoverningBody !== undefined || (wizardData as any).governanceType
-            ? {
-                hasHOA: (wizardData as any).hasGoverningBody,
-                governanceType: (wizardData as any).governanceType,
-                architecturalGuidelines: (wizardData as any).architecturalGuidelines,
-                guidelinesSummary: (wizardData as any).guidelinesSummary,
-                levyRange: {
-                  min:
-                    (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min ?? 0,
-                  max: (wizardData as any).monthlyLevyTo ?? (wizardData as any).levyRange?.max ?? 0,
-                },
-                rightsAndTaxes: {
-                  min:
-                    (wizardData as any).ratesFrom ?? (wizardData as any).rightsAndTaxes?.min ?? 0,
-                  max: (wizardData as any).ratesTo ?? (wizardData as any).rightsAndTaxes?.max ?? 0,
-                },
-              }
-            : undefined,
+        canonicalSnapshot,
         residentialConfig: residentialConfig as any,
         landConfig: (store as any).landConfig,
         commercialConfig: (store as any).commercialConfig,
         mixedUseConfig: (store as any).mixedUseConfig,
         specifications: (store as any).specifications,
-
-        // Media
-        images: images as any,
-        videos,
-        brochures,
-        media: {
-          photos: images,
-          videos: videos.map(url => ({ url })),
-          brochures: brochures.map(url => ({ url })),
-        } as any,
-
-        // SEO
-        metaTitle: (wizardData as any).overview?.metaTitle,
-        metaDescription: (wizardData as any).overview?.metaDescription,
-        keywords: (wizardData as any).overview?.keywords,
-      });
+        fallbackOwnershipType: (store as any).developmentData?.ownershipType,
+      };
+      const payload: Record<string, any> = editingId
+        ? buildDevelopmentEditSavePayload(payloadInput, {
+            intent: 'publish',
+            previousCanonicalSnapshot:
+              typeof (store as any).getPersistedEditSnapshot === 'function'
+                ? (store as any).getPersistedEditSnapshot()
+                : ((store as any).persistedEditSnapshot ?? undefined),
+          })
+        : buildDevelopmentSubmitPayload(payloadInput);
 
       console.log('[FinalisationPhase] Payload Preview:', payload);
 
       let developmentId: number;
       const publisherBrandProfileId = publisherContext?.brandProfileId ?? null;
-      const shouldUseSuperAdminFlow =
-        isSuperAdmin && typeof publisherBrandProfileId === 'number';
+      const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherBrandProfileId === 'number';
 
       if (editingId && shouldUseSuperAdminFlow) {
         console.log('[FinalisationPhase] Executing SUPER ADMIN UPDATE for ID:', editingId);
@@ -727,7 +283,7 @@ export function FinalisationPhase() {
             publisherBrandProfileId,
           );
 
-          const superAdminPayload = {
+          const superAdminPayload: any = {
             ...payload,
             // Ensure brandProfileId is set from publisher context
             brandProfileId: publisherBrandProfileId,
@@ -746,7 +302,7 @@ export function FinalisationPhase() {
             listingIdentity?.identityType === 'brand' ||
             listingIdentity?.identityType === 'marketing_agency';
 
-          const createPayload = {
+          const createPayload: any = {
             ...payload,
             // Identity & Branding
             brandProfileId: isBrandDevelopment
@@ -933,8 +489,8 @@ export function FinalisationPhase() {
 
   const renderUnitPriceLabel = (u: any) => {
     if (isRent) {
-      const rentFrom = getUnitRentFrom(u);
-      const rentTo = getUnitRentTo(u);
+      const rentFrom = getDisplayUnitRentFrom(u);
+      const rentTo = getDisplayUnitRentTo(u);
       const value = rentFrom > 0 ? rentFrom : rentTo;
       if (!value || value <= 0) return '---';
       return value.toLocaleString();
@@ -944,13 +500,13 @@ export function FinalisationPhase() {
       if (!startingBid || startingBid <= 0) return '---';
       return `${startingBid.toLocaleString()} (starting bid)`;
     }
-    const total = computeUnitTotalFrom(u);
+    const total = computeDisplayUnitTotalFrom(u);
     if (!total || total <= 0) return '---';
     return total.toLocaleString();
   };
 
   const renderUnitSizeLabel = (u: any) => {
-    const unitSize = toInt(u?.unitSize, 0);
+    const unitSize = toDisplayInt(u?.unitSize, 0);
     if (unitSize > 0) return `${unitSize}m²`;
     return '—';
   };
@@ -1042,8 +598,7 @@ export function FinalisationPhase() {
                       Type
                     </span>
                     <span className="font-medium text-slate-900 capitalize">
-                      {classification?.type?.replace('_', ' ')} |{' '}
-                      {ownershipDisplay}
+                      {classification?.type?.replace('_', ' ')} | {ownershipDisplay}
                     </span>
                   </div>
                 </div>
@@ -1177,12 +732,12 @@ export function FinalisationPhase() {
                           <Badge
                             variant="outline"
                             className={
-                              (toInt(u?.availableUnits, 0) ?? 0) > 0
+                              (toDisplayInt(u?.availableUnits, 0) ?? 0) > 0
                                 ? 'text-green-600 border-green-200'
                                 : 'text-red-600 border-red-200'
                             }
                           >
-                            {toInt(u?.availableUnits, 0)} Avail
+                            {toDisplayInt(u?.availableUnits, 0)} Avail
                           </Badge>
                         </div>
                       </div>
@@ -1209,9 +764,16 @@ export function FinalisationPhase() {
                 <Button
                   variant="outline"
                   className="w-full text-xs"
-                  onClick={() => toast.success('Draft saved')}
+                  disabled={isManualSaveDraftPending}
+                  onClick={async () => {
+                    if (!onManualSaveDraft) {
+                      toast.error('Draft saving unavailable');
+                      return;
+                    }
+                    await onManualSaveDraft();
+                  }}
                 >
-                  Save Draft
+                  {isManualSaveDraftPending ? 'Saving...' : 'Save Draft'}
                 </Button>
               </div>
 
@@ -1312,14 +874,14 @@ export function FinalisationPhase() {
                         <div className="flex items-center gap-2 text-[10px] text-amber-800">
                           <Clock className="w-3 h-3 text-amber-600" />
                           <span className="font-medium text-amber-900">
-                            Auction: {formatDate(computedDevAuctionRange.auctionStartDate)} -{' '}
-                            {formatDate(computedDevAuctionRange.auctionEndDate)}
+                            Auction: {formatDate(previewAuctionRange.auctionStartDate)} -{' '}
+                            {formatDate(previewAuctionRange.auctionEndDate)}
                           </span>
                         </div>
                         <p className="text-[10px] text-amber-700 mt-1">
                           Starting from R
-                          {computedDevAuctionRange.startingBidFrom
-                            ? computedDevAuctionRange.startingBidFrom.toLocaleString()
+                          {previewAuctionRange.startingBidFrom
+                            ? previewAuctionRange.startingBidFrom.toLocaleString()
                             : '---'}
                         </p>
                       </div>

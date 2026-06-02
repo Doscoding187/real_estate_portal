@@ -31,10 +31,12 @@ type AcceleratorMatchSnapshot = {
     developmentId: number;
     developmentName: string;
     area: string;
+    transactionType?: string | null;
     logoUrl?: string | null;
     unitOptions?: Array<{
       unitTypeId?: string | null;
       unitName?: string;
+      transactionType?: string | null;
       priceFrom?: number;
       priceTo?: number;
       fitRatio?: number;
@@ -48,6 +50,7 @@ type AccessStockRow = {
   developmentId: number;
   developmentName: string;
   location: string;
+  transactionType: DevelopmentTransactionType;
   priceFrom: number | null;
   priceTo: number | null;
   commissionAmount: number;
@@ -67,6 +70,8 @@ type AttentionItem = {
   timeLabel: string;
   onClick: () => void;
 };
+
+type DevelopmentTransactionType = 'sale' | 'rent' | 'auction';
 
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -97,6 +102,58 @@ function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: numb
   if (hasFrom) return `From ${formatCurrency(from)}`;
   if (hasTo) return `Up to ${formatCurrency(to)}`;
   return 'Price not configured';
+}
+
+export function normalizePartnerDashboardTransactionType(value: unknown): DevelopmentTransactionType {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'rent' || normalized === 'rental') return 'rent';
+  if (normalized === 'auction') return 'auction';
+  return 'sale';
+}
+
+export function getPartnerDashboardPricingContext(input: {
+  transactionType?: unknown;
+  priceFrom?: number | null;
+  priceTo?: number | null;
+  fallbackPrice?: number | null;
+}) {
+  const transactionType = normalizePartnerDashboardTransactionType(input.transactionType);
+  const rawFrom = Number(input.priceFrom || input.fallbackPrice || 0);
+  const rawTo = Number(input.priceTo || input.priceFrom || input.fallbackPrice || 0);
+  const priceFrom = Number.isFinite(rawFrom) && rawFrom > 0 ? rawFrom : null;
+  const priceTo = Number.isFinite(rawTo) && rawTo > 0 ? rawTo : priceFrom;
+  const rangeText = formatCurrencyRange(priceFrom, priceTo);
+  const referencePrice = priceFrom || priceTo || null;
+
+  if (transactionType === 'rent') {
+    const text = rangeText === 'Price not configured' ? 'Rent not configured' : `${rangeText} / month`;
+    return {
+      transactionType,
+      label: 'Monthly rent',
+      displayText: text,
+      shareText: referencePrice ? `Rent from ${formatCurrency(referencePrice)} / month` : text,
+      referencePrice,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const text = rangeText === 'Price not configured' ? 'Starting bid not configured' : rangeText.replace(/^From /, 'Bid from ');
+    return {
+      transactionType,
+      label: 'Starting bid',
+      displayText: text,
+      shareText: referencePrice ? `Bid from ${formatCurrency(referencePrice)}` : text,
+      referencePrice,
+    };
+  }
+
+  return {
+    transactionType,
+    label: 'Price range',
+    displayText: rangeText,
+    shareText: referencePrice ? `From ${formatCurrency(referencePrice)}` : rangeText,
+    referencePrice,
+  };
 }
 
 function parseMoneyInt(value: string, fallbackValue = 0) {
@@ -193,8 +250,16 @@ function buildWhatsAppShareMessage(
   const summary = matches
     .slice(0, 3)
     .map(
-      match =>
-        `- ${match.developmentName} (${match.area || 'N/A'}) - From ${formatCurrency(match.purchasePrice)}`,
+      match => {
+        const unitOption = match.unitOptions?.[0];
+        const pricing = getPartnerDashboardPricingContext({
+          transactionType: unitOption?.transactionType || match.transactionType,
+          priceFrom: unitOption?.priceFrom,
+          priceTo: unitOption?.priceTo,
+          fallbackPrice: match.purchasePrice,
+        });
+        return `- ${match.developmentName} (${match.area || 'N/A'}) - ${pricing.shareText}`;
+      },
     )
     .join('\n');
 
@@ -457,6 +522,7 @@ export default function PartnerDashboardPage() {
           developmentId,
           developmentName: row.developmentName || 'Development',
           location: [row.city, row.province].filter(Boolean).join(' - ') || 'Location unavailable',
+          transactionType: normalizePartnerDashboardTransactionType(row.transactionType),
           priceFrom,
           priceTo,
           commissionAmount,
@@ -496,6 +562,7 @@ export default function PartnerDashboardPage() {
         developmentId,
         developmentName: item.developmentName || 'Development',
         location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
+        transactionType: normalizePartnerDashboardTransactionType(item.transactionType),
         priceFrom: item.priceFrom ? Number(item.priceFrom) : null,
         priceTo: item.priceTo ? Number(item.priceTo) : item.priceFrom ? Number(item.priceFrom) : null,
         commissionAmount,
@@ -535,6 +602,7 @@ export default function PartnerDashboardPage() {
         developmentId,
         developmentName: item.developmentName || 'Development',
         location: [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable',
+        transactionType: normalizePartnerDashboardTransactionType(item.transactionType),
         priceFrom: item.priceFrom ? Number(item.priceFrom) : null,
         priceTo: item.priceTo ? Number(item.priceTo) : item.priceFrom ? Number(item.priceFrom) : null,
         commissionAmount,
@@ -624,11 +692,12 @@ export default function PartnerDashboardPage() {
 
     const topStock = visibleStock[0];
     if (topStock) {
+      const topStockPricing = getPartnerDashboardPricingContext(topStock);
       items.push({
         id: `stock-${topStock.developmentId}`,
         urgency: 'info',
         title: `High opportunity - ${topStock.developmentName}`,
-        detail: `${formatCurrencyRange(topStock.priceFrom, topStock.priceTo)} - Commission ${formatCurrency(topStock.commissionAmount)}`,
+        detail: `${topStockPricing.displayText} - Commission ${formatCurrency(topStock.commissionAmount)}`,
         timeLabel: 'Today',
         onClick: () => setLocation('/distribution/partner/developments'),
       });
@@ -872,14 +941,19 @@ export default function PartnerDashboardPage() {
 
                   {matches.slice(0, 3).map(match => {
                     const confidence = getMatchConfidence(match.bestFitRatio);
-                    const unitPriceFrom = Number(match.unitOptions?.[0]?.priceFrom || 0);
-                    const displayPrice = unitPriceFrom > 0 ? unitPriceFrom : Number(match.purchasePrice || 0);
                     const linkedStock = stockByDevelopmentId.get(Number(match.developmentId));
+                    const unitOption = match.unitOptions?.[0];
+                    const pricing = getPartnerDashboardPricingContext({
+                      transactionType: unitOption?.transactionType || match.transactionType || linkedStock?.transactionType,
+                      priceFrom: unitOption?.priceFrom || linkedStock?.priceFrom,
+                      priceTo: unitOption?.priceTo || linkedStock?.priceTo,
+                      fallbackPrice: match.purchasePrice,
+                    });
                     const commissionAmount = computeCommissionAmount({
                       commissionModel: linkedStock?.commissionModel,
                       defaultCommissionPercent: linkedStock?.defaultCommissionPercent,
                       defaultCommissionAmount: linkedStock?.defaultCommissionAmount,
-                      purchasePrice: displayPrice,
+                      purchasePrice: pricing.referencePrice,
                     });
                     return (
                       <div key={match.developmentId} className="mb-2 rounded-md border border-border bg-white p-3">
@@ -887,7 +961,7 @@ export default function PartnerDashboardPage() {
                         <p className="text-[11px] text-muted-foreground">{match.area || 'N/A'}</p>
                         <div className="mt-2 flex items-center justify-between">
                           <p className="font-mono text-[13px] font-semibold text-foreground">
-                            {formatCurrency(displayPrice)}
+                            {pricing.displayText}
                           </p>
                           <span
                             className={
@@ -1003,70 +1077,77 @@ export default function PartnerDashboardPage() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleStock.map(row => (
-              <article
-                key={row.developmentId}
-                className="overflow-hidden rounded-lg border border-primary/15 bg-white transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="relative flex h-32 items-center justify-center bg-primary/5">
-                  <span
-                    className={`absolute left-3 top-3 rounded px-2 py-1 text-[9px] font-bold uppercase text-white ${
-                      row.badge === 'Hot'
-                        ? 'bg-[#DC2626]'
-                        : row.badge === 'Fast payout'
-                          ? 'bg-[#059669]'
-                          : 'bg-[#D97706]'
-                    }`}
+              (() => {
+                const pricing = getPartnerDashboardPricingContext(row);
+                return (
+                  <article
+                    key={row.developmentId}
+                    className="overflow-hidden rounded-lg border border-primary/15 bg-white transition hover:-translate-y-0.5 hover:shadow-md"
                   >
-                    {row.badge}
-                  </span>
-                  {row.imageUrl ? (
-                    <img
-                      src={row.imageUrl}
-                      alt={row.developmentName}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Home className="h-12 w-12 text-foreground/25" />
-                  )}
-                </div>
-                <div className="p-4">
-                  <div>
-                    <p className="text-[14px] font-semibold text-foreground">{row.developmentName}</p>
-                    <p className="mt-1 text-[12px] text-muted-foreground">{row.location}</p>
-                    <div className="mt-4 grid gap-3">
+                    <div className="relative flex h-32 items-center justify-center bg-primary/5">
+                      <span
+                        className={`absolute left-3 top-3 rounded px-2 py-1 text-[9px] font-bold uppercase text-white ${
+                          row.badge === 'Hot'
+                            ? 'bg-[#DC2626]'
+                            : row.badge === 'Fast payout'
+                              ? 'bg-[#059669]'
+                              : 'bg-[#D97706]'
+                        }`}
+                      >
+                        {row.badge}
+                      </span>
+                      {row.imageUrl ? (
+                        <img
+                          src={row.imageUrl}
+                          alt={row.developmentName}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <Home className="h-12 w-12 text-foreground/25" />
+                      )}
+                    </div>
+                    <div className="p-4">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Price range</p>
-                        <p className="mt-1 font-mono text-[15px] font-semibold text-foreground">
-                          {formatCurrencyRange(row.priceFrom, row.priceTo)}
-                        </p>
+                        <p className="text-[14px] font-semibold text-foreground">{row.developmentName}</p>
+                        <p className="mt-1 text-[12px] text-muted-foreground">{row.location}</p>
+                        <div className="mt-4 grid gap-3">
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                              {pricing.label}
+                            </p>
+                            <p className="mt-1 font-mono text-[15px] font-semibold text-foreground">
+                              {pricing.displayText}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
+                            <p className="mt-1 text-[13px] font-semibold text-success">{row.commissionDisplay}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
-                        <p className="mt-1 text-[13px] font-semibold text-success">{row.commissionDisplay}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setLocation('/distribution/partner/developments')}
+                          className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-[12px] font-semibold text-primary"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
+                          }
+                          className="rounded-md bg-conversion px-3 py-2 text-[12px] font-semibold text-conversion-foreground hover:bg-conversion-hover"
+                        >
+                          Submit Buyer
+                        </button>
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setLocation('/distribution/partner/developments')}
-                      className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-[12px] font-semibold text-primary"
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
-                      }
-                      className="rounded-md bg-conversion px-3 py-2 text-[12px] font-semibold text-conversion-foreground hover:bg-conversion-hover"
-                    >
-                      Submit Buyer
-                    </button>
-                  </div>
-                </div>
-              </article>
+                  </article>
+                );
+              })()
             ))}
 
             <button

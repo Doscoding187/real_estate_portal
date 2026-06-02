@@ -13,6 +13,7 @@ export interface SimpleHomeListingCardProps {
   image?: string | null;
   href: string;
   price: number;
+  listingType?: 'sale' | 'rent' | 'auction';
   bedrooms?: number | null;
   bathrooms?: number | null;
   area?: number | null;
@@ -34,6 +35,7 @@ export function SimpleHomeListingCard({
   image,
   href,
   price,
+  listingType = 'sale',
   bedrooms,
   bathrooms,
   area,
@@ -42,6 +44,14 @@ export function SimpleHomeListingCard({
 }: SimpleHomeListingCardProps) {
   const locationLabel = suburb ? `${suburb}, ${city}` : city;
   const resolvedImage = withApiBase(image);
+  const priceLabel =
+    price > 0
+      ? listingType === 'rent'
+        ? `${formatCurrency(price)} / month`
+        : listingType === 'auction'
+          ? `Starting bid ${formatCurrency(price)}`
+          : formatCurrency(price)
+      : 'Price on request';
   const specItems = [
     formatMeasure(area)
       ? {
@@ -108,7 +118,7 @@ export function SimpleHomeListingCard({
 
       <div className="p-4">
         <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">
-          {price > 0 ? formatCurrency(price) : 'Price on request'}
+          {priceLabel}
         </div>
 
         <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">

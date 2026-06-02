@@ -7,6 +7,7 @@ import { brandLeadService } from './services/brandLeadService';
 import { developments, properties, developerBrandProfiles, leads } from '../drizzle/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { developmentService } from './services/developmentService';
+import { buildPublishedDevelopmentWorkflowStateColumns } from './lib/developmentWorkflowPersistence';
 
 /**
  * Super Admin Publisher Router
@@ -391,36 +392,34 @@ export const superAdminPublisherRouter = router({
 
       const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-      const [before] = await dbConn
-        .select({ count: sql<number>`count(*)` })
+      const brandDevelopments = await dbConn
+        .select()
         .from(developments)
         .where(eq(developments.developerBrandProfileId, input.brandProfileId));
 
-      const [needsUpdate] = await dbConn
-        .select({ count: sql<number>`count(*)` })
-        .from(developments)
-        .where(
-          and(
-            eq(developments.developerBrandProfileId, input.brandProfileId),
-            sql`(${developments.isPublished} = 0 OR ${developments.approvalStatus} <> 'approved')`,
-          ),
-        );
+      const updated = brandDevelopments.filter(
+        development =>
+          Number((development as any).isPublished) !== 1 ||
+          (development as any).approvalStatus !== 'approved',
+      ).length;
 
-      await dbConn
-        .update(developments)
-        .set({
-          isPublished: 1,
-          approvalStatus: 'approved' as any,
-          approvedAt: nowFormatted,
-          approvedBy: ctx.user.id,
-          publishedAt: nowFormatted,
-          status: 'launching-soon',
-          updatedAt: nowFormatted,
-        })
-        .where(eq(developments.developerBrandProfileId, input.brandProfileId));
+      for (const development of brandDevelopments) {
+        await dbConn
+          .update(developments)
+          .set({
+            isPublished: 1,
+            approvalStatus: 'approved' as any,
+            approvedAt: nowFormatted,
+            approvedBy: ctx.user.id,
+            publishedAt: (development as any).publishedAt ?? nowFormatted,
+            status: 'launching-soon',
+            updatedAt: nowFormatted,
+            ...buildPublishedDevelopmentWorkflowStateColumns(development as Record<string, any>),
+          })
+          .where(eq(developments.id, development.id));
+      }
 
-      const total = Number(before?.count || 0);
-      const updated = Number(needsUpdate?.count || 0);
+      const total = brandDevelopments.length;
 
       return {
         success: true,
@@ -505,6 +504,7 @@ export const superAdminPublisherRouter = router({
           publishedAt: nowFormatted,
           status: existingDev.status || 'launching-soon',
           updatedAt: nowFormatted,
+          ...buildPublishedDevelopmentWorkflowStateColumns(existingDev),
         })
         .where(eq(developments.id, input.developmentId));
 

@@ -34,7 +34,7 @@ const propertyFiltersSchema = z.object({
   propertyType: z
     .array(z.enum(['house', 'apartment', 'townhouse', 'plot', 'commercial']))
     .optional(),
-  listingType: z.enum(['sale', 'rent']).optional(),
+  listingType: z.enum(['sale', 'rent', 'auction']).optional(),
   minPrice: z.number().optional(),
   maxPrice: z.number().optional(),
   minBedrooms: z.number().optional(),

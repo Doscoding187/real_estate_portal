@@ -15,6 +15,7 @@ export * from './leads';
 export * from './servicesEngine';
 export * from './demand';
 export * from './referrals';
+export * from './leadRouting';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';

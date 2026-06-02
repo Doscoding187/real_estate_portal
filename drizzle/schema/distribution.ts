@@ -293,6 +293,7 @@ export const distributionDevelopmentAccess = mysqlTable(
     excludedByExclusivity: tinyint('excluded_by_exclusivity').default(0).notNull(),
     reasonCode: varchar('reason_code', { length: 80 }),
     notes: text('notes'),
+    brochureConfigJson: json('brochure_config_json'),
     includedAt: timestamp('included_at', { mode: 'string' }),
     excludedAt: timestamp('excluded_at', { mode: 'string' }),
     pausedAt: timestamp('paused_at', { mode: 'string' }),

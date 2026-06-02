@@ -192,6 +192,91 @@ const inferClassification = (unit: any): { unitCategory: 'house' | 'apartment'; 
   return { unitCategory: 'apartment', unitSubType: 'apartment' };
 };
 
+type UnitTypesPhaseTransactionType = 'for_sale' | 'for_rent' | 'auction';
+
+export const normalizeUnitTypesPhaseTransactionType = (
+  transactionType: unknown,
+): UnitTypesPhaseTransactionType => {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['for-rent', 'to-rent', 'rent', 'rental', 'lease'].includes(normalized)) return 'for_rent';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'for_sale';
+};
+
+const formatUnitTypeCurrency = (value: number) => `R ${value.toLocaleString()}`;
+
+export const isValidUnitTypesPhaseMonthlyRentRange = (unit: Partial<UnitType>) => {
+  const rentFrom = Number((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0);
+  const rentTo = Number((unit as any).monthlyRentTo ?? 0);
+  return !Number.isFinite(rentTo) || rentTo <= 0 || rentTo >= rentFrom;
+};
+
+export const getUnitTypesPhaseTransactionCopy = (transactionType: unknown) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+
+  if (normalized === 'for_rent') {
+    return {
+      transactionType: normalized,
+      recommendation: 'Recommended for cards: add at least 2 unit types with clear names and monthly rents.',
+      emptyVerb: 'leasing',
+    };
+  }
+
+  if (normalized === 'auction') {
+    return {
+      transactionType: normalized,
+      recommendation: 'Recommended for cards: add at least 2 unit types with clear names and starting bids.',
+      emptyVerb: 'auctioning',
+    };
+  }
+
+  return {
+    transactionType: normalized,
+    recommendation: 'Recommended for cards: add at least 2 unit types with clear names and sale prices.',
+    emptyVerb: 'selling',
+  };
+};
+
+export const getUnitTypesPhasePriceDisplay = (unit: Partial<UnitType>, transactionType: unknown) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+  const rentFrom = Number((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0);
+  const rentTo = Number((unit as any).monthlyRentTo ?? 0);
+  const auctionStart = Number((unit as any).startingBid ?? 0);
+  const saleFrom = Number(unit.priceFrom ?? unit.basePriceFrom ?? 0);
+  const saleTo = Number(unit.priceTo ?? unit.basePriceTo ?? 0);
+
+  const primaryValue = normalized === 'for_rent' ? rentFrom : normalized === 'auction' ? auctionStart : saleFrom;
+  const secondaryValue = normalized === 'for_rent' ? rentTo : normalized === 'auction' ? 0 : saleTo;
+
+  if (!primaryValue || primaryValue <= 0) {
+    return {
+      transactionType: normalized,
+      display: '---',
+      suffix: '',
+    };
+  }
+
+  const range =
+    normalized !== 'auction' && secondaryValue > primaryValue
+      ? ` - ${formatUnitTypeCurrency(secondaryValue)}`
+      : '';
+
+  return {
+    transactionType: normalized,
+    display: `${formatUnitTypeCurrency(primaryValue)}${range}`,
+    suffix:
+      normalized === 'for_rent'
+        ? '/ month'
+        : normalized === 'auction'
+          ? 'starting bid'
+          : '',
+  };
+};
+
 export function UnitTypesPhase() {
   const {
     unitTypes,
@@ -206,8 +291,10 @@ export function UnitTypesPhase() {
   const transactionType = useDevelopmentWizard(
     state => state.transactionType ?? state.developmentData?.transactionType,
   );
-  const isRental = transactionType === 'for_rent';
-  const isAuction = transactionType === 'auction';
+  const normalizedTransactionType = normalizeUnitTypesPhaseTransactionType(transactionType);
+  const isRental = normalizedTransactionType === 'for_rent';
+  const isAuction = normalizedTransactionType === 'auction';
+  const transactionCopy = getUnitTypesPhaseTransactionCopy(normalizedTransactionType);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -640,6 +727,9 @@ export function UnitTypesPhase() {
     } else if (isRental) {
       if (!formData.monthlyRentFrom || formData.monthlyRentFrom <= 0)
         return toast.error('Monthly Rent is required');
+      if (!isValidUnitTypesPhaseMonthlyRentRange(formData)) {
+        return toast.error('Monthly Rent To must be greater than or equal to Monthly Rent From');
+      }
     } else {
       if (!formData.priceFrom) return toast.error('Base Price is required');
     }
@@ -1167,9 +1257,7 @@ export function UnitTypesPhase() {
         <div>
           <h2 className="text-3xl font-bold text-slate-900">Unit Types</h2>
           <p className="text-slate-600">Configure your diverse unit mix.</p>
-          <p className="text-xs text-slate-500">
-            Recommended for cards: add at least 2 unit types with clear names and prices.
-          </p>
+          <p className="text-xs text-slate-500">{transactionCopy.recommendation}</p>
         </div>
         <Button
           onClick={() => handleOpenDialog()}
@@ -1187,8 +1275,7 @@ export function UnitTypesPhase() {
           </div>
           <h3 className="text-lg font-medium text-slate-900">No Unit Types defined</h3>
           <p className="text-slate-500 mb-6">
-            Create your first unit type to start{' '}
-            {isAuction ? 'auctioning' : isRental ? 'leasing' : 'selling'}.
+            Create your first unit type to start {transactionCopy.emptyVerb}.
           </p>
           <Button onClick={() => handleOpenDialog()} variant="outline">
             Create Unit Type
@@ -1198,6 +1285,7 @@ export function UnitTypesPhase() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {unitTypes.map(unit => {
             const classification = inferClassification(unit as any);
+            const priceDisplay = getUnitTypesPhasePriceDisplay(unit, normalizedTransactionType);
             return (
               <Card key={unit.id} className="group hover:shadow-lg transition-all border-slate-200">
               <div className="h-40 bg-slate-100 relative">
@@ -1257,31 +1345,10 @@ export function UnitTypesPhase() {
                   </Badge>
                 </div>
                 <p className="text-sm font-semibold text-blue-600">
-                  {(() => {
-                    const rentFrom = Number(
-                      (unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0,
-                    );
-                    const rentTo = Number((unit as any).monthlyRentTo ?? 0);
-                    const auctionStart = Number((unit as any).startingBid ?? 0);
-                    const saleFrom = Number(unit.priceFrom ?? 0);
-                    const saleTo = Number(unit.priceTo ?? 0);
-
-                    const primaryValue = isRental ? rentFrom : isAuction ? auctionStart : saleFrom;
-                    const secondaryValue = isRental ? rentTo : isAuction ? 0 : saleTo;
-
-                    if (!primaryValue || primaryValue <= 0) return '---';
-
-                    return (
-                      <>
-                        R {primaryValue.toLocaleString()}{' '}
-                        {!isAuction &&
-                          secondaryValue > primaryValue &&
-                          `- R ${secondaryValue.toLocaleString()}`}
-                      </>
-                    );
-                  })()}
-                  {isRental && <span className="text-xs text-slate-500"> / month</span>}
-                  {isAuction && <span className="text-xs text-slate-500"> starting bid</span>}
+                  {priceDisplay.display}
+                  {priceDisplay.suffix ? (
+                    <span className="text-xs text-slate-500"> {priceDisplay.suffix}</span>
+                  ) : null}
                 </p>
               </CardHeader>
               <CardContent className="text-sm text-slate-600 space-y-1">

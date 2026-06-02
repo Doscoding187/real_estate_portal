@@ -27,26 +27,130 @@ import { trpc } from '@/lib/trpc';
 import { calculateMonthlyRepayment, formatSARandShort, SA_PRIME_RATE } from '@/lib/bond-calculator';
 import { formatPriceCompact } from '@/lib/formatPrice';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
+import { getDevelopmentUnitRouteKey } from '@/lib/developmentUnitSelectors';
 
 const DEFAULT_BOND_TERM_YEARS = 20;
-
-const toUnitRouteKey = (unit: any): string => {
-  const directId = unit?.id ?? unit?.unitTypeId ?? unit?.unitId;
-  if (directId !== null && directId !== undefined && `${directId}`.trim() !== '') {
-    return `${directId}`;
-  }
-  return String(unit?.name || unit?.type || unit?.structuralType || 'unit')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-};
 
 const parseNumberInput = (value: string) => {
   const normalized = value.replace(/[^\d.]/g, '');
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+type QualificationTransactionType = 'sale' | 'rent' | 'auction';
+
+function toPositiveNumber(value: unknown): number {
+  const numeric = Number(value || 0);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+}
+
+export function normalizeQualificationTransactionType(
+  value: unknown,
+): QualificationTransactionType {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['for_rent', 'rent', 'to_rent', 'rental', 'rent_to_buy'].includes(normalized)) return 'rent';
+  if (['auction', 'auctions'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getDevelopmentQualificationPricingContext(dev: any, selectedUnit?: any | null) {
+  const transactionType = normalizeQualificationTransactionType(dev?.transactionType);
+  const unitTypes = Array.isArray(dev?.unitTypes) ? dev.unitTypes : [];
+  const sourceUnits = selectedUnit ? [selectedUnit] : unitTypes;
+
+  const values =
+    transactionType === 'rent'
+      ? sourceUnits
+          .flatMap((unit: any) => [
+            toPositiveNumber(unit?.monthlyRentFrom ?? unit?.monthlyRent),
+            toPositiveNumber(unit?.monthlyRentTo),
+          ])
+          .filter(Boolean)
+      : transactionType === 'auction'
+        ? sourceUnits
+            .flatMap((unit: any) => [
+              toPositiveNumber(unit?.startingBid),
+              toPositiveNumber(unit?.reservePrice),
+            ])
+            .filter(Boolean)
+        : sourceUnits
+            .flatMap((unit: any) => [
+              toPositiveNumber(unit?.basePriceFrom ?? unit?.priceFrom),
+              toPositiveNumber(unit?.basePriceTo ?? unit?.priceTo),
+            ])
+            .filter(Boolean);
+
+  const developmentFallbackFrom =
+    transactionType === 'rent'
+      ? toPositiveNumber(dev?.monthlyRentFrom)
+      : transactionType === 'auction'
+        ? toPositiveNumber(dev?.startingBidFrom)
+        : toPositiveNumber(dev?.priceFrom);
+  const developmentFallbackTo =
+    transactionType === 'rent'
+      ? toPositiveNumber(dev?.monthlyRentTo)
+      : transactionType === 'auction'
+        ? toPositiveNumber(dev?.reservePriceFrom)
+        : toPositiveNumber(dev?.priceTo);
+
+  const minPrice = (values.length > 0 ? Math.min(...values) : 0) || developmentFallbackFrom || 0;
+  const maxCandidate =
+    (values.length > 0 ? Math.max(...values) : 0) || developmentFallbackTo || minPrice;
+
+  return {
+    transactionType,
+    minPrice,
+    maxPrice: maxCandidate > minPrice ? maxCandidate : undefined,
+    targetLabel:
+      transactionType === 'rent'
+        ? 'monthly rent'
+        : transactionType === 'auction'
+          ? 'starting bid'
+          : 'entry price',
+    rangePrefix:
+      transactionType === 'rent'
+        ? 'Rent'
+        : transactionType === 'auction'
+          ? 'Starting bid'
+          : 'Homes from',
+    capacityLabel:
+      transactionType === 'rent'
+        ? 'monthly rental budget'
+        : transactionType === 'auction'
+          ? 'auction buying power'
+          : 'buying power',
+    repaymentLabel: transactionType === 'rent' ? 'Target rent' : 'Repayment',
+  };
+}
+
+export function getDevelopmentQualificationLeadUnitContext(dev: any, selectedUnit?: any | null) {
+  if (!selectedUnit) return {};
+
+  const pricing = getDevelopmentQualificationPricingContext(dev, selectedUnit);
+  const unitPriceFrom =
+    pricing.minPrice > 0 && Number.isFinite(pricing.minPrice) ? pricing.minPrice : undefined;
+
+  return {
+    unitId: getDevelopmentUnitRouteKey(selectedUnit),
+    unitName:
+      typeof selectedUnit.name === 'string' && selectedUnit.name.trim()
+        ? selectedUnit.name.trim()
+        : undefined,
+    unitPriceFrom,
+    unitBedrooms:
+      Number.isFinite(Number(selectedUnit.bedrooms)) && Number(selectedUnit.bedrooms) >= 0
+        ? Number(selectedUnit.bedrooms)
+        : undefined,
+    unitBathrooms:
+      Number.isFinite(Number(selectedUnit.bathrooms)) && Number(selectedUnit.bathrooms) >= 0
+        ? Number(selectedUnit.bathrooms)
+        : undefined,
+  };
+}
 
 const calculateAffordableLoanAmount = (
   monthlyBudget: number,
@@ -75,7 +179,9 @@ export default function DevelopmentQualificationPage() {
       ? parseNumberInput(new URLSearchParams(window.location.search).get('deposit') || '')
       : 0;
   const initialUnitKey =
-    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('unit') || '' : '';
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('unit') || ''
+      : '';
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitted, setSubmitted] = useState(false);
   const [financials, setFinancials] = useState({
@@ -122,32 +228,19 @@ export default function DevelopmentQualificationPage() {
     },
   });
 
-  const developmentPricing = useMemo(() => {
-    const unitTypes = Array.isArray(dev?.unitTypes) ? dev.unitTypes : [];
-    const prices = unitTypes
-      .flatMap((unit: any) => [Number(unit.basePriceFrom || 0), Number(unit.basePriceTo || 0)])
-      .filter((value: number) => Number.isFinite(value) && value > 0);
-
-    const minPrice =
-      (prices.length > 0 ? Math.min(...prices) : 0) || Number(dev?.priceFrom || 0) || 0;
-    const maxPrice =
-      (prices.length > 0 ? Math.max(...prices) : 0) || Number(dev?.priceTo || 0) || minPrice;
-
-    return {
-      minPrice,
-      maxPrice: maxPrice > minPrice ? maxPrice : undefined,
-    };
-  }, [dev?.priceFrom, dev?.priceTo, dev?.unitTypes]);
-
   const selectedUnit = useMemo(() => {
     if (!dev || !initialUnitKey) return null;
     const unitTypes = Array.isArray(dev.unitTypes) ? dev.unitTypes : [];
     return (
-      unitTypes.find((unit: any) => toUnitRouteKey(unit) === initialUnitKey) ||
+      unitTypes.find((unit: any) => getDevelopmentUnitRouteKey(unit) === initialUnitKey) ||
       unitTypes.find((unit: any) => `${unit.id}` === `${initialUnitKey}`) ||
       null
     );
   }, [dev, initialUnitKey]);
+
+  const developmentPricing = useMemo(() => {
+    return getDevelopmentQualificationPricingContext(dev, selectedUnit);
+  }, [dev, selectedUnit]);
 
   const monthlyIncome = parseNumberInput(financials.monthlyIncome);
   const coApplicantIncome = parseNumberInput(financials.coApplicantIncome);
@@ -166,31 +259,36 @@ export default function DevelopmentQualificationPage() {
     DEFAULT_BOND_TERM_YEARS,
   );
   const maxAffordable = Math.max(affordableLoan + availableDeposit, 0);
-  const comfortFloor = Math.max(Math.round(maxAffordable * 0.82), 0);
-  const targetPrice = Math.max(Number(selectedUnit?.basePriceFrom || 0), 0) || developmentPricing.minPrice;
-  const depositGap = Math.max(targetPrice - maxAffordable, 0);
-  const estimatedTargetRepayment = calculateMonthlyRepayment(
-    Math.max(targetPrice - availableDeposit, 0),
-    SA_PRIME_RATE,
-    DEFAULT_BOND_TERM_YEARS,
-  );
-  const qualifies = maxAffordable >= targetPrice;
-  const closeFit = !qualifies && maxAffordable >= targetPrice * 0.9;
+  const affordabilityCapacity =
+    developmentPricing.transactionType === 'rent' ? adjustedRepaymentBudget : maxAffordable;
+  const comfortFloor = Math.max(Math.round(affordabilityCapacity * 0.82), 0);
+  const targetPrice = developmentPricing.minPrice;
+  const depositGap = Math.max(targetPrice - affordabilityCapacity, 0);
+  const estimatedTargetRepayment =
+    developmentPricing.transactionType === 'rent'
+      ? targetPrice
+      : calculateMonthlyRepayment(
+          Math.max(targetPrice - availableDeposit, 0),
+          SA_PRIME_RATE,
+          DEFAULT_BOND_TERM_YEARS,
+        );
+  const qualifies = affordabilityCapacity >= targetPrice;
+  const closeFit = !qualifies && affordabilityCapacity >= targetPrice * 0.9;
 
   const resultTone = qualifies ? 'success' : closeFit ? 'warning' : 'muted';
   const resultCopy = qualifies
     ? {
         title: `You likely qualify for ${selectedUnit?.name || dev?.name || 'this development'}`,
-        body: `Estimated buying power is up to ${formatSARandShort(maxAffordable)}. ${selectedUnit?.name ? `${selectedUnit.name} starts from` : 'Homes in this development start from'} ${formatSARandShort(targetPrice)}.`,
+        body: `Estimated ${developmentPricing.capacityLabel} is up to ${formatSARandShort(affordabilityCapacity)}. ${selectedUnit?.name ? `${selectedUnit.name} ${developmentPricing.targetLabel} starts from` : `${developmentPricing.rangePrefix} in this development starts from`} ${formatSARandShort(targetPrice)}.`,
       }
     : closeFit
       ? {
           title: 'You are close to qualifying',
-          body: `You may need a stronger deposit or lower commitments. You are currently about ${formatSARandShort(depositGap)} short of the entry price.`,
+          body: `You may need a stronger deposit or lower commitments. You are currently about ${formatSARandShort(depositGap)} short of the ${developmentPricing.targetLabel}.`,
         }
       : {
           title: 'This development may be above your current range',
-          body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. Submit your details and the sales team can help with next-best options.`,
+          body: `Estimated ${developmentPricing.capacityLabel} is around ${formatSARandShort(affordabilityCapacity)}. Submit your details and the sales team can help with next-best options.`,
         };
 
   const canContinueStep1 = monthlyIncome > 0;
@@ -222,7 +320,7 @@ export default function DevelopmentQualificationPage() {
     const qualificationSummary = [
       `Development: ${dev.name}`,
       selectedUnit?.name ? `Unit: ${selectedUnit.name}` : null,
-      `Estimated affordability range: ${formatSARandShort(comfortFloor)} - ${formatSARandShort(maxAffordable)}`,
+      `Estimated affordability range: ${formatSARandShort(comfortFloor)} - ${formatSARandShort(affordabilityCapacity)}`,
       `Monthly income: ${formatSARandShort(monthlyIncome)}`,
       coApplicantIncome > 0 ? `Co-applicant income: ${formatSARandShort(coApplicantIncome)}` : null,
       monthlyExpenses > 0 ? `Monthly expenses: ${formatSARandShort(monthlyExpenses)}` : null,
@@ -236,6 +334,7 @@ export default function DevelopmentQualificationPage() {
     createLead.mutate({
       developmentId: dev.id,
       developerBrandProfileId: (dev as any).developerBrandProfileId ?? undefined,
+      ...getDevelopmentQualificationLeadUnitContext(dev, selectedUnit),
       name: contact.name.trim(),
       email: contact.email.trim(),
       phone: contact.phone.trim(),
@@ -247,7 +346,7 @@ export default function DevelopmentQualificationPage() {
         monthlyExpenses,
         monthlyDebts,
         availableDeposit,
-        maxAffordable,
+        maxAffordable: affordabilityCapacity,
         calculatedAt: new Date().toISOString(),
       },
     });
@@ -432,7 +531,8 @@ export default function DevelopmentQualificationPage() {
 
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <p className="text-sm font-medium text-slate-700">
-                            This check starts with income so we can estimate whether homes from{' '}
+                            This check starts with income so we can estimate whether{' '}
+                            {developmentPricing.rangePrefix.toLowerCase()}{' '}
                             {formatSARandShort(targetPrice)} are in range.
                           </p>
                         </div>
@@ -585,10 +685,10 @@ export default function DevelopmentQualificationPage() {
                           <div className="rounded-2xl border border-slate-200 bg-white p-4">
                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                               <TrendingUp className="h-4 w-4 text-orange-600" />
-                              Buying Power
+                              {developmentPricing.capacityLabel}
                             </div>
                             <p className="mt-2 text-2xl font-bold text-slate-900">
-                              {formatSARandShort(maxAffordable)}
+                              {formatSARandShort(affordabilityCapacity)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
                               Estimated upper affordability
@@ -598,13 +698,13 @@ export default function DevelopmentQualificationPage() {
                           <div className="rounded-2xl border border-slate-200 bg-white p-4">
                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                               <Calculator className="h-4 w-4 text-blue-600" />
-                              Repayment
+                              {developmentPricing.repaymentLabel}
                             </div>
                             <p className="mt-2 text-2xl font-bold text-slate-900">
                               {formatSARandShort(estimatedTargetRepayment)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              Estimated monthly payment at the entry price
+                              Estimated monthly payment at the {developmentPricing.targetLabel}
                             </p>
                           </div>
 
@@ -691,7 +791,7 @@ export default function DevelopmentQualificationPage() {
                   <h2 className="text-lg font-bold text-slate-900">{dev.name}</h2>
                   <div className="space-y-2 text-sm text-slate-600">
                     <p>
-                      Homes from{' '}
+                      {developmentPricing.rangePrefix}{' '}
                       <span className="font-semibold text-slate-900">
                         {formatSARandShort(targetPrice)}
                       </span>

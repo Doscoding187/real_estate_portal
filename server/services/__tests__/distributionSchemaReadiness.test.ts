@@ -21,9 +21,9 @@ describe('distribution schema readiness requirements', () => {
   });
 
   it('defines the required development brand-link and program fields for catalog listing', () => {
-    expect(
-      getDistributionSchemaRequirementLabels('distribution.admin.listDevelopmentCatalog'),
-    ).toEqual(
+    const labels = getDistributionSchemaRequirementLabels('distribution.admin.listDevelopmentCatalog');
+
+    expect(labels).toEqual(
       expect.arrayContaining([
         'developments.developer_brand_profile_id',
         'developments.marketing_brand_profile_id',
@@ -33,6 +33,23 @@ describe('distribution schema readiness requirements', () => {
         'distribution_programs.currency_code',
       ]),
     );
+    expect(labels).not.toContain('distribution_development_access.brochure_config_json');
+  });
+
+  it('scopes brochure configuration readiness to the brochure editor operation', () => {
+    expect(
+      getDistributionSchemaRequirementLabels('distribution.admin.setDevelopmentBrochureConfig'),
+    ).toEqual(
+      expect.arrayContaining([
+        'distribution_development_access',
+        'distribution_development_access.development_id',
+        'distribution_development_access.brochure_config_json',
+      ]),
+    );
+
+    expect(
+      getDistributionSchemaRequirementLabels('distribution.admin.upsertDevelopmentAccess'),
+    ).not.toContain('distribution_development_access.brochure_config_json');
   });
 
   it('reports missing schema items deterministically for an operation', () => {

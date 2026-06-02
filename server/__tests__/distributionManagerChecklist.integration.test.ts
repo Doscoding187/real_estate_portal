@@ -5,6 +5,7 @@ import { getDb } from '../db-connection';
 import {
   developmentRequiredDocuments,
   developments,
+  distributionCommissionEntries,
   distributionDealDocuments,
   distributionDeals,
   distributionIdentities,
@@ -307,6 +308,12 @@ describeWithDb('distribution.manager deal checklist integration', () => {
 
     const dealIds = uniqueIds(createdState.dealIds);
     if (dealIds.length) {
+      await db
+        .delete(distributionCommissionEntries)
+        .where(inArray(distributionCommissionEntries.dealId, dealIds));
+    }
+
+    if (dealIds.length) {
       await db.delete(distributionDeals).where(inArray(distributionDeals.id, dealIds));
     }
 
@@ -600,6 +607,51 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       success: true,
       stage: 'commission_pending',
     });
+  });
+
+  it('uses the deal commission base when manager transition creates a commission entry', async () => {
+    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const caller = buildCaller(seed.managerUserId);
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    await setDealStage(seed.dealId, 'bond_approved');
+    await db
+      .update(distributionDeals)
+      .set({
+        dealAmount: 0,
+        commissionBaseAmount: 18_500,
+        affordabilityPurchasePrice: 1_200_000,
+      } as any)
+      .where(eq(distributionDeals.id, seed.dealId));
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+      status: 'verified',
+    });
+
+    await expect(
+      caller.distribution.manager.advanceDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_pending',
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      stage: 'commission_pending',
+    });
+
+    const [entry] = await db
+      .select({
+        calculationBaseAmount: distributionCommissionEntries.calculationBaseAmount,
+        commissionAmount: distributionCommissionEntries.commissionAmount,
+      })
+      .from(distributionCommissionEntries)
+      .where(eq(distributionCommissionEntries.dealId, seed.dealId))
+      .limit(1);
+
+    expect(Number(entry?.calculationBaseAmount || 0)).toBe(18_500);
+    expect(Number(entry?.commissionAmount || 0)).toBe(463);
   });
 
   it('blocks admin transition to commission_paid unless forced when payout readiness is missing', async () => {

@@ -79,6 +79,11 @@ import {
   SA_PRIME_RATE,
 } from '@/lib/bond-calculator';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
+import {
+  getDevelopmentUnitMedia,
+  getDevelopmentUnitRouteKey,
+} from '@/lib/developmentUnitSelectors';
+import { calculateInventorySummary, calculatePriceFrom } from '../../../shared/developmentDerived';
 
 type AmenityTabKey = AmenityCategory | 'other';
 
@@ -91,44 +96,11 @@ const AMENITY_CATEGORY_ICONS: Record<AmenityTabKey, typeof Shield> = {
   other: CheckCircle2,
 };
 
-// --- UNIT HELPERS ---
-const getPrimaryUnitImage = (u: any, devHero?: string): string => {
-  const bm = u.baseMedia;
-  const gallery = Array.isArray(bm?.gallery) ? bm.gallery : Array.isArray(bm) ? bm : [];
-
-  // robust gallery search
-  const first =
-    gallery.find((x: any) => x?.isPrimary && x?.url)?.url ||
-    gallery.find((x: any) => x?.url)?.url ||
-    // legacy fields
-    u.primaryImageUrl ||
-    u.image ||
-    u.coverImage ||
-    // fallbacks
-    devHero ||
-    '/assets/placeholder-home.jpg';
-
-  return first;
-};
-
 const inferOwnership = (structuralType: string, defaultType?: string) => {
   if (defaultType) return defaultType;
   const t = (structuralType || '').toLowerCase();
   const isHouse = /house|duplex|simplex|townhouse|freestanding|cluster/.test(t);
   return isHouse ? 'Freehold' : 'Sectional Title';
-};
-
-const toUnitRouteKey = (unit: any): string => {
-  const directId = unit?.id ?? unit?.unitTypeId ?? unit?.unitId;
-  if (directId !== null && directId !== undefined && `${directId}`.trim() !== '') {
-    return `${directId}`;
-  }
-
-  const fallbackLabel = String(unit?.name || unit?.type || unit?.structuralType || 'unit').trim();
-  return fallbackLabel
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 };
 
 const parseNumber = (value: unknown): number | null => {
@@ -201,6 +173,210 @@ const DEFAULT_DEPOSIT_PERCENTAGE = 0;
 const DEFAULT_BOND_TERM_YEARS = 20;
 const QUICK_QUALIFICATION_PAYMENT_RATIO = 3;
 
+type DevelopmentDetailTransactionType = 'sale' | 'rent' | 'auction';
+
+const toSharedDevelopmentTransactionType = (
+  transactionType: DevelopmentDetailTransactionType,
+): 'for_sale' | 'for_rent' | 'auction' => {
+  if (transactionType === 'rent') return 'for_rent';
+  if (transactionType === 'auction') return 'auction';
+  return 'for_sale';
+};
+
+const toPositiveNumber = (value: unknown): number | null => {
+  const parsed = parseNumber(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
+};
+
+export function normalizeDevelopmentDetailTransactionType(
+  value: unknown,
+): DevelopmentDetailTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function getDevelopmentDetailUnitPricingContext(
+  unit: Record<string, unknown>,
+  fallbackTransactionType: unknown,
+) {
+  const transactionType = normalizeDevelopmentDetailTransactionType(
+    unit.transactionType ?? fallbackTransactionType,
+  );
+
+  if (transactionType === 'rent') {
+    const priceRange = calculatePriceFrom(unit, 'for_rent');
+    const priceFrom = priceRange.priceFrom > 0 ? priceRange.priceFrom : null;
+    const priceTo = priceRange.priceTo;
+    return {
+      transactionType,
+      priceFrom,
+      priceTo,
+      priceLabel: 'Rent from',
+      snapshotLabel: 'Rental Snapshot',
+      repaymentLabel: 'Monthly rent',
+      incomeLabel: 'Qualifying income',
+      paymentAmount: priceFrom,
+      usesBondEstimate: false,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const priceRange = calculatePriceFrom(unit, 'auction');
+    const priceFrom = priceRange.priceFrom > 0 ? priceRange.priceFrom : null;
+    const priceTo = toPositiveNumber(unit.reservePrice) ?? priceFrom;
+    const paymentAmount =
+      priceFrom !== null
+        ? calculateMonthlyRepayment(priceFrom, SA_PRIME_RATE, DEFAULT_BOND_TERM_YEARS)
+        : null;
+    return {
+      transactionType,
+      priceFrom,
+      priceTo,
+      priceLabel: 'Starting bid',
+      snapshotLabel: 'Auction Snapshot',
+      repaymentLabel: 'Est. bond repayment',
+      incomeLabel: 'Indicative income',
+      paymentAmount,
+      usesBondEstimate: true,
+    };
+  }
+
+  const priceRange = calculatePriceFrom(unit, toSharedDevelopmentTransactionType(transactionType));
+  const priceFrom = priceRange.priceFrom > 0 ? priceRange.priceFrom : null;
+  const priceTo = priceRange.priceTo;
+  const paymentAmount =
+    priceFrom !== null
+      ? calculateMonthlyRepayment(priceFrom, SA_PRIME_RATE, DEFAULT_BOND_TERM_YEARS)
+      : null;
+  return {
+    transactionType,
+    priceFrom,
+    priceTo,
+    priceLabel: 'Price from',
+    snapshotLabel: 'Ownership Snapshot',
+    repaymentLabel: 'Repayment from',
+    incomeLabel: 'Qualifying income',
+    paymentAmount,
+    usesBondEstimate: true,
+  };
+}
+
+export function getDevelopmentDetailPricingContext(
+  development: Record<string, unknown>,
+  units: Array<Record<string, unknown>> = [],
+) {
+  const transactionType = normalizeDevelopmentDetailTransactionType(development.transactionType);
+  const unitRanges = units
+    .map(unit => getDevelopmentDetailUnitPricingContext(unit, transactionType))
+    .filter(context => context.priceFrom !== null || context.priceTo !== null);
+  const unitPriceValues = unitRanges
+    .flatMap(context => [context.priceFrom, context.priceTo])
+    .filter((value): value is number => typeof value === 'number' && value > 0);
+
+  const developmentFallback =
+    transactionType === 'rent'
+      ? getDevelopmentDetailUnitPricingContext(
+          {
+            monthlyRentFrom: development.monthlyRentFrom,
+            monthlyRentTo: development.monthlyRentTo,
+          },
+          transactionType,
+        )
+      : transactionType === 'auction'
+        ? getDevelopmentDetailUnitPricingContext(
+            {
+              startingBid: development.startingBidFrom,
+              reservePrice: development.reservePriceFrom,
+            },
+            transactionType,
+          )
+        : getDevelopmentDetailUnitPricingContext(
+            {
+              basePriceFrom: development.priceFrom,
+              basePriceTo: development.priceTo,
+            },
+            transactionType,
+          );
+
+  const priceFrom =
+    (unitPriceValues.length > 0 ? Math.min(...unitPriceValues) : null) ??
+    developmentFallback.priceFrom ??
+    0;
+  const priceTo =
+    (unitPriceValues.length > 0 ? Math.max(...unitPriceValues) : null) ??
+    developmentFallback.priceTo ??
+    undefined;
+  const priceToDisplay = priceTo && priceTo > priceFrom ? priceTo : undefined;
+  const paymentAmount =
+    transactionType === 'rent'
+      ? priceFrom
+      : priceFrom > 0
+        ? calculateMonthlyRepayment(priceFrom, SA_PRIME_RATE, DEFAULT_BOND_TERM_YEARS)
+        : 0;
+
+  return {
+    transactionType,
+    priceFrom,
+    priceTo: priceToDisplay,
+    paymentAmount,
+    minimumIncome: Math.round(paymentAmount * QUICK_QUALIFICATION_PAYMENT_RATIO),
+    priceLabel:
+      transactionType === 'rent'
+        ? 'Rent From'
+        : transactionType === 'auction'
+          ? 'Starting Bid'
+          : 'Price From',
+    repaymentLabel:
+      transactionType === 'rent'
+        ? 'Monthly Rent'
+        : transactionType === 'auction'
+          ? 'Est. Bond Repayment'
+          : 'Est. Repayment',
+    incomeLabel: transactionType === 'auction' ? 'Indicative Income' : 'Qualifying Income',
+    repaymentSuffix: ' / month',
+    estimationNote:
+      transactionType === 'rent'
+        ? 'Rental fit is estimated from monthly rent and household income.'
+        : transactionType === 'auction'
+          ? 'Bond estimate is indicative and based on the starting bid.'
+          : 'Estimated using a 20-year bond term and standard prime lending rate.',
+  };
+}
+
+export function getDevelopmentDetailLeadUnitContext(
+  unit: Record<string, unknown> | null | undefined,
+  fallbackTransactionType: unknown,
+) {
+  if (!unit) return null;
+
+  const pricing = getDevelopmentDetailUnitPricingContext(unit, fallbackTransactionType);
+  const unitPriceFrom =
+    pricing.priceFrom !== null && pricing.priceFrom > 0 ? pricing.priceFrom : undefined;
+
+  return {
+    unitId: getDevelopmentUnitRouteKey(unit),
+    unitName: typeof unit.name === 'string' && unit.name.trim() ? unit.name.trim() : undefined,
+    unitPriceFrom,
+    unitPriceLabel: pricing.priceLabel,
+    unitBedrooms:
+      Number.isFinite(Number(unit.bedrooms)) && Number(unit.bedrooms) >= 0
+        ? Number(unit.bedrooms)
+        : undefined,
+    unitBathrooms:
+      Number.isFinite(Number(unit.bathrooms)) && Number(unit.bathrooms) >= 0
+        ? Number(unit.bathrooms)
+        : undefined,
+  };
+}
+
 const resolveDocumentUrl = (item: unknown): string | null => {
   if (typeof item === 'string') {
     const trimmed = item.trim();
@@ -214,6 +390,33 @@ const resolveDocumentUrl = (item: unknown): string | null => {
   return typeof candidate === 'string' && candidate.trim() ? resolveMediaUrl(candidate) : null;
 };
 
+const toMediaArray = (value: unknown): any[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [trimmed];
+    } catch {
+      return [trimmed];
+    }
+  }
+  return [];
+};
+
+export function getDevelopmentDetailMediaBuckets(dev: any) {
+  const media = dev?.media && typeof dev.media === 'object' ? dev.media : {};
+
+  return {
+    images: toMediaArray(media.photos ?? media.images ?? dev?.images),
+    videos: toMediaArray(media.videos ?? dev?.videos),
+    floorPlans: toMediaArray(media.floorPlans ?? dev?.floorPlans),
+    brochures: toMediaArray(media.documents ?? media.brochures ?? dev?.brochures),
+  };
+}
+
 const resolveUnitFloorPlanUrl = (unit: any): string | null => {
   const floorPlans = Array.isArray(unit?.baseMedia?.floorPlans) ? unit.baseMedia.floorPlans : [];
   for (const item of floorPlans) {
@@ -223,9 +426,10 @@ const resolveUnitFloorPlanUrl = (unit: any): string | null => {
   return null;
 };
 
-const getUnitAvailabilityState = (unit: any) => {
-  const availableUnits = Math.max(0, Number(unit?.availableUnits || 0));
-  const totalUnits = Math.max(0, Number(unit?.totalUnits || 0));
+export const getDevelopmentDetailUnitAvailabilityState = (unit: any) => {
+  const inventory = calculateInventorySummary(unit ?? {});
+  const availableUnits = inventory.available;
+  const totalUnits = inventory.total;
 
   if (totalUnits > 0 && availableUnits <= 0) {
     return {
@@ -256,6 +460,7 @@ const getUnitAvailabilityState = (unit: any) => {
 
 type UnitTypeCarouselProps = {
   units: any[];
+  transactionType: unknown;
   onRequestCallback: (unit: any) => void;
   onRequestInformation: (unit: any) => void;
   onOpenFloorPlan: (unit: any) => void;
@@ -263,6 +468,7 @@ type UnitTypeCarouselProps = {
 
 function UnitTypeCarousel({
   units,
+  transactionType,
   onRequestCallback,
   onRequestInformation,
   onOpenFloorPlan,
@@ -303,24 +509,18 @@ function UnitTypeCarousel({
       >
         <CarouselContent className="-ml-4">
           {units.map(unit => {
-            const unitPriceFrom = parseNumber(unit.basePriceFrom) ?? 0;
-            const unitPriceTo = parseNumber(unit.basePriceTo);
-            const availability = getUnitAvailabilityState(unit);
+            const unitPricing = getDevelopmentDetailUnitPricingContext(unit, transactionType);
+            const unitPriceFrom = unitPricing.priceFrom ?? 0;
+            const unitPriceTo = unitPricing.priceTo;
+            const availability = getDevelopmentDetailUnitAvailabilityState(unit);
             const exactPriceFrom = formatExactRand(unitPriceFrom) || 'Price on request';
             const exactPriceTo =
-              unitPriceTo !== null && unitPriceTo > unitPriceFrom
+              typeof unitPriceTo === 'number' && unitPriceTo > unitPriceFrom
                 ? formatExactRand(unitPriceTo)
                 : null;
-            const estimatedRepayment =
-              unitPriceFrom > 0
-                ? Math.round(
-                    calculateMonthlyRepayment(
-                      unitPriceFrom,
-                      SA_PRIME_RATE,
-                      DEFAULT_BOND_TERM_YEARS,
-                    ),
-                  )
-                : null;
+            const estimatedRepayment = unitPricing.paymentAmount
+              ? Math.round(unitPricing.paymentAmount)
+              : null;
             const qualifyingIncome =
               estimatedRepayment !== null
                 ? Math.round(estimatedRepayment * QUICK_QUALIFICATION_PAYMENT_RATIO)
@@ -367,17 +567,21 @@ function UnitTypeCarousel({
                       {estimatedRepayment ? (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
                           <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                            Ownership Snapshot
+                            {unitPricing.snapshotLabel}
                           </p>
                           <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px]">
-                            <span className="truncate text-slate-600">Repayment from</span>
+                            <span className="truncate text-slate-600">
+                              {unitPricing.repaymentLabel}
+                            </span>
                             <span className="truncate font-semibold text-slate-900">
                               {formatExactRand(estimatedRepayment)} / month
                             </span>
                           </div>
                           {qualifyingIncome ? (
                             <div className="mt-1 flex items-center justify-between gap-2 text-[10px]">
-                              <span className="truncate text-slate-600">Qualifying income</span>
+                              <span className="truncate text-slate-600">
+                                {unitPricing.incomeLabel}
+                              </span>
                               <span className="truncate font-semibold text-slate-900">
                                 {formatExactRand(qualifyingIncome)} / month
                               </span>
@@ -616,9 +820,7 @@ export default function DevelopmentDetail() {
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
   const [leadDialogMode, setLeadDialogMode] = useState<
     'brochure' | 'contact' | 'qualification' | 'info'
-  >(
-    'qualification',
-  );
+  >('qualification');
   const [leadDialogLocation, setLeadDialogLocation] = useState('unknown');
   const [activeLeadUnit, setActiveLeadUnit] = useState<any | null>(null);
   const [activeAmenityTab, setActiveAmenityTab] = useState<AmenityTabKey | ''>('');
@@ -734,10 +936,10 @@ export default function DevelopmentDetail() {
       ctaLocation: `unit_card_${unit.id}_floor_plan`,
       ctaHref:
         typeof window !== 'undefined'
-          ? `${window.location.origin}/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`
-          : `/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`,
+          ? `${window.location.origin}/development/${slug || ''}/unit/${getDevelopmentUnitRouteKey(unit)}`
+          : `/development/${slug || ''}/unit/${getDevelopmentUnitRouteKey(unit)}`,
     });
-    setLocation(`/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`);
+    setLocation(`/development/${slug || ''}/unit/${getDevelopmentUnitRouteKey(unit)}`);
   };
 
   // Fetch real development by slug or ID
@@ -940,9 +1142,10 @@ export default function DevelopmentDetail() {
   };
 
   // 1. RAW DATA EXTRACTION
-  const rawImages = parseJSON(dev.images);
-  const rawVideos = parseJSON(dev.videos);
-  const rawFloorPlans = parseJSON(dev.floorPlans);
+  const mediaBuckets = getDevelopmentDetailMediaBuckets(dev);
+  const rawImages = mediaBuckets.images;
+  const rawVideos = mediaBuckets.videos;
+  const rawFloorPlans = mediaBuckets.floorPlans;
 
   // 2. NORMALIZE TO CANONICAL TYPES
   // Convert DB format to our typed ImageMedia/VideoMedia
@@ -1013,12 +1216,10 @@ export default function DevelopmentDetail() {
     const unitTypes = dev.unitTypes || [];
     const totals = unitTypes.reduce(
       (acc: any, u: any) => {
-        const total = Math.max(0, Number(u.totalUnits || 0));
-        const avail = Math.max(0, Number(u.availableUnits || 0));
-        const reserved = Math.max(0, Number(u.reservedUnits || 0));
-        acc.total += total;
-        acc.available += avail;
-        acc.reserved += reserved;
+        const summary = calculateInventorySummary(u);
+        acc.total += summary.total;
+        acc.available += summary.available;
+        acc.reserved += summary.reserved;
         return acc;
       },
       { total: 0, available: 0, reserved: 0 },
@@ -1038,19 +1239,18 @@ export default function DevelopmentDetail() {
       reservedUnits = Number((dev as any).reservedUnits || 0);
     }
 
-    if (totalUnits <= 0) return { soldPct: null, total: 0, available: 0, reserved: 0, sold: 0 };
-
-    const clampedReserved = Math.min(Math.max(reservedUnits, 0), totalUnits);
-    const clampedAvailable = Math.min(Math.max(availableUnits, 0), totalUnits - clampedReserved);
-    const sold = Math.max(totalUnits - clampedAvailable - clampedReserved, 0);
-    const soldPct = Math.round((sold / totalUnits) * 100);
+    const summary = calculateInventorySummary({
+      totalUnits,
+      availableUnits,
+      reservedUnits,
+    });
 
     return {
-      soldPct,
-      total: totalUnits,
-      available: clampedAvailable,
-      reserved: clampedReserved,
-      sold,
+      soldPct: summary.soldPct,
+      total: summary.total,
+      available: summary.available,
+      reserved: summary.reserved,
+      sold: summary.sold,
     };
   })();
   const salesFromApi = dev.salesMetrics
@@ -1161,10 +1361,9 @@ export default function DevelopmentDetail() {
 
       return {
         ...u,
-        normalizedImage: getPrimaryUnitImage(
-          u,
-          heroMedia?.type === 'image' ? heroMedia.image?.url : undefined,
-        ),
+        normalizedImage: getDevelopmentUnitMedia(u, {
+          fallbackImageUrl: heroMedia?.type === 'image' ? heroMedia.image?.url : undefined,
+        }).primaryImageUrl,
         normalizedOwnership: finalLabel,
         normalizedType: formatLabel(u.structuralType || u.type || 'Apartment'),
         floorSize: u.unitSize,
@@ -1176,7 +1375,7 @@ export default function DevelopmentDetail() {
   };
 
   const brochureUrl = (() => {
-    const brochureItems = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
+    const brochureItems = mediaBuckets.brochures;
     for (const item of brochureItems) {
       const url = resolveDocumentUrl(item);
       if (url) return url;
@@ -1184,29 +1383,11 @@ export default function DevelopmentDetail() {
     return null;
   })();
 
-  const unitPriceValues = (development.units || [])
-    .flatMap((unit: any) => [Number(unit.basePriceFrom || 0), Number(unit.basePriceTo || 0)])
-    .filter((value: number) => Number.isFinite(value) && value > 0);
-
-  const derivedPriceFrom =
-    (unitPriceValues.length > 0 ? Math.min(...unitPriceValues) : 0) ||
-    Number(dev.priceFrom || 0) ||
-    development.startingPrice;
-  const derivedPriceTo =
-    (unitPriceValues.length > 0 ? Math.max(...unitPriceValues) : 0) ||
-    Number(dev.priceTo || 0) ||
-    undefined;
-
-  const priceToDisplay =
-    derivedPriceTo && derivedPriceTo > derivedPriceFrom ? derivedPriceTo : undefined;
-  const estimatedRepaymentFrom = calculateMonthlyRepayment(
-    derivedPriceFrom,
-    SA_PRIME_RATE,
-    DEFAULT_BOND_TERM_YEARS,
-  );
-  const minimumIncomeRequired = Math.round(
-    estimatedRepaymentFrom * QUICK_QUALIFICATION_PAYMENT_RATIO,
-  );
+  const detailPricing = getDevelopmentDetailPricingContext(dev, development.units || []);
+  const derivedPriceFrom = detailPricing.priceFrom;
+  const priceToDisplay = detailPricing.priceTo;
+  const estimatedRepaymentFrom = detailPricing.paymentAmount;
+  const minimumIncomeRequired = detailPricing.minimumIncome;
 
   const normalizedStatus = dev.status ? formatLabel(dev.status) : 'Now Selling';
   const normalizedCompletionDate = development.completionDate || 'Completion TBC';
@@ -1229,38 +1410,54 @@ export default function DevelopmentDetail() {
       ),
     );
     const maxAffordable = Math.round(baseAffordable + quickDepositAmount);
-    const comfortFloor = Math.max(Math.round(maxAffordable * 0.85), 0);
-    const qualifies = maxAffordable >= derivedPriceFrom;
-    const nearQualify = !qualifies && maxAffordable >= derivedPriceFrom * 0.9;
+    const comparisonCapacity =
+      detailPricing.transactionType === 'rent' ? maxMonthlyRepayment : maxAffordable;
+    const comfortFloor = Math.max(Math.round(comparisonCapacity * 0.85), 0);
+    const qualifies = comparisonCapacity >= derivedPriceFrom;
+    const nearQualify = !qualifies && comparisonCapacity >= derivedPriceFrom * 0.9;
     const depositNote =
       quickDepositAmount > 0 ? ` Includes ${formatSARandShort(quickDepositAmount)} deposit.` : '';
+    const priceNoun =
+      detailPricing.transactionType === 'rent'
+        ? 'rental homes'
+        : detailPricing.transactionType === 'auction'
+          ? 'auction units'
+          : 'homes';
+    const capacityLabel =
+      detailPricing.transactionType === 'rent' ? 'monthly rent capacity' : 'buying power';
+    const startLabel =
+      detailPricing.transactionType === 'rent'
+        ? 'rent starts from'
+        : detailPricing.transactionType === 'auction'
+          ? 'bidding starts from'
+          : 'homes here start from';
 
     if (qualifies) {
       return {
         tone: 'success' as const,
-        buyingPower: maxAffordable,
+        buyingPower: comparisonCapacity,
         comfortFloor,
-        headline: `You likely qualify for homes in ${development.name}`,
-        body: `Estimated buying power up to ${formatSARandShort(maxAffordable)}. Homes here start from ${formatSARandShort(derivedPriceFrom)}.${depositNote}`,
+        headline: `You likely qualify for ${priceNoun} in ${development.name}`,
+        body: `Estimated ${capacityLabel} up to ${formatSARandShort(comparisonCapacity)}. ${startLabel.charAt(0).toUpperCase() + startLabel.slice(1)} ${formatSARandShort(derivedPriceFrom)}.${depositNote}`,
       };
     }
 
     if (nearQualify) {
       return {
         tone: 'warning' as const,
-        buyingPower: maxAffordable,
+        buyingPower: comparisonCapacity,
         comfortFloor,
         headline: 'You may be close to qualifying',
-        body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. A higher qualifying income or joint application could improve fit.${depositNote}`,
+        body: `Estimated ${capacityLabel} is around ${formatSARandShort(comparisonCapacity)}. A higher qualifying income or joint application could improve fit.${depositNote}`,
       };
     }
 
     return {
       tone: 'muted' as const,
-      buyingPower: maxAffordable,
+      buyingPower: comparisonCapacity,
       comfortFloor,
       headline: 'This development may be above your current range',
-      body: `Estimated buying power is around ${formatSARandShort(maxAffordable)}. Start full qualification to explore next-best options.${depositNote}`,
+      body: `Estimated ${capacityLabel} is around ${formatSARandShort(comparisonCapacity)}. Start full qualification to explore next-best options.${depositNote}`,
     };
   })();
 
@@ -1371,6 +1568,11 @@ export default function DevelopmentDetail() {
                   priceTo={priceToDisplay}
                   monthlyRepayment={estimatedRepaymentFrom}
                   minimumIncome={minimumIncomeRequired}
+                  priceLabel={detailPricing.priceLabel}
+                  repaymentLabel={detailPricing.repaymentLabel}
+                  incomeLabel={detailPricing.incomeLabel}
+                  repaymentSuffix={detailPricing.repaymentSuffix}
+                  estimationNote={detailPricing.estimationNote}
                   completionDate={normalizedCompletionDate}
                   constructionStatus={normalizedStatus}
                   salesMetrics={sales}
@@ -1487,8 +1689,13 @@ export default function DevelopmentDetail() {
                         ) : (
                           <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-white p-4">
                             <p className="text-sm font-medium text-slate-700">
-                              Check whether homes from {formatSARandShort(derivedPriceFrom)} fit
-                              your income.
+                              Check whether{' '}
+                              {detailPricing.transactionType === 'rent'
+                                ? 'rentals'
+                                : detailPricing.transactionType === 'auction'
+                                  ? 'auction units'
+                                  : 'homes'}{' '}
+                              from {formatSARandShort(derivedPriceFrom)} fit your income.
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
                               Estimated with a 10% deposit and a 20-year bond term.
@@ -1781,6 +1988,7 @@ export default function DevelopmentDetail() {
                           >
                             <UnitTypeCarousel
                               units={bedroomGroups.get(key)?.units || []}
+                              transactionType={detailPricing.transactionType}
                               onRequestCallback={handleUnitCallback}
                               onRequestInformation={handleUnitInformation}
                               onOpenFloorPlan={handleUnitFloorPlan}
@@ -2077,7 +2285,7 @@ export default function DevelopmentDetail() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Price From
+              {detailPricing.priceLabel}
             </p>
             <p className="truncate text-base font-bold text-slate-900">
               {priceToDisplay
@@ -2132,25 +2340,7 @@ export default function DevelopmentDetail() {
         }}
         unitContext={
           activeLeadUnit
-            ? {
-                unitId: String(activeLeadUnit.id),
-                unitName: String(activeLeadUnit.name || '').trim() || undefined,
-                unitPriceFrom:
-                  Number.isFinite(Number(activeLeadUnit.basePriceFrom)) &&
-                  Number(activeLeadUnit.basePriceFrom) > 0
-                    ? Number(activeLeadUnit.basePriceFrom)
-                    : undefined,
-                unitBedrooms:
-                  Number.isFinite(Number(activeLeadUnit.bedrooms)) &&
-                  Number(activeLeadUnit.bedrooms) >= 0
-                    ? Number(activeLeadUnit.bedrooms)
-                    : undefined,
-                unitBathrooms:
-                  Number.isFinite(Number(activeLeadUnit.bathrooms)) &&
-                  Number(activeLeadUnit.bathrooms) >= 0
-                    ? Number(activeLeadUnit.bathrooms)
-                    : undefined,
-              }
+            ? getDevelopmentDetailLeadUnitContext(activeLeadUnit, detailPricing.transactionType)
             : null
         }
         affordabilityData={

@@ -34,6 +34,23 @@ const CACHE_PREFIX = 'property:search:v2:';
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 
+export function normalizePropertySearchListingType(
+  listingType: unknown,
+): Property['listingType'] | null {
+  const normalized = String(listingType ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['sale', 'sell', 'for_sale'].includes(normalized)) return 'sale';
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy', 'shared_living'].includes(normalized)) {
+    return 'rent';
+  }
+  if (['auction', 'auctions'].includes(normalized)) return 'auction';
+
+  return null;
+}
+
 function parseJsonObject(value: unknown): Record<string, any> {
   if (!value) return {};
   if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -898,8 +915,9 @@ export class PropertySearchService {
     }
 
     // Listing type filter
-    if (filters.listingType) {
-      conditions.push(eq(properties.listingType, filters.listingType));
+    const listingType = normalizePropertySearchListingType(filters.listingType);
+    if (listingType) {
+      conditions.push(eq(properties.listingType, listingType));
     }
 
     // Price range

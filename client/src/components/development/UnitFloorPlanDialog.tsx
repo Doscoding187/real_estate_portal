@@ -68,6 +68,67 @@ const formatParkingLabel = (parkingType: unknown, parkingBays: unknown): string 
   return null;
 };
 
+type UnitFloorPlanTransactionType = 'sale' | 'rent' | 'auction';
+
+export const normalizeUnitFloorPlanTransactionType = (
+  value: unknown,
+): UnitFloorPlanTransactionType => {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['rent', 'rental', 'to-rent', 'lease'].includes(normalized)) return 'rent';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+export const getUnitFloorPlanPricingContext = (unit: any) => {
+  const transactionType = normalizeUnitFloorPlanTransactionType(
+    unit?.transactionType ?? unit?.listingType ?? unit?.developmentTransactionType,
+  );
+
+  if (transactionType === 'rent') {
+    const rentFrom = parseNumber(unit?.monthlyRentFrom ?? unit?.baseMonthlyRentFrom);
+    const rentTo = parseNumber(unit?.monthlyRentTo ?? unit?.baseMonthlyRentTo);
+
+    return {
+      transactionType,
+      label: 'Monthly rent',
+      from: rentFrom,
+      to: rentTo !== null && rentFrom !== null && rentTo > rentFrom ? rentTo : null,
+      fallback: 'Rent on request',
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const startingBid = parseNumber(unit?.startingBid ?? unit?.baseStartingBid);
+    const reservePrice = parseNumber(unit?.reservePrice ?? unit?.baseReservePrice);
+
+    return {
+      transactionType,
+      label: 'Starting bid',
+      from: startingBid,
+      to:
+        reservePrice !== null && startingBid !== null && reservePrice > startingBid
+          ? reservePrice
+          : null,
+      fallback: 'Bid on request',
+    };
+  }
+
+  const priceFrom = parseNumber(unit?.basePriceFrom ?? unit?.priceFrom);
+  const priceTo = parseNumber(unit?.basePriceTo ?? unit?.priceTo);
+
+  return {
+    transactionType,
+    label: 'Price from',
+    from: priceFrom,
+    to: priceTo !== null && priceFrom !== null && priceTo > priceFrom ? priceTo : null,
+    fallback: 'Price on request',
+  };
+};
+
 const resolveDocumentUrl = (item: unknown): string | null => {
   if (!item || typeof item !== 'object') return null;
   const doc = item as { url?: string; href?: string; src?: string; key?: string };
@@ -159,8 +220,7 @@ export function UnitFloorPlanDialog({
   const galleryUrls = useMemo(() => (unit ? getGalleryUrls(unit) : []), [unit]);
   const amenityChips = useMemo(() => (unit ? getAmenityChips(unit) : []), [unit]);
 
-  const unitPriceFrom = parseNumber(unit?.basePriceFrom) ?? 0;
-  const unitPriceTo = parseNumber(unit?.basePriceTo);
+  const pricingContext = getUnitFloorPlanPricingContext(unit);
   const houseSizeLabel = formatSizeValue(unit?.floorSize ?? unit?.unitSize);
   const yardSizeLabel = formatSizeValue(unit?.landSize ?? unit?.yardSize);
   const parkingLabel = formatParkingLabel(unit?.parkingType, unit?.parkingBays);
@@ -168,9 +228,14 @@ export function UnitFloorPlanDialog({
     String(unit?.configDescription || unit?.description || '').trim() ||
     `View the ${unit?.name || 'unit'} layout, finishes, and configuration for ${developmentName}.`;
 
-  const exactPriceFrom = unitPriceFrom > 0 ? formatPriceCompact(unitPriceFrom) : 'Price on request';
+  const exactPriceFrom =
+    pricingContext.from !== null && pricingContext.from > 0
+      ? formatPriceCompact(pricingContext.from)
+      : pricingContext.fallback;
   const exactPriceTo =
-    unitPriceTo !== null && unitPriceTo > unitPriceFrom ? formatPriceCompact(unitPriceTo) : null;
+    pricingContext.to !== null && pricingContext.to > 0
+      ? formatPriceCompact(pricingContext.to)
+      : null;
   const hasGallery = galleryUrls.length > 0;
   const galleryImage = hasGallery
     ? galleryUrls[Math.min(activeGalleryIndex, galleryUrls.length - 1)]
@@ -257,6 +322,9 @@ export function UnitFloorPlanDialog({
                     <p className="pb-1 text-sm text-slate-300">up to {exactPriceTo}</p>
                   ) : null}
                 </div>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  {pricingContext.label}
+                </p>
                 <p className="mt-4 text-sm leading-6 text-slate-300">{description}</p>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
@@ -307,7 +375,8 @@ export function UnitFloorPlanDialog({
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
-                      You get the right pricing, specs, and next steps for this layout.
+                      You get the right {pricingContext.label.toLowerCase()}, specs, and next steps
+                      for this layout.
                     </li>
                   </ul>
                 </div>

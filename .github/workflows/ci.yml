@@ -157,6 +157,11 @@ jobs:
           done
           pnpm vitest run --project server --minWorkers=1 --maxWorkers=2 --silent
 
+      - name: Audit Development Listing Engine workflow state
+        env:
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+        run: pnpm run dle:audit:workflow-state
+
   build:
     name: Build Application
     runs-on: ubuntu-latest

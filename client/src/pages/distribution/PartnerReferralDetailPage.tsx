@@ -82,6 +82,59 @@ function base64ToBlob(base64: string, mimeType: string) {
   return new Blob([bytes], { type: mimeType });
 }
 
+type ReferralAffordabilityDisplayType = 'sale' | 'rent' | 'auction';
+
+export function normalizeReferralAffordabilityDisplayType(value: unknown): ReferralAffordabilityDisplayType {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'rent' || normalized === 'rental' || normalized === 'for_rent' || normalized === 'to-rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction') return 'auction';
+  return 'sale';
+}
+
+export function getReferralAffordabilityDisplay(input: {
+  transactionType?: unknown;
+  purchasePriceEstimate?: number | null;
+  listingPriceFrom?: number | null;
+  listingPriceTo?: number | null;
+}) {
+  const transactionType = normalizeReferralAffordabilityDisplayType(input.transactionType);
+  const listingPriceFrom = Number(input.listingPriceFrom || 0);
+  const listingPriceTo = Number(input.listingPriceTo || 0);
+  const hasListingPrice = Number.isFinite(listingPriceFrom) && listingPriceFrom > 0;
+  const rangeText =
+    hasListingPrice && listingPriceTo > listingPriceFrom
+      ? `R${listingPriceFrom.toLocaleString('en-ZA')} - R${listingPriceTo.toLocaleString('en-ZA')}`
+      : hasListingPrice
+        ? `R${listingPriceFrom.toLocaleString('en-ZA')}`
+        : null;
+
+  if (transactionType === 'rent' && rangeText) {
+    return {
+      label: 'Matched monthly rent',
+      value: `${rangeText} / month`,
+    };
+  }
+
+  if (transactionType === 'auction' && rangeText) {
+    return {
+      label: 'Matched starting bid',
+      value: rangeText,
+    };
+  }
+
+  const purchasePriceEstimate = Number(input.purchasePriceEstimate || 0);
+  if (Number.isFinite(purchasePriceEstimate) && purchasePriceEstimate > 0) {
+    return {
+      label: 'Purchase price estimate',
+      value: `R${purchasePriceEstimate.toLocaleString('en-ZA')}`,
+    };
+  }
+
+  return null;
+}
+
 export default function PartnerReferralDetailPage() {
   const [match, params] = useRoute('/distribution/partner/referrals/:dealId');
   const { isAuthenticated, loading } = useAuth();
@@ -231,6 +284,12 @@ export default function PartnerReferralDetailPage() {
   const supportingDocuments = Array.isArray(referral.programTerms?.sourceDocuments)
     ? referral.programTerms.sourceDocuments
     : [];
+  const affordabilityDisplay = getReferralAffordabilityDisplay({
+    transactionType: referral.affordability?.transactionType,
+    purchasePriceEstimate: referral.affordability?.purchasePriceEstimate,
+    listingPriceFrom: referral.affordability?.listingPriceFrom,
+    listingPriceTo: referral.affordability?.listingPriceTo,
+  });
 
   return (
     <ReferralAppShell>
@@ -385,10 +444,10 @@ export default function PartnerReferralDetailPage() {
                 <span className="text-slate-500">Document progress:</span>{' '}
                 {referral.docProgress.verifiedRequiredCount}/{referral.docProgress.requiredCount}
               </p>
-              {referral.affordability?.purchasePriceEstimate ? (
+              {affordabilityDisplay ? (
                 <p>
-                  <span className="text-slate-500">Purchase price estimate:</span> R
-                  {Number(referral.affordability.purchasePriceEstimate).toLocaleString('en-ZA')}
+                  <span className="text-slate-500">{affordabilityDisplay.label}:</span>{' '}
+                  {affordabilityDisplay.value}
                 </p>
               ) : null}
               {affordabilityAssumptions ? (

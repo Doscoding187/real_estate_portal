@@ -14,6 +14,7 @@
  */
 
 import { z } from 'zod';
+import { flattenCanonicalDevelopmentPayload } from '../lib/canonicalDevelopmentPayload';
 
 // ============================================================================
 // TYPES
@@ -293,6 +294,45 @@ function normalizeMedia(value: any): string | null {
   }
 }
 
+function computeSaleRangeFromUnits(unitTypes?: any[]): { priceFrom: number | null; priceTo: number | null } {
+  if (!Array.isArray(unitTypes) || unitTypes.length === 0) {
+    return { priceFrom: null, priceTo: null };
+  }
+
+  const fromValues = unitTypes
+    .map(unit => coerceDecimal(unit?.basePriceFrom ?? unit?.priceFrom))
+    .filter((n): n is number => n !== null && Number.isFinite(n) && n > 0);
+  const toValues = unitTypes
+    .map(unit => coerceDecimal(unit?.basePriceTo ?? unit?.priceTo))
+    .filter((n): n is number => n !== null && Number.isFinite(n) && n > 0);
+
+  return {
+    priceFrom: fromValues.length ? Math.min(...fromValues) : null,
+    priceTo: toValues.length ? Math.max(...toValues) : null,
+  };
+}
+
+function computeRentRangeFromUnits(unitTypes?: any[]): {
+  monthlyRentFrom: number | null;
+  monthlyRentTo: number | null;
+} {
+  if (!Array.isArray(unitTypes) || unitTypes.length === 0) {
+    return { monthlyRentFrom: null, monthlyRentTo: null };
+  }
+
+  const fromValues = unitTypes
+    .map(unit => coerceDecimal(unit?.monthlyRentFrom ?? unit?.monthlyRent))
+    .filter((n): n is number => n !== null && Number.isFinite(n) && n > 0);
+  const toValues = unitTypes
+    .map(unit => coerceDecimal(unit?.monthlyRentTo))
+    .filter((n): n is number => n !== null && Number.isFinite(n) && n > 0);
+
+  return {
+    monthlyRentFrom: fromValues.length ? Math.min(...fromValues) : null,
+    monthlyRentTo: toValues.length ? Math.max(...toValues) : null,
+  };
+}
+
 function computeAuctionRangeFromUnits(unitTypes?: any[]): {
   auctionStartDate: string | null;
   auctionEndDate: string | null;
@@ -406,6 +446,8 @@ export function normalizeForPublish(
   wizardData: WizardData,
   ownerType: 'platform' | 'developer' = 'developer',
 ): NormalizedDevelopmentPayload {
+  wizardData = flattenCanonicalDevelopmentPayload(wizardData) as WizardData;
+
   // Validate required fields
   if (!wizardData.name?.trim()) {
     throw new Error('Development name is required');
@@ -435,6 +477,10 @@ export function normalizeForPublish(
     ['for_sale', 'for_rent', 'auction'] as const,
     'for_sale',
   )!;
+  const saleRange =
+    transactionType === 'for_sale' ? computeSaleRangeFromUnits(wizardData.unitTypes) : null;
+  const rentRange =
+    transactionType === 'for_rent' ? computeRentRangeFromUnits(wizardData.unitTypes) : null;
   const auctionRange =
     transactionType === 'auction' ? computeAuctionRangeFromUnits(wizardData.unitTypes) : null;
 
@@ -494,26 +540,38 @@ export function normalizeForPublish(
     marketingRole: mapEnum(wizardData.marketingRole, ['exclusive', 'joint', 'open'] as const),
 
     // Numeric fields
-    priceFrom: coerceInt(wizardData.priceFrom),
-    priceTo: coerceInt(wizardData.priceTo),
-    monthlyRentFrom: coerceDecimal(wizardData.monthlyRentFrom),
-    monthlyRentTo: coerceDecimal(wizardData.monthlyRentTo),
+    priceFrom:
+      transactionType === 'for_sale'
+        ? (coerceInt(wizardData.priceFrom) ?? saleRange?.priceFrom ?? null)
+        : null,
+    priceTo:
+      transactionType === 'for_sale'
+        ? (coerceInt(wizardData.priceTo) ?? saleRange?.priceTo ?? null)
+        : null,
+    monthlyRentFrom:
+      transactionType === 'for_rent'
+        ? (coerceDecimal(wizardData.monthlyRentFrom) ?? rentRange?.monthlyRentFrom ?? null)
+        : null,
+    monthlyRentTo:
+      transactionType === 'for_rent'
+        ? (coerceDecimal(wizardData.monthlyRentTo) ?? rentRange?.monthlyRentTo ?? null)
+        : null,
     auctionStartDate:
       transactionType === 'auction'
         ? (auctionRange?.auctionStartDate ?? emptyToNull((wizardData as any).auctionStartDate))
-        : emptyToNull((wizardData as any).auctionStartDate),
+        : null,
     auctionEndDate:
       transactionType === 'auction'
         ? (auctionRange?.auctionEndDate ?? emptyToNull((wizardData as any).auctionEndDate))
-        : emptyToNull((wizardData as any).auctionEndDate),
+        : null,
     startingBidFrom:
       transactionType === 'auction'
         ? (auctionRange?.startingBidFrom ?? coerceDecimal((wizardData as any).startingBidFrom))
-        : coerceDecimal((wizardData as any).startingBidFrom),
+        : null,
     reservePriceFrom:
       transactionType === 'auction'
         ? (auctionRange?.reservePriceFrom ?? coerceDecimal((wizardData as any).reservePriceFrom))
-        : coerceDecimal((wizardData as any).reservePriceFrom),
+        : null,
     monthlyLevyFrom: coerceDecimal(wizardData.monthlyLevyFrom),
     monthlyLevyTo: coerceDecimal(wizardData.monthlyLevyTo),
     ratesFrom: coerceDecimal(wizardData.ratesFrom),

@@ -15,6 +15,7 @@ export interface SimpleDevelopmentUnitCardProps {
   href: string;
   priceFrom?: number | null;
   priceTo?: number | null;
+  listingType?: 'sale' | 'rent' | 'auction';
   bedrooms?: number | null;
   bathrooms?: number | null;
   unitSize?: number | null;
@@ -27,12 +28,19 @@ const formatMeasure = (value?: number | null) => {
   return `${value.toLocaleString()} m2`;
 };
 
-const formatPrice = (priceFrom?: number | null, priceTo?: number | null) => {
+const formatPrice = (
+  priceFrom?: number | null,
+  priceTo?: number | null,
+  listingType: 'sale' | 'rent' | 'auction' = 'sale',
+) => {
   if (priceFrom && priceTo && priceTo > priceFrom) {
-    return `${formatCurrency(priceFrom)} - ${formatCurrency(priceTo)}`;
+    const rangeLabel = `${formatCurrency(priceFrom)} - ${formatCurrency(priceTo)}`;
+    return listingType === 'auction' ? `Starting bid ${rangeLabel}` : rangeLabel;
   }
   if (priceFrom && priceFrom > 0) {
-    return `From ${formatCurrency(priceFrom)}`;
+    return listingType === 'auction'
+      ? `Starting bid ${formatCurrency(priceFrom)}`
+      : `From ${formatCurrency(priceFrom)}`;
   }
   return 'Price on request';
 };
@@ -47,6 +55,7 @@ export function SimpleDevelopmentUnitCard({
   href,
   priceFrom,
   priceTo,
+  listingType = 'sale',
   bedrooms,
   bathrooms,
   unitSize,
@@ -121,7 +130,7 @@ export function SimpleDevelopmentUnitCard({
 
       <div className="p-4">
         <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">
-          {formatPrice(priceFrom, priceTo)}
+          {formatPrice(priceFrom, priceTo, listingType)}
         </div>
 
         <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">

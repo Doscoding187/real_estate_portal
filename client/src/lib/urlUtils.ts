@@ -116,12 +116,15 @@ export interface SearchFilters {
   [key: string]: unknown;
 }
 
-import { generateIntentUrl, SearchIntent } from './searchIntent';
+import { generateIntentUrl, normalizeSearchListingType, SearchIntent } from './searchIntent';
+import { toAbsoluteUrl } from './seo/structuredData';
 
 // Helper to bridge SearchFilters -> SearchIntent for URL generation
 function filtersToIntent(filters: SearchFilters): SearchIntent {
+  const listingType = normalizeSearchListingType(filters.listingType) ?? 'sale';
+
   return {
-    transactionType: filters.listingType === 'rent' ? 'to-rent' : 'for-sale', // default
+    transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
     geography: {
       level: filters.suburb
         ? 'locality'
@@ -135,7 +138,7 @@ function filtersToIntent(filters: SearchFilters): SearchIntent {
       suburb: filters.suburb,
       locationId: filters.locationId,
     },
-    filters: filters, // Pass full filters as query params source
+    filters: { ...filters, listingType }, // Pass full filters as query params source
     defaults: { propertyCategory: 'residential', sort: 'relevance' },
   };
 }
@@ -162,7 +165,7 @@ export function generateCanonicalUrl(filters: SearchFilters): string {
   // P24 canonical tags on search pages usually point to the version without sort orders etc., but keep vital filters.
   // For now, let's return the intent URL exactly as it represents the resource.
 
-  return `https://propertylistify.com${generateIntentUrl(intent)}`;
+  return toAbsoluteUrl(generateIntentUrl(intent));
 }
 
 // Parse URL params back to filters
@@ -195,7 +198,10 @@ export function parseLegacyQueryParams(searchParams: URLSearchParams): SearchFil
   const city = searchParams.get('city') || searchParams.get('search');
   const suburb = searchParams.get('suburb');
 
-  if (listingType) filters.listingType = listingType as SearchFilters['listingType'];
+  if (listingType) {
+    const normalizedListingType = normalizeSearchListingType(listingType);
+    if (normalizedListingType) filters.listingType = normalizedListingType;
+  }
   if (propertyType) filters.propertyType = propertyType;
   if (city) filters.city = city;
   if (suburb) filters.suburb = suburb;
@@ -225,10 +231,13 @@ export function generatePageTitle(filters: SearchFilters): string {
   }
 
   // Listing type
-  if (filters.listingType === 'sale') {
+  const listingType = normalizeSearchListingType(filters.listingType);
+  if (listingType === 'sale') {
     parts.push('for Sale');
-  } else if (filters.listingType === 'rent') {
+  } else if (listingType === 'rent') {
     parts.push('to Rent');
+  } else if (listingType === 'auction') {
+    parts.push('on Auction');
   }
 
   // Location
@@ -260,10 +269,13 @@ export function generateMetaDescription(filters: SearchFilters, resultCount?: nu
   }
 
   // Listing type
-  if (filters.listingType === 'sale') {
+  const listingType = normalizeSearchListingType(filters.listingType);
+  if (listingType === 'sale') {
     parts.push('for sale');
-  } else if (filters.listingType === 'rent') {
+  } else if (listingType === 'rent') {
     parts.push('to rent');
+  } else if (listingType === 'auction') {
+    parts.push('on auction');
   }
 
   // Location
@@ -293,8 +305,9 @@ export function generateBreadcrumbs(filters: SearchFilters): BreadcrumbItem[] {
   // But URL structure is Inverted or specific.
   // We must generate HREF for each crumb using GeneratePropertyUrl (which calls generateIntentUrl).
 
-  const isRent = filters.listingType === 'rent';
-  const rootLabel = isRent ? 'For Rent' : 'For Sale';
+  const listingType = normalizeSearchListingType(filters.listingType);
+  const rootLabel =
+    listingType === 'rent' ? 'For Rent' : listingType === 'auction' ? 'Auctions' : 'For Sale';
   // Root URL: /property-for-sale
   const rootHref = generatePropertyUrl({ listingType: filters.listingType });
 

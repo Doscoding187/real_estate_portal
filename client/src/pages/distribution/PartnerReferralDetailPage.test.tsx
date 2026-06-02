@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import PartnerReferralDetailPage from './PartnerReferralDetailPage';
+import PartnerReferralDetailPage, { getReferralAffordabilityDisplay } from './PartnerReferralDetailPage';
 
 const {
   mockUseAuth,
@@ -87,6 +87,38 @@ vi.mock('@/lib/trpc', () => ({
     },
   },
 }));
+
+describe('PartnerReferralDetailPage affordability display', () => {
+  it('uses matched listing labels for rent and auction attachments', () => {
+    const rent = getReferralAffordabilityDisplay({
+      transactionType: 'rent',
+      purchasePriceEstimate: 1_500_000,
+      listingPriceFrom: 12_500,
+      listingPriceTo: 14_000,
+    });
+    expect(rent?.label).toBe('Matched monthly rent');
+    expect(rent?.value.replace(/\s/g, ' ')).toBe('R12 500 - R14 000 / month');
+
+    const auction = getReferralAffordabilityDisplay({
+      transactionType: 'auction',
+      purchasePriceEstimate: 1_500_000,
+      listingPriceFrom: 850_000,
+      listingPriceTo: 900_000,
+    });
+    expect(auction?.label).toBe('Matched starting bid');
+    expect(auction?.value.replace(/\s/g, ' ')).toBe('R850 000 - R900 000');
+  });
+
+  it('falls back to purchase price estimate for legacy sale attachments', () => {
+    expect(
+      getReferralAffordabilityDisplay({
+        purchasePriceEstimate: 1_450_000,
+      }),
+    ).toMatchObject({
+      label: 'Purchase price estimate',
+    });
+  });
+});
 
 describe('PartnerReferralDetailPage', () => {
   beforeEach(() => {
@@ -205,5 +237,33 @@ describe('PartnerReferralDetailPage', () => {
     expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
     expect(screen.getByText('Unit / house plans')).toBeInTheDocument();
     expect(screen.getByText('Upload signed copy')).toBeInTheDocument();
+  });
+
+  it('shows transaction-aware affordability labels for rental referrals', () => {
+    mockExportPackUseMutation.mockReturnValue({
+      isPending: false,
+      mutate: vi.fn(),
+    });
+    const current = mockGetReferralUseQuery().data;
+    mockGetReferralUseQuery.mockReturnValue({
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      data: {
+        ...current,
+        affordability: {
+          ...current.affordability,
+          transactionType: 'rent',
+          listingPriceFrom: 12500,
+          listingPriceTo: 14000,
+        },
+      },
+    });
+
+    render(<PartnerReferralDetailPage />);
+
+    expect(screen.getByText('Matched monthly rent:')).toBeInTheDocument();
+    expect(screen.getByText(/\/ month/)).toBeInTheDocument();
+    expect(screen.queryByText('Purchase price estimate:')).not.toBeInTheDocument();
   });
 });

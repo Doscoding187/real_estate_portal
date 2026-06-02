@@ -18,7 +18,20 @@ function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
 }
 
-function normalizeSavedSearchPreviewMatches(value: unknown) {
+export function normalizeSavedSearchPreviewListingType(value: unknown): 'sale' | 'rent' | 'auction' {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) {
+    return 'rent';
+  }
+  if (['auction', 'auctions'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function normalizeSavedSearchPreviewMatches(value: unknown) {
   const parsed =
     typeof value === 'string'
       ? (() => {
@@ -56,10 +69,7 @@ function normalizeSavedSearchPreviewMatches(value: unknown) {
         city: typeof candidate.city === 'string' ? candidate.city : '',
         suburb: typeof candidate.suburb === 'string' ? candidate.suburb : '',
         image: typeof candidate.image === 'string' ? candidate.image : null,
-        listingType:
-          candidate.listingType === 'rent' || candidate.listingType === 'sale'
-            ? candidate.listingType
-            : 'sale',
+        listingType: normalizeSavedSearchPreviewListingType(candidate.listingType),
         listingSource:
           candidate.listingSource === 'development' || candidate.listingSource === 'manual'
             ? candidate.listingSource

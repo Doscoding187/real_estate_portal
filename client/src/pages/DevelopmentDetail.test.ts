@@ -1,0 +1,227 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  getDevelopmentDetailLeadUnitContext,
+  getDevelopmentDetailMediaBuckets,
+  getDevelopmentDetailPricingContext,
+  getDevelopmentDetailUnitAvailabilityState,
+  getDevelopmentDetailUnitPricingContext,
+  normalizeDevelopmentDetailTransactionType,
+} from './DevelopmentDetail';
+
+describe('DevelopmentDetail pricing context', () => {
+  it('normalizes development detail transaction aliases', () => {
+    expect(normalizeDevelopmentDetailTransactionType('for_rent')).toBe('rent');
+    expect(normalizeDevelopmentDetailTransactionType('to-rent')).toBe('rent');
+    expect(normalizeDevelopmentDetailTransactionType('on auction')).toBe('auction');
+    expect(normalizeDevelopmentDetailTransactionType('for_sale')).toBe('sale');
+  });
+
+  it('uses rental unit monthly rent instead of stale sale prices', () => {
+    const context = getDevelopmentDetailPricingContext(
+      {
+        transactionType: 'for_rent',
+        priceFrom: 1200000,
+        monthlyRentFrom: 14000,
+        monthlyRentTo: 18000,
+      },
+      [
+        { basePriceFrom: 1200000, monthlyRentFrom: 12500, monthlyRentTo: 15500 },
+        { basePriceFrom: 1500000, monthlyRentFrom: 10000 },
+      ],
+    );
+
+    expect(context).toMatchObject({
+      transactionType: 'rent',
+      priceFrom: 10000,
+      priceTo: 15500,
+      priceLabel: 'Rent From',
+      repaymentLabel: 'Monthly Rent',
+      paymentAmount: 10000,
+    });
+  });
+
+  it('uses auction starting bid and reserve price instead of sale prices', () => {
+    const context = getDevelopmentDetailPricingContext(
+      {
+        transactionType: 'auction',
+        priceFrom: 1500000,
+        startingBidFrom: 800000,
+        reservePriceFrom: 950000,
+      },
+      [
+        { basePriceFrom: 1500000, startingBid: 850000, reservePrice: 1000000 },
+        { basePriceFrom: 1600000, startingBid: 750000, reservePrice: 900000 },
+      ],
+    );
+
+    expect(context).toMatchObject({
+      transactionType: 'auction',
+      priceFrom: 750000,
+      priceTo: 1000000,
+      priceLabel: 'Starting Bid',
+      repaymentLabel: 'Est. Bond Repayment',
+    });
+  });
+
+  it('builds rental unit card labels without bond wording', () => {
+    expect(
+      getDevelopmentDetailUnitPricingContext(
+        { basePriceFrom: 1200000, monthlyRentFrom: 9500, monthlyRentTo: 12000 },
+        'for_rent',
+      ),
+    ).toMatchObject({
+      transactionType: 'rent',
+      priceFrom: 9500,
+      priceTo: 12000,
+      snapshotLabel: 'Rental Snapshot',
+      repaymentLabel: 'Monthly rent',
+      usesBondEstimate: false,
+    });
+  });
+
+  it('drops inverted sale and rental unit upper ranges on detail cards', () => {
+    expect(
+      getDevelopmentDetailUnitPricingContext(
+        { basePriceFrom: 1500000, basePriceTo: 1200000 },
+        'for_sale',
+      ),
+    ).toMatchObject({
+      transactionType: 'sale',
+      priceFrom: 1500000,
+      priceTo: undefined,
+    });
+
+    expect(
+      getDevelopmentDetailUnitPricingContext(
+        { monthlyRentFrom: 15000, monthlyRentTo: 12500 },
+        'for_rent',
+      ),
+    ).toMatchObject({
+      transactionType: 'rent',
+      priceFrom: 15000,
+      priceTo: undefined,
+    });
+  });
+
+  it('uses shared clamped inventory for unit availability labels', () => {
+    expect(
+      getDevelopmentDetailUnitAvailabilityState({
+        totalUnits: 5,
+        availableUnits: 9,
+        reservedUnits: 4,
+      }),
+    ).toMatchObject({
+      label: 'Only 1 left',
+      primaryLabel: 'Request Callback',
+    });
+
+    expect(
+      getDevelopmentDetailUnitAvailabilityState({
+        totalUnits: 3,
+        availableUnits: 0,
+      }),
+    ).toMatchObject({
+      label: 'Sold out',
+      primaryLabel: 'Join Waitlist',
+    });
+  });
+
+  it('builds rental lead unit context from monthly rent fields', () => {
+    expect(
+      getDevelopmentDetailLeadUnitContext(
+        {
+          id: 'unit-rent',
+          name: 'Type R',
+          basePriceFrom: 1200000,
+          monthlyRentFrom: 12500,
+          bedrooms: 2,
+          bathrooms: 1,
+        },
+        'for_rent',
+      ),
+    ).toMatchObject({
+      unitId: 'unit-rent',
+      unitName: 'Type R',
+      unitPriceFrom: 12500,
+      unitPriceLabel: 'Rent from',
+      unitBedrooms: 2,
+      unitBathrooms: 1,
+    });
+  });
+
+  it('uses canonical unit route identity when a public unit has no database id', () => {
+    expect(
+      getDevelopmentDetailLeadUnitContext(
+        {
+          unitTypeId: 'unit-type-canonical',
+          name: 'Type C',
+          priceFrom: 1750000,
+        },
+        'sale',
+      ),
+    ).toMatchObject({
+      unitId: 'unit-type-canonical',
+      unitName: 'Type C',
+      unitPriceFrom: 1750000,
+    });
+  });
+
+  it('builds auction lead unit context from starting bid fields', () => {
+    expect(
+      getDevelopmentDetailLeadUnitContext(
+        {
+          id: 'unit-auction',
+          name: 'Type A',
+          basePriceFrom: 1200000,
+          startingBid: 850000,
+          reservePrice: 950000,
+        },
+        'auction',
+      ),
+    ).toMatchObject({
+      unitId: 'unit-auction',
+      unitName: 'Type A',
+      unitPriceFrom: 850000,
+      unitPriceLabel: 'Starting bid',
+    });
+  });
+
+  it('uses canonical media buckets before legacy root media on public detail', () => {
+    const buckets = getDevelopmentDetailMediaBuckets({
+      images: ['https://example.com/legacy-photo.jpg'],
+      videos: ['https://example.com/legacy-video.mp4'],
+      floorPlans: ['https://example.com/legacy-floorplan.pdf'],
+      brochures: ['https://example.com/legacy-brochure.pdf'],
+      media: {
+        photos: [{ url: 'https://example.com/canonical-photo.jpg' }],
+        videos: [{ url: 'https://example.com/canonical-video.mp4' }],
+        floorPlans: [{ url: 'https://example.com/canonical-floorplan.pdf' }],
+        documents: [{ url: 'https://example.com/canonical-brochure.pdf' }],
+      },
+    });
+
+    expect(buckets).toEqual({
+      images: [{ url: 'https://example.com/canonical-photo.jpg' }],
+      videos: [{ url: 'https://example.com/canonical-video.mp4' }],
+      floorPlans: [{ url: 'https://example.com/canonical-floorplan.pdf' }],
+      brochures: [{ url: 'https://example.com/canonical-brochure.pdf' }],
+    });
+  });
+
+  it('falls back to legacy root media while detail callers migrate', () => {
+    expect(
+      getDevelopmentDetailMediaBuckets({
+        images: JSON.stringify(['https://example.com/legacy-photo.jpg']),
+        videos: ['https://example.com/legacy-video.mp4'],
+        floorPlans: ['https://example.com/legacy-floorplan.pdf'],
+        brochures: ['https://example.com/legacy-brochure.pdf'],
+      }),
+    ).toEqual({
+      images: ['https://example.com/legacy-photo.jpg'],
+      videos: ['https://example.com/legacy-video.mp4'],
+      floorPlans: ['https://example.com/legacy-floorplan.pdf'],
+      brochures: ['https://example.com/legacy-brochure.pdf'],
+    });
+  });
+});

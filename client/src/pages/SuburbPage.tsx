@@ -43,10 +43,13 @@ export default function SuburbPage({
 }) {
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, suburb: suburbSlug, action, locationId } = params;
+  const locationPathPrefix = location.startsWith('/property-to-rent')
+    ? '/property-to-rent'
+    : '/property-for-sale';
+  const cityCanonicalPath = `${locationPathPrefix}/${provinceSlug}/${citySlug}`;
+  const suburbCanonicalPath = `${cityCanonicalPath}/${suburbSlug}`;
   const [heroTab, setHeroTab] = useState<string>('buy');
-  const campaignHierarchy = buildCampaignSlugHierarchy(
-    `${provinceSlug}/${citySlug}/${suburbSlug}`,
-  );
+  const campaignHierarchy = buildCampaignSlugHierarchy(`${provinceSlug}/${citySlug}/${suburbSlug}`);
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
     const t = String(tabId || 'buy').toLowerCase();
@@ -136,13 +139,16 @@ export default function SuburbPage({
       <LocationSchema
         type="Suburb"
         name={suburb.name}
-        description={`Real estate in ${suburb.name}, ${suburb.cityName}`}
-        url={`/${provinceSlug}/${citySlug}/${suburbSlug}`}
+        description={`Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${suburb.name}, ${suburb.cityName}`}
+        url={suburbCanonicalPath}
         breadcrumbs={[
           { name: 'Home', url: '/' },
-          { name: suburb.provinceName || provinceSlug, url: `/${provinceSlug}` },
-          { name: suburb.cityName || citySlug, url: `/${provinceSlug}/${citySlug}` },
-          { name: suburb.name, url: `/${provinceSlug}/${citySlug}/${suburbSlug}` },
+          {
+            name: suburb.provinceName || provinceSlug,
+            url: `${locationPathPrefix}/${provinceSlug}`,
+          },
+          { name: suburb.cityName || citySlug, url: cityCanonicalPath },
+          { name: suburb.name, url: suburbCanonicalPath },
         ]}
         geo={{
           latitude: Number(suburb.latitude),

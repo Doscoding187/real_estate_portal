@@ -198,16 +198,15 @@ const DevelopmentsList: React.FC = () => {
                         ? 'rejected'
                         : 'draft',
                 images: parsedImages, // Use safely parsed images
-                priceFrom: dev.priceFrom,
               }}
               readiness={calculateDevelopmentReadiness({
+                ...dev,
                 name: dev.name,
                 description: dev.description, // Ensure description is fetched
                 address: dev.address || dev.city,
                 latitude: dev.latitude,
                 longitude: dev.longitude,
                 images: parsedImages,
-                priceFrom: dev.priceFrom, // Ensure priceFrom is fetched
               })}
               onEdit={id => setLocation(`/developer/create-development?id=${id}`)}
               onDelete={id => handleDelete(id, dev.name)}

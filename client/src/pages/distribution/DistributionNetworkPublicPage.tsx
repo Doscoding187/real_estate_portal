@@ -62,6 +62,106 @@ const BADGE_LABELS = [
   { text: 'Selling Fast', color: 'bg-emerald-500' },
 ];
 
+type PublicDistributionTransactionType = 'sale' | 'rent' | 'auction';
+
+type PublicDistributionDevelopmentPricingInput = {
+  transactionType?: string | null;
+  priceFrom?: number | string | null;
+  priceTo?: number | string | null;
+  monthlyRentFrom?: number | string | null;
+  monthlyRentTo?: number | string | null;
+  startingBidFrom?: number | string | null;
+  reservePriceFrom?: number | string | null;
+};
+
+function normalizePublicDistributionTransactionType(
+  value: unknown,
+): PublicDistributionTransactionType {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) return 'rent';
+  if (['auction', 'auctions', 'on_auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+function toPositiveNumber(value: unknown): number | null {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function formatShortRand(value: number | null) {
+  if (!value) return 'TBD';
+  if (value >= 1_000_000) return `R${(value / 1_000_000).toFixed(1)}m`;
+  return `R${Math.round(value / 1000)}k`;
+}
+
+export function getPublicDistributionDevelopmentPricing(
+  dev: PublicDistributionDevelopmentPricingInput,
+) {
+  const transactionType = normalizePublicDistributionTransactionType(dev.transactionType);
+
+  if (transactionType === 'rent') {
+    const priceFrom = toPositiveNumber(dev.monthlyRentFrom ?? dev.priceFrom);
+    const priceTo = toPositiveNumber(dev.monthlyRentTo ?? dev.priceTo) ?? priceFrom;
+
+    return {
+      transactionType,
+      priceFrom,
+      priceTo,
+      headline: `Rent from ${formatShortRand(priceFrom)}`,
+      subline: priceFrom ? 'Monthly rent' : 'Rent on request',
+      qualifyingText: priceFrom
+        ? `Renters around ${formatShortRand(priceFrom)}/month may qualify`
+        : 'Rental affordability depends on unit type',
+      incomeFilterPrice: null,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const priceFrom = toPositiveNumber(dev.startingBidFrom ?? dev.priceFrom);
+    const priceTo = toPositiveNumber(dev.reservePriceFrom ?? dev.priceTo) ?? priceFrom;
+    const bondEstimate = priceFrom ? formatShortRand(priceFrom * 0.0105) : null;
+
+    return {
+      transactionType,
+      priceFrom,
+      priceTo,
+      headline: `Bid from ${formatShortRand(priceFrom)}`,
+      subline: bondEstimate ? `Est. bond from ${bondEstimate}/month` : 'Bid on request',
+      qualifyingText: calculateQualifyingIncome(priceFrom),
+      incomeFilterPrice: priceFrom,
+    };
+  }
+
+  const priceFrom = toPositiveNumber(dev.priceFrom);
+  const priceTo = toPositiveNumber(dev.priceTo) ?? priceFrom;
+  const bondEstimate = priceFrom ? formatShortRand(priceFrom * 0.0105) : null;
+
+  return {
+    transactionType,
+    priceFrom,
+    priceTo,
+    headline: `From ${formatShortRand(priceFrom)}`,
+    subline: bondEstimate ? `Est. bond from ${bondEstimate}/month` : 'Price on request',
+    qualifyingText: calculateQualifyingIncome(priceFrom),
+    incomeFilterPrice: priceFrom,
+  };
+}
+
+export function calculateQualifyingIncome(priceFrom: number | null | undefined) {
+  if (!priceFrom) return 'Income dependent on unit type';
+  const estRepayment = priceFrom * 0.0105;
+  const estGross = estRepayment * 3.3;
+
+  if (estGross >= 1000000) {
+    return `Min R${(estGross / 1000000).toFixed(1)}m / month`;
+  }
+  return `Min R${(estGross / 1000).toFixed(0)}k / month`;
+}
+
 export default function DistributionNetworkPublicPage() {
   const [, setLocation] = useLocation();
   const stickyVisible = useMobileStickyCTA('distribution-network-hero');
@@ -79,17 +179,6 @@ export default function DistributionNetworkPublicPage() {
 
   const { data: developments, isLoading: isLoadingDevs } =
     trpc.developer.listPublicDevelopments.useQuery({ limit: 5 }, { staleTime: 1000 * 60 * 5 });
-
-  const calculateQualifyingIncome = (priceFrom: number | null | undefined) => {
-    if (!priceFrom) return 'Income dependent on unit type';
-    const estRepayment = priceFrom * 0.0105;
-    const estGross = estRepayment * 3.3;
-
-    if (estGross >= 1000000) {
-      return `Min R${(estGross / 1000000).toFixed(1)}m / month`;
-    }
-    return `Min R${(estGross / 1000).toFixed(0)}k / month`;
-  };
 
   const revealAndScrollToForm = (devId?: number) => {
     setInterestedDevId(devId ?? null);
@@ -127,7 +216,7 @@ export default function DistributionNetworkPublicPage() {
     const matched = developments.filter(dev => {
       // Income / price filter
       if (incomeOption && incomeOption.minPrice !== undefined) {
-        const price = dev.priceFrom ? Number(dev.priceFrom) : null;
+        const price = getPublicDistributionDevelopmentPricing(dev).incomeFilterPrice;
         if (price !== null) {
           if (price < incomeOption.minPrice || price > incomeOption.maxPrice) return false;
         }
@@ -632,8 +721,7 @@ export default function DistributionNetworkPublicPage() {
               ) : (
                 <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {(developments ?? []).map((dev, i) => {
-                    const priceFrom = dev.priceFrom ? Number(dev.priceFrom) : null;
-                    const qualifyingThreshold = calculateQualifyingIncome(priceFrom);
+                    const pricing = getPublicDistributionDevelopmentPricing(dev);
 
                     const bgGradients = [
                       'linear-gradient(140deg, #0f172a 0%, var(--brand-blue) 100%)',
@@ -675,18 +763,12 @@ export default function DistributionNetworkPublicPage() {
                         <div className="opp-body">
                           <div className="opp-qualify">
                             <div className="opp-qualify-dot"></div>
-                            <p>Buyers earning {qualifyingThreshold} qualify</p>
+                            <p>{pricing.qualifyingText}</p>
                           </div>
                           <div className="opp-price-row">
                             <div className="opp-price">
-                              From R
-                              {(priceFrom || 0) >= 1000000
-                                ? ((priceFrom || 0) / 1000000).toFixed(1) + 'm'
-                                : ((priceFrom || 0) / 1000).toFixed(0) + 'k'}
-                              <span>
-                                From R{priceFrom ? ((priceFrom * 0.0105) / 1000).toFixed(0) : '0'}
-                                k/month bond
-                              </span>
+                              {pricing.headline}
+                              <span>{pricing.subline}</span>
                             </div>
                             <div className="opp-payout">
                               {dev.referrerCommissionType === 'flat' && dev.referrerCommissionAmount

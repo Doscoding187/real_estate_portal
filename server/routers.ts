@@ -245,11 +245,14 @@ import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
+import { leadRoutingRouter } from './leadRoutingRouter';
 import { distributionRouter } from './distributionRouter';
 import { demandRouter } from './demandRouter';
 import { servicesEngineRouter } from './servicesEngineRouter';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { discoveryRouter } from './domains/discovery/router';
+import { mapPropertyListingTypeToTransactionType } from './services/listingTypeMapping';
+import { mapListingTypeToDevelopmentTransactionType } from '../shared/developmentDerived';
 
 export const appRouter = router({
   system: systemRouter,
@@ -293,6 +296,7 @@ export const appRouter = router({
   favorites: favoritesRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,
+  leadRouting: leadRoutingRouter,
   distribution: distributionRouter,
   demand: demandRouter,
   servicesEngine: servicesEngineRouter,
@@ -441,6 +445,7 @@ export const appRouter = router({
         const nearbyDevelopments = await developmentService.listPublicDevelopments({
           province: input.province,
           city: input.city,
+          transactionType: mapListingTypeToDevelopmentTransactionType(input.listingType),
           limit: Math.min(input.limit, 6),
         });
 
@@ -466,6 +471,11 @@ export const appRouter = router({
               province: dev.province,
               priceFrom: dev.priceFrom ?? null,
               priceTo: dev.priceTo ?? null,
+              monthlyRentFrom: dev.monthlyRentFrom ?? null,
+              monthlyRentTo: dev.monthlyRentTo ?? null,
+              startingBidFrom: dev.startingBidFrom ?? null,
+              reservePriceFrom: dev.reservePriceFrom ?? null,
+              transactionType: dev.transactionType ?? 'for_sale',
               status: dev.status ?? null,
               isFeatured: dev.isFeatured ?? false,
               rating: dev.rating ?? null,
@@ -474,6 +484,19 @@ export const appRouter = router({
               builderLogoUrl: dev.builderLogoUrl ?? null,
               configurations: Array.isArray(dev.configurations) ? dev.configurations : [],
               images: Array.isArray(dev.images) ? dev.images : [],
+              videos: Array.isArray(dev.videos) ? dev.videos : [],
+              floorPlans: Array.isArray(dev.floorPlans) ? dev.floorPlans : [],
+              brochures: Array.isArray(dev.brochures) ? dev.brochures : [],
+              media:
+                dev.media && typeof dev.media === 'object'
+                  ? dev.media
+                  : {
+                      photos: Array.isArray(dev.images) ? dev.images : [],
+                      videos: Array.isArray(dev.videos) ? dev.videos : [],
+                      floorPlans: Array.isArray(dev.floorPlans) ? dev.floorPlans : [],
+                      brochures: Array.isArray(dev.brochures) ? dev.brochures : [],
+                      documents: Array.isArray(dev.brochures) ? dev.brochures : [],
+                    },
               developerBrandProfileId: dev.developerBrandProfileId ?? null,
             })),
             total: filteredDevelopments.length,
@@ -487,6 +510,9 @@ export const appRouter = router({
           province: z.string().optional(),
           city: z.string().optional(),
           suburb: z.array(z.string()).optional(),
+          listingType: z
+            .enum(['sale', 'rent', 'rent_to_buy', 'auction', 'shared_living'])
+            .optional(),
           limit: z.number().default(20),
           offset: z.number().default(0),
         }),
@@ -500,6 +526,7 @@ export const appRouter = router({
         const allResults = await developmentService.listPublicDevelopments({
           province: input.province,
           city: input.city,
+          transactionType: mapListingTypeToDevelopmentTransactionType(input.listingType),
           limit: poolLimit,
         });
 
@@ -524,7 +551,26 @@ export const appRouter = router({
             province: dev.province,
             priceFrom: dev.priceFrom ?? null,
             priceTo: dev.priceTo ?? null,
+            monthlyRentFrom: dev.monthlyRentFrom ?? null,
+            monthlyRentTo: dev.monthlyRentTo ?? null,
+            startingBidFrom: dev.startingBidFrom ?? null,
+            reservePriceFrom: dev.reservePriceFrom ?? null,
+            transactionType: dev.transactionType ?? 'for_sale',
+            configurations: Array.isArray(dev.configurations) ? dev.configurations : [],
             images: Array.isArray(dev.images) ? dev.images : [],
+            videos: Array.isArray(dev.videos) ? dev.videos : [],
+            floorPlans: Array.isArray(dev.floorPlans) ? dev.floorPlans : [],
+            brochures: Array.isArray(dev.brochures) ? dev.brochures : [],
+            media:
+              dev.media && typeof dev.media === 'object'
+                ? dev.media
+                : {
+                    photos: Array.isArray(dev.images) ? dev.images : [],
+                    videos: Array.isArray(dev.videos) ? dev.videos : [],
+                    floorPlans: Array.isArray(dev.floorPlans) ? dev.floorPlans : [],
+                    brochures: Array.isArray(dev.brochures) ? dev.brochures : [],
+                    documents: Array.isArray(dev.brochures) ? dev.brochures : [],
+                  },
             developerBrandProfileId: dev.developerBrandProfileId ?? null,
           })),
           total: filteredResults.length,
@@ -543,7 +589,7 @@ export const appRouter = router({
           propertyType: z
             .enum(['house', 'apartment', 'townhouse', 'plot', 'commercial'])
             .optional(),
-          listingType: z.enum(['sale', 'rent']).optional(),
+          listingType: z.enum(['sale', 'rent', 'auction']).optional(),
           minPrice: z.number().optional(),
           maxPrice: z.number().optional(),
           minBedrooms: z.number().optional(),
@@ -1105,7 +1151,7 @@ export const appRouter = router({
           featured: 0,
           views: 0,
           enquiries: 0,
-          transactionType: input.listingType === 'rent' ? 'rent' : 'sale',
+          transactionType: mapPropertyListingTypeToTransactionType(input.listingType),
         });
 
         // Create property images
@@ -1179,6 +1225,9 @@ export const appRouter = router({
           {
             ...input,
             amenities: input.amenities ? JSON.stringify(input.amenities) : undefined,
+            transactionType: input.listingType
+              ? mapPropertyListingTypeToTransactionType(input.listingType)
+              : undefined,
             updatedAt: new Date().toISOString(),
           },
           user.role ?? undefined,

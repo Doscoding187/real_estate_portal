@@ -5,6 +5,12 @@ export type ReadinessResult = {
   };
 };
 
+export {
+  calculateDevelopmentReadiness,
+  getDevelopmentReadinessPricing,
+  normalizeDevelopmentReadinessTransactionType,
+} from '../../shared/developmentReadiness';
+
 export const calculateListingReadiness = (listing: any): ReadinessResult => {
   const missing: { [key: string]: string[] } = {
     location: [],
@@ -89,81 +95,6 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
     }
   } else {
     missing.specs.push('Property Type');
-  }
-
-  return { score, missing };
-};
-
-export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
-  const missing: { [key: string]: string[] } = {
-    basic: [],
-    location: [],
-    media: [],
-    amenities: [],
-    specs: [],
-  };
-  let score = 0;
-
-  // 1. Basic Info (20%)
-  if (dev.name && dev.description && dev.description.length > 50) {
-    score += 20;
-  } else {
-    if (!dev.name) missing.basic.push('Name');
-    if (!dev.description || dev.description.length <= 50)
-      missing.basic.push('Description (min 50 chars)');
-  }
-
-  // 2. Location (20%)
-  if (dev.address && dev.latitude && dev.longitude) {
-    score += 20;
-  } else {
-    if (!dev.address) missing.location.push('Address');
-    if (!dev.latitude || !dev.longitude) missing.location.push('Map Location');
-  }
-
-  // 3. Media (20%)
-  let imageCount = 0;
-  if (Array.isArray(dev.images)) {
-    imageCount = dev.images.length;
-  } else if (typeof dev.images === 'string') {
-    try {
-      const parsed = JSON.parse(dev.images);
-      if (Array.isArray(parsed)) imageCount = parsed.length;
-    } catch (_error) {
-      // Ignore malformed image payloads and keep count at zero.
-    }
-  }
-
-  if (imageCount >= 1) {
-    score += 20;
-  } else {
-    missing.media.push('Main Image');
-  }
-
-  // 4. Amenities (20%) - Require at least 3 amenities
-  let amenityCount = 0;
-  if (Array.isArray(dev.amenities)) {
-    amenityCount = dev.amenities.length;
-  } else if (typeof dev.amenities === 'string') {
-    try {
-      const parsed = JSON.parse(dev.amenities);
-      if (Array.isArray(parsed)) amenityCount = parsed.length;
-    } catch (_error) {
-      // Ignore malformed amenities payloads and keep count at zero.
-    }
-  }
-
-  if (amenityCount >= 3) {
-    score += 20;
-  } else {
-    missing.amenities.push(`Select at least 3 amenities (Current: ${amenityCount})`);
-  }
-
-  // 5. Units/Specs (20%)
-  if (dev.priceFrom && Number(dev.priceFrom) > 0) {
-    score += 20;
-  } else {
-    missing.specs.push('Price From (Units)');
   }
 
   return { score, missing };

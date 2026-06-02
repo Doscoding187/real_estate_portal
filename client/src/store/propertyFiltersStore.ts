@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { PropertyFilters, SortOption, ViewMode } from '../../../shared/types';
+import { normalizeSearchListingType } from '../lib/searchIntent';
 
 /**
  * Property filters store state interface
@@ -44,6 +45,16 @@ const defaultSortOption: SortOption = 'date_desc';
  */
 const defaultViewMode: ViewMode = 'list';
 
+const normalizePropertyFilters = (filters: Partial<PropertyFilters>): Partial<PropertyFilters> => {
+  if (!('listingType' in filters)) return filters;
+
+  const listingType = normalizeSearchListingType(filters.listingType);
+  return {
+    ...filters,
+    listingType: listingType ?? undefined,
+  };
+};
+
 /**
  * Parse URL search params into PropertyFilters
  */
@@ -64,7 +75,8 @@ const parseFiltersFromUrl = (searchParams: URLSearchParams): PropertyFilters => 
     filters.propertyType = types.split(',') as any[];
   }
   if (searchParams.has('listingType')) {
-    filters.listingType = searchParams.get('listingType') as any;
+    const listingType = normalizeSearchListingType(searchParams.get('listingType'));
+    if (listingType) filters.listingType = listingType;
   }
   if (searchParams.has('minPrice')) {
     filters.minPrice = Number(searchParams.get('minPrice'));
@@ -151,7 +163,10 @@ const serializeFiltersToUrl = (filters: PropertyFilters): URLSearchParams => {
   if (filters.propertyType && filters.propertyType.length > 0) {
     params.set('propertyType', filters.propertyType.join(','));
   }
-  if (filters.listingType) params.set('listingType', filters.listingType);
+  if (filters.listingType) {
+    const listingType = normalizeSearchListingType(filters.listingType);
+    if (listingType) params.set('listingType', listingType);
+  }
   if (filters.minPrice !== undefined) params.set('minPrice', String(filters.minPrice));
   if (filters.maxPrice !== undefined) params.set('maxPrice', String(filters.maxPrice));
   if (filters.minBedrooms !== undefined) params.set('minBedrooms', String(filters.minBedrooms));
@@ -220,14 +235,20 @@ export const usePropertyFiltersStore = create<PropertyFiltersState>()(
       // Set multiple filters at once
       setFilters: newFilters =>
         set(state => ({
-          filters: { ...state.filters, ...newFilters },
+          filters: { ...state.filters, ...normalizePropertyFilters(newFilters) },
           page: 1, // Reset to first page when filters change
         })),
 
       // Update a single filter
       updateFilter: (key, value) =>
         set(state => ({
-          filters: { ...state.filters, [key]: value },
+          filters: {
+            ...state.filters,
+            [key]:
+              key === 'listingType'
+                ? normalizeSearchListingType(value) ?? undefined
+                : value,
+          },
           page: 1, // Reset to first page when filters change
         })),
 

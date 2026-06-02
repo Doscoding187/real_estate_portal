@@ -27,8 +27,13 @@ interface EnhancedDevelopmentCardProps {
     description?: string;
     city?: string;
     address?: string;
+    transactionType?: string | null;
     priceFrom?: number;
     priceTo?: number;
+    monthlyRentFrom?: number | null;
+    monthlyRentTo?: number | null;
+    startingBidFrom?: number | null;
+    reservePriceFrom?: number | null;
     images?: string[];
     status: string;
     approvalStatus?: string;
@@ -40,6 +45,56 @@ interface EnhancedDevelopmentCardProps {
   onDelete: (id: number) => void;
   onView?: (id: number) => void;
   className?: string;
+}
+
+type PublisherCardTransactionType = 'sale' | 'rent' | 'auction';
+
+function normalizePublisherCardTransactionType(value: unknown): PublisherCardTransactionType {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['rent', 'rental', 'to_rent', 'for_rent', 'rent_to_buy'].includes(normalized)) return 'rent';
+  if (['auction', 'auctions', 'on_auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+function toPositiveNumber(value: unknown): number | null {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function getPublisherDevelopmentPriceBadge(development: {
+  transactionType?: string | null;
+  priceFrom?: number | null;
+  priceTo?: number | null;
+  monthlyRentFrom?: number | null;
+  monthlyRentTo?: number | null;
+  startingBidFrom?: number | null;
+  reservePriceFrom?: number | null;
+}): string | null {
+  const transactionType = normalizePublisherCardTransactionType(development.transactionType);
+  const from =
+    transactionType === 'rent'
+      ? toPositiveNumber(development.monthlyRentFrom ?? development.priceFrom)
+      : transactionType === 'auction'
+        ? toPositiveNumber(development.startingBidFrom ?? development.priceFrom)
+        : toPositiveNumber(development.priceFrom);
+  const to =
+    transactionType === 'rent'
+      ? toPositiveNumber(development.monthlyRentTo ?? development.priceTo)
+      : transactionType === 'auction'
+        ? toPositiveNumber(development.reservePriceFrom ?? development.priceTo)
+        : toPositiveNumber(development.priceTo);
+
+  if (!from) return null;
+
+  const range = to && to > from ? `${formatCurrency(from)} - ${formatCurrency(to)}` : formatCurrency(from);
+
+  if (transactionType === 'rent') return `${range}/mo`;
+  if (transactionType === 'auction') return `Bid from ${range}`;
+  return range;
 }
 
 export const EnhancedDevelopmentCard: React.FC<EnhancedDevelopmentCardProps> = ({
@@ -88,6 +143,7 @@ export const EnhancedDevelopmentCard: React.FC<EnhancedDevelopmentCardProps> = (
   };
 
   const statusInfo = getStatusColor(development.status);
+  const priceBadge = getPublisherDevelopmentPriceBadge(development);
 
   return (
     <Card
@@ -162,14 +218,10 @@ export const EnhancedDevelopmentCard: React.FC<EnhancedDevelopmentCardProps> = (
         </div>
 
         {/* Price Badge (if available) */}
-        {development.priceFrom && (
+        {priceBadge && (
           <div className="absolute bottom-3 left-3">
             <div className="glass-effect-light px-3 py-1.5 rounded-xl border border-white/30">
-              <div className="text-white font-bold text-sm">
-                {development.priceTo
-                  ? `${formatCurrency(development.priceFrom)} - ${formatCurrency(development.priceTo)}`
-                  : formatCurrency(development.priceFrom)}
-              </div>
+              <div className="text-white font-bold text-sm">{priceBadge}</div>
             </div>
           </div>
         )}

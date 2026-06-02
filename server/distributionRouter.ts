@@ -18,6 +18,7 @@ import {
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
+  distributionDevelopmentAccess,
   distributionIdentities,
   distributionManagerAssignments,
   distributionPrograms,
@@ -454,6 +455,86 @@ function toNumberOrNull(value: unknown) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return null;
   return numeric;
+}
+
+type DistributionCatalogTransactionType = 'sale' | 'rent' | 'auction';
+
+export function normalizeDistributionCatalogTransactionType(
+  value: unknown,
+): DistributionCatalogTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function resolveDistributionCatalogDevelopmentPricing(row: Record<string, unknown>) {
+  const transactionType = normalizeDistributionCatalogTransactionType(row.transactionType);
+
+  if (transactionType === 'rent') {
+    const priceFrom = toNumberOrNull(row.monthlyRentFrom ?? row.priceFrom);
+    return {
+      transactionType,
+      priceFrom,
+      priceTo: toNumberOrNull(row.monthlyRentTo ?? row.priceTo) ?? priceFrom,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const priceFrom = toNumberOrNull(row.startingBidFrom ?? row.priceFrom);
+    return {
+      transactionType,
+      priceFrom,
+      priceTo: toNumberOrNull(row.reservePriceFrom ?? row.priceTo) ?? priceFrom,
+    };
+  }
+
+  const priceFrom = toNumberOrNull(row.priceFrom);
+  return {
+    transactionType,
+    priceFrom,
+    priceTo: toNumberOrNull(row.priceTo) ?? priceFrom,
+  };
+}
+
+export function resolveDistributionCatalogUnitPricing(
+  row: Record<string, unknown>,
+  fallbackTransactionType: unknown,
+) {
+  const transactionType = normalizeDistributionCatalogTransactionType(
+    row.transactionType ?? fallbackTransactionType,
+  );
+
+  if (transactionType === 'rent') {
+    const priceFrom = toNumberOrNull(row.monthlyRentFrom ?? row.monthlyRent);
+    return {
+      transactionType,
+      priceFrom,
+      priceTo: toNumberOrNull(row.monthlyRentTo) ?? priceFrom,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const priceFrom = toNumberOrNull(row.startingBid);
+    return {
+      transactionType,
+      priceFrom,
+      priceTo: toNumberOrNull(row.reservePrice) ?? priceFrom,
+    };
+  }
+
+  const priceFrom = toNumberOrNull(row.priceFrom ?? row.basePriceFrom);
+  return {
+    transactionType,
+    priceFrom,
+    priceTo: toNumberOrNull(row.priceTo ?? row.basePriceTo) ?? priceFrom,
+  };
 }
 
 function extractFirstImageUrl(rawImages: unknown) {
@@ -1364,6 +1445,17 @@ const upsertDevelopmentAccessInput = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
 });
 
+const developmentBrochureConfigSchema = z.object({
+  headline: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(900).nullable().optional(),
+  highlightBullets: z.array(z.string().trim().min(1).max(140)).max(8).default([]),
+  amenityLabels: z.array(z.string().trim().min(1).max(80)).max(8).default([]),
+  heroImageUrl: z.string().trim().url().max(2048).nullable().optional(),
+  contactName: z.string().trim().max(120).nullable().optional(),
+  contactPhone: z.string().trim().max(50).nullable().optional(),
+  contactEmail: z.string().trim().email().max(320).nullable().optional(),
+});
+
 const getBrandPartnershipInput = z.object({
   brandProfileId: z.number().int().positive(),
 });
@@ -1701,11 +1793,16 @@ const adminDistributionRouter = router({
           city: developments.city,
           province: developments.province,
           developmentStatus: developments.status,
+          transactionType: developments.transactionType,
           approvalStatus: developments.approvalStatus,
           isPublished: developments.isPublished,
           developmentImages: developments.images,
           developmentPriceFrom: developments.priceFrom,
           developmentPriceTo: developments.priceTo,
+          developmentMonthlyRentFrom: developments.monthlyRentFrom,
+          developmentMonthlyRentTo: developments.monthlyRentTo,
+          developmentStartingBidFrom: developments.startingBidFrom,
+          developmentReservePriceFrom: developments.reservePriceFrom,
           developmentUpdatedAt: developments.updatedAt,
           programId: distributionPrograms.id,
           programIsActive: distributionPrograms.isActive,
@@ -1761,11 +1858,16 @@ const adminDistributionRouter = router({
             city: developments.city,
             province: developments.province,
             developmentStatus: developments.status,
+            transactionType: developments.transactionType,
             approvalStatus: developments.approvalStatus,
             isPublished: developments.isPublished,
             developmentImages: developments.images,
             developmentPriceFrom: developments.priceFrom,
             developmentPriceTo: developments.priceTo,
+            developmentMonthlyRentFrom: developments.monthlyRentFrom,
+            developmentMonthlyRentTo: developments.monthlyRentTo,
+            developmentStartingBidFrom: developments.startingBidFrom,
+            developmentReservePriceFrom: developments.reservePriceFrom,
             developmentUpdatedAt: developments.updatedAt,
             programId: distributionPrograms.id,
             programIsActive: distributionPrograms.isActive,
@@ -1826,14 +1928,20 @@ const adminDistributionRouter = router({
         ? await db
             .select({
               developmentId: unitTypes.developmentId,
+              developmentTransactionType: developments.transactionType,
               unitTypeName: unitTypes.name,
               unitPriceFrom: unitTypes.priceFrom,
               unitPriceTo: unitTypes.priceTo,
               unitBasePriceFrom: unitTypes.basePriceFrom,
               unitBasePriceTo: unitTypes.basePriceTo,
+              unitMonthlyRentFrom: unitTypes.monthlyRentFrom,
+              unitMonthlyRentTo: unitTypes.monthlyRentTo,
+              unitStartingBid: unitTypes.startingBid,
+              unitReservePrice: unitTypes.reservePrice,
               unitIsActive: unitTypes.isActive,
             })
             .from(unitTypes)
+            .innerJoin(developments, eq(unitTypes.developmentId, developments.id))
             .where(inArray(unitTypes.developmentId, developmentIds))
             .orderBy(unitTypes.displayOrder, unitTypes.name)
         : [];
@@ -1884,10 +1992,22 @@ const adminDistributionRouter = router({
             unitTypes: [],
           } as const);
 
-        const unitPriceFrom =
-          toNumberOrNull(row.unitPriceFrom) ?? toNumberOrNull(row.unitBasePriceFrom);
-        const unitPriceTo =
-          toNumberOrNull(row.unitPriceTo) ?? toNumberOrNull(row.unitBasePriceTo) ?? unitPriceFrom;
+        const unitPricing = resolveDistributionCatalogUnitPricing(
+          {
+            transactionType: row.developmentTransactionType,
+            priceFrom: row.unitPriceFrom,
+            priceTo: row.unitPriceTo,
+            basePriceFrom: row.unitBasePriceFrom,
+            basePriceTo: row.unitBasePriceTo,
+            monthlyRentFrom: row.unitMonthlyRentFrom,
+            monthlyRentTo: row.unitMonthlyRentTo,
+            startingBid: row.unitStartingBid,
+            reservePrice: row.unitReservePrice,
+          },
+          row.developmentTransactionType,
+        );
+        const unitPriceFrom = unitPricing.priceFrom;
+        const unitPriceTo = unitPricing.priceTo;
 
         const nextMin =
           current.priceFrom === null
@@ -1974,10 +2094,17 @@ const adminDistributionRouter = router({
         const developmentId = Number(row.developmentId);
         const published = boolFromTinyInt(row.isPublished);
         const unitSummary = unitSummaryByDevelopment.get(developmentId);
-        const fallbackPriceFrom = toNumberOrNull(row.developmentPriceFrom);
-        const fallbackPriceTo = toNumberOrNull(row.developmentPriceTo);
-        const priceFrom = unitSummary?.priceFrom ?? fallbackPriceFrom;
-        const priceTo = unitSummary?.priceTo ?? fallbackPriceTo;
+        const fallbackPricing = resolveDistributionCatalogDevelopmentPricing({
+          transactionType: row.transactionType,
+          priceFrom: row.developmentPriceFrom,
+          priceTo: row.developmentPriceTo,
+          monthlyRentFrom: row.developmentMonthlyRentFrom,
+          monthlyRentTo: row.developmentMonthlyRentTo,
+          startingBidFrom: row.developmentStartingBidFrom,
+          reservePriceFrom: row.developmentReservePriceFrom,
+        });
+        const priceFrom = unitSummary?.priceFrom ?? fallbackPricing.priceFrom;
+        const priceTo = unitSummary?.priceTo ?? fallbackPricing.priceTo;
         const hasProgram = Boolean(row.programId);
         const programId = Number(row.programId || 0);
         const managerInfo = managerByDevelopment.get(developmentId);
@@ -2036,6 +2163,7 @@ const adminDistributionRouter = router({
           isPublished: published,
           approvalStatus: row.approvalStatus,
           developmentStatus: row.developmentStatus,
+          transactionType: fallbackPricing.transactionType,
           publishedEligible: published && row.approvalStatus === 'approved',
           priceFrom,
           priceTo,
@@ -2332,6 +2460,58 @@ const adminDistributionRouter = router({
             entity: result.entity,
             development: result.development,
             derivedState: result.evaluation,
+          };
+        },
+      );
+    }),
+
+  setDevelopmentBrochureConfig: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        brochureConfig: developmentBrochureConfigSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await runDistributionDbOperation(
+        'distribution.admin.setDevelopmentBrochureConfig',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.setDevelopmentBrochureConfig');
+          assertDistributionEnabled();
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
+
+          const normalizedConfig = {
+            headline: input.brochureConfig.headline?.trim() || null,
+            description: input.brochureConfig.description?.trim() || null,
+            highlightBullets: input.brochureConfig.highlightBullets
+              .map(value => value.trim())
+              .filter(Boolean)
+              .slice(0, 8),
+            amenityLabels: input.brochureConfig.amenityLabels
+              .map(value => value.trim())
+              .filter(Boolean)
+              .slice(0, 8),
+            heroImageUrl: input.brochureConfig.heroImageUrl?.trim() || null,
+            contactName: input.brochureConfig.contactName?.trim() || null,
+            contactPhone: input.brochureConfig.contactPhone?.trim() || null,
+            contactEmail: input.brochureConfig.contactEmail?.trim() || null,
+          };
+
+          await db
+            .update(distributionDevelopmentAccess)
+            .set({
+              brochureConfigJson: normalizedConfig,
+              updatedBy: ctx.user.id,
+            } as any)
+            .where(eq(distributionDevelopmentAccess.developmentId, input.developmentId));
+
+          const result = await getDevelopmentAccessDetails(db, input.developmentId);
+          return {
+            success: true as const,
+            developmentId: input.developmentId,
+            brochureConfig: normalizedConfig,
+            entity: result.entity,
           };
         },
       );
@@ -5933,6 +6113,9 @@ const managerDistributionRouter = router({
           attributionLockedAt: distributionDeals.attributionLockedAt,
           commissionTriggerStage: distributionDeals.commissionTriggerStage,
           commissionStatus: distributionDeals.commissionStatus,
+          dealAmount: distributionDeals.dealAmount,
+          commissionBaseAmount: distributionDeals.commissionBaseAmount,
+          affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
           managerUserId: distributionDeals.managerUserId,
           submittedAt: distributionDeals.submittedAt,
         })
@@ -6557,8 +6740,13 @@ const referrerDistributionRouter = router({
           features: developments.features,
           developmentImages: developments.images,
           developmentStatus: developments.status,
+          transactionType: developments.transactionType,
           priceFrom: developments.priceFrom,
           priceTo: developments.priceTo,
+          monthlyRentFrom: developments.monthlyRentFrom,
+          monthlyRentTo: developments.monthlyRentTo,
+          startingBidFrom: developments.startingBidFrom,
+          reservePriceFrom: developments.reservePriceFrom,
           minTierRequired: distributionAgentAccess.minTierRequired,
           accessStatus: distributionAgentAccess.accessStatus,
           notes: distributionAgentAccess.notes,
@@ -6603,6 +6791,10 @@ const referrerDistributionRouter = router({
               priceTo: unitTypes.priceTo,
               basePriceFrom: unitTypes.basePriceFrom,
               basePriceTo: unitTypes.basePriceTo,
+              monthlyRentFrom: unitTypes.monthlyRentFrom,
+              monthlyRentTo: unitTypes.monthlyRentTo,
+              startingBid: unitTypes.startingBid,
+              reservePrice: unitTypes.reservePrice,
               isActive: unitTypes.isActive,
             })
             .from(unitTypes)
@@ -6619,8 +6811,13 @@ const referrerDistributionRouter = router({
           bathrooms: number | null;
           unitSize: number | null;
           yardSize: number | null;
+          transactionType: string | null;
           priceFrom: number | null;
           priceTo: number | null;
+          monthlyRentFrom: number | null;
+          monthlyRentTo: number | null;
+          startingBid: number | null;
+          reservePrice: number | null;
         }>
       >();
       for (const row of unitTypeRows) {
@@ -6628,13 +6825,30 @@ const referrerDistributionRouter = router({
         const current = unitTypesByDevelopment.get(developmentId) || [];
         const name = String(row.name || '').trim();
         if (!name) continue;
+        const parentTransactionType = rows.find(
+          development => Number(development.developmentId) === developmentId,
+        )?.transactionType;
+        const normalizedTransactionType =
+          parentTransactionType === 'for_rent'
+            ? 'rent'
+            : parentTransactionType === 'auction'
+              ? 'auction'
+              : 'sale';
         const resolvedPriceFrom =
-          toNumberOrNull(row.priceFrom) ?? toNumberOrNull(row.basePriceFrom) ?? null;
+          normalizedTransactionType === 'rent'
+            ? toNumberOrNull(row.monthlyRentFrom)
+            : normalizedTransactionType === 'auction'
+              ? toNumberOrNull(row.startingBid)
+              : toNumberOrNull(row.priceFrom) ?? toNumberOrNull(row.basePriceFrom) ?? null;
         const resolvedPriceTo =
-          toNumberOrNull(row.priceTo) ??
-          toNumberOrNull(row.basePriceTo) ??
-          resolvedPriceFrom ??
-          null;
+          normalizedTransactionType === 'rent'
+            ? (toNumberOrNull(row.monthlyRentTo) ?? resolvedPriceFrom ?? null)
+            : normalizedTransactionType === 'auction'
+              ? (toNumberOrNull(row.reservePrice) ?? resolvedPriceFrom ?? null)
+              : toNumberOrNull(row.priceTo) ??
+                toNumberOrNull(row.basePriceTo) ??
+                resolvedPriceFrom ??
+                null;
         current.push({
           name,
           isActive: boolFromTinyInt(row.isActive),
@@ -6642,8 +6856,13 @@ const referrerDistributionRouter = router({
           bathrooms: toNumberOrNull(row.bathrooms),
           unitSize: toNumberOrNull(row.unitSize),
           yardSize: toNumberOrNull(row.yardSize),
+          transactionType: normalizedTransactionType,
           priceFrom: resolvedPriceFrom,
           priceTo: resolvedPriceTo,
+          monthlyRentFrom: toNumberOrNull(row.monthlyRentFrom),
+          monthlyRentTo: toNumberOrNull(row.monthlyRentTo),
+          startingBid: toNumberOrNull(row.startingBid),
+          reservePrice: toNumberOrNull(row.reservePrice),
         });
         unitTypesByDevelopment.set(developmentId, current);
       }
@@ -6651,10 +6870,29 @@ const referrerDistributionRouter = router({
       return rows.map(row => {
         const minTierRequired = row.minTierRequired as DistributionTier;
         const developmentId = Number(row.developmentId);
+        const transactionType =
+          row.transactionType === 'for_rent'
+            ? 'rent'
+            : row.transactionType === 'auction'
+              ? 'auction'
+              : 'sale';
+        const priceFrom =
+          transactionType === 'rent'
+            ? toNumberOrNull(row.monthlyRentFrom)
+            : transactionType === 'auction'
+              ? toNumberOrNull(row.startingBidFrom)
+              : toNumberOrNull(row.priceFrom);
+        const priceTo =
+          transactionType === 'rent'
+            ? (toNumberOrNull(row.monthlyRentTo) ?? priceFrom)
+            : transactionType === 'auction'
+              ? (toNumberOrNull(row.reservePriceFrom) ?? priceFrom)
+              : toNumberOrNull(row.priceTo);
 
         return {
           ...row,
           agentId,
+          transactionType,
           currentTier,
           minTierRequired,
           tierEligible: isTierEligible(currentTier, minTierRequired),
@@ -6668,8 +6906,12 @@ const referrerDistributionRouter = router({
           imageUrl: extractFirstImageUrl(row.developmentImages),
           developmentStatus: row.developmentStatus || null,
           unitTypes: unitTypesByDevelopment.get(developmentId) || [],
-          priceFrom: row.priceFrom ? Number(row.priceFrom) : null,
-          priceTo: row.priceTo ? Number(row.priceTo) : null,
+          priceFrom,
+          priceTo,
+          monthlyRentFrom: toNumberOrNull(row.monthlyRentFrom),
+          monthlyRentTo: toNumberOrNull(row.monthlyRentTo),
+          startingBidFrom: toNumberOrNull(row.startingBidFrom),
+          reservePriceFrom: toNumberOrNull(row.reservePriceFrom),
         };
       });
     }),

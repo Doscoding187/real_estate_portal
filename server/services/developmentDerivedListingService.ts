@@ -8,6 +8,15 @@ import type {
   SearchCardResult,
   SortOption,
 } from '../../shared/types';
+import {
+  calculateInventorySummary,
+  calculatePriceFrom,
+  mapDevelopmentTransactionTypeToListingType,
+  mapListingTypeToDevelopmentTransactionType,
+  normalizeDevelopmentTransactionType,
+} from '../../shared/developmentDerived';
+import type { DevelopmentTransactionType } from '../../shared/developmentDerived';
+export { normalizeDevelopmentTransactionType } from '../../shared/developmentDerived';
 
 interface DevelopmentDerivedListingFilters {
   province?: string;
@@ -126,10 +135,6 @@ function toNumberOrNull(value: unknown): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
-function toNumberOrZero(value: unknown): number {
-  return toNumberOrNull(value) ?? 0;
-}
-
 function toSentenceCaseLabel(value: string): string {
   return value
     .split(/[_-\s]+/)
@@ -212,9 +217,14 @@ function mapStructuralTypeToPropertyType(
   return 'apartment';
 }
 
-function mapTransactionTypeToListingType(transactionType: unknown): Property['listingType'] {
-  const transaction = String(transactionType || '').toLowerCase();
-  return transaction === 'for_rent' ? 'rent' : 'sale';
+export function mapTransactionTypeToListingType(transactionType: unknown): Property['listingType'] {
+  return mapDevelopmentTransactionTypeToListingType(transactionType);
+}
+
+export function mapListingTypeFilterToDevelopmentTransactionType(
+  listingType: unknown,
+): DevelopmentTransactionType | null {
+  return mapListingTypeToDevelopmentTransactionType(listingType) ?? null;
 }
 
 function getPrimaryImage(unitBaseMedia: unknown, developmentImages: unknown): string | null {
@@ -385,7 +395,8 @@ function buildListingTitle(row: any, propertyType: Property['propertyType']): st
   const bedrooms = Number(row.bedrooms || 0);
   const unitName = String(row.unitName || '').trim();
   const listingType = mapTransactionTypeToListingType(row.transactionType);
-  const action = listingType === 'rent' ? 'to Rent' : 'for Sale';
+  const action =
+    listingType === 'rent' ? 'to Rent' : listingType === 'auction' ? 'on Auction' : 'for Sale';
   const propertyLabel =
     propertyType === 'plot'
       ? 'Plot'
@@ -467,6 +478,22 @@ function computeOrganicRankingScore(input: {
 }
 
 function buildSort(sortOption: SortOption) {
+  const compareSameDevelopmentUnitOrder = (
+    a: DevelopmentDerivedListing,
+    b: DevelopmentDerivedListing,
+  ) => {
+    if (a.developmentId !== b.developmentId) return 0;
+    const leftOrder =
+      typeof a.unitDisplayOrder === 'number' && a.unitDisplayOrder >= 0
+        ? a.unitDisplayOrder
+        : Number.MAX_SAFE_INTEGER;
+    const rightOrder =
+      typeof b.unitDisplayOrder === 'number' && b.unitDisplayOrder >= 0
+        ? b.unitDisplayOrder
+        : Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder;
+  };
+
   switch (sortOption) {
     case 'price_asc':
       return (a: DevelopmentDerivedListing, b: DevelopmentDerivedListing) => a.price - b.price;
@@ -485,7 +512,8 @@ function buildSort(sortOption: SortOption) {
     default:
       return (a: DevelopmentDerivedListing, b: DevelopmentDerivedListing) =>
         (b.rankingScore || 0) - (a.rankingScore || 0) ||
-        new Date(b.listedDate).getTime() - new Date(a.listedDate).getTime();
+        new Date(b.listedDate).getTime() - new Date(a.listedDate).getTime() ||
+        compareSameDevelopmentUnitOrder(a, b);
   }
 }
 
@@ -543,6 +571,12 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
     latitude: item.latitude,
     longitude: item.longitude,
     developmentId: item.developmentId,
+    unitTypeId: item.unitTypeId,
+    ...(typeof item.unitDisplayOrder === 'number'
+      ? { unitDisplayOrder: item.unitDisplayOrder }
+      : {}),
+    ...(typeof item.priceTo === 'number' ? { priceTo: item.priceTo } : {}),
+    ...(typeof item.availableUnits === 'number' ? { availableUnits: item.availableUnits } : {}),
   };
 }
 
@@ -564,8 +598,9 @@ export class DevelopmentDerivedListingService {
       eq(unitTypes.isActive, 1),
     ];
 
-    const targetTransactionType =
-      filters.listingType === 'rent' ? 'for_rent' : filters.listingType === 'sale' ? 'for_sale' : null;
+    const targetTransactionType = filters.listingType
+      ? mapListingTypeFilterToDevelopmentTransactionType(filters.listingType)
+      : null;
     if (targetTransactionType) {
       conditions.push(eq(developments.transactionType, targetTransactionType as any));
     }
@@ -626,9 +661,12 @@ export class DevelopmentDerivedListingService {
         monthlyRentFrom: unitTypes.monthlyRentFrom,
         monthlyRentTo: unitTypes.monthlyRentTo,
         startingBid: unitTypes.startingBid,
+        reservePrice: unitTypes.reservePrice,
         auctionStatus: unitTypes.auctionStatus,
         availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
         totalUnits: unitTypes.totalUnits,
+        unitDisplayOrder: unitTypes.displayOrder,
         unitBaseMedia: unitTypes.baseMedia,
         unitCreatedAt: unitTypes.createdAt,
       })
@@ -668,19 +706,11 @@ export class DevelopmentDerivedListingService {
           return null;
         }
 
-        const listingType = mapTransactionTypeToListingType(row.transactionType);
-        const price =
-          listingType === 'rent'
-            ? toNumberOrZero(row.monthlyRentFrom)
-            : row.transactionType === 'auction'
-              ? toNumberOrZero(row.startingBid)
-              : toNumberOrZero(row.priceFrom ?? row.basePriceFrom);
-        const priceTo =
-          listingType === 'rent'
-            ? toNumberOrNull(row.monthlyRentTo)
-            : row.transactionType === 'auction'
-              ? null
-              : toNumberOrNull(row.priceTo ?? row.basePriceTo);
+        const transactionType = normalizeDevelopmentTransactionType(row.transactionType);
+        const listingType = mapTransactionTypeToListingType(transactionType);
+        const priceRange = calculatePriceFrom(row, transactionType);
+        const price = priceRange.priceFrom;
+        const priceTo = priceRange.priceTo;
 
         if (filters.minPrice && price < filters.minPrice) return null;
         if (filters.maxPrice && price > filters.maxPrice) return null;
@@ -703,12 +733,13 @@ export class DevelopmentDerivedListingService {
         const title = buildListingTitle(row, propertyType);
         const floorSize = toNumberOrNull(row.unitSize) ?? undefined;
         const erfSize = toNumberOrNull(row.yardSize) ?? undefined;
-        const availableUnits = toNumberOrNull(row.availableUnits) ?? undefined;
+        const inventory = calculateInventorySummary(row);
+        const availableUnits = inventory.total > 0 ? inventory.available : undefined;
         const rankingScore = computeOrganicRankingScore({
           listedDate,
           title,
           price,
-          priceTo: priceTo ?? undefined,
+          priceTo,
           bedrooms,
           bathrooms,
           floorSize,
@@ -723,22 +754,20 @@ export class DevelopmentDerivedListingService {
           id: `dev-${row.developmentId}-${row.unitTypeId}`,
           unitTypeId: String(row.unitTypeId),
           developmentId: Number(row.developmentId),
+          unitDisplayOrder: toNumberOrNull(row.unitDisplayOrder) ?? undefined,
           rankingScore,
           href: row.developmentSlug
             ? `/development/${row.developmentSlug}/unit/${row.unitTypeId}`
             : `/development/${row.developmentId}/unit/${row.unitTypeId}`,
           title,
           price,
-          priceTo: priceTo ?? undefined,
+          priceTo,
           city: row.city,
           suburb: row.suburb || row.city,
           province: row.province,
           propertyType,
           listingType,
-          transactionType: String(row.transactionType || 'for_sale') as
-            | 'for_sale'
-            | 'for_rent'
-            | 'auction',
+          transactionType,
           listingSource: 'development' as const,
           bedrooms,
           bathrooms,

@@ -62,7 +62,7 @@ describe('Property Filters Store - URL Synchronization', () => {
             }),
             { nil: undefined },
           ),
-          listingType: fc.option(fc.constantFrom('sale', 'rent'), { nil: undefined }),
+          listingType: fc.option(fc.constantFrom('sale', 'rent', 'auction'), { nil: undefined }),
           minPrice: fc.option(fc.integer({ min: 100000, max: 5000000 }), { nil: undefined }),
           maxPrice: fc.option(fc.integer({ min: 5000000, max: 50000000 }), { nil: undefined }),
           minBedrooms: fc.option(fc.integer({ min: 1, max: 5 }), { nil: undefined }),
@@ -242,7 +242,7 @@ describe('Property Filters Store - URL Synchronization', () => {
             }),
             { nil: undefined },
           ),
-          listingType: fc.option(fc.constantFrom('sale', 'rent'), { nil: undefined }),
+          listingType: fc.option(fc.constantFrom('sale', 'rent', 'auction'), { nil: undefined }),
           minPrice: fc.option(fc.integer({ min: 100000, max: 5000000 }), { nil: undefined }),
           maxPrice: fc.option(fc.integer({ min: 5000000, max: 50000000 }), { nil: undefined }),
           minBedrooms: fc.option(fc.integer({ min: 1, max: 5 }), { nil: undefined }),
@@ -341,6 +341,19 @@ describe('Property Filters Store - URL Synchronization', () => {
         verbose: false,
       },
     );
+  });
+
+  it('should normalize listing type aliases from URL parameters', () => {
+    const store = usePropertyFiltersStore.getState();
+
+    store.syncFromUrl(new URLSearchParams('listingType=auctions'));
+    expect(usePropertyFiltersStore.getState().filters.listingType).toBe('auction');
+
+    store.syncFromUrl(new URLSearchParams('listingType=for_rent'));
+    expect(usePropertyFiltersStore.getState().filters.listingType).toBe('rent');
+
+    store.setFilters({ listingType: 'auction' });
+    expect(usePropertyFiltersStore.getState().syncToUrl().get('listingType')).toBe('auction');
   });
 
   /**
