@@ -207,7 +207,7 @@ export const normalizeUnitTypesPhaseTransactionType = (
   return 'for_sale';
 };
 
-const formatUnitTypeCurrency = (value: number) => `R ${value.toLocaleString()}`;
+const formatUnitTypeCurrency = (value: number) => `R ${value.toLocaleString('en-ZA')}`;
 
 export const isValidUnitTypesPhaseMonthlyRentRange = (unit: Partial<UnitType>) => {
   const rentFrom = Number((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0);
