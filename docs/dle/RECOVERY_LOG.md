@@ -42,7 +42,7 @@ Remaining risks:
 - Manual DLE browser flows still need a dedicated recovery audit.
 - Autosave remains a future slice behind manual save/resume proof.
 Next recommended slice: Run the DLE recovery audit and manual flow proof checklist.
-Commit hash/tag: `39c2d172 docs(dle): add source of truth and recovery discipline`
+Commit hash/tag: `97e9a7bb docs(dle): add source of truth and recovery discipline`
 Uncommitted reason, if any: None. Slice committed.
 
 ## 2026-06-02 - Recovery Audit
@@ -86,5 +86,5 @@ Remaining risks:
 - `docs/dle/` remains uncommitted until user approval.
 Next recommended slice:
 - Then run browser-level manual flow proof for create, manual save draft, My Drafts, resume, publish, and public display.
-Commit hash/tag: `39c2d172 docs(dle): add source of truth and recovery discipline`
+Commit hash/tag: `97e9a7bb docs(dle): add source of truth and recovery discipline`
 Uncommitted reason, if any: None. Slice committed.
