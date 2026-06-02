@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildDevelopmentDetailAmenityGroups,
+  formatDevelopmentDetailLabel,
   getDevelopmentDetailLeadUnitContext,
   getDevelopmentDetailMediaBuckets,
   getDevelopmentDetailPricingContext,
@@ -10,6 +12,26 @@ import {
 } from './DevelopmentDetail';
 
 describe('DevelopmentDetail pricing context', () => {
+  it('builds amenity groups without render-order helper errors', () => {
+    expect(formatDevelopmentDetailLabel('backup_power')).toBe('Backup Power');
+
+    const groups = buildDevelopmentDetailAmenityGroups([
+      '24_hour_security',
+      'backup_power',
+      'custom_rooftop_lounge',
+    ]);
+
+    expect(groups.security).toEqual([
+      expect.objectContaining({ key: '24_hour_security', label: '24-Hour Security' }),
+    ]);
+    expect(groups.convenience).toEqual([
+      expect.objectContaining({ key: 'backup_power', label: 'Backup Generator / Power' }),
+    ]);
+    expect(groups.other).toEqual([
+      expect.objectContaining({ key: 'custom_rooftop_lounge', label: 'Custom Rooftop Lounge' }),
+    ]);
+  });
+
   it('normalizes development detail transaction aliases', () => {
     expect(normalizeDevelopmentDetailTransactionType('for_rent')).toBe('rent');
     expect(normalizeDevelopmentDetailTransactionType('to-rent')).toBe('rent');

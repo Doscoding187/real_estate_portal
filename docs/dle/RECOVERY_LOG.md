@@ -193,3 +193,57 @@ Next recommended slice:
 - After that, prove rental and auction unit-type paths through browser and decide the pre-Review save-state UX fix.
 Commit hash/tag: `527e3762 docs(dle): record manual save resume proof`
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-02 - Sale Publish/Public Page Proof
+
+Date: 2026-06-02
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Continue from the manual save/resume checkpoint by proving sale draft publish and public development detail rendering, then audit the sale journey product gaps before autosave.
+Files changed:
+- server/services/developmentService.ts
+- server/services/__tests__/developmentService.date.test.ts
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/SALE_JOURNEY_PRODUCT_AUDIT.md
+- docs/dle/evidence/2026-06-02/*.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run server/services/__tests__/developmentService.date.test.ts client/src/pages/DevelopmentDetail.test.ts'`
+- Result: Passed. 2 test files, 14 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed.
+Manual flows verified:
+- Resumed saved sale draft id `2`.
+- Publish readiness correctly blocked missing highlights.
+- Added three highlights in Marketing Summary.
+- Published development id `4` after backend date normalization fix.
+- Verified database row with `isPublished = 1`, transaction type `for_sale`, sale price range, and published unit inventory.
+- Fixed public detail amenity helper render-order crash.
+- Public detail page rendered with development name, sale pricing, unit type, and CTA.
+Evidence:
+- docs/dle/evidence/2026-06-02/qa-dle-publish-resumed-draft.png
+- docs/dle/evidence/2026-06-02/qa-dle-publish-button-disabled.png
+- docs/dle/evidence/2026-06-02/qa-dle-publish-review-blocked-before-fix.png
+- docs/dle/evidence/2026-06-02/qa-dle-publish-marketing-before-highlights-fixed.png
+- docs/dle/evidence/2026-06-02/qa-dle-publish-marketing-highlights-added-fixed.png
+- docs/dle/evidence/2026-06-02/qa-dle-publish-review-ready-after-date-fix.png
+- docs/dle/evidence/2026-06-02/qa-dle-publish-confirm-dialog-after-date-fix.png
+- docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png
+- docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-published.png
+- docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-rendered.png
+Product/UX findings:
+- The readiness guardrail is useful, but missing highlights are discovered too late in the flow.
+- Public detail now renders, but required highlights were not confirmed on the public page. This is a gap between backend readiness and buyer-facing proof.
+- The save-state truth issue remains: the UI must not claim progress is saved unless a real save has succeeded.
+Remaining risks:
+- Search cards and lead capture were not verified.
+- Edit-published field ownership remains unverified.
+- Rental and auction browser flows remain unverified.
+- Autosave remains behind manual save/resume and truth-in-UX fixes.
+Next recommended slice:
+- Fix public highlight surfacing and save-state truth, then verify search-card/lead-form transaction context before starting autosave.
+Commit hash/tag: Pending until commit.
+Uncommitted reason, if any: Pending commit in this slice.

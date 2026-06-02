@@ -96,6 +96,46 @@ const AMENITY_CATEGORY_ICONS: Record<AmenityTabKey, typeof Shield> = {
   other: CheckCircle2,
 };
 
+export const formatDevelopmentDetailLabel = (value?: string) => {
+  if (!value) return '—';
+  return value
+    .replace(/-/g, ' ')
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const formatLabel = formatDevelopmentDetailLabel;
+
+export function getDevelopmentDetailAmenityLabel(key: string) {
+  const match = AMENITY_REGISTRY.find(item => item.key === key);
+  return match?.label ?? formatLabel(key);
+}
+
+export function buildDevelopmentDetailAmenityGroups(list: string[]) {
+  const groups: Record<AmenityTabKey, { key: string; label: string }[]> = {
+    security: [],
+    lifestyle: [],
+    sustainability: [],
+    convenience: [],
+    family: [],
+    other: [],
+  };
+  const seen = new Set<string>();
+
+  list.forEach(raw => {
+    const key = String(raw ?? '').trim();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    const match = AMENITY_REGISTRY.find(item => item.key === key);
+    const category = (match?.category ?? 'other') as AmenityTabKey;
+    groups[category].push({ key, label: getDevelopmentDetailAmenityLabel(key) });
+  });
+
+  return groups;
+}
+
 const inferOwnership = (structuralType: string, defaultType?: string) => {
   if (defaultType) return defaultType;
   const t = (structuralType || '').toLowerCase();
@@ -960,7 +1000,7 @@ export default function DevelopmentDetail() {
   );
 
   const amenityList = normalizeAmenities(dev?.amenities);
-  const amenityGroups = buildAmenityGroups(amenityList);
+  const amenityGroups = buildDevelopmentDetailAmenityGroups(amenityList);
   const amenityTabs = [
     ...AMENITY_CATEGORIES.map(category => ({
       key: category.key,
@@ -1067,45 +1107,6 @@ export default function DevelopmentDetail() {
         </div>
       </div>
     );
-  }
-
-  // Format label helper
-  const formatLabel = (value?: string) => {
-    if (!value) return '—';
-    return value
-      .replace(/-/g, ' ')
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  function getAmenityLabel(key: string) {
-    const match = AMENITY_REGISTRY.find(item => item.key === key);
-    return match?.label ?? formatLabel(key);
-  }
-
-  function buildAmenityGroups(list: string[]) {
-    const groups: Record<AmenityTabKey, { key: string; label: string }[]> = {
-      security: [],
-      lifestyle: [],
-      sustainability: [],
-      convenience: [],
-      family: [],
-      other: [],
-    };
-    const seen = new Set<string>();
-
-    list.forEach(raw => {
-      const key = String(raw ?? '').trim();
-      if (!key || seen.has(key)) return;
-      seen.add(key);
-      const match = AMENITY_REGISTRY.find(item => item.key === key);
-      const category = (match?.category ?? 'other') as AmenityTabKey;
-      groups[category].push({ key, label: getAmenityLabel(key) });
-    });
-
-    return groups;
   }
 
   // Get unit type label

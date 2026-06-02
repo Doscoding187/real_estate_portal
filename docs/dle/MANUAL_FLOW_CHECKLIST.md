@@ -4,7 +4,7 @@ Use this checklist before calling the Development Listing Engine stable.
 
 | Flow | Required Result | Status | Evidence |
 |---|---|---|---|
-| Create development | Development can be created without data loss | Partial | Browser reached authenticated sale workflow from Project Setup through Review & Publish, including media upload and sale unit-type creation. No publish submit yet. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-review-ready.png`. |
+| Create development | Development can be created without data loss | Pass | Browser reached authenticated sale workflow from Project Setup through Review & Publish, including media upload and sale unit-type creation. The resumed draft was then published to development id `4`. Edit-after-publish ownership remains separately pending. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
 | Manual Save Draft | Draft saves through real backend path | Pass | Browser clicked `Save Draft` on Review & Publish. No API failures captured. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-manual-save-draft.png`. |
 | Draft appears in My Drafts | Saved draft is visible | Pass | Draft `DLE QA Sale Flow 1780436367449` appeared in `/developer/drafts`. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-my-drafts-visible.png`. |
 | Resume draft | Canonical state restores correctly | Pass | Resume opened `/developer/create-development?draftId=2` and restored the saved development identity. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-draft-resumed.png`. |
@@ -14,8 +14,8 @@ Use this checklist before calling the Development Listing Engine stable.
 | Edit sale unit types | Sale inventory/pricing updates safely | Partial | Browser created a sale unit type with pricing/inventory and reached Review. Edit-after-save/publish ownership still pending. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-unit-type-created.png`. |
 | Edit rental unit types | Rental inventory/pricing updates safely | Pending | |
 | Edit auction unit types | Auction inventory/pricing updates safely | Pending | |
-| Publish development | Publish validation passes correctly | Pending | Not attempted in the 2026-06-02 manual save/resume proof. Needs dedicated submit/public-page slice. |
-| Public page | Correct sale/rent/auction display | Pending | |
+| Publish development | Publish validation passes correctly | Pass | Publish readiness correctly blocked missing highlights, highlights were added, and the sale draft published successfully after the backend date-format fix. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-button-disabled.png` and `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
+| Public page | Correct sale/rent/auction display | Partial | Public sale page now renders with development name, sale pricing, unit type, and CTA after the amenity helper render-order fix. Required highlights were not confirmed in public page text checks, so buyer-facing packaging is still incomplete. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-rendered.png`. |
 | Search cards | Correct sale/rent/auction pricing and ordering | Pending | |
 | Lead capture | Lead context matches transaction type and unit interest | Pending | |
 | Edit published development | No unrelated field wipes | Pending | |
@@ -65,8 +65,7 @@ Evidence screenshots:
 
 Not yet verified:
 
-- Publish.
-- Public development page/search-card output.
+- Search-card output.
 
 ## 2026-06-02 Browser Manual Save/Resume Proof
 
@@ -139,3 +138,60 @@ Before UI/product upgrade:
 - Finish publish/public-page proof so the showroom can be audited against the commercial engine vision.
 - Prove rental and auction unit-type paths through the browser.
 - Surface sale/rent/auction intelligence more visibly in wizard previews, public unit cards, search cards, and lead forms.
+
+## 2026-06-02 Browser Publish/Public Page Proof
+
+Environment:
+
+- Frontend: `http://localhost:3009`
+- Backend: `http://localhost:5000`
+- Database: `listify_local`
+- Account: `developer@listify.local`
+- Draft resumed: `/developer/create-development?draftId=2`
+- Published development id: `4`
+- Published slug: `dle-qa-sale-flow-1780436367449-2vp50t`
+
+Functional pass/fail:
+
+- Pass: resumed sale draft `DLE QA Sale Flow 1780436367449`.
+- Pass: Review readiness blocked publishing while three required highlights were missing.
+- Pass: added highlights in Marketing Summary and returned to Review.
+- Pass: backend date-format bug was fixed, then publish succeeded.
+- Pass: database row was verified with `isPublished = 1`, transaction type `for_sale`, and price range `1750000`.
+- Pass: sale unit type persisted for published development id `4`.
+- Pass: public detail render-order bug was fixed, then the public page rendered.
+- Partial: public page showed name, sale pricing, unit type, and CTA, but required highlights were not confirmed in browser text checks.
+- Pending: search cards, lead capture, edit-published ownership, rental flow, and auction flow.
+
+Evidence screenshots:
+
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-resumed-draft.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-button-disabled.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-review-blocked-before-fix.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-marketing-before-highlights-fixed.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-marketing-highlights-added-fixed.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-review-ready-after-date-fix.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-confirm-dialog-after-date-fix.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-published.png`
+- `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-rendered.png`
+
+Product experience gaps:
+
+- Required highlights are a correct readiness rule, but the wizard surfaces the missing requirement too late.
+- Public detail must visibly reflect publish-critical highlights, or the backend readiness intelligence is not fully visible in the showroom.
+- The header still needs a truth-in-UX fix before autosave: do not claim `Saved` unless a real save path has succeeded.
+- Manual `Save Draft` remains review-only in the browser-proven journey.
+
+Before autosave:
+
+- Fix truthful save-state messaging.
+- Decide whether every step gets a manual save affordance or clearer unsaved/local-progress copy.
+- Prove resumed drafts restore media, documents, highlights, unit types, and readiness state.
+- Prove edit-after-resume and edit-after-publish do not wipe unrelated fields.
+
+Before UI/product upgrade:
+
+- Make highlights and sale inventory more visible in the public page.
+- Add sale journey previews in the wizard so developers can see the buyer-facing package taking shape.
+- Verify search-card and lead-form transaction context.

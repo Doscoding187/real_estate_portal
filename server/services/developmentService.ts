@@ -261,14 +261,21 @@ function sanitizeDecimal(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function sanitizeDate(value: unknown): string | null {
+export function sanitizeDevelopmentDate(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString().slice(0, 19).replace('T', ' ');
   }
   if (typeof value === 'string') {
     const s = value.trim();
-    return s.length > 0 ? s : null;
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return s;
+    const parsed = new Date(s);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 19).replace('T', ' ');
+    }
+    return s;
   }
   return null;
 }
@@ -1148,8 +1155,8 @@ export async function createDevelopment(
     estateSpecs: governanceEstateSpecs.hasOwnedFields
       ? stringifyJsonValue(governanceEstateSpecs.estateSpecs, {})
       : null,
-    launchDate: sanitizeDate((developmentData as any).launchDate),
-    completionDate: sanitizeDate((developmentData as any).completionDate),
+    launchDate: sanitizeDevelopmentDate((developmentData as any).launchDate),
+    completionDate: sanitizeDevelopmentDate((developmentData as any).completionDate),
 
     ownershipType: sanitizeEnum(
       (developmentData as any).ownershipType,
@@ -1433,9 +1440,9 @@ export async function updateDevelopment(
   // Status / dates
   // ---------------------------------------------------------------------------
   if (developmentData.launchDate !== undefined)
-    updatePayload.launchDate = sanitizeDate(developmentData.launchDate);
+    updatePayload.launchDate = sanitizeDevelopmentDate(developmentData.launchDate);
   if (developmentData.completionDate !== undefined)
-    updatePayload.completionDate = sanitizeDate(developmentData.completionDate);
+    updatePayload.completionDate = sanitizeDevelopmentDate(developmentData.completionDate);
   if (developmentData.marketingRole !== undefined) {
     updatePayload.marketingRole = sanitizeEnum(
       developmentData.marketingRole,
