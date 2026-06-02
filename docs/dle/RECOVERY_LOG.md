@@ -132,5 +132,5 @@ Remaining risks:
 Next recommended slice:
 - Continue browser manual proof from Marketing Summary through Media and Unit Types.
 - Confirm whether Manual Save Draft should be exposed before Review, or document as intentional review-only behavior before autosave work.
-Commit hash/tag: Not committed yet.
-Uncommitted reason, if any: Awaiting final hygiene verification and commit.
+Commit hash/tag: `ada5b495 docs(dle): record browser manual flow preflight`
+Uncommitted reason, if any: None. Slice committed.
