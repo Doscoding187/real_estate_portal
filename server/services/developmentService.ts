@@ -1064,10 +1064,12 @@ export async function createDevelopment(
   );
   const isSuperAdminBrandCreation = user?.role === 'super_admin' && !!resolvedBrandProfileId;
   const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  const transactionAggregates = buildDevelopmentTransactionAggregates(
-    normalizedTransactionType,
-    developmentData as Record<string, unknown>,
-    unitTypesData as Array<Record<string, unknown>> | null,
+  const transactionAggregates = normalizeDevelopmentTransactionAggregatesForDb(
+    buildDevelopmentTransactionAggregates(
+      normalizedTransactionType,
+      developmentData as Record<string, unknown>,
+      unitTypesData as Array<Record<string, unknown>> | null,
+    ),
   );
   const governanceEstateSpecs = buildDevelopmentGovernanceEstateSpecs(
     developmentData as Record<string, any>,
@@ -1709,10 +1711,12 @@ export async function updateDevelopment(
   ) {
     Object.assign(
       updatePayload,
-      buildDevelopmentTransactionAggregates(
-        effectiveTransactionType,
-        developmentData as Record<string, unknown>,
-        aggregateUnitTypesData,
+      normalizeDevelopmentTransactionAggregatesForDb(
+        buildDevelopmentTransactionAggregates(
+          effectiveTransactionType,
+          developmentData as Record<string, unknown>,
+          aggregateUnitTypesData,
+        ),
       ),
     );
   }
@@ -1825,6 +1829,16 @@ const asDateTimeOrNull = (v: unknown): string | null => {
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString().slice(0, 19).replace('T', ' ');
 };
+
+function normalizeDevelopmentTransactionAggregatesForDb<T extends Record<string, any>>(
+  aggregates: T,
+): T {
+  return {
+    ...aggregates,
+    auctionStartDate: asDateTimeOrNull(aggregates.auctionStartDate),
+    auctionEndDate: asDateTimeOrNull(aggregates.auctionEndDate),
+  };
+}
 
 const normalizeParkingKind = (v: unknown): 'none' | 'open' | 'covered' | 'carport' | 'garage' => {
   const s = String(v ?? '')
