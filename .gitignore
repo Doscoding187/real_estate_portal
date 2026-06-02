@@ -123,6 +123,9 @@ dist/
 # Local backups
 backups/
 
+# Local Obsidian vaults / project memory scratch
+Property listify/
+
 # Local debug artifacts
 _WIP_*.patch
 rg-meta-output*.txt
