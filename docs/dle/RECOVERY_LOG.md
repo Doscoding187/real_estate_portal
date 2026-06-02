@@ -245,5 +245,5 @@ Remaining risks:
 - Autosave remains behind manual save/resume and truth-in-UX fixes.
 Next recommended slice:
 - Fix public highlight surfacing and save-state truth, then verify search-card/lead-form transaction context before starting autosave.
-Commit hash/tag: Pending until commit.
-Uncommitted reason, if any: Pending commit in this slice.
+Commit hash/tag: `d4e0adaf fix(dle): publish sale drafts and render public detail`
+Uncommitted reason, if any: None. Slice committed.
