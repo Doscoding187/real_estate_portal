@@ -191,5 +191,5 @@ Remaining risks:
 Next recommended slice:
 - Run publish/submit-for-review and public development page proof for the saved sale development, then inspect public/search-card transaction language.
 - After that, prove rental and auction unit-type paths through browser and decide the pre-Review save-state UX fix.
-Commit hash/tag: Pending.
-Uncommitted reason, if any: Pending verification and commit.
+Commit hash/tag: `527e3762 docs(dle): record manual save resume proof`
+Uncommitted reason, if any: None. Slice committed.
