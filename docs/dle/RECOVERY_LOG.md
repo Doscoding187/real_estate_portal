@@ -134,3 +134,62 @@ Next recommended slice:
 - Confirm whether Manual Save Draft should be exposed before Review, or document as intentional review-only behavior before autosave work.
 Commit hash/tag: `ada5b495 docs(dle): record browser manual flow preflight`
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-02 - Browser Manual Save/Resume Proof
+
+Date: 2026-06-02
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Continue from the existing recovery checkpoint and prove the DLE sale workflow through manual save, My Drafts visibility, and draft resume without repeating basic recovery setup.
+Files changed:
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-02/*.png
+Focused tests run:
+- Browser manual flow proof through Playwright against local frontend/backend.
+- No API failures captured during the successful run.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed.
+Manual flows verified:
+- Developer login.
+- Sale development workflow start.
+- Residential configuration.
+- Identity and market entry.
+- Location entry.
+- Governance/finance step advance.
+- Amenities quick-start.
+- Marketing summary step advance.
+- Local media upload for hero/gallery image and brochure.
+- Sale unit type creation with pricing/inventory.
+- Review & Publish reached.
+- Manual Save Draft from Review.
+- Draft appeared in My Drafts.
+- Resume opened `/developer/create-development?draftId=2` and restored the saved development identity.
+Evidence:
+- docs/dle/evidence/2026-06-02/qa-dle-flow-login-to-create.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-identity-filled.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-location-filled.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-amenities-filled.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-marketing-filled.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-media-uploaded.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-unit-types-start.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-unit-type-created.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-review-ready.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-manual-save-draft.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-my-drafts-visible.png
+- docs/dle/evidence/2026-06-02/qa-dle-flow-draft-resumed.png
+Product/UX findings:
+- The wizard has a guided packaging shape, especially setup, amenities, media quality, and unit inventory.
+- The header still shows `Saved` before a backend-backed manual save has happened, which conflicts with the autosave truth principle.
+- Manual `Save Draft` is only visible on Review & Publish, leaving earlier steps without an obvious trusted backend save fallback.
+- Publish/public-page proof is still needed before judging buyer-facing quality.
+Remaining risks:
+- Publish/submit-for-review was not attempted in this slice.
+- Public development detail page, search cards, lead capture, rental flow, auction flow, and edit-published ownership proof remain pending.
+- Resume proof confirmed identity restoration; media/doc/unit canonical restoration should be asserted more deeply before autosave.
+Next recommended slice:
+- Run publish/submit-for-review and public development page proof for the saved sale development, then inspect public/search-card transaction language.
+- After that, prove rental and auction unit-type paths through browser and decide the pre-Review save-state UX fix.
+Commit hash/tag: Pending.
+Uncommitted reason, if any: Pending verification and commit.
