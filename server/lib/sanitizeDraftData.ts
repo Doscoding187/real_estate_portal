@@ -129,6 +129,28 @@ const normalizeUnitType = (u: any) => {
 // NOTE: clean-slate: only new | phase
 const normalizeNature = (v: any) => (v === 'phase' ? 'phase' : 'new');
 
+const normalizeStringArray = (value: unknown) =>
+  asArray(value, [])
+    .map(item => asString(item))
+    .filter(Boolean);
+
+const nullableString = (value: unknown) => {
+  const text = asString(value).trim();
+  return text || null;
+};
+
+const normalizeStepData = (value: unknown, unitTypes: any[]) => {
+  const cleaned = deepStripNonSerializable(value);
+  const stepData = isPlainObject(cleaned) ? cleaned : {};
+  return {
+    ...stepData,
+    unit_types: {
+      ...(isPlainObject((stepData as any).unit_types) ? (stepData as any).unit_types : {}),
+      unitTypes,
+    },
+  };
+};
+
 export function sanitizeDraftData(input: unknown) {
   const raw = deepStripNonSerializable(input);
   const draft = isPlainObject(raw) ? raw : {};
@@ -155,9 +177,17 @@ export function sanitizeDraftData(input: unknown) {
     media: normalizeMedia(ddRaw.media ?? draft.media ?? {}),
   };
 
+  const unitTypes = asArray(draft.unitTypes, []).map(normalizeUnitType);
+  const stepData = normalizeStepData(draft.stepData, unitTypes);
+
   return {
     // Wizard keys (sanitized)
     currentPhase: clampInt(draft.currentPhase, 1, 11, 1),
+    currentStep: clampInt(draft.currentStep, 1, 999, 1),
+    workflowId: nullableString(draft.workflowId),
+    currentStepId: nullableString(draft.currentStepId),
+    completedSteps: normalizeStringArray(draft.completedSteps),
+    stepData,
 
     // keep these if your client sends them
     developmentType: asString(draft.developmentType ?? 'residential'),
@@ -181,9 +211,12 @@ export function sanitizeDraftData(input: unknown) {
     overview: isPlainObject(draft.overview) ? draft.overview : {},
     finalisation: isPlainObject(draft.finalisation) ? draft.finalisation : {},
 
-    unitTypes: asArray(draft.unitTypes, []).map(normalizeUnitType),
+    unitTypes,
 
     // canonical nested block (always present)
     developmentData,
+
+    _version: asString(draft._version ?? '3.0'),
+    _savedAt: draft._savedAt ?? Date.now(),
   };
 }
