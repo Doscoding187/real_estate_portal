@@ -88,3 +88,49 @@ Next recommended slice:
 - Then run browser-level manual flow proof for create, manual save draft, My Drafts, resume, publish, and public display.
 Commit hash/tag: `97e9a7bb docs(dle): add source of truth and recovery discipline`
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-02 - Browser Manual Flow Preflight
+
+Date: 2026-06-02
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Start browser-level DLE manual flow proof using the local developer demo account.
+Files changed:
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-02/*.png
+Focused tests run:
+- Not rerun in this slice. Prior focused DLE guardrails passed: 6 files, 77 tests.
+pnpm run check:
+- Not rerun in this slice. Prior `pnpm run check` passed after sourcing `~/.nvm/nvm.sh`.
+git diff --check:
+- Passed.
+Manual flows verified:
+- Partial browser preflight only.
+- Login form rendered and authenticated local developer route worked.
+- Authenticated developer reached `/developer/create-development`.
+- Project Setup displayed development type and sale/rent/auction transaction choices.
+- Sale workflow started as `residential_sale`.
+- Configuration, Identity & Market, Location, Governance & Finances, Amenities & Features, and Marketing Summary were reached through browser navigation.
+- Location data entry advanced to Governance & Finances.
+- Amenities quick-start applied common amenities and advanced to Marketing Summary.
+Evidence:
+- docs/dle/evidence/2026-06-02/qa-login-signin-form-dle.png
+- docs/dle/evidence/2026-06-02/qa-dle-wizard-start.png
+- docs/dle/evidence/2026-06-02/qa-dle-wizard-step-after-start.png
+- docs/dle/evidence/2026-06-02/qa-dle-wizard-identity.png
+- docs/dle/evidence/2026-06-02/qa-dle-location-ready.png
+- docs/dle/evidence/2026-06-02/qa-dle-after-location-next.png
+- docs/dle/evidence/2026-06-02/qa-dle-marketing-summary.png
+Product/UX findings:
+- The wizard has a visible guided packaging shape: setup selector, transaction goal, step-level explanations, result-card recommendations, and amenities quick-start.
+- Explicit Manual Save Draft is only visible in the final review/publish step, not in earlier wizard steps. This matters for the autosave/truth-in-UX principle because earlier steps show `Saved` status while autosave remains disabled.
+- Headless browser did not find a `.gm-style` map element during Location, but address/city/province/postal fields still advanced successfully.
+Remaining risks:
+- No final create/publish submit through browser yet.
+- No browser proof yet for Media, Unit Types, Review, Manual Save Draft, My Drafts, Draft Resume, Publish, Public Page, Search Cards, or lead capture.
+- Login rate limiting can be hit during repeated QA scripts; restart local backend to clear in-memory limiter during local-only testing.
+Next recommended slice:
+- Continue browser manual proof from Marketing Summary through Media and Unit Types.
+- Confirm whether Manual Save Draft should be exposed before Review, or document as intentional review-only behavior before autosave work.
+Commit hash/tag: Not committed yet.
+Uncommitted reason, if any: Awaiting final hygiene verification and commit.
