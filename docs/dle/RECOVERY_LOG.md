@@ -272,7 +272,7 @@ Focused tests run:
 pnpm run check:
 - Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
 git diff --check:
-- Passed before this log update.
+- Passed after this log update.
 Manual flows verified:
 - Public sale page for `dle-qa-sale-flow-1780436367449-2vp50t` rendered without error boundary.
 - Public sale page showed `Market Highlights`.
@@ -581,4 +581,57 @@ Remaining risks:
 Next recommended slice:
 - Prove rental and auction edit-published ownership through browser-level flows, then decide the first autosave implementation slice.
 Commit hash/tag: This entry is included in `test(dle): prove rental auction browser merchandising`.
+Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-03 - Rental/Auction Edit-Published Browser Ownership Proof
+
+Date: 2026-06-03
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove Rental and Auction edit-published ownership survives partial edit sequences in browser-rendered public output before autosave work.
+Files changed:
+- e2e/dle/rental-auction-edit-published-ownership.spec.ts
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-lead-context.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-lead-context.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:5173 pnpm exec playwright test e2e/dle/rental-auction-edit-published-ownership.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 browser spec, 2 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed outside the sandbox with local MySQL access. 12 test files, 98 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed before this log update.
+Manual flows verified:
+- Rental location edit updated public suburb while preserving rental unit identity, monthly-rent pricing, and highlights.
+- Rental media edit did not wipe browser-rendered location, highlights, unit identity, or monthly-rent pricing.
+- Rental marketing edit updated public highlights while preserving location, media, unit identity, and monthly-rent pricing.
+- Rental governance/finance edit did not wipe browser-rendered location, highlights, unit identity, or monthly-rent pricing.
+- Rental unit edit updated browser-visible unit name and rent range, and post-edit search/lead remained rental-native.
+- Auction location edit updated public suburb while preserving auction unit identity, bid/reserve range, and highlights.
+- Auction media edit did not wipe browser-rendered location, highlights, unit identity, or bid/reserve pricing.
+- Auction marketing edit updated public highlights while preserving location, media, unit identity, and bid/reserve pricing.
+- Auction governance/finance edit did not wipe browser-rendered location, highlights, unit identity, or bid/reserve pricing.
+- Auction unit edit updated browser-visible unit name and bid/reserve range, and post-edit search/lead remained auction-native.
+Evidence:
+- docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-lead-context.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-lead-context.png
+Remaining risks:
+- This browser proof validates public output after backend partial edits; it does not claim full rental/auction wizard edit UX parity.
+- Rental and auction browser create/save/resume/publish wizard flows remain pending.
+- Autosave remains blocked until transaction-lane wizard save/resume behavior and truthful failure/recovery behavior are proven.
+Next recommended slice:
+- Run Rental and Auction wizard save/resume/publish proof, including draft visibility, resume hydration for media/highlights/unit types/readiness, and public output after publish.
+Commit hash/tag: This entry is included in `test(dle): prove rental auction edit ownership in browser`.
 Uncommitted reason, if any: None. Slice committed.

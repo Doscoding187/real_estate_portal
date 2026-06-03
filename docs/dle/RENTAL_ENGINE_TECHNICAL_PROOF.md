@@ -2,11 +2,11 @@
 
 Date: 2026-06-03
 Branch: recovery/lead-routing-verification-2026-06-02
-Status: Focused API/unit/integration proof passed, including rental edit-published ownership; browser parity with Sale still pending.
+Status: Focused API/unit/integration proof passed, including rental edit-published ownership. Browser public-output parity for edit-published ownership is now proven.
 
 ## Purpose
 
-This checkpoint records what is technically proven for the Rental Engine before the browser/manual rental ownership slice.
+This checkpoint records what is technically proven for the Rental Engine, including the later browser public-output proof for edit-published ownership.
 
 It does not claim that Rental is world-class or fully browser-proven. It establishes that the current codebase already has meaningful rental transaction guardrails, and it defines the remaining proof needed before autosave or broad UI/product upgrades.
 
@@ -87,32 +87,49 @@ Proof covered:
 - Unit-types partial edit changed rental unit name, bedrooms, monthly rent range, deposit/lease/furnished metadata, and inventory totals while preserving location, media, highlights, governance, approval, and public output.
 - Stale sale-shaped `priceFrom`/`priceTo` values injected during rental edits did not leak into development-level public pricing.
 
+## Edit-Published Browser Public-Output Proof
+
+Focused browser spec:
+
+- `e2e/dle/rental-auction-edit-published-ownership.spec.ts`
+- Test name: `proves rental edit-published ownership remains visible in browser output`
+
+Proof covered:
+
+- Published rental location edit updated the public suburb while preserving rental unit identity, monthly rent, and highlights.
+- Published rental media edit did not wipe location, highlights, rental unit identity, or monthly rent on the public page.
+- Published rental marketing edit updated public highlights while preserving location, media, unit identity, and monthly rent.
+- Published rental governance/finance edit did not wipe public location, highlights, unit identity, or monthly rent.
+- Published rental unit edit updated the visible unit name and rent range while preserving location, media, highlights, approval/searchability, and transaction-native lead context.
+- Post-edit rental search card rendered `Rent from R 13,500`.
+- Post-edit rental lead capture persisted selected unit id/name, `transactionType: rent`, and `unitPriceLabel: Rent from`.
+
+Evidence:
+
+- `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-public-page.png`
+- `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-search-card.png`
+- `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-lead-context.png`
+
 ## What This Does Not Yet Prove
 
 The Rental Engine is not yet at Sale parity.
 
 Still pending:
 
-- Browser-proven rental create/save/resume.
-- Browser-proven rental publish/readiness.
-- Browser-proven rental public development page.
-- Browser-proven rental search/result card.
-- Browser-proven rental public lead submission.
-- Browser edit-published ownership proof for rental location, media, marketing/highlights, governance/finance, and unit-type edits.
+- Browser-proven rental create/save/resume through the wizard.
+- Browser-proven rental publish/readiness through the wizard.
 - Product-quality audit of rental language, especially avoiding sale-shaped inventory copy such as sold/sold-out where leasing language is more appropriate.
 
 ## Next Required Slice
 
-Run the Rental Engine browser ownership proof using the Sale ownership pattern:
+Run the Rental Engine wizard save/resume/publish proof:
 
-1. Create or identify a published rental development.
-2. Edit location and confirm media, highlights, governance, rental units, monthly rent, approval, and public output are preserved.
-3. Edit media and confirm location, highlights, governance, rental units, monthly rent, approval, and public output are preserved.
-4. Edit marketing/highlights and confirm public highlights update without wiping rental units/media/location.
-5. Edit governance/finance and confirm rental inventory is preserved.
-6. Edit rental unit types and confirm rental aggregates, public page, search cards, and lead context remain rental-native.
-7. Confirm the development remains published/approved/searchable.
-8. Confirm lead capture preserves development id, selected unit id/name, `transactionType: rent`, and `Rent From`/monthly-rent context.
+1. Create a rental development through the browser wizard.
+2. Manually save the rental draft.
+3. Confirm it appears in My Drafts.
+4. Resume the draft and verify identity, media, highlights, rental units, monthly rent, and readiness state.
+5. Publish/submit the rental development through the wizard readiness path.
+6. Confirm public page, search card, and lead context still match the transaction-first rental engine.
 
 ## Autosave Decision
 
@@ -120,6 +137,6 @@ Autosave is still not safe to start from this checkpoint alone.
 
 Reason:
 
-- Rental has strong focused technical/API coverage, including edit-published ownership, but not full browser/manual ownership proof.
-- Auction has not yet reached the same technical/browser checkpoint.
-- The save-state truth principle still requires all transaction lanes to prove safe save/resume/edit behavior before autosave.
+- Rental has strong focused technical/API coverage and browser public-output edit-published ownership proof.
+- Rental wizard create/save/resume/publish remains pending.
+- The save-state truth principle still requires transaction-lane save/resume behavior before autosave.
