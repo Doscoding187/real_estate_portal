@@ -1698,6 +1698,558 @@ describeWithDb('Development Card Data Flow Integration', () => {
     });
   });
 
+  it('preserves published auction ownership across partial edits and public output', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const suffix = Date.now();
+    const { testUserId, builderName } = await createApprovedDeveloper(
+      db!,
+      suffix,
+      'Auction Ownership',
+    );
+    const developmentName = `Auction Ownership Development ${suffix}`;
+    const unitTypeId = `auction-own-${suffix}`;
+    const city = `Auction Ownership City ${suffix}`;
+    const originalImages = [
+      { url: 'https://example.com/auction-ownership-original-hero.jpg' },
+    ];
+    const updatedImages = [
+      { url: 'https://example.com/auction-ownership-updated-hero.jpg' },
+    ];
+    const updatedVideos = ['https://example.com/auction-ownership-updated-video.mp4'];
+    const updatedFloorPlans = ['https://example.com/auction-ownership-updated-plan.pdf'];
+    const updatedBrochures = ['https://example.com/auction-ownership-updated-brochure.pdf'];
+    const originalAuctionStart = '2026-11-10T10:00:00.000Z';
+    const originalAuctionEnd = '2026-11-20T17:00:00.000Z';
+    const updatedAuctionStart = '2026-12-03T09:00:00.000Z';
+    const updatedAuctionEnd = '2026-12-12T17:00:00.000Z';
+
+    const createdDevelopment = await developmentService.createDevelopment(testUserId, {
+      name: developmentName,
+      developmentType: 'residential',
+      transactionType: 'auction',
+      address: '31 Auction Ownership Road',
+      city,
+      province: 'Gauteng',
+      suburb: 'Bidtown',
+      status: 'launching-soon',
+      ownershipType: 'sectional-title',
+      ownershipTypes: ['sectional-title'],
+      launchDate: '2026-08-01',
+      completionDate: '2027-03-31',
+      description:
+        'Published auction ownership proof keeps bid terms and inventory stable across edits.',
+      highlights: ['Timed bidding', 'Legal pack ready', 'Secure estate'],
+      images: originalImages,
+      videos: ['https://example.com/auction-ownership-original-video.mp4'],
+      floorPlans: ['https://example.com/auction-ownership-original-plan.pdf'],
+      brochures: ['https://example.com/auction-ownership-original-brochure.pdf'],
+      monthlyLevyFrom: 1_450,
+      ratesFrom: 1_050,
+      transferCostsIncluded: 0,
+      unitTypes: [
+        {
+          id: unitTypeId,
+          name: 'Auction Ownership Lot A',
+          bedrooms: 3,
+          bathrooms: 2,
+          unitSize: 118,
+          yardSize: 220,
+          priceFrom: 3_200_000,
+          priceTo: 3_500_000,
+          monthlyRentFrom: 22_000,
+          startingBid: 900_000,
+          reservePrice: 1_050_000,
+          auctionStartDate: originalAuctionStart,
+          auctionEndDate: originalAuctionEnd,
+          auctionStatus: 'scheduled',
+          totalUnits: 1,
+          availableUnits: 1,
+          reservedUnits: 0,
+          parkingType: 'garage',
+          parkingBays: 2,
+        },
+      ],
+    } as any);
+
+    createdDevelopmentId = Number(createdDevelopment.id);
+
+    await developmentService.publishDevelopment(createdDevelopmentId, testUserId);
+    await developmentService.approveDevelopment(createdDevelopmentId, 1);
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    async function assertAuctionPublicState(expected: {
+      address: string;
+      suburb: string;
+      images: Array<Record<string, string>>;
+      videos: string[];
+      floorPlans: string[];
+      brochures: string[];
+      description: string;
+      highlights: string[];
+      levyFrom: number;
+      ratesFrom: number;
+      transferCostsIncluded: boolean;
+      unitName: string;
+      bedrooms: number;
+      startingBidFrom: number;
+      reservePriceFrom: number;
+      auctionStartDate: string;
+      auctionEndDate: string;
+      totalUnits: number;
+      availableUnits: number;
+    }) {
+      const result = await caller.properties.search({
+        city,
+        province: 'Gauteng',
+        limit: 20,
+        offset: 0,
+        includeDevelopments: true,
+      });
+
+      const developmentItems = (result as any)?.developments?.items ?? [];
+      const matched = developmentItems.find(
+        (dev: any) => Number(dev.id) === createdDevelopmentId,
+      );
+
+      expect(matched).toMatchObject({
+        id: createdDevelopmentId,
+        name: developmentName,
+        city,
+        suburb: expected.suburb,
+        province: 'Gauteng',
+        transactionType: 'auction',
+        startingBidFrom: expected.startingBidFrom,
+        reservePriceFrom: expected.reservePriceFrom,
+        priceFrom: null,
+        priceTo: null,
+        monthlyRentFrom: null,
+        monthlyRentTo: null,
+        builderName,
+        videos: expected.videos,
+        floorPlans: expected.floorPlans,
+        brochures: expected.brochures,
+      });
+      expect(matched.images).toEqual(expected.images);
+      expect(matched.configurations[0]).toMatchObject({
+        unitTypeId,
+        label: expected.unitName,
+        listingType: 'auction',
+        priceFrom: expected.startingBidFrom,
+        priceTo: expected.reservePriceFrom,
+      });
+
+      const detail = await caller.developer.getPublicDevelopmentBySlug({
+        slugOrId: String(createdDevelopment.slug || createdDevelopmentId),
+      });
+
+      expect(detail).toMatchObject({
+        id: createdDevelopmentId,
+        name: developmentName,
+        address: expected.address,
+        city,
+        suburb: expected.suburb,
+        province: 'Gauteng',
+        description: expected.description,
+        priceFrom: null,
+        priceTo: null,
+        monthlyRentFrom: null,
+        monthlyRentTo: null,
+        videos: expected.videos,
+        floorPlans: expected.floorPlans,
+        brochures: expected.brochures,
+      });
+      expect(detail?.images).toEqual(expected.images);
+      expect(detail?.highlights).toEqual(expected.highlights);
+      expect(Number(detail?.startingBidFrom)).toBe(expected.startingBidFrom);
+      expect(Number(detail?.reservePriceFrom)).toBe(expected.reservePriceFrom);
+      expect(String(detail?.auctionStartDate)).toContain(expected.auctionStartDate.slice(0, 10));
+      expect(String(detail?.auctionEndDate)).toContain(expected.auctionEndDate.slice(0, 10));
+      expect(detail?.estateSpecs).toMatchObject({
+        levyRange: { min: expected.levyFrom },
+        rightsAndTaxes: { min: expected.ratesFrom },
+        transferCostsIncluded: expected.transferCostsIncluded,
+      });
+      expect(detail?.unitTypes?.[0]).toMatchObject({
+        id: unitTypeId,
+        name: expected.unitName,
+        bedrooms: expected.bedrooms,
+        totalUnits: expected.totalUnits,
+        availableUnits: expected.availableUnits,
+      });
+      expect(Number(detail?.unitTypes?.[0]?.startingBid)).toBe(expected.startingBidFrom);
+      expect(Number(detail?.unitTypes?.[0]?.reservePrice)).toBe(expected.reservePriceFrom);
+      expect(String(detail?.unitTypes?.[0]?.auctionStartDate)).toContain(
+        expected.auctionStartDate.slice(0, 10),
+      );
+      expect(String(detail?.unitTypes?.[0]?.auctionEndDate)).toContain(
+        expected.auctionEndDate.slice(0, 10),
+      );
+      expect(Number(detail?.unitTypes?.[0]?.priceFrom ?? 0)).toBe(0);
+      expect(Number(detail?.unitTypes?.[0]?.monthlyRentFrom ?? 0)).toBe(0);
+      expect(detail?.media).toMatchObject({
+        photos: expected.images,
+        videos: expected.videos,
+        floorPlans: expected.floorPlans,
+        brochures: expected.brochures,
+        documents: expected.brochures,
+      });
+    }
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_auction',
+      currentStepId: 'location',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Auction Location Name',
+        transactionType: 'auction',
+        priceFrom: 999_999,
+        monthlyRentFrom: 99_999,
+        unitTypes: [{ id: unitTypeId, priceFrom: 999_999, monthlyRentFrom: 99_999 }],
+      },
+      stepData: {
+        location: {
+          address: '31 Auction Ownership Road Updated',
+          city,
+          province: 'Gauteng',
+          suburb: 'Bidtown Heights',
+          postalCode: '2196',
+        },
+        unit_types: {
+          unitTypes: [{ id: unitTypeId, name: 'Stale Auction Location Unit', priceFrom: 999_999 }],
+        },
+      },
+      address: '31 Auction Ownership Road Updated',
+      city,
+      province: 'Gauteng',
+      suburb: 'Bidtown Heights',
+      postalCode: '2196',
+      priceFrom: 999_999,
+      monthlyRentFrom: 99_999,
+    } as any);
+
+    await assertAuctionPublicState({
+      address: '31 Auction Ownership Road Updated',
+      suburb: 'Bidtown Heights',
+      images: originalImages,
+      videos: ['https://example.com/auction-ownership-original-video.mp4'],
+      floorPlans: ['https://example.com/auction-ownership-original-plan.pdf'],
+      brochures: ['https://example.com/auction-ownership-original-brochure.pdf'],
+      description:
+        'Published auction ownership proof keeps bid terms and inventory stable across edits.',
+      highlights: ['Timed bidding', 'Legal pack ready', 'Secure estate'],
+      levyFrom: 1_450,
+      ratesFrom: 1_050,
+      transferCostsIncluded: false,
+      unitName: 'Auction Ownership Lot A',
+      bedrooms: 3,
+      startingBidFrom: 900_000,
+      reservePriceFrom: 1_050_000,
+      auctionStartDate: originalAuctionStart,
+      auctionEndDate: originalAuctionEnd,
+      totalUnits: 1,
+      availableUnits: 1,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_auction',
+      currentStepId: 'development_media',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Auction Media Name',
+        location: {
+          address: '99 Stale Auction Media Road',
+          city: 'Stale Auction City',
+          province: 'Western Cape',
+          suburb: 'Stale Auction Suburb',
+        },
+        startingBidFrom: 99_999,
+      },
+      stepData: {
+        development_media: {
+          heroImage: updatedImages[0],
+          photos: [],
+          videos: updatedVideos,
+          floorPlans: updatedFloorPlans,
+          brochures: updatedBrochures,
+          documents: updatedBrochures,
+        },
+        unit_types: {
+          unitTypes: [
+            {
+              id: unitTypeId,
+              name: 'Stale Auction Media Unit',
+              startingBid: 99_999,
+              reservePrice: 100_000,
+            },
+          ],
+        },
+      },
+      address: '99 Stale Auction Media Road',
+      city: 'Stale Auction City',
+      province: 'Western Cape',
+      startingBidFrom: 99_999,
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+    } as any);
+
+    await assertAuctionPublicState({
+      address: '31 Auction Ownership Road Updated',
+      suburb: 'Bidtown Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description:
+        'Published auction ownership proof keeps bid terms and inventory stable across edits.',
+      highlights: ['Timed bidding', 'Legal pack ready', 'Secure estate'],
+      levyFrom: 1_450,
+      ratesFrom: 1_050,
+      transferCostsIncluded: false,
+      unitName: 'Auction Ownership Lot A',
+      bedrooms: 3,
+      startingBidFrom: 900_000,
+      reservePriceFrom: 1_050_000,
+      auctionStartDate: originalAuctionStart,
+      auctionEndDate: originalAuctionEnd,
+      totalUnits: 1,
+      availableUnits: 1,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_auction',
+      currentStepId: 'marketing_summary',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Auction Marketing Name',
+        images: [{ url: 'https://example.com/stale-auction-marketing-hero.jpg' }],
+        startingBidFrom: 88_888,
+      },
+      stepData: {
+        marketing_summary: {
+          description:
+            'Updated auction marketing copy proves timed-bid highlights can change safely.',
+          highlights: ['Registration open', 'Viewing weekend', 'Reserve guided'],
+          tagline: 'Auction ownership proof',
+        },
+      },
+      description: 'Updated auction marketing copy proves timed-bid highlights can change safely.',
+      highlights: ['Registration open', 'Viewing weekend', 'Reserve guided'],
+      tagline: 'Auction ownership proof',
+      priceFrom: 888_888,
+      monthlyRentFrom: 88_888,
+      startingBidFrom: 88_888,
+    } as any);
+
+    await assertAuctionPublicState({
+      address: '31 Auction Ownership Road Updated',
+      suburb: 'Bidtown Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description: 'Updated auction marketing copy proves timed-bid highlights can change safely.',
+      highlights: ['Registration open', 'Viewing weekend', 'Reserve guided'],
+      levyFrom: 1_450,
+      ratesFrom: 1_050,
+      transferCostsIncluded: false,
+      unitName: 'Auction Ownership Lot A',
+      bedrooms: 3,
+      startingBidFrom: 900_000,
+      reservePriceFrom: 1_050_000,
+      auctionStartDate: originalAuctionStart,
+      auctionEndDate: originalAuctionEnd,
+      totalUnits: 1,
+      availableUnits: 1,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_auction',
+      currentStepId: 'governance_finances',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Auction Governance Name',
+        location: {
+          address: '99 Stale Auction Governance Road',
+          city: 'Stale Auction City',
+          province: 'Western Cape',
+        },
+        startingBidFrom: 77_777,
+      },
+      stepData: {
+        governance_finances: {
+          levyRange: { min: 1_650, max: 1_950 },
+          rightsAndTaxes: { min: 1_225, max: 1_525 },
+          transferCostsIncluded: true,
+        },
+      },
+      monthlyLevyFrom: 1_650,
+      monthlyLevyTo: 1_950,
+      ratesFrom: 1_225,
+      ratesTo: 1_525,
+      transferCostsIncluded: 1,
+      address: '99 Stale Auction Governance Road',
+      startingBidFrom: 77_777,
+    } as any);
+
+    await assertAuctionPublicState({
+      address: '31 Auction Ownership Road Updated',
+      suburb: 'Bidtown Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description: 'Updated auction marketing copy proves timed-bid highlights can change safely.',
+      highlights: ['Registration open', 'Viewing weekend', 'Reserve guided'],
+      levyFrom: 1_650,
+      ratesFrom: 1_225,
+      transferCostsIncluded: true,
+      unitName: 'Auction Ownership Lot A',
+      bedrooms: 3,
+      startingBidFrom: 900_000,
+      reservePriceFrom: 1_050_000,
+      auctionStartDate: originalAuctionStart,
+      auctionEndDate: originalAuctionEnd,
+      totalUnits: 1,
+      availableUnits: 1,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_auction',
+      currentStepId: 'unit_types',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      transactionType: 'auction',
+      developmentData: {
+        name: 'Stale Auction Unit Name',
+        transactionType: 'auction',
+        location: {
+          address: '99 Stale Auction Unit Road',
+          city: 'Stale Auction City',
+          province: 'Western Cape',
+        },
+        priceFrom: 777_777,
+        monthlyRentFrom: 77_777,
+      },
+      stepData: {
+        unit_types: {
+          unitTypes: [
+            {
+              id: unitTypeId,
+              name: 'Auction Ownership Lot A Updated',
+              bedrooms: 4,
+              bathrooms: 3,
+              unitSize: 132,
+              priceFrom: 3_800_000,
+              monthlyRentFrom: 28_000,
+              startingBid: 1_050_000,
+              reservePrice: 1_250_000,
+              auctionStartDate: updatedAuctionStart,
+              auctionEndDate: updatedAuctionEnd,
+              auctionStatus: 'scheduled',
+              totalUnits: 2,
+              availableUnits: 1,
+              reservedUnits: 1,
+              parkingType: 'garage',
+              parkingBays: 2,
+            },
+          ],
+        },
+      },
+      unitTypes: [
+        {
+          id: unitTypeId,
+          name: 'Auction Ownership Lot A Updated',
+          bedrooms: 4,
+          bathrooms: 3,
+          unitSize: 132,
+          priceFrom: 3_800_000,
+          monthlyRentFrom: 28_000,
+          startingBid: 1_050_000,
+          reservePrice: 1_250_000,
+          auctionStartDate: updatedAuctionStart,
+          auctionEndDate: updatedAuctionEnd,
+          auctionStatus: 'scheduled',
+          totalUnits: 2,
+          availableUnits: 1,
+          reservedUnits: 1,
+          parkingType: 'garage',
+          parkingBays: 2,
+        },
+      ],
+      priceFrom: 777_777,
+      monthlyRentFrom: 77_777,
+      startingBidFrom: 1_050_000,
+      reservePriceFrom: 1_250_000,
+    } as any);
+
+    await assertAuctionPublicState({
+      address: '31 Auction Ownership Road Updated',
+      suburb: 'Bidtown Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description: 'Updated auction marketing copy proves timed-bid highlights can change safely.',
+      highlights: ['Registration open', 'Viewing weekend', 'Reserve guided'],
+      levyFrom: 1_650,
+      ratesFrom: 1_225,
+      transferCostsIncluded: true,
+      unitName: 'Auction Ownership Lot A Updated',
+      bedrooms: 4,
+      startingBidFrom: 1_050_000,
+      reservePriceFrom: 1_250_000,
+      auctionStartDate: updatedAuctionStart,
+      auctionEndDate: updatedAuctionEnd,
+      totalUnits: 2,
+      availableUnits: 1,
+    });
+
+    const [publishedState] = await db!
+      .select({
+        isPublished: developments.isPublished,
+        approvalStatus: developments.approvalStatus,
+        priceFrom: developments.priceFrom,
+        priceTo: developments.priceTo,
+        monthlyRentFrom: developments.monthlyRentFrom,
+        monthlyRentTo: developments.monthlyRentTo,
+        startingBidFrom: developments.startingBidFrom,
+        reservePriceFrom: developments.reservePriceFrom,
+        auctionStartDate: developments.auctionStartDate,
+        auctionEndDate: developments.auctionEndDate,
+        totalUnits: developments.totalUnits,
+        availableUnits: developments.availableUnits,
+      })
+      .from(developments)
+      .where(eq(developments.id, createdDevelopmentId))
+      .limit(1);
+
+    expect(Number(publishedState?.isPublished ?? 0)).toBe(1);
+    expect(publishedState?.approvalStatus).toBe('approved');
+    expect(publishedState?.priceFrom).toBeNull();
+    expect(publishedState?.priceTo).toBeNull();
+    expect(publishedState?.monthlyRentFrom).toBeNull();
+    expect(publishedState?.monthlyRentTo).toBeNull();
+    expect(Number(publishedState?.startingBidFrom)).toBe(1_050_000);
+    expect(Number(publishedState?.reservePriceFrom)).toBe(1_250_000);
+    expect(String(publishedState?.auctionStartDate)).toContain(updatedAuctionStart.slice(0, 10));
+    expect(String(publishedState?.auctionEndDate)).toContain(updatedAuctionEnd.slice(0, 10));
+    expect(Number(publishedState?.totalUnits)).toBe(2);
+    expect(Number(publishedState?.availableUnits)).toBe(1);
+  }, 120_000);
+
   it('blocks publishing when description is empty', async () => {
     const db = await getDb();
     expect(db).toBeTruthy();

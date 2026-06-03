@@ -489,3 +489,41 @@ Next recommended slice:
 - Run Rental Engine browser/API edit-published ownership proof using the Sale ownership pattern.
 Commit hash/tag: Current commit for this slice.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-03 - Auction Edit-Published API Ownership Proof
+
+Date: 2026-06-03
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove published auction development partial edits preserve unrelated fields and auction-native public output before autosave work.
+Files changed:
+- server/__tests__/integration.development-card-data-flow.test.ts
+- server/services/developmentService.ts
+- docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed. 1 test file, 13 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed. 11 test files, 95 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed.
+Manual flows verified:
+- None in this slice. This is API/DB edit-published ownership proof; browser proof remains pending.
+API/DB ownership proof:
+- Published auction location edit preserved media, highlights, governance, auction units, bid/reserve pricing, auction dates, approval, and public output.
+- Published auction media edit preserved location, highlights, governance, auction units, bid/reserve pricing, auction dates, approval, and public output.
+- Published auction marketing/highlights edit preserved location, media, governance, auction units, bid/reserve pricing, auction dates, approval, and public output.
+- Published auction governance/finance edit preserved location, media, highlights, auction units, bid/reserve pricing, auction dates, approval, and public output.
+- Published auction unit-types edit preserved location, media, highlights, governance, approval, public output, and stale sale/rent prices did not leak into auction public pricing.
+- Public development detail now exposes top-level auction aggregates used by the frontend pricing helpers: `auctionStartDate`, `auctionEndDate`, `startingBidFrom`, and `reservePriceFrom`.
+Remaining risks:
+- Auction browser create/save/resume/publish/public/search/lead proof remains pending.
+- Rental browser proof remains pending.
+- Autosave remains blocked until transaction-lane browser save/resume/edit safety is proven.
+Next recommended slice:
+- Run Rental and Auction browser proof for public page/search/lead and edit-published ownership, then decide the first autosave implementation slice.
+Commit hash/tag: Current commit for this slice.
+Uncommitted reason, if any: None. Slice will be committed after hygiene checks.

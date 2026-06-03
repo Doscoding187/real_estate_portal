@@ -521,6 +521,10 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       priceTo: developments.priceTo,
       monthlyRentFrom: developments.monthlyRentFrom,
       monthlyRentTo: developments.monthlyRentTo,
+      auctionStartDate: developments.auctionStartDate,
+      auctionEndDate: developments.auctionEndDate,
+      startingBidFrom: developments.startingBidFrom,
+      reservePriceFrom: developments.reservePriceFrom,
       amenities: developments.amenities,
       highlights: developments.highlights,
       estateSpecs: developments.estateSpecs,
@@ -676,6 +680,12 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
   return {
     ...dev,
     developerDisplay: buildDeveloperDisplay(dev),
+    priceFrom: dev.priceFrom != null ? Number(dev.priceFrom) : null,
+    priceTo: dev.priceTo != null ? Number(dev.priceTo) : null,
+    monthlyRentFrom: dev.monthlyRentFrom != null ? Number(dev.monthlyRentFrom) : null,
+    monthlyRentTo: dev.monthlyRentTo != null ? Number(dev.monthlyRentTo) : null,
+    startingBidFrom: dev.startingBidFrom != null ? Number(dev.startingBidFrom) : null,
+    reservePriceFrom: dev.reservePriceFrom != null ? Number(dev.reservePriceFrom) : null,
 
     images,
     videos,
