@@ -511,16 +511,16 @@ export function EnhancedHero({
           ) : (
             // Default Homepage Title
             <h1 className="mb-3 text-[2rem] font-bold leading-[1.06] text-blue-950 sm:mb-4 sm:text-4xl md:text-5xl lg:text-6xl">
-              <span className="block">Find property with</span>
-              <span className="block text-blue-600">confidence in South Africa</span>
+              <span className="block">South Africa&apos;s smarter</span>
+              <span className="block text-blue-600">property platform</span>
             </h1>
           )}
 
           <p className="animate-fade-in text-[0.95rem] leading-6 text-slate-600 sm:mx-auto sm:block sm:max-w-2xl sm:text-base md:text-lg md:leading-relaxed">
             {subtitle || (
               <>
-                Search property, discover new developments, research suburbs, and connect with
-                trusted property professionals across South Africa.
+                Search homes, discover new developments, explore local insights, and connect with
+                trusted property professionals.
               </>
             )}
           </p>
