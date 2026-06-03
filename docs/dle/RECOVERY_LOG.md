@@ -293,3 +293,51 @@ Next recommended slice:
 - Verify search-card and lead-form transaction context through browser/API, then prove edit-published ownership before autosave.
 Commit hash/tag: `dd89ceab fix(dle): surface public highlights and truthful save state`
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-03 - Search Card And Lead Context Proof
+
+Date: 2026-06-03
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Verify sale public list/search output and public lead capture carry the DLE commercial context before autosave work.
+Files changed:
+- client/src/components/development/DevelopmentLeadDialog.tsx
+- client/src/components/development/DevelopmentLeadDialog.test.tsx
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentUnitDetailPage.tsx
+- server/developerRouter.ts
+- server/services/publicLeadCaptureService.ts
+- server/services/developmentService.ts
+- server/__tests__/contract.developer-create-lead.test.ts
+- server/__tests__/integration.developer-create-lead-persistence.test.ts
+- server/__tests__/integration.development-card-data-flow.test.ts
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development/DevelopmentLeadDialog.test.tsx client/src/pages/DevelopmentDetail.test.ts server/__tests__/contract.developer-create-lead.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx'`
+- Result: Passed. 6 test files, 31 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Manual flows verified:
+- Republished local QA development id `4` through `developmentService.publishDevelopment(4, 2)`.
+- Verified public list output includes slug `dle-qa-sale-flow-1780436367449-2vp50t`, `transactionType: for_sale`, public highlights, and sale unit configuration with `priceFrom: 1750000`.
+- Submitted a sale unit lead through the public development page in a headless browser.
+- Verified `developer.createLead` returned HTTP `200` and closed the dialog.
+- Verified persisted lead includes development id, selected unit id/name, unit price, unit price label, normalized `transactionType: sale`, and `funnel_stage: interest`.
+Evidence:
+- docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png
+Product/UX findings:
+- Public list/search output now visibly carries sale transaction and inventory context instead of behaving like a generic listing feed.
+- Public lead capture now preserves selected-unit commercial context for routing/reporting readiness.
+- Local QA data mismatch found: the captured unit is named `2 Bedroom Garden Apartment`, but the persisted lead bedroom count is `1`.
+Remaining risks:
+- Rent and auction search-card/lead-context browser proof remain pending.
+- Edit-published field ownership remains unverified and should be next before autosave.
+- Manual `Save Draft` remains most obvious on Review & Publish rather than throughout the wizard.
+Next recommended slice:
+- Prove edit-published field ownership for location, media, governance/finance, and sale unit types without wiping unrelated fields.
+- Then run focused rent and auction public/lead-context proof.
+Commit hash/tag: Pending.
+Uncommitted reason, if any: Verification still running for this slice.

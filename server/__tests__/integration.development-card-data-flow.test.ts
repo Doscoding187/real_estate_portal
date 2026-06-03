@@ -167,6 +167,16 @@ describeWithDb('Development Card Data Flow Integration', () => {
     createdDevelopmentId = Number(createdDevelopment.id);
 
     await developmentService.publishDevelopment(createdDevelopmentId, testUserId);
+    const [publishedState] = await db!
+      .select({
+        isPublished: developments.isPublished,
+        approvalStatus: developments.approvalStatus,
+      })
+      .from(developments)
+      .where(eq(developments.id, createdDevelopmentId))
+      .limit(1);
+    expect(Number(publishedState?.isPublished ?? 0)).toBe(1);
+    expect(publishedState?.approvalStatus).toBe('approved');
     await developmentService.approveDevelopment(createdDevelopmentId, 1);
 
     const caller = appRouter.createCaller({

@@ -49,7 +49,7 @@ Pass:
 Partial:
 
 - Public page did not surface the newly added highlights in the initial 2026-06-02 browser text checks. This was fixed on 2026-06-03 by selecting/normalizing public detail highlights and rendering a Market Highlights section.
-- Search-card output, lead capture, and edit-published ownership were not verified in this slice.
+- Search-card output and lead capture were later verified for the sale flow on 2026-06-03. Rent/auction output and edit-published ownership remain pending.
 
 ## Bugs Fixed During Proof
 
@@ -93,6 +93,8 @@ Regression test:
 - Marketing Summary and Review are connected by validation, but the UI does not yet make the buyer-facing output visible enough while the user is writing.
 - Unit Types are technically the commercial core, but the UI can make the sale inventory/package meaning stronger through summary previews and buyer-language examples.
 - Public detail now renders and shows required highlights after the 2026-06-03 public highlight surfacing fix.
+- Sale public list output now includes transaction type, public highlights, and sale unit configuration.
+- Sale lead capture now preserves selected unit and normalized transaction context for downstream routing/reporting readiness.
 
 ## Recommended Improved Sale Journey
 
@@ -161,8 +163,8 @@ The sale journey should feel like packaging a market-ready development:
 
 - Required highlights are now visible on the public page in a Market Highlights section.
 - Public page should show sale inventory as product cards, not generic property rows.
-- Search cards need transaction-aware sale pricing and inventory language.
-- Lead forms need to preserve development id, transaction type, and selected unit type context.
+- Search cards now carry sale transaction and inventory data in public list output; the visual card treatment still needs a product-quality audit, and rent/auction proof remains pending.
+- Lead forms now preserve development id, transaction type, selected unit type context, price label, and price for the sale path; rent/auction proof remains pending.
 - Edit-published development must be proven without unrelated field wipes.
 - The wizard should expose more live previews so the developer sees the market-ready package forming as they work.
 
@@ -178,3 +180,4 @@ The sale journey should feel like packaging a market-ready development:
 - Public page pre-fix error: `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-published.png`
 - Public page rendered: `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-rendered.png`
 - Public page highlights visible: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`
+- Sale lead context submitted: `docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png`

@@ -2821,6 +2821,7 @@ async function publishDevelopment(
         .update(developments)
         .set({
           isPublished: 1,
+          approvalStatus: 'approved',
           publishedAt: publishedAtFormatted,
           ...buildPublishedDevelopmentWorkflowStateColumns(existingDev),
         })
@@ -2898,6 +2899,7 @@ async function publishDevelopment(
     .update(developments)
     .set({
       isPublished: 1,
+      approvalStatus: 'approved',
       publishedAt: publishedAtFormatted,
       ...buildPublishedDevelopmentWorkflowStateColumns(ownedDevelopment),
     })
@@ -3084,6 +3086,7 @@ export async function publishDevelopmentStrict(
         developerId: devProfile.id,
         slug,
         isPublished: 1,
+        approvalStatus: 'approved',
         publishedAt: mysqlDateTime(),
         ...buildPublishedDevelopmentWorkflowStateColumns(wizardState as Record<string, any>),
         amenities: JSON.stringify(normalizeAmenities((normalized as any).amenities)),

@@ -31,6 +31,7 @@ interface DevelopmentLeadDialogProps {
     unitName?: string;
     unitPriceFrom?: number;
     unitPriceLabel?: string;
+    transactionType?: 'sale' | 'rent' | 'auction' | string;
     unitBedrooms?: number;
     unitBathrooms?: number;
   } | null;
@@ -211,6 +212,8 @@ export function DevelopmentLeadDialog({
       unitId: resolvedUnitId,
       unitName: resolvedUnitName || undefined,
       unitPriceFrom: unitContext?.unitPriceFrom,
+      unitPriceLabel: unitContext?.unitPriceLabel,
+      transactionType: unitContext?.transactionType,
       unitBedrooms: unitContext?.unitBedrooms,
       unitBathrooms: unitContext?.unitBathrooms,
       name: form.name.trim(),

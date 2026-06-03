@@ -467,6 +467,7 @@ export function getDevelopmentDetailLeadUnitContext(
     unitName: typeof unit.name === 'string' && unit.name.trim() ? unit.name.trim() : undefined,
     unitPriceFrom,
     unitPriceLabel: pricing.priceLabel,
+    transactionType: pricing.transactionType,
     unitBedrooms:
       Number.isFinite(Number(unit.bedrooms)) && Number(unit.bedrooms) >= 0
         ? Number(unit.bedrooms)

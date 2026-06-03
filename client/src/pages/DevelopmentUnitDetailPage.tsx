@@ -1197,6 +1197,7 @@ export default function DevelopmentUnitDetailPage() {
               ? pricingModel.primaryValue
               : undefined,
           unitPriceLabel: pricingModel.summaryLabel,
+          transactionType: pricingModel.transactionType,
           unitBedrooms:
             Number.isFinite(Number(selectedUnit.bedrooms)) && Number(selectedUnit.bedrooms) >= 0
               ? Number(selectedUnit.bedrooms)

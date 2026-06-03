@@ -14,6 +14,12 @@ interface AffordabilityData {
   availableDeposit?: number;
   maxAffordable?: number;
   calculatedAt?: string;
+  leadContext?: LeadContextData;
+}
+
+interface LeadContextData {
+  transactionType?: string;
+  unitPriceLabel?: string;
 }
 
 export interface PublicLeadCaptureInput {
@@ -25,6 +31,8 @@ export interface PublicLeadCaptureInput {
   unitId?: string;
   unitName?: string;
   unitPriceFrom?: number;
+  unitPriceLabel?: string;
+  transactionType?: string;
   unitBedrooms?: number;
   unitBathrooms?: number;
   name: string;
@@ -96,6 +104,56 @@ function coerceLeadType(input?: string): LeadType {
   if (input === 'offer') return 'offer';
   if (input === 'callback') return 'callback';
   return 'inquiry';
+}
+
+function normalizeTransactionContext(value?: string | null): string | undefined {
+  const normalized = (value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (!normalized) return undefined;
+  if (normalized === 'for_rent' || normalized === 'to_rent') return 'rent';
+  if (normalized === 'for_sale') return 'sale';
+  if (normalized === 'on_auction') return 'auction';
+  if (normalized === 'sale' || normalized === 'rent' || normalized === 'auction') return normalized;
+  return normalized;
+}
+
+function hasAffordabilitySignal(value?: AffordabilityData): boolean {
+  if (!value) return false;
+  return Boolean(
+    value.monthlyIncome ||
+      value.monthlyExpenses ||
+      value.monthlyDebts ||
+      value.availableDeposit ||
+      value.maxAffordable,
+  );
+}
+
+function buildLeadAffordabilityData(input: PublicLeadCaptureInput): {
+  data: AffordabilityData | null;
+  hasAffordability: boolean;
+} {
+  const hasAffordability = hasAffordabilitySignal(input.affordabilityData);
+  const leadContext: LeadContextData = {};
+  const transactionType = normalizeTransactionContext(input.transactionType);
+  const unitPriceLabel =
+    typeof input.unitPriceLabel === 'string' && input.unitPriceLabel.trim()
+      ? input.unitPriceLabel.trim()
+      : undefined;
+
+  if (transactionType) leadContext.transactionType = transactionType;
+  if (unitPriceLabel) leadContext.unitPriceLabel = unitPriceLabel;
+
+  const hasLeadContext = Object.keys(leadContext).length > 0;
+  if (!input.affordabilityData && !hasLeadContext) {
+    return { data: null, hasAffordability };
+  }
+
+  return {
+    data: {
+      ...(input.affordabilityData || {}),
+      ...(hasLeadContext ? { leadContext } : {}),
+    },
+    hasAffordability,
+  };
 }
 
 async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<ResolvedLeadOwnership> {
@@ -186,6 +244,7 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
   const source = normalizeLeadSource(input.source || input.leadSource);
   const leadSource = normalizeLeadSource(input.leadSource || input.source);
   const leadType = coerceLeadType(input.leadType);
+  const leadAffordability = buildLeadAffordabilityData(input);
 
   if (resolved.developerBrandProfileId) {
     const brandCapture = await brandLeadService.captureBrandLead({
@@ -213,8 +272,10 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
     if (resolved.agencyId) leadPatch.agencyId = resolved.agencyId;
     if (leadType !== 'inquiry') leadPatch.leadType = leadType;
     if (source) leadPatch.source = source;
-    if (input.affordabilityData) {
-      leadPatch.affordabilityData = input.affordabilityData as any;
+    if (leadAffordability.data) {
+      leadPatch.affordabilityData = leadAffordability.data as any;
+    }
+    if (leadAffordability.hasAffordability) {
       leadPatch.funnelStage = 'affordability';
     }
 
@@ -275,8 +336,8 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
     utmSource: input.utmSource || null,
     utmMedium: input.utmMedium || null,
     utmCampaign: input.utmCampaign || null,
-    affordabilityData: input.affordabilityData ? (input.affordabilityData as any) : null,
-    funnelStage: input.affordabilityData ? 'affordability' : 'interest',
+    affordabilityData: leadAffordability.data ? (leadAffordability.data as any) : null,
+    funnelStage: leadAffordability.hasAffordability ? 'affordability' : 'interest',
     qualificationStatus: 'pending',
   });
 

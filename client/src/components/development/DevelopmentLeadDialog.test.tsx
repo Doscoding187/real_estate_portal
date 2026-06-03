@@ -55,6 +55,8 @@ describe('DevelopmentLeadDialog', () => {
           unitId: canonicalUnitId,
           unitName: 'Type A',
           unitPriceFrom: 1299000,
+          unitPriceLabel: 'Price from',
+          transactionType: 'sale',
           unitBedrooms: 3,
           unitBathrooms: 2,
         }}
@@ -81,6 +83,8 @@ describe('DevelopmentLeadDialog', () => {
         unitId: canonicalUnitId,
         unitName: 'Type A',
         unitPriceFrom: 1299000,
+        unitPriceLabel: 'Price from',
+        transactionType: 'sale',
         unitBedrooms: 3,
         unitBathrooms: 2,
         leadSource: 'development_detail_info',

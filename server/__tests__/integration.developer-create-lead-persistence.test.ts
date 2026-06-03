@@ -154,6 +154,8 @@ describeWithDb('developer.createLead persistence integration', () => {
       unitId: unitTypeId,
       unitName: 'Direct Type A',
       unitPriceFrom: 1_299_000,
+      unitPriceLabel: 'Price from',
+      transactionType: 'sale',
       unitBedrooms: 3,
       unitBathrooms: 2,
       name: 'Direct Buyer',
@@ -191,6 +193,12 @@ describeWithDb('developer.createLead persistence integration', () => {
     expect(Number(persisted.unitPriceFrom)).toBe(1_299_000);
     expect(Number(persisted.unitBedrooms)).toBe(3);
     expect(Number(persisted.unitBathrooms)).toBe(2);
+    expect(persisted.affordabilityData).toMatchObject({
+      leadContext: {
+        transactionType: 'sale',
+        unitPriceLabel: 'Price from',
+      },
+    });
   }, 120000);
 
   it('persists canonical unit context for brand-routed development enquiries', async () => {
@@ -228,6 +236,8 @@ describeWithDb('developer.createLead persistence integration', () => {
       unitId: unitTypeId,
       unitName: 'Brand Type A',
       unitPriceFrom: 1_399_000,
+      unitPriceLabel: 'Rent from',
+      transactionType: 'for_rent',
       unitBedrooms: 3,
       unitBathrooms: 2,
       name: 'Brand Buyer',
@@ -267,5 +277,12 @@ describeWithDb('developer.createLead persistence integration', () => {
     expect(Number(persisted.unitPriceFrom)).toBe(1_399_000);
     expect(Number(persisted.unitBedrooms)).toBe(3);
     expect(Number(persisted.unitBathrooms)).toBe(2);
+    expect(persisted.affordabilityData).toMatchObject({
+      leadContext: {
+        transactionType: 'rent',
+        unitPriceLabel: 'Rent from',
+      },
+    });
+    expect(persisted.funnelStage).toBe('interest');
   }, 120000);
 });

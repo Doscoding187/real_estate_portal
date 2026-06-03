@@ -16,8 +16,8 @@ Use this checklist before calling the Development Listing Engine stable.
 | Edit auction unit types | Auction inventory/pricing updates safely | Pending | |
 | Publish development | Publish validation passes correctly | Pass | Publish readiness correctly blocked missing highlights, highlights were added, and the sale draft published successfully after the backend date-format fix. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-button-disabled.png` and `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
 | Public page | Correct sale/rent/auction display | Partial | Sale public page now renders with development name, sale pricing, unit type, CTA, and publish-critical highlights. Overall row stays partial until rent/auction public display is browser-proven. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`. |
-| Search cards | Correct sale/rent/auction pricing and ordering | Pending | |
-| Lead capture | Lead context matches transaction type and unit interest | Pending | |
+| Search cards | Correct sale/rent/auction pricing and ordering | Partial | Sale public list output includes published development `4`, `for_sale`, public highlights, and sale unit configuration with `priceFrom: 1750000`. Rent/auction search-card proof remains pending. |
+| Lead capture | Lead context matches transaction type and unit interest | Partial | Browser submitted a sale unit lead and DB verified development id, unit id/name, sale transaction context, price label, price, and `funnel_stage: interest`. Rent/auction lead proof remains pending. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png`. |
 | Edit published development | No unrelated field wipes | Pending | |
 
 ## Evidence Standard
@@ -226,3 +226,45 @@ Focused tests:
 - `client/src/pages/DevelopmentDetail.test.ts`
 - `client/src/components/development-wizard/DevelopmentWizard.test.tsx`
 - `client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx`
+
+## 2026-06-03 Search Card And Lead Context Proof
+
+Environment:
+
+- Frontend: `http://localhost:3009`
+- Backend: `http://localhost:5000`
+- Database: `listify_local`
+- Published development id: `4`
+- Published slug: `dle-qa-sale-flow-1780436367449-2vp50t`
+
+Functional pass/fail:
+
+- Pass: republished local QA development through `developmentService.publishDevelopment(4, 2)`.
+- Pass: publish now sets `approvalStatus = approved` with `isPublished = 1`, making the development eligible for public list/search output.
+- Pass: `listPublicDevelopments({ limit: 50 })` returned the QA sale development.
+- Pass: public list output included `transactionType: for_sale`.
+- Pass: public list output included the three public highlights.
+- Pass: public list output included sale unit configuration with `listingType: sale` and `priceFrom: 1750000`.
+- Pass: browser submitted a public sale unit lead through the public development page.
+- Pass: `developer.createLead` returned HTTP `200`.
+- Pass: persisted lead kept development id `4`, unit id `unit-1780436383320-xxsr1lrnn`, unit name `2 Bedroom Garden Apartment`, unit price `1750000.00`, and `lead_source: development_detail_contact`.
+- Pass: persisted lead stored `affordability_data.leadContext.transactionType = sale` and `unitPriceLabel = Price from`.
+- Pass: persisted lead stayed in `funnel_stage: interest`; lead context alone did not incorrectly promote it to affordability.
+- Pending: rent and auction search-card/lead-context browser proof.
+- Pending: edit-published field ownership proof.
+
+Evidence:
+
+- `docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png`
+
+Product/data notes:
+
+- The sale public card data is now more than a generic listing: it carries transaction type, highlights, and sale unit inventory into public list output.
+- The lead dialog now passes commercial context to the backend instead of only contact details.
+- Local QA data has a mismatch worth cleaning later: unit name says `2 Bedroom Garden Apartment`, while the persisted bedroom count on the captured lead is `1`.
+
+Before autosave:
+
+- Prove edit-published location, media, governance/finance, and unit-type changes do not wipe unrelated fields.
+- Prove resumed drafts restore media, documents, highlights, unit types, and readiness state.
+- Keep rent and auction proof separate from sale proof so transaction-specific behavior does not regress quietly.
