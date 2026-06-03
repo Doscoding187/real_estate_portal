@@ -418,3 +418,37 @@ Next recommended slice:
 - Run Rental Engine edit-published ownership and public/lead proof using the sale ownership pattern, then run Auction Engine proof.
 Commit hash/tag: Current commit for this slice.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-03 - Rental Engine Technical Proof Checkpoint
+
+Date: 2026-06-03
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Establish focused technical proof for the Rental Engine before browser/manual rental ownership work.
+Files changed:
+- docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed. 11 test files, 93 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed.
+Manual flows verified:
+- None in this slice. This checkpoint is focused automated/API/DB proof only.
+Technical proof:
+- Rental pricing uses monthly rent fields on public detail, unit detail, search/result cards, qualification, referral, and distribution helpers.
+- Rental readiness requires monthly rent and blocks inverted rental ranges.
+- Rental sanitization/canonical update paths strip stale sale and auction fields.
+- Rental public search configurations use rental aggregates and `listingType: rent`.
+- Rental lead persistence normalizes transaction context to `rent` and preserves the rental unit price label.
+Remaining risks:
+- Rental browser create/save/resume/publish/public/search/lead proof remains pending.
+- Rental edit-published ownership remains pending.
+- Auction proof remains pending.
+- Autosave remains blocked until all transaction lanes prove save/resume/edit safety.
+Next recommended slice:
+- Run Rental Engine browser/API edit-published ownership proof using the Sale ownership pattern.
+Commit hash/tag: Current commit for this slice.
+Uncommitted reason, if any: None. Slice committed.
