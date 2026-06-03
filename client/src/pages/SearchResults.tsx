@@ -590,6 +590,7 @@ export default function SearchResults({
                                 highlights: card.highlights,
                                 description: card.description,
                                 listingSource: card.listingSource,
+                                listingType: card.listingType,
                                 listerType: card.listerType,
                                 contactRole: card.contactRole,
                                 propertyId: card.propertyId,

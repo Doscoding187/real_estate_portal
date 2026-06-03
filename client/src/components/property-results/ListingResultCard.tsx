@@ -34,6 +34,7 @@ export interface ListingResultCardData {
   agencyId?: number;
   developerBrandProfileId?: number;
   developmentId?: number;
+  listingType?: 'sale' | 'rent' | 'auction';
   unitTypeId?: string;
   unitDisplayOrder?: number;
   contactPhone?: string;
@@ -41,10 +42,15 @@ export interface ListingResultCardData {
   contactEmail?: string;
 }
 
-function formatPrice(price: number, options?: { from?: boolean }) {
+function formatPrice(
+  price: number,
+  options?: { from?: boolean; listingType?: 'sale' | 'rent' | 'auction' },
+) {
   const normalizedPrice = Number(price || 0);
   if (normalizedPrice <= 0) return 'Price on request';
   const formattedPrice = `R ${normalizedPrice.toLocaleString()}`;
+  if (options?.from && options.listingType === 'rent') return `Rent from ${formattedPrice}`;
+  if (options?.from && options.listingType === 'auction') return `Bid from ${formattedPrice}`;
   return options?.from ? `From ${formattedPrice}` : formattedPrice;
 }
 
@@ -193,7 +199,10 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             )}
 
             <p className="mt-3 text-lg font-semibold tracking-tight text-blue-600 sm:text-xl">
-              {formatPrice(data.price, { from: isDevelopmentListing })}
+              {formatPrice(data.price, {
+                from: isDevelopmentListing,
+                listingType: data.listingType,
+              })}
             </p>
 
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 pr-2">

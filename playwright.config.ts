@@ -120,11 +120,15 @@ export default defineConfig({
     },
   ],
 
-  // Run your local dev server before starting the tests
-  webServer: {
-    command: 'pnpm dev:backend',
-    url: 'http://localhost:5000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  // Run your local dev server before starting the tests, unless a manual QA slice
+  // needs to reuse already-running frontend/backend processes.
+  webServer:
+    process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1'
+      ? undefined
+      : {
+          command: 'pnpm dev:backend',
+          url: 'http://localhost:5000',
+          reuseExistingServer: !process.env.CI,
+          timeout: 120 * 1000,
+        },
 });

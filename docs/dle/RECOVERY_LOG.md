@@ -527,3 +527,58 @@ Next recommended slice:
 - Run Rental and Auction browser proof for public page/search/lead and edit-published ownership, then decide the first autosave implementation slice.
 Commit hash/tag: Current commit for this slice.
 Uncommitted reason, if any: None. Slice will be committed after hygiene checks.
+
+## 2026-06-03 - Rental/Auction Browser Merchandising And Lead Proof
+
+Date: 2026-06-03
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make Rental and Auction backend intelligence visible in public merchandising and prove browser lead capture preserves transaction-specific unit context.
+Files changed:
+- client/src/components/property-results/ListingResultCard.tsx
+- client/src/components/property-results/__tests__/ListingResultCard.test.tsx
+- client/src/pages/SearchResults.tsx
+- playwright.config.ts
+- e2e/dle/rental-auction-public-merchandising.spec.ts
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-03/qa-dle-rental-browser-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-browser-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-browser-lead-context.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-browser-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-browser-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-browser-lead-context.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:5173 pnpm exec playwright test e2e/dle/rental-auction-public-merchandising.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 browser spec, 2 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed outside the sandbox with local MySQL access. 12 test files, 98 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Manual flows verified:
+- Rental browser public detail rendered transaction-native output: `Rent From`, `Monthly Rent`, rental unit name, and visible monthly rent range.
+- Rental browser search card rendered `Rent from R 12,500` instead of generic sale-shaped `From R ...`.
+- Rental browser lead dialog submitted successfully and DB verification preserved development id, selected unit id/name, `transactionType: rent`, `unitPriceLabel: Rent from`, `leadSource: development_detail_contact`, and `funnelStage: interest`.
+- Auction browser public detail rendered transaction-native output: `Starting Bid`, auction unit name, and visible bid/reserve range.
+- Auction browser search card rendered `Bid from R 850,000` instead of generic sale-shaped `From R ...`.
+- Auction browser lead dialog submitted successfully and DB verification preserved development id, selected unit id/name, `transactionType: auction`, `unitPriceLabel: Starting bid`, `leadSource: development_detail_contact`, and `funnelStage: interest`.
+Product fix:
+- Unified search/result cards now accept development `listingType` and use transaction-aware price labels for development inventory: sale remains `From`, rental uses `Rent from`, and auction uses `Bid from`.
+- `SearchResults` now passes `card.listingType` through to `ListingResultCard`.
+- Playwright config can skip its `webServer` hook via `PLAYWRIGHT_SKIP_WEBSERVER=1` so DLE browser QA can reuse already-running local frontend/backend processes.
+Evidence:
+- docs/dle/evidence/2026-06-03/qa-dle-rental-browser-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-browser-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-rental-browser-lead-context.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-browser-public-page.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-browser-search-card.png
+- docs/dle/evidence/2026-06-03/qa-dle-auction-browser-lead-context.png
+Remaining risks:
+- Rental and auction edit-published ownership are API/DB-proven, but browser edit-published ownership remains pending.
+- Rental and auction browser create/save/resume/publish wizard flows remain pending.
+- Autosave remains blocked until transaction-lane save/resume/edit safety and truthful failure/recovery behavior are proven.
+Next recommended slice:
+- Prove rental and auction edit-published ownership through browser-level flows, then decide the first autosave implementation slice.
+Commit hash/tag: This entry is included in `test(dle): prove rental auction browser merchandising`.
+Uncommitted reason, if any: None. Slice committed.

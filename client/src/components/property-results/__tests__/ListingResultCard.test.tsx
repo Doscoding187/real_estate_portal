@@ -50,4 +50,60 @@ describe('ListingResultCard development inventory identity', () => {
 
     expect(setLocationMock).toHaveBeenCalledWith('/development/demo-development/unit/unit-a');
   });
+
+  it('labels rental development search cards as rent instead of generic sale pricing', () => {
+    render(
+      <ListingResultCard
+        data={{
+          id: 'dev-43-rent-a',
+          href: '/development/rental-development/unit/rent-a',
+          title: 'Rental Studio',
+          location: 'Rosebank, Johannesburg, Gauteng',
+          price: 12_500,
+          image: 'https://example.com/rent-a.jpg',
+          development: {
+            id: 43,
+            name: 'Rental Development',
+            slug: 'rental-development',
+          },
+          listingSource: 'development',
+          listingType: 'rent',
+          contactRole: 'developer',
+          developmentId: 43,
+          unitTypeId: 'rent-a',
+          postedBy: 'Rental Builder',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Rent from R 12,500')).toBeInTheDocument();
+  });
+
+  it('labels auction development search cards as bids instead of generic sale pricing', () => {
+    render(
+      <ListingResultCard
+        data={{
+          id: 'dev-44-auction-a',
+          href: '/development/auction-development/unit/auction-a',
+          title: 'Auction Lot',
+          location: 'Menlyn, Pretoria, Gauteng',
+          price: 850_000,
+          image: 'https://example.com/auction-a.jpg',
+          development: {
+            id: 44,
+            name: 'Auction Development',
+            slug: 'auction-development',
+          },
+          listingSource: 'development',
+          listingType: 'auction',
+          contactRole: 'developer',
+          developmentId: 44,
+          unitTypeId: 'auction-a',
+          postedBy: 'Auction Builder',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Bid from R 850,000')).toBeInTheDocument();
+  });
 });
