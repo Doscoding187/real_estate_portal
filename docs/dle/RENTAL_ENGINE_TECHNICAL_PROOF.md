@@ -2,7 +2,7 @@
 
 Date: 2026-06-03
 Branch: recovery/lead-routing-verification-2026-06-02
-Status: Focused API/unit/integration proof passed; browser parity with Sale still pending.
+Status: Focused API/unit/integration proof passed, including rental edit-published ownership; browser parity with Sale still pending.
 
 ## Purpose
 
@@ -22,7 +22,7 @@ Result:
 
 - Passed.
 - 11 test files.
-- 93 tests.
+- 94 tests.
 
 Environment note:
 
@@ -56,6 +56,9 @@ Rental field ownership and stale-field stripping:
 - Sale-to-rental transaction switching preserves unit identity while removing stale sale prices.
 - Rental-to-sale switching removes stale rental fields when the transaction changes away from rent.
 - Canonical `unit_types` partial saves can switch sale inventory to rental without owning unrelated fields.
+- Published rental partial edits preserve unrelated fields across location, media, marketing/highlights, governance/finance, and unit-type ownership boundaries.
+- Published rental public search/detail output remains rental-native after edits, using monthly rent aggregates and `listingType: rent` instead of stale sale-shaped prices.
+- Published rental approval/searchability survives the edit sequence.
 
 Rental public/search output:
 
@@ -68,6 +71,22 @@ Rental lead context:
 - Persisted rental lead context includes the unit price label such as `Rent from`.
 - Rental lead context remains in the interest funnel stage when no affordability payload is supplied.
 
+## Edit-Published API/DB Ownership Proof
+
+Focused test:
+
+- `server/__tests__/integration.development-card-data-flow.test.ts`
+- Test name: `preserves published rental ownership across partial edits and public output`
+
+Proof covered:
+
+- Location partial edit changed address/suburb and preserved media, highlights, governance, rental unit types, monthly rent, approval, and public output.
+- Media partial edit changed hero/gallery/video/floor plan/brochure assets and preserved location, highlights, governance, rental unit types, monthly rent, approval, and public output.
+- Marketing partial edit changed description/highlights/tagline and preserved location, media, governance, rental unit types, monthly rent, approval, and public output.
+- Governance/finance partial edit changed levy/rates/transfer-cost fields and preserved location, media, highlights, rental unit types, monthly rent, approval, and public output.
+- Unit-types partial edit changed rental unit name, bedrooms, monthly rent range, deposit/lease/furnished metadata, and inventory totals while preserving location, media, highlights, governance, approval, and public output.
+- Stale sale-shaped `priceFrom`/`priceTo` values injected during rental edits did not leak into development-level public pricing.
+
 ## What This Does Not Yet Prove
 
 The Rental Engine is not yet at Sale parity.
@@ -79,12 +98,12 @@ Still pending:
 - Browser-proven rental public development page.
 - Browser-proven rental search/result card.
 - Browser-proven rental public lead submission.
-- Browser/API edit-published ownership proof for rental location, media, marketing/highlights, governance/finance, and unit-type edits.
+- Browser edit-published ownership proof for rental location, media, marketing/highlights, governance/finance, and unit-type edits.
 - Product-quality audit of rental language, especially avoiding sale-shaped inventory copy such as sold/sold-out where leasing language is more appropriate.
 
 ## Next Required Slice
 
-Run the Rental Engine browser/API ownership proof using the Sale ownership pattern:
+Run the Rental Engine browser ownership proof using the Sale ownership pattern:
 
 1. Create or identify a published rental development.
 2. Edit location and confirm media, highlights, governance, rental units, monthly rent, approval, and public output are preserved.
@@ -101,6 +120,6 @@ Autosave is still not safe to start from this checkpoint alone.
 
 Reason:
 
-- Rental has strong focused technical coverage, but not full browser/manual ownership proof.
+- Rental has strong focused technical/API coverage, including edit-published ownership, but not full browser/manual ownership proof.
 - Auction has not yet reached the same technical/browser checkpoint.
 - The save-state truth principle still requires all transaction lanes to prove safe save/resume/edit behavior before autosave.

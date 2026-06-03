@@ -419,6 +419,43 @@ Next recommended slice:
 Commit hash/tag: Current commit for this slice.
 Uncommitted reason, if any: None. Slice committed.
 
+## 2026-06-03 - Rental Edit-Published API Ownership Proof
+
+Date: 2026-06-03
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove published rental development partial edits preserve unrelated fields and rental-native public output before autosave work.
+Files changed:
+- server/__tests__/integration.development-card-data-flow.test.ts
+- docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed. 1 test file, 12 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed. 11 test files, 94 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed.
+Manual flows verified:
+- None in this slice. This is API/DB edit-published ownership proof; browser proof remains pending.
+API/DB ownership proof:
+- Published rental location edit preserved media, highlights, governance, rental units, monthly rent, approval, and public output.
+- Published rental media edit preserved location, highlights, governance, rental units, monthly rent, approval, and public output.
+- Published rental marketing/highlights edit preserved location, media, governance, rental units, monthly rent, approval, and public output.
+- Published rental governance/finance edit preserved location, media, highlights, rental units, monthly rent, approval, and public output.
+- Published rental unit-types edit preserved location, media, highlights, governance, approval, public output, and stale sale-shaped prices did not leak into rental public pricing.
+Remaining risks:
+- Rental browser edit-published proof remains pending.
+- Rental browser create/save/resume/publish/public/search/lead proof remains pending.
+- Auction technical/browser ownership proof remains pending.
+- Autosave remains blocked until transaction-lane save/resume/edit safety is proven.
+Next recommended slice:
+- Run Rental Engine browser proof for public page/search/lead and edit-published ownership, or move to Auction technical ownership proof if browser runtime is not available.
+Commit hash/tag: Current commit for this slice.
+Uncommitted reason, if any: None. Slice committed.
+
 ## 2026-06-03 - Rental Engine Technical Proof Checkpoint
 
 Date: 2026-06-03

@@ -335,6 +335,513 @@ describeWithDb('Development Card Data Flow Integration', () => {
     });
   });
 
+  it('preserves published rental ownership across partial edits and public output', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const suffix = Date.now();
+    const { testUserId, builderName } = await createApprovedDeveloper(
+      db!,
+      suffix,
+      'Rental Ownership',
+    );
+    const developmentName = `Rental Ownership Development ${suffix}`;
+    const unitTypeId = `rental-own-${suffix}`;
+    const city = `Rental Ownership City ${suffix}`;
+    const originalImages = [
+      { url: 'https://example.com/rental-ownership-original-hero.jpg' },
+    ];
+    const updatedImages = [
+      { url: 'https://example.com/rental-ownership-updated-hero.jpg' },
+    ];
+    const updatedVideos = ['https://example.com/rental-ownership-updated-video.mp4'];
+    const updatedFloorPlans = ['https://example.com/rental-ownership-updated-plan.pdf'];
+    const updatedBrochures = ['https://example.com/rental-ownership-updated-brochure.pdf'];
+
+    const createdDevelopment = await developmentService.createDevelopment(testUserId, {
+      name: developmentName,
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      address: '21 Rental Ownership Road',
+      city,
+      province: 'Gauteng',
+      suburb: 'Leaseview',
+      status: 'selling',
+      ownershipType: 'sectional-title',
+      ownershipTypes: ['sectional-title'],
+      launchDate: '2026-06-01',
+      completionDate: '2027-03-31',
+      description:
+        'Published rental ownership proof keeps monthly rent and inventory stable across edits.',
+      highlights: ['Lease-ready units', 'Fibre ready', 'Secure access'],
+      images: originalImages,
+      videos: ['https://example.com/rental-ownership-original-video.mp4'],
+      floorPlans: ['https://example.com/rental-ownership-original-plan.pdf'],
+      brochures: ['https://example.com/rental-ownership-original-brochure.pdf'],
+      monthlyLevyFrom: 950,
+      ratesFrom: 650,
+      transferCostsIncluded: 0,
+      unitTypes: [
+        {
+          id: unitTypeId,
+          name: 'Rental Ownership 2 Bed',
+          bedrooms: 2,
+          bathrooms: 2,
+          unitSize: 72,
+          priceFrom: 2_400_000,
+          priceTo: 2_700_000,
+          monthlyRentFrom: 12_500,
+          monthlyRentTo: 14_500,
+          depositRequired: 25_000,
+          leaseTerm: '12 months',
+          isFurnished: true,
+          totalUnits: 18,
+          availableUnits: 11,
+          reservedUnits: 3,
+          parkingType: 'covered',
+          parkingBays: 1,
+        },
+      ],
+    } as any);
+
+    createdDevelopmentId = Number(createdDevelopment.id);
+
+    await developmentService.publishDevelopment(createdDevelopmentId, testUserId);
+    await developmentService.approveDevelopment(createdDevelopmentId, 1);
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    async function assertRentalPublicState(expected: {
+      address: string;
+      suburb: string;
+      images: Array<Record<string, string>>;
+      videos: string[];
+      floorPlans: string[];
+      brochures: string[];
+      description: string;
+      highlights: string[];
+      levyFrom: number;
+      ratesFrom: number;
+      transferCostsIncluded: boolean;
+      unitName: string;
+      bedrooms: number;
+      monthlyRentFrom: number;
+      monthlyRentTo: number;
+      totalUnits: number;
+      availableUnits: number;
+    }) {
+      const result = await caller.properties.search({
+        city,
+        province: 'Gauteng',
+        limit: 20,
+        offset: 0,
+        includeDevelopments: true,
+      });
+
+      const developmentItems = (result as any)?.developments?.items ?? [];
+      const matched = developmentItems.find(
+        (dev: any) => Number(dev.id) === createdDevelopmentId,
+      );
+
+      expect(matched).toMatchObject({
+        id: createdDevelopmentId,
+        name: developmentName,
+        city,
+        suburb: expected.suburb,
+        province: 'Gauteng',
+        transactionType: 'for_rent',
+        monthlyRentFrom: expected.monthlyRentFrom,
+        monthlyRentTo: expected.monthlyRentTo,
+        priceFrom: null,
+        priceTo: null,
+        builderName,
+        videos: expected.videos,
+        floorPlans: expected.floorPlans,
+        brochures: expected.brochures,
+      });
+      expect(matched.images).toEqual(expected.images);
+      expect(matched.configurations[0]).toMatchObject({
+        unitTypeId,
+        label: expected.unitName,
+        listingType: 'rent',
+        priceFrom: expected.monthlyRentFrom,
+        priceTo: expected.monthlyRentTo,
+      });
+
+      const detail = await caller.developer.getPublicDevelopmentBySlug({
+        slugOrId: String(createdDevelopment.slug || createdDevelopmentId),
+      });
+
+      expect(detail).toMatchObject({
+        id: createdDevelopmentId,
+        name: developmentName,
+        address: expected.address,
+        city,
+        suburb: expected.suburb,
+        province: 'Gauteng',
+        description: expected.description,
+        priceFrom: null,
+        priceTo: null,
+        videos: expected.videos,
+        floorPlans: expected.floorPlans,
+        brochures: expected.brochures,
+      });
+      expect(detail?.images).toEqual(expected.images);
+      expect(detail?.highlights).toEqual(expected.highlights);
+      expect(Number(detail?.monthlyRentFrom)).toBe(expected.monthlyRentFrom);
+      expect(Number(detail?.monthlyRentTo)).toBe(expected.monthlyRentTo);
+      expect(detail?.estateSpecs).toMatchObject({
+        levyRange: { min: expected.levyFrom },
+        rightsAndTaxes: { min: expected.ratesFrom },
+        transferCostsIncluded: expected.transferCostsIncluded,
+      });
+      expect(detail?.unitTypes?.[0]).toMatchObject({
+        id: unitTypeId,
+        name: expected.unitName,
+        bedrooms: expected.bedrooms,
+        totalUnits: expected.totalUnits,
+        availableUnits: expected.availableUnits,
+      });
+      expect(Number(detail?.unitTypes?.[0]?.monthlyRentFrom)).toBe(expected.monthlyRentFrom);
+      expect(Number(detail?.unitTypes?.[0]?.monthlyRentTo)).toBe(expected.monthlyRentTo);
+      expect(Number(detail?.unitTypes?.[0]?.priceFrom ?? 0)).toBe(0);
+      expect(detail?.media).toMatchObject({
+        photos: expected.images,
+        videos: expected.videos,
+        floorPlans: expected.floorPlans,
+        brochures: expected.brochures,
+        documents: expected.brochures,
+      });
+    }
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_rent',
+      currentStepId: 'location',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Rental Location Name',
+        transactionType: 'for_rent',
+        priceFrom: 900_000,
+        unitTypes: [{ id: unitTypeId, priceFrom: 900_000 }],
+      },
+      stepData: {
+        location: {
+          address: '21 Rental Ownership Road Updated',
+          city,
+          province: 'Gauteng',
+          suburb: 'Leaseview Heights',
+          postalCode: '2196',
+        },
+        unit_types: {
+          unitTypes: [{ id: unitTypeId, name: 'Stale Rental Location Unit', priceFrom: 900_000 }],
+        },
+      },
+      address: '21 Rental Ownership Road Updated',
+      city,
+      province: 'Gauteng',
+      suburb: 'Leaseview Heights',
+      postalCode: '2196',
+      priceFrom: 900_000,
+      priceTo: 950_000,
+    } as any);
+
+    await assertRentalPublicState({
+      address: '21 Rental Ownership Road Updated',
+      suburb: 'Leaseview Heights',
+      images: originalImages,
+      videos: ['https://example.com/rental-ownership-original-video.mp4'],
+      floorPlans: ['https://example.com/rental-ownership-original-plan.pdf'],
+      brochures: ['https://example.com/rental-ownership-original-brochure.pdf'],
+      description:
+        'Published rental ownership proof keeps monthly rent and inventory stable across edits.',
+      highlights: ['Lease-ready units', 'Fibre ready', 'Secure access'],
+      levyFrom: 950,
+      ratesFrom: 650,
+      transferCostsIncluded: false,
+      unitName: 'Rental Ownership 2 Bed',
+      bedrooms: 2,
+      monthlyRentFrom: 12_500,
+      monthlyRentTo: 14_500,
+      totalUnits: 18,
+      availableUnits: 11,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_rent',
+      currentStepId: 'development_media',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Rental Media Name',
+        location: {
+          address: '99 Stale Rental Media Road',
+          city: 'Stale Rental City',
+          province: 'Western Cape',
+          suburb: 'Stale Rental Suburb',
+        },
+        monthlyRentFrom: 99_999,
+      },
+      stepData: {
+        development_media: {
+          heroImage: updatedImages[0],
+          photos: [],
+          videos: updatedVideos,
+          floorPlans: updatedFloorPlans,
+          brochures: updatedBrochures,
+          documents: updatedBrochures,
+        },
+        unit_types: {
+          unitTypes: [
+            {
+              id: unitTypeId,
+              name: 'Stale Rental Media Unit',
+              monthlyRentFrom: 99_999,
+              monthlyRentTo: 100_000,
+            },
+          ],
+        },
+      },
+      address: '99 Stale Rental Media Road',
+      city: 'Stale Rental City',
+      province: 'Western Cape',
+      monthlyRentFrom: 99_999,
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+    } as any);
+
+    await assertRentalPublicState({
+      address: '21 Rental Ownership Road Updated',
+      suburb: 'Leaseview Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description:
+        'Published rental ownership proof keeps monthly rent and inventory stable across edits.',
+      highlights: ['Lease-ready units', 'Fibre ready', 'Secure access'],
+      levyFrom: 950,
+      ratesFrom: 650,
+      transferCostsIncluded: false,
+      unitName: 'Rental Ownership 2 Bed',
+      bedrooms: 2,
+      monthlyRentFrom: 12_500,
+      monthlyRentTo: 14_500,
+      totalUnits: 18,
+      availableUnits: 11,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_rent',
+      currentStepId: 'marketing_summary',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Rental Marketing Name',
+        images: [{ url: 'https://example.com/stale-rental-marketing-hero.jpg' }],
+        monthlyRentFrom: 88_888,
+      },
+      stepData: {
+        marketing_summary: {
+          description:
+            'Updated rental marketing copy proves public highlights can change safely.',
+          highlights: ['Lease specials', 'Walkable lifestyle', 'Managed access'],
+          tagline: 'Rental ownership proof',
+        },
+      },
+      description: 'Updated rental marketing copy proves public highlights can change safely.',
+      highlights: ['Lease specials', 'Walkable lifestyle', 'Managed access'],
+      tagline: 'Rental ownership proof',
+      priceFrom: 888_888,
+      monthlyRentFrom: 88_888,
+    } as any);
+
+    await assertRentalPublicState({
+      address: '21 Rental Ownership Road Updated',
+      suburb: 'Leaseview Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description: 'Updated rental marketing copy proves public highlights can change safely.',
+      highlights: ['Lease specials', 'Walkable lifestyle', 'Managed access'],
+      levyFrom: 950,
+      ratesFrom: 650,
+      transferCostsIncluded: false,
+      unitName: 'Rental Ownership 2 Bed',
+      bedrooms: 2,
+      monthlyRentFrom: 12_500,
+      monthlyRentTo: 14_500,
+      totalUnits: 18,
+      availableUnits: 11,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_rent',
+      currentStepId: 'governance_finances',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      developmentData: {
+        name: 'Stale Rental Governance Name',
+        location: {
+          address: '99 Stale Rental Governance Road',
+          city: 'Stale Rental City',
+          province: 'Western Cape',
+        },
+        monthlyRentFrom: 77_777,
+      },
+      stepData: {
+        governance_finances: {
+          levyRange: { min: 1_050, max: 1_350 },
+          rightsAndTaxes: { min: 725, max: 950 },
+          transferCostsIncluded: true,
+        },
+      },
+      monthlyLevyFrom: 1_050,
+      monthlyLevyTo: 1_350,
+      ratesFrom: 725,
+      ratesTo: 950,
+      transferCostsIncluded: 1,
+      address: '99 Stale Rental Governance Road',
+      monthlyRentFrom: 77_777,
+    } as any);
+
+    await assertRentalPublicState({
+      address: '21 Rental Ownership Road Updated',
+      suburb: 'Leaseview Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description: 'Updated rental marketing copy proves public highlights can change safely.',
+      highlights: ['Lease specials', 'Walkable lifestyle', 'Managed access'],
+      levyFrom: 1_050,
+      ratesFrom: 725,
+      transferCostsIncluded: true,
+      unitName: 'Rental Ownership 2 Bed',
+      bedrooms: 2,
+      monthlyRentFrom: 12_500,
+      monthlyRentTo: 14_500,
+      totalUnits: 18,
+      availableUnits: 11,
+    });
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      workflowId: 'residential_rent',
+      currentStepId: 'unit_types',
+      completedSteps: ['identity_market', 'configuration', 'location', 'unit_types'],
+      canonicalUpdateMode: 'partial_step',
+      transactionType: 'for_rent',
+      developmentData: {
+        name: 'Stale Rental Unit Name',
+        transactionType: 'for_rent',
+        location: {
+          address: '99 Stale Rental Unit Road',
+          city: 'Stale Rental City',
+          province: 'Western Cape',
+        },
+        priceFrom: 777_777,
+      },
+      stepData: {
+        unit_types: {
+          unitTypes: [
+            {
+              id: unitTypeId,
+              name: 'Rental Ownership 2 Bed Updated',
+              bedrooms: 3,
+              bathrooms: 2,
+              unitSize: 82,
+              priceFrom: 3_100_000,
+              monthlyRentFrom: 13_500,
+              monthlyRentTo: 15_500,
+              depositRequired: 27_000,
+              leaseTerm: '12 months',
+              isFurnished: true,
+              totalUnits: 20,
+              availableUnits: 9,
+              reservedUnits: 4,
+              parkingType: 'covered',
+              parkingBays: 1,
+            },
+          ],
+        },
+      },
+      unitTypes: [
+        {
+          id: unitTypeId,
+          name: 'Rental Ownership 2 Bed Updated',
+          bedrooms: 3,
+          bathrooms: 2,
+          unitSize: 82,
+          priceFrom: 3_100_000,
+          monthlyRentFrom: 13_500,
+          monthlyRentTo: 15_500,
+          depositRequired: 27_000,
+          leaseTerm: '12 months',
+          isFurnished: true,
+          totalUnits: 20,
+          availableUnits: 9,
+          reservedUnits: 4,
+          parkingType: 'covered',
+          parkingBays: 1,
+        },
+      ],
+      priceFrom: 777_777,
+      monthlyRentFrom: 13_500,
+      monthlyRentTo: 15_500,
+    } as any);
+
+    await assertRentalPublicState({
+      address: '21 Rental Ownership Road Updated',
+      suburb: 'Leaseview Heights',
+      images: updatedImages,
+      videos: updatedVideos,
+      floorPlans: updatedFloorPlans,
+      brochures: updatedBrochures,
+      description: 'Updated rental marketing copy proves public highlights can change safely.',
+      highlights: ['Lease specials', 'Walkable lifestyle', 'Managed access'],
+      levyFrom: 1_050,
+      ratesFrom: 725,
+      transferCostsIncluded: true,
+      unitName: 'Rental Ownership 2 Bed Updated',
+      bedrooms: 3,
+      monthlyRentFrom: 13_500,
+      monthlyRentTo: 15_500,
+      totalUnits: 20,
+      availableUnits: 9,
+    });
+
+    const [publishedState] = await db!
+      .select({
+        isPublished: developments.isPublished,
+        approvalStatus: developments.approvalStatus,
+        priceFrom: developments.priceFrom,
+        priceTo: developments.priceTo,
+        monthlyRentFrom: developments.monthlyRentFrom,
+        monthlyRentTo: developments.monthlyRentTo,
+        totalUnits: developments.totalUnits,
+        availableUnits: developments.availableUnits,
+      })
+      .from(developments)
+      .where(eq(developments.id, createdDevelopmentId))
+      .limit(1);
+
+    expect(Number(publishedState?.isPublished ?? 0)).toBe(1);
+    expect(publishedState?.approvalStatus).toBe('approved');
+    expect(publishedState?.priceFrom).toBeNull();
+    expect(publishedState?.priceTo).toBeNull();
+    expect(Number(publishedState?.monthlyRentFrom)).toBe(13_500);
+    expect(Number(publishedState?.monthlyRentTo)).toBe(15_500);
+    expect(Number(publishedState?.totalUnits)).toBe(20);
+    expect(Number(publishedState?.availableUnits)).toBe(9);
+  }, 120_000);
+
   it('uses edited canonical sale inventory for public search instead of stale development aggregates', async () => {
     const db = await getDb();
     expect(db).toBeTruthy();
