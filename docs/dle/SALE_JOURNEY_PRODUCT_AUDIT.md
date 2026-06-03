@@ -48,7 +48,7 @@ Pass:
 
 Partial:
 
-- Public page did not surface the newly added highlights in browser text checks. This is a product visibility gap because highlights were required to publish.
+- Public page did not surface the newly added highlights in the initial 2026-06-02 browser text checks. This was fixed on 2026-06-03 by selecting/normalizing public detail highlights and rendering a Market Highlights section.
 - Search-card output, lead capture, and edit-published ownership were not verified in this slice.
 
 ## Bugs Fixed During Proof
@@ -92,7 +92,7 @@ Regression test:
 - Manual `Save Draft` is only obvious on Review & Publish. Earlier steps need either a real save affordance or clearer unsaved/local-progress language.
 - Marketing Summary and Review are connected by validation, but the UI does not yet make the buyer-facing output visible enough while the user is writing.
 - Unit Types are technically the commercial core, but the UI can make the sale inventory/package meaning stronger through summary previews and buyer-language examples.
-- Public detail now renders, but the required highlights were not confirmed on the page. Backend readiness is not fully visible in the showroom.
+- Public detail now renders and shows required highlights after the 2026-06-03 public highlight surfacing fix.
 
 ## Recommended Improved Sale Journey
 
@@ -151,7 +151,7 @@ The sale journey should feel like packaging a market-ready development:
 
 ## Before Autosave
 
-- Fix the header save state so it never claims `Saved` unless a real save succeeded.
+- Keep the fixed header save state covered so it never claims `Saved` unless a real save succeeded.
 - Decide whether manual `Save Draft` belongs on every step or whether earlier steps need explicit local/unsaved language.
 - Prove resumed drafts restore media, documents, unit types, highlights, and readiness state.
 - Confirm save/resume data uses canonical `stepData.unit_types.unitTypes`.
@@ -159,7 +159,7 @@ The sale journey should feel like packaging a market-ready development:
 
 ## Before Calling Sale World-Class
 
-- Required highlights must be visible on the public page and/or intentionally mapped to a clear buyer-facing section.
+- Required highlights are now visible on the public page in a Market Highlights section.
 - Public page should show sale inventory as product cards, not generic property rows.
 - Search cards need transaction-aware sale pricing and inventory language.
 - Lead forms need to preserve development id, transaction type, and selected unit type context.
@@ -177,3 +177,4 @@ The sale journey should feel like packaging a market-ready development:
 - Publish success: `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`
 - Public page pre-fix error: `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-published.png`
 - Public page rendered: `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-rendered.png`
+- Public page highlights visible: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`

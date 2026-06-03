@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDevelopmentDetailAmenityGroups,
   formatDevelopmentDetailLabel,
+  getDevelopmentDetailHighlights,
   getDevelopmentDetailLeadUnitContext,
   getDevelopmentDetailMediaBuckets,
   getDevelopmentDetailPricingContext,
@@ -37,6 +38,27 @@ describe('DevelopmentDetail pricing context', () => {
     expect(normalizeDevelopmentDetailTransactionType('to-rent')).toBe('rent');
     expect(normalizeDevelopmentDetailTransactionType('on auction')).toBe('auction');
     expect(normalizeDevelopmentDetailTransactionType('for_sale')).toBe('sale');
+  });
+
+  it('normalizes public highlights from canonical and legacy sources', () => {
+    expect(
+      getDevelopmentDetailHighlights({
+        highlights: JSON.stringify(['No transfer duty', 'Prime Sandton address']),
+        developmentData: {
+          highlights: ['No transfer duty', 'Launch-ready investor units'],
+        },
+        stepData: {
+          marketing_summary: {
+            keySellingPoints: [{ label: 'Limited launch pricing' }],
+          },
+        },
+      }),
+    ).toEqual([
+      'No transfer duty',
+      'Prime Sandton address',
+      'Launch-ready investor units',
+      'Limited launch pricing',
+    ]);
   });
 
   it('uses rental unit monthly rent instead of stale sale prices', () => {

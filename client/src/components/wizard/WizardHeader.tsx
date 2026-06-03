@@ -10,7 +10,7 @@ export interface WizardHeaderProps {
   progressPercent: number;
   showExit?: boolean;
   onExit?: () => void;
-  saveStatus?: 'saved' | 'saving' | 'error';
+  saveStatus?: 'saved' | 'saving' | 'error' | 'unsaved';
   lastSavedAt?: Date;
   className?: string;
 }
@@ -21,7 +21,7 @@ export function WizardHeader({
   progressPercent,
   showExit = true,
   onExit,
-  saveStatus = 'saved',
+  saveStatus = 'unsaved',
   lastSavedAt,
   className,
 }: WizardHeaderProps) {
@@ -60,6 +60,14 @@ export function WizardHeader({
                 >
                   <CheckCircle2 className="w-3 h-3 mr-1.5 text-emerald-500" />
                   Saved
+                </span>
+              )}
+              {saveStatus === 'unsaved' && (
+                <span
+                  className="flex items-center text-xs text-slate-500 font-medium"
+                  title="Use Save Draft or Save Progress to persist this work"
+                >
+                  Manual save ready
                 </span>
               )}
               {saveStatus === 'error' && (

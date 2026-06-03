@@ -81,6 +81,10 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   const {
     currentPhase,
+    currentStepId,
+    workflowId,
+    completedSteps,
+    stepData,
     setPhase,
     developmentType,
     developmentData,
@@ -98,6 +102,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   // Local guard: prevent double-hydration (edit/draft/create)
   const [isHydrated, setIsHydrated] = useState(false);
+  const [manualLastSavedAt, setManualLastSavedAt] = useState<Date | null>(null);
+  const [persistedSaveSignature, setPersistedSaveSignature] = useState<string | null>(null);
 
   // --- Create mode: wait for persist rehydrate, then hard reset ---
   useEffect(() => {
@@ -129,14 +135,30 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const stateToWatch = useMemo(
     () => ({
       currentPhase,
+      currentStepId,
+      workflowId,
+      completedSteps,
+      stepData,
       developmentData,
       classification,
       overview,
       unitTypes,
       finalisation,
     }),
-    [currentPhase, developmentData, classification, overview, unitTypes, finalisation],
+    [
+      currentPhase,
+      currentStepId,
+      workflowId,
+      completedSteps,
+      stepData,
+      developmentData,
+      classification,
+      overview,
+      unitTypes,
+      finalisation,
+    ],
   );
+  const saveStateSignature = useMemo(() => JSON.stringify(stateToWatch), [stateToWatch]);
 
   const {
     lastSaved,
@@ -372,6 +394,9 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
           throw new Error('Draft could not be persisted');
         }
       });
+      const savedAt = new Date();
+      setManualLastSavedAt(savedAt);
+      setPersistedSaveSignature(saveStateSignature);
       toast.success('Draft saved');
     } catch (error) {
       console.error('[DevelopmentWizard] Manual draft save failed:', error);
@@ -385,6 +410,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     isManualSavingDraft,
     saveDraft,
     saveDraftMutation,
+    saveStateSignature,
   ]);
 
   const handleSaveProgress = useCallback(async () => {
@@ -450,6 +476,9 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       }
 
       useDevelopmentWizard.getState().markEditSnapshotPersisted();
+      const savedAt = new Date();
+      setManualLastSavedAt(savedAt);
+      setPersistedSaveSignature(saveStateSignature);
       toast.success('Progress saved');
     } catch (error) {
       console.error('[DevelopmentWizard] Save progress failed:', error);
@@ -463,7 +492,16 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     shouldUsePublisherApi,
     updateDevelopmentMutation,
     updatePublisherDevelopmentMutation,
+    saveStateSignature,
   ]);
+
+  const headerSaveStatus = isSaving || isManualSavingDraft || isSavingProgress
+    ? 'saving'
+    : autoSaveError
+      ? 'error'
+      : manualLastSavedAt && persistedSaveSignature === saveStateSignature
+        ? 'saved'
+        : 'unsaved';
 
   const renderPhase = () => {
     if (isEditMode && isEditLoading) {
@@ -488,8 +526,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     return (
       <WizardEngine
         onExit={() => setShowExitDialog(true)}
-        saveStatus={isSaving ? 'saving' : autoSaveError ? 'error' : 'saved'}
-        lastSavedAt={lastSaved}
+        saveStatus={headerSaveStatus}
+        lastSavedAt={lastSaved ?? manualLastSavedAt ?? undefined}
         onManualSaveDraft={handleManualSaveDraft}
         isManualSaveDraftPending={isManualSavingDraft}
         onSaveProgress={isEditMode ? handleSaveProgress : undefined}

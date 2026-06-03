@@ -15,7 +15,7 @@ Use this checklist before calling the Development Listing Engine stable.
 | Edit rental unit types | Rental inventory/pricing updates safely | Pending | |
 | Edit auction unit types | Auction inventory/pricing updates safely | Pending | |
 | Publish development | Publish validation passes correctly | Pass | Publish readiness correctly blocked missing highlights, highlights were added, and the sale draft published successfully after the backend date-format fix. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-button-disabled.png` and `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
-| Public page | Correct sale/rent/auction display | Partial | Public sale page now renders with development name, sale pricing, unit type, and CTA after the amenity helper render-order fix. Required highlights were not confirmed in public page text checks, so buyer-facing packaging is still incomplete. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-rendered.png`. |
+| Public page | Correct sale/rent/auction display | Partial | Sale public page now renders with development name, sale pricing, unit type, CTA, and publish-critical highlights. Overall row stays partial until rent/auction public display is browser-proven. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`. |
 | Search cards | Correct sale/rent/auction pricing and ordering | Pending | |
 | Lead capture | Lead context matches transaction type and unit interest | Pending | |
 | Edit published development | No unrelated field wipes | Pending | |
@@ -179,13 +179,13 @@ Evidence screenshots:
 Product experience gaps:
 
 - Required highlights are a correct readiness rule, but the wizard surfaces the missing requirement too late.
-- Public detail must visibly reflect publish-critical highlights, or the backend readiness intelligence is not fully visible in the showroom.
-- The header still needs a truth-in-UX fix before autosave: do not claim `Saved` unless a real save path has succeeded.
+- Public detail now visibly reflects publish-critical highlights after the 2026-06-03 public highlight surfacing fix.
+- The header save-state truth issue was fixed in focused component coverage: it starts as manual-save-ready/unsaved and only shows saved after a real manual save succeeds.
 - Manual `Save Draft` remains review-only in the browser-proven journey.
 
 Before autosave:
 
-- Fix truthful save-state messaging.
+- Keep truthful save-state messaging covered as autosave work starts.
 - Decide whether every step gets a manual save affordance or clearer unsaved/local-progress copy.
 - Prove resumed drafts restore media, documents, highlights, unit types, and readiness state.
 - Prove edit-after-resume and edit-after-publish do not wipe unrelated fields.
@@ -195,3 +195,34 @@ Before UI/product upgrade:
 - Make highlights and sale inventory more visible in the public page.
 - Add sale journey previews in the wizard so developers can see the buyer-facing package taking shape.
 - Verify search-card and lead-form transaction context.
+
+## 2026-06-03 Public Highlights And Save-State Truth Proof
+
+Environment:
+
+- Frontend: `http://localhost:3009`
+- Backend: `http://localhost:5000`
+- Database: `listify_local`
+- Published development id: `4`
+- Published slug: `dle-qa-sale-flow-1780436367449-2vp50t`
+
+Functional pass/fail:
+
+- Pass: public detail API now selects and normalizes `highlights`.
+- Pass: double-encoded JSON arrays from the `highlights` column normalize to a clean array.
+- Pass: public sale page shows `Market Highlights`.
+- Pass: public sale page shows `No transfer duty`, `Prime Sandton address`, and `Launch-ready investor units`.
+- Pass: public sale page still shows sale pricing and the sale unit type.
+- Pass: wizard header no longer defaults to `Saved`; focused component coverage proves it starts unsaved/manual-save-ready and flips to saved only after manual save succeeds.
+- Pending: rent/auction public detail proof, search-card browser proof, lead-form submission proof, and edit-published ownership proof.
+
+Evidence:
+
+- `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`
+
+Focused tests:
+
+- `server/services/__tests__/developmentService.date.test.ts`
+- `client/src/pages/DevelopmentDetail.test.ts`
+- `client/src/components/development-wizard/DevelopmentWizard.test.tsx`
+- `client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx`

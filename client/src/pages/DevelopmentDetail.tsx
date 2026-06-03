@@ -136,6 +136,67 @@ export function buildDevelopmentDetailAmenityGroups(list: string[]) {
   return groups;
 }
 
+const toDevelopmentDetailStringList = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .flatMap(item => toDevelopmentDetailStringList(item))
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if (
+      (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    ) {
+      try {
+        return toDevelopmentDetailStringList(JSON.parse(trimmed));
+      } catch {
+        return [trimmed];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  if (typeof value === 'object') {
+    const label =
+      (value as { label?: unknown; title?: unknown; name?: unknown; value?: unknown }).label ??
+      (value as { label?: unknown; title?: unknown; name?: unknown; value?: unknown }).title ??
+      (value as { label?: unknown; title?: unknown; name?: unknown; value?: unknown }).name ??
+      (value as { label?: unknown; title?: unknown; name?: unknown; value?: unknown }).value;
+    return toDevelopmentDetailStringList(label);
+  }
+
+  return [];
+};
+
+export function getDevelopmentDetailHighlights(dev: any): string[] {
+  const rawHighlights = [
+    dev?.highlights,
+    dev?.developmentData?.highlights,
+    dev?.marketingSummary?.keySellingPoints,
+    dev?.marketingSummary?.highlights,
+    dev?.stepData?.marketing_summary?.keySellingPoints,
+    dev?.stepData?.marketing_summary?.highlights,
+  ];
+  const seen = new Set<string>();
+
+  return rawHighlights
+    .flatMap(toDevelopmentDetailStringList)
+    .filter(highlight => {
+      const key = highlight.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 const inferOwnership = (structuralType: string, defaultType?: string) => {
   if (defaultType) return defaultType;
   const t = (structuralType || '').toLowerCase();
@@ -1385,6 +1446,7 @@ export default function DevelopmentDetail() {
   })();
 
   const detailPricing = getDevelopmentDetailPricingContext(dev, development.units || []);
+  const developmentHighlights = getDevelopmentDetailHighlights(dev);
   const derivedPriceFrom = detailPricing.priceFrom;
   const priceToDisplay = detailPricing.priceTo;
   const estimatedRepaymentFrom = detailPricing.paymentAmount;
@@ -1882,6 +1944,37 @@ export default function DevelopmentDetail() {
                 </section>
 
                 <Separator className="bg-slate-200" />
+
+                {developmentHighlights.length > 0 && (
+                  <>
+                    <section id="market-highlights" className="w-full">
+                      <Card className="border-slate-200 shadow-sm">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                          <CardTitle className="font-bold text-slate-900">
+                            Market Highlights
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {developmentHighlights.slice(0, 8).map(highlight => (
+                              <div
+                                key={highlight}
+                                className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3"
+                              >
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                                <span className="text-sm font-medium leading-6 text-slate-700">
+                                  {highlight}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </section>
+
+                    <Separator className="bg-slate-200" />
+                  </>
+                )}
 
                 {/* Floor Plans Section - CRITICAL: Carousel overflow contained */}
                 <section id="available-units" className="w-full">

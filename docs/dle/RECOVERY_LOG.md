@@ -247,3 +247,49 @@ Next recommended slice:
 - Fix public highlight surfacing and save-state truth, then verify search-card/lead-form transaction context before starting autosave.
 Commit hash/tag: `d4e0adaf fix(dle): publish sale drafts and render public detail`
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-03 - Public Highlights And Save-State Truth
+
+Date: 2026-06-03
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Fix the two blockers identified before autosave: publish-critical highlights must be visible on the public sale page, and the wizard must not claim progress is saved before a real save succeeds.
+Files changed:
+- server/services/developmentService.ts
+- server/services/__tests__/developmentService.date.test.ts
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- client/src/components/wizard/WizardHeader.tsx
+- client/src/components/wizard/WizardEngine.tsx
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/SALE_JOURNEY_PRODUCT_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run server/services/__tests__/developmentService.date.test.ts client/src/pages/DevelopmentDetail.test.ts client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx'`
+- Result: Passed. 4 test files, 27 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed before this log update.
+Manual flows verified:
+- Public sale page for `dle-qa-sale-flow-1780436367449-2vp50t` rendered without error boundary.
+- Public sale page showed `Market Highlights`.
+- Public sale page showed `No transfer duty`, `Prime Sandton address`, and `Launch-ready investor units`.
+- Public sale page still showed sale pricing and the sale unit type.
+Evidence:
+- docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png
+Product/UX findings:
+- Public detail now reflects publish-critical highlights, so the public showroom better proves the readiness engine.
+- Header save state now starts as unsaved/manual-save-ready and only shows saved after a real manual save or save-progress path succeeds.
+Remaining risks:
+- Manual `Save Draft` is still most obvious on Review & Publish; earlier-step save affordance or clearer copy remains unresolved.
+- Search-card browser proof and lead-form submission proof remain pending.
+- Edit-published field ownership remains unverified.
+- Rental and auction browser flows remain unverified.
+- Autosave should still wait behind deeper resumed-draft and field-ownership proof.
+Next recommended slice:
+- Verify search-card and lead-form transaction context through browser/API, then prove edit-published ownership before autosave.
+Commit hash/tag: Pending until commit.
+Uncommitted reason, if any: Pending commit in this slice.

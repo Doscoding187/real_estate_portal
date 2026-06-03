@@ -96,18 +96,25 @@ function parseJsonMaybeTwice<T>(value: unknown, fallback: T): T {
   }
 }
 
-function parseJsonField(field: unknown): unknown[] {
+export function parseDevelopmentJsonArrayField(field: unknown): unknown[] {
   if (Array.isArray(field)) return field;
   if (!field) return [];
 
   if (typeof field === 'string') {
+    const trimmed = field.trim();
+    if (!trimmed) return [];
+
     try {
-      const trimmed = field.trim();
-      if (trimmed.startsWith('[')) return JSON.parse(trimmed);
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === 'string' && parsed !== trimmed) {
+        return parseDevelopmentJsonArrayField(parsed);
+      }
+      if (typeof parsed === 'string' && parsed.trim()) return [parsed.trim()];
+      return [];
+    } catch {
       if (trimmed.includes(',')) return trimmed.split(',').map(s => s.trim());
       return [trimmed];
-    } catch {
-      return [];
     }
   }
 
@@ -515,6 +522,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       monthlyRentFrom: developments.monthlyRentFrom,
       monthlyRentTo: developments.monthlyRentTo,
       amenities: developments.amenities,
+      highlights: developments.highlights,
       estateSpecs: developments.estateSpecs,
       floorPlans: developments.floorPlans,
       brochures: developments.brochures,
@@ -659,10 +667,11 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
     }
   }
 
-  const images = parseJsonField(dev.images);
-  const videos = parseJsonField(dev.videos);
-  const floorPlans = parseJsonField(dev.floorPlans);
-  const brochures = parseJsonField(dev.brochures);
+  const images = parseDevelopmentJsonArrayField(dev.images);
+  const videos = parseDevelopmentJsonArrayField(dev.videos);
+  const floorPlans = parseDevelopmentJsonArrayField(dev.floorPlans);
+  const brochures = parseDevelopmentJsonArrayField(dev.brochures);
+  const highlights = parseDevelopmentJsonArrayField(dev.highlights);
 
   return {
     ...dev,
@@ -680,6 +689,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       documents: brochures,
     },
     amenities: normalizeAmenities(dev.amenities),
+    highlights,
 
     estateSpecs:
       typeof dev.estateSpecs === 'string'
@@ -723,7 +733,7 @@ export async function getPublicDevelopment(id: number) {
 
   return {
     ...results[0],
-    images: parseJsonField(results[0].images),
+    images: parseDevelopmentJsonArrayField(results[0].images),
   };
 }
 
@@ -863,10 +873,10 @@ export async function listPublicDevelopments(options: {
   });
 
   return results.map((d: any) => {
-    const images = parseJsonField(d.images);
-    const videos = parseJsonField(d.videos);
-    const floorPlans = parseJsonField(d.floorPlans);
-    const brochures = parseJsonField(d.brochures);
+    const images = parseDevelopmentJsonArrayField(d.images);
+    const videos = parseDevelopmentJsonArrayField(d.videos);
+    const floorPlans = parseDevelopmentJsonArrayField(d.floorPlans);
+    const brochures = parseDevelopmentJsonArrayField(d.brochures);
 
     return {
       ...d,
@@ -885,7 +895,7 @@ export async function listPublicDevelopments(options: {
         brochures,
         documents: brochures,
       },
-      highlights: parseJsonField(d.highlights),
+      highlights: parseDevelopmentJsonArrayField(d.highlights),
       rating: d.rating != null ? Number(d.rating) : null,
       isFeatured: Number(d.isFeatured || 0) === 1,
       builderName: d.brandName || d.developerName || null,
@@ -2633,10 +2643,10 @@ async function getDevelopmentsByDeveloperId(developerProfileId: number) {
       highlights,
       features,
 
-      images: parseJsonField(dev.images),
-      videos: parseJsonField(dev.videos),
-      floorPlans: parseJsonField(dev.floorPlans),
-      brochures: parseJsonField(dev.brochures),
+      images: parseDevelopmentJsonArrayField(dev.images),
+      videos: parseDevelopmentJsonArrayField(dev.videos),
+      floorPlans: parseDevelopmentJsonArrayField(dev.floorPlans),
+      brochures: parseDevelopmentJsonArrayField(dev.brochures),
     };
   });
 }

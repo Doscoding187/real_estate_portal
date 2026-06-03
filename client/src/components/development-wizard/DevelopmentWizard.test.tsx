@@ -171,6 +171,7 @@ vi.mock('@/components/ui/ErrorAlert', () => ({
 
 vi.mock('../wizard/WizardEngine', () => ({
   WizardEngine: ({
+    saveStatus,
     onManualSaveDraft,
     isManualSaveDraftPending,
     onSaveProgress,
@@ -179,6 +180,7 @@ vi.mock('../wizard/WizardEngine', () => ({
     React.createElement(
       React.Fragment,
       null,
+      React.createElement('span', { 'data-testid': 'wizard-save-status' }, saveStatus),
       React.createElement(
         'button',
         {
@@ -283,6 +285,7 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     await waitFor(() => {
       expect(useDevelopmentWizard.getState().currentStepId).toBe('review_publish');
     });
+    expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
 
     fireEvent.click(screen.getByRole('button', { name: /manual save draft/i }));
 
@@ -328,6 +331,9 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     expect(draftData.stepData.review_publish).toEqual({
       checklistConfirmed: true,
       readinessDismissals: ['launch-date-warning'],
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('saved');
     });
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Draft saved');
   });

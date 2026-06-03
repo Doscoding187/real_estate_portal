@@ -30,7 +30,7 @@ const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
 interface WizardEngineProps {
   onExit?: () => void;
-  saveStatus?: 'saved' | 'saving' | 'error';
+  saveStatus?: 'saved' | 'saving' | 'error' | 'unsaved';
   lastSavedAt?: Date;
   onManualSaveDraft?: () => void | Promise<void>;
   isManualSaveDraftPending?: boolean;
