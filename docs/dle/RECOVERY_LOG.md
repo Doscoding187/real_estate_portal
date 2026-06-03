@@ -339,5 +339,5 @@ Remaining risks:
 Next recommended slice:
 - Prove edit-published field ownership for location, media, governance/finance, and sale unit types without wiping unrelated fields.
 - Then run focused rent and auction public/lead-context proof.
-Commit hash/tag: Pending.
-Uncommitted reason, if any: Verification still running for this slice.
+Commit hash/tag: `4e107027 fix(dle): preserve lead context and searchable publish state`
+Uncommitted reason, if any: None. Slice committed.
