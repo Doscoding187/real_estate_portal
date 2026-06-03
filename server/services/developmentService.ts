@@ -1719,6 +1719,12 @@ export async function updateDevelopment(
         deleteMissing: updateIntent.deleteMissingUnitTypes,
       })
     : undefined;
+  const inventoryAggregates = buildDevelopmentInventoryAggregates(aggregateUnitTypesData);
+
+  if (inventoryAggregates) {
+    updatePayload.totalUnits = inventoryAggregates.totalUnits;
+    updatePayload.availableUnits = inventoryAggregates.availableUnits;
+  }
 
   if (
     effectiveTransactionType &&
@@ -1855,6 +1861,34 @@ function normalizeDevelopmentTransactionAggregatesForDb<T extends Record<string,
     auctionStartDate: asDateTimeOrNull(aggregates.auctionStartDate),
     auctionEndDate: asDateTimeOrNull(aggregates.auctionEndDate),
   };
+}
+
+type DevelopmentInventoryAggregates = {
+  totalUnits: number;
+  availableUnits: number;
+};
+
+function buildDevelopmentInventoryAggregates(
+  unitTypesData?: Array<Record<string, any>> | null,
+): DevelopmentInventoryAggregates | null {
+  if (!Array.isArray(unitTypesData)) return null;
+
+  return unitTypesData.reduce<DevelopmentInventoryAggregates>(
+    (acc, unit) => {
+      const totalUnits = Math.max(0, sanitizeInt(unit?.totalUnits) ?? 0);
+      const reservedUnits = Math.min(Math.max(0, sanitizeInt(unit?.reservedUnits) ?? 0), totalUnits);
+      const availableUnits = Math.min(
+        Math.max(0, sanitizeInt(unit?.availableUnits) ?? 0),
+        Math.max(0, totalUnits - reservedUnits),
+      );
+
+      return {
+        totalUnits: acc.totalUnits + totalUnits,
+        availableUnits: acc.availableUnits + availableUnits,
+      };
+    },
+    { totalUnits: 0, availableUnits: 0 },
+  );
 }
 
 const normalizeParkingKind = (v: unknown): 'none' | 'open' | 'covered' | 'carport' | 'garage' => {

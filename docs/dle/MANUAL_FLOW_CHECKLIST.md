@@ -8,17 +8,17 @@ Use this checklist before calling the Development Listing Engine stable.
 | Manual Save Draft | Draft saves through real backend path | Pass | Browser clicked `Save Draft` on Review & Publish. No API failures captured. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-manual-save-draft.png`. |
 | Draft appears in My Drafts | Saved draft is visible | Pass | Draft `DLE QA Sale Flow 1780436367449` appeared in `/developer/drafts`. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-my-drafts-visible.png`. |
 | Resume draft | Canonical state restores correctly | Pass | Resume opened `/developer/create-development?draftId=2` and restored the saved development identity. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-draft-resumed.png`. |
-| Edit location | Only location fields change | Pending | |
-| Edit media | Only media fields change | Pending | |
-| Edit governance/finance | Only governance/finance fields change | Pending | |
-| Edit sale unit types | Sale inventory/pricing updates safely | Partial | Browser created a sale unit type with pricing/inventory and reached Review. Edit-after-save/publish ownership still pending. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-unit-type-created.png`. |
+| Edit location | Only location fields change | Pass | Published sale development id `4` location edit preserved media, highlights, governance, unit types, pricing, approval, and public visibility. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`. |
+| Edit media | Only media fields change | Pass | Published sale development id `4` media edit preserved location, highlights, governance, unit types, pricing, approval, and public visibility. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-public-page-final.png`. |
+| Edit governance/finance | Only governance/finance fields change | Pass | Published sale development id `4` governance edit preserved location, media, highlights, unit types, pricing, approval, and public visibility. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`. |
+| Edit sale unit types | Sale inventory/pricing updates safely | Pass | Published sale development id `4` unit edit preserved location, media, highlights, governance, approval, public list visibility, and lead context. Backend now derives development inventory totals from partial unit-type edits. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-lead-submitted.png`. |
 | Edit rental unit types | Rental inventory/pricing updates safely | Pending | |
 | Edit auction unit types | Auction inventory/pricing updates safely | Pending | |
 | Publish development | Publish validation passes correctly | Pass | Publish readiness correctly blocked missing highlights, highlights were added, and the sale draft published successfully after the backend date-format fix. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-button-disabled.png` and `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
 | Public page | Correct sale/rent/auction display | Partial | Sale public page now renders with development name, sale pricing, unit type, CTA, and publish-critical highlights. Overall row stays partial until rent/auction public display is browser-proven. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`. |
 | Search cards | Correct sale/rent/auction pricing and ordering | Partial | Sale public list output includes published development `4`, `for_sale`, public highlights, and sale unit configuration with `priceFrom: 1750000`. Rent/auction search-card proof remains pending. |
 | Lead capture | Lead context matches transaction type and unit interest | Partial | Browser submitted a sale unit lead and DB verified development id, unit id/name, sale transaction context, price label, price, and `funnel_stage: interest`. Rent/auction lead proof remains pending. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png`. |
-| Edit published development | No unrelated field wipes | Pending | |
+| Edit published development | No unrelated field wipes | Pass | Sale edit-published ownership is browser/API/DB-proven for location, media, governance, marketing highlights, and unit types. Rent/auction edit-published proof remains pending before calling the full DLE stable. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`. |
 
 ## Evidence Standard
 
@@ -268,3 +268,38 @@ Before autosave:
 - Prove edit-published location, media, governance/finance, and unit-type changes do not wipe unrelated fields.
 - Prove resumed drafts restore media, documents, highlights, unit types, and readiness state.
 - Keep rent and auction proof separate from sale proof so transaction-specific behavior does not regress quietly.
+
+## 2026-06-03 Edit-Published Field Ownership Proof
+
+Environment:
+
+- Frontend: `http://localhost:3009`
+- Backend: `http://localhost:5000`
+- Database: `listify_local`
+- Published development id: `4`
+- Published slug: `dle-qa-sale-flow-1780436367449-2vp50t`
+
+Functional pass/fail:
+
+- Pass: location partial edit changed address/suburb/city/province/postal code and preserved media, highlights, governance, unit types, pricing, approval, and public visibility.
+- Pass: media partial edit changed hero/gallery/brochure assets and preserved location, highlights, governance, unit types, pricing, approval, and public visibility.
+- Pass: marketing partial edit changed public `Market Highlights`, tagline, and description and preserved location, media, governance, unit types, pricing, approval, and public visibility.
+- Pass: governance/finance partial edit changed levy/rates/transfer-cost fields and preserved location, media, highlights, unit types, pricing, approval, and public visibility.
+- Pass: unit-types partial edit changed unit name, bedrooms, bathrooms, price range, and inventory while preserving location, media, highlights, governance, approval, and public visibility.
+- Pass: backend inventory aggregate bug was fixed; development-level `totalUnits` and `availableUnits` now derive from the effective unit set during unit-type edits.
+- Pass: edited public sale page rendered updated highlights, updated unit name, and updated sale pricing.
+- Pass: post-edit public list/search output remained visible with `transactionType: for_sale`, updated highlights, and sale unit configuration `priceFrom: 1800000`, `priceTo: 1850000`.
+- Pass: post-edit browser lead submission returned HTTP `200`.
+- Pass: persisted post-edit lead included development id `4`, selected unit id/name, `unit_price_from: 1800000.00`, `unit_bedrooms: 2`, `unit_bathrooms: 1.5`, `transactionType: sale`, `unitPriceLabel: Price from`, and `funnel_stage: interest`.
+- Pending: rent and auction edit-published ownership proof.
+
+Evidence:
+
+- `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`
+- `docs/dle/evidence/2026-06-03/qa-dle-edit-published-public-page-final.png`
+- `docs/dle/evidence/2026-06-03/qa-dle-edit-published-lead-submitted.png`
+
+Before autosave:
+
+- Sale edit-published ownership no longer blocks autosave by itself.
+- Still prove rent and auction edit-published ownership, plus deeper resumed-draft restoration for media, documents, highlights, unit types, and readiness.

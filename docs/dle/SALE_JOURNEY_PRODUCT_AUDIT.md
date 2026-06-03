@@ -49,7 +49,7 @@ Pass:
 Partial:
 
 - Public page did not surface the newly added highlights in the initial 2026-06-02 browser text checks. This was fixed on 2026-06-03 by selecting/normalizing public detail highlights and rendering a Market Highlights section.
-- Search-card output and lead capture were later verified for the sale flow on 2026-06-03. Rent/auction output and edit-published ownership remain pending.
+- Search-card output, lead capture, and edit-published field ownership were later verified for the sale flow on 2026-06-03. Rent/auction output and edit-published ownership remain pending.
 
 ## Bugs Fixed During Proof
 
@@ -157,7 +157,8 @@ The sale journey should feel like packaging a market-ready development:
 - Decide whether manual `Save Draft` belongs on every step or whether earlier steps need explicit local/unsaved language.
 - Prove resumed drafts restore media, documents, unit types, highlights, and readiness state.
 - Confirm save/resume data uses canonical `stepData.unit_types.unitTypes`.
-- Add browser/API proof that one wizard slice cannot wipe unrelated slices after resume.
+- Sale edit-published ownership has browser/API/DB proof for location, media, marketing highlights, governance/finance, and unit types.
+- Add rent and auction edit-published ownership proof before enabling autosave for every transaction mode.
 
 ## Before Calling Sale World-Class
 
@@ -165,7 +166,7 @@ The sale journey should feel like packaging a market-ready development:
 - Public page should show sale inventory as product cards, not generic property rows.
 - Search cards now carry sale transaction and inventory data in public list output; the visual card treatment still needs a product-quality audit, and rent/auction proof remains pending.
 - Lead forms now preserve development id, transaction type, selected unit type context, price label, and price for the sale path; rent/auction proof remains pending.
-- Edit-published development must be proven without unrelated field wipes.
+- Sale edit-published development ownership is proven without unrelated field wipes; rent/auction edit-published proof remains pending.
 - The wizard should expose more live previews so the developer sees the market-ready package forming as they work.
 
 ## Evidence
@@ -181,3 +182,6 @@ The sale journey should feel like packaging a market-ready development:
 - Public page rendered: `docs/dle/evidence/2026-06-02/qa-dle-public-page-sale-rendered.png`
 - Public page highlights visible: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`
 - Sale lead context submitted: `docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png`
+- Sale edit-published ownership summary: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`
+- Sale edit-published final public page: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-public-page-final.png`
+- Sale edit-published lead submitted: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-lead-submitted.png`

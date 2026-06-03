@@ -1021,6 +1021,91 @@ describeWithDb('Development Card Data Flow Integration', () => {
     expect(Number(detail?.unitTypes?.[0]?.priceTo)).toBe(1_750_000);
   });
 
+  it('derives development inventory totals from partial unit-type edits', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const suffix = Date.now();
+    const { testUserId } = await createApprovedDeveloper(db!, suffix, 'Inventory Patch');
+    const unitTypeId = `inventory-patch-${suffix}`;
+
+    const createdDevelopment = await developmentService.createDevelopment(testUserId, {
+      name: `Inventory Patch Development ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'for_sale',
+      address: '22 Inventory Patch Road',
+      city: `Inventory Patch City ${suffix}`,
+      province: 'Gauteng',
+      suburb: 'Patchview',
+      status: 'selling',
+      ownershipType: 'sectional-title',
+      ownershipTypes: ['sectional-title'],
+      launchDate: '2026-08-01',
+      completionDate: '2027-03-31',
+      description: 'Partial unit edits should keep development inventory summaries aligned.',
+      highlights: ['Inventory safe', 'Edit proof', 'Commercial stock'],
+      images: [{ url: 'https://placehold.co/600x400/e2e8f0/64748b?text=Inventory+Patch' }],
+      unitTypes: [
+        {
+          id: unitTypeId,
+          name: 'Patch 2 Bed',
+          bedrooms: 2,
+          bathrooms: 2,
+          unitSize: 78,
+          priceFrom: 1_250_000,
+          priceTo: 1_350_000,
+          totalUnits: 10,
+          availableUnits: 7,
+          parkingType: 'covered',
+          parkingBays: 1,
+        },
+      ],
+    } as any);
+
+    createdDevelopmentId = Number(createdDevelopment.id);
+
+    await developmentService.updateDevelopment(createdDevelopmentId, testUserId, {
+      canonicalUpdateMode: 'partial_step',
+      workflowId: 'residential_sale',
+      currentStepId: 'unit_types',
+      completedSteps: ['configuration', 'identity_market', 'location', 'unit_types'],
+      transactionType: 'for_sale',
+      stepData: {
+        unit_types: {
+          unitTypes: [
+            {
+              id: unitTypeId,
+              name: 'Patch 2 Bed Updated',
+              bedrooms: 2,
+              bathrooms: 2,
+              unitSize: 78,
+              priceFrom: 1_450_000,
+              priceTo: 1_550_000,
+              totalUnits: 12,
+              availableUnits: 5,
+              parkingType: 'covered',
+              parkingBays: 1,
+            },
+          ],
+        },
+      },
+    } as any);
+
+    const updated = await developmentService.getDevelopmentWithPhases(createdDevelopmentId);
+
+    expect(Number(updated.totalUnits)).toBe(12);
+    expect(Number(updated.availableUnits)).toBe(5);
+    expect(Number(updated.priceFrom)).toBe(1_450_000);
+    expect(Number(updated.priceTo)).toBe(1_550_000);
+    expect(updated.unitTypes).toHaveLength(1);
+    expect(updated.unitTypes[0]).toMatchObject({
+      id: unitTypeId,
+      name: 'Patch 2 Bed Updated',
+    });
+    expect(Number(updated.unitTypes[0].totalUnits)).toBe(12);
+    expect(Number(updated.unitTypes[0].availableUnits)).toBe(5);
+  });
+
   it('uses auction unit inventory for public development configurations instead of stale sale shadows', async () => {
     const db = await getDb();
     expect(db).toBeTruthy();

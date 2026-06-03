@@ -341,3 +341,51 @@ Next recommended slice:
 - Then run focused rent and auction public/lead-context proof.
 Commit hash/tag: `4e107027 fix(dle): preserve lead context and searchable publish state`
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-03 - Edit-Published Field Ownership Proof
+
+Date: 2026-06-03
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Prove published sale development edits preserve unrelated fields before autosave work.
+Files changed:
+- server/services/developmentService.ts
+- server/__tests__/integration.development-card-data-flow.test.ts
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/SALE_JOURNEY_PRODUCT_AUDIT.md
+- docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md
+- docs/dle/evidence/2026-06-03/qa-dle-edit-published-public-page-final.png
+- docs/dle/evidence/2026-06-03/qa-dle-edit-published-lead-submitted.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run server/__tests__/integration.development-card-data-flow.test.ts client/src/components/development/DevelopmentLeadDialog.test.tsx client/src/pages/DevelopmentDetail.test.ts server/__tests__/contract.developer-create-lead.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx'`
+- Result: Passed. 6 test files, 32 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Manual flows verified:
+- Published sale development id `4` location edit preserved media, highlights, governance, unit types, pricing, approval, and public visibility.
+- Media edit preserved location, highlights, governance, unit types, pricing, approval, and public visibility.
+- Marketing edit updated public `Market Highlights` and preserved location, media, governance, unit types, pricing, approval, and public visibility.
+- Governance/finance edit preserved location, media, highlights, unit types, pricing, approval, and public visibility.
+- Unit-types edit preserved location, media, highlights, governance, approval, and public visibility.
+- Public page rendered the edited sale development with updated highlights, unit name, and sale price range.
+- Post-edit lead capture returned HTTP `200` and persisted selected-unit sale context.
+Bug fixed:
+- Partial unit-type edits could leave development-level `totalUnits` and `availableUnits` stale when the caller omitted top-level inventory totals.
+- `updateDevelopment` now derives development inventory totals from the effective unit set whenever unit types are edited.
+Evidence:
+- docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md
+- docs/dle/evidence/2026-06-03/qa-dle-edit-published-public-page-final.png
+- docs/dle/evidence/2026-06-03/qa-dle-edit-published-lead-submitted.png
+Product/UX findings:
+- Sale edit-published ownership is now strong enough that autosave is no longer blocked by the sale path alone.
+- Public output proves the edited sale package remains a commercial product page after location/media/governance/marketing/unit edits.
+Remaining risks:
+- Rent and auction edit-published ownership remain pending.
+- Resumed draft restoration still needs deeper proof for media, documents, highlights, unit types, and readiness.
+- Manual save remains the trusted fallback until autosave gets its own failure and recovery UX.
+Next recommended slice:
+- Prove rent and auction edit-published ownership using the same field-ownership pattern, then decide the first autosave implementation slice.
+Commit hash/tag: Pending.
+Uncommitted reason, if any: Full checks and commit still pending.
