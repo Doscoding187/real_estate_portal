@@ -14,10 +14,6 @@ import { trpc } from '@/lib/trpc';
 
 export function TopDevelopers() {
   const [, setLocation] = useLocation();
-  const displayValue = (value: unknown) => {
-    const num = Number(value);
-    return Number.isFinite(num) && num > 0 ? String(num) : '-';
-  };
   const displayMetric = (value: unknown, fallback = 'Info soon') => {
     const num = Number(value);
     return Number.isFinite(num) && num > 0 ? String(num) : fallback;
@@ -45,11 +41,11 @@ export function TopDevelopers() {
         {/* Section Header */}
         <div className="mb-5 md:mb-6">
           <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
-            Top Developers in South Africa
+            Connect with trusted property developers
           </h2>
           <p className="text-slate-600 max-w-3xl leading-relaxed text-xs md:text-sm">
-            Explore trusted property developers building across South Africa&apos;s leading
-            markets.
+            Explore developer profiles, active project pipelines, and new development opportunities
+            across South Africa.
           </p>
         </div>
 
@@ -92,7 +88,7 @@ export function TopDevelopers() {
                     className="pl-4 md:pl-6 basis-[78%] sm:basis-[56%] md:basis-1/2 lg:basis-1/4"
                   >
                     <Card className="h-full border border-slate-200 hover:border-slate-300 transition-colors bg-white rounded-xl shadow-sm hover:shadow-md">
-                        <CardContent className="p-3.5 sm:p-4">
+                      <CardContent className="p-3.5 sm:p-4">
                         {/* Header: Logo & Identity */}
                         <div className="flex gap-3 mb-3">
                           <div className="w-12 h-12 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
@@ -136,9 +132,7 @@ export function TopDevelopers() {
                           <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-right">
                             <span
                               className={`block font-bold text-slate-900 ${
-                                hasNumericValue(developer.stats?.experience)
-                                  ? 'text-lg'
-                                  : 'text-sm'
+                                hasNumericValue(developer.stats?.experience) ? 'text-lg' : 'text-sm'
                               }`}
                             >
                               {displayMetric(developer.stats?.experience, 'Info soon')}
@@ -211,63 +205,14 @@ export function TopDevelopers() {
             </Carousel>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Card
-                key={i}
-                className="h-full border border-slate-200 bg-white rounded-xl shadow-sm"
-              >
-                <CardContent className="p-4">
-                  <div className="flex gap-4 mb-4">
-                    <div className="w-14 h-14 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
-                      <Building2 className="h-6 w-6 text-slate-300" />
-                    </div>
-                    <div className="flex flex-col justify-center min-w-0">
-                      <h3 className="text-lg font-bold text-slate-900 leading-tight mb-0.5 truncate">
-                        -
-                      </h3>
-                      <p className="text-xs text-slate-500 font-medium truncate">-</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-4 px-1">
-                    <div className="flex flex-col">
-                      <span className="text-xl font-bold text-slate-900">-</span>
-                      <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-                        Projects
-                      </span>
-                    </div>
-                    <div className="flex flex-col text-right">
-                      <span className="text-xl font-bold text-slate-900">-</span>
-                      <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-                        Experience
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-700 font-medium truncate">
-                        Ready to Move (-)
-                      </span>
-                      <ChevronRight className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    </div>
-                    <div className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-700 font-medium truncate">
-                        Under Const. (-)
-                      </span>
-                      <ChevronRight className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    </div>
-                    <div className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-700 font-medium truncate">
-                        New Launch (-)
-                      </span>
-                      <ChevronRight className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
+            <Building2 className="mx-auto h-9 w-9 text-slate-300" />
+            <h3 className="mt-3 text-sm font-bold text-slate-900">
+              Developer profiles are being prepared
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              We will show developer profiles here as soon as live brand data is available.
+            </p>
           </div>
         )}
 

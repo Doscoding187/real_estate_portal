@@ -188,9 +188,10 @@ export function ExploreCities({
   const displayedCities = allCities.slice(0, visibleCount);
   const remainingCount = allCities.length - visibleCount;
 
-  const displayTitle = title || 'Explore Real Estate in Popular Cities';
+  const displayTitle = title || 'Explore real estate by popular city';
   const displayDescription =
-    description || "Browse properties in South Africa's most sought-after locations.";
+    description ||
+    'Use city pages as a starting point for local listings, suburb research, and market discovery.';
 
   return (
     <section className="bg-white py-4 md:py-8">
@@ -198,8 +199,12 @@ export function ExploreCities({
         {/* Section Header */}
         <div className="mb-5 flex flex-col items-center gap-2.5 text-center md:mb-10 md:gap-3">
           <div className="max-w-3xl text-center">
-            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
-            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">{displayDescription}</p>
+            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+              {displayTitle}
+            </h2>
+            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">
+              {displayDescription}
+            </p>
           </div>
 
           <Link href="/property-for-sale">

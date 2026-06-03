@@ -47,18 +47,18 @@ export default function Home() {
 
   const heroTabValue =
     activeHeroTab === null
-      ? undefined
-      : activeHeroTab === 'buy'
       ? 'buy'
-      : activeHeroTab === 'rent'
-        ? 'rental'
-        : activeHeroTab === 'developments'
-          ? 'projects'
-          : activeHeroTab === 'shared_living'
-            ? 'pg'
-            : activeHeroTab === 'plot_land'
-              ? 'plot'
-              : 'commercial';
+      : activeHeroTab === 'buy'
+        ? 'buy'
+        : activeHeroTab === 'rent'
+          ? 'rental'
+          : activeHeroTab === 'developments'
+            ? 'projects'
+            : activeHeroTab === 'shared_living'
+              ? 'pg'
+              : activeHeroTab === 'plot_land'
+                ? 'plot'
+                : 'commercial';
   const homeCanonicalUrl = toAbsoluteUrl('/');
   const homeDescription =
     'Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify.';

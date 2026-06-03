@@ -139,8 +139,8 @@ export function TopLocalities({
 }: TopLocalitiesProps = {}) {
   const [selectedCity, setSelectedCity] = useState('Cape Town');
 
-  const defaultTitle = `Top Suburbs in ${locationName}`;
-  const defaultSubtitle = `Discover ${locationName}${locationName.endsWith('s') ? "'" : "'s"} top suburbs by demand, listing activity, and market momentum.`;
+  const defaultTitle = `Research top suburbs and localities`;
+  const defaultSubtitle = `Compare ${locationName}${locationName.endsWith('s') ? "'" : "'s"} suburb signals, sale activity, rental activity, and local market momentum.`;
 
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
@@ -217,7 +217,9 @@ export function TopLocalities({
     <div className="py-4 md:py-5">
       <div className="container">
         <div className="mb-5 md:mb-6">
-          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+            {displayTitle}
+          </h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
@@ -244,7 +246,7 @@ export function TopLocalities({
 
         {isLoading ? (
           <div className="rounded-xl border border-slate-100 bg-white p-6 text-sm text-slate-500">
-            Loading localities...
+            Loading suburb signals...
           </div>
         ) : (
           <div className="relative group/carousel">
@@ -307,7 +309,9 @@ export function TopLocalities({
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                   {formatListingLabel(locality.propertiesForSale, 'For Sale homes')}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  in {locality.name}
+                                </p>
                               </div>
                               <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
                                 <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
@@ -321,7 +325,9 @@ export function TopLocalities({
                                 <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                   {formatListingLabel(locality.propertiesForRent, 'For Rent homes')}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  in {locality.name}
+                                </p>
                               </div>
                               <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
                                 <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />

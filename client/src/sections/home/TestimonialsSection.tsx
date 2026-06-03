@@ -34,14 +34,15 @@ export function TestimonialsSection() {
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-1 sm:mb-4 sm:px-4 sm:py-2">
           <Star className="h-4 w-4 fill-current text-yellow-500 sm:h-5 sm:w-5" />
           <span className="text-[11px] font-semibold text-yellow-700 sm:text-sm">
-            Trusted by Thousands
+            Search confidence
           </span>
         </div>
         <h2 className="mb-2 text-[1.125rem] font-bold text-slate-900 sm:text-xl md:text-[26px]">
-          What Our Clients Say
+          Property journeys with more confidence
         </h2>
         <p className="max-w-2xl text-sm leading-6 text-slate-600 md:text-sm md:leading-relaxed">
-          Real experiences from people who found their dream homes
+          Hear from people using Property Listify to search, compare areas, and move with more
+          confidence.
         </p>
       </div>
 
