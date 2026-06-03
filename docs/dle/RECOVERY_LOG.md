@@ -291,5 +291,5 @@ Remaining risks:
 - Autosave should still wait behind deeper resumed-draft and field-ownership proof.
 Next recommended slice:
 - Verify search-card and lead-form transaction context through browser/API, then prove edit-published ownership before autosave.
-Commit hash/tag: Pending until commit.
-Uncommitted reason, if any: Pending commit in this slice.
+Commit hash/tag: `dd89ceab fix(dle): surface public highlights and truthful save state`
+Uncommitted reason, if any: None. Slice committed.
