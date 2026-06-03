@@ -36,6 +36,8 @@ Unit types are the commercial inventory core.
 
 Public display, search cards, dashboards, distribution catalogues, and lead capture should use transaction-aware helpers rather than stale sale-shaped fallbacks.
 
+Transaction type is the top-level DLE branch. Sale, Rental, and Auction should be treated as separate sub-engines under the shared DLE shell, not as minor field variations of one generic form. See `docs/dle/TRANSACTION_ENGINE_ARCHITECTURE_AUDIT.md` before coding rent or auction ownership work.
+
 ## Migration Discipline
 
 - Additive changes are preferred during recovery.

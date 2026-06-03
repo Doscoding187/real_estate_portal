@@ -389,3 +389,32 @@ Next recommended slice:
 - Prove rent and auction edit-published ownership using the same field-ownership pattern, then decide the first autosave implementation slice.
 Commit hash/tag: `2ee9b40f fix(dle): preserve inventory totals on published edits`
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-03 - Transaction Engine Architecture Audit
+
+Date: 2026-06-03
+Branch: recovery/lead-routing-verification-2026-06-02
+Goal: Pause before rent/auction ownership proof and document the transaction-first architecture model for Sale, Rental, and Auction sub-engines.
+Files changed:
+- docs/dle/TRANSACTION_ENGINE_ARCHITECTURE_AUDIT.md
+- docs/dle/TECHNICAL_ARCHITECTURE.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Not run; documentation-only architecture audit.
+pnpm run check:
+- Not run; documentation-only architecture audit.
+git diff --check:
+- Passed.
+Manual flows verified:
+- None in this slice. This audit reviewed existing implementation references and prior sale browser proof.
+Current implementation summary:
+- Transaction-aware schema fields, shared helpers, readiness, publish normalization, public pricing, lead context, and distribution/referral pricing already exist for sale/rent/auction.
+- Sale manual and edit-published ownership proof is complete.
+- Rental and auction still need browser/API ownership proof before autosave.
+Remaining risks:
+- Rental and auction public/product behavior may still be sale-shaped in inventory language, dashboards, admin review, and qualification/distribution flows.
+- Rental and auction field ownership under partial edits remains unproven.
+Next recommended slice:
+- Run Rental Engine edit-published ownership and public/lead proof using the sale ownership pattern, then run Auction Engine proof.
+Commit hash/tag: Current commit for this slice.
+Uncommitted reason, if any: None. Slice committed.
