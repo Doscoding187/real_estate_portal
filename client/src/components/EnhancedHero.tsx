@@ -18,7 +18,6 @@ import {
   Briefcase,
   Users,
   Search,
-  Mic,
   MapPinned,
   Loader2,
   Key,
@@ -81,6 +80,75 @@ const TRUST_ITEMS = [
   { label: 'Agent & agency tools', icon: Users },
 ] as const;
 
+const HERO_REFINEMENTS: Record<
+  string,
+  {
+    label: string;
+    placeholder: string;
+    options: Array<{ value: string; label: string }>;
+  }
+> = {
+  buy: {
+    label: 'Property type',
+    placeholder: 'Any property type',
+    options: [
+      { value: 'house', label: 'House' },
+      { value: 'apartment', label: 'Apartment' },
+      { value: 'townhouse', label: 'Townhouse' },
+      { value: 'land', label: 'Land & plots' },
+    ],
+  },
+  rental: {
+    label: 'Budget',
+    placeholder: 'Any budget',
+    options: [
+      { value: '7500', label: 'Up to R7,500' },
+      { value: '12000', label: 'Up to R12,000' },
+      { value: '20000', label: 'Up to R20,000' },
+      { value: '30000', label: 'R30,000+' },
+    ],
+  },
+  projects: {
+    label: 'Development type',
+    placeholder: 'Any development',
+    options: [
+      { value: 'Full Title', label: 'Full title' },
+      { value: 'Sectional Title', label: 'Sectional title' },
+      { value: 'Security Estate', label: 'Security estate' },
+      { value: 'Affordable Housing', label: 'Affordable housing' },
+    ],
+  },
+  pg: {
+    label: 'Budget',
+    placeholder: 'Any budget',
+    options: [
+      { value: '5000', label: 'Up to R5,000' },
+      { value: '7500', label: 'Up to R7,500' },
+      { value: '10000', label: 'Up to R10,000' },
+    ],
+  },
+  plot: {
+    label: 'Land type',
+    placeholder: 'Any land type',
+    options: [
+      { value: 'Residential', label: 'Residential' },
+      { value: 'Commercial', label: 'Commercial' },
+      { value: 'Agricultural', label: 'Agricultural' },
+      { value: 'Industrial', label: 'Industrial' },
+    ],
+  },
+  commercial: {
+    label: 'Commercial type',
+    placeholder: 'Any commercial type',
+    options: [
+      { value: 'Office', label: 'Office' },
+      { value: 'Retail', label: 'Retail' },
+      { value: 'Industrial', label: 'Industrial' },
+      { value: 'Warehouse', label: 'Warehouse' },
+    ],
+  },
+};
+
 export function EnhancedHero({
   variant = 'home',
   title,
@@ -106,7 +174,6 @@ export function EnhancedHero({
   const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
   // computed for backward compatibility in single-select logic
   const selectedLocation = selectedLocations.length === 1 ? selectedLocations[0] : null;
-  const hasActiveSearchInput = searchQuery.trim().length > 0 || selectedLocations.length > 0;
 
   // Filter panel state
   const [showFilters, setShowFilters] = useState(false);
@@ -209,7 +276,7 @@ export function EnhancedHero({
       setLocation('/agents');
       setShowFilters(false);
     } else {
-      setShowFilters(true);
+      setShowFilters(false);
     }
   };
 
@@ -487,6 +554,37 @@ export function EnhancedHero({
     .toLowerCase();
   const effectiveIntent = normalizedActiveTab || 'buy';
   const intentHelperCopy = INTENT_HELPER_COPY[effectiveIntent] || INTENT_HELPER_COPY.buy;
+  const activeCategory =
+    HERO_CATEGORIES.find(category => category.id === effectiveIntent) || HERO_CATEGORIES[0];
+  const activeCategoryLabel = activeCategory.label;
+  const refinementConfig = HERO_REFINEMENTS[effectiveIntent];
+  const refinementValue = (() => {
+    if (effectiveIntent === 'buy') return filters.propertyTypes[0] || '';
+    if (effectiveIntent === 'rental' || effectiveIntent === 'pg') return filters.budgetMax || '';
+    if (effectiveIntent === 'projects') return filters.developmentType || '';
+    if (effectiveIntent === 'plot') return filters.landType || '';
+    if (effectiveIntent === 'commercial') return filters.commercialUseType || '';
+    return '';
+  })();
+
+  const handleHeroRefinementChange = (value: string) => {
+    if (value === 'any') {
+      if (effectiveIntent === 'buy') handleFilterChange('propertyTypes', []);
+      if (effectiveIntent === 'rental' || effectiveIntent === 'pg')
+        handleFilterChange('budgetMax', '');
+      if (effectiveIntent === 'projects') handleFilterChange('developmentType', '');
+      if (effectiveIntent === 'plot') handleFilterChange('landType', '');
+      if (effectiveIntent === 'commercial') handleFilterChange('commercialUseType', '');
+      return;
+    }
+
+    if (effectiveIntent === 'buy') handleFilterChange('propertyTypes', [value]);
+    if (effectiveIntent === 'rental' || effectiveIntent === 'pg')
+      handleFilterChange('budgetMax', value);
+    if (effectiveIntent === 'projects') handleFilterChange('developmentType', value);
+    if (effectiveIntent === 'plot') handleFilterChange('landType', value);
+    if (effectiveIntent === 'commercial') handleFilterChange('commercialUseType', value);
+  };
 
   return (
     <div className="relative overflow-hidden bg-white text-slate-900">
@@ -592,29 +690,35 @@ export function EnhancedHero({
         <div className="mx-auto w-full max-w-5xl">
           <Card className="rounded-[1rem] border border-slate-100 bg-white shadow-xl sm:rounded-2xl sm:shadow-2xl">
             <CardContent className="p-3 sm:p-4 md:p-6">
-              <div className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-4 flex flex-col gap-1.5 sm:mb-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
-                    Start with your property journey
+                    {activeCategoryLabel} journey
                   </p>
                   <p className="mt-1 text-sm font-medium text-slate-600">{intentHelperCopy}</p>
                 </div>
-                <div className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 md:block">
-                  Search, compare, and connect
+                <div className="hidden text-right text-xs font-semibold text-slate-500 md:block">
+                  Choose intent, search simply, refine when needed.
                 </div>
               </div>
 
               {/* Main Search Row */}
-              <div className="flex flex-col gap-2 md:flex-row sm:gap-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
                 {/* Unified Search Input */}
-                <div className="flex-1 relative group">
+                <div className="relative min-w-0 flex-[1.8] group">
                   {/* Search Icon */}
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] sm:h-5 sm:w-5 text-muted-foreground z-10 pointer-events-none" />
 
                   <LocationAutosuggest
-                    placeholder="Search by city, suburb, or area..."
+                    placeholder={
+                      effectiveIntent === 'projects'
+                        ? 'Search city, suburb, development, or developer...'
+                        : effectiveIntent === 'agents'
+                          ? 'Search area, agent, or agency...'
+                          : 'Search by city, suburb, or province...'
+                    }
                     className="w-full"
-                    inputClassName="h-10 w-full rounded-2xl border-2 bg-transparent pl-11 pr-20 text-[15px] transition-colors hover:border-primary/50 focus:border-primary sm:h-14 sm:pr-24 sm:text-base"
+                    inputClassName="h-12 w-full rounded-2xl border-2 bg-white pl-11 pr-4 text-[15px] transition-colors hover:border-primary/50 focus:border-primary sm:h-14 sm:text-base"
                     showIcon={false}
                     selectedLocations={selectedLocations}
                     onRemove={index => {
@@ -643,44 +747,33 @@ export function EnhancedHero({
                     onSubmit={handleSearch}
                     maxLocations={5}
                   />
-
-                  {/* Action Buttons (Voice/Location) */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1.5 z-10">
-                    <Button
-                      onClick={handleSearch}
-                      size="icon"
-                      className={`h-8.5 w-8.5 rounded-xl shadow-sm transition-all sm:hidden ${
-                        hasActiveSearchInput
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                      }`}
-                      title="Search"
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hidden h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:inline-flex sm:h-10 sm:w-10"
-                      title="Use current location"
-                    >
-                      <MapPinned className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:h-10 sm:w-10"
-                      title="Voice search"
-                    >
-                      <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </div>
                 </div>
+
+                {refinementConfig ? (
+                  <div className="md:w-[14.5rem]">
+                    <Select
+                      value={refinementValue || 'any'}
+                      onValueChange={handleHeroRefinementChange}
+                    >
+                      <SelectTrigger className="h-12 rounded-2xl border-2 bg-white px-4 text-left sm:h-14">
+                        <SelectValue placeholder={refinementConfig.placeholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">{refinementConfig.placeholder}</SelectItem>
+                        {refinementConfig.options.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
 
                 {/* Search Button */}
                 <Button
                   onClick={handleSearch}
-                  className="hidden h-10 min-w-[100px] rounded-2xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:inline-flex sm:h-14 sm:min-w-[140px] sm:px-8 sm:text-base"
+                  className="h-12 min-w-[9rem] rounded-2xl bg-blue-600 px-6 text-sm font-bold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:h-14 sm:px-8 sm:text-base md:min-w-[10rem]"
                   size="lg"
                 >
                   {isCountLoading ? (
@@ -694,6 +787,28 @@ export function EnhancedHero({
                   )}
                 </Button>
               </div>
+
+              {!isNavigationMode && activeTab !== 'agents' && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowFilters(prev => !prev)}
+                    className="h-9 rounded-full px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-700"
+                  >
+                    {showFilters ? 'Hide filters' : 'More filters'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setLocation('/explore/map')}
+                    className="h-9 rounded-full px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-700"
+                  >
+                    <MapPinned className="mr-1.5 h-3.5 w-3.5" />
+                    Map search
+                  </Button>
+                </div>
+              )}
 
               {/* FOOTER: Navigation Pills ONLY (Quick Searches hidden per request) */}
               {isNavigationMode && (
