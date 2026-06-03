@@ -387,5 +387,5 @@ Remaining risks:
 - Manual save remains the trusted fallback until autosave gets its own failure and recovery UX.
 Next recommended slice:
 - Prove rent and auction edit-published ownership using the same field-ownership pattern, then decide the first autosave implementation slice.
-Commit hash/tag: Pending.
-Uncommitted reason, if any: Full checks and commit still pending.
+Commit hash/tag: `2ee9b40f fix(dle): preserve inventory totals on published edits`
+Uncommitted reason, if any: None. Slice committed.
