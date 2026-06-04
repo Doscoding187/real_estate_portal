@@ -2,8 +2,9 @@
 
 Date: 2026-06-04
 Status: Read-only dashboard operating surfaces cover inventory, lead risk, and distribution
-readiness. Sale reserve/release, Rental hold/release, and Auction registration open/rollback are
-implemented and browser-proven.
+readiness. Sale reserve/release, Rental hold/release, Auction registration open/rollback, and
+Auction time-gated activation are implemented and browser-proven. Outcome mutations are designed in
+`docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md` and remain the next implementation layer.
 
 ## Purpose
 
@@ -343,5 +344,5 @@ Implemented Auction Stage B:
 
 Recommended next implementation slice:
 
-- Design the outcome layer before implementation: Sale sold, Rental let, Auction sold/passed-in/
-  withdrawn, and how those outcomes affect public availability, lead stages, and distribution.
+- Implement the outcome layer from `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md`, starting with Sale
+  sold from reserved inventory before Rental let and Auction sold/passed-in/withdrawn.

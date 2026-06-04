@@ -329,6 +329,7 @@ docs/
     TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
     OPERATING_LAYER_AUDIT.md
     OPERATING_STATUS_AUDIT_CONTRACT.md
+    OPERATING_OUTCOME_LAYER_DESIGN.md
     SALE_OPERATING_STATUS_MUTATION_DESIGN.md
     RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md
     AUCTION_OPERATING_LIFECYCLE_DESIGN.md
@@ -349,14 +350,15 @@ Recommended order from here:
 2. Keep edit-development autosave separate until partial-step ownership is proven
 3. Continue the operating-layer rollout from the browser-proven Sale reserve/release and Rental
    hold/release mutations plus Auction registration open/rollback
-4. Design the next outcome layer: sold/let, Auction sold/passed-in/withdrawn, and lead-stage impact
-5. Continue the transaction-engine product experience audit
-6. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
-7. Product audit of public development page merchandising
-8. Search card and lead form alignment
-9. Developer dashboard and inventory impact
-10. Admin review impact
-11. Distribution/referral readiness
+4. Use `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md` before coding sold/let/Auction outcomes
+5. Implement Sale sold outcome from reserved inventory first
+6. Continue the transaction-engine product experience audit
+7. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
+8. Product audit of public development page merchandising
+9. Search card and lead form alignment
+10. Developer dashboard and inventory impact
+11. Admin review impact
+12. Distribution/referral readiness
 
 ## 19. Definition of World-Class
 

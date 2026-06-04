@@ -737,6 +737,7 @@ Remaining risks:
 Next recommended slice:
 - Design the outcome layer before coding: Sale sold, Rental let, Auction sold/passed-in/withdrawn,
   public availability impact, lead-stage impact, and distribution/referral impact.
+
 Commit hash/tag: This entry will be included in
 `feat(dle): add auction activation operations`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
@@ -2182,3 +2183,49 @@ browser-proven in this slice.
 Next recommended slice:
 - Design the outcome layer before coding: Sale sold, Rental let, Auction sold/passed-in/withdrawn,
   public availability impact, lead-stage impact, and distribution/referral impact.
+
+## 2026-06-04 - Operating Outcome Layer Design
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Document the transaction-first outcome contract before implementing Sale sold, Rental let, or
+Auction sold/passed-in/withdrawn mutations.
+Files changed:
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm run check` passed.
+- `git diff --check` passed.
+- `git status --short` reviewed; unrelated homepage/evidence/playwright dirty files were not
+  staged.
+Manual flows verified:
+- None. This is a design-only slice with no runtime behavior changes.
+Design decisions:
+- Outcomes are commercial commitments, not packaging edits or generic status toggles.
+- Outcome mutations must use operating endpoints, verify ownership and transaction type server-side,
+  validate current state, update a current-state projection, and write a DLE operating event in the
+  same transaction.
+- Event history is not enough as the current-state source of truth.
+- Sale sold and Rental let can use current unit-type availability/held projections for the first
+  narrow mutation, but inferred sold/let counts must not be treated as canonical reporting.
+- `reserved_units` must not be reused for sold units, let units, bidder counts, auction
+  registrations, or passed-in outcomes.
+- Auction outcomes should use canonical `unit_types.auction_status` values: `sold`, `passed_in`,
+  and `withdrawn`; `Sold at auction` is a display label, not the stored status.
+- Public cards, unit cards, dashboard actions, lead labels, admin review, and distribution/referral
+  handoff all need transaction-native outcome semantics.
+Remaining risks:
+- No Sale sold, Rental let, or Auction outcome mutation has been implemented yet.
+- No explicit `sold_units` or `let_units` projection exists on `unit_types`.
+- `development_units.status` exists but the current DLE operating surface is unit-type oriented.
+- Lead stages and funnel labels remain sale-shaped underneath transaction-native overlays.
+- Distribution/referral outcome automation still needs a separate handoff contract.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement Sale sold outcome from reserved inventory first, with browser proof for event readback,
+  no false success, field ownership, and Sale-native public availability language.
+Commit hash/tag: This entry will be included in `docs(dle): design operating outcome layer`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

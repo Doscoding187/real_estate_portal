@@ -2,7 +2,8 @@
 
 Date: 2026-06-04
 Status: Contract implemented through operating note/readback, Sale reserve/release, Rental
-hold/release, Auction registration open/rollback, and Auction time-gated activation. Outcomes remain
+hold/release, Auction registration open/rollback, and Auction time-gated activation. Outcome
+semantics are designed in `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md`; implementation remains
 future transaction-specific slices.
 
 ## Purpose
@@ -143,7 +144,7 @@ Recommended auction statuses:
 - `scheduled`: auction has been scheduled but is not active.
 - `registration_open`: bidder registration or interest capture is open.
 - `active`: auction is active.
-- `sold_at_auction`: auction sale outcome is complete.
+- `sold`: auction sale outcome is complete. Display label: `Sold at auction`.
 - `passed_in`: reserve/outcome condition was not met.
 - `withdrawn`: lot is removed.
 - `closed`: auction cycle is closed.
@@ -152,9 +153,9 @@ Status transitions:
 
 - `scheduled` -> `registration_open`
 - `registration_open` -> `active`
-- `active` -> `sold_at_auction`
+- `active` -> `sold`
 - `active` -> `passed_in`
-- `sold_at_auction` -> `closed`
+- `sold` -> `closed`
 - `passed_in` -> `closed`
 - any non-final status -> `withdrawn`
 
@@ -313,3 +314,5 @@ Before calling operating mutations safe, prove:
   lead-stage sync fails?
 - What fields and records should become the canonical bidder-registration model after Auction
   registration-open lifecycle proof?
+- Should Sale/Rental outcome reporting use explicit unit-type projection columns, individual
+  `development_units` records, or both?
