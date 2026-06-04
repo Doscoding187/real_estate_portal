@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getDevelopmentOperatingEventNote,
+  getRentalUnitHoldTransitionStatuses,
   getSaleUnitReservationTransitionStatuses,
   normalizeOperatingSourceSurface,
   parseDevelopmentOperatingEventJson,
@@ -51,6 +52,20 @@ describe('development operating events service helpers', () => {
 
     expect(getSaleUnitReservationTransitionStatuses('release')).toEqual({
       fromStatus: 'reserved',
+      toStatus: 'available',
+      quantityDelta: 1,
+    });
+  });
+
+  it('maps Rental hold transitions to lease-native event statuses and availability deltas', () => {
+    expect(getRentalUnitHoldTransitionStatuses('hold')).toEqual({
+      fromStatus: 'available',
+      toStatus: 'held',
+      quantityDelta: -1,
+    });
+
+    expect(getRentalUnitHoldTransitionStatuses('release')).toEqual({
+      fromStatus: 'held',
       toStatus: 'available',
       quantityDelta: 1,
     });

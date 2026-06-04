@@ -1,7 +1,7 @@
 # DLE Rental Operating Status Mutation Design
 
 Date: 2026-06-04
-Status: Design contract for the first Rental inventory mutation after Sale reserve/release proof.
+Status: Implemented and browser-proven for the first Rental hold/release inventory mutation.
 
 ## Purpose
 
@@ -182,17 +182,20 @@ Reject with clear Rental-native errors:
 
 Browser proof must show:
 
-- A Rental unit type can be held from the developer dashboard.
+- A Rental unit type can be held from the developer dashboard. Status: passed.
 - The dashboard uses `Rental Inventory`, `held`, `Hold`, and `Release`, not Sale reservation labels.
-- The dashboard shows the updated available/held counts.
-- The operating event appears in history with `available` -> `held`.
-- A held rental unit type can be released back to available.
-- The dashboard shows the updated counts after release.
+  Status: passed.
+- The dashboard shows the updated available/held counts. Status: passed.
+- The operating event appears in history with `available` -> `held`. Status: passed.
+- A held rental unit type can be released back to available. Status: passed.
+- The dashboard shows the updated counts after release. Status: passed.
 - Failed hold/release does not claim success.
 - The public development page and public search card still use Rental language after the operating
-  update.
+  update. Status: passed.
 - Monthly rent, deposit, lease term, furnished state, media, location, governance, highlights, unit
-  definitions, and wizard workflow state are unchanged by the mutation.
+  definitions, and wizard workflow state are unchanged by the mutation. Status: passed for persisted
+  monthly rent, deposit, lease term, furnished state, media, location, governance, highlights, and
+  unit definitions; canonical wizard workflow state remains a future seeded-fixture assertion.
 
 ## Future Extensions
 

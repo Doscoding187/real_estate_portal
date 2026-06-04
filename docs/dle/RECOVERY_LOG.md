@@ -1800,3 +1800,80 @@ Next recommended slice:
   then browser-proof it with DB and field-ownership assertions.
 Commit hash/tag: This entry will be included in `docs(dle): design rental operating hold`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Rental Hold/Release Operating Mutation
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement and browser-proof the first Rental operating inventory mutation as a distinct
+lease-native sub-engine without regressing Sale or wiping Rental packaging fields.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/rental-operating-hold.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-hold.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-release.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-public-language.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-search-language.png
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts'`
+- Result: Passed. 2 test files, 10 tests.
+Focused browser proof runs:
+- First Rental attempt correctly failed fixture publish validation because the seeded leasing
+  development lacked a required launch date. The fixture was corrected to satisfy the real publish
+  contract.
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-operating-hold.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 test file, 1 browser test.
+- Sale regression command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/sale-operating-reservation.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 test file, 1 browser test.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added Rental-only operating inventory readback via `developer.getRentalOperatingInventory`.
+- Added Rental-only hold/release mutation via `developer.transitionRentalUnitHold`.
+- Added Rental-native transition mapping: `hold` writes `available` -> `held`; `release` writes
+  `held` -> `available`.
+- Kept Sale and Rental public contracts separate while moving only the shared atomic count,
+  aggregate-refresh, and event-write mechanics into private service infrastructure.
+- The existing `unit_types.reserved_units` column is used only as Rental's underlying held-count
+  projection; Rental API snapshots, events, dashboard copy, and controls expose `held`, not
+  `reserved`.
+- Added a Rental-only `Rental Inventory` dashboard panel showing monthly rent, deposit, lease term,
+  furnished state, rentals available, held count, Hold, and Release.
+- Browser/DB proof seeded a published Rental development with 6 available and 1 held unit, held one
+  unit to reach 5 available and 2 held, then released it back to 6 available and 1 held.
+- Browser/DB proof verified Rental event type, transaction type, unit type ID, `available`/`held`
+  statuses, quantity deltas, metadata transition, before/after held snapshots, and aggregate
+  available units.
+- Field-ownership assertions verified stable monthly rent, deposit, lease term, furnished state,
+  media, brochures, highlights, location, ownership/governance fields, and unit definitions.
+- Public-page and search-card proof after the operating update verified continued Rental pricing
+  and transaction language.
+- Sale reserve/release browser regression proof passed after the shared private refactor.
+Manual flows verified:
+- Developer dashboard Rental hold/release against local frontend `:3009`, backend `:5000`, and
+  `listify_local`.
+- Published Rental public detail and rental search-card output after the operating mutation.
+Remaining risks:
+- Failed Rental hold/release no-false-success UX is not yet browser-proven.
+- Failed Sale reserve/release no-false-success UX remains outstanding.
+- Canonical wizard workflow state should be added to a future operating field-ownership fixture.
+- Auction registration/active/outcome operating mutation remains future work.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Design the first Auction `scheduled` -> `registration_open` -> `active` operating lifecycle
+  without forcing Auction through Sale/Rental count semantics.
+Commit hash/tag: This entry will be included in `feat(dle): add rental hold operations`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

@@ -18,6 +18,43 @@ const MAX_EVENT_LIMIT = 50;
 
 export const SALE_UNIT_RESERVATION_TRANSITIONS = ['reserve', 'release'] as const;
 export type SaleUnitReservationTransition = (typeof SALE_UNIT_RESERVATION_TRANSITIONS)[number];
+export const RENTAL_UNIT_HOLD_TRANSITIONS = ['hold', 'release'] as const;
+export type RentalUnitHoldTransition = (typeof RENTAL_UNIT_HOLD_TRANSITIONS)[number];
+
+type InventoryTransitionEngineConfig = {
+  transactionType: Extract<DevelopmentOperatingTransactionType, 'for_sale' | 'for_rent'>;
+  engineLabel: 'Sale' | 'Rental';
+  occupyTransition: 'reserve' | 'hold';
+  occupiedStatus: 'reserved' | 'held';
+  occupiedSnapshotKey: 'reservedUnits' | 'heldUnits';
+  nonMatchingTransactionMessage: string;
+  noAvailableMessage: string;
+  noOccupiedMessage: string;
+};
+
+const SALE_INVENTORY_TRANSITION_CONFIG: InventoryTransitionEngineConfig = {
+  transactionType: 'for_sale',
+  engineLabel: 'Sale',
+  occupyTransition: 'reserve',
+  occupiedStatus: 'reserved',
+  occupiedSnapshotKey: 'reservedUnits',
+  nonMatchingTransactionMessage:
+    'Sale reservation transitions are only available for Sale developments.',
+  noAvailableMessage: 'No available units can be reserved for this unit type.',
+  noOccupiedMessage: 'No reserved units can be released for this unit type.',
+};
+
+const RENTAL_INVENTORY_TRANSITION_CONFIG: InventoryTransitionEngineConfig = {
+  transactionType: 'for_rent',
+  engineLabel: 'Rental',
+  occupyTransition: 'hold',
+  occupiedStatus: 'held',
+  occupiedSnapshotKey: 'heldUnits',
+  nonMatchingTransactionMessage:
+    'Rental hold transitions are only available for Rental developments.',
+  noAvailableMessage: 'No available rental units can be held for this unit type.',
+  noOccupiedMessage: 'No held rental units can be released for this unit type.',
+};
 
 function readInsertId(insertResult: unknown): number | null {
   const candidate = Array.isArray(insertResult) ? insertResult[0] : insertResult;
@@ -89,6 +126,22 @@ export function getSaleUnitReservationTransitionStatuses(
 
   return {
     fromStatus: 'reserved',
+    toStatus: 'available',
+    quantityDelta: 1,
+  };
+}
+
+export function getRentalUnitHoldTransitionStatuses(transition: RentalUnitHoldTransition) {
+  if (transition === 'hold') {
+    return {
+      fromStatus: 'available',
+      toStatus: 'held',
+      quantityDelta: -1,
+    };
+  }
+
+  return {
+    fromStatus: 'held',
     toStatus: 'available',
     quantityDelta: 1,
   };
@@ -261,26 +314,89 @@ export async function listSaleOperatingInventory(input: {
   };
 }
 
-export async function transitionSaleUnitReservation(input: {
+export async function listRentalOperatingInventory(input: {
   developerId: number;
   developmentId: number;
-  unitTypeId: string;
-  actorUserId: number;
-  transition: SaleUnitReservationTransition;
-  note?: string;
-  sourceSurface?: unknown;
 }) {
   const { db, development } = await requireOwnedDevelopment(input);
-  if (development.transactionType !== 'for_sale') {
+  if (development.transactionType !== 'for_rent') {
+    return { items: [], aggregateAvailableUnits: null };
+  }
+
+  const items = await db
+    .select({
+      id: unitTypes.id,
+      developmentId: unitTypes.developmentId,
+      name: unitTypes.name,
+      totalUnits: unitTypes.totalUnits,
+      availableUnits: unitTypes.availableUnits,
+      heldUnitsProjection: unitTypes.reservedUnits,
+      monthlyRentFrom: unitTypes.monthlyRentFrom,
+      monthlyRentTo: unitTypes.monthlyRentTo,
+      depositRequired: unitTypes.depositRequired,
+      leaseTerm: unitTypes.leaseTerm,
+      isFurnished: unitTypes.isFurnished,
+      displayOrder: unitTypes.displayOrder,
+    })
+    .from(unitTypes)
+    .where(and(eq(unitTypes.developmentId, input.developmentId), eq(unitTypes.isActive, 1)))
+    .orderBy(unitTypes.displayOrder);
+
+  const aggregateAvailableUnits = items.reduce(
+    (sum, item) => sum + toNonNegativeInt(item.availableUnits),
+    0,
+  );
+
+  return {
+    items: items.map(item => ({
+      id: item.id,
+      developmentId: item.developmentId,
+      name: item.name,
+      totalUnits: toNonNegativeInt(item.totalUnits),
+      availableUnits: toNonNegativeInt(item.availableUnits),
+      heldUnits: toNonNegativeInt(item.heldUnitsProjection),
+      monthlyRentFrom: item.monthlyRentFrom != null ? Number(item.monthlyRentFrom) : null,
+      monthlyRentTo: item.monthlyRentTo != null ? Number(item.monthlyRentTo) : null,
+      depositRequired: item.depositRequired != null ? Number(item.depositRequired) : null,
+      leaseTerm: item.leaseTerm,
+      isFurnished: item.isFurnished === 1,
+      displayOrder: item.displayOrder,
+    })),
+    aggregateAvailableUnits,
+  };
+}
+
+async function transitionUnitAvailability(
+  input: {
+    developerId: number;
+    developmentId: number;
+    unitTypeId: string;
+    actorUserId: number;
+    transition: 'reserve' | 'hold' | 'release';
+    note?: string;
+    sourceSurface?: unknown;
+  },
+  config: InventoryTransitionEngineConfig,
+) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== config.transactionType) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Sale reservation transitions are only available for Sale developments.',
+      message: config.nonMatchingTransactionMessage,
     });
   }
 
-  const { fromStatus, toStatus, quantityDelta } = getSaleUnitReservationTransitionStatuses(
-    input.transition,
-  );
+  if (input.transition !== config.occupyTransition && input.transition !== 'release') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Unsupported ${config.engineLabel} inventory transition.`,
+    });
+  }
+
+  const isOccupyTransition = input.transition === config.occupyTransition;
+  const fromStatus = isOccupyTransition ? 'available' : config.occupiedStatus;
+  const toStatus = isOccupyTransition ? config.occupiedStatus : 'available';
+  const quantityDelta = isOccupyTransition ? -1 : 1;
   const note = input.note ? String(input.note).trim() : '';
   const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
 
@@ -308,30 +424,30 @@ export async function transitionSaleUnitReservation(input: {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Unit type not found.' });
     }
 
-    const beforeSnapshot = {
+    const beforeSnapshot: Record<string, unknown> = {
       unitTypeId: beforeUnit.id,
       unitTypeName: beforeUnit.name,
       totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
       availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
-      reservedUnits: toNonNegativeInt(beforeUnit.reservedUnits),
+      [config.occupiedSnapshotKey]: toNonNegativeInt(beforeUnit.reservedUnits),
     };
 
-    if (input.transition === 'reserve' && beforeSnapshot.availableUnits <= 0) {
+    if (isOccupyTransition && Number(beforeSnapshot.availableUnits) <= 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'No available units can be reserved for this unit type.',
+        message: config.noAvailableMessage,
       });
     }
 
-    if (input.transition === 'release' && beforeSnapshot.reservedUnits <= 0) {
+    if (!isOccupyTransition && Number(beforeSnapshot[config.occupiedSnapshotKey]) <= 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'No reserved units can be released for this unit type.',
+        message: config.noOccupiedMessage,
       });
     }
 
     const updateResult =
-      input.transition === 'reserve'
+      isOccupyTransition
         ? await tx
             .update(unitTypes)
             .set({
@@ -342,6 +458,7 @@ export async function transitionSaleUnitReservation(input: {
               and(
                 eq(unitTypes.id, input.unitTypeId),
                 eq(unitTypes.developmentId, input.developmentId),
+                eq(unitTypes.isActive, 1),
                 sql`${unitTypes.availableUnits} > 0`,
               ),
             )
@@ -355,6 +472,7 @@ export async function transitionSaleUnitReservation(input: {
               and(
                 eq(unitTypes.id, input.unitTypeId),
                 eq(unitTypes.developmentId, input.developmentId),
+                eq(unitTypes.isActive, 1),
                 sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`,
               ),
             );
@@ -362,7 +480,7 @@ export async function transitionSaleUnitReservation(input: {
     if (readAffectedRows(updateResult) < 1) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'Sale inventory changed before this transition could be saved.',
+        message: `${config.engineLabel} inventory changed before this transition could be saved.`,
       });
     }
 
@@ -382,16 +500,16 @@ export async function transitionSaleUnitReservation(input: {
     if (!afterUnit) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Sale inventory updated but could not be read back.',
+        message: `${config.engineLabel} inventory updated but could not be read back.`,
       });
     }
 
-    const afterSnapshot = {
+    const afterSnapshot: Record<string, unknown> = {
       unitTypeId: afterUnit.id,
       unitTypeName: afterUnit.name,
       totalUnits: toNonNegativeInt(afterUnit.totalUnits),
       availableUnits: toNonNegativeInt(afterUnit.availableUnits),
-      reservedUnits: toNonNegativeInt(afterUnit.reservedUnits),
+      [config.occupiedSnapshotKey]: toNonNegativeInt(afterUnit.reservedUnits),
     };
 
     const activeUnits = await tx
@@ -410,13 +528,14 @@ export async function transitionSaleUnitReservation(input: {
 
     const metadata = {
       transition: input.transition,
+      inventoryProjectionColumn: 'unit_types.reserved_units',
       ...(note ? { note } : {}),
       developmentName: development.name,
     };
     const insertResult = await tx.insert(developmentOperatingEvents).values({
       developmentId: input.developmentId,
       unitTypeId: input.unitTypeId,
-      transactionType: 'for_sale',
+      transactionType: config.transactionType,
       eventType: 'inventory_status_changed',
       fromStatus,
       toStatus,
@@ -438,7 +557,7 @@ export async function transitionSaleUnitReservation(input: {
     if (!insertedId) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Sale inventory event could not be saved.',
+        message: `${config.engineLabel} inventory event could not be saved.`,
       });
     }
 
@@ -456,7 +575,7 @@ export async function transitionSaleUnitReservation(input: {
     if (!event) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Sale inventory event was saved but could not be read back.',
+        message: `${config.engineLabel} inventory event was saved but could not be read back.`,
       });
     }
 
@@ -466,4 +585,28 @@ export async function transitionSaleUnitReservation(input: {
       event,
     };
   });
+}
+
+export async function transitionSaleUnitReservation(input: {
+  developerId: number;
+  developmentId: number;
+  unitTypeId: string;
+  actorUserId: number;
+  transition: SaleUnitReservationTransition;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  return await transitionUnitAvailability(input, SALE_INVENTORY_TRANSITION_CONFIG);
+}
+
+export async function transitionRentalUnitHold(input: {
+  developerId: number;
+  developmentId: number;
+  unitTypeId: string;
+  actorUserId: number;
+  transition: RentalUnitHoldTransition;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  return await transitionUnitAvailability(input, RENTAL_INVENTORY_TRANSITION_CONFIG);
 }

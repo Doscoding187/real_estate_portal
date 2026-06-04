@@ -33,8 +33,10 @@ import {
 } from './services/developerFunnelService';
 import {
   createDevelopmentOperatingNote,
+  listRentalOperatingInventory,
   listSaleOperatingInventory,
   listDevelopmentOperatingEvents,
+  transitionRentalUnitHold,
   transitionSaleUnitReservation,
 } from './services/developmentOperatingEventsService';
 import {
@@ -1786,6 +1788,43 @@ export const developerRouter = router({
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await transitionSaleUnitReservation({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        unitTypeId: input.unitTypeId,
+        actorUserId: user.id,
+        transition: input.transition,
+        note: input.note,
+        sourceSurface: 'developer_dashboard',
+      });
+    }),
+
+  getRentalOperatingInventory: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await listRentalOperatingInventory({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+      });
+    }),
+
+  transitionRentalUnitHold: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        unitTypeId: z.string().trim().min(1).max(DEVELOPMENT_UNIT_ID_MAX_LENGTH),
+        transition: z.enum(['hold', 'release']),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await transitionRentalUnitHold({
         developerId: profile.id,
         developmentId: input.developmentId,
         unitTypeId: input.unitTypeId,

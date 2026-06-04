@@ -32,6 +32,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { formatZARCompact } from '@/lib/utils';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
 
@@ -321,6 +322,19 @@ export default function Overview() {
     },
   );
 
+  const rentalOperatingInventoryQuery = trpc.developer.getRentalOperatingInventory.useQuery(
+    {
+      developmentId: selectedDevelopmentId || 0,
+    },
+    {
+      enabled:
+        !!developerProfile &&
+        !!selectedDevelopmentId &&
+        selectedDevelopmentTransactionType === 'rent',
+      refetchOnWindowFocus: false,
+    },
+  );
+
   const addOperatingNoteMutation = trpc.developer.addOperatingNote.useMutation({
     onSuccess: async () => {
       toast.success('Operating note added.');
@@ -347,6 +361,21 @@ export default function Overview() {
         toast.error(error.message || 'Could not update sales inventory.');
       },
     });
+
+  const transitionRentalUnitHoldMutation = trpc.developer.transitionRentalUnitHold.useMutation({
+    onSuccess: async (_data, variables) => {
+      toast.success(variables.transition === 'hold' ? 'Rental unit held.' : 'Rental hold released.');
+      await Promise.all([
+        rentalOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+        utils.developer.getFunnelKPIs.invalidate(),
+      ]);
+    },
+    onError: error => {
+      toast.error(error.message || 'Could not update rental inventory.');
+    },
+  });
 
   const isNewDeveloper = !developments || developments.length === 0;
   const profileStatus = (developerProfile as any)?.status as string | undefined;
@@ -423,6 +452,7 @@ export default function Overview() {
   });
   const operatingEvents = operatingEventsQuery.data?.items || [];
   const saleOperatingInventory = saleOperatingInventoryQuery.data?.items || [];
+  const rentalOperatingInventory = rentalOperatingInventoryQuery.data?.items || [];
 
   const snapshotTiles = [
     { label: 'New', value: stageCounts.new || 0, stage: 'new' },
@@ -813,6 +843,104 @@ export default function Overview() {
                             onClick={() =>
                               selectedDevelopmentId &&
                               transitionSaleUnitReservationMutation.mutate({
+                                developmentId: selectedDevelopmentId,
+                                unitTypeId: unit.id,
+                                transition: 'release',
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            Release
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {selectedDevelopmentTransactionType === 'rent' && (
+              <div className="rounded-md border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Rental Inventory</p>
+                    <p className="text-xs text-muted-foreground">
+                      Rentals available:{' '}
+                      {formatNumber(
+                        Number(rentalOperatingInventoryQuery.data?.aggregateAvailableUnits || 0),
+                      )}
+                    </p>
+                  </div>
+                  {rentalOperatingInventoryQuery.isFetching && (
+                    <Badge variant="outline">Refreshing</Badge>
+                  )}
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {!rentalOperatingInventoryQuery.isLoading &&
+                    rentalOperatingInventory.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No active Rental unit inventory found.
+                      </p>
+                    )}
+
+                  {rentalOperatingInventory.map((unit: any) => {
+                    const availableUnits = Number(unit.availableUnits || 0);
+                    const heldUnits = Number(unit.heldUnits || 0);
+                    const rentFrom = Number(unit.monthlyRentFrom || 0);
+                    const rentTo = Number(unit.monthlyRentTo || 0);
+                    const rentLabel =
+                      rentTo > rentFrom
+                        ? `${formatZARCompact(rentFrom)} - ${formatZARCompact(rentTo)} / month`
+                        : `${formatZARCompact(rentFrom)} / month`;
+                    const leaseContext = [
+                      rentLabel,
+                      unit.depositRequired
+                        ? `${formatZARCompact(Number(unit.depositRequired))} deposit`
+                        : null,
+                      unit.leaseTerm || null,
+                      unit.isFurnished ? 'Furnished' : 'Unfurnished',
+                    ]
+                      .filter(Boolean)
+                      .join(' | ');
+                    const mutationPending = transitionRentalUnitHoldMutation.isPending;
+                    return (
+                      <div
+                        className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
+                        key={unit.id}
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{unit.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatNumber(availableUnits)} rentals available,{' '}
+                            {formatNumber(heldUnits)} held
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">{leaseContext}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            disabled={availableUnits <= 0 || mutationPending}
+                            onClick={() =>
+                              selectedDevelopmentId &&
+                              transitionRentalUnitHoldMutation.mutate({
+                                developmentId: selectedDevelopmentId,
+                                unitTypeId: unit.id,
+                                transition: 'hold',
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                          >
+                            Hold
+                          </Button>
+                          <Button
+                            disabled={heldUnits <= 0 || mutationPending}
+                            onClick={() =>
+                              selectedDevelopmentId &&
+                              transitionRentalUnitHoldMutation.mutate({
                                 developmentId: selectedDevelopmentId,
                                 unitTypeId: unit.id,
                                 transition: 'release',

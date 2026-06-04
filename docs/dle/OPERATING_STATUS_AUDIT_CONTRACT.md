@@ -1,9 +1,8 @@
 # DLE Operating Status and Audit Contract
 
 Date: 2026-06-04
-Status: Contract implemented through operating note/readback and the first Sale reserve/release
-inventory mutation. Rental and Auction inventory mutations remain future transaction-specific
-slices.
+Status: Contract implemented through operating note/readback, Sale reserve/release, and Rental
+hold/release. Auction inventory mutations remain a future transaction-specific slice.
 
 ## Purpose
 
@@ -36,8 +35,9 @@ Existing anchors:
 Missing DLE operating anchors:
 
 - No transaction-native unit operating status model beyond the first Sale `available`/`reserved`
-  count transition.
-- No Rental held/release or Auction registration/active/outcome inventory mutations yet.
+  and Rental `available`/`held` count transitions.
+- No Rental application/lease outcome or Auction registration/active/outcome inventory mutations
+  yet.
 - No DLE operating event stream coverage yet for price, release phase, public status, or
   distribution handoff changes.
 
@@ -266,11 +266,14 @@ Current mutation status:
   `developments.available_units`, and inserts `development_operating_events` in one transaction.
 - Browser proof confirms reserve/release count changes, operating history readback, event payloads,
   aggregate availability, and no media/location/highlights/pricing/package wipe.
+- Rental `available` -> `held` -> `available` has been implemented from the developer dashboard.
+- The Rental mutation keeps lease-native API, dashboard, and event language while using
+  `unit_types.reserved_units` only as the underlying held-count projection.
+- Browser proof confirms hold/release counts, `available`/`held` event statuses, aggregate
+  availability, stable lease/package fields, and continued Rental language on public/search output.
 
 Only after that:
 
-- Implement Rental `available` -> `held` -> `available` from
-  `docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md`.
 - Then Auction `scheduled` -> `registration_open` -> `active`.
 
 ## Browser Proof Requirements
@@ -283,7 +286,11 @@ Before calling operating mutations safe, prove:
 - Failed operating event write does not claim success. Status: passed with injected browser failure.
 - Sale reserve/release cannot wipe media/location/highlights/pricing/unit definitions. Status:
   passed in browser/DB proof.
-- Public page labels remain transaction-native after the operating update.
+- Rental hold/release cannot wipe rent/deposit/lease/furnished/media/location/governance/highlights/
+  unit definitions. Status: passed in browser/DB proof.
+- Rental public page and search-card labels remain transaction-native after the operating update.
+  Status: passed.
+- Sale public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.
 
 ## Open Questions Before Inventory Mutation Work

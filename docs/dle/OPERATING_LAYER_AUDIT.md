@@ -2,7 +2,8 @@
 
 Date: 2026-06-04
 Status: Read-only dashboard operating surfaces cover inventory, lead risk, and distribution
-readiness. The first Sale reserve/release inventory mutation is implemented and browser-proven.
+readiness. The first Sale reserve/release and Rental hold/release inventory mutations are
+implemented and browser-proven.
 
 ## Purpose
 
@@ -287,8 +288,22 @@ Implemented next implementation slice:
 - Browser proof in `e2e/dle/sale-operating-reservation.spec.ts` verifies reserve/release UI counts,
   DB counts, operating event payloads, aggregate availability, and packaging-field preservation.
 
+Implemented next implementation slice:
+
+- Implemented and browser-proved the Rental `available` -> `held` -> `available` operating mutation
+  from `docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md`.
+- Added distinct Rental inventory readback and hold/release router/service contracts while sharing
+  only private atomic count/event infrastructure with Sale.
+- The dashboard exposes a Rental-only `Rental Inventory` panel with monthly rent, deposit, lease
+  term, furnished state, rentals available, held count, Hold, and Release.
+- Browser proof in `e2e/dle/rental-operating-hold.spec.ts` verifies lease-native UI/event language,
+  DB counts, event payloads, aggregate availability, lease/package field ownership, and continued
+  Rental public-page/search-card language.
+- Re-ran `e2e/dle/sale-operating-reservation.spec.ts` after the shared private refactor; Sale
+  reserve/release regression proof passed.
+
 Recommended next implementation slice:
 
-- Implement and browser-proof the Rental `available` -> `held` -> `available` operating mutation
-  from `docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md`, preserving Rental-native language and
-  lease packaging fields.
+- Design the first Auction operating lifecycle mutation without forcing it through Sale/Rental
+  count semantics. The likely first narrow path is `scheduled` -> `registration_open` -> `active`,
+  with auction-window and registration-readiness guardrails defined before code.
