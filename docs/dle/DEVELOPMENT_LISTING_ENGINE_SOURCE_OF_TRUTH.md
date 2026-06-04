@@ -348,7 +348,7 @@ Recommended order from here:
 4. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
 5. Product audit of public development page merchandising
 6. Search card and lead form alignment
-7. Browser-proof the event-only operating note mutation/readback surface
+7. Prove failed operating event writes do not claim success
 8. Design the first transaction-native inventory status mutation from
    `docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`
 9. Developer dashboard and inventory impact

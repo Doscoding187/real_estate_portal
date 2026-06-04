@@ -1543,3 +1543,52 @@ Next recommended slice:
   stream.
 Commit hash/tag: This entry will be included in `feat(dle): add operating event notes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Operating Note Browser Readback Proof
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-proof the first event-only DLE operating mutation across Sale, Rental, and Auction
+before any inventory count or status mutation.
+Files changed:
+- e2e/dle/operating-note-readback.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-operating-note-sale.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-note-rental.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-note-auction.png
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Local DB migration:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm db:migrate:local'`
+- Result: Passed. Applied `0068_create_development_operating_events.sql` to
+  `127.0.0.1:3306/listify_local` and `db:verify:distribution` passed.
+Focused browser proof run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/operating-note-readback.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 test file, 1 browser test.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added a repeatable Playwright proof that seeds one approved developer with Sale, Rental, and
+  Auction developments.
+- The proof authenticates as the seeded developer, opens `/developer/dashboard`, selects each
+  development, adds an operating note, and verifies dashboard readback.
+- The proof verifies DB events for each lane with `eventType: operating_note_added`,
+  `sourceSurface: developer_dashboard`, actor user ID, metadata note, afterData note, and
+  transaction type normalized from the development record.
+- Captured dashboard evidence screenshots for Sale, Rental, and Auction operating note history.
+- Updated the operating docs to mark success readback as browser-proven and keep failed-write proof
+  plus inventory/status mutation as future gates.
+Remaining risks:
+- Failed operating event write UX has not yet been browser-proven.
+- Inventory status transitions, quantity adjustments, operating projections, and
+  transaction-native lead-stage overlays remain unimplemented.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Prove failed operating event writes do not claim success, then design the first Sale
+  `available` -> `reserved` -> `available` status mutation against the event stream.
+Commit hash/tag: This entry will be included in `test(dle): prove operating note readback`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

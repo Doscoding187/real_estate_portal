@@ -267,9 +267,11 @@ Implemented next implementation slice:
   counts or statuses.
 - Added the `development_operating_events` event stream, developer ownership checks, dashboard
   history readback, and compact Operating History note entry in the selected-development overview.
+- Browser-proved Sale, Rental, and Auction note creation/readback from the developer dashboard with
+  `e2e/dle/operating-note-readback.spec.ts`.
 
 Recommended next implementation slice:
 
-- Browser-proof Sale, Rental, and Auction operating note readback from the developer dashboard.
+- Prove failed operating event writes do not claim success.
 - Then design the first transaction-native inventory status mutation with the event stream as the
   audit anchor.
