@@ -132,16 +132,18 @@ export function useAutoSave<T extends object>(
   const [error, setError] = useState<Error | null>(null);
 
   const dataRef = useRef(data);
+  const optionsRef = useRef({ enabled, onError, onSave, shouldSkipSave, storageKey });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isInitialMount = useRef(true);
+  const lastObservedDataRef = useRef(data);
+  const isMountedRef = useRef(true);
+  const isReadyToScheduleRef = useRef(false);
 
-  // Revisioning + single-flight
+  // Revisioning + serialized save queue
   const saveRevisionRef = useRef(0);
-  const inFlightRef = useRef<Promise<void> | null>(null);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
-  useEffect(() => {
-    dataRef.current = data;
-  }, [data]);
+  dataRef.current = data;
+  optionsRef.current = { enabled, onError, onSave, shouldSkipSave, storageKey };
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -150,69 +152,71 @@ export function useAutoSave<T extends object>(
     }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    isMountedRef.current = true;
+    isReadyToScheduleRef.current = false;
+    queueMicrotask(() => {
+      if (!cancelled && isMountedRef.current) {
+        isReadyToScheduleRef.current = true;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      isMountedRef.current = false;
+      isReadyToScheduleRef.current = false;
+      clearTimer();
+    };
+  }, [clearTimer]);
+
   const performSave = useCallback(async () => {
-    if (!enabled) return;
+    const optionsAtRequest = optionsRef.current;
+    if (!optionsAtRequest.enabled) return;
 
     const snapshot = dataRef.current;
-    if (shouldSkipSave?.(snapshot)) return;
+    if (optionsAtRequest.shouldSkipSave?.(snapshot)) return;
 
-    // Increment revision for this save attempt
+    // Increment revision when requested so older queued results cannot claim latest status.
     const myRevision = ++saveRevisionRef.current;
 
-    // Single-flight: if a save is in progress, wait for it, then continue
-    if (inFlightRef.current) {
-      try {
-        await inFlightRef.current;
-      } catch {
-        // ignore; we'll attempt this save anyway
+    const runSave = async () => {
+      if (isMountedRef.current) {
+        setIsSaving(true);
+        setError(null);
       }
-    }
 
-    setIsSaving(true);
-    setError(null);
-
-    const savePromise = (async () => {
       try {
-        if (onSave) {
-          await onSave(snapshot);
-        } else if (storageKey) {
-          localStorage.setItem(storageKey, JSON.stringify(snapshot));
+        if (optionsAtRequest.onSave) {
+          await optionsAtRequest.onSave(snapshot);
+        } else if (optionsAtRequest.storageKey) {
+          localStorage.setItem(optionsAtRequest.storageKey, JSON.stringify(snapshot));
         } else {
           throw new Error('Either storageKey or onSave must be provided');
         }
 
-        // Only apply "lastSaved" if this is still the latest save
-        if (myRevision === saveRevisionRef.current) {
+        if (isMountedRef.current && myRevision === saveRevisionRef.current) {
           setLastSaved(new Date());
         }
       } catch (err) {
         const saveError = err instanceof Error ? err : new Error('Unknown save error');
 
-        // Only apply error if this is still the latest save
-        if (myRevision === saveRevisionRef.current) {
+        if (isMountedRef.current && myRevision === saveRevisionRef.current) {
           setError(saveError);
+          optionsAtRequest.onError?.(saveError);
         }
-        onError?.(saveError);
         throw saveError;
       } finally {
-        // Only clear saving state if this is still the latest save
-        if (myRevision === saveRevisionRef.current) {
+        if (isMountedRef.current && myRevision === saveRevisionRef.current) {
           setIsSaving(false);
         }
       }
-    })();
+    };
 
-    inFlightRef.current = savePromise;
-
-    try {
-      await savePromise;
-    } finally {
-      // Only clear inFlight if we didn't get superseded
-      if (inFlightRef.current === savePromise) {
-        inFlightRef.current = null;
-      }
-    }
-  }, [enabled, onSave, storageKey, onError, shouldSkipSave]);
+    const savePromise = saveQueueRef.current.then(runSave, runSave);
+    saveQueueRef.current = savePromise.catch(() => undefined);
+    await savePromise;
+  }, []);
 
   const saveNow = useCallback(async () => {
     clearTimer();
@@ -225,21 +229,23 @@ export function useAutoSave<T extends object>(
   }, []);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
+    const dataChanged = lastObservedDataRef.current !== data;
+    lastObservedDataRef.current = data;
 
+    if (!isReadyToScheduleRef.current) return;
+    if (!dataChanged) return;
     if (!enabled) return;
     if (shouldSkipSave?.(data)) return;
 
     clearTimer();
     timerRef.current = setTimeout(() => {
-      void performSave();
+      void performSave().catch(() => {
+        // Status and the optional onError callback already expose the failure.
+      });
     }, debounceMs);
 
     return () => clearTimer();
-  }, [data, debounceMs, enabled, performSave, clearTimer, shouldSkipSave]);
+  }, [data, debounceMs, enabled, performSave, clearTimer]);
 
   return {
     lastSaved,

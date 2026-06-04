@@ -780,3 +780,39 @@ Next recommended slice:
 - Build the autosave coordinator guardrail slice: queued saves, stale response handling, hydration gates, duplicate-draft prevention, and browser failure/retry proof. Keep background autosave disabled until those gates pass.
 Commit hash/tag: This entry will be included in `fix(dle): establish autosave safety preflight`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Autosave Coordinator Serialization Guardrails
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Harden and prove the shared autosave coordinator before any DLE background autosave enablement.
+Files changed:
+- client/src/hooks/useAutoSave.ts
+- client/src/hooks/__tests__/useAutoSave.test.tsx
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/hooks/__tests__/useAutoSave.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/wizard/WizardEngine.test.tsx'`
+- Result: Passed. 3 test files, 26 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after final docs update.
+Proof and fixes:
+- Replaced the incomplete single-flight wait with a serialized promise queue, so three or more rapid save requests cannot overlap.
+- Each queued request now preserves the data snapshot, save destination, and error handler captured when it was requested.
+- Only the latest requested revision may own final saved/error/saving status; stale failures cannot overwrite newer status.
+- Debounced background failures are handled after status and `onError` expose the failure, avoiding unhandled rejections.
+- Callback identity changes no longer reschedule debounced saves.
+- Disabled saves remain inert.
+- Added a mount initialization barrier so React StrictMode mount effects and immediate mount-cycle hydration changes do not schedule an initial save.
+- DLE background autosave remains deliberately disabled behind `autoSaveEnabled = false`.
+Remaining risks:
+- Shared coordinator behavior is proven, but DLE-specific real-path queued saves still need duplicate-draft-ID proof.
+- Route hydration gating still needs browser proof for create, draft resume, and edit modes.
+- A deliberate real-backend failure/retry browser proof remains pending.
+- Debounce timing and rollout scope remain undecided.
+Next recommended slice:
+- Prove DLE route hydration and duplicate-draft prevention through the real persistence path, then add deliberate browser failure/retry proof. Keep background autosave disabled.
+Commit hash/tag: This entry will be included in `fix(dle): serialize autosave coordinator`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
