@@ -204,14 +204,218 @@ vi.mock('canvas-confetti', () => ({
 
 import { FinalisationPhase } from './FinalisationPhase';
 
+function makeFinalisationRentalSnapshot() {
+  return {
+    workflowId: 'residential_rent',
+    currentStepId: 'review_publish',
+    completedSteps: ['configuration', 'identity_market', 'location', 'unit_types'],
+    developmentData: {
+      name: 'Finalisation Edit Rental',
+      description: 'A resumed canonical edit draft that should update existing inventory.',
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      status: 'selling',
+      ownershipTypes: ['sectional-title'],
+      location: {
+        address: '11 Edit Road',
+        suburb: 'Sea Point',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8005',
+      },
+      media: {
+        heroImage: {
+          id: 'hero-edit',
+          url: 'https://example.com/edit-hero.jpg',
+          type: 'image',
+        },
+        photos: [],
+        videos: [],
+        documents: [],
+      },
+    },
+    stepData: {
+      configuration: {
+        developmentType: 'residential',
+        transactionType: 'for_rent',
+      },
+      identity_market: {
+        name: 'Finalisation Edit Rental',
+        transactionType: 'for_rent',
+        status: 'selling',
+        ownershipTypes: ['sectional-title'],
+      },
+      location: {
+        address: '11 Edit Road',
+        suburb: 'Sea Point',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8005',
+      },
+      amenities_features: {
+        amenities: ['Pool'],
+      },
+      unit_types: {
+        selectedUnitId: 'db-rent-unit-final',
+        unitTypes: [
+          {
+            id: 'db-rent-unit-final',
+            name: 'Final Rent Type',
+            bedrooms: 2,
+            bathrooms: 2,
+            monthlyRentFrom: 16_000,
+            monthlyRentTo: 19_000,
+            basePriceFrom: 2_000_000,
+            totalUnits: 12,
+            availableUnits: 7,
+            reservedUnits: 2,
+          },
+        ],
+      },
+    },
+    unitTypes: [
+      {
+        id: 'db-rent-unit-final',
+        name: 'Final Rent Type',
+        bedrooms: 2,
+        bathrooms: 2,
+        monthlyRentFrom: 16_000,
+        monthlyRentTo: 19_000,
+        basePriceFrom: 2_000_000,
+        totalUnits: 12,
+        availableUnits: 7,
+        reservedUnits: 2,
+      },
+    ],
+  };
+}
+
+function makeFinalisationAuctionSnapshot() {
+  return {
+    workflowId: 'residential_auction',
+    currentStepId: 'review_publish',
+    completedSteps: ['configuration', 'identity_market', 'location', 'unit_types'],
+    developmentData: {
+      name: 'Finalisation Auction Draft',
+      description: 'A resumed canonical auction draft that should publish auction inventory.',
+      developmentType: 'residential',
+      transactionType: 'auction',
+      status: 'selling',
+      ownershipTypes: ['sectional-title'],
+      location: {
+        address: '18 Final Auction Road',
+        suburb: 'De Waterkant',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8001',
+      },
+      media: {
+        heroImage: {
+          id: 'hero-auction',
+          url: 'https://example.com/auction-hero.jpg',
+          type: 'image',
+        },
+        photos: [],
+        videos: [],
+        documents: [],
+      },
+    },
+    stepData: {
+      configuration: {
+        developmentType: 'residential',
+        transactionType: 'auction',
+      },
+      identity_market: {
+        name: 'Finalisation Auction Draft',
+        transactionType: 'auction',
+        status: 'selling',
+        ownershipTypes: ['sectional-title'],
+      },
+      location: {
+        address: '18 Final Auction Road',
+        suburb: 'De Waterkant',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8001',
+      },
+      amenities_features: {
+        amenities: ['Concierge'],
+      },
+      unit_types: {
+        selectedUnitId: 'db-auction-unit-final',
+        unitTypes: [
+          {
+            id: 'db-auction-unit-final',
+            name: 'Final Auction Lot',
+            bedrooms: 3,
+            bathrooms: 2,
+            priceFrom: 2_700_000,
+            monthlyRentFrom: 24_000,
+            startingBid: 850_000,
+            reservePrice: 950_000,
+            auctionStartDate: '2030-02-01T09:00:00.000Z',
+            auctionEndDate: '2030-02-08T17:00:00.000Z',
+            auctionStatus: 'scheduled',
+            totalUnits: 4,
+            availableUnits: 2,
+            reservedUnits: 1,
+          },
+        ],
+      },
+    },
+    unitTypes: [
+      {
+        id: 'db-auction-unit-final',
+        name: 'Final Auction Lot',
+        bedrooms: 3,
+        bathrooms: 2,
+        priceFrom: 2_700_000,
+        monthlyRentFrom: 24_000,
+        startingBid: 850_000,
+        reservePrice: 950_000,
+        auctionStartDate: '2030-02-01T09:00:00.000Z',
+        auctionEndDate: '2030-02-08T17:00:00.000Z',
+        auctionStatus: 'scheduled',
+        totalUnits: 4,
+        availableUnits: 2,
+        reservedUnits: 1,
+      },
+    ],
+  };
+}
+
+function configureFinalisationSnapshot(
+  snapshot: ReturnType<typeof makeFinalisationRentalSnapshot>,
+  options: { editingId?: number } = {},
+) {
+  const wizardData = {
+    ...snapshot.developmentData,
+    workflowId: snapshot.workflowId,
+    currentStepId: snapshot.currentStepId,
+    completedSteps: snapshot.completedSteps,
+    stepData: snapshot.stepData,
+    unitTypes: snapshot.unitTypes,
+    amenities: snapshot.stepData.amenities_features?.amenities ?? [],
+    media: snapshot.developmentData.media,
+  };
+
+  testState.wizardState.editingId = options.editingId;
+  testState.wizardState.persistedEditSnapshot = snapshot;
+  testState.wizardState.getPersistedEditSnapshot.mockReturnValue(snapshot);
+  testState.wizardState.developmentData = {
+    ...snapshot.developmentData,
+    amenities: wizardData.amenities,
+  };
+  testState.wizardState.stepData = snapshot.stepData;
+  testState.wizardState.getWizardData = () => wizardData;
+  testState.wizardState.getDraftData = () => snapshot;
+  testState.wizardState.validateForPublish = () => ({ isValid: true, errors: [] });
+}
+
 describe('FinalisationPhase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    testState.wizardState.editingId = 987;
-    testState.wizardState.persistedEditSnapshot = testState.wizardState.getDraftData();
-    testState.wizardState.getPersistedEditSnapshot.mockReturnValue(
-      testState.wizardState.persistedEditSnapshot,
-    );
+    configureFinalisationSnapshot(makeFinalisationRentalSnapshot(), { editingId: 987 });
     testState.createDevelopmentMock.mockResolvedValue({ development: { id: 123 } });
     testState.updateDevelopmentMock.mockResolvedValue({ success: true });
     testState.publishDevelopmentMock.mockResolvedValue({ success: true });
@@ -307,6 +511,56 @@ describe('FinalisationPhase', () => {
     });
     expect(payload.unitTypes[0]).not.toHaveProperty('basePriceFrom');
     expect(payload.unitTypes[0]).not.toHaveProperty('priceFrom');
+    expect(payload.stepData.unit_types.unitTypes[0]).toEqual(payload.unitTypes[0]);
+    expect(testState.publishDevelopmentMock).toHaveBeenCalledWith({ id: 123 });
+    expect(testState.navigateMock).toHaveBeenCalledWith('/developer/developments');
+  });
+
+  it('publishes a resumed auction canonical draft without stale sale or rental unit prices', async () => {
+    configureFinalisationSnapshot(makeFinalisationAuctionSnapshot(), { editingId: undefined });
+
+    render(<FinalisationPhase />);
+
+    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+
+    await waitFor(() => expect(testState.createDevelopmentMock).toHaveBeenCalledTimes(1));
+
+    expect(testState.updateDevelopmentMock).not.toHaveBeenCalled();
+    const payload = testState.createDevelopmentMock.mock.calls[0][0];
+
+    expect(payload).toMatchObject({
+      workflowId: 'residential_auction',
+      currentStepId: 'review_publish',
+      completedSteps: ['configuration', 'identity_market', 'location', 'unit_types'],
+      name: 'Finalisation Auction Draft',
+      transactionType: 'auction',
+      auctionStartDate: '2030-02-01T09:00:00.000Z',
+      auctionEndDate: '2030-02-08T17:00:00.000Z',
+      startingBidFrom: 850_000,
+      reservePriceFrom: 950_000,
+      totalUnits: 4,
+      availableUnits: 2,
+    });
+    expect(payload.priceFrom).toBeUndefined();
+    expect(payload.priceTo).toBeUndefined();
+    expect(payload.monthlyRentFrom).toBeUndefined();
+    expect(payload.monthlyRentTo).toBeUndefined();
+    expect(payload.unitTypes[0]).toMatchObject({
+      id: 'db-auction-unit-final',
+      name: 'Final Auction Lot',
+      startingBid: 850_000,
+      reservePrice: 950_000,
+      auctionStartDate: '2030-02-01T09:00:00.000Z',
+      auctionEndDate: '2030-02-08T17:00:00.000Z',
+      auctionStatus: 'scheduled',
+      totalUnits: 4,
+      availableUnits: 2,
+      reservedUnits: 1,
+    });
+    expect(payload.unitTypes[0]).not.toHaveProperty('basePriceFrom');
+    expect(payload.unitTypes[0]).not.toHaveProperty('priceFrom');
+    expect(payload.unitTypes[0]).not.toHaveProperty('monthlyRentFrom');
     expect(payload.stepData.unit_types.unitTypes[0]).toEqual(payload.unitTypes[0]);
     expect(testState.publishDevelopmentMock).toHaveBeenCalledWith({ id: 123 });
     expect(testState.navigateMock).toHaveBeenCalledWith('/developer/developments');

@@ -249,9 +249,177 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
+const makeRentalUnit = () => ({
+  id: 'resume-unit-db-1',
+  name: 'Resume Rental Type',
+  bedrooms: 2,
+  bathrooms: 2,
+  monthlyRentFrom: 15_000,
+  monthlyRentTo: 18_000,
+  basePriceFrom: 1_500_000,
+  totalUnits: 9,
+  availableUnits: 6,
+});
+
+const makeAuctionUnit = () => ({
+  id: 'resume-auction-unit-db-1',
+  name: 'Resume Auction Lot',
+  bedrooms: 3,
+  bathrooms: 2,
+  priceFrom: 2_400_000,
+  monthlyRentFrom: 22_000,
+  startingBid: 850_000,
+  reservePrice: 950_000,
+  auctionStartDate: '2030-02-01T09:00:00.000Z',
+  auctionEndDate: '2030-02-08T17:00:00.000Z',
+  auctionStatus: 'scheduled',
+  totalUnits: 2,
+  availableUnits: 1,
+});
+
+function resetCanonicalRentalDraft() {
+  const rentalUnit = makeRentalUnit();
+  Object.assign(testState.canonicalDraft, {
+    workflowId: 'residential_rent',
+    currentStepId: 'review_publish',
+    completedSteps: [
+      'configuration',
+      'identity_market',
+      'location',
+      'amenities_features',
+      'unit_types',
+    ],
+    currentPhase: 8,
+    developmentType: 'residential',
+    transactionType: 'for_rent',
+    developmentData: {
+      name: 'Resumed Manual Draft',
+      description: 'A canonical draft resumed through the wizard shell.',
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      status: 'selling',
+      ownershipTypes: ['sectional-title'],
+      location: {
+        address: '17 Resume Road',
+        suburb: 'Sea Point',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8005',
+      },
+      media: { photos: [], videos: [], documents: [] },
+    },
+    stepData: {
+      configuration: {
+        developmentType: 'residential',
+        transactionType: 'for_rent',
+      },
+      identity_market: {
+        name: 'Resumed Manual Draft',
+        transactionType: 'for_rent',
+        status: 'selling',
+      },
+      location: {
+        address: '17 Resume Road',
+        suburb: 'Sea Point',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8005',
+      },
+      unit_types: {
+        selectedUnitId: rentalUnit.id,
+        unitTypes: [rentalUnit],
+      },
+      review_publish: {
+        checklistConfirmed: true,
+        readinessDismissals: ['launch-date-warning'],
+      },
+    },
+    unitTypes: [rentalUnit],
+  });
+
+  Object.assign(testState.editDevelopment, {
+    ...testState.canonicalDraft,
+    id: 987,
+    developmentData: {
+      ...testState.canonicalDraft.developmentData,
+      name: 'Edit Manual Draft',
+      description: 'An existing development saved manually as an edit draft.',
+    },
+    stepData: {
+      ...testState.canonicalDraft.stepData,
+      identity_market: {
+        ...testState.canonicalDraft.stepData.identity_market,
+        name: 'Edit Manual Draft',
+      },
+    },
+  });
+}
+
+function configureCanonicalAuctionDraft() {
+  const auctionUnit = makeAuctionUnit();
+  Object.assign(testState.canonicalDraft, {
+    workflowId: 'residential_auction',
+    currentStepId: 'review_publish',
+    completedSteps: [
+      'configuration',
+      'identity_market',
+      'location',
+      'amenities_features',
+      'unit_types',
+    ],
+    currentPhase: 8,
+    developmentType: 'residential',
+    transactionType: 'auction',
+    developmentData: {
+      name: 'Resumed Auction Draft',
+      description: 'A canonical auction draft resumed through the wizard shell.',
+      developmentType: 'residential',
+      transactionType: 'auction',
+      status: 'selling',
+      ownershipTypes: ['sectional-title'],
+      location: {
+        address: '21 Auction Road',
+        suburb: 'De Waterkant',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8001',
+      },
+      media: { photos: [], videos: [], documents: [] },
+    },
+    stepData: {
+      configuration: {
+        developmentType: 'residential',
+        transactionType: 'auction',
+      },
+      identity_market: {
+        name: 'Resumed Auction Draft',
+        transactionType: 'auction',
+        status: 'selling',
+      },
+      location: {
+        address: '21 Auction Road',
+        suburb: 'De Waterkant',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        postalCode: '8001',
+      },
+      unit_types: {
+        selectedUnitId: auctionUnit.id,
+        unitTypes: [auctionUnit],
+      },
+      review_publish: {
+        checklistConfirmed: true,
+        readinessDismissals: ['auction-window-confirmed'],
+      },
+    },
+    unitTypes: [auctionUnit],
+  });
+}
+
 describe('DevelopmentWizard draft resume/manual save wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetCanonicalRentalDraft();
     window.history.replaceState(
       {},
       '',
@@ -262,13 +430,6 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     testState.publisherContext = null;
     delete (testState.canonicalDraft as any).editingId;
     delete (testState.canonicalDraft as any).developmentId;
-    testState.canonicalDraft.currentStepId = 'review_publish';
-    testState.canonicalDraft.developmentData.name = 'Resumed Manual Draft';
-    testState.canonicalDraft.developmentData.description =
-      'A canonical draft resumed through the wizard shell.';
-    testState.canonicalDraft.stepData.identity_market.name = 'Resumed Manual Draft';
-    testState.editDevelopment.currentStepId = 'review_publish';
-    testState.editDevelopment.completedSteps = [...testState.canonicalDraft.completedSteps];
     testState.saveDraftMutationMock.mockResolvedValue({ id: 321, success: true });
     testState.updateDevelopmentMock.mockResolvedValue({ success: true });
     testState.updatePublisherDevelopmentMock.mockResolvedValue({ success: true });
@@ -418,6 +579,149 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
       monthlyRentTo: 18_000,
     });
     expect(draftData.unitTypes[0]).not.toHaveProperty('priceFrom');
+    expect(draftData.stepData.unit_types.unitTypes[0]).toEqual(draftData.unitTypes[0]);
+  });
+
+  it('manual save persists a resumed auction canonical draft without stale sale or rental unit prices', async () => {
+    configureCanonicalAuctionDraft();
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().currentStepId).toBe('review_publish');
+    });
+    expect(useDevelopmentWizard.getState().workflowId).toBe('residential_auction');
+    expect(useDevelopmentWizard.getState().developmentData.name).toBe('Resumed Auction Draft');
+
+    fireEvent.click(screen.getByRole('button', { name: /manual save draft/i }));
+
+    await waitFor(() => {
+      expect(testState.saveDraftMutationMock).toHaveBeenCalledTimes(1);
+    });
+
+    const saveInput = testState.saveDraftMutationMock.mock.calls[0][0];
+    const draftData = saveInput.draftData;
+
+    expect(saveInput).toMatchObject({
+      id: 321,
+      brandProfileId: 55,
+    });
+    expect(draftData).toMatchObject({
+      workflowId: 'residential_auction',
+      currentStepId: 'review_publish',
+      developmentData: {
+        name: 'Resumed Auction Draft',
+        transactionType: 'auction',
+        location: {
+          city: 'Cape Town',
+          suburb: 'De Waterkant',
+        },
+      },
+    });
+    expect(draftData.unitTypes).toHaveLength(1);
+    expect(draftData.unitTypes[0]).toMatchObject({
+      id: 'resume-auction-unit-db-1',
+      name: 'Resume Auction Lot',
+      startingBid: 850_000,
+      reservePrice: 950_000,
+      auctionStartDate: '2030-02-01T09:00:00.000Z',
+      auctionEndDate: '2030-02-08T17:00:00.000Z',
+      auctionStatus: 'scheduled',
+    });
+    expect(draftData.unitTypes[0]).not.toHaveProperty('priceFrom');
+    expect(draftData.unitTypes[0]).not.toHaveProperty('basePriceFrom');
+    expect(draftData.unitTypes[0]).not.toHaveProperty('monthlyRentFrom');
+    expect(draftData.stepData.unit_types.unitTypes[0]).toEqual(draftData.unitTypes[0]);
+    expect(draftData.stepData.review_publish).toEqual({
+      checklistConfirmed: true,
+      readinessDismissals: ['auction-window-confirmed'],
+    });
+  });
+
+  it('route draftId hydration replaces stale persisted state before auction manual save', async () => {
+    configureCanonicalAuctionDraft();
+    useDevelopmentWizard.setState({
+      workflowId: 'residential_sale' as any,
+      currentStepId: 'unit_types' as any,
+      completedSteps: ['configuration', 'identity_market', 'unit_types'] as any,
+      developmentData: {
+        name: 'Stale Sale State',
+        description: 'This stale sale state must not survive auction route draft hydration.',
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        location: {
+          city: 'Johannesburg',
+          suburb: 'Rosebank',
+          province: 'Gauteng',
+        },
+      } as any,
+      stepData: {
+        identity_market: {
+          name: 'Stale Sale State',
+          transactionType: 'for_sale',
+        },
+        unit_types: {
+          selectedUnitId: 'stale-sale-unit',
+          unitTypes: [
+            {
+              id: 'stale-sale-unit',
+              name: 'Stale Sale Unit',
+              bedrooms: 1,
+              bathrooms: 1,
+              priceFrom: 900_000,
+              monthlyRentFrom: 12_000,
+            },
+          ],
+        },
+      } as any,
+      unitTypes: [
+        {
+          id: 'stale-sale-unit',
+          name: 'Stale Sale Unit',
+          bedrooms: 1,
+          bathrooms: 1,
+          priceFrom: 900_000,
+          monthlyRentFrom: 12_000,
+        },
+      ] as any,
+    });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().currentStepId).toBe('review_publish');
+    });
+    expect(useDevelopmentWizard.getState().workflowId).toBe('residential_auction');
+    expect(useDevelopmentWizard.getState().developmentData.name).toBe('Resumed Auction Draft');
+    expect(useDevelopmentWizard.getState().unitTypes[0].id).toBe('resume-auction-unit-db-1');
+
+    fireEvent.click(screen.getByRole('button', { name: /manual save draft/i }));
+
+    await waitFor(() => {
+      expect(testState.saveDraftMutationMock).toHaveBeenCalledTimes(1);
+    });
+
+    const draftData = testState.saveDraftMutationMock.mock.calls[0][0].draftData;
+    expect(draftData).toMatchObject({
+      workflowId: 'residential_auction',
+      currentStepId: 'review_publish',
+      developmentData: {
+        name: 'Resumed Auction Draft',
+        transactionType: 'auction',
+        location: {
+          city: 'Cape Town',
+          suburb: 'De Waterkant',
+        },
+      },
+    });
+    expect(draftData.developmentData.name).not.toBe('Stale Sale State');
+    expect(draftData.unitTypes[0]).toMatchObject({
+      id: 'resume-auction-unit-db-1',
+      startingBid: 850_000,
+      reservePrice: 950_000,
+    });
+    expect(draftData.unitTypes[0]).not.toHaveProperty('priceFrom');
+    expect(draftData.unitTypes[0]).not.toHaveProperty('monthlyRentFrom');
     expect(draftData.stepData.unit_types.unitTypes[0]).toEqual(draftData.unitTypes[0]);
   });
 

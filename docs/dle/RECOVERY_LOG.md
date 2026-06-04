@@ -635,3 +635,36 @@ Next recommended slice:
 - Run Rental and Auction wizard save/resume/publish proof, including draft visibility, resume hydration for media/highlights/unit types/readiness, and public output after publish.
 Commit hash/tag: This entry is included in `test(dle): prove rental auction edit ownership in browser`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-04 - Auction Wizard Canonical Save/Publish Parity
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Close the focused auction wizard guardrail gap before autosave by proving resumed auction drafts save and publish through canonical transaction-specific payloads without stale sale/rental pricing.
+Files changed:
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- client/src/components/development-wizard/phases/FinalisationPhase.test.tsx
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx'`
+- Result: Passed. 2 test files, 13 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: First sandbox run failed because server tests could not connect to local MySQL (`EPERM 127.0.0.1:3306`). Rerun outside the sandbox passed with local MySQL access. 13 test files, 108 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed before this log update.
+Proof added:
+- `DevelopmentWizard` now proves a resumed auction canonical draft hydrates into `residential_auction`, manual-save persists auction transaction context, auction bid/reserve/date fields, review-readiness dismissals, and synchronized `stepData.unit_types.unitTypes`.
+- `DevelopmentWizard` now proves route `draftId` hydration replaces stale local sale state before auction manual save.
+- Auction manual-save output strips stale sale/rental unit pricing: no `priceFrom`, `basePriceFrom`, or `monthlyRentFrom` leaks into auction unit snapshots.
+- `FinalisationPhase` now proves create-mode publish of a resumed auction canonical draft builds auction-native submit payloads with auction dates, `startingBidFrom`, `reservePriceFrom`, inventory totals, canonical `stepData.unit_types.unitTypes`, and no stale sale/rental pricing.
+- Existing rental finalisation tests now reset through explicit rental fixtures so auction fixtures cannot leak into rental publish assertions.
+Remaining risks:
+- This is focused component/canonical payload proof, not full browser create/save/resume/publish proof for rental or auction.
+- Browser-level draft visibility, resume hydration for media/highlights/readiness, and post-publish public output from the wizard remain pending.
+- Autosave remains blocked until transaction-lane browser save/resume behavior and truthful failure/recovery behavior are proven.
+Next recommended slice:
+- Run browser-level rental and auction wizard save/resume/publish proof using authenticated local QA, covering draft visibility, resume hydration for media/highlights/unit types/readiness, publish/public output, search cards, and lead context.
+Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
