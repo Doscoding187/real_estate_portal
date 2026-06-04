@@ -1274,3 +1274,58 @@ Next recommended slice:
   define the first small post-publish operations surface.
 Commit hash/tag: This entry will be included in `feat(dle): clarify qualification assumptions`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Operating Layer Architecture Audit
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the DLE operating layer before implementing post-publish dashboard or inventory
+surfaces, so Sale, Rental, and Auction operations do not collapse back into generic listing CRUD.
+Files changed:
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Focused inspection run:
+- Read `docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md`.
+- Inspected current developer dashboard surfaces:
+  `client/src/components/developer/Overview.tsx`,
+  `client/src/components/developer/DevelopmentsList.tsx`,
+  `client/src/components/developer/LeadsManager.tsx`,
+  `client/src/components/developer/UnitsManager.tsx`,
+  `client/src/pages/DeveloperRoutes.tsx`,
+  `client/src/components/dashboard/EntityStatusCard.tsx`.
+- Inspected current backend/shared operating contracts:
+  `server/developerRouter.ts`, `server/services/developerFunnelService.ts`,
+  `shared/developerFunnel.ts`, `shared/developmentDerived.ts`,
+  `drizzle/schema/developments.ts`, and `drizzle/schema/leads.ts`.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added `docs/dle/OPERATING_LAYER_AUDIT.md`.
+- Documented the current operating base: transaction fields, unit inventory fields, derived
+  inventory helpers, developer overview KPIs, lead control center, lead stages, SLA policy,
+  assignment, activity logging, next actions, and distribution/referral infrastructure.
+- Documented current weak points: placeholder Units Manager, generic development cards, sale-shaped
+  lead stage names, missing live inventory mutations, missing operating event/audit model, and
+  missing transaction-native dashboard outcomes.
+- Defined the intended shared operating shell for live developments after publish.
+- Defined Sale, Rental, and Auction operating concepts and product language separately.
+- Recommended the first implementation slice: a read-only Development Operations Snapshot using
+  existing data, with no schema changes, no inventory mutations, and no edit-development autosave
+  changes.
+- Registered `OPERATING_LAYER_AUDIT.md` in the source-of-truth document and moved the strategic
+  order toward a read-only operating-layer surface.
+Remaining risks:
+- This slice is documentation-only. The dashboard does not yet show the operating snapshot.
+- Inventory mutation, reservation/let/sold/auction outcome tracking, audit events, and
+  transaction-native lead-stage overlays remain unimplemented.
+- The existing developer worktree still contains unrelated homepage/evidence/playwright changes
+  that were not touched or staged in this slice.
+Next recommended slice:
+- Implement the first read-only Development Operations Snapshot in the developer dashboard, using
+  current development fields, existing derived inventory helpers, and existing lead/distribution
+  queries.
+Commit hash/tag: This entry will be included in `docs(dle): define operating layer audit`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
