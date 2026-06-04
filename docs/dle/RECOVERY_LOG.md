@@ -1190,3 +1190,45 @@ Next recommended slice:
   the public action panel or lead dialog.
 Commit hash/tag: This entry will be included in `feat(dle): localize public lead dialog`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Qualification Route Transaction Copy
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Keep the public qualification route transaction-native after a buyer, renter, or bidder enters
+from the public action panel or lead dialog.
+Files changed:
+- client/src/pages/DevelopmentQualificationPage.tsx
+- client/src/pages/DevelopmentQualificationPage.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentQualificationPage.test.ts'`
+- Result: Passed. 1 test file, 5 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentQualificationPage.test.ts client/src/components/development/DevelopmentLeadDialog.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 11 test files, 102 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added a transaction-normalized qualification experience copy model for Sale, Rental, and Auction.
+- Sale qualification copy remains affordability, qualification, deposit, and sales-team oriented.
+- Rental qualification copy now uses rental fit, monthly rent capacity, upfront amount, rental lead,
+  lease availability, and leasing-team language.
+- Auction qualification copy now uses bidder readiness, auction capacity, starting bid, bidder
+  context, deposit/cash contribution, auction registration, and auction-team language.
+- The route now updates its meta text, hero, step labels, result card, submitted state, sidebar
+  checklist, and submit button from the transaction copy model.
+- Submitted qualification leads now include page-level `transactionType`; selected-unit
+  qualification context also includes `unitPriceLabel` and unit-level `transactionType`.
+Remaining risks:
+- The qualification calculations still use shared affordability assumptions. Rental lease
+  qualification ratios and Auction proof-of-funds/bidder registration requirements need deeper
+  product and rules work.
+- Operating-layer lead stages and team-specific follow-up workflows remain outstanding.
+Next recommended slice:
+- Add richer Rental/Auction qualification assumptions and prompts, then start the operating-layer
+  audit for live development inventory and lead-stage management.
+Commit hash/tag: This entry will be included in `feat(dle): localize qualification route`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

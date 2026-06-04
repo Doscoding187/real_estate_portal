@@ -127,6 +127,113 @@ export function getDevelopmentQualificationPricingContext(dev: any, selectedUnit
   };
 }
 
+export function getDevelopmentQualificationExperienceCopy(transactionType: unknown) {
+  const normalizedTransactionType = normalizeQualificationTransactionType(transactionType);
+
+  if (normalizedTransactionType === 'rent') {
+    return {
+      transactionType: normalizedTransactionType,
+      metaTitlePrefix: 'Check Rental Fit For',
+      metaDescriptionVerb: 'rental fit',
+      flowBadge: 'Rental Fit',
+      heroTitleVerb: 'fits your rental budget',
+      heroBody:
+        'Complete a few rental-fit inputs, review your estimated monthly rent capacity, then send a stronger rental lead to the leasing team.',
+      stepThreeLabel: 'Rental fit result and lead submission',
+      resultCardTitle: 'Rental Fit Result',
+      successTitlePrefix: 'This rental may fit your budget',
+      nearTitle: 'You may be close to rental fit',
+      outTitle: 'This rental may be above your current range',
+      outTeamLabel: 'leasing team',
+      shortfallLabel: 'monthly rental budget gap',
+      submitLabel: 'Submit Rental Fit',
+      submittingLabel: 'Submitting rental fit',
+      toastSuccess: 'Rental fit submitted to the leasing team.',
+      submittedTitle: 'Rental fit sent successfully',
+      submittedBody:
+        'The leasing team now has your rental fit snapshot and contact details for this development.',
+      depositLabel: 'Upfront amount',
+      depositHelper: 'Upfront amount considered in this estimate',
+      capacityHelper: 'Estimated upper monthly rent capacity',
+      paymentHelper: 'Target monthly rent for this rental',
+      includedEstimate: 'Development-specific rental fit estimate',
+      teamHandoff: 'Direct handoff to the leasing team',
+      followUp: 'Follow-up for lease terms and availability',
+      howWorksEstimate: 'Review your estimated rental fit for this development.',
+      howWorksSubmit: 'Submit a stronger rental lead with your fit context attached.',
+      incomePrompt: 'monthly rent from',
+    };
+  }
+
+  if (normalizedTransactionType === 'auction') {
+    return {
+      transactionType: normalizedTransactionType,
+      metaTitlePrefix: 'Check Bidder Readiness For',
+      metaDescriptionVerb: 'bidder readiness',
+      flowBadge: 'Bidder Readiness',
+      heroTitleVerb: 'fits your bidder budget',
+      heroBody:
+        'Complete a few bidder-readiness inputs, review your estimated auction capacity, then send a stronger auction lead to the auction team.',
+      stepThreeLabel: 'Bidder readiness result and lead submission',
+      resultCardTitle: 'Bidder Readiness Result',
+      successTitlePrefix: 'You may be bidder-ready for',
+      nearTitle: 'You may be close to bidder readiness',
+      outTitle: 'This auction may be above your current range',
+      outTeamLabel: 'auction team',
+      shortfallLabel: 'bidder capacity gap',
+      submitLabel: 'Submit Bidder Readiness',
+      submittingLabel: 'Submitting bidder readiness',
+      toastSuccess: 'Bidder readiness submitted to the auction team.',
+      submittedTitle: 'Bidder readiness sent successfully',
+      submittedBody:
+        'The auction team now has your bidder readiness snapshot and contact details for this development.',
+      depositLabel: 'Deposit or cash contribution',
+      depositHelper: 'Deposit or cash contribution considered in this estimate',
+      capacityHelper: 'Estimated upper auction capacity',
+      paymentHelper: 'Estimated monthly payment at the starting bid',
+      includedEstimate: 'Development-specific bidder readiness estimate',
+      teamHandoff: 'Direct handoff to the auction team',
+      followUp: 'Follow-up for auction timing and registration',
+      howWorksEstimate: 'Review your estimated bidder readiness for this development.',
+      howWorksSubmit: 'Submit a stronger auction lead with your bidder context attached.',
+      incomePrompt: 'starting bids from',
+    };
+  }
+
+  return {
+    transactionType: normalizedTransactionType,
+    metaTitlePrefix: 'Qualify For',
+    metaDescriptionVerb: 'affordability',
+    flowBadge: 'Full Qualification',
+    heroTitleVerb: 'fits your budget',
+    heroBody:
+      'Complete a few affordability inputs, review your estimated range, then send a stronger lead to the sales team.',
+    stepThreeLabel: 'Result and lead submission',
+    resultCardTitle: 'Qualification Result',
+    successTitlePrefix: 'You likely qualify for',
+    nearTitle: 'You are close to qualifying',
+    outTitle: 'This development may be above your current range',
+    outTeamLabel: 'sales team',
+    shortfallLabel: 'entry price',
+    submitLabel: 'Submit Qualification',
+    submittingLabel: 'Submitting qualification',
+    toastSuccess: 'Qualification submitted to the sales team.',
+    submittedTitle: 'Qualification sent successfully',
+    submittedBody:
+      'The sales team now has your affordability snapshot and contact details for this development.',
+    depositLabel: 'Deposit',
+    depositHelper: 'Deposit considered in this estimate',
+    capacityHelper: 'Estimated upper affordability',
+    paymentHelper: 'Estimated monthly payment at the entry price',
+    includedEstimate: 'Development-specific affordability estimate',
+    teamHandoff: 'Direct handoff to the sales team',
+    followUp: 'Follow-up for next steps and availability',
+    howWorksEstimate: 'Review your estimated affordability for this development.',
+    howWorksSubmit: 'Submit a stronger lead with your affordability context attached.',
+    incomePrompt: 'homes from',
+  };
+}
+
 export function getDevelopmentQualificationLeadUnitContext(dev: any, selectedUnit?: any | null) {
   if (!selectedUnit) return {};
 
@@ -141,6 +248,8 @@ export function getDevelopmentQualificationLeadUnitContext(dev: any, selectedUni
         ? selectedUnit.name.trim()
         : undefined,
     unitPriceFrom,
+    unitPriceLabel: pricing.targetLabel,
+    transactionType: pricing.transactionType,
     unitBedrooms:
       Number.isFinite(Number(selectedUnit.bedrooms)) && Number(selectedUnit.bedrooms) >= 0
         ? Number(selectedUnit.bedrooms)
@@ -221,7 +330,7 @@ export default function DevelopmentQualificationPage() {
         path: dev?.slug || slug,
       });
       setSubmitted(true);
-      toast.success('Qualification submitted to the sales team.');
+      toast.success(getDevelopmentQualificationExperienceCopy(dev?.transactionType).toastSuccess);
     },
     onError: error => {
       toast.error(error.message || 'Unable to submit qualification.');
@@ -241,6 +350,10 @@ export default function DevelopmentQualificationPage() {
   const developmentPricing = useMemo(() => {
     return getDevelopmentQualificationPricingContext(dev, selectedUnit);
   }, [dev, selectedUnit]);
+  const qualificationCopy = useMemo(
+    () => getDevelopmentQualificationExperienceCopy(developmentPricing.transactionType),
+    [developmentPricing.transactionType],
+  );
 
   const monthlyIncome = parseNumberInput(financials.monthlyIncome);
   const coApplicantIncome = parseNumberInput(financials.coApplicantIncome);
@@ -274,21 +387,26 @@ export default function DevelopmentQualificationPage() {
         );
   const qualifies = affordabilityCapacity >= targetPrice;
   const closeFit = !qualifies && affordabilityCapacity >= targetPrice * 0.9;
+  const qualificationSubject = selectedUnit?.name || dev?.name || 'this development';
+  const successTitle =
+    developmentPricing.transactionType === 'rent'
+      ? `${qualificationSubject} may fit your rental budget`
+      : `${qualificationCopy.successTitlePrefix} ${qualificationSubject}`;
 
   const resultTone = qualifies ? 'success' : closeFit ? 'warning' : 'muted';
   const resultCopy = qualifies
     ? {
-        title: `You likely qualify for ${selectedUnit?.name || dev?.name || 'this development'}`,
+        title: successTitle,
         body: `Estimated ${developmentPricing.capacityLabel} is up to ${formatSARandShort(affordabilityCapacity)}. ${selectedUnit?.name ? `${selectedUnit.name} ${developmentPricing.targetLabel} starts from` : `${developmentPricing.rangePrefix} in this development starts from`} ${formatSARandShort(targetPrice)}.`,
       }
     : closeFit
       ? {
-          title: 'You are close to qualifying',
-          body: `You may need a stronger deposit or lower commitments. You are currently about ${formatSARandShort(depositGap)} short of the ${developmentPricing.targetLabel}.`,
+          title: qualificationCopy.nearTitle,
+          body: `You may need a stronger ${qualificationCopy.depositLabel.toLowerCase()} or lower commitments. You are currently about ${formatSARandShort(depositGap)} short of the ${qualificationCopy.shortfallLabel}.`,
         }
       : {
-          title: 'This development may be above your current range',
-          body: `Estimated ${developmentPricing.capacityLabel} is around ${formatSARandShort(affordabilityCapacity)}. Submit your details and the sales team can help with next-best options.`,
+          title: qualificationCopy.outTitle,
+          body: `Estimated ${developmentPricing.capacityLabel} is around ${formatSARandShort(affordabilityCapacity)}. Submit your details and the ${qualificationCopy.outTeamLabel} can help with next-best options.`,
         };
 
   const canContinueStep1 = monthlyIncome > 0;
@@ -320,12 +438,15 @@ export default function DevelopmentQualificationPage() {
     const qualificationSummary = [
       `Development: ${dev.name}`,
       selectedUnit?.name ? `Unit: ${selectedUnit.name}` : null,
-      `Estimated affordability range: ${formatSARandShort(comfortFloor)} - ${formatSARandShort(affordabilityCapacity)}`,
+      `Transaction type: ${developmentPricing.transactionType}`,
+      `Estimated ${developmentPricing.capacityLabel}: ${formatSARandShort(comfortFloor)} - ${formatSARandShort(affordabilityCapacity)}`,
       `Monthly income: ${formatSARandShort(monthlyIncome)}`,
       coApplicantIncome > 0 ? `Co-applicant income: ${formatSARandShort(coApplicantIncome)}` : null,
       monthlyExpenses > 0 ? `Monthly expenses: ${formatSARandShort(monthlyExpenses)}` : null,
       monthlyDebts > 0 ? `Monthly debts: ${formatSARandShort(monthlyDebts)}` : null,
-      availableDeposit > 0 ? `Available deposit: ${formatSARandShort(availableDeposit)}` : null,
+      availableDeposit > 0
+        ? `${qualificationCopy.depositLabel}: ${formatSARandShort(availableDeposit)}`
+        : null,
       `Result: ${qualifies ? 'Likely qualifies' : closeFit ? 'Near qualification' : 'Out of range'}`,
     ]
       .filter(Boolean)
@@ -335,6 +456,7 @@ export default function DevelopmentQualificationPage() {
       developmentId: dev.id,
       developerBrandProfileId: (dev as any).developerBrandProfileId ?? undefined,
       ...getDevelopmentQualificationLeadUnitContext(dev, selectedUnit),
+      transactionType: developmentPricing.transactionType,
       name: contact.name.trim(),
       email: contact.email.trim(),
       phone: contact.phone.trim(),
@@ -389,8 +511,8 @@ export default function DevelopmentQualificationPage() {
   return (
     <>
       <MetaControl
-        title={`Qualify For ${selectedUnit?.name || dev.name}`}
-        description={`Check affordability and submit a qualification request for ${selectedUnit?.name || dev.name}.`}
+        title={`${qualificationCopy.metaTitlePrefix} ${selectedUnit?.name || dev.name}`}
+        description={`Check ${qualificationCopy.metaDescriptionVerb} and submit a qualification request for ${selectedUnit?.name || dev.name}.`}
       />
 
       <div className="min-h-screen bg-slate-50">
@@ -420,18 +542,17 @@ export default function DevelopmentQualificationPage() {
                     </button>
                     <div className="mt-5 flex flex-wrap items-center gap-2">
                       <Badge className="border border-white/10 bg-white/10 text-white hover:bg-white/10">
-                        Full Qualification
+                        {qualificationCopy.flowBadge}
                       </Badge>
                       <Badge className="border border-orange-300/20 bg-orange-400/10 text-orange-100 hover:bg-orange-400/10">
                         {priceLabel}
                       </Badge>
                     </div>
                     <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-                      Check whether {selectedUnit?.name || dev.name} fits your budget
+                      Check whether {selectedUnit?.name || dev.name} {qualificationCopy.heroTitleVerb}
                     </h1>
                     <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
-                      Complete a few affordability inputs, review your estimated range, then send a
-                      stronger lead to the sales team for {selectedUnit?.name || dev.name}.
+                      {qualificationCopy.heroBody} For {selectedUnit?.name || dev.name}.
                     </p>
                   </div>
 
@@ -446,7 +567,7 @@ export default function DevelopmentQualificationPage() {
                             ? 'Household income'
                             : step === 2
                               ? 'Monthly commitments'
-                              : 'Result and lead submission'}
+                              : qualificationCopy.stepThreeLabel}
                         </p>
                       </div>
                       <div className="w-40">
@@ -466,12 +587,9 @@ export default function DevelopmentQualificationPage() {
                       </div>
                       <div className="space-y-3">
                         <h2 className="text-2xl font-bold text-slate-900">
-                          Qualification sent successfully
+                          {qualificationCopy.submittedTitle}
                         </h2>
-                        <p className="text-slate-700">
-                          The sales team now has your affordability snapshot and contact details for{' '}
-                          {dev.name}.
-                        </p>
+                        <p className="text-slate-700">{qualificationCopy.submittedBody}</p>
                         <div className="flex flex-wrap gap-3">
                           <Button onClick={() => setLocation(`/development/${dev.slug || slug}`)}>
                             Return to Development
@@ -531,9 +649,9 @@ export default function DevelopmentQualificationPage() {
 
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <p className="text-sm font-medium text-slate-700">
-                            This check starts with income so we can estimate whether{' '}
-                            {developmentPricing.rangePrefix.toLowerCase()}{' '}
-                            {formatSARandShort(targetPrice)} are in range.
+                            This check starts with income so we can estimate whether the target of{' '}
+                            {qualificationCopy.incomePrompt} {formatSARandShort(targetPrice)} is in
+                            range.
                           </p>
                         </div>
 
@@ -595,7 +713,7 @@ export default function DevelopmentQualificationPage() {
                           </div>
 
                           <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="availableDeposit">Available deposit</Label>
+                            <Label htmlFor="availableDeposit">{qualificationCopy.depositLabel}</Label>
                             <Input
                               id="availableDeposit"
                               inputMode="numeric"
@@ -616,8 +734,9 @@ export default function DevelopmentQualificationPage() {
                             Accuracy pass
                           </Badge>
                           <p className="text-sm text-slate-600">
-                            Adding expenses, debts, and deposit improves the affordability estimate
-                            before you submit.
+                            Adding expenses, debts, and {qualificationCopy.depositLabel.toLowerCase()}{' '}
+                            improves the {qualificationCopy.metaDescriptionVerb} estimate before
+                            you submit.
                           </p>
                         </div>
 
@@ -648,7 +767,7 @@ export default function DevelopmentQualificationPage() {
                   {step === 3 && (
                     <Card className="border-slate-200 shadow-sm">
                       <CardHeader>
-                        <CardTitle>Qualification Result</CardTitle>
+                        <CardTitle>{qualificationCopy.resultCardTitle}</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div
@@ -691,7 +810,7 @@ export default function DevelopmentQualificationPage() {
                               {formatSARandShort(affordabilityCapacity)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              Estimated upper affordability
+                              {qualificationCopy.capacityHelper}
                             </p>
                           </div>
 
@@ -704,20 +823,20 @@ export default function DevelopmentQualificationPage() {
                               {formatSARandShort(estimatedTargetRepayment)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              Estimated monthly payment at the {developmentPricing.targetLabel}
+                              {qualificationCopy.paymentHelper}
                             </p>
                           </div>
 
                           <div className="rounded-2xl border border-slate-200 bg-white p-4">
                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                               <Wallet className="h-4 w-4 text-emerald-600" />
-                              Deposit
+                              {qualificationCopy.depositLabel}
                             </div>
                             <p className="mt-2 text-2xl font-bold text-slate-900">
                               {formatSARandShort(availableDeposit)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              Deposit considered in this estimate
+                              {qualificationCopy.depositHelper}
                             </p>
                           </div>
                         </div>
@@ -768,11 +887,11 @@ export default function DevelopmentQualificationPage() {
                             {createLead.isPending ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Submitting
+                                {qualificationCopy.submittingLabel}
                               </>
                             ) : (
                               <>
-                                Submit Qualification
+                                {qualificationCopy.submitLabel}
                                 <ArrowRight className="ml-2 h-4 w-4" />
                               </>
                             )}
@@ -828,13 +947,13 @@ export default function DevelopmentQualificationPage() {
                       <span className="mt-0.5 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-bold text-white">
                         2
                       </span>
-                      Review your estimated affordability for this development.
+                      {qualificationCopy.howWorksEstimate}
                     </div>
                     <div className="flex items-start gap-3">
                       <span className="mt-0.5 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-bold text-white">
                         3
                       </span>
-                      Submit a stronger lead with your affordability context attached.
+                      {qualificationCopy.howWorksSubmit}
                     </div>
                   </div>
                 </CardContent>
@@ -846,15 +965,15 @@ export default function DevelopmentQualificationPage() {
                   <div className="space-y-2 text-sm text-slate-600">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      Development-specific affordability estimate
+                      {qualificationCopy.includedEstimate}
                     </div>
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-orange-500" />
-                      Direct handoff to the sales team
+                      {qualificationCopy.teamHandoff}
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-blue-600" />
-                      Follow-up for next steps and availability
+                      {qualificationCopy.followUp}
                     </div>
                   </div>
                 </CardContent>

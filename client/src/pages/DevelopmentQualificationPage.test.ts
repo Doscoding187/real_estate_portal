@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getDevelopmentQualificationExperienceCopy,
   getDevelopmentQualificationLeadUnitContext,
   getDevelopmentQualificationPricingContext,
   normalizeQualificationTransactionType,
@@ -53,6 +54,30 @@ describe('DevelopmentQualificationPage pricing context', () => {
     });
   });
 
+  it('builds transaction-native qualification experience copy', () => {
+    expect(getDevelopmentQualificationExperienceCopy('for_sale')).toMatchObject({
+      flowBadge: 'Full Qualification',
+      submitLabel: 'Submit Qualification',
+      teamHandoff: 'Direct handoff to the sales team',
+    });
+
+    expect(getDevelopmentQualificationExperienceCopy('for_rent')).toMatchObject({
+      flowBadge: 'Rental Fit',
+      resultCardTitle: 'Rental Fit Result',
+      submitLabel: 'Submit Rental Fit',
+      teamHandoff: 'Direct handoff to the leasing team',
+      includedEstimate: 'Development-specific rental fit estimate',
+    });
+
+    expect(getDevelopmentQualificationExperienceCopy('auction')).toMatchObject({
+      flowBadge: 'Bidder Readiness',
+      resultCardTitle: 'Bidder Readiness Result',
+      submitLabel: 'Submit Bidder Readiness',
+      teamHandoff: 'Direct handoff to the auction team',
+      includedEstimate: 'Development-specific bidder readiness estimate',
+    });
+  });
+
   it('builds qualification lead context with canonical unit identity and commercial values', () => {
     expect(
       getDevelopmentQualificationLeadUnitContext(
@@ -70,6 +95,8 @@ describe('DevelopmentQualificationPage pricing context', () => {
       unitId: 'unit-type-rent',
       unitName: 'Rental Type',
       unitPriceFrom: 12500,
+      unitPriceLabel: 'monthly rent',
+      transactionType: 'rent',
       unitBedrooms: 2,
       unitBathrooms: 1.5,
     });

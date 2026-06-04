@@ -2,7 +2,8 @@
 
 Date: 2026-06-04
 Status: Product-visibility slices are now active across wizard guidance, unit preview, public
-unit-card merchandising, public action-panel CTAs, and lead-dialog copy/context.
+unit-card merchandising, public action-panel CTAs, lead-dialog copy/context, and qualification
+route copy/results.
 
 ## Standard
 
@@ -123,6 +124,24 @@ The lead dialog should:
 This closes an important conversion gap: a renter or bidder no longer lands in a generic sales form
 after clicking a transaction-native CTA.
 
+## Sixth Product-Visibility Slice
+
+Make the public qualification route transaction-aware.
+
+The qualification route should:
+
+- keep Sale language focused on affordability, qualification, deposits, and sales follow-up;
+- use Rental language for rental fit, monthly rent capacity, lease availability, upfront amounts,
+  and leasing-team handoff;
+- use Auction language for bidder readiness, auction capacity, starting bids, bidder context,
+  registration follow-up, and auction-team handoff;
+- preserve transaction type in submitted qualification leads, including development-level leads
+  where no unit is selected;
+- attach selected-unit price labels and transaction type when a unit-specific qualification starts.
+
+This keeps the conversion journey transaction-native after the public page, public action panel, and
+lead dialog have already established the correct commercial lane.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -132,8 +151,9 @@ after clicking a transaction-native CTA.
   pack, and urgency should become first-class product language.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
   labels, availability, and primary CTAs.
-- Deepen the qualification route itself so Rental and Auction calculations, helper copy, and result
-  language remain fully native after the lead-dialog handoff.
+- Add richer Rental/Auction qualification assumptions where needed, such as lease qualification
+  ratios, proof-of-income expectations, bidder registration requirements, and proof-of-funds
+  prompts.
 - Add operating-layer surfaces after publish: inventory status, reservations, sold/let/auction
   outcomes, lead stages, pricing adjustments, release phases, dashboards, and audit history.
 
