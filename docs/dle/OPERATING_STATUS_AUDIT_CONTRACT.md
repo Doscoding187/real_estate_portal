@@ -266,7 +266,7 @@ Before calling operating mutations safe, prove:
 - Sale operating note/event appears in dashboard history. Status: passed in browser proof.
 - Rental operating note/event appears in dashboard history. Status: passed in browser proof.
 - Auction operating note/event appears in dashboard history. Status: passed in browser proof.
-- Failed operating event write does not claim success.
+- Failed operating event write does not claim success. Status: passed with injected browser failure.
 - Inventory mutation cannot wipe media/location/governance/unit definitions.
 - Public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.

@@ -290,6 +290,18 @@ async function addOperatingNoteAndAssert(input: {
   expect(parseEventJson(event.afterData).note).toBe(scenario.note);
 }
 
+async function getOperatingEventCount(developmentId: number): Promise<number> {
+  const db = await getDb();
+  expect(db).toBeTruthy();
+
+  const rows = await db!
+    .select()
+    .from(developmentOperatingEvents)
+    .where(eq(developmentOperatingEvents.developmentId, developmentId));
+
+  return rows.length;
+}
+
 test.describe.serial('DLE operating note browser readback', () => {
   let seed: Seed | null = null;
 
@@ -344,5 +356,56 @@ test.describe.serial('DLE operating note browser readback', () => {
       expect(development.transactionType).toBe(scenario.transactionType);
       await addOperatingNoteAndAssert({ page, development, scenario });
     }
+  });
+
+  test('does not claim success when an operating note write fails', async ({ page }) => {
+    expect(seed).toBeTruthy();
+    const currentSeed = seed!;
+    const development = currentSeed.developments.sale;
+    const failedNote = `Injected failed operating note ${Date.now()}`;
+    const beforeCount = await getOperatingEventCount(development.id);
+
+    await loginAsSeededDeveloper(page, currentSeed);
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, development.name);
+
+    await page.route(
+      '**/api/trpc/developer.addOperatingNote**',
+      async route => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: {
+              message: 'Injected operating note failure',
+              code: -32603,
+            },
+          }),
+        });
+      },
+      { times: 1 },
+    );
+
+    const responsePromise = page.waitForResponse(
+      response =>
+        response.url().includes('/api/trpc/developer.addOperatingNote') &&
+        response.request().method() === 'POST',
+      { timeout: 10_000 },
+    );
+
+    await page.getByPlaceholder('Add an internal operating note').fill(failedNote);
+    await page.getByRole('button', { name: 'Add Note' }).click();
+    const response = await responsePromise;
+    expect(response.ok()).toBeFalsy();
+
+    await expect(page.getByPlaceholder('Add an internal operating note')).toHaveValue(failedNote);
+    await expect(page.getByText('Operating note added.')).toHaveCount(0);
+    await expect.poll(() => getOperatingEventCount(development.id)).toBe(beforeCount);
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-operating-note-failure-visible.png`,
+    });
   });
 });

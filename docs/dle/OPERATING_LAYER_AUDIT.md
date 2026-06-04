@@ -269,9 +269,10 @@ Implemented next implementation slice:
   history readback, and compact Operating History note entry in the selected-development overview.
 - Browser-proved Sale, Rental, and Auction note creation/readback from the developer dashboard with
   `e2e/dle/operating-note-readback.spec.ts`.
+- Browser-proved that an injected failed note write keeps the note in the textarea, does not show a
+  success state, and does not increase the DB event count.
 
 Recommended next implementation slice:
 
-- Prove failed operating event writes do not claim success.
-- Then design the first transaction-native inventory status mutation with the event stream as the
-  audit anchor.
+- Design the first transaction-native inventory status mutation with the event stream as the audit
+  anchor.

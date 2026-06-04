@@ -1592,3 +1592,48 @@ Next recommended slice:
   `available` -> `reserved` -> `available` status mutation against the event stream.
 Commit hash/tag: This entry will be included in `test(dle): prove operating note readback`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Operating Note Failed-Write Browser Proof
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove the Operating History surface does not claim success when an operating note write fails.
+Files changed:
+- e2e/dle/operating-note-readback.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-operating-note-sale.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-note-rental.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-note-auction.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-note-failure-visible.png
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Focused browser proof run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/operating-note-readback.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 test file, 2 browser tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Extended the operating-note Playwright proof with an injected failed
+  `developer.addOperatingNote` response.
+- Confirmed the failed write keeps the developer-entered note in the textarea.
+- Confirmed the dashboard does not show the `Operating note added.` success toast on failure.
+- Confirmed the DB event count for the selected development does not increase after the failed
+  write.
+- Captured failed-write evidence in
+  `docs/dle/evidence/2026-06-04/qa-dle-operating-note-failure-visible.png`.
+- Updated the operating docs to mark failed-write no-false-success proof as satisfied.
+Remaining risks:
+- Inventory status transitions, quantity adjustments, operating projections, and
+  transaction-native lead-stage overlays remain unimplemented.
+- Inventory mutation still needs its own field-ownership/browser proof to show it cannot wipe
+  media, location, governance, or unit definitions.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Design the first Sale `available` -> `reserved` -> `available` status mutation against the event
+  stream, then implement it as a narrow operating-only mutation.
+Commit hash/tag: This entry will be included in `test(dle): prove operating note failure handling`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
