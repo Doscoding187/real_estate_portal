@@ -1189,6 +1189,7 @@ export default function DevelopmentUnitDetailPage() {
         onOpenChange={setLeadDialogOpen}
         mode={leadDialogMode}
         ctaLocation={leadDialogLocation}
+        transactionType={pricingModel.transactionType}
         unitContext={{
           unitId: getDevelopmentUnitRouteKey(selectedUnit),
           unitName: selectedUnit.name ?? undefined,

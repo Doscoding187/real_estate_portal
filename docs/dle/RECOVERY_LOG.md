@@ -1145,3 +1145,48 @@ Next recommended slice:
   transaction-native after the action-panel CTA is clicked.
 Commit hash/tag: This entry will be included in `feat(dle): localize public action panel`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Public Lead Dialog Transaction Copy
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Keep Sale, Rental, and Auction language and transaction context intact inside the public lead
+dialog after a buyer, renter, or bidder clicks a transaction-native CTA.
+Files changed:
+- client/src/components/development/DevelopmentLeadDialog.tsx
+- client/src/components/development/DevelopmentLeadDialog.test.tsx
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentUnitDetailPage.tsx
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development/DevelopmentLeadDialog.test.tsx'`
+- Result: Passed. 1 test file, 5 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development/DevelopmentLeadDialog.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/pages/DevelopmentQualificationPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 11 test files, 101 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added a transaction-normalized lead-dialog copy model for Sale, Rental, and Auction.
+- Sale dialog copy continues to use sales, brochure, pricing, and full-qualification language.
+- Rental dialog copy now uses leasing team, rental pack, rental details, lease terms, and rental fit
+  language.
+- Auction dialog copy now uses auction team, auction pack, auction interest, bidder readiness,
+  registration, and starting-bid language.
+- Added transaction-aware suggested-message generation for brochure, contact, qualification, and
+  information lead modes.
+- Added page-level `transactionType` support so general brochure/contact/qualification leads
+  preserve Sale/Rental/Auction context even when no unit is selected.
+- Kept existing `leadSource` identifiers stable while improving user-facing copy and submitted
+  `transactionType`.
+Remaining risks:
+- The qualification route itself still needs deeper Rental/Auction language and result treatment.
+- Lead routing and dashboard follow-up still need operating-layer surfaces for sales, leasing, and
+  auction workflows.
+Next recommended slice:
+- Make `DevelopmentQualificationPage` copy/results transaction-native after the user enters through
+  the public action panel or lead dialog.
+Commit hash/tag: This entry will be included in `feat(dle): localize public lead dialog`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

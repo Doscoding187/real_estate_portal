@@ -2,7 +2,7 @@
 
 Date: 2026-06-04
 Status: Product-visibility slices are now active across wizard guidance, unit preview, public
-unit-card merchandising, and public action-panel CTAs.
+unit-card merchandising, public action-panel CTAs, and lead-dialog copy/context.
 
 ## Standard
 
@@ -104,6 +104,25 @@ This continues moving backend transaction truth into the public conversion layer
 already carries selected unit and transaction context; the public CTA language now better matches
 that context before the form opens.
 
+## Fifth Product-Visibility Slice
+
+Make the public lead dialog transaction-aware.
+
+The lead dialog should:
+
+- preserve transaction type for page-level brochure/contact/qualification leads, even when no unit
+  is selected;
+- continue using selected-unit transaction context when a unit is selected;
+- use sale-native copy for sales team, brochure, pricing, and qualification requests;
+- use rental-native copy for leasing team, rental packs, rental details, lease terms, and rental fit;
+- use auction-native copy for auction team, auction packs, auction interest, bidder readiness, and
+  registration next steps;
+- keep existing lead-source identifiers stable while improving the user-facing language and payload
+  transaction context.
+
+This closes an important conversion gap: a renter or bidder no longer lands in a generic sales form
+after clicking a transaction-native CTA.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -113,6 +132,8 @@ that context before the form opens.
   pack, and urgency should become first-class product language.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
   labels, availability, and primary CTAs.
+- Deepen the qualification route itself so Rental and Auction calculations, helper copy, and result
+  language remain fully native after the lead-dialog handoff.
 - Add operating-layer surfaces after publish: inventory status, reservations, sold/let/auction
   outcomes, lead stages, pricing adjustments, release phases, dashboards, and audit history.
 

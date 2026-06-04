@@ -18,12 +18,14 @@ import { trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 import { formatPriceCompact } from '@/lib/formatPrice';
 
 type LeadDialogMode = 'brochure' | 'contact' | 'qualification' | 'info';
+type LeadDialogTransactionType = 'sale' | 'rent' | 'auction';
 
 interface DevelopmentLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: LeadDialogMode;
   ctaLocation?: string;
+  transactionType?: LeadDialogTransactionType | string;
   unitContext?: {
     id?: number | string | null;
     name?: string | null;
@@ -49,55 +51,292 @@ interface DevelopmentLeadDialogProps {
   } | null;
 }
 
-const MODE_COPY: Record<
-  LeadDialogMode,
-  {
-    title: string;
-    description: string;
-    submitLabel: string;
-    leadSource: string;
-    successMessage: string;
+export const normalizeDevelopmentLeadDialogTransactionType = (
+  transactionType: unknown,
+): LeadDialogTransactionType => {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (['rent', 'rental', 'for_rent', 'to_rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction', 'auctions'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+const LEAD_SOURCE_BY_MODE: Record<LeadDialogMode, string> = {
+  brochure: 'development_detail_brochure',
+  contact: 'development_detail_contact',
+  qualification: 'development_detail_qualification',
+  info: 'development_detail_info',
+};
+
+export function getDevelopmentLeadDialogCopy(
+  mode: LeadDialogMode,
+  transactionType: unknown = 'sale',
+) {
+  const normalizedTransactionType = normalizeDevelopmentLeadDialogTransactionType(transactionType);
+  const leadSource = LEAD_SOURCE_BY_MODE[mode];
+
+  const shared =
+    normalizedTransactionType === 'rent'
+      ? {
+          teamLabel: 'leasing team',
+          captureLabel: 'Rental Lead',
+          attributionLabel: 'Leasing attribution',
+          contextBody:
+            'This enquiry will be routed with the right development and rental unit context so the leasing team can follow up with the correct information.',
+          mobileContextBody:
+            'Your details are used to connect you with the correct leasing team without losing the unit context.',
+          happensBody:
+            'The request is stored as a qualified rental development lead and can be actioned by the right leasing team without losing the unit context.',
+        }
+      : normalizedTransactionType === 'auction'
+        ? {
+            teamLabel: 'auction team',
+            captureLabel: 'Auction Lead',
+            attributionLabel: 'Auction attribution',
+            contextBody:
+              'This enquiry will be routed with the right development and auction unit context so the auction team can follow up with the correct information.',
+            mobileContextBody:
+              'Your details are used to connect you with the correct auction team without losing the unit context.',
+            happensBody:
+              'The request is stored as a qualified auction development lead and can be actioned by the right auction team without losing the unit context.',
+          }
+        : {
+            teamLabel: 'sales team',
+            captureLabel: 'Lead Capture',
+            attributionLabel: 'Sales attribution',
+            contextBody:
+              'This enquiry will be routed with the right development and unit context so the sales team can follow up with the correct information.',
+            mobileContextBody:
+              'Your details are used to connect you with the correct sales and qualification team.',
+            happensBody:
+              'The request is stored as a qualified development lead and can be actioned by the right sales team without losing the unit context.',
+          };
+
+  if (mode === 'brochure') {
+    if (normalizedTransactionType === 'rent') {
+      return {
+        ...shared,
+        title: 'Request Rental Pack',
+        description:
+          'Share your details to receive the rental pack, availability, and lease next steps for this development.',
+        submitLabel: 'Request Rental Pack',
+        leadSource,
+        successMessage: 'Rental pack request submitted.',
+      };
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return {
+        ...shared,
+        title: 'Request Auction Pack',
+        description:
+          'Share your details to receive the auction pack, starting bid details, and registration next steps for this development.',
+        submitLabel: 'Request Auction Pack',
+        leadSource,
+        successMessage: 'Auction pack request submitted.',
+      };
+    }
+
+    return {
+      ...shared,
+      title: 'Download Brochure',
+      description:
+        'Share your details to receive the brochure and pricing pack for this development.',
+      submitLabel: 'Unlock Brochure',
+      leadSource,
+      successMessage: 'Brochure request submitted.',
+    };
   }
-> = {
-  brochure: {
-    title: 'Download Brochure',
-    description:
-      'Share your details to receive the brochure and pricing pack for this development.',
-    submitLabel: 'Unlock Brochure',
-    leadSource: 'development_detail_brochure',
-    successMessage: 'Brochure request submitted.',
-  },
-  contact: {
-    title: 'Contact Sales Team',
-    description:
-      'Send your enquiry and the sales team can respond with availability, pricing, and next steps.',
-    submitLabel: 'Send Enquiry',
-    leadSource: 'development_detail_contact',
-    successMessage: 'Your enquiry has been sent.',
-  },
-  qualification: {
-    title: 'Start Full Qualification',
-    description:
-      'Submit your details to continue with a full affordability review for this development.',
-    submitLabel: 'Start Qualification',
-    leadSource: 'development_detail_qualification',
-    successMessage: 'Qualification request submitted.',
-  },
-  info: {
+
+  if (mode === 'contact') {
+    if (normalizedTransactionType === 'rent') {
+      return {
+        ...shared,
+        title: 'Contact Leasing Team',
+        description:
+          'Send your enquiry and the leasing team can respond with rental availability, lease terms, and next steps.',
+        submitLabel: 'Send Rental Enquiry',
+        leadSource,
+        successMessage: 'Your rental enquiry has been sent.',
+      };
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return {
+        ...shared,
+        title: 'Contact Auction Team',
+        description:
+          'Send your enquiry and the auction team can respond with auction timing, bidder registration, and next steps.',
+        submitLabel: 'Send Auction Enquiry',
+        leadSource,
+        successMessage: 'Your auction enquiry has been sent.',
+      };
+    }
+
+    return {
+      ...shared,
+      title: 'Contact Sales Team',
+      description:
+        'Send your enquiry and the sales team can respond with availability, pricing, and next steps.',
+      submitLabel: 'Send Enquiry',
+      leadSource,
+      successMessage: 'Your enquiry has been sent.',
+    };
+  }
+
+  if (mode === 'qualification') {
+    if (normalizedTransactionType === 'rent') {
+      return {
+        ...shared,
+        title: 'Check Rental Fit',
+        description:
+          'Submit your details to continue with a rental fit review for this development.',
+        submitLabel: 'Check Rental Fit',
+        leadSource,
+        successMessage: 'Rental fit request submitted.',
+      };
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return {
+        ...shared,
+        title: 'Check Bidder Readiness',
+        description:
+          'Submit your details to continue with an auction bidder readiness review for this development.',
+        submitLabel: 'Check Bidder Readiness',
+        leadSource,
+        successMessage: 'Bidder readiness request submitted.',
+      };
+    }
+
+    return {
+      ...shared,
+      title: 'Start Full Qualification',
+      description:
+        'Submit your details to continue with a full affordability review for this development.',
+      submitLabel: 'Start Qualification',
+      leadSource,
+      successMessage: 'Qualification request submitted.',
+    };
+  }
+
+  if (normalizedTransactionType === 'rent') {
+    return {
+      ...shared,
+      title: 'Request Rental Details',
+      description:
+        'Share your details to receive monthly rent, lease terms, specifications, and availability for this unit.',
+      submitLabel: 'Request Rental Details',
+      leadSource,
+      successMessage: 'Rental details request submitted.',
+    };
+  }
+
+  if (normalizedTransactionType === 'auction') {
+    return {
+      ...shared,
+      title: 'Register Auction Interest',
+      description:
+        'Share your details to receive starting bid, auction timing, registration requirements, and specifications for this unit.',
+      submitLabel: 'Register Auction Interest',
+      leadSource,
+      successMessage: 'Auction interest submitted.',
+    };
+  }
+
+  return {
+    ...shared,
     title: 'Request Information',
     description:
       'Share your details to receive the latest pricing, specifications, and next steps for this unit.',
     submitLabel: 'Request Information',
-    leadSource: 'development_detail_info',
+    leadSource,
     successMessage: 'Information request submitted.',
-  },
-};
+  };
+}
+
+export function getDevelopmentLeadDialogGeneratedMessage({
+  mode,
+  transactionType,
+  subject,
+  affordabilityData,
+}: {
+  mode: LeadDialogMode;
+  transactionType?: unknown;
+  subject: string;
+  affordabilityData?: DevelopmentLeadDialogProps['affordabilityData'];
+}) {
+  const normalizedTransactionType = normalizeDevelopmentLeadDialogTransactionType(transactionType);
+
+  if (mode === 'brochure') {
+    if (normalizedTransactionType === 'rent') {
+      return `Please send me the rental pack, latest monthly rent, and lease details for ${subject}.`;
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return `Please send me the auction pack, starting bid details, and registration steps for ${subject}.`;
+    }
+
+    return `Please send me the brochure and latest pricing for ${subject}.`;
+  }
+
+  if (mode === 'qualification') {
+    const incomeLine = affordabilityData?.monthlyIncome
+      ? ` My household income is ${formatSARandShort(affordabilityData.monthlyIncome)} per month.`
+      : '';
+    const depositLine = affordabilityData?.availableDeposit
+      ? ` I have an available deposit of ${formatSARandShort(affordabilityData.availableDeposit)}.`
+      : '';
+    const capacityLine = affordabilityData?.maxAffordable
+      ? normalizedTransactionType === 'rent'
+        ? ` My estimated monthly rental capacity is ${formatSARandShort(affordabilityData.maxAffordable)}.`
+        : normalizedTransactionType === 'auction'
+          ? ` My estimated bidder capacity is ${formatSARandShort(affordabilityData.maxAffordable)}.`
+          : ` My estimated buying power is ${formatSARandShort(affordabilityData.maxAffordable)}.`
+      : '';
+
+    const reviewLabel =
+      normalizedTransactionType === 'rent'
+        ? 'rental fit review'
+        : normalizedTransactionType === 'auction'
+          ? 'bidder readiness review'
+          : 'full qualification review';
+
+    return `I would like to start a ${reviewLabel} for ${subject}.${incomeLine}${depositLine}${capacityLine}`.trim();
+  }
+
+  if (mode === 'info') {
+    if (normalizedTransactionType === 'rent') {
+      return `Please send me rental details about ${subject}, including monthly rent, lease terms, specifications, and available options.`;
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return `Please send me auction details about ${subject}, including starting bid, auction timing, registration requirements, and specifications.`;
+    }
+
+    return `Please send me more information about ${subject}, including pricing, specifications, and available options.`;
+  }
+
+  if (normalizedTransactionType === 'rent') {
+    return `I am interested in ${subject}. Please contact me with rental availability, lease terms, and next steps.`;
+  }
+
+  if (normalizedTransactionType === 'auction') {
+    return `I am interested in ${subject}. Please contact me with auction timing, bidder registration, and next steps.`;
+  }
+
+  return `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
+}
 
 export function DevelopmentLeadDialog({
   open,
   onOpenChange,
   mode,
   ctaLocation,
+  transactionType,
   unitContext,
   development,
   affordabilityData,
@@ -122,40 +361,26 @@ export function DevelopmentLeadDialog({
     }
   }, [open]);
 
-  const copy = MODE_COPY[mode];
   const resolvedUnitName = unitContext?.unitName || unitContext?.name || null;
   const resolvedUnitId =
     unitContext?.unitId ||
     (unitContext?.id !== null && unitContext?.id !== undefined ? String(unitContext.id) : undefined);
+  const resolvedTransactionType = normalizeDevelopmentLeadDialogTransactionType(
+    unitContext?.transactionType ?? transactionType,
+  );
+  const copy = getDevelopmentLeadDialogCopy(mode, resolvedTransactionType);
 
   const generatedMessage = useMemo(() => {
     const subject = resolvedUnitName?.trim()
       ? `${resolvedUnitName} at ${development.name}`
       : development.name;
 
-    if (mode === 'brochure') {
-      return `Please send me the brochure and latest pricing for ${subject}.`;
-    }
-
-    if (mode === 'qualification') {
-      const incomeLine = affordabilityData?.monthlyIncome
-        ? ` My household income is ${formatSARandShort(affordabilityData.monthlyIncome)} per month.`
-        : '';
-      const depositLine = affordabilityData?.availableDeposit
-        ? ` I have an available deposit of ${formatSARandShort(affordabilityData.availableDeposit)}.`
-        : '';
-      const buyingPowerLine = affordabilityData?.maxAffordable
-        ? ` My estimated buying power is ${formatSARandShort(affordabilityData.maxAffordable)}.`
-        : '';
-
-      return `I would like to start a full qualification review for ${subject}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
-    }
-
-    if (mode === 'info') {
-      return `Please send me more information about ${subject}, including pricing, specifications, and available options.`;
-    }
-
-    return `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
+    return getDevelopmentLeadDialogGeneratedMessage({
+      mode,
+      transactionType: resolvedTransactionType,
+      subject,
+      affordabilityData,
+    });
   }, [
     affordabilityData?.availableDeposit,
     affordabilityData?.maxAffordable,
@@ -163,6 +388,7 @@ export function DevelopmentLeadDialog({
     development.name,
     mode,
     resolvedUnitName,
+    resolvedTransactionType,
   ]);
 
   const createLead = trpc.developer.createLead.useMutation({
@@ -182,7 +408,7 @@ export function DevelopmentLeadDialog({
           window.location.href = development.brochureUrl;
         }
       } else if (mode === 'brochure') {
-        toast.info('The sales team will send the brochure to you shortly.');
+        toast.info(`The ${copy.teamLabel} will follow up shortly.`);
       }
     },
     onError: error => {
@@ -213,7 +439,7 @@ export function DevelopmentLeadDialog({
       unitName: resolvedUnitName || undefined,
       unitPriceFrom: unitContext?.unitPriceFrom,
       unitPriceLabel: unitContext?.unitPriceLabel,
-      transactionType: unitContext?.transactionType,
+      transactionType: unitContext?.transactionType ?? resolvedTransactionType,
       unitBedrooms: unitContext?.unitBedrooms,
       unitBathrooms: unitContext?.unitBathrooms,
       name: form.name.trim(),
@@ -240,7 +466,7 @@ export function DevelopmentLeadDialog({
             <DialogHeader className="space-y-3 text-left">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="border-0 bg-orange-500/15 text-orange-200 hover:bg-orange-500/15">
-                  {mode === 'info' ? 'Unit Enquiry' : 'Lead Capture'}
+                  {mode === 'info' ? 'Unit Enquiry' : copy.captureLabel}
                 </Badge>
                 {unitContext?.unitName ? (
                   <Badge className="border-0 bg-white/10 text-white hover:bg-white/10">
@@ -267,8 +493,7 @@ export function DevelopmentLeadDialog({
                     </p>
                   ) : null}
                   <p className="text-xs leading-5 text-slate-300">
-                    This enquiry will be routed with the right development and unit context so the
-                    sales team can follow up with the correct information.
+                    {copy.contextBody}
                   </p>
                 </div>
               </div>
@@ -314,8 +539,7 @@ export function DevelopmentLeadDialog({
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="text-sm font-semibold text-white">What happens after submit</p>
                 <p className="mt-1 text-sm leading-6 text-slate-300">
-                  The request is stored as a qualified development lead and can be actioned by the
-                  right sales team without losing the unit context.
+                  {copy.happensBody}
                 </p>
               </div>
               <div className="flex items-center gap-4 text-xs text-slate-300">
@@ -325,7 +549,7 @@ export function DevelopmentLeadDialog({
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Mail className="h-3.5 w-3.5" />
-                  Sales attribution
+                  {copy.attributionLabel}
                 </span>
               </div>
             </div>
@@ -351,8 +575,7 @@ export function DevelopmentLeadDialog({
                       </p>
                     ) : null}
                     <p className="text-xs text-slate-500">
-                      Your details are used to connect you with the correct sales and qualification
-                      team.
+                      {copy.mobileContextBody}
                     </p>
                   </div>
                 </div>
@@ -423,7 +646,7 @@ export function DevelopmentLeadDialog({
                 </div>
                 <p className="mt-1 text-sm text-slate-200">
                   The enquiry is stored with development context and can be attributed correctly in
-                  publisher reporting.
+                  publisher reporting for this {resolvedTransactionType} enquiry.
                 </p>
               </div>
 

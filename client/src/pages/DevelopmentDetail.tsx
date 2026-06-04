@@ -2559,6 +2559,7 @@ export default function DevelopmentDetail() {
         }}
         mode={leadDialogMode}
         ctaLocation={leadDialogLocation}
+        transactionType={detailPricing.transactionType}
         development={{
           id: development.id,
           name: development.name,
