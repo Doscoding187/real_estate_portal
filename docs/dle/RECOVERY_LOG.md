@@ -1481,3 +1481,65 @@ Next recommended slice:
   adding inventory status or quantity mutations.
 Commit hash/tag: This entry will be included in `docs(dle): define operating status contract`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Event-Only Operating Note Mutation
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first DLE operating mutation as an event-only note/readback surface, proving
+developer ownership, audit writing, and dashboard history before any inventory count or status
+mutation.
+Files changed:
+- drizzle/schema/developmentOperations.ts
+- drizzle/schema/index.ts
+- server/migrations/0068_create_development_operating_events.sql
+- server/services/developmentOperatingEventsService.ts
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts'`
+- Result: Blocked by sandboxed DB access. Vitest loaded `.env.test` and failed global DB init with
+  `connect EPERM 127.0.0.1:3306`.
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts'`
+- Result: Passed. 2 test files, 8 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added `development_operating_events` as the DLE-specific operating event stream.
+- Added a SQL migration for the operating event stream with development, unit type, lead,
+  distribution deal, actor, event type, source surface, metadata, and before/after JSON anchors.
+- Added a development operating events service that verifies developer ownership, normalizes
+  transaction type from the development record, writes `operating_note_added`, and reads the event
+  back before returning success.
+- Added `developer.getOperatingEvents` and `developer.addOperatingNote` procedures.
+- Added Operating History to the selected-development Operating Readiness panel.
+- Developers can add compact internal operating notes and see recent events without changing
+  inventory, media, location, governance, highlights, unit definitions, public packaging, or
+  canonical wizard `stepData`.
+- Added focused helper tests for source-surface normalization and event note JSON parsing on the
+  service and dashboard sides.
+- Updated the source-of-truth, operating audit, and operating status contract to record that the
+  first event-only mutation is implemented.
+Remaining risks:
+- Browser proof for Sale, Rental, and Auction operating note creation/readback is still outstanding.
+- The focused server test did not exercise real DB insertion in this restricted environment; it
+  exercised the policy helpers with DB initialization skipped.
+- Inventory status transitions, quantity adjustments, operating projections, and
+  transaction-native lead-stage overlays remain unimplemented.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Browser-proof the event-only operating note flow for Sale, Rental, and Auction dashboards, then
+  design the first Sale `available` -> `reserved` -> `available` status mutation against this event
+  stream.
+Commit hash/tag: This entry will be included in `feat(dle): add operating event notes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

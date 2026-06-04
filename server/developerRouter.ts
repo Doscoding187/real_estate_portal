@@ -32,6 +32,10 @@ import {
   transitionDeveloperLead,
 } from './services/developerFunnelService';
 import {
+  createDevelopmentOperatingNote,
+  listDevelopmentOperatingEvents,
+} from './services/developmentOperatingEventsService';
+import {
   developmentDrafts,
   developments,
   developers,
@@ -1715,6 +1719,41 @@ export const developerRouter = router({
         range: input?.range ?? '30d',
         sla: input?.sla,
         limit: input?.limit,
+      });
+    }),
+
+  getOperatingEvents: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        limit: z.number().int().min(1).max(50).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await listDevelopmentOperatingEvents({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        limit: input.limit,
+      });
+    }),
+
+  addOperatingNote: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        note: z.string().trim().min(3).max(1000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await createDevelopmentOperatingNote({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        actorUserId: user.id,
+        note: input.note,
+        sourceSurface: 'developer_dashboard',
       });
     }),
 

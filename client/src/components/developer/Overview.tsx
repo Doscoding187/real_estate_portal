@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -154,6 +155,46 @@ function formatMinutes(mins?: number): string {
   return `${(mins / 60).toFixed(1)}h`;
 }
 
+export function parseOverviewOperatingEventJson(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value !== 'string') return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getOverviewOperatingEventNote(event: {
+  metadata?: unknown;
+  afterData?: unknown;
+}): string {
+  const metadata = parseOverviewOperatingEventJson(event.metadata);
+  const afterData = parseOverviewOperatingEventJson(event.afterData);
+  const note = metadata.note ?? afterData.note;
+  return typeof note === 'string' ? note.trim() : '';
+}
+
+function formatOperatingEventTime(value?: string | null): string {
+  if (!value) return 'Just now';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Just now';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function getOverviewOperatingEventLabel(eventType?: string | null): string {
+  if (eventType === 'operating_note_added') return 'Operating note';
+  return String(eventType || 'Operating event').replace(/_/g, ' ');
+}
+
 export default function Overview() {
   const { user } = useAuth();
   const { status: onboardingStatus, isLoading: onboardingLoading } = useDeveloperOnboardingStatus();
@@ -162,6 +203,7 @@ export default function Overview() {
   const [range, setRange] = useState<Range>('30d');
   const [developmentFilter, setDevelopmentFilter] = useState<string>('all');
   const [isReferralAccessOpen, setIsReferralAccessOpen] = useState(false);
+  const [operatingNote, setOperatingNote] = useState('');
 
   const isSuperAdmin = user?.role === 'super_admin';
 
@@ -248,6 +290,28 @@ export default function Overview() {
     },
   );
 
+  const operatingEventsQuery = trpc.developer.getOperatingEvents.useQuery(
+    {
+      developmentId: selectedDevelopmentId || 0,
+      limit: 5,
+    },
+    {
+      enabled: !!developerProfile && !!selectedDevelopmentId,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  const addOperatingNoteMutation = trpc.developer.addOperatingNote.useMutation({
+    onSuccess: async () => {
+      toast.success('Operating note added.');
+      setOperatingNote('');
+      await operatingEventsQuery.refetch();
+    },
+    onError: error => {
+      toast.error(error.message || 'Could not add operating note.');
+    },
+  });
+
   const isNewDeveloper = !developments || developments.length === 0;
   const profileStatus = (developerProfile as any)?.status as string | undefined;
   const profileRejectionReason = (developerProfile as any)?.rejectionReason as string | undefined;
@@ -325,6 +389,7 @@ export default function Overview() {
     distributionSettings,
     distributionSummary,
   });
+  const operatingEvents = operatingEventsQuery.data?.items || [];
 
   const snapshotTiles = [
     { label: 'New', value: stageCounts.new || 0, stage: 'new' },
@@ -652,6 +717,76 @@ export default function Overview() {
               <Button variant="outline" onClick={() => goToLeads({ view: 'attention' })}>
                 {operatingReadiness.queueLabel}
               </Button>
+            </div>
+
+            <div className="rounded-md border border-slate-200 p-3">
+              <div className="flex flex-col gap-3 lg:flex-row">
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm font-medium">Operating History</p>
+                  <Textarea
+                    className="min-h-20 resize-none"
+                    maxLength={1000}
+                    placeholder="Add an internal operating note"
+                    value={operatingNote}
+                    onChange={event => setOperatingNote(event.target.value)}
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      Notes are audit events and do not change inventory or public packaging.
+                    </p>
+                    <Button
+                      disabled={
+                        operatingNote.trim().length < 3 || addOperatingNoteMutation.isPending
+                      }
+                      onClick={() =>
+                        selectedDevelopmentId &&
+                        addOperatingNoteMutation.mutate({
+                          developmentId: selectedDevelopmentId,
+                          note: operatingNote,
+                        })
+                      }
+                      size="sm"
+                      type="button"
+                    >
+                      {addOperatingNoteMutation.isPending ? 'Adding...' : 'Add Note'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-2">
+                  {operatingEventsQuery.isLoading && (
+                    <p className="text-sm text-muted-foreground">Loading operating history...</p>
+                  )}
+
+                  {!operatingEventsQuery.isLoading && operatingEvents.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No operating events recorded for this development yet.
+                    </p>
+                  )}
+
+                  {operatingEvents.map((event: any) => {
+                    const note = getOverviewOperatingEventNote(event);
+                    return (
+                      <div
+                        className="rounded-md border border-slate-200 bg-white p-2 text-sm"
+                        key={event.id}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge variant="outline">
+                            {getOverviewOperatingEventLabel(event.eventType)}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatOperatingEventTime(event.eventAt || event.createdAt)}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-slate-700">
+                          {note || 'Operating event recorded.'}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

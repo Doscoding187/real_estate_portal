@@ -1,7 +1,8 @@
 # DLE Operating Status and Audit Contract
 
 Date: 2026-06-04
-Status: Contract draft. No schema, migration, API, or runtime behavior change in this slice.
+Status: Contract implemented through the first event-only note/readback slice. Inventory status and
+quantity mutations remain blocked until browser proof and transition-specific design are complete.
 
 ## Purpose
 
@@ -238,7 +239,7 @@ Every future operating mutation must not:
 
 Do not start with broad inventory editing.
 
-Recommended first mutation:
+Implemented first mutation:
 
 - Add a narrow operating note/event endpoint or service that writes an `operating_note_added` event
   for a development.
@@ -252,6 +253,7 @@ Why:
 
 Only after that:
 
+- Browser-proof Sale, Rental, and Auction note creation/readback from the developer dashboard.
 - Add transaction-native inventory status changes for one engine at a time.
 - Start with Sale `available` -> `reserved` -> `available`.
 - Then Rental `available` -> `held` -> `available`.
@@ -269,10 +271,10 @@ Before calling operating mutations safe, prove:
 - Public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.
 
-## Open Questions Before Schema Work
+## Open Questions Before Inventory Mutation Work
 
-- Should operating event history live in a new DLE-specific table or extend generic audit logs with a
-  strict typed metadata envelope?
+- Should operating history remain event-only for the next slice, or should the first status mutation
+  project state onto unit types immediately?
 - Should unit-level status be stored on `unit_types`, a new unit inventory table, or an event-sourced
   projection?
 - Should Rental and Auction get transaction-specific lead stage enums, or should the current shared

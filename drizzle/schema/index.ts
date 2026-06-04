@@ -4,6 +4,7 @@ export * from './locations';
 export * from './billing';
 export * from './listings';
 export * from './developments';
+export * from './developmentOperations';
 export * from './media';
 export * from './explore';
 export * from './economicActors';

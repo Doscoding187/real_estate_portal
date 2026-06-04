@@ -261,7 +261,15 @@ The contract now defines:
 - Distribution/referral readiness rules per development.
 - Browser proof requirements for the operations panel and later inventory mutations.
 
+Implemented next implementation slice:
+
+- Added an event-only `operating_note_added` mutation/readback surface before mutating inventory
+  counts or statuses.
+- Added the `development_operating_events` event stream, developer ownership checks, dashboard
+  history readback, and compact Operating History note entry in the selected-development overview.
+
 Recommended next implementation slice:
 
-- Add an event-only `operating_note_added` mutation/readback surface before mutating inventory
-  counts or statuses.
+- Browser-proof Sale, Rental, and Auction operating note readback from the developer dashboard.
+- Then design the first transaction-native inventory status mutation with the event stream as the
+  audit anchor.

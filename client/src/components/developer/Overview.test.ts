@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildOverviewOperatingReadiness, getOverviewOperatingCopy } from './Overview';
+import {
+  buildOverviewOperatingReadiness,
+  getOverviewOperatingCopy,
+  getOverviewOperatingEventNote,
+  parseOverviewOperatingEventJson,
+} from './Overview';
 
 describe('Developer Overview operating readiness', () => {
   it('builds sale-native operating copy and private distribution state', () => {
@@ -80,5 +85,28 @@ describe('Developer Overview operating readiness', () => {
 
   it('returns null without a selected development', () => {
     expect(buildOverviewOperatingReadiness({ development: null })).toBeNull();
+  });
+
+  it('formats operating event metadata without relying on one JSON shape', () => {
+    expect(parseOverviewOperatingEventJson('{"note":"Rental hold requested"}')).toEqual({
+      note: 'Rental hold requested',
+    });
+    expect(parseOverviewOperatingEventJson({ note: 'Buyer callback queued' })).toEqual({
+      note: 'Buyer callback queued',
+    });
+    expect(parseOverviewOperatingEventJson('bad-json')).toEqual({});
+
+    expect(
+      getOverviewOperatingEventNote({
+        metadata: { note: 'Registration list checked' },
+        afterData: { note: 'Fallback' },
+      }),
+    ).toBe('Registration list checked');
+    expect(
+      getOverviewOperatingEventNote({
+        metadata: null,
+        afterData: '{"note":"Fallback afterData note"}',
+      }),
+    ).toBe('Fallback afterData note');
   });
 });
