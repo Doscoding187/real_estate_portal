@@ -328,7 +328,20 @@ Implemented failed operating mutation trust proof:
   - `docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-no-false-success.png`
   - `docs/dle/evidence/2026-06-04/qa-dle-operating-failed-auction-no-false-success.png`
 
+Implemented Auction Stage B:
+
+- Implemented time-gated Auction activation from
+  `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
+- `developer.activateAuctionLot` requires `auction`, `registration_open`, and a current time inside
+  the configured lot auction window.
+- The dashboard now exposes `Activate Auction` only for `Registration open` lots and shows
+  `Auction active` after success.
+- Browser proof in `e2e/dle/auction-operating-activation.spec.ts` verifies early activation failure
+  without success, in-window activation success, `registration_open` -> `active` event readback, no
+  count mutation, stable Auction package fields, public `Auction active` language, and preserved
+  Auction search pricing.
+
 Recommended next implementation slice:
 
-- Implement time-gated Auction activation from
-  `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
+- Design the outcome layer before implementation: Sale sold, Rental let, Auction sold/passed-in/
+  withdrawn, and how those outcomes affect public availability, lead stages, and distribution.

@@ -32,6 +32,7 @@ import {
   transitionDeveloperLead,
 } from './services/developerFunnelService';
 import {
+  activateAuctionLot,
   createDevelopmentOperatingNote,
   listAuctionOperatingInventory,
   listRentalOperatingInventory,
@@ -1869,6 +1870,27 @@ export const developerRouter = router({
         unitTypeId: input.unitTypeId,
         actorUserId: user.id,
         transition: input.transition,
+        note: input.note,
+        sourceSurface: 'developer_dashboard',
+      });
+    }),
+
+  activateAuctionLot: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        unitTypeId: z.string().trim().min(1).max(DEVELOPMENT_UNIT_ID_MAX_LENGTH),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await activateAuctionLot({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        unitTypeId: input.unitTypeId,
+        actorUserId: user.id,
         note: input.note,
         sourceSurface: 'developer_dashboard',
       });

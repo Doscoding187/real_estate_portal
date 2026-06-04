@@ -669,6 +669,78 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-04 - Auction Time-Gated Activation Operating Mutation
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement and browser-proof Auction Stage B so `registration_open` lots can become `active`
+only inside the configured auction window, with early activation failure visible and no false
+success.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- e2e/dle/auction-operating-activation.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-activation-early-failed.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-activation-active.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-activation-public-active.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-activation-search-language.png
+- docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts client/src/pages/DevelopmentDetail.test.ts'`
+- Result: Passed. 3 test files, 32 tests.
+Focused browser proof run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/auction-operating-activation.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 test file, 1 browser test.
+Focused regression browser proof run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/auction-operating-registration.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed after restarting local backend/frontend. The first attempt failed before app
+  assertions because `:3009` was not listening.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added `getAuctionActivationReadinessIssue` to enforce valid start/end windows and reject early or
+  late activation.
+- Added `activateAuctionLot`, which requires owned Auction development, active lot, current
+  `registration_open` status, and current time inside the auction window.
+- Activation updates only `unit_types.auction_status` to `active` and writes an
+  `inventory_status_changed` event with `registration_open` -> `active` in the same transaction.
+- Activation does not change inventory counts, bids, reserve, dates, media, documents, location,
+  governance, highlights, unit definitions, or development aggregate availability.
+- Added `developer.activateAuctionLot`.
+- Added dashboard `Activate Auction` action for `Registration open` lots and `Auction active`
+  readback after success.
+- Browser proof verifies early activation error, no `Auction lot activated.` success on early
+  failure, registration-open state remains stable, in-window activation succeeds, event readback is
+  correct, public detail shows `Auction active`, and search card pricing remains `Bid from`.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Auction registration open/rollback regression after adding the activation button.
+Remaining risks:
+- Auction outcomes are not implemented: sold, passed-in, and withdrawn still need a separate
+  outcome design and proof.
+- Bidder registrations, proof-of-funds/FICA readiness, terms acceptance, and registration deposits
+  still need a canonical model.
+- Sale sold and Rental let/application outcomes remain future transaction-specific slices.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Design the outcome layer before coding: Sale sold, Rental let, Auction sold/passed-in/withdrawn,
+  public availability impact, lead-stage impact, and distribution/referral impact.
+Commit hash/tag: This entry will be included in
+`feat(dle): add auction activation operations`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-04 - Failed Operating Mutation No-False-Success Proof
 
 Date: 2026-06-04
@@ -2095,3 +2167,18 @@ Next recommended slice:
   time-gated Auction activation.
 Commit hash/tag: This entry will be included in `feat(dle): add auction registration operations`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Latest Checkpoint Pointer
+
+Latest completed DLE operating checkpoint in this worktree:
+
+- `test(dle): prove operating mutation failure handling`
+- `feat(dle): add auction activation operations` (pending commit in this slice)
+
+Do not follow the older stale recommendation above. Failed Sale/Rental/Auction operating mutation
+no-false-success proof is complete, and Auction time-gated activation is implemented and
+browser-proven in this slice.
+
+Next recommended slice:
+- Design the outcome layer before coding: Sale sold, Rental let, Auction sold/passed-in/withdrawn,
+  public availability impact, lead-stage impact, and distribution/referral impact.

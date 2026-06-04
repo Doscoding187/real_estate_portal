@@ -1,8 +1,8 @@
 # DLE Auction Operating Lifecycle Design
 
 Date: 2026-06-04
-Status: Stage A registration open/rollback is implemented and browser-proven. Time-gated
-activation and outcomes remain future Auction-specific slices.
+Status: Stage A registration open/rollback and Stage B time-gated activation are implemented and
+browser-proven. Outcomes remain future Auction-specific slices.
 
 ## Purpose
 
@@ -34,6 +34,7 @@ Current canonical Auction anchors:
 Current `unit_types.auction_status` values:
 
 - `scheduled`
+- `registration_open`
 - `active`
 - `sold`
 - `passed_in`
@@ -259,7 +260,7 @@ The Auction operating panel should show:
 - registration readiness
 - Auction-native action:
   - Scheduled: `Open Registration`
-  - Registration open: `Close Registration`
+  - Registration open: `Activate Auction` and `Close Registration`
   - Active: no registration toggle; show active state
 - no Sale `Reserve` or Rental `Hold` controls
 - no fictional registered-bidder count
@@ -302,9 +303,9 @@ Stage A browser proof must show:
 
 Stage B browser proof must additionally show:
 
-- Early activation is rejected without a false success state.
-- Activation succeeds only inside the auction window.
-- Activation writes `registration_open` -> `active` atomically.
+- Early activation is rejected without a false success state. Status: passed.
+- Activation succeeds only inside the auction window. Status: passed.
+- Activation writes `registration_open` -> `active` atomically. Status: passed.
 
 ## First Implementation Recommendation
 
@@ -317,5 +318,5 @@ Implement Stage A first:
 5. Add Auction-only dashboard panel.
 6. Browser-proof lifecycle, field ownership, and public Auction language.
 
-Do not implement activation or outcomes in the same first slice. Their time and outcome semantics
-need separate proof.
+Stage A and Stage B are now implemented. Do not implement outcomes in the same activation slice;
+sold, passed-in, and withdrawn need separate proof.

@@ -172,9 +172,10 @@ assumptions behind generic affordability language.
   labels, availability, and primary CTAs.
 - Add deeper Rental/Auction qualification rules where needed, such as lease qualification ratios,
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
-- Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release, and
-  Auction registration open/rollback are now browser-proven. Sold/let/auction outcomes, lead
-  stages, pricing adjustments, release phases, and deeper dashboards remain future.
+- Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
+  Auction registration open/rollback, and Auction time-gated activation are now browser-proven.
+  Sold/let/auction outcomes, lead stages, pricing adjustments, release phases, and deeper
+  dashboards remain future.
 
 ## Evidence To Attach Over Time
 

@@ -459,6 +459,26 @@ export default function Overview() {
       },
     });
 
+  const activateAuctionLotMutation = trpc.developer.activateAuctionLot.useMutation({
+    onSuccess: async () => {
+      toast.success('Auction lot activated.');
+      await Promise.all([
+        auctionOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+        utils.developer.getFunnelKPIs.invalidate(),
+      ]);
+    },
+    onError: async error => {
+      toast.error(error.message || 'Could not activate Auction lot.');
+      await Promise.all([
+        auctionOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+      ]);
+    },
+  });
+
   const isNewDeveloper = !developments || developments.length === 0;
   const profileStatus = (developerProfile as any)?.status as string | undefined;
   const profileRejectionReason = (developerProfile as any)?.rejectionReason as string | undefined;
@@ -1068,7 +1088,9 @@ export default function Overview() {
 
                   {auctionOperatingInventory.map((unit: any) => {
                     const auctionStatus = String(unit.auctionStatus || 'scheduled');
-                    const mutationPending = transitionAuctionRegistrationMutation.isPending;
+                    const mutationPending =
+                      transitionAuctionRegistrationMutation.isPending ||
+                      activateAuctionLotMutation.isPending;
                     return (
                       <div
                         className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
@@ -1113,22 +1135,38 @@ export default function Overview() {
                             </Button>
                           )}
                           {auctionStatus === 'registration_open' && (
-                            <Button
-                              disabled={mutationPending}
-                              onClick={() =>
-                                selectedDevelopmentId &&
-                                transitionAuctionRegistrationMutation.mutate({
-                                  developmentId: selectedDevelopmentId,
-                                  unitTypeId: unit.id,
-                                  transition: 'close_registration',
-                                })
-                              }
-                              size="sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              Close Registration
-                            </Button>
+                            <>
+                              <Button
+                                disabled={mutationPending}
+                                onClick={() =>
+                                  selectedDevelopmentId &&
+                                  activateAuctionLotMutation.mutate({
+                                    developmentId: selectedDevelopmentId,
+                                    unitTypeId: unit.id,
+                                  })
+                                }
+                                size="sm"
+                                type="button"
+                              >
+                                Activate Auction
+                              </Button>
+                              <Button
+                                disabled={mutationPending}
+                                onClick={() =>
+                                  selectedDevelopmentId &&
+                                  transitionAuctionRegistrationMutation.mutate({
+                                    developmentId: selectedDevelopmentId,
+                                    unitTypeId: unit.id,
+                                    transition: 'close_registration',
+                                  })
+                                }
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
+                                Close Registration
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>

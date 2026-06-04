@@ -2,8 +2,8 @@
 
 Date: 2026-06-04
 Status: Contract implemented through operating note/readback, Sale reserve/release, Rental
-hold/release, and Auction registration open/rollback. Auction activation and outcomes remain future
-transaction-specific slices.
+hold/release, Auction registration open/rollback, and Auction time-gated activation. Outcomes remain
+future transaction-specific slices.
 
 ## Purpose
 
@@ -27,7 +27,8 @@ Existing anchors:
   fields, and auction dates.
 - `unit_types.total_units`, `unit_types.available_units`, `unit_types.reserved_units`.
 - `unit_types` sale pricing fields, rental rent/deposit/lease fields, and auction fields.
-- `unit_types.auction_status`: `scheduled`, `active`, `sold`, `passed_in`, `withdrawn`.
+- `unit_types.auction_status`: `scheduled`, `registration_open`, `active`, `sold`, `passed_in`,
+  `withdrawn`.
 - `lead_activities`: lead-level notes, calls, meetings, and status changes.
 - `audit_logs` and `managerial_audit_logs`: generic platform audit anchors.
 - `distribution_deal_events`: distribution deal stage/event history.
@@ -36,8 +37,8 @@ Existing anchors:
 Missing DLE operating anchors:
 
 - No transaction-native unit operating status model beyond the first Sale `available`/`reserved`,
-  Rental `available`/`held`, and Auction `scheduled`/`registration_open` transitions.
-- No Rental application/lease outcome or Auction active/outcome mutations yet.
+  Rental `available`/`held`, and Auction `scheduled`/`registration_open`/`active` transitions.
+- No Rental application/lease outcome or Auction outcome mutations yet.
 - No DLE operating event stream coverage yet for price, release phase, public status, or
   distribution handoff changes.
 
@@ -273,14 +274,13 @@ Current mutation status:
   availability, stable lease/package fields, and continued Rental language on public/search output.
 - Auction `scheduled` -> `registration_open` -> `scheduled` has been implemented from the developer
   dashboard.
+- Auction `registration_open` -> `active` has been implemented from the developer dashboard with a
+  server-side auction-window guard.
 - Auction lifecycle uses canonical `unit_types.auction_status`; registered bidders are not faked
   through `reserved_units`.
-- Browser proof confirms registration open/rollback events, no count mutation, stable Auction
-  packaging fields, and continued Auction public/search language.
-
-Only after that:
-
-- Keep Auction activation time-gated and separate from registration open/rollback.
+- Browser proof confirms registration open/rollback, early activation failure, in-window
+  activation, no count mutation, stable Auction packaging fields, and continued Auction
+  public/search language.
 
 ## Browser Proof Requirements
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getAuctionActivationReadinessIssue,
   getAuctionRegistrationReadinessIssue,
   getAuctionRegistrationTransitionStatuses,
   getDevelopmentOperatingEventNote,
@@ -119,5 +120,36 @@ describe('development operating events service helpers', () => {
         nowMs,
       ),
     ).toBe('Registration can only open before the auction starts.');
+  });
+
+  it('requires Auction activation to happen inside the configured auction window', () => {
+    const nowMs = new Date('2030-02-01T10:00:00.000Z').getTime();
+    expect(
+      getAuctionActivationReadinessIssue(
+        {
+          auctionStartDate: '2030-02-01T09:00:00.000Z',
+          auctionEndDate: '2030-02-08T17:00:00.000Z',
+        },
+        nowMs,
+      ),
+    ).toBeNull();
+    expect(
+      getAuctionActivationReadinessIssue(
+        {
+          auctionStartDate: '2030-02-02T09:00:00.000Z',
+          auctionEndDate: '2030-02-08T17:00:00.000Z',
+        },
+        nowMs,
+      ),
+    ).toBe('Auction activation can only start at or after the auction start time.');
+    expect(
+      getAuctionActivationReadinessIssue(
+        {
+          auctionStartDate: '2030-01-31T09:00:00.000Z',
+          auctionEndDate: '2030-02-01T09:30:00.000Z',
+        },
+        nowMs,
+      ),
+    ).toBe('Auction activation cannot start after the auction window has ended.');
   });
 });
