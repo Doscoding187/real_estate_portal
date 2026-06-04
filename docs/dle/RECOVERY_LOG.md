@@ -1637,3 +1637,50 @@ Next recommended slice:
   stream, then implement it as a narrow operating-only mutation.
 Commit hash/tag: This entry will be included in `test(dle): prove operating note failure handling`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Sale Operating Status Mutation Design
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the first Sale inventory status mutation before coding live count changes.
+Files changed:
+- docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Focused inspection run:
+- Read `docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md`.
+- Read `docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`.
+- Read `docs/dle/OPERATING_LAYER_AUDIT.md`.
+- Inspected current inventory anchors in `drizzle/schema/developments.ts`,
+  `shared/developmentDerived.ts`, `server/services/developmentOperatingEventsService.ts`,
+  `server/services/developmentService.ts`, and
+  `client/src/components/dashboard/EntityStatusCard.tsx`.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added `docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md`.
+- Defined the first mutation as Sale-only, unit-type count-level reserve/release:
+  `available` -> `reserved` and `reserved` -> `available`.
+- Defined transaction boundaries: unit count update, development available-unit aggregate refresh,
+  and `development_operating_events` insert must happen in one DB transaction.
+- Clarified that `unit_types` is the first inventory source of truth because it has both
+  `available_units` and `reserved_units`; `developments.available_units` is a refreshed aggregate
+  projection and `developments` has no reserved count column.
+- Defined hard exclusions: no wizard `stepData`, no edit autosave, no media/location/governance/
+  highlights/description/pricing/public-packaging changes, and no Rental/Auction mutation in this
+  first slice.
+- Defined browser proof requirements for reserve, release, event readback, no false success on
+  failure, public Sale language preservation, and field-ownership safety.
+Remaining risks:
+- This is a design-only slice. No Sale reserve/release API or UI has been implemented yet.
+- Inventory mutation field-ownership proof remains outstanding.
+- Rental and Auction operating mutations remain future work.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement the Sale reserve/release mutation service/router/dashboard surface against this design.
+Commit hash/tag: This entry will be included in `docs(dle): design sale operating status mutation`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

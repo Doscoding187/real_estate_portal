@@ -329,6 +329,7 @@ docs/
     TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
     OPERATING_LAYER_AUDIT.md
     OPERATING_STATUS_AUDIT_CONTRACT.md
+    SALE_OPERATING_STATUS_MUTATION_DESIGN.md
     AGENT_HANDOFF_TEMPLATE.md
 ```
 
@@ -348,8 +349,8 @@ Recommended order from here:
 4. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
 5. Product audit of public development page merchandising
 6. Search card and lead form alignment
-7. Design the first transaction-native inventory status mutation from
-   `docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`
+7. Implement the first Sale reserve/release inventory mutation from
+   `docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md`
 8. Developer dashboard and inventory impact
 9. Admin review impact
 10. Distribution/referral readiness

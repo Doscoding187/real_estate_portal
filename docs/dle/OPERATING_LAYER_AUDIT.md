@@ -274,5 +274,5 @@ Implemented next implementation slice:
 
 Recommended next implementation slice:
 
-- Design the first transaction-native inventory status mutation with the event stream as the audit
-  anchor.
+- Implement the first Sale reserve/release inventory mutation from
+  `docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md`.

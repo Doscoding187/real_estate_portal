@@ -255,7 +255,8 @@ Only after that:
 
 - Browser-proof Sale, Rental, and Auction note creation/readback from the developer dashboard.
 - Add transaction-native inventory status changes for one engine at a time.
-- Start with Sale `available` -> `reserved` -> `available`.
+- Start with Sale `available` -> `reserved` -> `available`, using
+  `docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md`.
 - Then Rental `available` -> `held` -> `available`.
 - Then Auction `scheduled` -> `registration_open` -> `active`.
 
