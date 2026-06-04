@@ -7,6 +7,7 @@ import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 
 const testState = vi.hoisted(() => {
   const saveDraftMutationMock = vi.fn();
+  const saveNowMock = vi.fn();
   const updateDevelopmentMock = vi.fn();
   const updatePublisherDevelopmentMock = vi.fn();
   const toastSuccessMock = vi.fn();
@@ -128,6 +129,7 @@ const testState = vi.hoisted(() => {
     editDevelopment,
     publisherContext,
     saveDraftMutationMock,
+    saveNowMock,
     setLocationMock,
     toastErrorMock,
     toastSuccessMock,
@@ -164,7 +166,7 @@ vi.mock('@/hooks/useAutoSave', () => ({
       error: null,
       isSaving: false,
       lastSaved: null,
-      saveNow: vi.fn(),
+      saveNow: testState.saveNowMock,
       clearSaveStatus: vi.fn(),
     };
   },
@@ -437,6 +439,7 @@ function configureCanonicalAuctionDraft() {
 describe('DevelopmentWizard draft resume/manual save wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED', 'false');
     resetCanonicalRentalDraft();
     window.history.replaceState(
       {},
@@ -569,6 +572,106 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
         'Draft could not be persisted',
       );
     });
+  });
+
+  it.each([
+    {
+      label: 'create',
+      url: '/developer/developments/new?brandProfileId=55',
+    },
+    {
+      label: 'draft',
+      url: '/developer/developments/new?draftId=321&brandProfileId=55',
+    },
+  ])(
+    'enables guarded autosave for a hydrated $label route without claiming it is saved',
+    async ({ url }) => {
+      vi.stubEnv('VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED', 'true');
+      window.history.replaceState({}, '', url);
+      testState.currentUrl = url;
+
+      render(<DevelopmentWizard />);
+
+      await waitFor(() => {
+        expect(testState.autoSaveOptions?.enabled).toBe(true);
+      });
+
+      expect(testState.autoSaveOptions.debounceMs).toBe(10_000);
+      expect(testState.autoSaveOptions.shouldSkipSave(testState.autoSaveData)).toBe(true);
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
+      expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+
+      act(() => {
+        useDevelopmentWizard.getState().saveWorkflowStepData('marketing_summary' as any, {
+          tagline: 'Changed after hydrated baseline',
+        });
+      });
+
+      await waitFor(() => {
+        expect(testState.autoSaveOptions.shouldSkipSave(testState.autoSaveData)).toBe(false);
+      });
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
+    },
+  );
+
+  it('keeps edit-development autosave disabled when the create/draft rollout switch is enabled', async () => {
+    vi.stubEnv('VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED', 'true');
+    window.history.replaceState({}, '', '/developer/developments/edit?id=987&brandProfileId=55');
+    testState.currentUrl = '/developer/developments/edit?id=987&brandProfileId=55';
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().editingId).toBe(987);
+    });
+
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    expect(testState.autoSaveOptions.shouldSkipSave(testState.autoSaveData)).toBe(true);
+    expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
+    expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps publisher-context create autosave disabled until a publisher draft path is proven', async () => {
+    vi.stubEnv('VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED', 'true');
+    window.history.replaceState({}, '', '/developer/developments/new?brandProfileId=77');
+    testState.currentUrl = '/developer/developments/new?brandProfileId=77';
+    testState.userRole = 'super_admin';
+    testState.publisherContext = {
+      mode: 'seeding',
+      brandProfileId: 77,
+      brandProfileName: 'Publisher Brand',
+      brandProfileType: 'developer',
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.autoSaveOptions).toBeTruthy();
+    });
+
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
+    expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+  });
+
+  it('requests an immediate save when canonical workflow navigation changes step', async () => {
+    vi.stubEnv('VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED', 'true');
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().currentStepId).toBe('review_publish');
+    });
+    testState.saveNowMock.mockClear();
+
+    act(() => {
+      useDevelopmentWizard.getState().goWorkflowBack();
+    });
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().currentStepId).toBe('unit_types');
+    });
+    expect(testState.saveNowMock).toHaveBeenCalledTimes(1);
   });
 
   it('resets stale persisted state before exposing a create-mode autosave snapshot', async () => {

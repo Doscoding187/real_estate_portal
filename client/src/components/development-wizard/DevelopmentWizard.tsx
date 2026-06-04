@@ -50,6 +50,8 @@ const getDraftStateSignature = (snapshot: any) => {
   return JSON.stringify(canonicalState);
 };
 
+const CREATE_DRAFT_AUTOSAVE_DEBOUNCE_MS = 10_000;
+
 export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [, setLocation] = useLocation();
 
@@ -95,6 +97,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   const {
     currentPhase,
+    currentStepId,
     setPhase,
     developmentType,
     developmentData,
@@ -110,6 +113,11 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [manualLastSavedAt, setManualLastSavedAt] = useState<Date | null>(null);
   const [persistedSaveSignature, setPersistedSaveSignature] = useState<string | null>(null);
   const hydrationTargetRef = useRef(hydrationTargetKey);
+  const markHydratedBaseline = useCallback(() => {
+    setPersistedSaveSignature(
+      getDraftStateSignature(useDevelopmentWizard.getState().getDraftData()),
+    );
+  }, []);
 
   useEffect(() => {
     if (hydrationTargetRef.current === hydrationTargetKey) return;
@@ -141,9 +149,10 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     if (!persistReady) return;
     if (!isEditMode && !isDraftMode) {
       reset();
+      markHydratedBaseline();
       setIsHydrated(true);
     }
-  }, [persistReady, isEditMode, isDraftMode, reset]);
+  }, [persistReady, isEditMode, isDraftMode, markHydratedBaseline, reset]);
 
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
@@ -202,8 +211,10 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     await persistencePromise;
   }, [effectiveDraftBrandProfileId, saveDraftMutation]);
 
-  // Autosave remains deliberately disabled until the safety contract is fully proven.
-  const autoSaveEnabled = false;
+  const createDraftAutosaveRolloutEnabled =
+    import.meta.env.VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED === 'true';
+  const autoSaveEnabled =
+    createDraftAutosaveRolloutEnabled && !isEditMode && !shouldUsePublisherApi;
   const {
     lastSaved,
     isSaving,
@@ -211,7 +222,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     saveNow,
     clearSaveStatus,
   } = useAutoSave(canonicalSnapshotToWatch, {
-    debounceMs: 60000,
+    debounceMs: CREATE_DRAFT_AUTOSAVE_DEBOUNCE_MS,
     enabled: autoSaveEnabled && isHydrated,
     shouldSkipSave: snapshot => persistedSaveSignature === getDraftStateSignature(snapshot),
     onSave: async snapshot => {
@@ -222,14 +233,14 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     },
   });
 
-  // Save on phase transition (only after hydration)
-  const prevPhaseRef = useRef(currentPhase);
+  // Save canonical workflow progress on step transition (only after hydration).
+  const previousStepIdRef = useRef(currentStepId);
   useEffect(() => {
-    if (prevPhaseRef.current !== currentPhase && prevPhaseRef.current !== 0) {
+    if (previousStepIdRef.current !== currentStepId && previousStepIdRef.current != null) {
       if (isHydrated) saveNow();
     }
-    prevPhaseRef.current = currentPhase;
-  }, [currentPhase, saveNow, isHydrated]);
+    previousStepIdRef.current = currentStepId;
+  }, [currentStepId, saveNow, isHydrated]);
 
   useEffect(() => {
     if (!shouldUsePublisherApi || !publisherContext?.brandProfileId) return;
@@ -352,6 +363,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       if (preferredStepId) setWorkflowStep(preferredStepId);
     }
 
+    markHydratedBaseline();
     setIsHydrated(true);
     toast.success('Development loaded for editing.');
   }, [
@@ -361,6 +373,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     isHydrated,
     hydrateDevelopment,
     initializeWorkflow,
+    markHydratedBaseline,
     setWorkflowStep,
   ]);
 
@@ -371,9 +384,18 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     if (editData) return;
 
     reset();
+    markHydratedBaseline();
     setIsHydrated(true);
     toast.error('Unable to load development for editing.');
-  }, [persistReady, isEditMode, isHydrated, isEditLoading, editData, reset]);
+  }, [
+    persistReady,
+    isEditMode,
+    isHydrated,
+    isEditLoading,
+    editData,
+    markHydratedBaseline,
+    reset,
+  ]);
 
   // --- Draft hydration (gated by persist rehydrate; never in edit mode) ---
   useEffect(() => {
@@ -383,9 +405,18 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     if (!loadedDraft?.draftData || isHydrated) return;
 
     hydrateDevelopment(loadedDraft.draftData);
+    markHydratedBaseline();
     setIsHydrated(true);
     toast.success('Draft loaded successfully');
-  }, [persistReady, isDraftMode, isEditMode, loadedDraft, isHydrated, hydrateDevelopment]);
+  }, [
+    persistReady,
+    isDraftMode,
+    isEditMode,
+    loadedDraft,
+    isHydrated,
+    hydrateDevelopment,
+    markHydratedBaseline,
+  ]);
 
   // --- Legacy phase skip ---
   useEffect(() => {

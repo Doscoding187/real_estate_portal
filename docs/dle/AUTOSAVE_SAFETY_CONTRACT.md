@@ -1,7 +1,7 @@
 # DLE Autosave Safety Contract
 
 Date: 2026-06-04
-Status: Preflight contract. Autosave remains disabled.
+Status: Guarded create/draft rollout available behind a default-off switch. Edit autosave remains disabled.
 
 ## Purpose
 
@@ -9,7 +9,7 @@ DLE autosave must protect commercial packaging work without making claims the ba
 
 Autosave is not a convenience toggle. It is a persistence contract across Sale, Rental, and Auction canonical workflow state.
 
-Manual Save Draft remains the trusted fallback until every gate in this document is proven.
+Manual Save Draft remains the trusted fallback during the guarded rollout.
 
 ## Canonical Save Scope
 
@@ -77,9 +77,41 @@ Autosave may be enabled only after all of these pass:
 9. Autosave is gated behind hydration and does not save stale persisted local state before route draft/edit hydration.
 10. Focused browser proof covers success, failure, retry, resume, and no duplicate draft creation.
 
-## Current Preflight Decision
+## Guarded Rollout Decision
 
-Autosave remains disabled.
+Developer create/draft autosave is available only when
+`VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED=true`. The switch is unset/false by default. Publisher
+emulator create/draft routes remain excluded until a publisher-scoped draft persistence path is
+proven.
+
+The guarded rollout uses:
+
+- a 10-second inactivity debounce so canonical development packages are not written on every
+  field interaction;
+- an immediate save request when canonical `currentStepId` changes;
+- a hydrated canonical baseline so create, draft-resume, and edit routes do not save merely
+  because they loaded;
+- the same full canonical snapshot and serialized persistence queue used by Manual Save Draft;
+- Manual Save Draft as the always-visible fallback before Review.
+
+Ten seconds is deliberately long enough to avoid chatty writes while a developer is actively
+packaging a section, but short enough to protect work during normal pauses. A canonical step
+transition saves immediately because it is a strong signal that the developer completed a
+meaningful packaging slice.
+
+Rollback is immediate: set `VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED=false` and redeploy/restart the
+frontend. Roll back if any of these are observed:
+
+- duplicate draft creation;
+- hydration-triggered writes;
+- a false `Saved` claim;
+- stale Sale, Rental, or Auction state after resume;
+- save failures that are not visible and recoverable;
+- request volume inconsistent with the 10-second debounce and step-transition contract.
+
+Edit-development and publisher-emulator autosave remain disabled regardless of the switch.
+
+## Preflight Foundation
 
 The 2026-06-04 preflight slice establishes the contract and fixes the first trust blockers:
 
@@ -119,8 +151,7 @@ background autosave:
 - focused create, draft-resume, and edit tests confirm autosave remains disabled while the correct
   canonical route snapshot is exposed.
 
-The 2026-06-04 browser preflight proves the real-runtime safety boundary without enabling
-background autosave:
+The 2026-06-04 browser preflight proves the real-runtime safety boundary:
 
 - create, draft-resume, and edit routes make no persistence calls while hydrating;
 - changing route targets inside one mounted wizard clears the previous target and hydrates the new
@@ -132,12 +163,18 @@ background autosave:
   returned draft ID with the second request;
 - Rental and Auction save-resume-publish browser flows still pass after the route-target fix.
 
-Still required before guarded create/draft enablement:
+The 2026-06-04 guarded rollout slice proves the switch-enabled boundary:
 
-- a deliberate debounce decision based on developer workflow, not an arbitrary timer;
-- an explicit rollout switch and rollback path;
-- transaction-lane browser proof after guarded autosave is enabled that Rental and Auction resume
-  the latest confirmed canonical state.
+- developer create and draft routes become eligible only after hydration; edit and publisher
+  emulator routes remain disabled;
+- loaded canonical state becomes a skip baseline without falsely claiming it is saved;
+- later canonical changes become eligible for autosave;
+- canonical `currentStepId` transitions request an immediate save;
+- Sale, Rental, and Auction each autosave and resume the latest confirmed canonical step;
+- a failed background rental save remains visible, leaves the database unchanged, and a later
+  latest-state retry succeeds;
+- the previous browser failure/retry and one-new-draft-identity proofs still pass with the rollout
+  switch enabled.
 
 Edit-development autosave is a separate later decision. It must preserve baseline-aware partial-step
 ownership and must not reuse create/draft full-snapshot persistence as a published-development
@@ -145,11 +182,6 @@ overwrite path.
 
 ## Recommended Next Slice
 
-Design and prove a guarded create/draft-only autosave rollout:
-
-1. Choose and document the debounce based on the developer packaging workflow.
-2. Add an explicit create/draft-only rollout switch; keep edit-development autosave disabled.
-3. Prove Sale, Rental, and Auction autosave success, resume, failure, retry, and no duplicate drafts
-   in the browser with the switch enabled.
-4. Keep Manual Save Draft available as the trusted fallback and define the rollback trigger before
-   considering broader rollout.
+Run a limited create/draft rollout with the switch enabled in a controlled environment and monitor
+the rollback triggers. Keep edit-development autosave out of scope until a separate
+baseline-aware partial-step ownership design and browser proof exist.

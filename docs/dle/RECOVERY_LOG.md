@@ -901,3 +901,73 @@ Next recommended slice:
 - Design and implement a guarded create/draft-only autosave rollout switch and deliberate debounce, then prove transaction-lane autosave success/resume/failure/retry before broader rollout.
 Commit hash/tag: This entry will be included in `fix(dle): prove autosave browser preflight`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Guarded Create/Draft Autosave Rollout
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make create/draft autosave available behind an explicit default-off rollout switch while
+keeping edit-development autosave disabled and preserving truthful save-state behavior.
+Files changed:
+- .env.example
+- .env.local.example
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- e2e/dle/autosave-guarded-rollout.spec.ts
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-04/qa-dle-sale-guarded-autosave-resume.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-guarded-autosave-resume.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-guarded-autosave-resume.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-guarded-autosave-retry.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/hooks/__tests__/useAutoSave.test.tsx client/src/components/wizard/WizardEngine.test.tsx'`
+- Result: Passed. 3 test files, 33 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:5173 pnpm exec playwright test e2e/dle/autosave-preflight-browser.spec.ts e2e/dle/autosave-guarded-rollout.spec.ts e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed with `VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED=true`. 3 browser specs, 7 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/hooks/__tests__/useAutoSave.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/developerRouter.drafts.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed with local test database access. 16 test files, 139 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added the explicit default-off `VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED` switch to the runtime
+  and environment references.
+- The switch enables real-developer create and draft autosave only; edit-development and
+  publisher-emulator autosave remain disabled regardless of the flag.
+- Focused component proof confirms publisher-emulator create remains excluded even when the
+  rollout switch is enabled.
+- Chose a 10-second inactivity debounce based on the commercial packaging workflow and documented
+  the rationale and rollback triggers.
+- Create, draft, and edit hydration now establish a canonical skip baseline without producing a
+  backend write or falsely showing `Saved`.
+- Corrected immediate workflow-transition saving to watch canonical `currentStepId` instead of the
+  legacy `currentPhase`.
+- Sale, Rental, and Auction each autosaved a canonical step transition and resumed the latest
+  confirmed step from the database.
+- A failed Rental background autosave stayed visibly failed and left the database unchanged; a
+  later latest-state transition retried successfully and resumed correctly.
+- Existing hydration, manual failure/retry, one-new-draft identity, Rental publish, Auction publish,
+  public output, search, and lead-context browser proofs still pass with the switch enabled.
+Evidence:
+- docs/dle/evidence/2026-06-04/qa-dle-sale-guarded-autosave-resume.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-guarded-autosave-resume.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-guarded-autosave-resume.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-guarded-autosave-retry.png
+Remaining risks:
+- The rollout switch remains false/unset by default. A controlled environment must enable and
+  monitor it before any broad rollout.
+- Edit-development autosave remains out of scope because published-development progress requires
+  baseline-aware partial-step ownership rather than create/draft full-snapshot persistence.
+- Publisher-emulator autosave remains out of scope until it has a proven publisher-scoped draft
+  persistence path; `developer.saveDraft` requires a real developer profile.
+- The 10-second field-edit debounce is coordinator- and component-proven; browser evidence focuses
+  on immediate canonical step transitions because they are deterministic and commercially
+  meaningful.
+Next recommended slice:
+- Run a controlled create/draft autosave rollout with the switch enabled and monitor the documented
+  rollback triggers, then return to the transaction-first wizard product experience audit.
+Commit hash/tag: This entry will be included in `feat(dle): add guarded draft autosave rollout`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

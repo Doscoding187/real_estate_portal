@@ -174,11 +174,15 @@ If users cannot feel the commercial intelligence, the engine is not finished.
 
 Autosave must stay behind manual save/resume proof.
 
-Do not re-enable autosave until manual save, draft listing, draft resume, and edit-draft identity have been proven through real backend-backed flow checks.
+Manual save, draft listing, draft resume, edit-draft identity, failure/retry, and one-draft identity
+have now been proven through real backend-backed flow checks. Create/draft autosave is available
+only behind the default-off `VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED` rollout switch. Publisher
+emulator autosave remains excluded until a publisher-scoped draft path is proven.
 
 The UI must not tell users that progress is saved unless a real save path succeeds. Autosave failures must be visible, recoverable, or clearly handled; they must not silently claim safety while the backend failed.
 
-Manual Save Draft remains the trusted fallback until autosave is verified.
+Manual Save Draft remains the trusted fallback during the guarded rollout. Edit-development
+autosave remains disabled until a separate baseline-aware partial-step ownership design is proven.
 
 The authoritative enablement gates and save-state rules live in
 `docs/dle/AUTOSAVE_SAFETY_CONTRACT.md`.
@@ -335,16 +339,15 @@ Use `docs/dle/AGENT_HANDOFF_TEMPLATE.md` before every new implementation session
 
 Recommended order from here:
 
-1. Recovery audit
-2. Commit hygiene / preserve untracked DLE work
-3. Manual flow proof
-4. Fix truth-in-UX around disabled autosave
-5. Prove the autosave safety contract and guarded rollout
-6. Product audit of wizard experience
-7. Product audit of public development page
-8. UI upgrade to make the engine visible and joyful
-9. Search card and lead form alignment
-10. Distribution/referral readiness
+1. Run and monitor a controlled create/draft autosave rollout
+2. Keep edit-development autosave separate until partial-step ownership is proven
+3. Product audit of wizard experience
+4. Product audit of public development page
+5. UI upgrade to make the transaction engines visible and joyful
+6. Search card and lead form alignment
+7. Developer dashboard and inventory impact
+8. Admin review impact
+9. Distribution/referral readiness
 
 ## 19. Definition of World-Class
 
