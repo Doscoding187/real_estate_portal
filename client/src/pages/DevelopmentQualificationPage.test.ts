@@ -59,6 +59,10 @@ describe('DevelopmentQualificationPage pricing context', () => {
       flowBadge: 'Full Qualification',
       submitLabel: 'Submit Qualification',
       teamHandoff: 'Direct handoff to the sales team',
+      assumptionTitle: 'Affordability assumptions',
+      assumptionItems: expect.arrayContaining([
+        'Deposit improves the estimated buying power but does not guarantee finance approval.',
+      ]),
     });
 
     expect(getDevelopmentQualificationExperienceCopy('for_rent')).toMatchObject({
@@ -67,6 +71,10 @@ describe('DevelopmentQualificationPage pricing context', () => {
       submitLabel: 'Submit Rental Fit',
       teamHandoff: 'Direct handoff to the leasing team',
       includedEstimate: 'Development-specific rental fit estimate',
+      assumptionTitle: 'Rental fit assumptions',
+      assumptionItems: expect.arrayContaining([
+        'Does not replace developer or landlord lease approval.',
+      ]),
     });
 
     expect(getDevelopmentQualificationExperienceCopy('auction')).toMatchObject({
@@ -75,6 +83,10 @@ describe('DevelopmentQualificationPage pricing context', () => {
       submitLabel: 'Submit Bidder Readiness',
       teamHandoff: 'Direct handoff to the auction team',
       includedEstimate: 'Development-specific bidder readiness estimate',
+      assumptionTitle: 'Bidder readiness assumptions',
+      assumptionItems: expect.arrayContaining([
+        'Does not register you for the auction or approve proof of funds.',
+      ]),
     });
   });
 

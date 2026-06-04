@@ -162,6 +162,16 @@ export function getDevelopmentQualificationExperienceCopy(transactionType: unkno
       howWorksEstimate: 'Review your estimated rental fit for this development.',
       howWorksSubmit: 'Submit a stronger rental lead with your fit context attached.',
       incomePrompt: 'monthly rent from',
+      accuracyPrompt:
+        'Adding living expenses, debt repayments, and upfront amount helps the leasing team read this as a rental-fit estimate, not a final lease approval.',
+      assumptionTitle: 'Rental fit assumptions',
+      assumptionItems: [
+        'Uses household income and monthly commitments to estimate rent capacity.',
+        'Does not replace developer or landlord lease approval.',
+        'The leasing team may still request income proof, deposit confirmation, and lease documents.',
+      ],
+      resultAssumption:
+        'This estimate is an early rental-fit signal. Lease approval can still depend on documents, credit checks, deposit terms, and availability.',
     };
   }
 
@@ -197,6 +207,16 @@ export function getDevelopmentQualificationExperienceCopy(transactionType: unkno
       howWorksEstimate: 'Review your estimated bidder readiness for this development.',
       howWorksSubmit: 'Submit a stronger auction lead with your bidder context attached.',
       incomePrompt: 'starting bids from',
+      accuracyPrompt:
+        'Adding commitments and deposit or cash contribution helps the auction team read this as bidder readiness, not auction registration.',
+      assumptionTitle: 'Bidder readiness assumptions',
+      assumptionItems: [
+        'Uses income, commitments, and available cash contribution to estimate auction capacity.',
+        'Does not register you for the auction or approve proof of funds.',
+        'The auction team may still request FICA, bidder registration, deposit proof, and auction terms acceptance.',
+      ],
+      resultAssumption:
+        'This estimate is an early bidder-readiness signal. Final bidding depends on auction rules, registration approval, proof of funds, and reserve conditions.',
     };
   }
 
@@ -231,6 +251,16 @@ export function getDevelopmentQualificationExperienceCopy(transactionType: unkno
     howWorksEstimate: 'Review your estimated affordability for this development.',
     howWorksSubmit: 'Submit a stronger lead with your affordability context attached.',
     incomePrompt: 'homes from',
+    accuracyPrompt:
+      'Adding expenses, debts, and deposit improves the affordability estimate before you submit it to the sales team.',
+    assumptionTitle: 'Affordability assumptions',
+    assumptionItems: [
+      `Uses a ${DEFAULT_BOND_TERM_YEARS}-year bond term and current prime-rate estimate.`,
+      'Deposit improves the estimated buying power but does not guarantee finance approval.',
+      'The sales team may still request a formal pre-approval or bond originator review.',
+    ],
+    resultAssumption:
+      'This estimate is an early affordability signal. A lender, bond originator, or sales team may still need to verify finance readiness.',
   };
 }
 
@@ -734,9 +764,7 @@ export default function DevelopmentQualificationPage() {
                             Accuracy pass
                           </Badge>
                           <p className="text-sm text-slate-600">
-                            Adding expenses, debts, and {qualificationCopy.depositLabel.toLowerCase()}{' '}
-                            improves the {qualificationCopy.metaDescriptionVerb} estimate before
-                            you submit.
+                            {qualificationCopy.accuracyPrompt}
                           </p>
                         </div>
 
@@ -839,6 +867,15 @@ export default function DevelopmentQualificationPage() {
                               {qualificationCopy.depositHelper}
                             </p>
                           </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {qualificationCopy.assumptionTitle}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {qualificationCopy.resultAssumption}
+                          </p>
                         </div>
 
                         <div className="grid gap-5 md:grid-cols-2">
@@ -975,6 +1012,22 @@ export default function DevelopmentQualificationPage() {
                       <Phone className="h-4 w-4 text-blue-600" />
                       {qualificationCopy.followUp}
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="p-5 space-y-3">
+                  <h3 className="text-base font-bold text-slate-900">
+                    {qualificationCopy.assumptionTitle}
+                  </h3>
+                  <div className="space-y-3 text-sm text-slate-600">
+                    {qualificationCopy.assumptionItems.map(item => (
+                      <div key={item} className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

@@ -1232,3 +1232,45 @@ Next recommended slice:
   audit for live development inventory and lead-stage management.
 Commit hash/tag: This entry will be included in `feat(dle): localize qualification route`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Qualification Route Transaction Assumptions
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the public qualification route explain transaction-specific assumptions so Sale,
+Rental, and Auction users understand what the estimate does and does not prove.
+Files changed:
+- client/src/pages/DevelopmentQualificationPage.tsx
+- client/src/pages/DevelopmentQualificationPage.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentQualificationPage.test.ts'`
+- Result: Passed. 1 test file, 5 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentQualificationPage.test.ts client/src/components/development/DevelopmentLeadDialog.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 11 test files, 102 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added transaction-specific assumption copy to the qualification experience model.
+- Sale now explains the bond-term/prime-rate estimate, deposit effect, and finance approval limits.
+- Rental now explains rental-fit estimates, lease approval limits, income proof, deposit
+  confirmation, and lease-document expectations.
+- Auction now explains bidder-readiness estimates, auction-registration limits, FICA, proof of
+  funds/deposit proof, and auction-term expectations.
+- The Step 2 accuracy prompt now changes by transaction type instead of reusing generic
+  affordability language.
+- The result and sidebar now surface the active transaction assumptions before the user submits
+  contact details.
+Remaining risks:
+- The underlying qualification math still uses a shared affordability-derived model. Dedicated
+  Rental lease qualification ratios and Auction registration/proof-of-funds workflows remain future
+  product/rules work.
+- Operating-layer lead stages and team-specific follow-up workflows remain outstanding.
+Next recommended slice:
+- Start the operating-layer audit for live development inventory and lead-stage management, then
+  define the first small post-publish operations surface.
+Commit hash/tag: This entry will be included in `feat(dle): clarify qualification assumptions`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

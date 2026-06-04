@@ -2,8 +2,8 @@
 
 Date: 2026-06-04
 Status: Product-visibility slices are now active across wizard guidance, unit preview, public
-unit-card merchandising, public action-panel CTAs, lead-dialog copy/context, and qualification
-route copy/results.
+unit-card merchandising, public action-panel CTAs, lead-dialog copy/context, qualification route
+copy/results, and transaction-specific qualification assumptions.
 
 ## Standard
 
@@ -142,6 +142,25 @@ The qualification route should:
 This keeps the conversion journey transaction-native after the public page, public action panel, and
 lead dialog have already established the correct commercial lane.
 
+## Seventh Product-Visibility Slice
+
+Make qualification assumptions transaction-specific.
+
+The qualification route should:
+
+- keep Sale assumptions clear about bond-term, prime-rate, deposit, and finance approval limits;
+- use Rental assumptions that explain rental-fit estimates, lease approval limits, proof-of-income
+  expectations, deposit confirmation, and lease documents;
+- use Auction assumptions that explain bidder-readiness estimates, registration limits, proof of
+  funds, FICA, deposit proof, and auction terms;
+- surface the assumptions before submission and near the result so buyers, renters, and bidders
+  understand what the check does and does not prove;
+- avoid implying that Rental and Auction use the exact same approval model as Sale finance.
+
+This keeps the qualification route commercially honest. It does not yet replace the shared
+calculation model with dedicated Rental and Auction rules, but it stops the UI from hiding the
+assumptions behind generic affordability language.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -151,9 +170,8 @@ lead dialog have already established the correct commercial lane.
   pack, and urgency should become first-class product language.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
   labels, availability, and primary CTAs.
-- Add richer Rental/Auction qualification assumptions where needed, such as lease qualification
-  ratios, proof-of-income expectations, bidder registration requirements, and proof-of-funds
-  prompts.
+- Add deeper Rental/Auction qualification rules where needed, such as lease qualification ratios,
+  proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Add operating-layer surfaces after publish: inventory status, reservations, sold/let/auction
   outcomes, lead stages, pricing adjustments, release phases, dashboards, and audit history.
 
