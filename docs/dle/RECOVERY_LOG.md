@@ -1429,3 +1429,55 @@ Next recommended slice:
   capture browser proof for the dashboard operating surfaces.
 Commit hash/tag: This entry will be included in `feat(dle): surface operating readiness`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Operating Status and Audit Contract
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the transaction-native operating status and audit contract before any live inventory
+mutations are added to the DLE.
+Files changed:
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Focused inspection run:
+- Read `docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md`.
+- Read `docs/dle/OPERATING_LAYER_AUDIT.md`.
+- Inspected existing schema anchors:
+  `drizzle/schema/developments.ts`, `drizzle/schema/leads.ts`,
+  `drizzle/schema/distribution.ts`, and `drizzle/schema/core.ts`.
+- Confirmed current anchors: development transaction fields, unit inventory counts, unit auction
+  status, lead activities, generic audit logs, managerial audit logs, and distribution deal events.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added `docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`.
+- Defined the boundary between packaging edits and operating updates.
+- Defined shared abstract operating buckets: open, held, committed, blocked, closed.
+- Defined transaction-native Sale statuses and transitions: available, reserved, under offer,
+  bond/deal progress, sold, withdrawn.
+- Defined transaction-native Rental statuses and transitions: available, held, application in
+  progress, lease ready, let, available soon, withdrawn.
+- Defined transaction-native Auction statuses and transitions: scheduled, registration open,
+  active, sold at auction, passed in, withdrawn, closed.
+- Defined the recommended `development_operating_events` stream, minimum fields, event types, and
+  source surfaces.
+- Added mutation guardrails requiring explicit development ownership, transaction normalization from
+  the development record, operating-field-only updates, same-transaction event writing, and no
+  canonical wizard `stepData` rewrites.
+- Recommended the first mutation slice as event-only `operating_note_added` before inventory counts
+  or statuses are mutated.
+- Registered the contract in the source-of-truth and linked it from the operating audit.
+Remaining risks:
+- This slice is documentation-only. No schema, migration, API, service, or dashboard history surface
+  exists yet for `development_operating_events`.
+- Browser proof for the read-only dashboard operating surfaces remains outstanding.
+- Transaction-native lead-stage overlays remain a future design/implementation slice.
+Next recommended slice:
+- Implement an event-only operating note mutation/readback surface, then capture browser proof before
+  adding inventory status or quantity mutations.
+Commit hash/tag: This entry will be included in `docs(dle): define operating status contract`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

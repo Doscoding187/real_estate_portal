@@ -328,6 +328,7 @@ docs/
     AUTOSAVE_SAFETY_CONTRACT.md
     TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
     OPERATING_LAYER_AUDIT.md
+    OPERATING_STATUS_AUDIT_CONTRACT.md
     AGENT_HANDOFF_TEMPLATE.md
 ```
 
@@ -347,7 +348,7 @@ Recommended order from here:
 4. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
 5. Product audit of public development page merchandising
 6. Search card and lead form alignment
-7. Define the transaction-native operating status/audit model before inventory mutations
+7. Implement the first event-only operating mutation from `docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`
 8. Add browser proof for the dashboard operating surfaces
 9. Developer dashboard and inventory impact
 10. Admin review impact

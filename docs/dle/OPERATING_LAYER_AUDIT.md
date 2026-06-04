@@ -248,7 +248,10 @@ Guardrails:
 
 ## Next Architecture Work After The First Surface
 
-Before adding inventory mutations, define:
+Before adding inventory mutations, follow
+`docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`.
+
+The contract now defines:
 
 - A transaction-native operating status model for unit inventory.
 - An operating event/audit model for inventory, pricing, lead stage, distribution handoff, and
@@ -257,3 +260,8 @@ Before adding inventory mutations, define:
 - Transaction-native lead-stage labels or stage overlays for Sale, Rental, and Auction.
 - Distribution/referral readiness rules per development.
 - Browser proof requirements for the operations panel and later inventory mutations.
+
+Recommended next implementation slice:
+
+- Add an event-only `operating_note_added` mutation/readback surface before mutating inventory
+  counts or statuses.
