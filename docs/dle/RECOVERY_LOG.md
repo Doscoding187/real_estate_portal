@@ -1018,3 +1018,44 @@ Next recommended slice:
   rental, and auction inventory will merchandise publicly before publishing.
 Commit hash/tag: This entry will be included in `feat(dle): surface transaction engine guidance`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Transaction-Aware Unit Card Preview
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the Unit Types step visibly transaction-first by previewing how Sale, Rental, and Auction
+unit inventory will merchandise publicly before publish.
+Files changed:
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx'`
+- Result: Passed. 2 test files, 10 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 8 test files, 84 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added a presentation-only Unit Types merchandising preview for Sale, Rental, and Auction.
+- Sale previews now show price-band language, for-sale availability, purchase enquiry context, and
+  buyer-facing CTA copy.
+- Rental previews now show monthly-rent language, deposit, lease term, rental availability, rental
+  lead context, and rental CTA copy.
+- Auction previews now show starting-bid language, auction window, reserve tracking, open-lot
+  availability, auction interest context, and auction CTA copy.
+- Changed the existing unit-card availability fallback from sale-only `Sold Out` to the
+  transaction-neutral `No availability`.
+Remaining risks:
+- This is still an in-wizard preview, not a full public-page redesign.
+- Identity, highlights, and media still need live public-preview treatment.
+- Rental and Auction still need deeper first-class packaging surfaces for qualification,
+  registration, legal packs, outcomes, and post-publish operations.
+Next recommended slice:
+- Extend the same transaction-first showroom treatment to the public page sections and developer
+  dashboard operations, starting with Rental/Auction-specific merchandising and lead readiness.
+Commit hash/tag: This entry will be included in `feat(dle): preview transaction unit merchandising`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

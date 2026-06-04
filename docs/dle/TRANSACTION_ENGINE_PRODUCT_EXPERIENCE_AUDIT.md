@@ -50,9 +50,27 @@ The band should:
 This does not finish the product experience. It creates a visible bridge between the transaction
 architecture and the developer packaging flow.
 
+## Second Product-Visibility Slice
+
+Add a transaction-aware public merchandising preview to Unit Types.
+
+The preview should:
+
+- show the developer how a unit card will read before publish;
+- use sale-native language for price bands, for-sale availability, and purchase enquiry context;
+- use rental-native language for monthly rent, deposit, lease term, rental availability, and rental
+  lead context;
+- use auction-native language for starting bid, auction window, reserve tracking, lot availability,
+  and auction interest context;
+- avoid sale-only fallback labels such as `Sold Out` for rental and auction inventory;
+- stay presentation-only and not alter save, schema, routing, publish, or readiness behavior.
+
+This improves the showroom layer: the developer can see the commercial buyer/renter/bidder-facing
+meaning of the inventory they are entering instead of only managing backend fields.
+
 ## Remaining Product Gaps
 
-- Add live public-preview feedback for identity, highlights, media, and unit cards.
+- Add live public-preview feedback for identity, highlights, and media.
 - Make Rental packaging feel lease-native: deposit, lease term, furnished state, availability, and
   renter qualification should feel intentional rather than optional add-ons.
 - Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal

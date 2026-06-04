@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { describe, expect, it } from 'vitest';
 import {
+  getUnitTypesPhaseMerchandisingPreview,
   getUnitTypesPhasePriceDisplay,
   getUnitTypesPhaseTransactionCopy,
   isValidUnitTypesPhaseMonthlyRentRange,
@@ -92,5 +92,69 @@ describe('UnitTypesPhase transaction helpers', () => {
         monthlyRentTo: 12_500,
       }),
     ).toBe(false);
+  });
+
+  it('builds sale, rental, and auction public merchandising previews', () => {
+    const salePreview = getUnitTypesPhaseMerchandisingPreview(
+      {
+        priceFrom: 1_200_000,
+        priceTo: 1_450_000,
+        availableUnits: 4,
+      },
+      'for_sale',
+    );
+    expect(salePreview).toMatchObject({
+      eyebrow: 'Sale card preview',
+      priceLabel: 'Price from',
+      priceSuffix: '',
+      availabilityLabel: '4 for sale',
+      ctaLabel: 'Enquire to buy',
+      leadContextLabel: 'Purchase lead context',
+      supportingDetails: expect.arrayContaining(['4 units for sale', 'Buyer price band']),
+    });
+
+    const rentalPreview = getUnitTypesPhaseMerchandisingPreview(
+      {
+        monthlyRentFrom: 12_500,
+        monthlyRentTo: 14_000,
+        depositRequired: 25_000,
+        leaseTerm: '12 months',
+        availableUnits: 3,
+      },
+      'for_rent',
+    );
+    expect(rentalPreview).toMatchObject({
+      eyebrow: 'Rental card preview',
+      priceLabel: 'Rent from',
+      priceSuffix: '/ month',
+      availabilityLabel: '3 rentals available',
+      ctaLabel: 'Request rental details',
+      leadContextLabel: 'Rental lead context',
+      supportingDetails: expect.arrayContaining(['12 months']),
+    });
+    expect(rentalPreview.supportingDetails.map(normalizeCurrencySpacing)).toContain(
+      'Deposit R 25 000',
+    );
+
+    const auctionPreview = getUnitTypesPhaseMerchandisingPreview(
+      {
+        startingBid: 850_000,
+        reservePrice: 950_000,
+        auctionStartDate: '2030-02-01T09:00:00.000Z',
+        auctionEndDate: '2030-02-08T17:00:00.000Z',
+        availableUnits: 2,
+      },
+      'auction',
+    );
+    expect(auctionPreview).toMatchObject({
+      eyebrow: 'Auction card preview',
+      priceLabel: 'Starting bid',
+      priceSuffix: 'starting bid',
+      availabilityLabel: '2 lots open',
+      ctaLabel: 'Register auction interest',
+      leadContextLabel: 'Auction lead context',
+      supportingDetails: expect.arrayContaining(['Reserve tracked internally']),
+    });
+    expect(auctionPreview.supportingDetails.some(detail => detail.includes('2030'))).toBe(true);
   });
 });

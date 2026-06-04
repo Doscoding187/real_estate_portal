@@ -277,6 +277,90 @@ export const getUnitTypesPhasePriceDisplay = (unit: Partial<UnitType>, transacti
   };
 };
 
+const formatUnitTypesPhaseDate = (value: unknown) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+export const getUnitTypesPhaseMerchandisingPreview = (
+  unit: Partial<UnitType>,
+  transactionType: unknown,
+) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+  const priceDisplay = getUnitTypesPhasePriceDisplay(unit, normalized);
+  const availableUnits = Math.max(0, Number((unit as any).availableUnits ?? 0));
+  const depositRequired = Number((unit as any).depositRequired ?? 0);
+  const leaseTerm = String((unit as any).leaseTerm ?? '').trim();
+  const auctionStartDate = formatUnitTypesPhaseDate((unit as any).auctionStartDate);
+  const auctionEndDate = formatUnitTypesPhaseDate((unit as any).auctionEndDate);
+
+  if (normalized === 'for_rent') {
+    return {
+      transactionType: normalized,
+      eyebrow: 'Rental card preview',
+      priceLabel: 'Rent from',
+      priceText: priceDisplay.display,
+      priceSuffix: priceDisplay.suffix,
+      availabilityLabel: availableUnits > 0 ? `${availableUnits} rentals available` : 'Fully let',
+      ctaLabel: 'Request rental details',
+      leadContextLabel: 'Rental lead context',
+      supportingDetails: [
+        depositRequired > 0
+          ? `Deposit ${formatUnitTypeCurrency(depositRequired)}`
+          : 'Deposit to confirm',
+        leaseTerm || 'Lease term to confirm',
+        availableUnits > 0 ? `${availableUnits} rental units available` : 'Fully let',
+      ],
+    };
+  }
+
+  if (normalized === 'auction') {
+    const auctionWindow =
+      auctionStartDate && auctionEndDate
+        ? `${auctionStartDate} - ${auctionEndDate}`
+        : auctionStartDate || 'Auction date to confirm';
+    const reservePrice = Number((unit as any).reservePrice ?? 0);
+
+    return {
+      transactionType: normalized,
+      eyebrow: 'Auction card preview',
+      priceLabel: 'Starting bid',
+      priceText: priceDisplay.display,
+      priceSuffix: priceDisplay.suffix,
+      availabilityLabel: availableUnits > 0 ? `${availableUnits} lots open` : 'Closed',
+      ctaLabel: 'Register auction interest',
+      leadContextLabel: 'Auction lead context',
+      supportingDetails: [
+        auctionWindow,
+        reservePrice > 0 ? 'Reserve tracked internally' : 'Reserve to confirm',
+        availableUnits > 0 ? `${availableUnits} lots open` : 'Auction inventory closed',
+      ],
+    };
+  }
+
+  return {
+    transactionType: normalized,
+    eyebrow: 'Sale card preview',
+    priceLabel: 'Price from',
+    priceText: priceDisplay.display,
+    priceSuffix: priceDisplay.suffix,
+    availabilityLabel: availableUnits > 0 ? `${availableUnits} for sale` : 'Sold out',
+    ctaLabel: 'Enquire to buy',
+    leadContextLabel: 'Purchase lead context',
+    supportingDetails: [
+      availableUnits > 0 ? `${availableUnits} units for sale` : 'Sold out',
+      'Buyer price band',
+      'Purchase enquiry context',
+    ],
+  };
+};
+
 export function UnitTypesPhase() {
   const {
     unitTypes,
@@ -1286,6 +1370,10 @@ export function UnitTypesPhase() {
           {unitTypes.map(unit => {
             const classification = inferClassification(unit as any);
             const priceDisplay = getUnitTypesPhasePriceDisplay(unit, normalizedTransactionType);
+            const merchandisingPreview = getUnitTypesPhaseMerchandisingPreview(
+              unit,
+              normalizedTransactionType,
+            );
             return (
               <Card key={unit.id} className="group hover:shadow-lg transition-all border-slate-200">
               <div className="h-40 bg-slate-100 relative">
@@ -1341,7 +1429,7 @@ export function UnitTypesPhase() {
                         : 'text-red-600 bg-red-50',
                     )}
                   >
-                    {unit.availableUnits > 0 ? `${unit.availableUnits} Avail` : 'Sold Out'}
+                    {unit.availableUnits > 0 ? `${unit.availableUnits} Avail` : 'No availability'}
                   </Badge>
                 </div>
                 <p className="text-sm font-semibold text-blue-600">
@@ -1367,6 +1455,48 @@ export function UnitTypesPhase() {
                       <Maximize className="w-3.5 h-3.5" /> {unit.yardSize} m²
                     </span>
                   )}
+                </div>
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        {merchandisingPreview.eyebrow}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-slate-500">
+                        {merchandisingPreview.priceLabel}
+                      </p>
+                      <p className="text-base font-bold text-slate-950">
+                        {merchandisingPreview.priceText}
+                        {merchandisingPreview.priceSuffix ? (
+                          <span className="ml-1 text-xs font-medium text-slate-500">
+                            {merchandisingPreview.priceSuffix}
+                          </span>
+                        ) : null}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0">
+                      {merchandisingPreview.availabilityLabel}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {merchandisingPreview.supportingDetails.map(detail => (
+                      <span
+                        key={detail}
+                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600"
+                      >
+                        {detail}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+                    <span className="text-xs text-slate-500">
+                      {merchandisingPreview.leadContextLabel}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700">
+                      {merchandisingPreview.ctaLabel}
+                      <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
