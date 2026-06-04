@@ -298,6 +298,9 @@ Before calling operating mutations safe, prove:
   Status: passed.
 - Auction public page and search-card labels remain transaction-native after registration open.
   Status: passed.
+- Failed Sale reserve, Rental hold, and Auction registration mutations do not claim success, refresh
+  the dashboard back to backend truth, and write no operating events. Status: passed in browser/DB
+  proof.
 - Sale public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.
 

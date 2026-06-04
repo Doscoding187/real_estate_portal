@@ -297,7 +297,8 @@ Stage A browser proof must show:
   workflow state remains a future seeded-fixture assertion.
 - Public detail/search output remains Auction-native and reflects registration-open language where
   designed. Status: passed.
-- Failed lifecycle writes do not claim success.
+- Failed lifecycle writes do not claim success. Status: passed for stale
+  `scheduled` -> `registration_open` browser/DB proof.
 
 Stage B browser proof must additionally show:
 

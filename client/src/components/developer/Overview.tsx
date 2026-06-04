@@ -404,8 +404,13 @@ export default function Overview() {
           utils.developer.getFunnelKPIs.invalidate(),
         ]);
       },
-      onError: error => {
+      onError: async error => {
         toast.error(error.message || 'Could not update sales inventory.');
+        await Promise.all([
+          saleOperatingInventoryQuery.refetch(),
+          operatingEventsQuery.refetch(),
+          utils.developer.getDevelopments.invalidate(),
+        ]);
       },
     });
 
@@ -419,8 +424,13 @@ export default function Overview() {
         utils.developer.getFunnelKPIs.invalidate(),
       ]);
     },
-    onError: error => {
+    onError: async error => {
       toast.error(error.message || 'Could not update rental inventory.');
+      await Promise.all([
+        rentalOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+      ]);
     },
   });
 
@@ -439,8 +449,13 @@ export default function Overview() {
           utils.developer.getFunnelKPIs.invalidate(),
         ]);
       },
-      onError: error => {
+      onError: async error => {
         toast.error(error.message || 'Could not update Auction registration.');
+        await Promise.all([
+          auctionOperatingInventoryQuery.refetch(),
+          operatingEventsQuery.refetch(),
+          utils.developer.getDevelopments.invalidate(),
+        ]);
       },
     });
 

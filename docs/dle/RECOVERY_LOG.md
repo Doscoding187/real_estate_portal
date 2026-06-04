@@ -669,6 +669,71 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-04 - Failed Operating Mutation No-False-Success Proof
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove failed Sale, Rental, and Auction operating mutations do not claim success, do not write
+false operating events, and refresh the developer dashboard back to backend truth before moving to
+Auction activation or autosave.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- e2e/dle/operating-mutation-failure-trust.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-auction-no-false-success.png
+- docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && SKIP_DB_INIT=1 pnpm vitest run client/src/components/developer/Overview.test.ts server/services/__tests__/developmentOperatingEventsService.test.ts'`
+- Result: Passed. 2 test files, 13 tests.
+Focused browser proof run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/operating-mutation-failure-trust.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 test file, 1 browser test.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Sale, Rental, and Auction operating mutation error handlers now refetch the relevant operating
+  inventory panel, operating history, and development snapshot after showing the backend error.
+- Added a backend-backed browser proof that creates valid published Sale, Rental, and Auction
+  packages, then deliberately makes the dashboard stale with direct DB changes before each failed
+  click.
+- Sale proof: stale `Reserve` click after availability is changed to zero shows
+  `No available units can be reserved for this unit type.`, does not show `Unit reserved.`, refreshes
+  to `0 available, 0 reserved`, and writes no operating event.
+- Rental proof: stale `Hold` click after availability is changed to zero shows
+  `No available rental units can be held for this unit type.`, does not show `Rental unit held.`,
+  refreshes to `0 rentals available, 0 held`, and writes no operating event.
+- Auction proof: stale `Open Registration` click after the canonical lot status is changed to
+  `registration_open` shows the backend transition error, does not show
+  `Auction registration opened.`, refreshes to `Registration open`, and writes no operating event.
+- Captured screenshots for all three failed-mutation states.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Browser proof required valid published package fixtures; initial attempts correctly hit publish
+  readiness validation for short descriptions, missing highlights, and missing launch/completion
+  dates before the fixture was brought into compliance.
+Remaining risks:
+- This slice proves no-false-success for representative stale-state/availability failure paths, not
+  every possible network/session/server failure mode.
+- Time-gated Auction activation is not implemented.
+- Sold, let, passed-in, withdrawn, price-change, release-phase, showing, and lead-stage operating
+  mutations remain future slices.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement time-gated Auction activation: `registration_open` -> `active` only inside the auction
+  window, with failed early activation proof and no false success state.
+Commit hash/tag: This entry will be included in
+`test(dle): prove operating mutation failure handling`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-04 - Rental/Auction Wizard Save-Resume-Publish Browser Proof
 
 Date: 2026-06-04

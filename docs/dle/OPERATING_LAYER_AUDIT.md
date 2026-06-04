@@ -302,12 +302,6 @@ Implemented next implementation slice:
 - Re-ran `e2e/dle/sale-operating-reservation.spec.ts` after the shared private refactor; Sale
   reserve/release regression proof passed.
 
-Recommended next implementation slice:
-
-- Browser-proof failed Sale/Rental/Auction operating mutations do not claim success.
-- Then implement time-gated Auction activation from
-  `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
-
 Implemented Auction Stage A:
 
 - Extended canonical `unit_types.auction_status` with `registration_open`.
@@ -321,3 +315,20 @@ Implemented Auction Stage A:
   Registration-open language, and Auction search pricing.
 - Registered-bidder counts remain separate from `reserved_units`; time-gated activation and
   outcomes remain later Auction-specific slices.
+
+Implemented failed operating mutation trust proof:
+
+- Failed Sale reserve, Rental hold, and Auction registration mutations now refetch the relevant
+  inventory/readiness panels after showing the backend error.
+- Browser proof in `e2e/dle/operating-mutation-failure-trust.spec.ts` deliberately creates stale
+  dashboard state before each click, then verifies the UI shows failure, does not show a success
+  toast, refreshes back to backend truth, and records no operating event.
+- Evidence captured:
+  - `docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-no-false-success.png`
+  - `docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-no-false-success.png`
+  - `docs/dle/evidence/2026-06-04/qa-dle-operating-failed-auction-no-false-success.png`
+
+Recommended next implementation slice:
+
+- Implement time-gated Auction activation from
+  `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
