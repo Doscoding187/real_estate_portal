@@ -8,6 +8,7 @@ import { Edit, Trash2, AlertTriangle, Eye, Inbox } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { getQualityTier } from '@/lib/quality';
 import { withApiBase, getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
+import { calculateInventorySummary } from '../../../../shared/developmentDerived';
 
 type EntityCardTransactionType = 'sale' | 'rent' | 'auction';
 
@@ -75,6 +76,66 @@ export function getEntityStatusCardPriceDisplay(type: 'listing' | 'development',
   return `${prefix}${formatCurrency(priceFrom)}`;
 }
 
+export function getEntityStatusCardOperationsSnapshot(
+  type: 'listing' | 'development',
+  data: any,
+) {
+  if (type !== 'development') return null;
+
+  const transactionType = normalizeEntityCardTransactionType(data?.transactionType);
+  const inventory = calculateInventorySummary({
+    totalUnits: data?.totalUnits,
+    availableUnits: data?.availableUnits,
+    reservedUnits: data?.reservedUnits,
+  });
+
+  if (transactionType === 'rent') {
+    return {
+      engineLabel: 'Rental Engine',
+      inventoryLabel: 'Leasing inventory',
+      primaryLabel: 'Rentals available',
+      primaryCount: inventory.available,
+      secondaryLabel: 'Held',
+      secondaryCount: inventory.reserved,
+      outcomeLabel: 'Let estimate',
+      outcomeCount: inventory.sold,
+      leadCtaLabel: 'Manage rental leads',
+      inventoryActionLabel: 'Update rental inventory',
+      inventoryActionHelp: 'Inventory updates need the operating audit model first.',
+    };
+  }
+
+  if (transactionType === 'auction') {
+    return {
+      engineLabel: 'Auction Engine',
+      inventoryLabel: 'Auction lots',
+      primaryLabel: 'Lots open',
+      primaryCount: inventory.available,
+      secondaryLabel: 'Registered or held',
+      secondaryCount: inventory.reserved,
+      outcomeLabel: 'Auction outcomes',
+      outcomeCount: inventory.sold,
+      leadCtaLabel: 'Manage bidder leads',
+      inventoryActionLabel: 'Update auction outcomes',
+      inventoryActionHelp: 'Auction outcome updates need the operating audit model first.',
+    };
+  }
+
+  return {
+    engineLabel: 'Sale Engine',
+    inventoryLabel: 'Sales inventory',
+    primaryLabel: 'Available',
+    primaryCount: inventory.available,
+    secondaryLabel: 'Reserved',
+    secondaryCount: inventory.reserved,
+    outcomeLabel: 'Sold estimate',
+    outcomeCount: inventory.sold,
+    leadCtaLabel: 'Manage buyer leads',
+    inventoryActionLabel: 'Update sales inventory',
+    inventoryActionHelp: 'Inventory updates need the operating audit model first.',
+  };
+}
+
 export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   type,
   data,
@@ -138,6 +199,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   const image = isListing ? data.primaryImage : getPrimaryDevelopmentImageUrl(data.images);
 
   const priceDisplay = getEntityStatusCardPriceDisplay(type, data);
+  const operationsSnapshot = getEntityStatusCardOperationsSnapshot(type, data);
 
   return (
     <Card
@@ -278,6 +340,49 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                   </div>
                 </div>
               )}
+
+              {operationsSnapshot &&
+                (status === 'published' || status === 'active' || status === 'available') && (
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          {operationsSnapshot.engineLabel}
+                        </p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {operationsSnapshot.inventoryLabel}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="border-slate-300 text-slate-600">
+                        Read-only
+                      </Badge>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {[
+                        {
+                          label: operationsSnapshot.primaryLabel,
+                          value: operationsSnapshot.primaryCount,
+                        },
+                        {
+                          label: operationsSnapshot.secondaryLabel,
+                          value: operationsSnapshot.secondaryCount,
+                        },
+                        {
+                          label: operationsSnapshot.outcomeLabel,
+                          value: operationsSnapshot.outcomeCount,
+                        },
+                      ].map(item => (
+                        <div key={item.label} className="rounded-md border border-slate-200 bg-white p-2">
+                          <p className="text-lg font-bold text-slate-900">{item.value}</p>
+                          <p className="text-[11px] font-medium text-slate-500">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {operationsSnapshot.inventoryActionHelp}
+                    </p>
+                  </div>
+                )}
             </div>
 
             {/* Footer Actions if needed */}
@@ -293,7 +398,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                     {onViewEnquiries && (
                       <Button size="sm" variant="outline" onClick={() => onViewEnquiries(data.id)}>
                         <Inbox className="mr-2 h-4 w-4" />
-                        View Enquiries
+                        {operationsSnapshot?.leadCtaLabel || 'View Enquiries'}
                       </Button>
                     )}
                     {onView && (

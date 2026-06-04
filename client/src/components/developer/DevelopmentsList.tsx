@@ -211,6 +211,7 @@ const DevelopmentsList: React.FC = () => {
               onEdit={id => setLocation(`/developer/create-development?id=${id}`)}
               onDelete={id => handleDelete(id, dev.name)}
               onView={id => setLocation(`/development/${id}`)}
+              onViewEnquiries={id => setLocation(`/developer/leads?developmentId=${id}`)}
             />
           );
         })}

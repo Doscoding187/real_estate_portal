@@ -1,7 +1,8 @@
 # DLE Operating Layer Audit
 
 Date: 2026-06-04
-Status: Architecture audit complete. No runtime changes in this slice.
+Status: First read-only dashboard operating surface implemented. Inventory mutations remain
+blocked behind the operating status/audit model.
 
 ## Purpose
 
@@ -150,45 +151,49 @@ Operations to distribution:
 - Referral/deal documents exist in distribution modules, but they are not yet summarized inside the
   developer's DLE operating view.
 
-## First Implementation Slice Recommendation
+## First Implementation Slice Status
 
 Build a read-only `Development Operations Snapshot` inside the developer dashboard.
 
-The first slice should avoid schema changes and should not mutate inventory.
+The first implementation slice has been completed in:
 
-Recommended surface:
+- `client/src/components/dashboard/EntityStatusCard.tsx`
+- `client/src/components/developer/DevelopmentsList.tsx`
+- `client/src/components/dashboard/EntityStatusCard.test.ts`
 
-- Add a transaction-aware operations panel to either:
-  - each row/card in `client/src/components/developer/DevelopmentsList.tsx`, or
-  - the selected-development area in `client/src/components/developer/Overview.tsx`.
+It avoids schema changes and does not mutate inventory.
 
-Recommended first data sources:
+Implemented surface:
+
+- Published/live development cards now show a transaction-aware read-only operations snapshot.
+- The snapshot uses Sale, Rental, and Auction labels instead of generic sale wording.
+- The existing development-card enquiries action now routes to
+  `/developer/leads?developmentId=<id>` and uses transaction-aware CTA labels.
+
+Implemented first data sources:
 
 - `trpc.developer.getDevelopments`
 - existing development fields: `transactionType`, `totalUnits`, `availableUnits`, approval/publish
   state, pricing fields, auction dates
 - derived inventory helper: `calculateInventorySummary`
-- existing funnel KPIs and attention data where a development is selected
-- distribution settings where a development is selected
 
-Recommended visible outputs:
+Implemented visible outputs:
 
-- Sale: available/reserved/sold snapshot, buyer lead risk, sales pipeline link.
-- Rental: rentals available/held/let estimate, rental lead risk, leasing pipeline link.
-- Auction: lots open/reserved/outcome snapshot, bidder lead risk, auction pipeline link.
-- A clear `Manage leads` CTA carrying `developmentId`.
-- A clear `Edit public package` CTA for packaging edits.
-- A disabled or informational `Update inventory` CTA until the mutation/audit model is designed.
+- Sale: available/reserved/sold estimate and buyer-lead CTA.
+- Rental: rentals available/held/let estimate and rental-lead CTA.
+- Auction: lots open/registered-or-held/outcome estimate and bidder-lead CTA.
+- Informational read-only state explaining that inventory updates need the operating audit model
+  first.
 
 Guardrails:
 
-- Read-only first.
-- No schema or migration in the first implementation slice.
-- No edit-development autosave change.
+- Read-only first: satisfied.
+- No schema or migration in the first implementation slice: satisfied.
+- No edit-development autosave change: satisfied.
 - No inventory mutation until field ownership, audit events, and transaction-native statuses are
-  designed.
-- Do not reuse sale labels for Rental and Auction.
-- Keep distribution status explanatory, not hidden behind a toggle.
+  designed: still enforced.
+- Do not reuse sale labels for Rental and Auction: covered by focused helper tests.
+- Keep distribution status explanatory, not hidden behind a toggle: still future work.
 
 ## Next Architecture Work After The First Surface
 

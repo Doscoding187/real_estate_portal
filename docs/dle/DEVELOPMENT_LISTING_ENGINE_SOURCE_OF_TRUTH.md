@@ -347,10 +347,11 @@ Recommended order from here:
 4. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
 5. Product audit of public development page merchandising
 6. Search card and lead form alignment
-7. Implement the first read-only operating-layer surface from `docs/dle/OPERATING_LAYER_AUDIT.md`
-8. Developer dashboard and inventory impact
-9. Admin review impact
-10. Distribution/referral readiness
+7. Broaden the read-only operating-layer surface with lead risk and distribution readiness
+8. Define the transaction-native operating status/audit model before inventory mutations
+9. Developer dashboard and inventory impact
+10. Admin review impact
+11. Distribution/referral readiness
 
 ## 19. Definition of World-Class
 

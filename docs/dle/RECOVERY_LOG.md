@@ -1329,3 +1329,53 @@ Next recommended slice:
   queries.
 Commit hash/tag: This entry will be included in `docs(dle): define operating layer audit`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Read-Only Development Operations Snapshot
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first operating-layer surface without schema changes or inventory mutations, so
+live development cards begin reflecting Sale, Rental, and Auction operations after publish.
+Files changed:
+- client/src/components/dashboard/EntityStatusCard.tsx
+- client/src/components/dashboard/EntityStatusCard.test.ts
+- client/src/components/developer/DevelopmentsList.tsx
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/dashboard/EntityStatusCard.test.ts'`
+- Result: Passed. 1 test file, 7 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/dashboard/EntityStatusCard.test.ts client/src/pages/DevelopmentQualificationPage.test.ts client/src/components/development/DevelopmentLeadDialog.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 12 test files, 109 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added a transaction-aware `getEntityStatusCardOperationsSnapshot` helper for development cards.
+- Sale development cards can now show a read-only Sales inventory snapshot with available,
+  reserved, sold-estimate counts, and a buyer-leads CTA.
+- Rental development cards can now show a read-only Leasing inventory snapshot with rentals
+  available, held, let-estimate counts, and a rental-leads CTA.
+- Auction development cards can now show a read-only Auction lots snapshot with lots open,
+  registered-or-held, auction-outcome counts, and a bidder-leads CTA.
+- Live development cards use existing `calculateInventorySummary` logic and current development
+  fields only.
+- The developer developments list now routes the operations lead CTA to
+  `/developer/leads?developmentId=<id>`.
+- The UI explicitly marks inventory operations as read-only until the operating status/audit model
+  exists.
+- Updated the operating audit and source-of-truth to record the implemented first surface and the
+  next operating-layer order.
+Remaining risks:
+- The operations snapshot is intentionally read-only and still uses derived sold/let/outcome counts
+  from current total/available/reserved fields.
+- Lead risk, distribution readiness, inventory mutation, reservation/let/sold/auction outcome
+  tracking, and audit events remain unimplemented.
+- Browser proof for the dashboard surface has not been captured in this slice.
+Next recommended slice:
+- Broaden the read-only operations snapshot with existing lead-risk and distribution-readiness data,
+  then define the transaction-native operating status/audit model before any inventory mutation.
+Commit hash/tag: This entry will be included in `feat(dle): add read-only operations snapshot`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
