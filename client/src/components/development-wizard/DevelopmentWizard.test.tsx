@@ -992,6 +992,35 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Development loaded for editing.');
   });
 
+  it('rehydrates the new canonical target when the mounted wizard changes from draft to edit', async () => {
+    const { rerender } = render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().developmentData.name).toBe('Resumed Manual Draft');
+    });
+
+    window.history.replaceState({}, '', '/developer/create-development?id=987&brandProfileId=55');
+    testState.currentUrl = '/developer/create-development?id=987&brandProfileId=55';
+    rerender(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().developmentData.name).toBe('Edit Manual Draft');
+    });
+    expect(useDevelopmentWizard.getState().editingId).toBe(987);
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    expect(testState.autoSaveData).toMatchObject({
+      editingId: 987,
+      developmentId: 987,
+      workflowId: 'residential_rent',
+      currentStepId: 'review_publish',
+      developmentData: {
+        name: 'Edit Manual Draft',
+        transactionType: 'for_rent',
+      },
+    });
+    expect(testState.autoSaveData.developmentData.name).not.toBe('Resumed Manual Draft');
+  });
+
   it('manual save of edit mode carries the existing development target in the canonical snapshot', async () => {
     window.history.replaceState({}, '', '/developer/developments/edit?id=987&brandProfileId=55');
     testState.currentUrl = '/developer/developments/edit?id=987&brandProfileId=55';

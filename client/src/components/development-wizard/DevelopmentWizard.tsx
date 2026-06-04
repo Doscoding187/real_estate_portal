@@ -66,6 +66,11 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   const isEditMode = editId != null;
   const isDraftMode = draftId != null;
+  const hydrationTargetKey = isEditMode
+    ? `edit:${editId}:brand:${brandProfileId ?? 'none'}`
+    : isDraftMode
+      ? `draft:${draftId}:brand:${brandProfileId ?? 'none'}`
+      : `create:brand:${brandProfileId ?? 'none'}`;
 
   // Keep draftId in state because new drafts get an ID after save
   const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftId);
@@ -104,6 +109,19 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [manualLastSavedAt, setManualLastSavedAt] = useState<Date | null>(null);
   const [persistedSaveSignature, setPersistedSaveSignature] = useState<string | null>(null);
+  const hydrationTargetRef = useRef(hydrationTargetKey);
+
+  useEffect(() => {
+    if (hydrationTargetRef.current === hydrationTargetKey) return;
+
+    hydrationTargetRef.current = hydrationTargetKey;
+    setIsHydrated(false);
+    setManualLastSavedAt(null);
+    setPersistedSaveSignature(null);
+    setSaveFailure(null);
+    setApiError(null);
+    reset();
+  }, [hydrationTargetKey, reset]);
 
   // --- Create mode: wait for persist rehydrate, then hard reset ---
   useEffect(() => {

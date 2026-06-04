@@ -119,22 +119,37 @@ background autosave:
 - focused create, draft-resume, and edit tests confirm autosave remains disabled while the correct
   canonical route snapshot is exposed.
 
-Still required before enablement:
+The 2026-06-04 browser preflight proves the real-runtime safety boundary without enabling
+background autosave:
 
-- real-backend browser proof that overlapping/queued saves cannot create duplicate drafts;
-- route hydration-gate browser proof for create, draft resume, and edit modes;
-- browser failure/retry proof against the real backend path;
+- create, draft-resume, and edit routes make no persistence calls while hydrating;
+- changing route targets inside one mounted wizard clears the previous target and hydrates the new
+  canonical target;
+- a deterministic backend `success: false` response remains visibly failed and leaves the database
+  unchanged;
+- a later real-backend retry clears the failure and persists the canonical snapshot;
+- two overlapping new-draft saves execute serially, create one database row, and send the first
+  returned draft ID with the second request;
+- Rental and Auction save-resume-publish browser flows still pass after the route-target fix.
+
+Still required before guarded create/draft enablement:
+
 - a deliberate debounce decision based on developer workflow, not an arbitrary timer;
-- transaction-lane browser proof that autosave resumes the latest confirmed canonical state.
+- an explicit rollout switch and rollback path;
+- transaction-lane browser proof after guarded autosave is enabled that Rental and Auction resume
+  the latest confirmed canonical state.
+
+Edit-development autosave is a separate later decision. It must preserve baseline-aware partial-step
+ownership and must not reuse create/draft full-snapshot persistence as a published-development
+overwrite path.
 
 ## Recommended Next Slice
 
-Prove the DLE-specific browser recovery contract without enabling background saves:
+Design and prove a guarded create/draft-only autosave rollout:
 
-1. Prove create, draft-resume, and edit routes do not persist before the intended canonical state
-   is loaded.
-2. Prove queued real-backend saves reuse the first confirmed draft ID and do not create duplicates.
-3. Force a browser save failure, confirm visible recovery, retry, and verify
-   the persisted canonical snapshot.
-4. Only then choose a guarded rollout strategy and deliberate debounce for create/draft journeys
-   before considering edit-development autosave.
+1. Choose and document the debounce based on the developer packaging workflow.
+2. Add an explicit create/draft-only rollout switch; keep edit-development autosave disabled.
+3. Prove Sale, Rental, and Auction autosave success, resume, failure, retry, and no duplicate drafts
+   in the browser with the switch enabled.
+4. Keep Manual Save Draft available as the trusted fallback and define the rollback trigger before
+   considering broader rollout.

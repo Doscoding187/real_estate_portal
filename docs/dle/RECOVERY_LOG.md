@@ -852,3 +852,52 @@ Next recommended slice:
 - Add browser-level real-backend hydration/no-duplicate/failure-retry evidence while background autosave remains disabled, then make the guarded rollout and debounce decision.
 Commit hash/tag: This entry will be included in `fix(dle): guard canonical draft persistence`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Autosave Browser Preflight And Route-Target Safety
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Close the real-runtime autosave preflight gates without enabling background autosave, and prove one mounted wizard cannot carry stale canonical state between route targets.
+Files changed:
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- e2e/dle/autosave-preflight-browser.spec.ts
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-browser-failure-visible.png
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-browser-one-draft-identity.png
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-browser-retry-saved.png
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-edit-hydrated-without-save.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/autosave-preflight-browser.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 browser spec, 3 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/autosave-preflight-browser.spec.ts e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 2 browser specs, 5 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/hooks/__tests__/useAutoSave.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/developerRouter.drafts.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed with local test database access. 16 test files, 134 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after final docs update.
+Proof and fixes:
+- Browser navigation from a resumed draft directly to an edit target exposed stale canonical state because the mounted wizard retained `isHydrated: true`.
+- Added a route-target hydration key so create, draft, edit, and brand-target changes clear the previous target before hydrating the new canonical state.
+- Focused component proof confirms a mounted draft wizard rehydrates the edit target and keeps autosave disabled.
+- Browser proof confirms create, draft-resume, and edit routes make no persistence calls during hydration.
+- A deterministic `success: false` browser save remains visibly failed and leaves the database unchanged; a later real-backend retry clears the failure and persists the canonical rental snapshot.
+- Two overlapping new-draft browser saves remain serialized, create exactly one real database row, and send the first returned draft ID with the second request.
+- Rental and Auction save-resume-publish browser flows still pass after the route-target fix.
+- Background autosave remains deliberately disabled behind `autoSaveEnabled = false`.
+Evidence:
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-browser-failure-visible.png
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-browser-retry-saved.png
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-browser-one-draft-identity.png
+- docs/dle/evidence/2026-06-04/qa-dle-autosave-edit-hydrated-without-save.png
+Remaining risks:
+- A deliberate debounce and explicit create/draft-only rollout switch are still required.
+- Sale, Rental, and Auction need browser proof with guarded background autosave actually enabled.
+- Edit-development autosave must remain a separate later decision because it requires baseline-aware partial-step ownership.
+Next recommended slice:
+- Design and implement a guarded create/draft-only autosave rollout switch and deliberate debounce, then prove transaction-lane autosave success/resume/failure/retry before broader rollout.
+Commit hash/tag: This entry will be included in `fix(dle): prove autosave browser preflight`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
