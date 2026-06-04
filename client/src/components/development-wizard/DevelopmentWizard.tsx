@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 
@@ -45,6 +45,11 @@ const parseNumericParam = (value: string | null) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const getDraftStateSignature = (snapshot: any) => {
+  const { _savedAt: _ignoredSavedAt, ...canonicalState } = snapshot ?? {};
+  return JSON.stringify(canonicalState);
+};
+
 export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [, setLocation] = useLocation();
 
@@ -85,19 +90,10 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   const {
     currentPhase,
-    currentStepId,
-    workflowId,
-    completedSteps,
-    stepData,
     setPhase,
     developmentType,
     developmentData,
-    classification,
-    overview,
-    unitTypes,
-    finalisation,
     reset,
-    saveDraft,
     hydrateDevelopment,
     initializeWorkflow,
     setWorkflowStep,
@@ -145,42 +141,26 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const saveDraftMutation = trpc.developer.saveDraft.useMutation();
   const updateDevelopmentMutation = trpc.developer.updateDevelopment.useMutation();
   const updatePublisherDevelopmentMutation = trpc.superAdminPublisher.updateDevelopment.useMutation();
+  const draftPersistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
 
-  const stateToWatch = useMemo(
-    () => ({
-      currentPhase,
-      currentStepId,
-      workflowId,
-      completedSteps,
-      stepData,
-      developmentData,
-      classification,
-      overview,
-      unitTypes,
-      finalisation,
-    }),
-    [
-      currentPhase,
-      currentStepId,
-      workflowId,
-      completedSteps,
-      stepData,
-      developmentData,
-      classification,
-      overview,
-      unitTypes,
-      finalisation,
-    ],
-  );
-  const saveStateSignature = useMemo(() => JSON.stringify(stateToWatch), [stateToWatch]);
+  const liveCanonicalSnapshot = useDevelopmentWizard.getState().getDraftData();
+  const liveCanonicalSignature = getDraftStateSignature(liveCanonicalSnapshot);
+  const canonicalSnapshotRef = useRef(liveCanonicalSnapshot);
+  const canonicalSignatureRef = useRef(liveCanonicalSignature);
+  if (canonicalSignatureRef.current !== liveCanonicalSignature) {
+    canonicalSnapshotRef.current = liveCanonicalSnapshot;
+    canonicalSignatureRef.current = liveCanonicalSignature;
+  }
+  const canonicalSnapshotToWatch = canonicalSnapshotRef.current;
+  const saveStateSignature = canonicalSignatureRef.current;
 
-  const persistDraftSnapshot = useCallback(async () => {
-    await saveDraft(async data => {
+  const persistDraftSnapshot = useCallback(async (snapshot: any) => {
+    const runPersistence = async () => {
       const existingDraftId = currentDraftIdRef.current;
       const result = await saveDraftMutation.mutateAsync({
         ...(existingDraftId ? { id: existingDraftId } : {}),
         ...(effectiveDraftBrandProfileId ? { brandProfileId: effectiveDraftBrandProfileId } : {}),
-        draftData: data,
+        draftData: snapshot,
       });
 
       if (result?.success === false) {
@@ -194,8 +174,15 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         currentDraftIdRef.current = result.id;
         setCurrentDraftId(result.id);
       }
-    });
-  }, [effectiveDraftBrandProfileId, saveDraft, saveDraftMutation]);
+    };
+
+    const persistencePromise = draftPersistenceQueueRef.current.then(
+      runPersistence,
+      runPersistence,
+    );
+    draftPersistenceQueueRef.current = persistencePromise.catch(() => undefined);
+    await persistencePromise;
+  }, [effectiveDraftBrandProfileId, saveDraftMutation]);
 
   // Autosave remains deliberately disabled until the safety contract is fully proven.
   const autoSaveEnabled = false;
@@ -205,15 +192,15 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     error: autoSaveError,
     saveNow,
     clearSaveStatus,
-  } = useAutoSave(stateToWatch, {
+  } = useAutoSave(canonicalSnapshotToWatch, {
     debounceMs: 60000,
     enabled: autoSaveEnabled && isHydrated,
-    shouldSkipSave: snapshot => persistedSaveSignature === JSON.stringify(snapshot),
+    shouldSkipSave: snapshot => persistedSaveSignature === getDraftStateSignature(snapshot),
     onSave: async snapshot => {
       setSaveFailure(null);
       setApiError(null);
-      await persistDraftSnapshot();
-      setPersistedSaveSignature(JSON.stringify(snapshot));
+      await persistDraftSnapshot(snapshot);
+      setPersistedSaveSignature(getDraftStateSignature(snapshot));
     },
   });
 
@@ -373,13 +360,14 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   // --- Draft hydration (gated by persist rehydrate; never in edit mode) ---
   useEffect(() => {
     if (!persistReady) return;
+    if (!isDraftMode) return;
     if (isEditMode) return;
     if (!loadedDraft?.draftData || isHydrated) return;
 
     hydrateDevelopment(loadedDraft.draftData);
     setIsHydrated(true);
     toast.success('Draft loaded successfully');
-  }, [persistReady, isEditMode, loadedDraft, isHydrated, hydrateDevelopment]);
+  }, [persistReady, isDraftMode, isEditMode, loadedDraft, isHydrated, hydrateDevelopment]);
 
   // --- Legacy phase skip ---
   useEffect(() => {
@@ -403,10 +391,11 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     setSaveFailure(null);
     setApiError(null);
     try {
-      await persistDraftSnapshot();
+      const requestedSnapshot = useDevelopmentWizard.getState().getDraftData();
+      await persistDraftSnapshot(requestedSnapshot);
       const savedAt = new Date();
       setManualLastSavedAt(savedAt);
-      setPersistedSaveSignature(saveStateSignature);
+      setPersistedSaveSignature(getDraftStateSignature(requestedSnapshot));
       toast.success('Draft saved');
       return true;
     } catch (error) {
@@ -421,7 +410,6 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     isManualSavingDraft,
     clearSaveStatus,
     persistDraftSnapshot,
-    saveStateSignature,
   ]);
 
   const handleSaveProgress = useCallback(async (): Promise<boolean> => {

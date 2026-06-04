@@ -104,9 +104,24 @@ DLE background autosave:
 - mount-cycle state changes are ignored until the coordinator is ready to observe real
   post-mount changes.
 
+The 2026-06-04 DLE persistence-boundary slice proves the focused wizard contract without enabling
+background autosave:
+
+- Manual Save Draft and future autosave writes share one DLE-level serialized persistence queue;
+- overlapping new-draft writes preserve their requested canonical snapshots;
+- a queued write reuses the first confirmed draft ID instead of creating a second draft;
+- autosave observes the same full canonical snapshot persisted by Manual Save Draft, rather than a
+  narrower UI-state subset;
+- save-state signatures ignore `_savedAt` metadata while still tracking canonical owned-field
+  changes;
+- fresh-create mode rejects stale cached draft hydration;
+- draft hydration explicitly requires a draft route;
+- focused create, draft-resume, and edit tests confirm autosave remains disabled while the correct
+  canonical route snapshot is exposed.
+
 Still required before enablement:
 
-- DLE-specific queued-save/draft-ID concurrency proof through the real persistence path;
+- real-backend browser proof that overlapping/queued saves cannot create duplicate drafts;
 - route hydration-gate browser proof for create, draft resume, and edit modes;
 - browser failure/retry proof against the real backend path;
 - a deliberate debounce decision based on developer workflow, not an arbitrary timer;
@@ -114,12 +129,12 @@ Still required before enablement:
 
 ## Recommended Next Slice
 
-Prove the DLE-specific hydration and recovery contract without enabling background saves:
+Prove the DLE-specific browser recovery contract without enabling background saves:
 
-1. Prove create, draft-resume, and edit route hydration cannot trigger persistence before the
-   intended canonical state is loaded.
-2. Prove queued real-path saves reuse the first confirmed draft ID and do not create duplicates.
-3. Add a browser test that forces a save failure, confirms visible recovery, retries, and verifies
+1. Prove create, draft-resume, and edit routes do not persist before the intended canonical state
+   is loaded.
+2. Prove queued real-backend saves reuse the first confirmed draft ID and do not create duplicates.
+3. Force a browser save failure, confirm visible recovery, retry, and verify
    the persisted canonical snapshot.
 4. Only then choose a guarded rollout strategy and deliberate debounce for create/draft journeys
    before considering edit-development autosave.

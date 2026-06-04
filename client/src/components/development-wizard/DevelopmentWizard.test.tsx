@@ -12,6 +12,7 @@ const testState = vi.hoisted(() => {
   const toastSuccessMock = vi.fn();
   const toastErrorMock = vi.fn();
   const setLocationMock = vi.fn();
+  let autoSaveData: any = null;
   let autoSaveOptions: any = null;
   let currentUrl = '/developer/developments/new?draftId=321&brandProfileId=55';
   let userRole = 'developer';
@@ -120,6 +121,7 @@ const testState = vi.hoisted(() => {
   };
 
   return {
+    autoSaveData,
     autoSaveOptions,
     canonicalDraft,
     currentUrl,
@@ -155,7 +157,8 @@ vi.mock('@/hooks/usePublisherContext', () => ({
 }));
 
 vi.mock('@/hooks/useAutoSave', () => ({
-  useAutoSave: (_data: any, options: any) => {
+  useAutoSave: (data: any, options: any) => {
+    testState.autoSaveData = data;
     testState.autoSaveOptions = options;
     return {
       error: null,
@@ -441,6 +444,7 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
       '/developer/developments/new?draftId=321&brandProfileId=55',
     );
     testState.currentUrl = '/developer/developments/new?draftId=321&brandProfileId=55';
+    testState.autoSaveData = null;
     testState.autoSaveOptions = null;
     testState.userRole = 'developer';
     testState.publisherContext = null;
@@ -515,7 +519,9 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Draft saved');
 
     act(() => {
-      useDevelopmentWizard.getState().setDevelopmentData({ tagline: 'Changed after save' });
+      useDevelopmentWizard.getState().saveWorkflowStepData('marketing_summary' as any, {
+        tagline: 'Changed after save',
+      });
     });
     await waitFor(() => {
       expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
@@ -565,25 +571,98 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     });
   });
 
-  it('reuses the first confirmed draft id for later persistence without waiting for a rerender', async () => {
+  it('resets stale persisted state before exposing a create-mode autosave snapshot', async () => {
     window.history.replaceState({}, '', '/developer/developments/new?brandProfileId=55');
     testState.currentUrl = '/developer/developments/new?brandProfileId=55';
-    testState.saveDraftMutationMock.mockResolvedValue({ id: 777, success: true });
+    useDevelopmentWizard.setState({
+      workflowId: 'residential_sale' as any,
+      developmentData: {
+        ...useDevelopmentWizard.getState().developmentData,
+        name: 'Stale Create State',
+        transactionType: 'for_sale',
+      } as any,
+    });
 
     render(<DevelopmentWizard />);
 
     await waitFor(() => {
-      expect(testState.autoSaveOptions).toBeTruthy();
+      expect(testState.autoSaveData?.developmentData?.name).not.toBe('Stale Create State');
     });
+    expect(useDevelopmentWizard.getState().developmentData.name).not.toBe('Stale Create State');
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+  });
+
+  it('serializes overlapping autosave and manual writes through one new-draft identity', async () => {
+    window.history.replaceState({}, '', '/developer/developments/new?brandProfileId=55');
+    testState.currentUrl = '/developer/developments/new?brandProfileId=55';
+    let resolveFirstPersistence!: (value: any) => void;
+    const firstPersistence = new Promise(resolve => {
+      resolveFirstPersistence = resolve;
+    });
+    testState.saveDraftMutationMock
+      .mockImplementationOnce(() => firstPersistence)
+      .mockResolvedValueOnce({ id: 777, success: true });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.autoSaveData).toBeTruthy();
+    });
+
+    act(() => {
+      useDevelopmentWizard.getState().setDevelopmentData({ name: 'Autosave Snapshot' });
+    });
+    await waitFor(() => {
+      expect(testState.autoSaveData.developmentData.name).toBe('Autosave Snapshot');
+    });
+
+    const autosaveSnapshot = testState.autoSaveData;
+    let autosavePromise!: Promise<void>;
+    act(() => {
+      autosavePromise = testState.autoSaveOptions.onSave(autosaveSnapshot);
+    });
+    await waitFor(() => {
+      expect(testState.saveDraftMutationMock).toHaveBeenCalledTimes(1);
+    });
+    expect(testState.saveDraftMutationMock.mock.calls[0][0]).not.toHaveProperty('id');
+    expect(testState.saveDraftMutationMock.mock.calls[0][0].draftData).toBe(autosaveSnapshot);
+
+    act(() => {
+      useDevelopmentWizard.getState().setDevelopmentData({ name: 'Manual Snapshot' });
+    });
+    await waitFor(() => {
+      expect(testState.autoSaveData.developmentData.name).toBe('Manual Snapshot');
+    });
+    fireEvent.click(screen.getByRole('button', { name: /manual save draft/i }));
 
     await act(async () => {
-      await testState.autoSaveOptions.onSave({ revision: 1 });
-      await testState.autoSaveOptions.onSave({ revision: 2 });
+      await Promise.resolve();
+    });
+    expect(testState.saveDraftMutationMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirstPersistence({ id: 777, success: true });
+      await autosavePromise;
+    });
+    await waitFor(() => {
+      expect(testState.saveDraftMutationMock).toHaveBeenCalledTimes(2);
     });
 
+    const manualInput = testState.saveDraftMutationMock.mock.calls[1][0];
     expect(testState.saveDraftMutationMock).toHaveBeenCalledTimes(2);
-    expect(testState.saveDraftMutationMock.mock.calls[0][0]).not.toHaveProperty('id');
-    expect(testState.saveDraftMutationMock.mock.calls[1][0]).toMatchObject({ id: 777 });
+    expect(manualInput).toMatchObject({
+      id: 777,
+      draftData: {
+        developmentData: {
+          name: 'Manual Snapshot',
+        },
+      },
+    });
+    expect(manualInput.draftData.developmentData.name).not.toBe('Autosave Snapshot');
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('saved');
+    });
   });
 
   it('does not confirm a new draft save without a persistent draft id', async () => {
@@ -683,6 +762,16 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     expect(useDevelopmentWizard.getState().workflowId).toBe('residential_rent');
     expect(useDevelopmentWizard.getState().developmentData.name).toBe('Resumed Manual Draft');
     expect(useDevelopmentWizard.getState().unitTypes[0].id).toBe('resume-unit-db-1');
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    expect(testState.autoSaveData).toMatchObject({
+      workflowId: 'residential_rent',
+      currentStepId: 'review_publish',
+      developmentData: {
+        name: 'Resumed Manual Draft',
+        transactionType: 'for_rent',
+      },
+    });
+    expect(testState.autoSaveData.developmentData.name).not.toBe('Stale Local Development');
 
     fireEvent.click(screen.getByRole('button', { name: /manual save draft/i }));
 
@@ -889,6 +978,17 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
       'unit_types',
       'review_publish',
     ]);
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    expect(testState.autoSaveData).toMatchObject({
+      editingId: 987,
+      developmentId: 987,
+      workflowId: 'residential_rent',
+      currentStepId: 'review_publish',
+      developmentData: {
+        name: 'Edit Manual Draft',
+        transactionType: 'for_rent',
+      },
+    });
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Development loaded for editing.');
   });
 

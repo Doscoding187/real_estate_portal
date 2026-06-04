@@ -816,3 +816,39 @@ Next recommended slice:
 - Prove DLE route hydration and duplicate-draft prevention through the real persistence path, then add deliberate browser failure/retry proof. Keep background autosave disabled.
 Commit hash/tag: This entry will be included in `fix(dle): serialize autosave coordinator`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - DLE Canonical Persistence Boundary Guardrails
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove exact canonical snapshot ownership, route hydration gating, and duplicate-draft prevention at the DLE persistence boundary while background autosave remains disabled.
+Files changed:
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/hooks/__tests__/useAutoSave.test.tsx client/src/components/wizard/WizardEngine.test.tsx'`
+- Result: Passed. 3 test files, 27 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/hooks/__tests__/useAutoSave.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/developerRouter.drafts.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed with local test database access. 16 test files, 133 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after final docs update.
+Proof and fixes:
+- Manual Save Draft and future autosave writes now share one DLE-level serialized persistence queue.
+- An overlapping autosave/manual-save proof confirms the first new-draft write runs alone, the queued write preserves its own canonical snapshot, and the queued write reuses the first returned draft ID.
+- Autosave now observes and persists the full canonical draft snapshot rather than a narrower hand-selected UI-state object.
+- Manual save captures the exact canonical snapshot at request time.
+- Save-state signatures ignore changing `_savedAt` metadata while tracking canonical owned-field changes.
+- Draft hydration now explicitly requires draft mode, preventing cached draft data from hydrating a fresh-create route.
+- Focused create, draft-resume, and edit tests confirm stale state is replaced by the correct canonical route snapshot while background autosave remains disabled.
+Remaining risks:
+- Browser proof against the real backend is still required for route hydration, queued no-duplicate behavior, and deliberate save failure/retry.
+- Debounce timing and guarded rollout scope remain undecided.
+- Background autosave remains deliberately disabled behind `autoSaveEnabled = false`.
+Next recommended slice:
+- Add browser-level real-backend hydration/no-duplicate/failure-retry evidence while background autosave remains disabled, then make the guarded rollout and debounce decision.
+Commit hash/tag: This entry will be included in `fix(dle): guard canonical draft persistence`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
