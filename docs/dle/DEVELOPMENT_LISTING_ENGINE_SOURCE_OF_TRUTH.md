@@ -326,6 +326,7 @@ docs/
     TECHNICAL_ARCHITECTURE.md
     FIELD_OWNERSHIP_CONTRACT.md
     AUTOSAVE_SAFETY_CONTRACT.md
+    TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
     AGENT_HANDOFF_TEMPLATE.md
 ```
 
@@ -341,9 +342,9 @@ Recommended order from here:
 
 1. Run and monitor a controlled create/draft autosave rollout
 2. Keep edit-development autosave separate until partial-step ownership is proven
-3. Product audit of wizard experience
-4. Product audit of public development page
-5. UI upgrade to make the transaction engines visible and joyful
+3. Continue the transaction-engine product experience audit
+4. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
+5. Product audit of public development page merchandising
 6. Search card and lead form alignment
 7. Developer dashboard and inventory impact
 8. Admin review impact

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gavel, KeyRound, Save, Tag } from 'lucide-react';
 import { DevelopmentTypePhase } from '../development-wizard/phases/DevelopmentTypePhase';
 import { ResidentialConfigPhase } from '../development-wizard/phases/ResidentialConfigPhase';
 import { IdentityPhase } from '../development-wizard/phases/IdentityPhase';
@@ -27,6 +27,131 @@ const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
   UnitTypesStep: UnitTypesPhase,
   ReviewStep: FinalisationPhase,
 };
+
+type WizardTransactionEngine = 'sale' | 'rental' | 'auction';
+
+const TRANSACTION_ENGINE_COPY: Record<
+  WizardTransactionEngine,
+  {
+    accentClass: string;
+    icon: typeof Tag;
+    label: string;
+    outcome: string;
+    signals: string[];
+    summary: string;
+    title: string;
+  }
+> = {
+  sale: {
+    accentClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    icon: Tag,
+    label: 'Sale Engine',
+    title: 'Buyer-ready development package',
+    summary: 'Shape sale inventory around price bands, ownership confidence, and purchase enquiry context.',
+    signals: ['Sale price bands', 'Buyer costs', 'Available and reserved stock'],
+    outcome: 'Public output: price ranges, unit cards, buyer CTAs, and purchase lead context.',
+  },
+  rental: {
+    accentClass: 'border-sky-200 bg-sky-50 text-sky-700',
+    icon: KeyRound,
+    label: 'Rental Engine',
+    title: 'Renter-ready development package',
+    summary: 'Shape leasing inventory around monthly rent, tenant fit, availability, and move-in terms.',
+    signals: ['Monthly rent ranges', 'Deposit and lease terms', 'Rental availability'],
+    outcome: 'Public output: rent language, unit fit, rental CTAs, and lease lead context.',
+  },
+  auction: {
+    accentClass: 'border-amber-200 bg-amber-50 text-amber-700',
+    icon: Gavel,
+    label: 'Auction Engine',
+    title: 'Bid-ready development package',
+    summary: 'Shape auction inventory around opening bid, timing, eligibility, and bidder urgency.',
+    signals: ['Starting bid', 'Auction window', 'Bidder readiness'],
+    outcome: 'Public output: bid language, auction timing, registration CTAs, and auction lead context.',
+  },
+};
+
+const STEP_FOCUS: Record<string, string> = {
+  configuration: 'commercial branch and inventory shape',
+  identity_market: 'market identity, launch posture, and developer promise',
+  location: 'location story and buyer/renter confidence',
+  governance_finances: 'legal, ownership, costs, and rules',
+  amenities_features: 'amenity value and lifestyle proof',
+  marketing_summary: 'highlights and buyer-facing positioning',
+  development_media: 'media hierarchy, brochures, and visual trust',
+  unit_types: 'commercial unit inventory and transaction pricing',
+  review_publish: 'readiness, publish safety, and public conversion',
+};
+
+export function normalizeWizardTransactionEngine(value: unknown): WizardTransactionEngine {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['for-rent', 'rent', 'rental', 'to-rent', 'lease'].includes(normalized)) return 'rental';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getWizardTransactionEngineCopy(value: unknown) {
+  return TRANSACTION_ENGINE_COPY[normalizeWizardTransactionEngine(value)];
+}
+
+function TransactionEngineGuidance({
+  currentStepId,
+  transactionType,
+}: {
+  currentStepId: string | null;
+  transactionType: unknown;
+}) {
+  const copy = getWizardTransactionEngineCopy(transactionType);
+  const Icon = copy.icon;
+  const focus = currentStepId ? STEP_FOCUS[currentStepId] : null;
+
+  return (
+    <section
+      aria-label={`${copy.label} packaging context`}
+      className="mb-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+    >
+      <div className="grid gap-4 md:grid-cols-[1.1fr_1fr] md:items-center">
+        <div className="flex gap-3">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${copy.accentClass}`}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {copy.label}
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-950">{copy.title}</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{copy.summary}</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {copy.signals.map(signal => (
+              <span
+                key={signal}
+                className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
+              >
+                {signal}
+              </span>
+            ))}
+          </div>
+          <p className="text-sm text-slate-600">{copy.outcome}</p>
+          {focus && (
+            <p className="text-xs font-medium text-slate-500">
+              Current packaging focus: <span className="text-slate-700">{focus}</span>
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 interface WizardEngineProps {
   onExit?: () => void;
@@ -55,6 +180,7 @@ export function WizardEngine({
     stepErrors,
     developmentData,
     developmentType,
+    transactionType,
     listingIdentity,
     setWorkflowStep,
   } = useDevelopmentWizard();
@@ -102,6 +228,7 @@ export function WizardEngine({
 
   const StepComponent = STEP_COMPONENTS[currentStep.componentKey];
   const progress = ((currentStepIndex + 1) / visibleSteps.length) * 100;
+  const activeTransactionType = developmentData.transactionType ?? transactionType;
 
   // Validation Display
   const currentErrors = currentStepId ? stepErrors[currentStepId] : [];
@@ -120,6 +247,11 @@ export function WizardEngine({
 
       <main className="flex-1 py-8 px-4">
         <div className="max-w-5xl mx-auto">
+          <TransactionEngineGuidance
+            currentStepId={currentStepId}
+            transactionType={activeTransactionType}
+          />
+
           {/* Validation Errors for Current Step */}
           {currentErrors && currentErrors.length > 0 && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-2">

@@ -53,3 +53,56 @@ describe('WizardEngine persistence controls', () => {
     expect(onSaveProgress).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('WizardEngine transaction engine guidance', () => {
+  beforeEach(() => {
+    setRentalIdentityStep();
+  });
+
+  it.each([
+    {
+      transactionType: 'for_sale',
+      workflowId: 'residential_sale',
+      engine: 'Sale Engine',
+      signal: 'Sale price bands',
+      outcome: 'purchase lead context',
+    },
+    {
+      transactionType: 'for_rent',
+      workflowId: 'residential_rent',
+      engine: 'Rental Engine',
+      signal: 'Monthly rent ranges',
+      outcome: 'lease lead context',
+    },
+    {
+      transactionType: 'auction',
+      workflowId: 'residential_auction',
+      engine: 'Auction Engine',
+      signal: 'Auction window',
+      outcome: 'auction lead context',
+    },
+  ])(
+    'surfaces $engine commercial packaging context',
+    ({ engine, outcome, signal, transactionType, workflowId }) => {
+      useDevelopmentWizard.setState({
+        workflowId: workflowId as any,
+        currentStepId: 'identity_market' as any,
+        developmentType: 'residential',
+        transactionType: transactionType as any,
+        developmentData: {
+          name: `${engine} Proof`,
+          developmentType: 'residential',
+          transactionType,
+        } as any,
+      });
+
+      render(<WizardEngine />);
+
+      expect(screen.getByLabelText(`${engine} packaging context`)).toBeTruthy();
+      expect(screen.getByText(engine)).toBeTruthy();
+      expect(screen.getByText(signal)).toBeTruthy();
+      expect(screen.getByText(new RegExp(outcome))).toBeTruthy();
+      expect(screen.getByText(/market identity, launch posture, and developer promise/i)).toBeTruthy();
+    },
+  );
+});

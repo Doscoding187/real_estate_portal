@@ -21,6 +21,13 @@ Its job is to help a developer turn raw project information into a market-ready 
 - Backend intelligence is visible in the wizard, public pages, search cards, unit cards, lead forms, dashboards, and distribution/referral views.
 - The platform feels commercially serious without feeling heavy.
 
+## Current Product Direction
+
+The wizard shell should now make the active transaction engine visible throughout the packaging
+flow. Sale, Rental, and Auction should not appear only as setup choices or conditional fields; each
+lane should carry its own commercial language, pricing semantics, inventory signals, and public
+output expectations as the developer works.
+
 ## What To Avoid
 
 - Treating developments like single listings.

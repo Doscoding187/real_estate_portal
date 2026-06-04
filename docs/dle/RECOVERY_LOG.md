@@ -971,3 +971,50 @@ Next recommended slice:
   rollback triggers, then return to the transaction-first wizard product experience audit.
 Commit hash/tag: This entry will be included in `feat(dle): add guarded draft autosave rollout`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Transaction Engine Wizard Guidance
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Start turning the proven transaction architecture into visible product experience by making
+the active Sale, Rental, or Auction engine explicit inside the shared wizard shell.
+Files changed:
+- client/src/components/wizard/WizardEngine.tsx
+- client/src/components/wizard/WizardEngine.test.tsx
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/PRODUCT_VISION.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentUnitDetailPage.test.ts'`
+- Result: Passed. 5 test files, 49 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 browser spec, 2 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added a shared transaction-engine guidance band to the active wizard shell.
+- The band makes the active engine visible as Sale Engine, Rental Engine, or Auction Engine.
+- Sale copy now calls out price bands, buyer costs, available/reserved stock, and purchase lead
+  context.
+- Rental copy now calls out monthly rent ranges, deposit/lease terms, rental availability, and
+  lease lead context.
+- Auction copy now calls out starting bid, auction window, bidder readiness, and auction lead
+  context.
+- The band maps the current workflow step to a commercial packaging focus, so generic steps such
+  as Identity, Location, Media, Unit Types, and Review carry transaction-first meaning.
+- Added product audit documentation that separates current transaction-aware mechanics from the
+  still-needed transaction-first experience upgrades.
+Remaining risks:
+- This is the first visible product layer, not a full wizard redesign.
+- The wizard still needs live public-preview feedback for identity, highlights, media, and unit
+  cards.
+- Rental and Auction still need deeper product-language improvements for lease terms, bidder
+  registration, auction/legal packs, and post-publish operations.
+Next recommended slice:
+- Add a transaction-aware unit-card preview inside Unit Types so developers can see how sale,
+  rental, and auction inventory will merchandise publicly before publishing.
+Commit hash/tag: This entry will be included in `feat(dle): surface transaction engine guidance`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
