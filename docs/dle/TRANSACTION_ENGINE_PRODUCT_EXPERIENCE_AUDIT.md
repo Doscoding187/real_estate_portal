@@ -1,7 +1,8 @@
 # DLE Transaction Engine Product Experience Audit
 
 Date: 2026-06-04
-Status: First product-visibility slice started.
+Status: Product-visibility slices are now active across wizard guidance, unit preview, and public
+unit-card merchandising.
 
 ## Standard
 
@@ -68,6 +69,22 @@ The preview should:
 This improves the showroom layer: the developer can see the commercial buyer/renter/bidder-facing
 meaning of the inventory they are entering instead of only managing backend fields.
 
+## Third Product-Visibility Slice
+
+Make public development unit-card availability transaction-aware.
+
+The public unit cards should:
+
+- keep Sale availability language familiar: sold out, only X left, X available, request callback;
+- use rental-native language: fully let, rentals available, rental waitlist, rental details;
+- use auction-native language: auction closed, lots open, register auction interest;
+- show the availability state visibly on the public unit card, not only in helper data;
+- keep the existing lead capture path intact so selected unit identity, price context, and
+  transaction type still flow into the enquiry.
+
+This makes the public merchandising layer more trustworthy: a renter should not see sale-only
+language, and an auction bidder should see auction intent before opening the lead form.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -76,7 +93,7 @@ meaning of the inventory they are entering instead of only managing backend fiel
 - Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal
   pack, and urgency should become first-class product language.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
-  labels.
+  labels and availability.
 - Add operating-layer surfaces after publish: inventory status, reservations, sold/let/auction
   outcomes, lead stages, pricing adjustments, release phases, dashboards, and audit history.
 

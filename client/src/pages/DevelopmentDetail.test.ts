@@ -171,6 +171,62 @@ describe('DevelopmentDetail pricing context', () => {
     });
   });
 
+  it('uses rental-native public availability and CTA labels', () => {
+    expect(
+      getDevelopmentDetailUnitAvailabilityState(
+        {
+          totalUnits: 12,
+          availableUnits: 8,
+        },
+        'for_rent',
+      ),
+    ).toMatchObject({
+      label: '8 rentals available',
+      primaryLabel: 'Request Rental Details',
+    });
+
+    expect(
+      getDevelopmentDetailUnitAvailabilityState(
+        {
+          totalUnits: 3,
+          availableUnits: 0,
+        },
+        'rent',
+      ),
+    ).toMatchObject({
+      label: 'Fully let',
+      primaryLabel: 'Join Rental Waitlist',
+    });
+  });
+
+  it('uses auction-native public availability and CTA labels', () => {
+    expect(
+      getDevelopmentDetailUnitAvailabilityState(
+        {
+          totalUnits: 5,
+          availableUnits: 2,
+        },
+        'auction',
+      ),
+    ).toMatchObject({
+      label: 'Only 2 lots open',
+      primaryLabel: 'Register Auction Interest',
+    });
+
+    expect(
+      getDevelopmentDetailUnitAvailabilityState(
+        {
+          totalUnits: 3,
+          availableUnits: 0,
+        },
+        'on auction',
+      ),
+    ).toMatchObject({
+      label: 'Auction closed',
+      primaryLabel: 'Register Interest',
+    });
+  });
+
   it('builds rental lead unit context from monthly rent fields', () => {
     expect(
       getDevelopmentDetailLeadUnitContext(

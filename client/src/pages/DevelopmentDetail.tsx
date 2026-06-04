@@ -528,12 +528,35 @@ const resolveUnitFloorPlanUrl = (unit: any): string | null => {
   return null;
 };
 
-export const getDevelopmentDetailUnitAvailabilityState = (unit: any) => {
+const pluralizeUnitCount = (count: number, singular: string, plural: string) =>
+  `${count} ${count === 1 ? singular : plural}`;
+
+export const getDevelopmentDetailUnitAvailabilityState = (
+  unit: any,
+  transactionType: unknown = 'sale',
+) => {
+  const normalizedTransactionType = normalizeDevelopmentDetailTransactionType(transactionType);
   const inventory = calculateInventorySummary(unit ?? {});
   const availableUnits = inventory.available;
   const totalUnits = inventory.total;
 
   if (totalUnits > 0 && availableUnits <= 0) {
+    if (normalizedTransactionType === 'rent') {
+      return {
+        label: 'Fully let',
+        className: 'border-rose-200 bg-rose-50 text-rose-700',
+        primaryLabel: 'Join Rental Waitlist',
+      };
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return {
+        label: 'Auction closed',
+        className: 'border-rose-200 bg-rose-50 text-rose-700',
+        primaryLabel: 'Register Interest',
+      };
+    }
+
     return {
       label: 'Sold out',
       className: 'border-rose-200 bg-rose-50 text-rose-700',
@@ -542,6 +565,22 @@ export const getDevelopmentDetailUnitAvailabilityState = (unit: any) => {
   }
 
   if (availableUnits > 0 && availableUnits <= 5) {
+    if (normalizedTransactionType === 'rent') {
+      return {
+        label: `Only ${pluralizeUnitCount(availableUnits, 'rental', 'rentals')} left`,
+        className: 'border-amber-200 bg-amber-50 text-amber-700',
+        primaryLabel: 'Request Rental Details',
+      };
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return {
+        label: `Only ${pluralizeUnitCount(availableUnits, 'lot', 'lots')} open`,
+        className: 'border-amber-200 bg-amber-50 text-amber-700',
+        primaryLabel: 'Register Auction Interest',
+      };
+    }
+
     return {
       label: `Only ${availableUnits} left`,
       className: 'border-amber-200 bg-amber-50 text-amber-700',
@@ -550,6 +589,22 @@ export const getDevelopmentDetailUnitAvailabilityState = (unit: any) => {
   }
 
   if (availableUnits > 5) {
+    if (normalizedTransactionType === 'rent') {
+      return {
+        label: `${availableUnits} rentals available`,
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        primaryLabel: 'Request Rental Details',
+      };
+    }
+
+    if (normalizedTransactionType === 'auction') {
+      return {
+        label: `${availableUnits} lots open`,
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        primaryLabel: 'Register Auction Interest',
+      };
+    }
+
     return {
       label: `${availableUnits} available`,
       className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -614,7 +669,10 @@ function UnitTypeCarousel({
             const unitPricing = getDevelopmentDetailUnitPricingContext(unit, transactionType);
             const unitPriceFrom = unitPricing.priceFrom ?? 0;
             const unitPriceTo = unitPricing.priceTo;
-            const availability = getDevelopmentDetailUnitAvailabilityState(unit);
+            const availability = getDevelopmentDetailUnitAvailabilityState(
+              unit,
+              unitPricing.transactionType,
+            );
             const exactPriceFrom = formatExactRand(unitPriceFrom) || 'Price on request';
             const exactPriceTo =
               typeof unitPriceTo === 'number' && unitPriceTo > unitPriceFrom
@@ -651,6 +709,15 @@ function UnitTypeCarousel({
                       <div className="absolute left-3 top-3">
                         <span className="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
                           {unit.normalizedOwnership}
+                        </span>
+                      </div>
+                    ) : null}
+                    {availability ? (
+                      <div className="absolute right-3 top-3">
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm ${availability.className}`}
+                        >
+                          {availability.label}
                         </span>
                       </div>
                     ) : null}

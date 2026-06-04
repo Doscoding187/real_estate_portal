@@ -1059,3 +1059,45 @@ Next recommended slice:
   dashboard operations, starting with Rental/Auction-specific merchandising and lead readiness.
 Commit hash/tag: This entry will be included in `feat(dle): preview transaction unit merchandising`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Public Unit Availability Merchandising
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make public development unit-card availability and CTA language transaction-aware so Rental
+and Auction no longer inherit sale-only merchandising language.
+Files changed:
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts'`
+- Result: Passed. 1 test file, 15 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 9 test files, 89 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Kept Sale unit availability behavior intact: `Sold out`, `Only X left`, `X available`, and
+  sale-style callback/waitlist CTAs.
+- Added Rental-native public availability labels: `Fully let`, `X rentals available`, rental
+  waitlist, and rental-details CTAs.
+- Added Auction-native public availability labels: `Auction closed`, `X lots open`, register
+  interest, and auction-interest CTAs.
+- Surfaced the availability state as a visible badge on public unit cards instead of using it only
+  for the primary button label.
+- Kept the existing selected-unit lead path unchanged so unit identity, price label, and transaction
+  type continue to flow into `DevelopmentLeadDialog`.
+Remaining risks:
+- This improves public unit-card merchandising, but does not yet add full Rental/Auction public
+  sections for lease qualification, bidder registration, legal packs, or auction urgency.
+- The action panel still contains sale/qualification-oriented copy that should become
+  transaction-aware in a later public-page slice.
+Next recommended slice:
+- Make the public action panel and quick-qualification block transaction-aware so Rental and Auction
+  have native next-step language before the lead dialog opens.
+Commit hash/tag: This entry will be included in `feat(dle): localize public unit availability`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
