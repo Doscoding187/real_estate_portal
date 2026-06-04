@@ -1,14 +1,14 @@
 # DLE Rental Engine Technical Proof Checkpoint
 
-Date: 2026-06-03
+Date: 2026-06-03; updated 2026-06-04
 Branch: recovery/lead-routing-verification-2026-06-02
-Status: Focused API/unit/integration proof passed, including rental edit-published ownership. Browser public-output parity for edit-published ownership is now proven.
+Status: Focused API/unit/integration proof passed, including rental edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is now proven.
 
 ## Purpose
 
 This checkpoint records what is technically proven for the Rental Engine, including the later browser public-output proof for edit-published ownership.
 
-It does not claim that Rental is world-class or fully browser-proven. It establishes that the current codebase already has meaningful rental transaction guardrails, and it defines the remaining proof needed before autosave or broad UI/product upgrades.
+It does not claim that Rental is world-class or that the full hand-entered wizard UX has been proven from Project Setup through every form step. It establishes that the current codebase already has meaningful rental transaction guardrails, and it defines the remaining proof needed before autosave or broad UI/product upgrades.
 
 ## Test Run
 
@@ -110,26 +110,46 @@ Evidence:
 - `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-search-card.png`
 - `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-lead-context.png`
 
+## Wizard Save/Resume/Publish Browser Proof
+
+Focused browser spec:
+
+- `e2e/dle/rental-auction-wizard-save-publish.spec.ts`
+- Test name: `proves rental wizard draft resume, manual save, publish, public output, search, and lead context`
+
+Proof covered:
+
+- A review-ready canonical rental draft appeared in My Drafts with one unit type.
+- Resume opened the wizard with the draft id and hydrated Review & Publish with name, media, highlights, rental unit identity, monthly rent, and publish controls.
+- Manual `Save Draft` sent a real `developer.saveDraft` request and the DB draft retained `workflowId: residential_rent`, canonical `stepData.unit_types.unitTypes`, monthly rent, and no stale sale/auction unit pricing.
+- Browser publish created an approved, published rental development with `transactionType: for_rent`.
+- Public page, search card, and lead capture stayed rental-native after wizard publish.
+- Persisted lead context included development id, selected unit id/name, `transactionType: rent`, `unitPriceLabel: Rent from`, `leadSource: development_detail_contact`, and `funnelStage: interest`.
+
+Evidence:
+
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-draft-visible.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-resume-hydrated.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-public-page.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-search-card.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-lead-context.png`
+
 ## What This Does Not Yet Prove
 
-The Rental Engine is not yet at Sale parity.
+The Rental Engine is much closer to Sale parity, but not yet a full product-quality rental journey.
 
 Still pending:
 
-- Browser-proven rental create/save/resume through the wizard.
-- Browser-proven rental publish/readiness through the wizard.
+- Full hand-entered rental wizard UX from Project Setup through every form step.
+- Product-quality audit of rental-specific wizard language and public merchandising.
 - Product-quality audit of rental language, especially avoiding sale-shaped inventory copy such as sold/sold-out where leasing language is more appropriate.
 
 ## Next Required Slice
 
-Run the Rental Engine wizard save/resume/publish proof:
+Run the Rental Engine autosave preflight or full hand-entered rental UX proof:
 
-1. Create a rental development through the browser wizard.
-2. Manually save the rental draft.
-3. Confirm it appears in My Drafts.
-4. Resume the draft and verify identity, media, highlights, rental units, monthly rent, and readiness state.
-5. Publish/submit the rental development through the wizard readiness path.
-6. Confirm public page, search card, and lead context still match the transaction-first rental engine.
+1. If preparing autosave, define and prove truthful save-state, failed-save messaging, retry, conflict handling, and transaction-scoped payload ownership.
+2. If preparing product polish, run a fully hand-entered rental browser journey from Project Setup through Review & Publish and record UX gaps.
 
 ## Autosave Decision
 
@@ -137,6 +157,6 @@ Autosave is still not safe to start from this checkpoint alone.
 
 Reason:
 
-- Rental has strong focused technical/API coverage and browser public-output edit-published ownership proof.
-- Rental wizard create/save/resume/publish remains pending.
-- The save-state truth principle still requires transaction-lane save/resume behavior before autosave.
+- Rental has strong focused technical/API coverage, browser public-output edit-published ownership proof, and browser save/resume/publish proof from a review-ready canonical draft.
+- Transaction-lane save/resume/publish is no longer the main rental blocker.
+- Autosave still requires a dedicated failure/retry/conflict design and proof that the UI never claims saved progress unless a real save succeeds.

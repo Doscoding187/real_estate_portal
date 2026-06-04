@@ -1,14 +1,14 @@
 # DLE Auction Engine Technical Proof Checkpoint
 
-Date: 2026-06-03
+Date: 2026-06-03; updated 2026-06-04
 Branch: refine/homepage-phase1-clarity-trust
-Status: Focused API/unit/integration proof passed, including auction edit-published ownership. Browser public-output parity for edit-published ownership is now proven.
+Status: Focused API/unit/integration proof passed, including auction edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is now proven.
 
 ## Purpose
 
 This checkpoint records what is technically proven for the Auction Engine, including the later browser public-output proof for edit-published ownership.
 
-It does not claim that Auction is world-class or fully browser-proven. It proves that the current codebase treats auction as its own transaction lane with bid/reserve pricing, auction dates, stale sale/rent stripping, public output, and edit-published field ownership.
+It does not claim that Auction is world-class or that the full hand-entered wizard UX has been proven from Project Setup through every form step. It proves that the current codebase treats auction as its own transaction lane with bid/reserve pricing, auction dates, stale sale/rent stripping, public output, edit-published field ownership, and review-ready canonical draft save/resume/publish behavior.
 
 ## Test Run
 
@@ -93,26 +93,45 @@ Evidence:
 - `docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-search-card.png`
 - `docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-lead-context.png`
 
+## Wizard Save/Resume/Publish Browser Proof
+
+Focused browser spec:
+
+- `e2e/dle/rental-auction-wizard-save-publish.spec.ts`
+- Test name: `proves auction wizard draft resume, manual save, publish, public output, search, and lead context`
+
+Proof covered:
+
+- A review-ready canonical auction draft appeared in My Drafts with one unit type.
+- Resume opened the wizard with the draft id and hydrated Review & Publish with name, media, highlights, auction unit identity, starting bid, and publish controls.
+- Manual `Save Draft` sent a real `developer.saveDraft` request and the DB draft retained `workflowId: residential_auction`, canonical `stepData.unit_types.unitTypes`, bid/reserve fields, auction dates, and no stale sale/rental unit pricing.
+- Browser publish created an approved, published auction development with `transactionType: auction`.
+- Public page, search card, and lead capture stayed auction-native after wizard publish.
+- Persisted lead context included development id, selected unit id/name, `transactionType: auction`, `unitPriceLabel: Starting bid`, `leadSource: development_detail_contact`, and `funnelStage: interest`.
+
+Evidence:
+
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-draft-visible.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-resume-hydrated.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-public-page.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-search-card.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-lead-context.png`
+
 ## What This Does Not Yet Prove
 
-The Auction Engine is not yet at Sale browser parity.
+The Auction Engine is much closer to Sale browser parity, but not yet a full product-quality auction journey.
 
 Still pending:
 
-- Browser-proven auction create/save/resume through the wizard.
-- Browser-proven auction publish/readiness through the wizard.
+- Full hand-entered auction wizard UX from Project Setup through every form step.
 - Product-quality audit of auction language, especially registration, auction timing, legal pack readiness, and bid CTA language.
 
 ## Next Required Slice
 
-Run the Auction Engine wizard save/resume/publish proof:
+Run the Auction Engine autosave preflight or full hand-entered auction UX proof:
 
-1. Create an auction development through the browser wizard.
-2. Manually save the auction draft.
-3. Confirm it appears in My Drafts.
-4. Resume the draft and verify identity, media, highlights, auction units, bid/reserve terms, auction dates, and readiness state.
-5. Publish/submit the auction development through the wizard readiness path.
-6. Confirm public page, search card, and lead context still match the transaction-first auction engine.
+1. If preparing autosave, define and prove truthful save-state, failed-save messaging, retry, conflict handling, and transaction-scoped payload ownership.
+2. If preparing product polish, run a fully hand-entered auction browser journey from Project Setup through Review & Publish and record UX gaps.
 
 ## Autosave Decision
 
@@ -120,6 +139,6 @@ Autosave is still not safe to start from this checkpoint alone.
 
 Reason:
 
-- Sale has browser/API proof, and Rental/Auction now have strong technical/API ownership proof plus browser public-output edit-published proof.
-- Auction wizard create/save/resume/publish remains pending.
-- The save-state truth principle still requires transaction-lane save/resume behavior before autosave.
+- Sale has browser/API proof, and Auction now has strong technical/API ownership proof, browser public-output edit-published proof, and browser save/resume/publish proof from a review-ready canonical draft.
+- Transaction-lane save/resume/publish is no longer the main auction blocker.
+- Autosave still requires a dedicated failure/retry/conflict design and proof that the UI never claims saved progress unless a real save succeeds.

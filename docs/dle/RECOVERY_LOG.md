@@ -668,3 +668,53 @@ Next recommended slice:
 - Run browser-level rental and auction wizard save/resume/publish proof using authenticated local QA, covering draft visibility, resume hydration for media/highlights/unit types/readiness, publish/public output, search cards, and lead context.
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Rental/Auction Wizard Save-Resume-Publish Browser Proof
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove Rental and Auction browser draft visibility, resume hydration, manual save, publish, public page, search cards, and lead context from review-ready canonical drafts before autosave work.
+Files changed:
+- e2e/dle/rental-auction-wizard-save-publish.spec.ts
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-draft-visible.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-resume-hydrated.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-public-page.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-search-card.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-lead-context.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-draft-visible.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-resume-hydrated.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-public-page.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-search-card.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-lead-context.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 browser spec, 2 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Passed. 13 test files, 108 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Manual flows verified:
+- Rental canonical draft appeared in My Drafts with one unit type.
+- Rental resume hydrated Review & Publish with name, media, highlights, rental unit identity, monthly rent, and publish controls.
+- Rental manual save hit `developer.saveDraft`; DB retained `workflowId: residential_rent`, canonical `stepData.unit_types.unitTypes`, monthly rent fields, and no stale sale/auction unit pricing.
+- Rental publish created an approved, published `for_rent` development.
+- Rental public page, search card, and lead capture stayed rental-native after wizard publish.
+- Auction canonical draft appeared in My Drafts with one unit type.
+- Auction resume hydrated Review & Publish with name, media, highlights, auction unit identity, starting bid, and publish controls.
+- Auction manual save hit `developer.saveDraft`; DB retained `workflowId: residential_auction`, canonical `stepData.unit_types.unitTypes`, bid/reserve fields, auction dates, and no stale sale/rental unit pricing.
+- Auction publish created an approved, published `auction` development.
+- Auction public page, search card, and lead capture stayed auction-native after wizard publish.
+Remaining risks:
+- This proves browser save/resume/publish from review-ready canonical seeded drafts; it does not claim a fully hand-entered Project Setup through every form step rental/auction UX pass.
+- Autosave should not start as a blind wiring task. It needs a dedicated preflight for truthful save states, failed-save messaging, retry behavior, conflict handling, and transaction-scoped payload ownership.
+- Rental and auction product language still need polishing so the wizard feels like guided commercial packaging, not generic listing CRUD.
+Next recommended slice:
+- Run an autosave preflight design/guardrail slice, or run a full hand-entered rental/auction wizard UX proof if product polish needs that evidence first.
+Commit hash/tag: This entry will be included in `test(dle): prove rental auction wizard browser flow`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

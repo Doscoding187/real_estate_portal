@@ -5,19 +5,19 @@ Use this checklist before calling the Development Listing Engine stable.
 | Flow | Required Result | Status | Evidence |
 |---|---|---|---|
 | Create development | Development can be created without data loss | Pass | Browser reached authenticated sale workflow from Project Setup through Review & Publish, including media upload and sale unit-type creation. The resumed draft was then published to development id `4`. Edit-after-publish ownership remains separately pending. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
-| Manual Save Draft | Draft saves through real backend path | Pass | Browser clicked `Save Draft` on Review & Publish. No API failures captured. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-manual-save-draft.png`. |
-| Draft appears in My Drafts | Saved draft is visible | Pass | Draft `DLE QA Sale Flow 1780436367449` appeared in `/developer/drafts`. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-my-drafts-visible.png`. |
-| Resume draft | Canonical state restores correctly | Pass | Resume opened `/developer/create-development?draftId=2` and restored the saved development identity. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-draft-resumed.png`. |
+| Manual Save Draft | Draft saves through real backend path | Pass | Sale browser proof clicked `Save Draft` on Review & Publish. Rental and auction browser proof now confirms manual save hits `developer.saveDraft` and keeps canonical transaction-specific unit data. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-manual-save-draft.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-resume-hydrated.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-resume-hydrated.png`. |
+| Draft appears in My Drafts | Saved draft is visible | Pass | Sale draft appeared in `/developer/drafts`. Rental and auction canonical drafts also appeared in My Drafts with unit counts before resume. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-my-drafts-visible.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-draft-visible.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-draft-visible.png`. |
+| Resume draft | Canonical state restores correctly | Pass | Sale resume restored identity. Rental and auction resume now restore review-ready canonical state including media, highlights, unit identity, transaction-specific pricing, and publish controls. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-draft-resumed.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-resume-hydrated.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-resume-hydrated.png`. |
 | Edit location | Only location fields change | Pass | Published sale development id `4` location edit preserved media, highlights, governance, unit types, pricing, approval, and public visibility. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`. |
 | Edit media | Only media fields change | Pass | Published sale development id `4` media edit preserved location, highlights, governance, unit types, pricing, approval, and public visibility. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-public-page-final.png`. |
 | Edit governance/finance | Only governance/finance fields change | Pass | Published sale development id `4` governance edit preserved location, media, highlights, unit types, pricing, approval, and public visibility. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`. |
 | Edit sale unit types | Sale inventory/pricing updates safely | Pass | Published sale development id `4` unit edit preserved location, media, highlights, governance, approval, public list visibility, and lead context. Backend now derives development inventory totals from partial unit-type edits. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-lead-submitted.png`. |
 | Edit rental unit types | Rental inventory/pricing updates safely | Pass | Focused API/DB guardrails and browser public-output proof now show published rental unit edits preserve location, media, highlights, governance, approval, search/detail output, lead context, and monthly-rent aggregates. Evidence: `docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md`, `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-public-page.png`, `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-search-card.png`, and `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-lead-context.png`. |
 | Edit auction unit types | Auction inventory/pricing updates safely | Pass | Focused API/DB guardrails and browser public-output proof now show published auction unit edits preserve location, media, highlights, governance, approval, search/detail output, lead context, bid/reserve aggregates, auction dates, and inventory totals. Evidence: `docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md`, `docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-public-page.png`, `docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-search-card.png`, and `docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-lead-context.png`. |
-| Publish development | Publish validation passes correctly | Pass | Publish readiness correctly blocked missing highlights, highlights were added, and the sale draft published successfully after the backend date-format fix. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-button-disabled.png` and `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
-| Public page | Correct sale/rent/auction display | Pass | Sale public page renders with development name, sale pricing, unit type, CTA, and publish-critical highlights. Rental and auction browser proof now verifies transaction-native public detail output: `Rent From`, `Monthly Rent`, rental unit pricing, `Starting Bid`, and auction bid/reserve range. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`, `docs/dle/evidence/2026-06-03/qa-dle-rental-browser-public-page.png`, and `docs/dle/evidence/2026-06-03/qa-dle-auction-browser-public-page.png`. |
-| Search cards | Correct sale/rent/auction pricing and ordering | Pass | Sale public list output includes published development `4`, `for_sale`, public highlights, and sale unit configuration with `priceFrom: 1750000`. Rental and auction browser proof now verifies transaction-aware search card language: `Rent from R 12,500` and `Bid from R 850,000`. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-rental-browser-search-card.png`, `docs/dle/evidence/2026-06-03/qa-dle-auction-browser-search-card.png`, `docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md`, and `docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md`. |
-| Lead capture | Lead context matches transaction type and unit interest | Pass | Browser submitted sale, rental, and auction unit leads and DB verification covered development id, selected unit id/name, transaction type, price label, lead source, and `funnel_stage: interest`. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png`, `docs/dle/evidence/2026-06-03/qa-dle-rental-browser-lead-context.png`, and `docs/dle/evidence/2026-06-03/qa-dle-auction-browser-lead-context.png`. |
+| Publish development | Publish validation passes correctly | Pass | Sale published through the browser after readiness fixes. Rental and auction canonical resumed drafts now publish through the browser into approved public developments. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-public-page.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-public-page.png`. |
+| Public page | Correct sale/rent/auction display | Pass | Sale public page renders with development name, sale pricing, unit type, CTA, and publish-critical highlights. Rental and auction browser proof now verifies transaction-native public detail output from both service-seeded public developments and wizard-published canonical drafts. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-public-highlights-visible.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-public-page.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-public-page.png`. |
+| Search cards | Correct sale/rent/auction pricing and ordering | Pass | Sale public list output includes published development `4`, `for_sale`, public highlights, and sale unit configuration with `priceFrom: 1750000`. Rental and auction wizard-published proof now verifies transaction-aware search card language: `Rent from R 18,500` and `Bid from R 920,000`. Evidence: `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-search-card.png`, `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-search-card.png`, `docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md`, and `docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md`. |
+| Lead capture | Lead context matches transaction type and unit interest | Pass | Browser submitted sale, rental, and auction unit leads and DB verification covered development id, selected unit id/name, transaction type, price label, lead source, and `funnel_stage: interest`. Rental and auction are now proven against wizard-published canonical drafts too. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-lead-context-submitted.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-lead-context.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-lead-context.png`. |
 | Edit published development | No unrelated field wipes | Pass | Sale edit-published ownership is browser/API/DB-proven for location, media, governance, marketing highlights, and unit types. Rental and auction edit-published ownership are API/DB-proven across the same ownership boundaries, with browser proof that public pages, search cards, and lead context remain transaction-native after edit sequences. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`, `docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md`, `docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md`, `docs/dle/evidence/2026-06-03/qa-dle-rental-edit-published-public-page.png`, and `docs/dle/evidence/2026-06-03/qa-dle-auction-edit-published-public-page.png`. |
 
 ## Evidence Standard
@@ -303,3 +303,50 @@ Before autosave:
 
 - Sale edit-published ownership no longer blocks autosave by itself.
 - Still prove rent and auction edit-published ownership, plus deeper resumed-draft restoration for media, documents, highlights, unit types, and readiness.
+
+## 2026-06-04 Rental/Auction Wizard Save-Resume-Publish Proof
+
+Environment:
+
+- Frontend: `http://localhost:3009`
+- Backend: `http://localhost:5000`
+- Database: `listify_local`
+- Browser spec: `e2e/dle/rental-auction-wizard-save-publish.spec.ts`
+
+Functional pass/fail:
+
+- Pass: seeded a canonical rental draft for an approved developer and confirmed it appeared in My Drafts with one unit type.
+- Pass: resumed the rental draft through `/developer/create-development?draftId=...` and verified Review & Publish hydrated name, media, highlights, rental unit identity, monthly rent, and publish controls.
+- Pass: clicked manual `Save Draft`, captured a successful `developer.saveDraft` response, and verified DB draft data retained `workflowId: residential_rent`, canonical `stepData.unit_types.unitTypes`, monthly rent fields, and no stale sale/auction unit pricing.
+- Pass: published the resumed rental draft through the browser and verified the DB development was `isPublished = 1`, `approvalStatus = approved`, and `transactionType = for_rent`.
+- Pass: rental public page, search card, and lead dialog showed rental-native pricing and context after wizard publish.
+- Pass: persisted rental lead kept development id, selected unit id/name, `transactionType: rent`, `unitPriceLabel: Rent from`, `leadSource: development_detail_contact`, and `funnelStage: interest`.
+- Pass: seeded a canonical auction draft for an approved developer and confirmed it appeared in My Drafts with one unit type.
+- Pass: resumed the auction draft through `/developer/create-development?draftId=...` and verified Review & Publish hydrated name, media, highlights, auction unit identity, starting bid, and publish controls.
+- Pass: clicked manual `Save Draft`, captured a successful `developer.saveDraft` response, and verified DB draft data retained `workflowId: residential_auction`, canonical `stepData.unit_types.unitTypes`, bid/reserve fields, auction dates, and no stale sale/rental unit pricing.
+- Pass: published the resumed auction draft through the browser and verified the DB development was `isPublished = 1`, `approvalStatus = approved`, and `transactionType = auction`.
+- Pass: auction public page, search card, and lead dialog showed auction-native pricing and context after wizard publish.
+- Pass: persisted auction lead kept development id, selected unit id/name, `transactionType: auction`, `unitPriceLabel: Starting bid`, `leadSource: development_detail_contact`, and `funnelStage: interest`.
+
+Evidence:
+
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-draft-visible.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-resume-hydrated.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-public-page.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-search-card.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-lead-context.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-draft-visible.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-resume-hydrated.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-public-page.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-search-card.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-lead-context.png`
+
+Boundary:
+
+- This proves browser draft visibility, resume hydration, manual save, publish, public page, search card, and lead context for review-ready canonical rental and auction drafts.
+- This does not claim a full hand-entered rental/auction Project Setup through every form step pass. That remains a separate UX proof if the next slice needs it.
+
+Before autosave:
+
+- Transaction-lane save/resume/publish proof is no longer the main blocker.
+- Autosave still needs its own preflight design for truthful save states, failed-save messaging, retry behavior, conflict handling, and transaction-scoped payload ownership.
