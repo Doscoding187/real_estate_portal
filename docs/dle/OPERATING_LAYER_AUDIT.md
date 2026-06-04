@@ -1,8 +1,8 @@
 # DLE Operating Layer Audit
 
 Date: 2026-06-04
-Status: First read-only dashboard operating surface implemented. Inventory mutations remain
-blocked behind the operating status/audit model.
+Status: Read-only dashboard operating surfaces now cover inventory, lead risk, and distribution
+readiness. Inventory mutations remain blocked behind the operating status/audit model.
 
 ## Purpose
 
@@ -44,8 +44,8 @@ What is still weak:
 
 - `client/src/components/developer/UnitsManager.tsx` is a placeholder and is not wired as a live
   transaction inventory console.
-- `client/src/components/developer/DevelopmentsList.tsx` shows publish/readiness status but not a
-  live operating snapshot for inventory, lead risk, distribution state, or transaction outcomes.
+- `client/src/components/developer/DevelopmentsList.tsx` now shows a read-only inventory snapshot,
+  but not lead risk or distribution state.
 - Lead stages are still sale-shaped in their canonical names: offer, bond, sale, closed won/lost.
   Rental and Auction can use the pipeline mechanically, but the product language and outcome model
   are not transaction-native yet.
@@ -194,6 +194,57 @@ Guardrails:
   designed: still enforced.
 - Do not reuse sale labels for Rental and Auction: covered by focused helper tests.
 - Keep distribution status explanatory, not hidden behind a toggle: still future work.
+
+## Second Implementation Slice Status
+
+Broaden the read-only operating surface with lead risk and distribution readiness.
+
+The second implementation slice has been completed in:
+
+- `client/src/components/developer/Overview.tsx`
+- `client/src/components/developer/Overview.test.ts`
+
+It avoids schema changes, does not mutate inventory, and uses existing overview data that was
+already present in the developer dashboard.
+
+Implemented surface:
+
+- When a development is selected in the Developer Control Tower, the dashboard now shows an
+  `Operating Readiness` panel.
+- The panel is transaction-aware:
+  - Sale: buyer lead risk, qualified buyers, sales outcomes, referral sales readiness.
+  - Rental: rental lead risk, rental-fit leads, lease outcomes, referral leasing readiness.
+  - Auction: bidder lead risk, bidder-ready leads, auction outcomes, referral auction readiness.
+- Risk tiles link into the existing attention queue with the selected development filter.
+- Readiness and outcome tiles link into the existing lead pipeline with the selected development
+  filter.
+- Distribution readiness is summarized as `Private`, `Needs partner access`, `Partner-ready`, or
+  `Active referral pipeline`.
+
+Implemented data sources:
+
+- `trpc.developer.getFunnelKPIs`
+- `trpc.developer.getFunnelAttention`
+- `trpc.developer.getDistributionSettings`
+- `trpc.distribution.developer.dashboard`
+- selected-development context from `trpc.developer.getDevelopments`
+
+Implemented visible outputs:
+
+- Lead risk count from warning and breach counts.
+- Transaction-native ready lead labels from existing qualified-stage counts.
+- Transaction-native outcome labels from existing closed-won counts.
+- Distribution state from distribution enablement, eligible partner count, and referral deal count.
+- Transaction-native queue CTA copy for buyer, leasing, and bidder queues.
+
+Guardrails:
+
+- Read-only: satisfied.
+- No schema or migration: satisfied.
+- No inventory mutation: satisfied.
+- No edit-development autosave change: satisfied.
+- Existing generic lead-stage names are surfaced through transaction-native labels, but the
+  underlying stage model is still shared and sale-shaped.
 
 ## Next Architecture Work After The First Surface
 

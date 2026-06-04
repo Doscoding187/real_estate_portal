@@ -1379,3 +1379,53 @@ Next recommended slice:
   then define the transaction-native operating status/audit model before any inventory mutation.
 Commit hash/tag: This entry will be included in `feat(dle): add read-only operations snapshot`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Operating Readiness Lead and Distribution Snapshot
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Broaden the read-only operating layer with selected-development lead risk and distribution
+readiness, without schema changes, inventory mutations, or edit-development autosave changes.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/developer/Overview.test.ts'`
+- Result: Passed. 1 test file, 4 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/developer/Overview.test.ts client/src/components/dashboard/EntityStatusCard.test.ts client/src/pages/DevelopmentQualificationPage.test.ts client/src/components/development/DevelopmentLeadDialog.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 13 test files, 113 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added transaction-normalized operating readiness helpers to the developer overview.
+- Added an `Operating Readiness` panel when a development is selected in the Developer Control
+  Tower.
+- Sale selected-development copy now uses buyer lead risk, qualified buyers, sales outcomes,
+  referral sales readiness, and buyer queue language.
+- Rental selected-development copy now uses rental lead risk, rental-fit leads, lease outcomes,
+  referral leasing readiness, and leasing queue language.
+- Auction selected-development copy now uses bidder lead risk, bidder-ready leads, auction
+  outcomes, referral auction readiness, and bidder queue language.
+- The panel summarizes warning/breach risk, qualified/readiness count, closed outcome count,
+  distribution state, eligible partner count, and referral deal count from existing dashboard
+  queries.
+- The risk/readiness/outcome tiles route into the existing lead attention/pipeline views while
+  preserving the selected development filter.
+- Updated the operating audit and source-of-truth to mark read-only inventory, lead-risk, and
+  distribution-readiness surfaces as implemented.
+Remaining risks:
+- Browser proof for the dashboard operating surfaces has not been captured in this slice.
+- The underlying lead stage model remains shared and sale-shaped; Rental and Auction are currently
+  represented through transaction-native labels over the existing stage counts.
+- Inventory mutation, reservation/let/sold/auction outcome tracking, audit events, and
+  transaction-native lead-stage overlays remain unimplemented.
+Next recommended slice:
+- Define the transaction-native operating status/audit model before adding inventory mutations, and
+  capture browser proof for the dashboard operating surfaces.
+Commit hash/tag: This entry will be included in `feat(dle): surface operating readiness`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

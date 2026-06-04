@@ -28,12 +28,114 @@ import {
   Clock3,
   Filter,
   PhoneCall,
+  ShieldCheck,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
 
 type Range = '7d' | '30d' | '90d';
+type OverviewTransactionType = 'sale' | 'rent' | 'auction';
+
+function normalizeOverviewTransactionType(value: unknown): OverviewTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'for_rent' || normalized === 'rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'auctions') return 'auction';
+  return 'sale';
+}
+
+export function getOverviewOperatingCopy(transactionType: unknown) {
+  const normalized = normalizeOverviewTransactionType(transactionType);
+
+  if (normalized === 'rent') {
+    return {
+      engineLabel: 'Rental Engine',
+      riskLabel: 'Rental lead risk',
+      readyLabel: 'Rental-fit leads',
+      outcomeLabel: 'Lease outcomes',
+      queueLabel: 'Work leasing queue',
+      distributionLabel: 'Referral leasing readiness',
+      distributionHelp:
+        'Distribution should only open when lease terms, deposits, and partner access are ready.',
+    };
+  }
+
+  if (normalized === 'auction') {
+    return {
+      engineLabel: 'Auction Engine',
+      riskLabel: 'Bidder lead risk',
+      readyLabel: 'Bidder-ready leads',
+      outcomeLabel: 'Auction outcomes',
+      queueLabel: 'Work bidder queue',
+      distributionLabel: 'Referral auction readiness',
+      distributionHelp:
+        'Distribution should only open when auction packs, registration rules, and partner access are ready.',
+    };
+  }
+
+  return {
+    engineLabel: 'Sale Engine',
+    riskLabel: 'Buyer lead risk',
+    readyLabel: 'Qualified buyers',
+    outcomeLabel: 'Sales outcomes',
+    queueLabel: 'Work buyer queue',
+    distributionLabel: 'Referral sales readiness',
+    distributionHelp:
+      'Distribution should only open when buyer costs, availability, and partner access are ready.',
+  };
+}
+
+export function buildOverviewOperatingReadiness(input: {
+  development?: any | null;
+  stageCounts?: Record<string, any> | null;
+  attention?: any | null;
+  distributionSettings?: any | null;
+  distributionSummary?: any | null;
+}) {
+  if (!input.development) return null;
+
+  const copy = getOverviewOperatingCopy(input.development.transactionType);
+  const stageCounts = input.stageCounts || {};
+  const attention = input.attention || {};
+  const distributionSettings = input.distributionSettings || {};
+  const distributionSummary = input.distributionSummary || {};
+  const warningCount = Number(attention.warningCount || 0);
+  const breachCount = Number(attention.breachCount || 0);
+  const riskCount = warningCount + breachCount;
+  const distributionEnabled = distributionSettings.distributionEnabled === true;
+  const eligiblePartnerCount = Number(distributionSettings.eligiblePartnerCount || 0);
+  const referralDealCount = Number(distributionSummary.totalDeals || 0);
+
+  let distributionState = 'Private';
+  if (distributionEnabled && referralDealCount > 0) {
+    distributionState = 'Active referral pipeline';
+  } else if (distributionEnabled && eligiblePartnerCount > 0) {
+    distributionState = 'Partner-ready';
+  } else if (distributionEnabled) {
+    distributionState = 'Needs partner access';
+  }
+
+  return {
+    ...copy,
+    developmentName: input.development.name || 'Selected development',
+    riskCount,
+    warningCount,
+    breachCount,
+    newLeadCount: Number(stageCounts.new || 0),
+    readyCount: Number(stageCounts.qualified || 0),
+    outcomeCount: Number(stageCounts.closed_won || 0),
+    distributionEnabled,
+    eligiblePartnerCount,
+    referralDealCount,
+    distributionState,
+  };
+}
 
 function formatNumber(n?: number): string {
   if (typeof n !== 'number' || Number.isNaN(n)) return '0';
@@ -212,6 +314,17 @@ export default function Overview() {
   }, [distributionDashboardQuery.data, selectedDevelopmentId]);
   const distributionPanelVisible =
     !!selectedDevelopmentId && distributionSettings?.distributionEnabled === true;
+  const selectedDevelopment = useMemo(() => {
+    if (!selectedDevelopmentId) return null;
+    return developments.find((dev: any) => Number(dev.id) === selectedDevelopmentId) || null;
+  }, [developments, selectedDevelopmentId]);
+  const operatingReadiness = buildOverviewOperatingReadiness({
+    development: selectedDevelopment,
+    stageCounts,
+    attention,
+    distributionSettings,
+    distributionSummary,
+  });
 
   const snapshotTiles = [
     { label: 'New', value: stageCounts.new || 0, stage: 'new' },
@@ -452,6 +565,94 @@ export default function Overview() {
             <Button variant="outline" onClick={() => setIsReferralAccessOpen(true)}>
               Manage Referral Access
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {operatingReadiness && (
+        <Card className="card border-slate-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              Operating Readiness
+            </CardTitle>
+            <CardDescription>
+              {operatingReadiness.engineLabel} snapshot for {operatingReadiness.developmentName}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <button
+                className="text-left"
+                onClick={() => goToLeads({ view: 'attention' })}
+                type="button"
+              >
+                <div className="h-full rounded-md border border-slate-200 p-3 transition-colors hover:border-amber-300">
+                  <p className="text-xs text-muted-foreground">{operatingReadiness.riskLabel}</p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900">
+                    {formatNumber(operatingReadiness.riskCount)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatNumber(operatingReadiness.breachCount)} breach,{' '}
+                    {formatNumber(operatingReadiness.warningCount)} warning
+                  </p>
+                </div>
+              </button>
+
+              <button
+                className="text-left"
+                onClick={() => goToLeads({ view: 'pipeline', stage: 'qualified' })}
+                type="button"
+              >
+                <div className="h-full rounded-md border border-slate-200 p-3 transition-colors hover:border-blue-300">
+                  <p className="text-xs text-muted-foreground">{operatingReadiness.readyLabel}</p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900">
+                    {formatNumber(operatingReadiness.readyCount)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatNumber(operatingReadiness.newLeadCount)} new in this range
+                  </p>
+                </div>
+              </button>
+
+              <button
+                className="text-left"
+                onClick={() => goToLeads({ view: 'pipeline', stage: 'won' })}
+                type="button"
+              >
+                <div className="h-full rounded-md border border-slate-200 p-3 transition-colors hover:border-emerald-300">
+                  <p className="text-xs text-muted-foreground">
+                    {operatingReadiness.outcomeLabel}
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900">
+                    {formatNumber(operatingReadiness.outcomeCount)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Closed outcomes tracked through the current funnel
+                  </p>
+                </div>
+              </button>
+
+              <div className="rounded-md border border-slate-200 p-3">
+                <p className="text-xs text-muted-foreground">
+                  {operatingReadiness.distributionLabel}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {operatingReadiness.distributionState}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatNumber(operatingReadiness.eligiblePartnerCount)} eligible partner(s),{' '}
+                  {formatNumber(operatingReadiness.referralDealCount)} referral deal(s)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm text-slate-600">{operatingReadiness.distributionHelp}</p>
+              <Button variant="outline" onClick={() => goToLeads({ view: 'attention' })}>
+                {operatingReadiness.queueLabel}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
