@@ -32,9 +32,9 @@ interface WizardEngineProps {
   onExit?: () => void;
   saveStatus?: 'saved' | 'saving' | 'error' | 'unsaved';
   lastSavedAt?: Date;
-  onManualSaveDraft?: () => void | Promise<void>;
+  onManualSaveDraft?: () => void | Promise<unknown>;
   isManualSaveDraftPending?: boolean;
-  onSaveProgress?: () => void | Promise<void>;
+  onSaveProgress?: () => void | Promise<unknown>;
   isSaveProgressPending?: boolean;
 }
 
@@ -163,6 +163,21 @@ export function WizardEngine({
             </Button>
 
             <div className="flex items-center gap-3">
+              {onManualSaveDraft &&
+                !onSaveProgress &&
+                currentStep.componentKey !== 'ReviewStep' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onManualSaveDraft}
+                    disabled={isManualSaveDraftPending}
+                    className="h-12 px-5"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isManualSaveDraftPending ? 'Saving...' : 'Save Draft'}
+                  </Button>
+                )}
+
               {onSaveProgress && (
                 <Button
                   type="button"

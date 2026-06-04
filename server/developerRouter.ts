@@ -837,7 +837,6 @@ export const developerRouter = router({
             draftData: sanitized,
             progress,
             currentStep,
-            lastModified: new Date().toISOString(),
           };
           if (input.brandProfileId !== undefined) {
             updateSet.developerBrandProfileId = input.brandProfileId;

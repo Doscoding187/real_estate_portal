@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DevelopmentWizard } from './DevelopmentWizard';
@@ -12,6 +12,7 @@ const testState = vi.hoisted(() => {
   const toastSuccessMock = vi.fn();
   const toastErrorMock = vi.fn();
   const setLocationMock = vi.fn();
+  let autoSaveOptions: any = null;
   let currentUrl = '/developer/developments/new?draftId=321&brandProfileId=55';
   let userRole = 'developer';
   let publisherContext: any = null;
@@ -119,6 +120,7 @@ const testState = vi.hoisted(() => {
   };
 
   return {
+    autoSaveOptions,
     canonicalDraft,
     currentUrl,
     editDevelopment,
@@ -153,12 +155,16 @@ vi.mock('@/hooks/usePublisherContext', () => ({
 }));
 
 vi.mock('@/hooks/useAutoSave', () => ({
-  useAutoSave: () => ({
-    error: null,
-    isSaving: false,
-    lastSaved: null,
-    saveNow: vi.fn(),
-  }),
+  useAutoSave: (_data: any, options: any) => {
+    testState.autoSaveOptions = options;
+    return {
+      error: null,
+      isSaving: false,
+      lastSaved: null,
+      saveNow: vi.fn(),
+      clearSaveStatus: vi.fn(),
+    };
+  },
 }));
 
 vi.mock('@/components/wizard/DraftManager', () => ({
@@ -171,6 +177,7 @@ vi.mock('@/components/ui/ErrorAlert', () => ({
 
 vi.mock('../wizard/WizardEngine', () => ({
   WizardEngine: ({
+    onExit,
     saveStatus,
     onManualSaveDraft,
     isManualSaveDraftPending,
@@ -181,6 +188,14 @@ vi.mock('../wizard/WizardEngine', () => ({
       React.Fragment,
       null,
       React.createElement('span', { 'data-testid': 'wizard-save-status' }, saveStatus),
+      React.createElement(
+        'button',
+        {
+          onClick: onExit,
+          type: 'button',
+        },
+        'Open Exit Dialog',
+      ),
       React.createElement(
         'button',
         {
@@ -426,6 +441,7 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
       '/developer/developments/new?draftId=321&brandProfileId=55',
     );
     testState.currentUrl = '/developer/developments/new?draftId=321&brandProfileId=55';
+    testState.autoSaveOptions = null;
     testState.userRole = 'developer';
     testState.publisherContext = null;
     delete (testState.canonicalDraft as any).editingId;
@@ -497,6 +513,121 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
       expect(screen.getByTestId('wizard-save-status').textContent).toBe('saved');
     });
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Draft saved');
+
+    act(() => {
+      useDevelopmentWizard.getState().setDevelopmentData({ tagline: 'Changed after save' });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
+    });
+  });
+
+  it('keeps a failed draft save visible and recovers only after a real retry succeeds', async () => {
+    testState.saveDraftMutationMock.mockResolvedValueOnce({ id: 321, success: false });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().currentStepId).toBe('review_publish');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /manual save draft/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('error');
+    });
+    expect(testState.toastSuccessMock).not.toHaveBeenCalledWith('Draft saved');
+    expect(testState.toastErrorMock).toHaveBeenCalledWith('Failed to save draft');
+
+    testState.saveDraftMutationMock.mockResolvedValueOnce({ id: 321, success: true });
+    fireEvent.click(screen.getByRole('button', { name: /manual save draft/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('saved');
+    });
+    expect(testState.toastSuccessMock).toHaveBeenCalledWith('Draft saved');
+  });
+
+  it('keeps autosave disabled and rejects a backend safe-failure response', async () => {
+    testState.saveDraftMutationMock.mockResolvedValueOnce({ id: 321, success: false });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.autoSaveOptions).toBeTruthy();
+    });
+
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    await act(async () => {
+      await expect(testState.autoSaveOptions.onSave({ lane: 'rental' })).rejects.toThrow(
+        'Draft could not be persisted',
+      );
+    });
+  });
+
+  it('reuses the first confirmed draft id for later persistence without waiting for a rerender', async () => {
+    window.history.replaceState({}, '', '/developer/developments/new?brandProfileId=55');
+    testState.currentUrl = '/developer/developments/new?brandProfileId=55';
+    testState.saveDraftMutationMock.mockResolvedValue({ id: 777, success: true });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.autoSaveOptions).toBeTruthy();
+    });
+
+    await act(async () => {
+      await testState.autoSaveOptions.onSave({ revision: 1 });
+      await testState.autoSaveOptions.onSave({ revision: 2 });
+    });
+
+    expect(testState.saveDraftMutationMock).toHaveBeenCalledTimes(2);
+    expect(testState.saveDraftMutationMock.mock.calls[0][0]).not.toHaveProperty('id');
+    expect(testState.saveDraftMutationMock.mock.calls[1][0]).toMatchObject({ id: 777 });
+  });
+
+  it('does not confirm a new draft save without a persistent draft id', async () => {
+    window.history.replaceState({}, '', '/developer/developments/new?brandProfileId=55');
+    testState.currentUrl = '/developer/developments/new?brandProfileId=55';
+    testState.saveDraftMutationMock.mockResolvedValueOnce({ id: 0, success: true });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.autoSaveOptions).toBeTruthy();
+    });
+
+    await act(async () => {
+      await expect(testState.autoSaveOptions.onSave({ revision: 1 })).rejects.toThrow(
+        'Draft save did not return a persistent draft id',
+      );
+    });
+  });
+
+  it('does not exit when save-and-exit persistence fails, then exits after retry succeeds', async () => {
+    testState.saveDraftMutationMock.mockResolvedValueOnce({ id: 321, success: false });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().currentStepId).toBe('review_publish');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Exit Dialog' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save & Exit' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('error');
+    });
+    expect(testState.setLocationMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Save & Exit' })).toBeTruthy();
+
+    testState.saveDraftMutationMock.mockResolvedValueOnce({ id: 321, success: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Save & Exit' }));
+
+    await waitFor(() => {
+      expect(testState.setLocationMock).toHaveBeenCalledWith('/developer');
+    });
   });
 
   it('route draftId hydration replaces stale persisted wizard state before manual save', async () => {
@@ -909,6 +1040,27 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     );
     expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Progress saved');
+  });
+
+  it('keeps edit progress visibly failed when the owned partial update returns a safe failure', async () => {
+    window.history.replaceState({}, '', '/developer/developments/edit?id=987&brandProfileId=55');
+    testState.currentUrl = '/developer/developments/edit?id=987&brandProfileId=55';
+    testState.editDevelopment.currentStepId = 'marketing_summary';
+    testState.updateDevelopmentMock.mockResolvedValueOnce({ success: false });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().editingId).toBe(987);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /save progress/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-save-status').textContent).toBe('error');
+    });
+    expect(testState.toastSuccessMock).not.toHaveBeenCalledWith('Progress saved');
+    expect(testState.toastErrorMock).toHaveBeenCalledWith('Development progress could not be persisted');
   });
 
   it('unit_types save progress preserves unit identity and display order', async () => {

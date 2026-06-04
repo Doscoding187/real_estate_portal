@@ -44,7 +44,7 @@ import {
 } from '@/lib/developmentSubmitPayload';
 
 interface FinalisationPhaseProps {
-  onManualSaveDraft?: () => void | Promise<void>;
+  onManualSaveDraft?: () => void | Promise<unknown>;
   isManualSaveDraftPending?: boolean;
 }
 

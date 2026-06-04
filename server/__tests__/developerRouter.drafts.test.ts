@@ -332,6 +332,32 @@ describeWithDb('developerRouter development drafts', () => {
     });
     expect(draftData.unitTypes[0]).not.toHaveProperty('monthlyRentFrom');
     expect(draftData.stepData.unit_types.unitTypes[0]).toBe(draftData.unitTypes[0]);
+
+    const updated = await caller.developer.saveDraft({
+      id: createdDraftId,
+      draftData: {
+        ...draftData,
+        currentStepId: 'marketing_summary',
+        completedSteps: [...draftData.completedSteps, 'location'],
+      },
+    });
+    expect(updated).toMatchObject({
+      id: createdDraftId,
+      success: true,
+      draftMeta: {
+        currentStepId: 'marketing_summary',
+        currentStep: 6,
+        progress: 67,
+      },
+    });
+
+    const reloaded = await caller.developer.getDraft({ id: createdDraftId });
+    expect((reloaded as any)?.draftData?.currentStepId).toBe('marketing_summary');
+    expect((reloaded as any)?.draftData?.completedSteps).toEqual([
+      'configuration',
+      'identity_market',
+      'location',
+    ]);
   });
 
   it('saves an edit-hydrated canonical rental draft snapshot without losing inventory ownership', async () => {

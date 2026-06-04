@@ -718,3 +718,65 @@ Next recommended slice:
 - Run an autosave preflight design/guardrail slice, or run a full hand-entered rental/auction wizard UX proof if product polish needs that evidence first.
 Commit hash/tag: This entry will be included in `test(dle): prove rental auction wizard browser flow`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Autosave Safety Preflight And Truthful Manual Fallback
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Establish the DLE autosave safety contract and fix the first persistence-trust blockers without enabling background autosave.
+Files changed:
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- client/src/components/development-wizard/phases/FinalisationPhase.tsx
+- client/src/components/wizard/WizardEngine.tsx
+- client/src/components/wizard/WizardEngine.test.tsx
+- e2e/dle/rental-auction-wizard-save-publish.spec.ts
+- server/developerRouter.ts
+- server/__tests__/developerRouter.drafts.test.ts
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/MANUAL_FLOW_CHECKLIST.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-04/*.png
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx'`
+- Result: Passed. 3 test files, 21 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 browser spec, 2 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run server/__tests__/developerRouter.drafts.test.ts'`
+- Result: Passed with local MySQL access. 1 test file, 8 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/pages/DevelopmentQualificationPage.test.ts client/src/pages/ReferrerDashboard.test.ts server/__tests__/developerRouter.drafts.test.ts server/__tests__/distributionCatalogPricing.test.ts server/lib/developmentReadiness.shared.test.ts server/lib/sanitizeDraftData.test.ts server/__tests__/developerRouter.edit-update.test.ts server/__tests__/integration.developer-create-lead-persistence.test.ts server/__tests__/integration.development-card-data-flow.test.ts'`
+- Result: Initial sandbox run could not access local MySQL. Rerun with approved local DB access passed. 15 test files, 124 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after final docs update.
+Proof and fixes:
+- Autosave remains deliberately disabled behind `autoSaveEnabled = false`.
+- Added `docs/dle/AUTOSAVE_SAFETY_CONTRACT.md` as the authoritative save-state and enablement contract.
+- Centralized draft persistence so manual save, future autosave, and Save & Exit share the same canonical backend path.
+- Backend `success: false` responses now fail draft saves instead of silently becoming saved state.
+- Browser response checks now require payload `success: true`; HTTP `200` alone is not accepted as persistence proof.
+- The stricter browser check exposed an existing-draft update bug: the route wrote an ISO timestamp string into the MySQL `lastModified` timestamp column and returned a safe-failure response.
+- Removed the unsafe explicit timestamp write and added route-level proof that an existing canonical draft updates and reloads successfully.
+- New drafts require a persistent returned draft id before the UI can confirm success.
+- A synchronous draft-id ref ensures later saves reuse the first confirmed id without waiting for React rerender.
+- Manual-save and edit-progress failures now remain visible in the header as `error`.
+- A successful retry clears the failure and marks only the confirmed current state signature as `saved`.
+- Changes made after a confirmed save return the header to `unsaved`.
+- Edit Save Progress now treats resolved `success: false` updates as persistence failures.
+- Save & Exit now remains in the wizard after failed persistence and exits only after confirmed save.
+- Create/draft journeys now expose Manual Save Draft before Review; edit journeys continue using baseline-aware Save Progress.
+- Rental and auction browser flows proved the pre-Review Save Draft button uses the real backend before returning to Review and publishing.
+Evidence:
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-pre-review-save.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-pre-review-save.png
+Remaining risks:
+- Background autosave is not enabled.
+- Focused queued-save/stale-response behavior and hydration gating still need dedicated proof.
+- Browser failure/retry proof still needs a deliberately failed real save path.
+- Debounce timing and guarded rollout scope still require a deliberate decision.
+Next recommended slice:
+- Build the autosave coordinator guardrail slice: queued saves, stale response handling, hydration gates, duplicate-draft prevention, and browser failure/retry proof. Keep background autosave disabled until those gates pass.
+Commit hash/tag: This entry will be included in `fix(dle): establish autosave safety preflight`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

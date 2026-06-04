@@ -180,6 +180,9 @@ The UI must not tell users that progress is saved unless a real save path succee
 
 Manual Save Draft remains the trusted fallback until autosave is verified.
 
+The authoritative enablement gates and save-state rules live in
+`docs/dle/AUTOSAVE_SAFETY_CONTRACT.md`.
+
 ## 11. Field Ownership Rules
 
 Each wizard slice should own only its fields.
@@ -318,6 +321,7 @@ docs/
     PRODUCT_VISION.md
     TECHNICAL_ARCHITECTURE.md
     FIELD_OWNERSHIP_CONTRACT.md
+    AUTOSAVE_SAFETY_CONTRACT.md
     AGENT_HANDOFF_TEMPLATE.md
 ```
 
@@ -335,7 +339,7 @@ Recommended order from here:
 2. Commit hygiene / preserve untracked DLE work
 3. Manual flow proof
 4. Fix truth-in-UX around disabled autosave
-5. Re-enable autosave carefully
+5. Prove the autosave safety contract and guarded rollout
 6. Product audit of wizard experience
 7. Product audit of public development page
 8. UI upgrade to make the engine visible and joyful

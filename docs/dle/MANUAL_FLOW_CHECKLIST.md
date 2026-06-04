@@ -5,7 +5,7 @@ Use this checklist before calling the Development Listing Engine stable.
 | Flow | Required Result | Status | Evidence |
 |---|---|---|---|
 | Create development | Development can be created without data loss | Pass | Browser reached authenticated sale workflow from Project Setup through Review & Publish, including media upload and sale unit-type creation. The resumed draft was then published to development id `4`. Edit-after-publish ownership remains separately pending. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-publish-result-after-date-fix.png`. |
-| Manual Save Draft | Draft saves through real backend path | Pass | Sale browser proof clicked `Save Draft` on Review & Publish. Rental and auction browser proof now confirms manual save hits `developer.saveDraft` and keeps canonical transaction-specific unit data. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-manual-save-draft.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-resume-hydrated.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-resume-hydrated.png`. |
+| Manual Save Draft | Draft saves through real backend path | Pass | Sale browser proof clicked `Save Draft` on Review & Publish. Rental and auction browser proof now confirms Manual Save Draft is available before Review, hits `developer.saveDraft`, and keeps canonical transaction-specific unit data. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-manual-save-draft.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-pre-review-save.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-pre-review-save.png`. |
 | Draft appears in My Drafts | Saved draft is visible | Pass | Sale draft appeared in `/developer/drafts`. Rental and auction canonical drafts also appeared in My Drafts with unit counts before resume. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-my-drafts-visible.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-draft-visible.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-draft-visible.png`. |
 | Resume draft | Canonical state restores correctly | Pass | Sale resume restored identity. Rental and auction resume now restore review-ready canonical state including media, highlights, unit identity, transaction-specific pricing, and publish controls. Evidence: `docs/dle/evidence/2026-06-02/qa-dle-flow-draft-resumed.png`, `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-resume-hydrated.png`, and `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-resume-hydrated.png`. |
 | Edit location | Only location fields change | Pass | Published sale development id `4` location edit preserved media, highlights, governance, unit types, pricing, approval, and public visibility. Evidence: `docs/dle/evidence/2026-06-03/qa-dle-edit-published-field-ownership-summary.md`. |
@@ -350,3 +350,39 @@ Before autosave:
 
 - Transaction-lane save/resume/publish proof is no longer the main blocker.
 - Autosave still needs its own preflight design for truthful save states, failed-save messaging, retry behavior, conflict handling, and transaction-scoped payload ownership.
+
+## 2026-06-04 Autosave Safety Preflight
+
+Decision:
+
+- Autosave remains disabled.
+- `docs/dle/AUTOSAVE_SAFETY_CONTRACT.md` is now the authoritative enablement gate.
+
+Functional proof:
+
+- Pass: backend `developer.saveDraft` responses with `success: false` are treated as failures, not saved progress.
+- Pass: fixed the existing-draft update branch, which was returning HTTP `200` with `success: false` because it wrote an unsafe ISO string into the MySQL `lastModified` timestamp column.
+- Pass: browser save assertions now require response payload `success: true`; HTTP `200` alone is not accepted as persistence proof.
+- Pass: a new draft cannot be confirmed saved unless the backend returns a persistent draft id.
+- Pass: later persistence reuses the first confirmed new-draft id without waiting for a React rerender.
+- Pass: manual-save failure keeps the header in a persistent `error` state.
+- Pass: a real manual retry clears the error and marks only the confirmed current signature as `saved`.
+- Pass: changing wizard data after a successful save returns the header to `unsaved`.
+- Pass: edit Save Progress treats a resolved `success: false` partial update as failure.
+- Pass: Save & Exit keeps the developer in the wizard after persistence failure and exits only after a successful retry.
+- Pass: create/draft journeys show Manual Save Draft before Review.
+- Pass: rental and auction browser flows stepped back from Review, used the pre-Review Save Draft button against the real backend, returned to Review, and published successfully.
+
+Evidence:
+
+- `docs/dle/AUTOSAVE_SAFETY_CONTRACT.md`
+- `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-pre-review-save.png`
+- `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-pre-review-save.png`
+
+Still required before enabling autosave:
+
+- Focused queued-save and stale-response coordinator proof.
+- Hydration-gate proof for create, draft resume, and edit modes.
+- Browser failure/retry proof against a deliberately failed backend save.
+- A deliberate debounce and rollout decision.
+- Browser proof that autosave resumes the latest confirmed canonical state without duplicate drafts.

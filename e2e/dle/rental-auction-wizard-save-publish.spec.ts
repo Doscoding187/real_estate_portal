@@ -50,6 +50,11 @@ function getLeadContext(row: any) {
   return parsed?.leadContext ?? {};
 }
 
+function getTrpcResponseData(payload: any) {
+  const response = Array.isArray(payload) ? payload[0] : payload;
+  return response?.result?.data?.json ?? response?.result?.data ?? null;
+}
+
 function buildCanonicalDraft(scenario: DraftScenario) {
   const isRental = scenario.lane === 'rental';
   const transactionType = isRental ? 'for_rent' : 'auction';
@@ -336,6 +341,7 @@ async function manualSaveAndAssert(page: Page, scenario: DraftScenario, seed: Dr
   await page.getByRole('button', { name: 'Save Draft' }).click();
   const saveResponse = await saveResponsePromise;
   expect(saveResponse.ok()).toBeTruthy();
+  expect(getTrpcResponseData(await saveResponse.json())).toMatchObject({ success: true });
 
   const db = await getDb();
   expect(db).toBeTruthy();
@@ -366,6 +372,29 @@ async function manualSaveAndAssert(page: Page, scenario: DraftScenario, seed: Dr
     expect(draftData.unitTypes[0]).not.toHaveProperty('priceFrom');
     expect(draftData.unitTypes[0]).not.toHaveProperty('monthlyRentFrom');
   }
+}
+
+async function provePreReviewManualSave(page: Page, scenario: DraftScenario) {
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Save Draft', exact: true })).toBeVisible();
+
+  const saveResponsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.saveDraft') &&
+      response.request().method() === 'POST',
+    { timeout: 10_000 },
+  );
+  await page.getByRole('button', { name: 'Save Draft', exact: true }).click();
+  const saveResponse = await saveResponsePromise;
+  expect(saveResponse.ok()).toBeTruthy();
+  const saveResponseData = getTrpcResponseData(await saveResponse.json());
+  expect(saveResponseData).toMatchObject({ success: true });
+  await page.screenshot({
+    path: `${evidenceDir}/qa-dle-${scenario.lane}-wizard-pre-review-save.png`,
+  });
+
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByText('Publishing Controls')).toBeVisible({ timeout: 15_000 });
 }
 
 async function publishAndFindDevelopment(page: Page, scenario: DraftScenario) {
@@ -552,6 +581,7 @@ test.describe.serial('DLE rental and auction wizard save-resume-publish proof', 
 
       await loginAsSeededDeveloper(page, seed);
       await proveDraftListAndResume(page, seededScenario, seed);
+      await provePreReviewManualSave(page, seededScenario);
       await manualSaveAndAssert(page, seededScenario, seed);
       const development = await publishAndFindDevelopment(page, seededScenario);
       createdDevelopmentIds.push(Number(development.id));

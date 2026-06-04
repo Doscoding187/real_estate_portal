@@ -64,15 +64,19 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   // Keep draftId in state because new drafts get an ID after save
   const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftId);
+  const currentDraftIdRef = useRef<number | undefined>(draftId);
   useEffect(() => {
     setCurrentDraftId(draftId);
+    currentDraftIdRef.current = draftId;
   }, [draftId]);
 
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [apiError, setApiError] = useState<AppError | null>(null);
+  const [saveFailure, setSaveFailure] = useState<Error | null>(null);
   const [isManualSavingDraft, setIsManualSavingDraft] = useState(false);
   const [isSavingProgress, setIsSavingProgress] = useState(false);
+  const [isSavingBeforeExit, setIsSavingBeforeExit] = useState(false);
 
   const store = useDevelopmentWizard();
   const [persistReady, setPersistReady] = useState(() => {
@@ -127,7 +131,17 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     }
   }, [persistReady, isEditMode, isDraftMode, reset]);
 
-  // --- Autosave (currently disabled in your code) ---
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const { context: publisherContext } = usePublisherContext();
+  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.brandProfileId;
+  const effectiveDraftBrandProfileId = publisherContext?.brandProfileId ?? brandProfileId;
+  const persistStorageKey = shouldUsePublisherApi
+    ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
+    : DEVELOPMENT_WIZARD_STORAGE_KEY;
+  const persistKeyRef = useRef<string | null>(null);
+
+  // --- Persistence and autosave preflight ---
   const saveDraftMutation = trpc.developer.saveDraft.useMutation();
   const updateDevelopmentMutation = trpc.developer.updateDevelopment.useMutation();
   const updatePublisherDevelopmentMutation = trpc.superAdminPublisher.updateDevelopment.useMutation();
@@ -160,23 +174,46 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   );
   const saveStateSignature = useMemo(() => JSON.stringify(stateToWatch), [stateToWatch]);
 
+  const persistDraftSnapshot = useCallback(async () => {
+    await saveDraft(async data => {
+      const existingDraftId = currentDraftIdRef.current;
+      const result = await saveDraftMutation.mutateAsync({
+        ...(existingDraftId ? { id: existingDraftId } : {}),
+        ...(effectiveDraftBrandProfileId ? { brandProfileId: effectiveDraftBrandProfileId } : {}),
+        draftData: data,
+      });
+
+      if (result?.success === false) {
+        throw new Error('Draft could not be persisted');
+      }
+      if (!existingDraftId && !result?.id) {
+        throw new Error('Draft save did not return a persistent draft id');
+      }
+
+      if (result?.id) {
+        currentDraftIdRef.current = result.id;
+        setCurrentDraftId(result.id);
+      }
+    });
+  }, [effectiveDraftBrandProfileId, saveDraft, saveDraftMutation]);
+
+  // Autosave remains deliberately disabled until the safety contract is fully proven.
+  const autoSaveEnabled = false;
   const {
     lastSaved,
     isSaving,
     error: autoSaveError,
     saveNow,
+    clearSaveStatus,
   } = useAutoSave(stateToWatch, {
     debounceMs: 60000,
-    enabled: false, // TODO: re-enable when backend is stable
-    onSave: async () => {
-      await saveDraft(async data => {
-        const result = await saveDraftMutation.mutateAsync({
-          ...(currentDraftId ? { id: currentDraftId } : {}),
-          ...(brandProfileId ? { brandProfileId } : {}),
-          draftData: data,
-        });
-        if (result?.id && !currentDraftId) setCurrentDraftId(result.id);
-      });
+    enabled: autoSaveEnabled && isHydrated,
+    shouldSkipSave: snapshot => persistedSaveSignature === JSON.stringify(snapshot),
+    onSave: async snapshot => {
+      setSaveFailure(null);
+      setApiError(null);
+      await persistDraftSnapshot();
+      setPersistedSaveSignature(JSON.stringify(snapshot));
     },
   });
 
@@ -188,16 +225,6 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     }
     prevPhaseRef.current = currentPhase;
   }, [currentPhase, saveNow, isHydrated]);
-
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
-  const { context: publisherContext } = usePublisherContext();
-  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.brandProfileId;
-  const effectiveDraftBrandProfileId = publisherContext?.brandProfileId ?? brandProfileId;
-  const persistStorageKey = shouldUsePublisherApi
-    ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
-    : DEVELOPMENT_WIZARD_STORAGE_KEY;
-  const persistKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!shouldUsePublisherApi || !publisherContext?.brandProfileId) return;
@@ -279,9 +306,9 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   // --- Error handling ---
   useEffect(() => {
-    const err = loadError || draftError || autoSaveError;
+    const err = loadError || draftError || autoSaveError || saveFailure;
     if (err) setApiError(parseError(err));
-  }, [loadError, draftError, autoSaveError]);
+  }, [loadError, draftError, autoSaveError, saveFailure]);
 
   // --- Edit hydration (gated by persist rehydrate) ---
   useEffect(() => {
@@ -369,67 +396,54 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     }
   }, []);
 
-  const confirmExit = async () => {
-    try {
-      if (isHydrated) await saveNow();
-    } finally {
-      reset();
-      setLocation(isSuperAdmin ? '/admin/overview' : '/developer');
-    }
-  };
-
-  const handleManualSaveDraft = useCallback(async () => {
-    if (isManualSavingDraft) return;
+  const handleManualSaveDraft = useCallback(async (): Promise<boolean> => {
+    if (isManualSavingDraft) return false;
     setIsManualSavingDraft(true);
+    clearSaveStatus();
+    setSaveFailure(null);
+    setApiError(null);
     try {
-      await saveDraft(async data => {
-        const result = await saveDraftMutation.mutateAsync({
-          ...(currentDraftId ? { id: currentDraftId } : {}),
-          ...(effectiveDraftBrandProfileId ? { brandProfileId: effectiveDraftBrandProfileId } : {}),
-          draftData: data,
-        });
-
-        if (result?.id) setCurrentDraftId(result.id);
-        if (result?.success === false) {
-          throw new Error('Draft could not be persisted');
-        }
-      });
+      await persistDraftSnapshot();
       const savedAt = new Date();
       setManualLastSavedAt(savedAt);
       setPersistedSaveSignature(saveStateSignature);
       toast.success('Draft saved');
+      return true;
     } catch (error) {
       console.error('[DevelopmentWizard] Manual draft save failed:', error);
+      setSaveFailure(error instanceof Error ? error : new Error('Failed to save draft'));
       toast.error('Failed to save draft');
+      return false;
     } finally {
       setIsManualSavingDraft(false);
     }
   }, [
-    currentDraftId,
-    effectiveDraftBrandProfileId,
     isManualSavingDraft,
-    saveDraft,
-    saveDraftMutation,
+    clearSaveStatus,
+    persistDraftSnapshot,
     saveStateSignature,
   ]);
 
-  const handleSaveProgress = useCallback(async () => {
-    if (isSavingProgress) return;
+  const handleSaveProgress = useCallback(async (): Promise<boolean> => {
+    if (isSavingProgress) return false;
 
     const currentState = useDevelopmentWizard.getState();
     const editingId = currentState.editingId;
     if (!editingId) {
       toast.error('Save Progress is only available while editing an existing development.');
-      return;
+      return false;
     }
 
     const previousCanonicalSnapshot = currentState.getPersistedEditSnapshot();
     if (!previousCanonicalSnapshot) {
       toast.error('Reload this development before saving progress.');
-      return;
+      return false;
     }
 
     setIsSavingProgress(true);
+    clearSaveStatus();
+    setSaveFailure(null);
+    setApiError(null);
     try {
       const canonicalSnapshot = currentState.getDraftData();
       const amenities =
@@ -458,7 +472,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
           throw new Error('Publisher brand context is required.');
         }
 
-        await updatePublisherDevelopmentMutation.mutateAsync({
+        const result = await updatePublisherDevelopmentMutation.mutateAsync({
           brandProfileId: publisherBrandProfileId,
           developmentId: editingId,
           data: {
@@ -468,11 +482,17 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
             devOwnerType: 'platform',
           },
         });
+        if (result?.success === false) {
+          throw new Error('Development progress could not be persisted');
+        }
       } else {
-        await updateDevelopmentMutation.mutateAsync({
+        const result = await updateDevelopmentMutation.mutateAsync({
           id: editingId,
           data: payload,
         });
+        if (result?.success === false) {
+          throw new Error('Development progress could not be persisted');
+        }
       }
 
       useDevelopmentWizard.getState().markEditSnapshotPersisted();
@@ -480,14 +500,18 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       setManualLastSavedAt(savedAt);
       setPersistedSaveSignature(saveStateSignature);
       toast.success('Progress saved');
+      return true;
     } catch (error) {
       console.error('[DevelopmentWizard] Save progress failed:', error);
+      setSaveFailure(error instanceof Error ? error : new Error('Failed to save progress'));
       toast.error(error instanceof Error ? error.message : 'Failed to save progress');
+      return false;
     } finally {
       setIsSavingProgress(false);
     }
   }, [
     isSavingProgress,
+    clearSaveStatus,
     publisherContext?.brandProfileId,
     shouldUsePublisherApi,
     updateDevelopmentMutation,
@@ -495,11 +519,36 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     saveStateSignature,
   ]);
 
+  const confirmExit = async () => {
+    if (isSavingBeforeExit) return;
+
+    setIsSavingBeforeExit(true);
+    const didSave = isEditMode ? await handleSaveProgress() : await handleManualSaveDraft();
+
+    if (!didSave) {
+      setIsSavingBeforeExit(false);
+      setShowExitDialog(true);
+      return;
+    }
+
+    setShowExitDialog(false);
+    reset();
+    setLocation(isSuperAdmin ? '/admin/overview' : '/developer');
+    setIsSavingBeforeExit(false);
+  };
+
+  const latestSavedAt =
+    lastSaved && manualLastSavedAt
+      ? lastSaved > manualLastSavedAt
+        ? lastSaved
+        : manualLastSavedAt
+      : (lastSaved ?? manualLastSavedAt);
+
   const headerSaveStatus = isSaving || isManualSavingDraft || isSavingProgress
     ? 'saving'
-    : autoSaveError
+    : autoSaveError || saveFailure
       ? 'error'
-      : manualLastSavedAt && persistedSaveSignature === saveStateSignature
+      : latestSavedAt && persistedSaveSignature === saveStateSignature
         ? 'saved'
         : 'unsaved';
 
@@ -527,7 +576,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       <WizardEngine
         onExit={() => setShowExitDialog(true)}
         saveStatus={headerSaveStatus}
-        lastSavedAt={lastSaved ?? manualLastSavedAt ?? undefined}
+        lastSavedAt={latestSavedAt ?? undefined}
         onManualSaveDraft={handleManualSaveDraft}
         isManualSaveDraftPending={isManualSavingDraft}
         onSaveProgress={isEditMode ? handleSaveProgress : undefined}
@@ -545,6 +594,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         onStartFresh={() => {
           setShowResumeDraftDialog(false);
           setCurrentDraftId(undefined);
+          currentDraftIdRef.current = undefined;
           reset();
           window.history.replaceState({}, '', window.location.pathname);
         }}
@@ -576,11 +626,23 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Exit Development Wizard?</AlertDialogTitle>
-            <AlertDialogDescription>Your progress will be saved as a draft.</AlertDialogDescription>
+            <AlertDialogDescription>
+              {isEditMode
+                ? 'Save your latest development changes before exiting.'
+                : 'Save this development as a draft before exiting.'}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continue Editing</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmExit}>Exit</AlertDialogAction>
+            <AlertDialogAction
+              disabled={isSavingBeforeExit}
+              onClick={event => {
+                event.preventDefault();
+                void confirmExit();
+              }}
+            >
+              {isSavingBeforeExit ? 'Saving...' : 'Save & Exit'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
