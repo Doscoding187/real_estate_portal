@@ -1101,3 +1101,47 @@ Next recommended slice:
   have native next-step language before the lead dialog opens.
 Commit hash/tag: This entry will be included in `feat(dle): localize public unit availability`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Public Action Panel Transaction Copy
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the public development action panel transaction-aware so Sale, Rental, and Auction pages
+ask for the right next step before qualification or lead capture begins.
+Files changed:
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts'`
+- Result: Passed. 1 test file, 18 tests.
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm vitest run client/src/pages/DevelopmentDetail.test.ts client/src/pages/DevelopmentUnitDetailPage.test.ts client/src/components/property-results/__tests__/DevelopmentResultCard.test.tsx client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/wizard/WizardEngine.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/development-wizard/phases/FinalisationPhase.test.tsx client/src/hooks/useDevelopmentWizard.test.ts'`
+- Result: Passed. 9 test files, 92 tests.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added an exported public action-panel copy model for Sale, Rental, and Auction.
+- Sale action-panel copy continues to focus on affordability, full qualification, brochures, and
+  the sales team.
+- Rental action-panel copy now focuses on rental fit, lease details, rental packs, and the leasing
+  team.
+- Auction action-panel copy now focuses on bidder readiness, auction packs, auction-team contact,
+  and obligation-free auction interest.
+- Threaded the public detail pricing transaction type into the live mobile and sticky-sidebar
+  `DevelopmentActionPanel` instances.
+- Kept the existing qualification route, brochure lead, contact lead, and selected-unit lead context
+  behavior unchanged.
+Remaining risks:
+- The qualification route itself may still need deeper Rental/Auction language and calculations.
+- The older hidden desktop conversion card still contains sale-oriented copy but is not rendered by
+  its current classes; it should be removed or reconciled in a cleanup slice.
+- Full Rental/Auction public merchandising sections for lease terms, bidder registration, legal
+  packs, and auction urgency remain outstanding.
+Next recommended slice:
+- Audit and update the qualification route/lead-dialog copy so Rental and Auction remain
+  transaction-native after the action-panel CTA is clicked.
+Commit hash/tag: This entry will be included in `feat(dle): localize public action panel`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

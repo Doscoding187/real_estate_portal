@@ -1,8 +1,8 @@
 # DLE Transaction Engine Product Experience Audit
 
 Date: 2026-06-04
-Status: Product-visibility slices are now active across wizard guidance, unit preview, and public
-unit-card merchandising.
+Status: Product-visibility slices are now active across wizard guidance, unit preview, public
+unit-card merchandising, and public action-panel CTAs.
 
 ## Standard
 
@@ -85,6 +85,25 @@ The public unit cards should:
 This makes the public merchandising layer more trustworthy: a renter should not see sale-only
 language, and an auction bidder should see auction intent before opening the lead form.
 
+## Fourth Product-Visibility Slice
+
+Make the public action panel transaction-aware.
+
+The conversion panel should:
+
+- keep Sale copy focused on affordability, sales enquiry, and buyer qualification;
+- use rental-native copy for rental fit, lease details, rental packs, and leasing-team contact;
+- use auction-native copy for bidder readiness, auction packs, auction-team contact, and
+  obligation-free auction interest;
+- keep the existing lead-dialog and qualification-route behavior intact while improving the words
+  buyers, renters, and bidders see before they act;
+- avoid generic sale language such as `Contact Sales Team` on Rental and Auction pages where a
+  more precise next-step label is available.
+
+This continues moving backend transaction truth into the public conversion layer. The lead path
+already carries selected unit and transaction context; the public CTA language now better matches
+that context before the form opens.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -93,7 +112,7 @@ language, and an auction bidder should see auction intent before opening the lea
 - Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal
   pack, and urgency should become first-class product language.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
-  labels and availability.
+  labels, availability, and primary CTAs.
 - Add operating-layer surfaces after publish: inventory status, reservations, sold/let/auction
   outcomes, lead stages, pricing adjustments, release phases, dashboards, and audit history.
 

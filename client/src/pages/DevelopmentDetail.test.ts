@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDevelopmentDetailAmenityGroups,
   formatDevelopmentDetailLabel,
+  getDevelopmentDetailActionPanelCopy,
   getDevelopmentDetailHighlights,
   getDevelopmentDetailLeadUnitContext,
   getDevelopmentDetailMediaBuckets,
@@ -59,6 +60,54 @@ describe('DevelopmentDetail pricing context', () => {
       'Launch-ready investor units',
       'Limited launch pricing',
     ]);
+  });
+
+  it('keeps sale action panel copy focused on affordability and sales enquiry', () => {
+    expect(getDevelopmentDetailActionPanelCopy('for_sale', 4, true)).toMatchObject({
+      headline: 'Check affordability and take the next step.',
+      qualificationTitle: 'Quick Qualification Check',
+      depositLabel: 'Optional deposit',
+      primaryActionLabel: 'Start Full Qualification',
+      brochureActionLabel: 'Download Brochure',
+      contactActionLabel: 'Contact Sales Team',
+      trustSignals: expect.arrayContaining([
+        'Free pre-qualification available',
+        'No obligation to enquire',
+        '4 unit types available',
+      ]),
+    });
+  });
+
+  it('uses rental-native action panel copy for lease enquiries', () => {
+    expect(getDevelopmentDetailActionPanelCopy('for_rent', 3, false)).toMatchObject({
+      headline: 'Check rental fit and request lease details.',
+      qualificationTitle: 'Rental Fit Check',
+      depositLabel: 'Optional deposit or upfront amount',
+      primaryActionLabel: 'Check Rental Fit',
+      brochureActionLabel: 'Request Rental Pack',
+      contactActionLabel: 'Contact Leasing Team',
+      trustSignals: expect.arrayContaining([
+        'Rental fit estimate available',
+        'No obligation to enquire',
+        '3 rental unit types available',
+      ]),
+    });
+  });
+
+  it('uses auction-native action panel copy for bidder readiness', () => {
+    expect(getDevelopmentDetailActionPanelCopy('auction', 2, true)).toMatchObject({
+      headline: 'Check bidder readiness and request auction details.',
+      qualificationTitle: 'Bidder Readiness Check',
+      depositLabel: 'Available deposit or cash contribution',
+      primaryActionLabel: 'Check Bidder Readiness',
+      brochureActionLabel: 'Download Auction Pack',
+      contactActionLabel: 'Contact Auction Team',
+      trustSignals: expect.arrayContaining([
+        'Bidder readiness estimate available',
+        'Auction interest stays obligation-free',
+        '2 auction unit types available',
+      ]),
+    });
   });
 
   it('uses rental unit monthly rent instead of stale sale prices', () => {

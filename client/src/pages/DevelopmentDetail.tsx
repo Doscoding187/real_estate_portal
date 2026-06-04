@@ -819,6 +819,7 @@ type QuickQualificationState = {
 
 type DevelopmentActionPanelProps = {
   developmentName: string;
+  transactionType: unknown;
   inputId: string;
   quickIncome: string;
   onQuickIncomeChange: (value: string) => void;
@@ -832,8 +833,70 @@ type DevelopmentActionPanelProps = {
   onContactSales: () => void;
 };
 
+export function getDevelopmentDetailActionPanelCopy(
+  transactionType: unknown,
+  unitTypeCount: number,
+  hasBrochure: boolean,
+) {
+  const normalizedTransactionType = normalizeDevelopmentDetailTransactionType(transactionType);
+  const safeUnitTypeCount = Math.max(0, Number(unitTypeCount) || 0);
+
+  if (normalizedTransactionType === 'rent') {
+    return {
+      headline: 'Check rental fit and request lease details.',
+      qualificationTitle: 'Rental Fit Check',
+      qualificationHelp: 'Enter your monthly household income',
+      depositLabel: 'Optional deposit or upfront amount',
+      depositPlaceholder: 'Optional deposit',
+      primaryActionLabel: 'Check Rental Fit',
+      brochureActionLabel: hasBrochure ? 'Download Rental Pack' : 'Request Rental Pack',
+      contactActionLabel: 'Contact Leasing Team',
+      trustSignals: [
+        'Rental fit estimate available',
+        'No obligation to enquire',
+        `${safeUnitTypeCount} rental unit types available`,
+      ],
+    };
+  }
+
+  if (normalizedTransactionType === 'auction') {
+    return {
+      headline: 'Check bidder readiness and request auction details.',
+      qualificationTitle: 'Bidder Readiness Check',
+      qualificationHelp: 'Enter your monthly household income',
+      depositLabel: 'Available deposit or cash contribution',
+      depositPlaceholder: 'Deposit or cash contribution',
+      primaryActionLabel: 'Check Bidder Readiness',
+      brochureActionLabel: hasBrochure ? 'Download Auction Pack' : 'Request Auction Pack',
+      contactActionLabel: 'Contact Auction Team',
+      trustSignals: [
+        'Bidder readiness estimate available',
+        'Auction interest stays obligation-free',
+        `${safeUnitTypeCount} auction unit types available`,
+      ],
+    };
+  }
+
+  return {
+    headline: 'Check affordability and take the next step.',
+    qualificationTitle: 'Quick Qualification Check',
+    qualificationHelp: 'Enter your monthly household income',
+    depositLabel: 'Optional deposit',
+    depositPlaceholder: 'Optional deposit',
+    primaryActionLabel: 'Start Full Qualification',
+    brochureActionLabel: hasBrochure ? 'Download Brochure' : 'Request Brochure',
+    contactActionLabel: 'Contact Sales Team',
+    trustSignals: [
+      'Free pre-qualification available',
+      'No obligation to enquire',
+      `${safeUnitTypeCount} unit types available`,
+    ],
+  };
+}
+
 function DevelopmentActionPanel({
   developmentName,
+  transactionType,
   inputId,
   quickIncome,
   onQuickIncomeChange,
@@ -846,6 +909,12 @@ function DevelopmentActionPanel({
   onDownloadBrochure,
   onContactSales,
 }: DevelopmentActionPanelProps) {
+  const copy = getDevelopmentDetailActionPanelCopy(
+    transactionType,
+    unitTypeCount,
+    Boolean(brochureUrl),
+  );
+
   return (
     <Card className="overflow-hidden border-slate-200 shadow-sm">
       <CardContent className="p-0">
@@ -853,7 +922,7 @@ function DevelopmentActionPanel({
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-200">
             Interested in {developmentName}?
           </p>
-          <h3 className="mt-2 text-lg font-bold">Check affordability and take the next step.</h3>
+          <h3 className="mt-2 text-lg font-bold">{copy.headline}</h3>
         </div>
 
         <div className="space-y-4 p-4">
@@ -861,9 +930,9 @@ function DevelopmentActionPanel({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Quick Qualification Check
+                  {copy.qualificationTitle}
                 </p>
-                <p className="mt-1 text-xs text-slate-600">Enter your monthly household income</p>
+                <p className="mt-1 text-xs text-slate-600">{copy.qualificationHelp}</p>
               </div>
               <Badge
                 variant="outline"
@@ -895,7 +964,7 @@ function DevelopmentActionPanel({
 
             <div className="mt-3">
               <label htmlFor={`${inputId}-deposit`} className="sr-only">
-                Optional deposit
+                {copy.depositLabel}
               </label>
               <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
                 <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
@@ -905,13 +974,13 @@ function DevelopmentActionPanel({
                   id={`${inputId}-deposit`}
                   type="text"
                   inputMode="numeric"
-                  placeholder="Optional deposit"
+                  placeholder={copy.depositPlaceholder}
                   value={quickDeposit}
                   onChange={e => onQuickDepositChange(e.target.value)}
                   className="h-10 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-xs font-medium text-slate-900 outline-none placeholder:text-slate-400"
                 />
               </div>
-              <p className="mt-1 text-[11px] text-slate-500">Optional deposit</p>
+              <p className="mt-1 text-[11px] text-slate-500">{copy.depositLabel}</p>
             </div>
 
             {quickQualification ? (
@@ -939,37 +1008,31 @@ function DevelopmentActionPanel({
               className="h-10 bg-orange-500 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
               onClick={onStartQualification}
             >
-              Start Full Qualification
+              {copy.primaryActionLabel}
             </Button>
             <Button
               variant="outline"
               className="h-10 border-blue-200 text-sm font-semibold text-blue-700 hover:bg-blue-50"
               onClick={onDownloadBrochure}
             >
-              {brochureUrl ? 'Download Brochure' : 'Request Brochure'}
+              {copy.brochureActionLabel}
             </Button>
             <Button
               variant="ghost"
               className="h-9 text-xs font-medium text-slate-600 hover:text-slate-900"
               onClick={onContactSales}
             >
-              Contact Sales Team
+              {copy.contactActionLabel}
             </Button>
           </div>
 
           <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3 text-[11px] text-slate-600">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              Free pre-qualification available
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              No obligation to enquire
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              {unitTypeCount} unit types available
-            </div>
+            {copy.trustSignals.map(signal => (
+              <div key={signal} className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                {signal}
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
@@ -1712,6 +1775,7 @@ export default function DevelopmentDetail() {
                 <div className="lg:hidden">
                   <DevelopmentActionPanel
                     developmentName={development.name}
+                    transactionType={detailPricing.transactionType}
                     inputId="hero-quick-income"
                     quickIncome={quickIncome}
                     onQuickIncomeChange={setQuickIncome}
@@ -2424,6 +2488,7 @@ export default function DevelopmentDetail() {
                 >
                   <DevelopmentActionPanel
                     developmentName={development.name}
+                    transactionType={detailPricing.transactionType}
                     inputId="sidebar-quick-income"
                     quickIncome={quickIncome}
                     onQuickIncomeChange={setQuickIncome}
