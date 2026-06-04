@@ -2369,7 +2369,7 @@ export async function persistUnitTypes(
       auctionEndDate: isAuctionUnit ? asDateTimeOrNull(unitData.auctionEndDate) : null,
       auctionStatus: sanitizeEnum(
         isAuctionUnit ? unitData.auctionStatus : null,
-        ['scheduled', 'active', 'sold', 'passed_in', 'withdrawn'],
+        ['scheduled', 'registration_open', 'active', 'sold', 'passed_in', 'withdrawn'],
         'scheduled',
       ),
 

@@ -540,6 +540,52 @@ export const getDevelopmentDetailUnitAvailabilityState = (
   const availableUnits = inventory.available;
   const totalUnits = inventory.total;
 
+  if (normalizedTransactionType === 'auction') {
+    const auctionStatus = String(unit?.auctionStatus || '')
+      .trim()
+      .toLowerCase();
+
+    if (auctionStatus === 'registration_open') {
+      return {
+        label: 'Registration open',
+        className: 'border-blue-200 bg-blue-50 text-blue-700',
+        primaryLabel: 'Register Auction Interest',
+      };
+    }
+
+    if (auctionStatus === 'active') {
+      return {
+        label: 'Auction active',
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        primaryLabel: 'Register Auction Interest',
+      };
+    }
+
+    if (auctionStatus === 'sold') {
+      return {
+        label: 'Sold at auction',
+        className: 'border-slate-200 bg-slate-100 text-slate-700',
+        primaryLabel: 'Request Auction Outcome',
+      };
+    }
+
+    if (auctionStatus === 'passed_in') {
+      return {
+        label: 'Passed in',
+        className: 'border-amber-200 bg-amber-50 text-amber-700',
+        primaryLabel: 'Request Auction Details',
+      };
+    }
+
+    if (auctionStatus === 'withdrawn') {
+      return {
+        label: 'Withdrawn',
+        className: 'border-slate-200 bg-slate-100 text-slate-600',
+        primaryLabel: 'Request Auction Details',
+      };
+    }
+  }
+
   if (totalUnits > 0 && availableUnits <= 0) {
     if (normalizedTransactionType === 'rent') {
       return {

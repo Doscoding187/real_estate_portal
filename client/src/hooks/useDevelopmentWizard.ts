@@ -235,7 +235,13 @@ export interface UnitType {
   reservePrice?: number;
   auctionStartDate?: string;
   auctionEndDate?: string;
-  auctionStatus?: 'scheduled' | 'active' | 'sold' | 'passed_in' | 'withdrawn';
+  auctionStatus?:
+    | 'scheduled'
+    | 'registration_open'
+    | 'active'
+    | 'sold'
+    | 'passed_in'
+    | 'withdrawn';
   transferCostsIncluded?: boolean; // Boolean flag
   // Extended Costs (Ranges for variable unit sizes)
   monthlyLevyFrom?: number;

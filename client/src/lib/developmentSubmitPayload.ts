@@ -38,7 +38,13 @@ export type SubmitUnitType = {
   reservePrice?: number;
   auctionStartDate?: string;
   auctionEndDate?: string;
-  auctionStatus?: 'scheduled' | 'active' | 'sold' | 'passed_in' | 'withdrawn';
+  auctionStatus?:
+    | 'scheduled'
+    | 'registration_open'
+    | 'active'
+    | 'sold'
+    | 'passed_in'
+    | 'withdrawn';
   features?: Record<string, string[]>;
   parkingType?: SubmitParkingType;
   parkingBays?: number;

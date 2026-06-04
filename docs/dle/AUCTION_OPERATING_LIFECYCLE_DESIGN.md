@@ -1,7 +1,8 @@
 # DLE Auction Operating Lifecycle Design
 
 Date: 2026-06-04
-Status: Design contract before the first Auction operating lifecycle mutation.
+Status: Stage A registration open/rollback is implemented and browser-proven. Time-gated
+activation and outcomes remain future Auction-specific slices.
 
 ## Purpose
 
@@ -281,17 +282,21 @@ operating mutation must not rewrite public packaging copy.
 
 Stage A browser proof must show:
 
-- A scheduled Auction lot appears in an Auction-only operating panel.
-- The panel shows starting bid and auction window.
-- The panel does not show Sale Reserve or Rental Hold controls.
-- Opening registration changes the lot status to `registration_open`.
-- The dashboard shows `Registration open`.
-- A `registration_status_changed` event records `scheduled` -> `registration_open`.
-- Closing registration changes the lot back to `scheduled` and writes the reverse event.
+- A scheduled Auction lot appears in an Auction-only operating panel. Status: passed.
+- The panel shows starting bid and auction window. Status: passed.
+- The panel does not show Sale Reserve or Rental Hold controls. Status: passed.
+- Opening registration changes the lot status to `registration_open`. Status: passed.
+- The dashboard shows `Registration open`. Status: passed.
+- A `registration_status_changed` event records `scheduled` -> `registration_open`. Status:
+  passed.
+- Closing registration changes the lot back to `scheduled` and writes the reverse event. Status:
+  passed.
 - Starting bid, reserve price, dates, media, documents, location, governance, highlights, unit
-  definitions, and wizard workflow state remain unchanged.
+  definitions, and wizard workflow state remain unchanged. Status: passed for persisted bids,
+  dates, media, documents, location, governance, highlights, and unit definitions; canonical wizard
+  workflow state remains a future seeded-fixture assertion.
 - Public detail/search output remains Auction-native and reflects registration-open language where
-  designed.
+  designed. Status: passed.
 - Failed lifecycle writes do not claim success.
 
 Stage B browser proof must additionally show:

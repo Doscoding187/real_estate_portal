@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getAuctionLifecycleLabel,
   getUnitTypesPhaseMerchandisingPreview,
   getUnitTypesPhasePriceDisplay,
   getUnitTypesPhaseTransactionCopy,
@@ -15,6 +16,13 @@ describe('UnitTypesPhase transaction helpers', () => {
     expect(normalizeUnitTypesPhaseTransactionType('to rent')).toBe('for_rent');
     expect(normalizeUnitTypesPhaseTransactionType('on-auction')).toBe('auction');
     expect(normalizeUnitTypesPhaseTransactionType('for_sale')).toBe('for_sale');
+  });
+
+  it('shows Auction lifecycle labels without Sale/Rental status language', () => {
+    expect(getAuctionLifecycleLabel('scheduled')).toBe('Scheduled');
+    expect(getAuctionLifecycleLabel('registration_open')).toBe('Registration open');
+    expect(getAuctionLifecycleLabel('active')).toBe('Auction active');
+    expect(getAuctionLifecycleLabel('sold')).toBe('Sold at auction');
   });
 
   it('returns transaction-specific helper copy', () => {

@@ -584,6 +584,7 @@ export const unitTypes = mysqlTable(
     auctionEndDate: datetime('auction_end_date', { mode: 'string' }),
     auctionStatus: mysqlEnum('auction_status', [
       'scheduled',
+      'registration_open',
       'active',
       'sold',
       'passed_in',

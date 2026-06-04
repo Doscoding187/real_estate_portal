@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getAuctionRegistrationReadinessIssue,
+  getAuctionRegistrationTransitionStatuses,
   getDevelopmentOperatingEventNote,
   getRentalUnitHoldTransitionStatuses,
   getSaleUnitReservationTransitionStatuses,
@@ -69,5 +71,53 @@ describe('development operating events service helpers', () => {
       toStatus: 'available',
       quantityDelta: 1,
     });
+  });
+
+  it('maps Auction registration transitions without inventory quantity semantics', () => {
+    expect(getAuctionRegistrationTransitionStatuses('open_registration')).toEqual({
+      fromStatus: 'scheduled',
+      toStatus: 'registration_open',
+    });
+
+    expect(getAuctionRegistrationTransitionStatuses('close_registration')).toEqual({
+      fromStatus: 'registration_open',
+      toStatus: 'scheduled',
+    });
+  });
+
+  it('requires Auction registration readiness before opening registration', () => {
+    const nowMs = new Date('2030-01-01T00:00:00.000Z').getTime();
+    expect(
+      getAuctionRegistrationReadinessIssue(
+        {
+          startingBid: 850_000,
+          reservePrice: 950_000,
+          auctionStartDate: '2030-02-01T09:00:00.000Z',
+          auctionEndDate: '2030-02-08T17:00:00.000Z',
+        },
+        nowMs,
+      ),
+    ).toBeNull();
+    expect(
+      getAuctionRegistrationReadinessIssue(
+        {
+          startingBid: 850_000,
+          reservePrice: 800_000,
+          auctionStartDate: '2030-02-01T09:00:00.000Z',
+          auctionEndDate: '2030-02-08T17:00:00.000Z',
+        },
+        nowMs,
+      ),
+    ).toBe('Reserve price cannot be below the starting bid.');
+    expect(
+      getAuctionRegistrationReadinessIssue(
+        {
+          startingBid: 850_000,
+          auctionStartDate: '2029-12-01T09:00:00.000Z',
+          auctionEndDate: '2030-02-08T17:00:00.000Z',
+        },
+        nowMs,
+      ),
+    ).toBe('Registration can only open before the auction starts.');
   });
 });

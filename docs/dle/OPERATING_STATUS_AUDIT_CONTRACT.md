@@ -1,8 +1,9 @@
 # DLE Operating Status and Audit Contract
 
 Date: 2026-06-04
-Status: Contract implemented through operating note/readback, Sale reserve/release, and Rental
-hold/release. Auction inventory mutations remain a future transaction-specific slice.
+Status: Contract implemented through operating note/readback, Sale reserve/release, Rental
+hold/release, and Auction registration open/rollback. Auction activation and outcomes remain future
+transaction-specific slices.
 
 ## Purpose
 
@@ -34,10 +35,9 @@ Existing anchors:
 
 Missing DLE operating anchors:
 
-- No transaction-native unit operating status model beyond the first Sale `available`/`reserved`
-  and Rental `available`/`held` count transitions.
-- No Rental application/lease outcome or Auction registration/active/outcome inventory mutations
-  yet.
+- No transaction-native unit operating status model beyond the first Sale `available`/`reserved`,
+  Rental `available`/`held`, and Auction `scheduled`/`registration_open` transitions.
+- No Rental application/lease outcome or Auction active/outcome mutations yet.
 - No DLE operating event stream coverage yet for price, release phase, public status, or
   distribution handoff changes.
 
@@ -271,12 +271,16 @@ Current mutation status:
   `unit_types.reserved_units` only as the underlying held-count projection.
 - Browser proof confirms hold/release counts, `available`/`held` event statuses, aggregate
   availability, stable lease/package fields, and continued Rental language on public/search output.
+- Auction `scheduled` -> `registration_open` -> `scheduled` has been implemented from the developer
+  dashboard.
+- Auction lifecycle uses canonical `unit_types.auction_status`; registered bidders are not faked
+  through `reserved_units`.
+- Browser proof confirms registration open/rollback events, no count mutation, stable Auction
+  packaging fields, and continued Auction public/search language.
 
 Only after that:
 
-- Implement Auction `scheduled` -> `registration_open` registration open/rollback from
-  `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
-- Keep Auction activation time-gated and separate from the first registration mutation.
+- Keep Auction activation time-gated and separate from registration open/rollback.
 
 ## Browser Proof Requirements
 
@@ -291,6 +295,8 @@ Before calling operating mutations safe, prove:
 - Rental hold/release cannot wipe rent/deposit/lease/furnished/media/location/governance/highlights/
   unit definitions. Status: passed in browser/DB proof.
 - Rental public page and search-card labels remain transaction-native after the operating update.
+  Status: passed.
+- Auction public page and search-card labels remain transaction-native after registration open.
   Status: passed.
 - Sale public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.

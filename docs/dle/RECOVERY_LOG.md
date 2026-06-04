@@ -1939,3 +1939,94 @@ Next recommended slice:
   browser-proof lifecycle, public language, and field ownership.
 Commit hash/tag: This entry will be included in `docs(dle): design auction operating lifecycle`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Auction Registration Open/Rollback Operating Mutation
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement and browser-proof Auction Stage A as a distinct lot lifecycle mutation without
+reusing Sale/Rental count semantics or allowing packaging edits to activate a live Auction.
+Files changed:
+- server/migrations/0069_add_auction_registration_open_status.sql
+- drizzle/schema/developments.ts
+- client/src/hooks/useDevelopmentWizard.ts
+- client/src/lib/developmentSubmitPayload.ts
+- server/services/developmentService.ts
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/auction-operating-registration.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-registration-open.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-registration-closed.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-public-registration.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-search-language.png
+- docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Local DB migration:
+- Command: `bash -lc 'source ~/.nvm/nvm.sh && pnpm db:migrate:local'`
+- Result: Passed. Applied `0069_add_auction_registration_open_status.sql` to
+  `127.0.0.1:3306/listify_local`; `db:verify:distribution` passed.
+Focused tests run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/pages/DevelopmentDetail.test.ts'`
+- Result: Passed. 4 test files, 37 tests.
+Focused browser proof run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/auction-operating-registration.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed. 1 test file, 1 browser test.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Extended canonical `unit_types.auction_status` with `registration_open` through schema, SQL
+  migration, wizard/submit types, and persistence sanitizer compatibility.
+- Added Auction registration readiness validation for starting bid, reserve range, future auction
+  start, and valid auction window.
+- Added Auction-only operating inventory readback via `developer.getAuctionOperatingInventory`.
+- Added Auction-only registration lifecycle mutation via `developer.transitionAuctionRegistration`.
+- Opening registration atomically updates only `unit_types.auction_status` from `scheduled` to
+  `registration_open` and writes `registration_status_changed`.
+- Closing registration atomically moves `registration_open` back to `scheduled` with the reverse
+  event.
+- Auction lifecycle mutations do not change available/reserved counts or development aggregates.
+- Added an Auction-only `Auction Lots` dashboard panel showing current lifecycle, starting bid,
+  internal reserve context, auction window, Open Registration, and Close Registration.
+- The Auction dashboard does not expose Sale Reserve or Rental Hold controls and does not claim a
+  fictional registered-bidder count.
+- Corrected packaging/operating ownership in Unit Types: Auction lifecycle is now read-only there,
+  new lots remain Scheduled, and live changes are directed to the developer dashboard.
+- Public Auction unit merchandising now shows `Registration open` when the canonical lot lifecycle
+  is open.
+- Browser/DB proof verified open/rollback events, transaction type, lot ID, statuses, null quantity
+  deltas, no count mutation, stable bids/reserve/window/media/documents/location/governance/
+  highlights/unit definitions, public Registration-open language, and Auction search pricing.
+Manual flows verified:
+- Developer dashboard Auction registration open/rollback against local frontend `:3009`, backend
+  `:5000`, and `listify_local`.
+- Published Auction public detail during registration-open lifecycle.
+- Auction search-card price language after registration opened.
+Remaining risks:
+- Failed Auction lifecycle write no-false-success UX is not yet browser-proven.
+- Failed Sale/Rental operating mutation no-false-success proof remains outstanding.
+- Time-gated `registration_open` -> `active` is not implemented.
+- Sold, passed-in, and withdrawn outcome mutations are not implemented.
+- Bidder registrations, proof-of-funds/FICA readiness, terms acceptance, and registration deposits
+  still need a future canonical model.
+- Canonical wizard workflow state should be added to a future operating field-ownership fixture.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Browser-proof failed Sale/Rental/Auction operating mutations do not claim success, then implement
+  time-gated Auction activation.
+Commit hash/tag: This entry will be included in `feat(dle): add auction registration operations`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

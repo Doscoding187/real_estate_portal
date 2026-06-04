@@ -20,6 +20,18 @@ export const SALE_UNIT_RESERVATION_TRANSITIONS = ['reserve', 'release'] as const
 export type SaleUnitReservationTransition = (typeof SALE_UNIT_RESERVATION_TRANSITIONS)[number];
 export const RENTAL_UNIT_HOLD_TRANSITIONS = ['hold', 'release'] as const;
 export type RentalUnitHoldTransition = (typeof RENTAL_UNIT_HOLD_TRANSITIONS)[number];
+export const AUCTION_REGISTRATION_TRANSITIONS = [
+  'open_registration',
+  'close_registration',
+] as const;
+export type AuctionRegistrationTransition = (typeof AUCTION_REGISTRATION_TRANSITIONS)[number];
+type AuctionLifecycleStatus =
+  | 'scheduled'
+  | 'registration_open'
+  | 'active'
+  | 'sold'
+  | 'passed_in'
+  | 'withdrawn';
 
 type InventoryTransitionEngineConfig = {
   transactionType: Extract<DevelopmentOperatingTransactionType, 'for_sale' | 'for_rent'>;
@@ -147,10 +159,63 @@ export function getRentalUnitHoldTransitionStatuses(transition: RentalUnitHoldTr
   };
 }
 
+export function getAuctionRegistrationTransitionStatuses(
+  transition: AuctionRegistrationTransition,
+): { fromStatus: AuctionLifecycleStatus; toStatus: AuctionLifecycleStatus } {
+  if (transition === 'open_registration') {
+    return {
+      fromStatus: 'scheduled',
+      toStatus: 'registration_open',
+    };
+  }
+
+  return {
+    fromStatus: 'registration_open',
+    toStatus: 'scheduled',
+  };
+}
+
 function toNonNegativeInt(value: unknown): number {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric)) return 0;
   return Math.max(0, Math.trunc(numeric));
+}
+
+function toPositiveNumberOrNull(value: unknown): number | null {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function toDateMsOrNull(value: unknown): number | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  const time = date.getTime();
+  return Number.isFinite(time) ? time : null;
+}
+
+export function getAuctionRegistrationReadinessIssue(
+  unit: {
+    startingBid?: unknown;
+    reservePrice?: unknown;
+    auctionStartDate?: unknown;
+    auctionEndDate?: unknown;
+  },
+  nowMs = Date.now(),
+): string | null {
+  const startingBid = toPositiveNumberOrNull(unit.startingBid);
+  const reservePrice = toPositiveNumberOrNull(unit.reservePrice);
+  const startMs = toDateMsOrNull(unit.auctionStartDate);
+  const endMs = toDateMsOrNull(unit.auctionEndDate);
+
+  if (startingBid === null) return 'Starting bid is required before registration can open.';
+  if (reservePrice !== null && reservePrice < startingBid) {
+    return 'Reserve price cannot be below the starting bid.';
+  }
+  if (startMs === null) return 'Auction start date is required before registration can open.';
+  if (endMs === null) return 'Auction end date is required before registration can open.';
+  if (endMs <= startMs) return 'Auction end date must be after the start date.';
+  if (startMs <= nowMs) return 'Registration can only open before the auction starts.';
+  return null;
 }
 
 async function requireOwnedDevelopment(input: { developerId: number; developmentId: number }) {
@@ -364,6 +429,227 @@ export async function listRentalOperatingInventory(input: {
     })),
     aggregateAvailableUnits,
   };
+}
+
+export async function listAuctionOperatingInventory(input: {
+  developerId: number;
+  developmentId: number;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== 'auction') {
+    return { items: [], statusCounts: {} };
+  }
+
+  const items = await db
+    .select({
+      id: unitTypes.id,
+      developmentId: unitTypes.developmentId,
+      name: unitTypes.name,
+      totalUnits: unitTypes.totalUnits,
+      availableUnits: unitTypes.availableUnits,
+      startingBid: unitTypes.startingBid,
+      reservePrice: unitTypes.reservePrice,
+      auctionStartDate: unitTypes.auctionStartDate,
+      auctionEndDate: unitTypes.auctionEndDate,
+      auctionStatus: unitTypes.auctionStatus,
+      displayOrder: unitTypes.displayOrder,
+    })
+    .from(unitTypes)
+    .where(and(eq(unitTypes.developmentId, input.developmentId), eq(unitTypes.isActive, 1)))
+    .orderBy(unitTypes.displayOrder);
+
+  const normalizedItems = items.map(item => ({
+    ...item,
+    totalUnits: toNonNegativeInt(item.totalUnits),
+    availableUnits: toNonNegativeInt(item.availableUnits),
+    startingBid: item.startingBid != null ? Number(item.startingBid) : null,
+    reservePrice: item.reservePrice != null ? Number(item.reservePrice) : null,
+    auctionStatus: item.auctionStatus || 'scheduled',
+  }));
+  const statusCounts = normalizedItems.reduce(
+    (counts: Record<string, number>, item: { auctionStatus: string }) => {
+      counts[item.auctionStatus] = (counts[item.auctionStatus] || 0) + 1;
+      return counts;
+    },
+    {},
+  );
+
+  return { items: normalizedItems, statusCounts };
+}
+
+export async function transitionAuctionRegistration(input: {
+  developerId: number;
+  developmentId: number;
+  unitTypeId: string;
+  actorUserId: number;
+  transition: AuctionRegistrationTransition;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== 'auction') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Auction registration transitions are only available for Auction developments.',
+    });
+  }
+
+  const { fromStatus, toStatus } = getAuctionRegistrationTransitionStatuses(input.transition);
+  const note = input.note ? String(input.note).trim() : '';
+  const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
+
+  return await db.transaction(async (tx: any) => {
+    const [beforeUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        startingBid: unitTypes.startingBid,
+        reservePrice: unitTypes.reservePrice,
+        auctionStartDate: unitTypes.auctionStartDate,
+        auctionEndDate: unitTypes.auctionEndDate,
+        auctionStatus: unitTypes.auctionStatus,
+      })
+      .from(unitTypes)
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+        ),
+      )
+      .limit(1);
+
+    if (!beforeUnit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Auction lot not found.' });
+    }
+
+    const currentStatus = beforeUnit.auctionStatus || 'scheduled';
+    if (currentStatus !== fromStatus) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Auction registration can only move from ${fromStatus.replace(/_/g, ' ')} to ${toStatus.replace(/_/g, ' ')}.`,
+      });
+    }
+
+    if (input.transition === 'open_registration') {
+      const readinessIssue = getAuctionRegistrationReadinessIssue(beforeUnit);
+      if (readinessIssue) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: readinessIssue });
+      }
+    }
+
+    const beforeSnapshot = {
+      unitTypeId: beforeUnit.id,
+      unitTypeName: beforeUnit.name,
+      auctionStatus: currentStatus,
+      totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
+      availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
+      startingBid: toPositiveNumberOrNull(beforeUnit.startingBid),
+      reservePrice: toPositiveNumberOrNull(beforeUnit.reservePrice),
+      auctionStartDate: beforeUnit.auctionStartDate,
+      auctionEndDate: beforeUnit.auctionEndDate,
+    };
+
+    const updateResult = await tx
+      .update(unitTypes)
+      .set({ auctionStatus: toStatus })
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+          eq(unitTypes.auctionStatus, fromStatus),
+        ),
+      );
+
+    if (readAffectedRows(updateResult) < 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Auction lifecycle changed before this transition could be saved.',
+      });
+    }
+
+    const [afterUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        startingBid: unitTypes.startingBid,
+        reservePrice: unitTypes.reservePrice,
+        auctionStartDate: unitTypes.auctionStartDate,
+        auctionEndDate: unitTypes.auctionEndDate,
+        auctionStatus: unitTypes.auctionStatus,
+      })
+      .from(unitTypes)
+      .where(and(eq(unitTypes.id, input.unitTypeId), eq(unitTypes.developmentId, input.developmentId)))
+      .limit(1);
+
+    if (!afterUnit) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Auction lifecycle updated but could not be read back.',
+      });
+    }
+
+    const afterSnapshot = {
+      ...beforeSnapshot,
+      auctionStatus: afterUnit.auctionStatus || toStatus,
+    };
+    const metadata = {
+      transition: input.transition,
+      ...(note ? { note } : {}),
+      developmentName: development.name,
+    };
+    const insertResult = await tx.insert(developmentOperatingEvents).values({
+      developmentId: input.developmentId,
+      unitTypeId: input.unitTypeId,
+      transactionType: 'auction',
+      eventType: 'registration_status_changed',
+      fromStatus,
+      toStatus,
+      beforeData: beforeSnapshot,
+      afterData: afterSnapshot,
+      metadata,
+      actorUserId: input.actorUserId,
+      sourceSurface,
+    });
+
+    const insertedId = readInsertId(insertResult);
+    if (!insertedId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Auction registration event could not be saved.',
+      });
+    }
+
+    const [event] = await tx
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.id, insertedId),
+          eq(developmentOperatingEvents.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+
+    if (!event) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Auction registration event was saved but could not be read back.',
+      });
+    }
+
+    return {
+      unit: afterSnapshot,
+      event,
+    };
+  });
 }
 
 async function transitionUnitAvailability(

@@ -207,6 +207,23 @@ export const normalizeUnitTypesPhaseTransactionType = (
   return 'for_sale';
 };
 
+export const getAuctionLifecycleLabel = (value: unknown): string => {
+  const normalized = String(value || 'scheduled')
+    .trim()
+    .toLowerCase();
+
+  const labels: Record<string, string> = {
+    scheduled: 'Scheduled',
+    registration_open: 'Registration open',
+    active: 'Auction active',
+    sold: 'Sold at auction',
+    passed_in: 'Passed in',
+    withdrawn: 'Withdrawn',
+  };
+
+  return labels[normalized] || 'Scheduled';
+};
+
 const formatUnitTypeCurrency = (value: number) => `R ${value.toLocaleString('en-ZA')}`;
 
 export const isValidUnitTypesPhaseMonthlyRentRange = (unit: Partial<UnitType>) => {
@@ -1301,28 +1318,23 @@ export function UnitTypesPhase() {
         </div>
       </div>
 
-      {/* Section 3: Auction Status */}
+      {/* Section 3: Auction Lifecycle */}
       <div className="space-y-2">
         <Label className="text-base font-semibold text-slate-900 border-b pb-2 block">
-          3. Auction Status
+          3. Auction Lifecycle
         </Label>
-        <RadioGroup
-          value={formData.auctionStatus || 'scheduled'}
-          onValueChange={v => setFormData(p => ({ ...p, auctionStatus: v as any }))}
-          className="space-y-2"
-        >
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="scheduled" id="auction-status-scheduled" />
-            <Label htmlFor="auction-status-scheduled">Scheduled (auction pending)</Label>
+        <div className="flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">Current lifecycle</p>
+            <Badge variant="outline">
+              {getAuctionLifecycleLabel(formData.auctionStatus || 'scheduled')}
+            </Badge>
           </div>
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="active" id="auction-status-active" />
-            <Label htmlFor="auction-status-active">Active (accepting bids)</Label>
-          </div>
-        </RadioGroup>
-        <p className="text-xs text-slate-500 mt-2">
-          Status will update automatically when auction starts/ends
-        </p>
+          <p className="text-xs text-slate-500">
+            New Auction lots start as Scheduled. Registration and live lifecycle changes are
+            managed from the developer dashboard after publish.
+          </p>
+        </div>
       </div>
     </div>
   );

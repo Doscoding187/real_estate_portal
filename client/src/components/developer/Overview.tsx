@@ -156,6 +156,40 @@ function formatMinutes(mins?: number): string {
   return `${(mins / 60).toFixed(1)}h`;
 }
 
+export function getOverviewAuctionLifecycleLabel(value: unknown): string {
+  const normalized = String(value || 'scheduled')
+    .trim()
+    .toLowerCase();
+  const labels: Record<string, string> = {
+    scheduled: 'Scheduled',
+    registration_open: 'Registration open',
+    active: 'Auction active',
+    sold: 'Sold at auction',
+    passed_in: 'Passed in',
+    withdrawn: 'Withdrawn',
+  };
+  return labels[normalized] || 'Scheduled';
+}
+
+function formatOverviewAuctionWindow(startValue?: string | null, endValue?: string | null): string {
+  const formatValue = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat('en-ZA', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  };
+
+  const start = formatValue(startValue);
+  const end = formatValue(endValue);
+  if (start && end) return `${start} - ${end}`;
+  return start || end || 'Auction window not configured';
+}
+
 export function parseOverviewOperatingEventJson(value: unknown): Record<string, any> {
   if (!value) return {};
   if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -335,6 +369,19 @@ export default function Overview() {
     },
   );
 
+  const auctionOperatingInventoryQuery = trpc.developer.getAuctionOperatingInventory.useQuery(
+    {
+      developmentId: selectedDevelopmentId || 0,
+    },
+    {
+      enabled:
+        !!developerProfile &&
+        !!selectedDevelopmentId &&
+        selectedDevelopmentTransactionType === 'auction',
+      refetchOnWindowFocus: false,
+    },
+  );
+
   const addOperatingNoteMutation = trpc.developer.addOperatingNote.useMutation({
     onSuccess: async () => {
       toast.success('Operating note added.');
@@ -376,6 +423,26 @@ export default function Overview() {
       toast.error(error.message || 'Could not update rental inventory.');
     },
   });
+
+  const transitionAuctionRegistrationMutation =
+    trpc.developer.transitionAuctionRegistration.useMutation({
+      onSuccess: async (_data, variables) => {
+        toast.success(
+          variables.transition === 'open_registration'
+            ? 'Auction registration opened.'
+            : 'Auction registration closed.',
+        );
+        await Promise.all([
+          auctionOperatingInventoryQuery.refetch(),
+          operatingEventsQuery.refetch(),
+          utils.developer.getDevelopments.invalidate(),
+          utils.developer.getFunnelKPIs.invalidate(),
+        ]);
+      },
+      onError: error => {
+        toast.error(error.message || 'Could not update Auction registration.');
+      },
+    });
 
   const isNewDeveloper = !developments || developments.length === 0;
   const profileStatus = (developerProfile as any)?.status as string | undefined;
@@ -453,6 +520,7 @@ export default function Overview() {
   const operatingEvents = operatingEventsQuery.data?.items || [];
   const saleOperatingInventory = saleOperatingInventoryQuery.data?.items || [];
   const rentalOperatingInventory = rentalOperatingInventoryQuery.data?.items || [];
+  const auctionOperatingInventory = auctionOperatingInventoryQuery.data?.items || [];
 
   const snapshotTiles = [
     { label: 'New', value: stageCounts.new || 0, stage: 'new' },
@@ -952,6 +1020,101 @@ export default function Overview() {
                           >
                             Release
                           </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {selectedDevelopmentTransactionType === 'auction' && (
+              <div className="rounded-md border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Auction Lots</p>
+                    <p className="text-xs text-muted-foreground">
+                      Registration lifecycle is managed per lot. Bidder counts are tracked
+                      separately from inventory.
+                    </p>
+                  </div>
+                  {auctionOperatingInventoryQuery.isFetching && (
+                    <Badge variant="outline">Refreshing</Badge>
+                  )}
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {!auctionOperatingInventoryQuery.isLoading &&
+                    auctionOperatingInventory.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No active Auction lot inventory found.
+                      </p>
+                    )}
+
+                  {auctionOperatingInventory.map((unit: any) => {
+                    const auctionStatus = String(unit.auctionStatus || 'scheduled');
+                    const mutationPending = transitionAuctionRegistrationMutation.isPending;
+                    return (
+                      <div
+                        className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
+                        key={unit.id}
+                      >
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium text-slate-900">{unit.name}</p>
+                            <Badge variant="outline">
+                              {getOverviewAuctionLifecycleLabel(auctionStatus)}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Starting bid {formatZARCompact(Number(unit.startingBid || 0))}
+                            {unit.reservePrice
+                              ? ` | Reserve tracked at ${formatZARCompact(Number(unit.reservePrice))}`
+                              : ' | Reserve not set'}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {formatOverviewAuctionWindow(
+                              unit.auctionStartDate,
+                              unit.auctionEndDate,
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {auctionStatus === 'scheduled' && (
+                            <Button
+                              disabled={mutationPending}
+                              onClick={() =>
+                                selectedDevelopmentId &&
+                                transitionAuctionRegistrationMutation.mutate({
+                                  developmentId: selectedDevelopmentId,
+                                  unitTypeId: unit.id,
+                                  transition: 'open_registration',
+                                })
+                              }
+                              size="sm"
+                              type="button"
+                            >
+                              Open Registration
+                            </Button>
+                          )}
+                          {auctionStatus === 'registration_open' && (
+                            <Button
+                              disabled={mutationPending}
+                              onClick={() =>
+                                selectedDevelopmentId &&
+                                transitionAuctionRegistrationMutation.mutate({
+                                  developmentId: selectedDevelopmentId,
+                                  unitTypeId: unit.id,
+                                  transition: 'close_registration',
+                                })
+                              }
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              Close Registration
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );

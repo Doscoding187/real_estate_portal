@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildOverviewOperatingReadiness,
+  getOverviewAuctionLifecycleLabel,
   getOverviewOperatingCopy,
   getOverviewOperatingEventNote,
   parseOverviewOperatingEventJson,
@@ -81,6 +82,13 @@ describe('Developer Overview operating readiness', () => {
       referralDealCount: 5,
       distributionState: 'Active referral pipeline',
     });
+  });
+
+  it('uses Auction-native lifecycle labels', () => {
+    expect(getOverviewAuctionLifecycleLabel('scheduled')).toBe('Scheduled');
+    expect(getOverviewAuctionLifecycleLabel('registration_open')).toBe('Registration open');
+    expect(getOverviewAuctionLifecycleLabel('active')).toBe('Auction active');
+    expect(getOverviewAuctionLifecycleLabel('sold')).toBe('Sold at auction');
   });
 
   it('returns null without a selected development', () => {

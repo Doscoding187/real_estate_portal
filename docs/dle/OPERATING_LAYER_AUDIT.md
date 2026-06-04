@@ -2,7 +2,7 @@
 
 Date: 2026-06-04
 Status: Read-only dashboard operating surfaces cover inventory, lead risk, and distribution
-readiness. The first Sale reserve/release and Rental hold/release inventory mutations are
+readiness. Sale reserve/release, Rental hold/release, and Auction registration open/rollback are
 implemented and browser-proven.
 
 ## Purpose
@@ -304,9 +304,20 @@ Implemented next implementation slice:
 
 Recommended next implementation slice:
 
-- Implement Auction registration open/rollback from
+- Browser-proof failed Sale/Rental/Auction operating mutations do not claim success.
+- Then implement time-gated Auction activation from
   `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
-- Extend the canonical `unit_types.auction_status` enum with `registration_open` before runtime
-  mutation work.
-- Keep registered-bidder counts separate from `reserved_units`, and keep time-gated activation and
-  outcomes as later Auction-specific slices.
+
+Implemented Auction Stage A:
+
+- Extended canonical `unit_types.auction_status` with `registration_open`.
+- Added Auction-only operating readback and registration open/rollback mutation.
+- Added an Auction-only dashboard panel with lifecycle status, starting bid, reserve context,
+  auction window, and registration controls.
+- Removed manual Active selection from the packaging wizard; the wizard now shows lifecycle status
+  as dashboard-managed after publish.
+- Browser proof in `e2e/dle/auction-operating-registration.spec.ts` verifies registration
+  open/rollback, canonical status/event readback, no count mutation, field ownership, public
+  Registration-open language, and Auction search pricing.
+- Registered-bidder counts remain separate from `reserved_units`; time-gated activation and
+  outcomes remain later Auction-specific slices.

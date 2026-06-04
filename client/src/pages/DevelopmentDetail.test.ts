@@ -274,6 +274,20 @@ describe('DevelopmentDetail pricing context', () => {
       label: 'Auction closed',
       primaryLabel: 'Register Interest',
     });
+
+    expect(
+      getDevelopmentDetailUnitAvailabilityState(
+        {
+          totalUnits: 3,
+          availableUnits: 2,
+          auctionStatus: 'registration_open',
+        },
+        'auction',
+      ),
+    ).toMatchObject({
+      label: 'Registration open',
+      primaryLabel: 'Register Auction Interest',
+    });
   });
 
   it('builds rental lead unit context from monthly rent fields', () => {
