@@ -1751,3 +1751,52 @@ Next recommended slice:
   `available` -> `held` -> `available` with the same operating-event and field-ownership contract.
 Commit hash/tag: This entry will be included in `feat(dle): add sale reservation operations`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Rental Operating Status Mutation Design
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the first Rental inventory mutation as a separate lease-native operating sub-engine
+before coding live count changes.
+Files changed:
+- docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Focused inspection run:
+- Read `docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md`.
+- Read `docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`.
+- Read `docs/dle/OPERATING_LAYER_AUDIT.md`.
+- Inspected Rental inventory, monthly-rent, deposit, lease-term, furnished-state, and operating-event
+  anchors in `drizzle/schema/developments.ts`, `drizzle/schema/developmentOperations.ts`,
+  `server/services/developmentOperatingEventsService.ts`, `server/developerRouter.ts`, and
+  `client/src/components/developer/Overview.tsx`.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and decisions:
+- Added `docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md`.
+- Defined the first Rental mutation as unit-type count-level hold/release:
+  `available` -> `held` and `held` -> `available`.
+- Defined Rental-native public contracts and dashboard language: `hold`, `release`, and `held`, not
+  Sale-shaped `reserve` or `reserved`.
+- Documented that the existing `unit_types.reserved_units` column may serve only as the underlying
+  held-count projection until a future physical-unit model is justified.
+- Defined transaction boundaries: unit count update, development available-unit aggregate refresh,
+  and `development_operating_events` insert must happen in one DB transaction.
+- Defined hard exclusions: no rent/deposit/lease/furnished changes, no wizard `stepData`, no edit
+  autosave, no public-packaging changes, and no Sale/Auction mutation in this slice.
+- Defined browser proof requirements for Rental language, hold/release, event readback, no false
+  success, public Rental language, and lease/packaging field ownership.
+Remaining risks:
+- This is a design-only slice. No Rental hold/release API or UI has been implemented yet.
+- Failed Sale reserve/release no-false-success proof remains outstanding.
+- Auction operating mutation design remains future work.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement the Rental hold/release mutation service/router/dashboard surface against this design,
+  then browser-proof it with DB and field-ownership assertions.
+Commit hash/tag: This entry will be included in `docs(dle): design rental operating hold`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

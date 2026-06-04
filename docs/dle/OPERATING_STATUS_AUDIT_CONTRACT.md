@@ -269,7 +269,8 @@ Current mutation status:
 
 Only after that:
 
-- Then Rental `available` -> `held` -> `available`.
+- Implement Rental `available` -> `held` -> `available` from
+  `docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md`.
 - Then Auction `scheduled` -> `registration_open` -> `active`.
 
 ## Browser Proof Requirements

@@ -289,5 +289,6 @@ Implemented next implementation slice:
 
 Recommended next implementation slice:
 
-- Decide whether to add Sale mutation failure/no-false-success browser proof next or proceed to the
-  Rental `available` -> `held` -> `available` operating design with the same guardrails.
+- Implement and browser-proof the Rental `available` -> `held` -> `available` operating mutation
+  from `docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md`, preserving Rental-native language and
+  lease packaging fields.
