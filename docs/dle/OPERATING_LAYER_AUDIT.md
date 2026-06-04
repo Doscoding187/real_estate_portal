@@ -1,8 +1,8 @@
 # DLE Operating Layer Audit
 
 Date: 2026-06-04
-Status: Read-only dashboard operating surfaces now cover inventory, lead risk, and distribution
-readiness. Inventory mutations remain blocked behind the operating status/audit model.
+Status: Read-only dashboard operating surfaces cover inventory, lead risk, and distribution
+readiness. The first Sale reserve/release inventory mutation is implemented and browser-proven.
 
 ## Purpose
 
@@ -49,9 +49,9 @@ What is still weak:
 - Lead stages are still sale-shaped in their canonical names: offer, bond, sale, closed won/lost.
   Rental and Auction can use the pipeline mechanically, but the product language and outcome model
   are not transaction-native yet.
-- Development and unit inventory fields track totals, available, reserved, and auction status, but
-  there is no dedicated operating event/audit model for reservations, releases, lets, sold units,
-  auction registration, auction results, price changes, or phase changes.
+- Development and unit inventory fields track totals, available, reserved, and auction status. Sale
+  reserve/release now writes a DLE operating event, but lets, sold units, auction registration,
+  auction results, price changes, and phase changes remain future operating mutations.
 - The dashboard does not yet connect packaging quality, public merchandising, lead context, and live
   operations into one command surface.
 
@@ -272,7 +272,22 @@ Implemented next implementation slice:
 - Browser-proved that an injected failed note write keeps the note in the textarea, does not show a
   success state, and does not increase the DB event count.
 
+Implemented next implementation slice:
+
+- Implemented the first Sale reserve/release inventory mutation from
+  `docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md`.
+- The developer dashboard now exposes a Sale-only `Sales Inventory` panel for the selected
+  development.
+- `developer.getSaleOperatingInventory` reads active Sale unit inventory and aggregate available
+  units.
+- `developer.transitionSaleUnitReservation` performs a Sale-only `reserve` or `release` mutation,
+  verifies developer ownership, derives transaction type from the development, updates unit counts,
+  refreshes the development available-unit aggregate, and writes an `inventory_status_changed`
+  event in one transaction.
+- Browser proof in `e2e/dle/sale-operating-reservation.spec.ts` verifies reserve/release UI counts,
+  DB counts, operating event payloads, aggregate availability, and packaging-field preservation.
+
 Recommended next implementation slice:
 
-- Implement the first Sale reserve/release inventory mutation from
-  `docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md`.
+- Decide whether to add Sale mutation failure/no-false-success browser proof next or proceed to the
+  Rental `available` -> `held` -> `available` operating design with the same guardrails.

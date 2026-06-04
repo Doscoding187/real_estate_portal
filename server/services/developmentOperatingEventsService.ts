@@ -1,7 +1,7 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 
-import { developmentOperatingEvents, developments } from '../../drizzle/schema';
+import { developmentOperatingEvents, developments, unitTypes } from '../../drizzle/schema';
 import {
   DEVELOPMENT_OPERATING_SOURCE_SURFACES,
   type DEVELOPMENT_OPERATING_TRANSACTION_TYPES,
@@ -16,6 +16,9 @@ type DevelopmentOperatingTransactionType =
 const DEFAULT_EVENT_LIMIT = 20;
 const MAX_EVENT_LIMIT = 50;
 
+export const SALE_UNIT_RESERVATION_TRANSITIONS = ['reserve', 'release'] as const;
+export type SaleUnitReservationTransition = (typeof SALE_UNIT_RESERVATION_TRANSITIONS)[number];
+
 function readInsertId(insertResult: unknown): number | null {
   const candidate = Array.isArray(insertResult) ? insertResult[0] : insertResult;
   if (candidate && typeof candidate === 'object' && 'insertId' in candidate) {
@@ -23,6 +26,15 @@ function readInsertId(insertResult: unknown): number | null {
     return Number.isFinite(id) && id > 0 ? id : null;
   }
   return null;
+}
+
+function readAffectedRows(result: unknown): number {
+  const candidate = Array.isArray(result) ? result[0] : result;
+  if (candidate && typeof candidate === 'object' && 'affectedRows' in candidate) {
+    const affectedRows = Number((candidate as { affectedRows: unknown }).affectedRows);
+    return Number.isFinite(affectedRows) ? affectedRows : 0;
+  }
+  return 0;
 }
 
 function normalizeEventLimit(limit?: number): number {
@@ -64,6 +76,30 @@ export function getDevelopmentOperatingEventNote(event: {
   return typeof note === 'string' ? note.trim() : '';
 }
 
+export function getSaleUnitReservationTransitionStatuses(
+  transition: SaleUnitReservationTransition,
+) {
+  if (transition === 'reserve') {
+    return {
+      fromStatus: 'available',
+      toStatus: 'reserved',
+      quantityDelta: -1,
+    };
+  }
+
+  return {
+    fromStatus: 'reserved',
+    toStatus: 'available',
+    quantityDelta: 1,
+  };
+}
+
+function toNonNegativeInt(value: unknown): number {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.trunc(numeric));
+}
+
 async function requireOwnedDevelopment(input: { developerId: number; developmentId: number }) {
   const db = await getDb();
   if (!db) {
@@ -76,6 +112,7 @@ async function requireOwnedDevelopment(input: { developerId: number; development
       developerId: developments.developerId,
       name: developments.name,
       transactionType: developments.transactionType,
+      availableUnits: developments.availableUnits,
     })
     .from(developments)
     .where(eq(developments.id, input.developmentId))
@@ -175,4 +212,258 @@ export async function createDevelopmentOperatingNote(input: {
   }
 
   return event;
+}
+
+export async function listSaleOperatingInventory(input: {
+  developerId: number;
+  developmentId: number;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== 'for_sale') {
+    return { items: [], aggregateAvailableUnits: null };
+  }
+
+  const items = await db
+    .select({
+      id: unitTypes.id,
+      developmentId: unitTypes.developmentId,
+      name: unitTypes.name,
+      totalUnits: unitTypes.totalUnits,
+      availableUnits: unitTypes.availableUnits,
+      reservedUnits: unitTypes.reservedUnits,
+      priceFrom: unitTypes.priceFrom,
+      priceTo: unitTypes.priceTo,
+      basePriceFrom: unitTypes.basePriceFrom,
+      basePriceTo: unitTypes.basePriceTo,
+      displayOrder: unitTypes.displayOrder,
+    })
+    .from(unitTypes)
+    .where(and(eq(unitTypes.developmentId, input.developmentId), eq(unitTypes.isActive, 1)))
+    .orderBy(unitTypes.displayOrder);
+
+  const aggregateAvailableUnits = items.reduce(
+    (sum, item) => sum + toNonNegativeInt(item.availableUnits),
+    0,
+  );
+
+  return {
+    items: items.map(item => ({
+      ...item,
+      totalUnits: toNonNegativeInt(item.totalUnits),
+      availableUnits: toNonNegativeInt(item.availableUnits),
+      reservedUnits: toNonNegativeInt(item.reservedUnits),
+      priceFrom: item.priceFrom != null ? Number(item.priceFrom) : null,
+      priceTo: item.priceTo != null ? Number(item.priceTo) : null,
+      basePriceFrom: item.basePriceFrom != null ? Number(item.basePriceFrom) : null,
+      basePriceTo: item.basePriceTo != null ? Number(item.basePriceTo) : null,
+    })),
+    aggregateAvailableUnits,
+  };
+}
+
+export async function transitionSaleUnitReservation(input: {
+  developerId: number;
+  developmentId: number;
+  unitTypeId: string;
+  actorUserId: number;
+  transition: SaleUnitReservationTransition;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== 'for_sale') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Sale reservation transitions are only available for Sale developments.',
+    });
+  }
+
+  const { fromStatus, toStatus, quantityDelta } = getSaleUnitReservationTransitionStatuses(
+    input.transition,
+  );
+  const note = input.note ? String(input.note).trim() : '';
+  const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
+
+  return await db.transaction(async (tx: any) => {
+    const [beforeUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+      })
+      .from(unitTypes)
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+        ),
+      )
+      .limit(1);
+
+    if (!beforeUnit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Unit type not found.' });
+    }
+
+    const beforeSnapshot = {
+      unitTypeId: beforeUnit.id,
+      unitTypeName: beforeUnit.name,
+      totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
+      availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
+      reservedUnits: toNonNegativeInt(beforeUnit.reservedUnits),
+    };
+
+    if (input.transition === 'reserve' && beforeSnapshot.availableUnits <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No available units can be reserved for this unit type.',
+      });
+    }
+
+    if (input.transition === 'release' && beforeSnapshot.reservedUnits <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No reserved units can be released for this unit type.',
+      });
+    }
+
+    const updateResult =
+      input.transition === 'reserve'
+        ? await tx
+            .update(unitTypes)
+            .set({
+              availableUnits: sql`${unitTypes.availableUnits} - 1`,
+              reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) + 1`,
+            })
+            .where(
+              and(
+                eq(unitTypes.id, input.unitTypeId),
+                eq(unitTypes.developmentId, input.developmentId),
+                sql`${unitTypes.availableUnits} > 0`,
+              ),
+            )
+        : await tx
+            .update(unitTypes)
+            .set({
+              availableUnits: sql`${unitTypes.availableUnits} + 1`,
+              reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
+            })
+            .where(
+              and(
+                eq(unitTypes.id, input.unitTypeId),
+                eq(unitTypes.developmentId, input.developmentId),
+                sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`,
+              ),
+            );
+
+    if (readAffectedRows(updateResult) < 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Sale inventory changed before this transition could be saved.',
+      });
+    }
+
+    const [afterUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+      })
+      .from(unitTypes)
+      .where(and(eq(unitTypes.id, input.unitTypeId), eq(unitTypes.developmentId, input.developmentId)))
+      .limit(1);
+
+    if (!afterUnit) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Sale inventory updated but could not be read back.',
+      });
+    }
+
+    const afterSnapshot = {
+      unitTypeId: afterUnit.id,
+      unitTypeName: afterUnit.name,
+      totalUnits: toNonNegativeInt(afterUnit.totalUnits),
+      availableUnits: toNonNegativeInt(afterUnit.availableUnits),
+      reservedUnits: toNonNegativeInt(afterUnit.reservedUnits),
+    };
+
+    const activeUnits = await tx
+      .select({ availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(and(eq(unitTypes.developmentId, input.developmentId), eq(unitTypes.isActive, 1)));
+    const aggregateAvailableUnits = activeUnits.reduce(
+      (sum: number, row: { availableUnits: unknown }) => sum + toNonNegativeInt(row.availableUnits),
+      0,
+    );
+
+    await tx
+      .update(developments)
+      .set({ availableUnits: aggregateAvailableUnits })
+      .where(eq(developments.id, input.developmentId));
+
+    const metadata = {
+      transition: input.transition,
+      ...(note ? { note } : {}),
+      developmentName: development.name,
+    };
+    const insertResult = await tx.insert(developmentOperatingEvents).values({
+      developmentId: input.developmentId,
+      unitTypeId: input.unitTypeId,
+      transactionType: 'for_sale',
+      eventType: 'inventory_status_changed',
+      fromStatus,
+      toStatus,
+      quantityDelta,
+      beforeData: {
+        ...beforeSnapshot,
+        developmentAvailableUnits: toNonNegativeInt(development.availableUnits),
+      },
+      afterData: {
+        ...afterSnapshot,
+        developmentAvailableUnits: aggregateAvailableUnits,
+      },
+      metadata,
+      actorUserId: input.actorUserId,
+      sourceSurface,
+    });
+
+    const insertedId = readInsertId(insertResult);
+    if (!insertedId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Sale inventory event could not be saved.',
+      });
+    }
+
+    const [event] = await tx
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.id, insertedId),
+          eq(developmentOperatingEvents.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+
+    if (!event) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Sale inventory event was saved but could not be read back.',
+      });
+    }
+
+    return {
+      unit: afterSnapshot,
+      aggregateAvailableUnits,
+      event,
+    };
+  });
 }

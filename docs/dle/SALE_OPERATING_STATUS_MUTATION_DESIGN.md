@@ -1,7 +1,7 @@
 # DLE Sale Operating Status Mutation Design
 
 Date: 2026-06-04
-Status: Design contract for the first inventory mutation after operating note proof.
+Status: Implemented and browser-proven for the first Sale reserve/release inventory mutation.
 
 ## Purpose
 
@@ -162,16 +162,18 @@ Reject with clear errors:
 
 Browser proof must show:
 
-- A Sale unit type can be reserved from the developer dashboard.
-- The dashboard shows the updated available/reserved counts.
-- The operating event appears in history.
-- A reserved unit type can be released back to available.
-- The dashboard shows the updated counts after release.
+- A Sale unit type can be reserved from the developer dashboard. Status: passed.
+- The dashboard shows the updated available/reserved counts. Status: passed.
+- The operating event appears in history. Status: passed.
+- A reserved unit type can be released back to available. Status: passed.
+- The dashboard shows the updated counts after release. Status: passed.
 - Failed reserve/release does not claim success.
 - The public development page and public search card still use Sale language after the operating
   update.
-- Media, location, governance, highlights, unit definitions, pricing, and wizard workflow state are
-  unchanged by the mutation.
+- Media, location, highlights, unit definitions, and pricing are unchanged by the mutation. Status:
+  passed through browser/DB proof.
+- Governance and wizard workflow state should be included in the next broader field-ownership proof
+  when those fields are present in the seeded operating fixture.
 
 ## Future Extensions
 

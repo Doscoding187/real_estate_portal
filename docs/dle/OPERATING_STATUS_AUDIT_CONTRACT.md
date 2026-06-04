@@ -1,8 +1,9 @@
 # DLE Operating Status and Audit Contract
 
 Date: 2026-06-04
-Status: Contract implemented through the first event-only note/readback slice. Inventory status and
-quantity mutations remain blocked until browser proof and transition-specific design are complete.
+Status: Contract implemented through operating note/readback and the first Sale reserve/release
+inventory mutation. Rental and Auction inventory mutations remain future transaction-specific
+slices.
 
 ## Purpose
 
@@ -34,11 +35,11 @@ Existing anchors:
 
 Missing DLE operating anchors:
 
-- No transaction-native unit operating status model for Sale, Rental, and Auction.
-- No DLE operating event stream for inventory, price, release phase, public status, or distribution
-  handoff changes.
-- No mutation ownership contract separating packaging edits from operating updates.
-- No browser proof for dashboard operating surfaces yet.
+- No transaction-native unit operating status model beyond the first Sale `available`/`reserved`
+  count transition.
+- No Rental held/release or Auction registration/active/outcome inventory mutations yet.
+- No DLE operating event stream coverage yet for price, release phase, public status, or
+  distribution handoff changes.
 
 ## Operating Scope Boundaries
 
@@ -251,12 +252,23 @@ Why:
 - It lets browser proof verify the audit surface before mutating commercial stock.
 - It gives the developer dashboard a real operating history surface.
 
-Only after that:
+Completed after that:
 
 - Browser-proof Sale, Rental, and Auction note creation/readback from the developer dashboard.
 - Add transaction-native inventory status changes for one engine at a time.
 - Start with Sale `available` -> `reserved` -> `available`, using
   `docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md`.
+
+Current mutation status:
+
+- Sale `available` -> `reserved` -> `available` has been implemented from the developer dashboard.
+- The Sale mutation updates `unit_types.available_units`, `unit_types.reserved_units`, refreshes
+  `developments.available_units`, and inserts `development_operating_events` in one transaction.
+- Browser proof confirms reserve/release count changes, operating history readback, event payloads,
+  aggregate availability, and no media/location/highlights/pricing/package wipe.
+
+Only after that:
+
 - Then Rental `available` -> `held` -> `available`.
 - Then Auction `scheduled` -> `registration_open` -> `active`.
 
@@ -268,7 +280,8 @@ Before calling operating mutations safe, prove:
 - Rental operating note/event appears in dashboard history. Status: passed in browser proof.
 - Auction operating note/event appears in dashboard history. Status: passed in browser proof.
 - Failed operating event write does not claim success. Status: passed with injected browser failure.
-- Inventory mutation cannot wipe media/location/governance/unit definitions.
+- Sale reserve/release cannot wipe media/location/highlights/pricing/unit definitions. Status:
+  passed in browser/DB proof.
 - Public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.
 

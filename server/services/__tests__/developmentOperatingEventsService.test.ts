@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getDevelopmentOperatingEventNote,
+  getSaleUnitReservationTransitionStatuses,
   normalizeOperatingSourceSurface,
   parseDevelopmentOperatingEventJson,
 } from '../developmentOperatingEventsService';
@@ -39,5 +40,19 @@ describe('development operating events service helpers', () => {
         afterData: '{"note":"Fallback from afterData"}',
       }),
     ).toBe('Fallback from afterData');
+  });
+
+  it('maps Sale reservation transitions to event statuses and availability deltas', () => {
+    expect(getSaleUnitReservationTransitionStatuses('reserve')).toEqual({
+      fromStatus: 'available',
+      toStatus: 'reserved',
+      quantityDelta: -1,
+    });
+
+    expect(getSaleUnitReservationTransitionStatuses('release')).toEqual({
+      fromStatus: 'reserved',
+      toStatus: 'available',
+      quantityDelta: 1,
+    });
   });
 });

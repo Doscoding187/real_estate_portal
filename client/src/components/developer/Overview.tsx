@@ -227,6 +227,13 @@ export default function Overview() {
 
   const selectedDevelopmentId =
     developmentFilter === 'all' ? undefined : Number(developmentFilter);
+  const selectedDevelopment = useMemo(() => {
+    if (!selectedDevelopmentId) return null;
+    return developments.find((dev: any) => Number(dev.id) === selectedDevelopmentId) || null;
+  }, [developments, selectedDevelopmentId]);
+  const selectedDevelopmentTransactionType = normalizeOverviewTransactionType(
+    selectedDevelopment?.transactionType,
+  );
 
   const distributionSettingsQuery = trpc.developer.getDistributionSettings.useQuery(
     {
@@ -301,6 +308,19 @@ export default function Overview() {
     },
   );
 
+  const saleOperatingInventoryQuery = trpc.developer.getSaleOperatingInventory.useQuery(
+    {
+      developmentId: selectedDevelopmentId || 0,
+    },
+    {
+      enabled:
+        !!developerProfile &&
+        !!selectedDevelopmentId &&
+        selectedDevelopmentTransactionType === 'sale',
+      refetchOnWindowFocus: false,
+    },
+  );
+
   const addOperatingNoteMutation = trpc.developer.addOperatingNote.useMutation({
     onSuccess: async () => {
       toast.success('Operating note added.');
@@ -311,6 +331,22 @@ export default function Overview() {
       toast.error(error.message || 'Could not add operating note.');
     },
   });
+
+  const transitionSaleUnitReservationMutation =
+    trpc.developer.transitionSaleUnitReservation.useMutation({
+      onSuccess: async (_data, variables) => {
+        toast.success(variables.transition === 'reserve' ? 'Unit reserved.' : 'Reservation released.');
+        await Promise.all([
+          saleOperatingInventoryQuery.refetch(),
+          operatingEventsQuery.refetch(),
+          utils.developer.getDevelopments.invalidate(),
+          utils.developer.getFunnelKPIs.invalidate(),
+        ]);
+      },
+      onError: error => {
+        toast.error(error.message || 'Could not update sales inventory.');
+      },
+    });
 
   const isNewDeveloper = !developments || developments.length === 0;
   const profileStatus = (developerProfile as any)?.status as string | undefined;
@@ -378,10 +414,6 @@ export default function Overview() {
   }, [distributionDashboardQuery.data, selectedDevelopmentId]);
   const distributionPanelVisible =
     !!selectedDevelopmentId && distributionSettings?.distributionEnabled === true;
-  const selectedDevelopment = useMemo(() => {
-    if (!selectedDevelopmentId) return null;
-    return developments.find((dev: any) => Number(dev.id) === selectedDevelopmentId) || null;
-  }, [developments, selectedDevelopmentId]);
   const operatingReadiness = buildOverviewOperatingReadiness({
     development: selectedDevelopment,
     stageCounts,
@@ -390,6 +422,7 @@ export default function Overview() {
     distributionSummary,
   });
   const operatingEvents = operatingEventsQuery.data?.items || [];
+  const saleOperatingInventory = saleOperatingInventoryQuery.data?.items || [];
 
   const snapshotTiles = [
     { label: 'New', value: stageCounts.new || 0, stage: 'new' },
@@ -718,6 +751,86 @@ export default function Overview() {
                 {operatingReadiness.queueLabel}
               </Button>
             </div>
+
+            {selectedDevelopmentTransactionType === 'sale' && (
+              <div className="rounded-md border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Sales Inventory</p>
+                    <p className="text-xs text-muted-foreground">
+                      Aggregate available:{' '}
+                      {formatNumber(
+                        Number(saleOperatingInventoryQuery.data?.aggregateAvailableUnits || 0),
+                      )}
+                    </p>
+                  </div>
+                  {saleOperatingInventoryQuery.isFetching && (
+                    <Badge variant="outline">Refreshing</Badge>
+                  )}
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {!saleOperatingInventoryQuery.isLoading && saleOperatingInventory.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No active Sale unit inventory found.
+                    </p>
+                  )}
+
+                  {saleOperatingInventory.map((unit: any) => {
+                    const availableUnits = Number(unit.availableUnits || 0);
+                    const reservedUnits = Number(unit.reservedUnits || 0);
+                    const mutationPending = transitionSaleUnitReservationMutation.isPending;
+                    return (
+                      <div
+                        className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
+                        key={unit.id}
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{unit.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatNumber(availableUnits)} available,{' '}
+                            {formatNumber(reservedUnits)} reserved
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            disabled={availableUnits <= 0 || mutationPending}
+                            onClick={() =>
+                              selectedDevelopmentId &&
+                              transitionSaleUnitReservationMutation.mutate({
+                                developmentId: selectedDevelopmentId,
+                                unitTypeId: unit.id,
+                                transition: 'reserve',
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                          >
+                            Reserve
+                          </Button>
+                          <Button
+                            disabled={reservedUnits <= 0 || mutationPending}
+                            onClick={() =>
+                              selectedDevelopmentId &&
+                              transitionSaleUnitReservationMutation.mutate({
+                                developmentId: selectedDevelopmentId,
+                                unitTypeId: unit.id,
+                                transition: 'release',
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            Release
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="rounded-md border border-slate-200 p-3">
               <div className="flex flex-col gap-3 lg:flex-row">

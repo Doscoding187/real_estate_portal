@@ -1684,3 +1684,70 @@ Next recommended slice:
 - Implement the Sale reserve/release mutation service/router/dashboard surface against this design.
 Commit hash/tag: This entry will be included in `docs(dle): design sale operating status mutation`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Sale Reserve/Release Operating Mutation
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement and browser-proof the first Sale operating inventory mutation without reusing the
+edit-development wizard or wiping public packaging fields.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/sale-operating-reservation.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-sale-operating-reserve.png
+- docs/dle/evidence/2026-06-04/qa-dle-sale-operating-release.png
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md
+- docs/dle/RECOVERY_LOG.md
+Focused tests run:
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts'`
+- Result: Passed. 2 test files, 9 tests.
+Focused browser proof run:
+- First sandboxed attempt failed before test execution because Chromium could not shut down its Linux
+  sandbox.
+- Command:
+  `bash -lc 'source ~/.nvm/nvm.sh && PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/sale-operating-reservation.spec.ts --project="Desktop Chrome" --workers=1'`
+- Result: Passed outside the command sandbox. 1 test file, 1 browser test.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Proof and fixes:
+- Added Sale-only operating inventory readback via `developer.getSaleOperatingInventory`.
+- Added Sale-only reserve/release mutation via `developer.transitionSaleUnitReservation`.
+- The mutation verifies developer ownership, derives transaction type from the development record,
+  rejects non-Sale developments, updates one unit at a time, and writes
+  `inventory_status_changed` in the same transaction as the count update.
+- `unit_types.available_units` and `unit_types.reserved_units` are the count source of truth for
+  this first mutation; `developments.available_units` is refreshed as the aggregate sum of active
+  unit types.
+- Added a Sale-only `Sales Inventory` dashboard panel with Reserve and Release controls.
+- Browser proof seeded a Sale development with 8 available and 2 reserved units, reserved one unit
+  to reach 7 available and 3 reserved, then released one unit back to 8 available and 2 reserved.
+- Browser/DB proof verified event type, transaction type, unit type ID, from/to statuses, quantity
+  deltas, metadata transition, before/after data snapshots, aggregate available units, and unchanged
+  media/location/highlights/pricing/unit definition fields.
+Manual flows verified:
+- Developer dashboard Sale inventory reserve/release against local frontend `:3009`, backend
+  `:5000`, and `listify_local`.
+- Evidence screenshots captured:
+  `qa-dle-sale-operating-reserve.png` and `qa-dle-sale-operating-release.png`.
+Remaining risks:
+- Failed reserve/release no-false-success UX is not yet browser-proven.
+- Governance and wizard workflow fields should be included in the next broader operating
+  field-ownership proof fixture.
+- Public page/search card Sale-language preservation after reserve/release should be included in the
+  next broader public-merchandising proof.
+- Rental held/release and Auction registration lifecycle mutations remain future slices.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Either browser-proof failed Sale reserve/release handling, or design Rental
+  `available` -> `held` -> `available` with the same operating-event and field-ownership contract.
+Commit hash/tag: This entry will be included in `feat(dle): add sale reservation operations`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
