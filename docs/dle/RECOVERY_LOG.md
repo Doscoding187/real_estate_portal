@@ -1877,3 +1877,65 @@ Next recommended slice:
   without forcing Auction through Sale/Rental count semantics.
 Commit hash/tag: This entry will be included in `feat(dle): add rental hold operations`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-04 - Auction Operating Lifecycle Design
+
+Date: 2026-06-04
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the first Auction operating lifecycle without forcing Auction through Sale/Rental
+count semantics or creating a split source of truth.
+Files changed:
+- docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Focused inspection run:
+- Read `docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md`.
+- Read `docs/dle/TRANSACTION_ENGINE_ARCHITECTURE_AUDIT.md`.
+- Read `docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md`.
+- Read `docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md`.
+- Inspected Auction schema, wizard, sanitizer/type, readiness, derived-listing, public merchandising,
+  and migration anchors.
+pnpm run check:
+- Passed with `bash -lc 'source ~/.nvm/nvm.sh && pnpm run check'`.
+git diff --check:
+- Passed after this log update.
+Audit findings and decisions:
+- The intended Auction operating lifecycle includes `registration_open`, but canonical
+  `unit_types.auction_status` currently supports only `scheduled`, `active`, `sold`, `passed_in`,
+  and `withdrawn`.
+- Event-only registration state would create a split source of truth, so
+  `unit_types.auction_status` must remain the canonical current lot lifecycle projection and gain
+  `registration_open` through a coordinated schema/migration/type update.
+- Registered-bidder counts must not be faked through `unit_types.reserved_units`; no canonical DLE
+  bidder-registration model exists yet.
+- Defined Stage A as Auction registration open/rollback:
+  `scheduled` -> `registration_open` and explicit rollback to `scheduled`, with
+  `registration_status_changed` audit events and no inventory-count changes.
+- Defined Stage B activation separately because it must be time-gated:
+  `registration_open` -> `active` only inside the auction window.
+- Defined later outcome transitions separately: `active` -> `sold` / `passed_in`, plus withdrawn.
+- Defined packaging/operating ownership: lifecycle mutations cannot change starting bid, reserve
+  price, auction window, media, documents, location, governance, highlights, unit definitions, or
+  wizard `stepData`.
+- Identified a legacy ownership risk: the packaging wizard currently exposes `scheduled` and
+  `active`; live Auction activation should move to the operating layer after publish.
+- Defined Auction dashboard, public merchandising, browser/DB proof, field-ownership, and failure
+  requirements.
+Remaining risks:
+- This is a design-only slice. No schema migration or Auction lifecycle mutation has been
+  implemented yet.
+- Edit-published compatibility must ensure packaging saves cannot reset a live Auction lifecycle
+  status.
+- Bidder registrations, proof-of-funds/FICA readiness, terms acceptance, and registration deposits
+  still need a future canonical model.
+- Failed Sale/Rental operating mutation no-false-success proof remains outstanding.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement Auction Stage A: extend the canonical status enum with `registration_open`, update
+  schema/types/sanitizers/tests, add Auction operating readback and registration open/rollback, then
+  browser-proof lifecycle, public language, and field ownership.
+Commit hash/tag: This entry will be included in `docs(dle): design auction operating lifecycle`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

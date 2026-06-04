@@ -304,6 +304,9 @@ Implemented next implementation slice:
 
 Recommended next implementation slice:
 
-- Design the first Auction operating lifecycle mutation without forcing it through Sale/Rental
-  count semantics. The likely first narrow path is `scheduled` -> `registration_open` -> `active`,
-  with auction-window and registration-readiness guardrails defined before code.
+- Implement Auction registration open/rollback from
+  `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
+- Extend the canonical `unit_types.auction_status` enum with `registration_open` before runtime
+  mutation work.
+- Keep registered-bidder counts separate from `reserved_units`, and keep time-gated activation and
+  outcomes as later Auction-specific slices.

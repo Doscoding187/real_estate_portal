@@ -274,7 +274,9 @@ Current mutation status:
 
 Only after that:
 
-- Then Auction `scheduled` -> `registration_open` -> `active`.
+- Implement Auction `scheduled` -> `registration_open` registration open/rollback from
+  `docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md`.
+- Keep Auction activation time-gated and separate from the first registration mutation.
 
 ## Browser Proof Requirements
 
@@ -293,14 +295,12 @@ Before calling operating mutations safe, prove:
 - Sale public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.
 
-## Open Questions Before Inventory Mutation Work
+## Open Questions Before Broader Operating Mutation Work
 
-- Should operating history remain event-only for the next slice, or should the first status mutation
-  project state onto unit types immediately?
-- Should unit-level status be stored on `unit_types`, a new unit inventory table, or an event-sourced
-  projection?
 - Should Rental and Auction get transaction-specific lead stage enums, or should the current shared
   lead funnel keep a transaction label overlay?
 - Should distribution deal events be mirrored into DLE operating events, or referenced by ID only?
 - What is the rollback policy when an operating state change succeeds but downstream distribution or
   lead-stage sync fails?
+- What fields and records should become the canonical bidder-registration model after Auction
+  registration-open lifecycle proof?
