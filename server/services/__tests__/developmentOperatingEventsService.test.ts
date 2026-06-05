@@ -6,6 +6,7 @@ import {
   getAuctionRegistrationTransitionStatuses,
   getDevelopmentOperatingEventNote,
   getRentalUnitHoldTransitionStatuses,
+  getRentalUnitOutcomeTransitionStatuses,
   getSaleUnitOutcomeTransitionStatuses,
   getSaleUnitReservationTransitionStatuses,
   normalizeOperatingSourceSurface,
@@ -80,6 +81,14 @@ describe('development operating events service helpers', () => {
       fromStatus: 'held',
       toStatus: 'available',
       quantityDelta: 1,
+    });
+  });
+
+  it('maps Rental let outcome from held inventory without changing public availability', () => {
+    expect(getRentalUnitOutcomeTransitionStatuses('mark_let')).toEqual({
+      fromStatus: 'held',
+      toStatus: 'let',
+      quantityDelta: 0,
     });
   });
 

@@ -224,14 +224,16 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
     await expect(page.getByText('Rental Inventory')).toBeVisible();
     await expect(page.getByText('Sales Inventory')).toHaveCount(0);
     await expect(page.getByText(seed.unitTypeName)).toBeVisible();
-    await expect(page.getByText('6 rentals available, 1 held')).toBeVisible();
+    await expect(page.getByText('6 rentals available, 1 held, 3 let projection')).toBeVisible();
     await expect(page.getByText('12 months', { exact: false })).toBeVisible();
     await expect(page.getByText('R27k deposit', { exact: false })).toBeVisible();
     await expect(page.getByText('Furnished', { exact: false })).toBeVisible();
 
     await page.getByRole('button', { name: 'Hold', exact: true }).click();
     await expect(page.getByText('Rental unit held.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('5 rentals available, 2 held')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('5 rentals available, 2 held, 3 let projection')).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByText('inventory status changed')).toBeVisible({ timeout: 15_000 });
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-rental-operating-hold.png`,
@@ -245,9 +247,28 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
     expect(Number(unit.availableUnits)).toBe(5);
     expect(Number(unit.reservedUnits)).toBe(2);
 
+    await page.getByRole('button', { name: 'Mark Let', exact: true }).click();
+    await expect(page.getByText('Rental unit marked let.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('5 rentals available, 1 held, 4 let projection')).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-rental-operating-let.png`,
+    });
+
+    [unit] = await db!
+      .select()
+      .from(unitTypes)
+      .where(eq(unitTypes.id, seed.unitTypeId))
+      .limit(1);
+    expect(Number(unit.availableUnits)).toBe(5);
+    expect(Number(unit.reservedUnits)).toBe(1);
+
     await page.getByRole('button', { name: 'Release', exact: true }).click();
     await expect(page.getByText('Rental hold released.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('6 rentals available, 1 held')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('6 rentals available, 0 held, 4 let projection')).toBeVisible({
+      timeout: 15_000,
+    });
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-rental-operating-release.png`,
     });
@@ -258,15 +279,15 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
       .where(eq(unitTypes.id, seed.unitTypeId))
       .limit(1);
     expect(Number(unit.availableUnits)).toBe(6);
-    expect(Number(unit.reservedUnits)).toBe(1);
+    expect(Number(unit.reservedUnits)).toBe(0);
 
     const events = await db!
       .select()
       .from(developmentOperatingEvents)
       .where(eq(developmentOperatingEvents.developmentId, seed.developmentId))
       .orderBy(desc(developmentOperatingEvents.id));
-    expect(events).toHaveLength(2);
-    const [releaseEvent, holdEvent] = events;
+    expect(events).toHaveLength(3);
+    const [releaseEvent, letEvent, holdEvent] = events;
     expect(holdEvent.eventType).toBe('inventory_status_changed');
     expect(holdEvent.transactionType).toBe('for_rent');
     expect(holdEvent.unitTypeId).toBe(seed.unitTypeId);
@@ -277,6 +298,19 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
     expect(parseJsonObject(holdEvent.beforeData).heldUnits).toBe(1);
     expect(parseJsonObject(holdEvent.afterData).heldUnits).toBe(2);
 
+    expect(letEvent.eventType).toBe('inventory_status_changed');
+    expect(letEvent.transactionType).toBe('for_rent');
+    expect(letEvent.unitTypeId).toBe(seed.unitTypeId);
+    expect(letEvent.fromStatus).toBe('held');
+    expect(letEvent.toStatus).toBe('let');
+    expect(Number(letEvent.quantityDelta)).toBe(0);
+    expect(parseJsonObject(letEvent.metadata).transition).toBe('mark_let');
+    expect(parseJsonObject(letEvent.metadata).outcome).toBe('let');
+    expect(parseJsonObject(letEvent.beforeData).heldUnits).toBe(2);
+    expect(parseJsonObject(letEvent.afterData).heldUnits).toBe(1);
+    expect(parseJsonObject(letEvent.beforeData).letUnitsProjected).toBe(3);
+    expect(parseJsonObject(letEvent.afterData).letUnitsProjected).toBe(4);
+
     expect(releaseEvent.eventType).toBe('inventory_status_changed');
     expect(releaseEvent.transactionType).toBe('for_rent');
     expect(releaseEvent.unitTypeId).toBe(seed.unitTypeId);
@@ -284,8 +318,8 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
     expect(releaseEvent.toStatus).toBe('available');
     expect(Number(releaseEvent.quantityDelta)).toBe(1);
     expect(parseJsonObject(releaseEvent.metadata).transition).toBe('release');
-    expect(parseJsonObject(releaseEvent.beforeData).heldUnits).toBe(2);
-    expect(parseJsonObject(releaseEvent.afterData).heldUnits).toBe(1);
+    expect(parseJsonObject(releaseEvent.beforeData).heldUnits).toBe(1);
+    expect(parseJsonObject(releaseEvent.afterData).heldUnits).toBe(0);
 
     const [afterDevelopment] = await db!
       .select()

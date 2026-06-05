@@ -2292,3 +2292,73 @@ Next recommended slice:
   readback, no false success proof, and field-ownership proof.
 Commit hash/tag: This entry will be included in `feat(dle): add sale sold outcome`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Rental Let Operating Outcome
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first Rental outcome mutation by moving held Rental inventory to let without
+rewriting packaging fields or enabling autosave.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/rental-operating-hold.spec.ts
+- e2e/dle/operating-mutation-failure-trust.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-hold.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-let.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-release.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-public-language.png
+- docs/dle/evidence/2026-06-04/qa-dle-rental-operating-search-language.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-let-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-sold-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-auction-no-false-success.png
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/RENTAL_OPERATING_STATUS_MUTATION_DESIGN.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts` passed.
+- `pnpm run check` passed before browser proof.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-operating-hold.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/operating-mutation-failure-trust.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- Final `pnpm run check` passed.
+- Final `git diff --check` passed.
+- `git status --short` reviewed; unrelated homepage/evidence/playwright dirty files were not
+  staged.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Rental dashboard hold -> mark let -> release flow.
+- Rental operating history readback for `available` -> `held`, `held` -> `let`, and
+  `held` -> `available`.
+- Stale `Mark Let` failure shows backend truth, shows no success toast, and writes no event.
+- Rental public detail and search language remain Rental-native after the operating update.
+Proof and fixes:
+- Added `developer.markRentalUnitTypeLet`.
+- The mutation requires owned Rental development, active unit type, and `reserved_units > 0` as the
+  current held-count projection.
+- The mutation decrements only `unit_types.reserved_units`; `available_units` remains unchanged for
+  held-to-let because public availability was already reduced at hold time.
+- The mutation refreshes `developments.available_units` from active unit types and writes
+  `inventory_status_changed` with `held` -> `let`, `quantity_delta = 0`.
+- The dashboard shows a Rental-only `Mark Let` action and a `let projection` derived from
+  `total_units - available_units - reserved_units`.
+- Failed `Mark Let` refetches backend truth and does not claim success.
+Remaining risks:
+- Rental let count is still an inferred dashboard projection, not an explicit canonical
+  `let_units` column.
+- No application pipeline, lease document workflow, lead-stage conversion, or distribution/referral
+  deal outcome is automated.
+- Auction sold/passed-in/withdrawn outcomes remain future slices.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement Auction sold/passed-in/withdrawn outcomes from the active/non-final lifecycle with
+  Auction-native dashboard copy, event readback, no false success proof, public outcome language,
+  and field-ownership proof.
+Commit hash/tag: This entry will be included in `feat(dle): add rental let outcome`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

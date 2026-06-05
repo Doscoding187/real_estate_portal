@@ -2,9 +2,10 @@
 
 Date: 2026-06-04
 Status: Contract implemented through operating note/readback, Sale reserve/release, Sale sold from
-reserved inventory, Rental hold/release, Auction registration open/rollback, and Auction time-gated
-activation. Outcome semantics are designed in `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md`; Rental
-let and Auction outcomes remain future transaction-specific slices.
+reserved inventory, Rental hold/release, Rental let from held inventory, Auction registration
+open/rollback, and Auction time-gated activation. Outcome semantics are designed in
+`docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md`; Auction outcomes remain future
+transaction-specific slices.
 
 ## Purpose
 

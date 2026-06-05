@@ -454,6 +454,26 @@ export default function Overview() {
     },
   });
 
+  const markRentalUnitTypeLetMutation = trpc.developer.markRentalUnitTypeLet.useMutation({
+    onSuccess: async () => {
+      toast.success('Rental unit marked let.');
+      await Promise.all([
+        rentalOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+        utils.developer.getFunnelKPIs.invalidate(),
+      ]);
+    },
+    onError: async error => {
+      toast.error(error.message || 'Could not mark Rental unit let.');
+      await Promise.all([
+        rentalOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+      ]);
+    },
+  });
+
   const transitionAuctionRegistrationMutation =
     trpc.developer.transitionAuctionRegistration.useMutation({
       onSuccess: async (_data, variables) => {
@@ -1032,6 +1052,7 @@ export default function Overview() {
                   {rentalOperatingInventory.map((unit: any) => {
                     const availableUnits = Number(unit.availableUnits || 0);
                     const heldUnits = Number(unit.heldUnits || 0);
+                    const letUnitsProjected = Number(unit.letUnitsProjected || 0);
                     const rentFrom = Number(unit.monthlyRentFrom || 0);
                     const rentTo = Number(unit.monthlyRentTo || 0);
                     const rentLabel =
@@ -1048,7 +1069,9 @@ export default function Overview() {
                     ]
                       .filter(Boolean)
                       .join(' | ');
-                    const mutationPending = transitionRentalUnitHoldMutation.isPending;
+                    const mutationPending =
+                      transitionRentalUnitHoldMutation.isPending ||
+                      markRentalUnitTypeLetMutation.isPending;
                     return (
                       <div
                         className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
@@ -1058,7 +1081,8 @@ export default function Overview() {
                           <p className="text-sm font-medium text-slate-900">{unit.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {formatNumber(availableUnits)} rentals available,{' '}
-                            {formatNumber(heldUnits)} held
+                            {formatNumber(heldUnits)} held,{' '}
+                            {formatNumber(letUnitsProjected)} let projection
                           </p>
                           <p className="mt-1 text-xs text-slate-500">{leaseContext}</p>
                         </div>
@@ -1093,6 +1117,21 @@ export default function Overview() {
                             variant="outline"
                           >
                             Release
+                          </Button>
+                          <Button
+                            disabled={heldUnits <= 0 || mutationPending}
+                            onClick={() =>
+                              selectedDevelopmentId &&
+                              markRentalUnitTypeLetMutation.mutate({
+                                developmentId: selectedDevelopmentId,
+                                unitTypeId: unit.id,
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                            variant="secondary"
+                          >
+                            Mark Let
                           </Button>
                         </div>
                       </div>

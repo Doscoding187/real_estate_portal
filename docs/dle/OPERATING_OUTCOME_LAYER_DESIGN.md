@@ -1,8 +1,9 @@
 # DLE Operating Outcome Layer Design
 
 Date: 2026-06-04
-Status: Sale sold from reserved inventory is implemented and browser-proven. Rental let and Auction
-sold/passed-in/withdrawn outcomes remain future transaction-specific slices.
+Status: Sale sold from reserved inventory and Rental let from held inventory are implemented and
+browser-proven. Auction sold/passed-in/withdrawn outcomes remain future transaction-specific
+slices.
 
 ## Purpose
 
@@ -14,6 +15,7 @@ The DLE operating layer now has first live transitions:
 - Sale reserve/release.
 - Sale sold from reserved inventory.
 - Rental hold/release.
+- Rental let from held inventory.
 - Auction registration open/rollback.
 - Auction time-gated activation.
 
@@ -413,13 +415,28 @@ Implemented Sale sold from reserved inventory:
 The dashboard exposes `sold projection` from `total_units - available_units - reserved_units`.
 That remains a temporary projection, not canonical sold-count reporting.
 
+Implemented Rental let from held inventory:
+
+- Added `developer.markRentalUnitTypeLet`.
+- Requires Rental development ownership and `reserved_units > 0` as the current held-count
+  projection.
+- Decrements only `unit_types.reserved_units`.
+- Keeps `unit_types.available_units` unchanged for held-to-let.
+- Refreshes `developments.available_units` from active unit types.
+- Writes `inventory_status_changed` with `held` -> `let` and `quantity_delta = 0`.
+- Shows `Mark Let` in the Rental dashboard only when held stock exists.
+- Browser proof covers success, event readback, dashboard projection refresh, no false success on
+  stale held-stock failure, public Rental language, and packaging-field preservation.
+
+The dashboard exposes `let projection` from `total_units - available_units - reserved_units`.
+That remains a temporary projection, not canonical let-count reporting.
+
 ## Recommended Implementation Order
 
-1. Implement Rental let outcome from held inventory.
-2. Implement Auction sold/passed-in/withdrawn outcome from active/non-final lifecycle.
-3. Strengthen transaction-native public availability language for all outcome states.
-4. Design and implement lead-stage synchronization explicitly.
-5. Design and implement distribution/referral outcome handoff explicitly.
+1. Implement Auction sold/passed-in/withdrawn outcome from active/non-final lifecycle.
+2. Strengthen transaction-native public availability language for all outcome states.
+3. Design and implement lead-stage synchronization explicitly.
+4. Design and implement distribution/referral outcome handoff explicitly.
 
 ## Completed First Implementation Slice
 
@@ -453,7 +470,7 @@ Do not include:
 - edit-development autosave;
 - broad inventory editing.
 
-## Next Implementation Slice Recommendation
+## Completed Second Implementation Slice
 
 Implement Rental let outcome from held inventory.
 
@@ -475,3 +492,27 @@ Do not include:
 - automatic lead conversion;
 - commission/deal closure;
 - edit-development autosave.
+
+## Next Implementation Slice Recommendation
+
+Implement Auction sold/passed-in/withdrawn outcome from the active/non-final lifecycle.
+
+First Auction outcome slice should:
+
+- add a narrow Auction outcome endpoint;
+- require `auction_status = active` for `sold` and `passed_in`;
+- allow `withdrawn` only from explicitly permitted non-final statuses;
+- update only `unit_types.auction_status`;
+- write `auction_outcome_recorded` or a documented event contract for each outcome;
+- show Auction-native outcome actions in the dashboard;
+- browser-proof no false success, event readback, public Auction outcome language, and field
+  ownership.
+
+Do not include:
+
+- bidder registration records;
+- winning bidder automation;
+- deposit/payment workflow;
+- automatic reserve validation;
+- post-auction negotiation workflow;
+- automatic lead conversion or distribution deal closure.

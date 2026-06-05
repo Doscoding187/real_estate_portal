@@ -22,6 +22,8 @@ export const SALE_UNIT_OUTCOME_TRANSITIONS = ['mark_sold'] as const;
 export type SaleUnitOutcomeTransition = (typeof SALE_UNIT_OUTCOME_TRANSITIONS)[number];
 export const RENTAL_UNIT_HOLD_TRANSITIONS = ['hold', 'release'] as const;
 export type RentalUnitHoldTransition = (typeof RENTAL_UNIT_HOLD_TRANSITIONS)[number];
+export const RENTAL_UNIT_OUTCOME_TRANSITIONS = ['mark_let'] as const;
+export type RentalUnitOutcomeTransition = (typeof RENTAL_UNIT_OUTCOME_TRANSITIONS)[number];
 export const AUCTION_REGISTRATION_TRANSITIONS = [
   'open_registration',
   'close_registration',
@@ -176,6 +178,21 @@ export function getRentalUnitHoldTransitionStatuses(transition: RentalUnitHoldTr
   };
 }
 
+export function getRentalUnitOutcomeTransitionStatuses(transition: RentalUnitOutcomeTransition) {
+  if (transition === 'mark_let') {
+    return {
+      fromStatus: 'held',
+      toStatus: 'let',
+      quantityDelta: 0,
+    };
+  }
+
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: 'Unsupported Rental outcome transition.',
+  });
+}
+
 export function getAuctionRegistrationTransitionStatuses(
   transition: AuctionRegistrationTransition,
 ): { fromStatus: AuctionLifecycleStatus; toStatus: AuctionLifecycleStatus } {
@@ -207,6 +224,14 @@ function calculateProjectedSoldUnits(input: {
   const availableUnits = toNonNegativeInt(input.availableUnits);
   const reservedUnits = toNonNegativeInt(input.reservedUnits);
   return Math.max(totalUnits - availableUnits - reservedUnits, 0);
+}
+
+function calculateProjectedLetUnits(input: {
+  totalUnits?: unknown;
+  availableUnits?: unknown;
+  reservedUnits?: unknown;
+}): number {
+  return calculateProjectedSoldUnits(input);
 }
 
 function toPositiveNumberOrNull(value: unknown): number | null {
@@ -467,6 +492,11 @@ export async function listRentalOperatingInventory(input: {
       totalUnits: toNonNegativeInt(item.totalUnits),
       availableUnits: toNonNegativeInt(item.availableUnits),
       heldUnits: toNonNegativeInt(item.heldUnitsProjection),
+      letUnitsProjected: calculateProjectedLetUnits({
+        totalUnits: item.totalUnits,
+        availableUnits: item.availableUnits,
+        reservedUnits: item.heldUnitsProjection,
+      }),
       monthlyRentFrom: item.monthlyRentFrom != null ? Number(item.monthlyRentFrom) : null,
       monthlyRentTo: item.monthlyRentTo != null ? Number(item.monthlyRentTo) : null,
       depositRequired: item.depositRequired != null ? Number(item.depositRequired) : null,
@@ -1307,4 +1337,216 @@ export async function transitionRentalUnitHold(input: {
   sourceSurface?: unknown;
 }) {
   return await transitionUnitAvailability(input, RENTAL_INVENTORY_TRANSITION_CONFIG);
+}
+
+export async function markRentalUnitTypeLet(input: {
+  developerId: number;
+  developmentId: number;
+  unitTypeId: string;
+  actorUserId: number;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== 'for_rent') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Rental let outcomes are only available for Rental developments.',
+    });
+  }
+
+  const { fromStatus, toStatus, quantityDelta } =
+    getRentalUnitOutcomeTransitionStatuses('mark_let');
+  const note = input.note ? String(input.note).trim() : '';
+  const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
+
+  return await db.transaction(async (tx: any) => {
+    const [beforeUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+        monthlyRentFrom: unitTypes.monthlyRentFrom,
+        monthlyRentTo: unitTypes.monthlyRentTo,
+        depositRequired: unitTypes.depositRequired,
+        leaseTerm: unitTypes.leaseTerm,
+        isFurnished: unitTypes.isFurnished,
+      })
+      .from(unitTypes)
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+        ),
+      )
+      .limit(1);
+
+    if (!beforeUnit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Rental unit type not found.' });
+    }
+
+    const beforeSnapshot = {
+      unitTypeId: beforeUnit.id,
+      unitTypeName: beforeUnit.name,
+      totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
+      availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
+      heldUnits: toNonNegativeInt(beforeUnit.reservedUnits),
+      letUnitsProjected: calculateProjectedLetUnits(beforeUnit),
+      monthlyRentFrom:
+        beforeUnit.monthlyRentFrom != null ? Number(beforeUnit.monthlyRentFrom) : null,
+      monthlyRentTo: beforeUnit.monthlyRentTo != null ? Number(beforeUnit.monthlyRentTo) : null,
+      depositRequired:
+        beforeUnit.depositRequired != null ? Number(beforeUnit.depositRequired) : null,
+      leaseTerm: beforeUnit.leaseTerm,
+      isFurnished: beforeUnit.isFurnished === 1,
+    };
+
+    if (beforeSnapshot.heldUnits <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No held rental units can be marked let for this unit type.',
+      });
+    }
+
+    const updateResult = await tx
+      .update(unitTypes)
+      .set({
+        reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
+      })
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+          sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`,
+        ),
+      );
+
+    if (readAffectedRows(updateResult) < 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Rental inventory changed before the let outcome could be saved.',
+      });
+    }
+
+    const [afterUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+        monthlyRentFrom: unitTypes.monthlyRentFrom,
+        monthlyRentTo: unitTypes.monthlyRentTo,
+        depositRequired: unitTypes.depositRequired,
+        leaseTerm: unitTypes.leaseTerm,
+        isFurnished: unitTypes.isFurnished,
+      })
+      .from(unitTypes)
+      .where(
+        and(eq(unitTypes.id, input.unitTypeId), eq(unitTypes.developmentId, input.developmentId)),
+      )
+      .limit(1);
+
+    if (!afterUnit) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Rental let outcome saved but could not be read back.',
+      });
+    }
+
+    const activeUnits = await tx
+      .select({ availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(and(eq(unitTypes.developmentId, input.developmentId), eq(unitTypes.isActive, 1)));
+    const aggregateAvailableUnits = activeUnits.reduce(
+      (sum: number, row: { availableUnits: unknown }) => sum + toNonNegativeInt(row.availableUnits),
+      0,
+    );
+
+    await tx
+      .update(developments)
+      .set({ availableUnits: aggregateAvailableUnits })
+      .where(eq(developments.id, input.developmentId));
+
+    const afterSnapshot = {
+      unitTypeId: afterUnit.id,
+      unitTypeName: afterUnit.name,
+      totalUnits: toNonNegativeInt(afterUnit.totalUnits),
+      availableUnits: toNonNegativeInt(afterUnit.availableUnits),
+      heldUnits: toNonNegativeInt(afterUnit.reservedUnits),
+      letUnitsProjected: calculateProjectedLetUnits(afterUnit),
+      monthlyRentFrom: afterUnit.monthlyRentFrom != null ? Number(afterUnit.monthlyRentFrom) : null,
+      monthlyRentTo: afterUnit.monthlyRentTo != null ? Number(afterUnit.monthlyRentTo) : null,
+      depositRequired:
+        afterUnit.depositRequired != null ? Number(afterUnit.depositRequired) : null,
+      leaseTerm: afterUnit.leaseTerm,
+      isFurnished: afterUnit.isFurnished === 1,
+    };
+    const metadata = {
+      transition: 'mark_let',
+      outcome: 'let',
+      inventoryProjectionColumn: 'unit_types.reserved_units',
+      letProjection: 'total_units - available_units - reserved_units',
+      ...(note ? { note } : {}),
+      developmentName: development.name,
+    };
+    const insertResult = await tx.insert(developmentOperatingEvents).values({
+      developmentId: input.developmentId,
+      unitTypeId: input.unitTypeId,
+      transactionType: 'for_rent',
+      eventType: 'inventory_status_changed',
+      fromStatus,
+      toStatus,
+      quantityDelta,
+      beforeData: {
+        ...beforeSnapshot,
+        developmentAvailableUnits: toNonNegativeInt(development.availableUnits),
+      },
+      afterData: {
+        ...afterSnapshot,
+        developmentAvailableUnits: aggregateAvailableUnits,
+      },
+      metadata,
+      actorUserId: input.actorUserId,
+      sourceSurface,
+    });
+
+    const insertedId = readInsertId(insertResult);
+    if (!insertedId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Rental let outcome event could not be saved.',
+      });
+    }
+
+    const [event] = await tx
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.id, insertedId),
+          eq(developmentOperatingEvents.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+
+    if (!event) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Rental let outcome event was saved but could not be read back.',
+      });
+    }
+
+    return {
+      unit: afterSnapshot,
+      aggregateAvailableUnits,
+      event,
+    };
+  });
 }

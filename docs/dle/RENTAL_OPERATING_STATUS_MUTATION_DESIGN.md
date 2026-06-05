@@ -1,7 +1,8 @@
 # DLE Rental Operating Status Mutation Design
 
 Date: 2026-06-04
-Status: Implemented and browser-proven for the first Rental hold/release inventory mutation.
+Status: Implemented and browser-proven for Rental hold/release and the first Rental let outcome
+from held inventory.
 
 ## Purpose
 
@@ -199,9 +200,8 @@ Browser proof must show:
 
 ## Future Extensions
 
-After Rental hold/release is proven:
+After Rental hold/release and let-from-held are proven:
 
-- Add Rental `held` -> `application_in_progress` -> `lease_ready` -> `let`.
 - Add available-soon and withdrawn outcomes.
 - Add Rental-native lead-stage overlays and document/readiness signals.
 - Add Auction `scheduled` -> `registration_open` -> `active`.
