@@ -532,11 +532,25 @@ Do not include:
 - post-auction negotiation workflow;
 - automatic lead conversion or distribution deal closure.
 
-## Next Implementation Slice Recommendation
+## Outcome Handoff Contract
 
-Design the outcome handoff layer before automating cross-surface side effects:
+The handoff contract now lives in `docs/dle/OUTCOME_HANDOFF_CONTRACT.md`.
+
+It defines:
 
 - lead-stage synchronization for Sale sold, Rental let, and Auction outcomes;
 - distribution/referral deal outcome handoff;
-- explicit reporting projections for Sale sold and Rental let;
-- public/search CTA suppression where outcome states should not invite unavailable actions.
+- hard boundaries preventing inventory outcomes from silently closing leads, deals, commissions, or
+  referrals;
+- transaction-native display overlays for shared lead stages;
+- event linkage rules between inventory outcomes, lead-stage events, and distribution handoffs.
+
+## Next Implementation Slice Recommendation
+
+Implement explicit lead-stage synchronization first:
+
+- require a selected `leadId`;
+- use `isLeadTransitionAllowed` unless a supervised override is separately designed;
+- write `lead_stage_changed` DLE operating events and lead activities;
+- preserve transaction-native labels in dashboard/UI copy;
+- do not automate distribution deal or commission changes in the same slice.

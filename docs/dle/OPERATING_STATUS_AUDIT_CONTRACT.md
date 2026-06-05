@@ -318,11 +318,18 @@ Before calling operating mutations safe, prove:
 
 ## Open Questions Before Broader Operating Mutation Work
 
-- Should Rental and Auction get transaction-specific lead stage enums, or should the current shared
-  lead funnel keep a transaction label overlay?
-- Should distribution deal events be mirrored into DLE operating events, or referenced by ID only?
-- What is the rollback policy when an operating state change succeeds but downstream distribution or
-  lead-stage sync fails?
+Resolved by `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` for the next implementation slice:
+
+- Keep the current shared lead funnel first, with transaction-native display overlays for Sale,
+  Rental, and Auction.
+- Reference distribution deal events from DLE operating events for the first handoff slice; do not
+  silently mirror or mutate distribution deal state from inventory outcomes.
+- Treat lead sync and distribution handoff as explicit actions after inventory outcomes. A failed
+  downstream handoff should not roll back inventory truth unless a later bundled transaction
+  contract explicitly says so.
+
+Still open:
+
 - What fields and records should become the canonical bidder-registration model after Auction
   registration-open lifecycle proof?
 - Should Sale/Rental outcome reporting use explicit unit-type projection columns, individual

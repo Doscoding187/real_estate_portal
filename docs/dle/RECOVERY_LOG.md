@@ -2434,3 +2434,47 @@ Next recommended slice:
   cross-surface side effects from Sale sold, Rental let, or Auction outcomes.
 Commit hash/tag: This entry will be included in `feat(dle): add auction outcome operations`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Outcome Handoff Contract
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Document the explicit handoff contract for lead-stage synchronization and
+distribution/referral outcomes before automating side effects from Sale sold, Rental let, or Auction
+outcomes.
+Files changed:
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `git diff --check` passed.
+- `pnpm run check` passed.
+- `git status --short` reviewed; unrelated homepage/evidence/playwright dirty files were not
+  staged.
+Manual flows verified:
+- None. This is a documentation-only contract slice with no runtime behavior changes.
+Design decisions:
+- Inventory outcomes remain inventory-only by default.
+- Lead synchronization must be explicit, must use the current shared funnel guardrails, and must
+  display transaction-native labels for Sale, Rental, and Auction.
+- Distribution/referral handoff must be explicit and must not bypass distribution deal-stage,
+  document, payout milestone, manager review, or commission readiness guardrails.
+- Failed downstream handoff should not roll back inventory truth unless a later bundled transaction
+  contract explicitly requires it.
+- DLE operating events should link outcome, lead-stage, and distribution handoff events without
+  treating metadata alone as the current-state source of truth.
+Remaining risks:
+- No lead-stage sync mutation is implemented yet.
+- No distribution/referral handoff mutation is implemented yet.
+- Sale sold and Rental let counts remain inferred projections until explicit reporting fields are
+  designed.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement explicit lead-stage synchronization first, requiring a selected `leadId`, writing
+  `lead_stage_changed` DLE events and lead activities, preserving transaction-native labels, and
+  leaving distribution deal/commission automation for a later contract-backed slice.
+Commit hash/tag: This entry will be included in `docs(dle): add outcome handoff contract`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

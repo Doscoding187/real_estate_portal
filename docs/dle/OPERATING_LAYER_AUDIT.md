@@ -360,5 +360,5 @@ Implemented Auction outcome layer:
 
 Recommended next architecture work:
 
-- Design lead-stage synchronization and distribution/referral outcome handoff before automating
-  cross-surface side effects from Sale sold, Rental let, or Auction outcomes.
+- Use `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` to implement explicit lead-stage synchronization
+  before automating any distribution/referral deal or commission side effects.
