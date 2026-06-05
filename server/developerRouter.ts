@@ -1884,6 +1884,7 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         unitTypeId: z.string().trim().min(1).max(DEVELOPMENT_UNIT_ID_MAX_LENGTH),
+        source: z.enum(['reserved', 'available_direct']).optional(),
         note: z.string().trim().max(1000).optional(),
       }),
     )
@@ -1895,6 +1896,7 @@ export const developerRouter = router({
         developmentId: input.developmentId,
         unitTypeId: input.unitTypeId,
         actorUserId: user.id,
+        source: input.source,
         note: input.note,
         sourceSurface: 'developer_dashboard',
       });
@@ -1942,6 +1944,7 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         unitTypeId: z.string().trim().min(1).max(DEVELOPMENT_UNIT_ID_MAX_LENGTH),
+        source: z.enum(['held', 'available_direct']).optional(),
         note: z.string().trim().max(1000).optional(),
       }),
     )
@@ -1953,6 +1956,7 @@ export const developerRouter = router({
         developmentId: input.developmentId,
         unitTypeId: input.unitTypeId,
         actorUserId: user.id,
+        source: input.source,
         note: input.note,
         sourceSurface: 'developer_dashboard',
       });

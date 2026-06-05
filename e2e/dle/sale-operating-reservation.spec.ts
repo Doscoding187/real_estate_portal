@@ -259,13 +259,36 @@ test.describe.serial('DLE Sale operating reservation browser proof', () => {
     expect(Number(unit.reservedUnits)).toBe(1);
     expect(Number(unit.soldUnits)).toBe(3);
 
+    await page.getByRole('button', { name: 'Direct Sold' }).click();
+    await expect(page.getByRole('heading', { name: 'Confirm Direct Sale' })).toBeVisible();
+    await expect(page.getByText('reduces public availability')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirm Direct Sold' }).click();
+    await expect(page.getByText('Available Sale unit marked sold.')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('7 available, 1 reserved, 4 sold')).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-sale-operating-direct-sold.png`,
+    });
+
+    [unit] = await db!
+      .select()
+      .from(unitTypes)
+      .where(eq(unitTypes.id, seed.unitTypeId))
+      .limit(1);
+    expect(Number(unit.availableUnits)).toBe(7);
+    expect(Number(unit.reservedUnits)).toBe(1);
+    expect(Number(unit.soldUnits)).toBe(4);
+
     const events = await db!
       .select()
       .from(developmentOperatingEvents)
       .where(eq(developmentOperatingEvents.developmentId, seed.developmentId))
       .orderBy(desc(developmentOperatingEvents.id));
-    expect(events).toHaveLength(3);
-    const [releaseEvent, soldEvent, reserveEvent] = events;
+    expect(events).toHaveLength(4);
+    const [directSoldEvent, releaseEvent, soldEvent, reserveEvent] = events;
     expect(reserveEvent.eventType).toBe('inventory_status_changed');
     expect(reserveEvent.transactionType).toBe('for_sale');
     expect(reserveEvent.unitTypeId).toBe(seed.unitTypeId);
@@ -302,13 +325,35 @@ test.describe.serial('DLE Sale operating reservation browser proof', () => {
     expect(parseJsonObject(releaseEvent.beforeData).reservedUnits).toBe(2);
     expect(parseJsonObject(releaseEvent.afterData).reservedUnits).toBe(1);
 
+    expect(directSoldEvent.eventType).toBe('inventory_status_changed');
+    expect(directSoldEvent.transactionType).toBe('for_sale');
+    expect(directSoldEvent.unitTypeId).toBe(seed.unitTypeId);
+    expect(directSoldEvent.fromStatus).toBe('available');
+    expect(directSoldEvent.toStatus).toBe('sold');
+    expect(Number(directSoldEvent.quantityDelta)).toBe(-1);
+    expect(parseJsonObject(directSoldEvent.metadata).transition).toBe('mark_sold');
+    expect(parseJsonObject(directSoldEvent.metadata).outcome).toBe('sold');
+    expect(parseJsonObject(directSoldEvent.metadata).outcomeSource).toBe('available_direct');
+    expect(parseJsonObject(directSoldEvent.metadata).inventoryProjectionColumn).toBe(
+      'unit_types.available_units',
+    );
+    expect(parseJsonObject(directSoldEvent.metadata).outcomeProjectionColumn).toBe(
+      'unit_types.sold_units',
+    );
+    expect(parseJsonObject(directSoldEvent.beforeData).availableUnits).toBe(8);
+    expect(parseJsonObject(directSoldEvent.afterData).availableUnits).toBe(7);
+    expect(parseJsonObject(directSoldEvent.beforeData).reservedUnits).toBe(1);
+    expect(parseJsonObject(directSoldEvent.afterData).reservedUnits).toBe(1);
+    expect(parseJsonObject(directSoldEvent.beforeData).soldUnits).toBe(3);
+    expect(parseJsonObject(directSoldEvent.afterData).soldUnits).toBe(4);
+
     const [afterDevelopment] = await db!
       .select()
       .from(developments)
       .where(eq(developments.id, seed.developmentId))
       .limit(1);
 
-    expect(afterDevelopment.availableUnits).toBe(8);
+    expect(afterDevelopment.availableUnits).toBe(7);
     expect(afterDevelopment.name).toBe(beforeDevelopment.name);
     expect(afterDevelopment.city).toBe(beforeDevelopment.city);
     expect(afterDevelopment.suburb).toBe(beforeDevelopment.suburb);

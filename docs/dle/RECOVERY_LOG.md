@@ -2800,3 +2800,55 @@ Next recommended slice:
   paths behind explicit confirmation and the same event/counter guardrails.
 Commit hash/tag: This entry will be included in `feat(dle): add explicit outcome counters`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Direct Sale/Rental Outcome Transitions
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Let developers record a confirmed Sale sold or Rental let outcome directly from available
+inventory while preserving transaction-first state truth, explicit counters, public availability,
+and operating event audit history.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- e2e/dle/sale-operating-reservation.spec.ts
+- e2e/dle/rental-operating-hold.spec.ts
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm run check` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/sale-operating-reservation.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-operating-hold.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `git diff --check` passed.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Sale dashboard confirms direct sold from available inventory, refreshes `7 available, 1 reserved,
+  4 sold`, and writes an `available` -> `sold` event with explicit `sold_units`.
+- Rental dashboard confirms direct let from available inventory, refreshes `5 rentals available, 0
+  held, 5 let`, and writes an `available` -> `let` event with explicit `let_units`.
+Proof and fixes:
+- `developer.markSaleUnitTypeSold` now accepts `source: reserved | available_direct`.
+- Reserved Sale outcomes keep existing `reserved` -> `sold` behavior and leave public availability
+  unchanged.
+- Direct Sale outcomes require available stock, decrement `available_units`, increment
+  `sold_units`, refresh aggregate development availability, and write `available` -> `sold` with
+  `quantity_delta = -1`.
+- `developer.markRentalUnitTypeLet` now accepts `source: held | available_direct`.
+- Held Rental outcomes keep existing `held` -> `let` behavior and leave public availability
+  unchanged.
+- Direct Rental outcomes require available stock, decrement `available_units`, increment
+  `let_units`, refresh aggregate development availability, and write `available` -> `let` with
+  `quantity_delta = -1`.
+- Developer dashboard exposes separate `Direct Sold` and `Direct Let` actions with confirmation
+  copy that public availability will reduce.
+Remaining risks:
+- Auction still uses lifecycle status per lot/type; bidder/outcome records remain future work if
+  lot-level auction reporting becomes necessary.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- After focused proof passes, continue transaction-engine product experience work or strengthen
+  public availability copy around live sold/let outcome states.
+Commit hash/tag: This entry will be included in `feat(dle): support direct outcome transitions`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

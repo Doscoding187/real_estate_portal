@@ -37,10 +37,12 @@ export const SALE_UNIT_RESERVATION_TRANSITIONS = ['reserve', 'release'] as const
 export type SaleUnitReservationTransition = (typeof SALE_UNIT_RESERVATION_TRANSITIONS)[number];
 export const SALE_UNIT_OUTCOME_TRANSITIONS = ['mark_sold'] as const;
 export type SaleUnitOutcomeTransition = (typeof SALE_UNIT_OUTCOME_TRANSITIONS)[number];
+type SaleUnitOutcomeSource = 'reserved' | 'available_direct';
 export const RENTAL_UNIT_HOLD_TRANSITIONS = ['hold', 'release'] as const;
 export type RentalUnitHoldTransition = (typeof RENTAL_UNIT_HOLD_TRANSITIONS)[number];
 export const RENTAL_UNIT_OUTCOME_TRANSITIONS = ['mark_let'] as const;
 export type RentalUnitOutcomeTransition = (typeof RENTAL_UNIT_OUTCOME_TRANSITIONS)[number];
+type RentalUnitOutcomeSource = 'held' | 'available_direct';
 export const AUCTION_REGISTRATION_TRANSITIONS = [
   'open_registration',
   'close_registration',
@@ -1941,6 +1943,7 @@ export async function markSaleUnitTypeSold(input: {
   developmentId: number;
   unitTypeId: string;
   actorUserId: number;
+  source?: SaleUnitOutcomeSource;
   note?: string;
   sourceSurface?: unknown;
 }) {
@@ -1952,8 +1955,13 @@ export async function markSaleUnitTypeSold(input: {
     });
   }
 
-  const { fromStatus, toStatus, quantityDelta } =
-    getSaleUnitOutcomeTransitionStatuses('mark_sold');
+  const outcomeSource = input.source === 'available_direct' ? 'available_direct' : 'reserved';
+  const reservedOutcomeStatuses = getSaleUnitOutcomeTransitionStatuses('mark_sold');
+  const fromStatus =
+    outcomeSource === 'available_direct' ? 'available' : reservedOutcomeStatuses.fromStatus;
+  const toStatus = reservedOutcomeStatuses.toStatus;
+  const quantityDelta =
+    outcomeSource === 'available_direct' ? -1 : reservedOutcomeStatuses.quantityDelta;
   const note = input.note ? String(input.note).trim() : '';
   const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
 
@@ -1966,6 +1974,7 @@ export async function markSaleUnitTypeSold(input: {
         totalUnits: unitTypes.totalUnits,
         availableUnits: unitTypes.availableUnits,
         reservedUnits: unitTypes.reservedUnits,
+        soldUnits: unitTypes.soldUnits,
       })
       .from(unitTypes)
       .where(
@@ -1990,25 +1999,43 @@ export async function markSaleUnitTypeSold(input: {
       soldUnits: readExplicitSoldUnits(beforeUnit),
     };
 
-    if (beforeSnapshot.reservedUnits <= 0) {
+    if (outcomeSource === 'reserved' && beforeSnapshot.reservedUnits <= 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'No reserved units can be marked sold for this unit type.',
       });
     }
+    if (outcomeSource === 'available_direct' && beforeSnapshot.availableUnits <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No available units can be marked directly sold for this unit type.',
+      });
+    }
+
+    const updateSet =
+      outcomeSource === 'available_direct'
+        ? {
+            availableUnits: sql`COALESCE(${unitTypes.availableUnits}, 0) - 1`,
+            soldUnits: sql`COALESCE(${unitTypes.soldUnits}, 0) + 1`,
+          }
+        : {
+            reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
+            soldUnits: sql`COALESCE(${unitTypes.soldUnits}, 0) + 1`,
+          };
+    const stockGuard =
+      outcomeSource === 'available_direct'
+        ? sql`COALESCE(${unitTypes.availableUnits}, 0) > 0`
+        : sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`;
 
     const updateResult = await tx
       .update(unitTypes)
-      .set({
-        reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
-        soldUnits: sql`COALESCE(${unitTypes.soldUnits}, 0) + 1`,
-      })
+      .set(updateSet)
       .where(
         and(
           eq(unitTypes.id, input.unitTypeId),
           eq(unitTypes.developmentId, input.developmentId),
           eq(unitTypes.isActive, 1),
-          sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`,
+          stockGuard,
         ),
       );
 
@@ -2067,7 +2094,11 @@ export async function markSaleUnitTypeSold(input: {
     const metadata = {
       transition: 'mark_sold',
       outcome: 'sold',
-      inventoryProjectionColumn: 'unit_types.reserved_units',
+      outcomeSource,
+      inventoryProjectionColumn:
+        outcomeSource === 'available_direct'
+          ? 'unit_types.available_units'
+          : 'unit_types.reserved_units',
       outcomeProjectionColumn: 'unit_types.sold_units',
       ...(note ? { note } : {}),
       developmentName: development.name,
@@ -2144,6 +2175,7 @@ export async function markRentalUnitTypeLet(input: {
   developmentId: number;
   unitTypeId: string;
   actorUserId: number;
+  source?: RentalUnitOutcomeSource;
   note?: string;
   sourceSurface?: unknown;
 }) {
@@ -2155,8 +2187,13 @@ export async function markRentalUnitTypeLet(input: {
     });
   }
 
-  const { fromStatus, toStatus, quantityDelta } =
-    getRentalUnitOutcomeTransitionStatuses('mark_let');
+  const outcomeSource = input.source === 'available_direct' ? 'available_direct' : 'held';
+  const heldOutcomeStatuses = getRentalUnitOutcomeTransitionStatuses('mark_let');
+  const fromStatus =
+    outcomeSource === 'available_direct' ? 'available' : heldOutcomeStatuses.fromStatus;
+  const toStatus = heldOutcomeStatuses.toStatus;
+  const quantityDelta =
+    outcomeSource === 'available_direct' ? -1 : heldOutcomeStatuses.quantityDelta;
   const note = input.note ? String(input.note).trim() : '';
   const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
 
@@ -2206,25 +2243,43 @@ export async function markRentalUnitTypeLet(input: {
       isFurnished: beforeUnit.isFurnished === 1,
     };
 
-    if (beforeSnapshot.heldUnits <= 0) {
+    if (outcomeSource === 'held' && beforeSnapshot.heldUnits <= 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'No held rental units can be marked let for this unit type.',
       });
     }
+    if (outcomeSource === 'available_direct' && beforeSnapshot.availableUnits <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No available rental units can be marked directly let for this unit type.',
+      });
+    }
+
+    const updateSet =
+      outcomeSource === 'available_direct'
+        ? {
+            availableUnits: sql`COALESCE(${unitTypes.availableUnits}, 0) - 1`,
+            letUnits: sql`COALESCE(${unitTypes.letUnits}, 0) + 1`,
+          }
+        : {
+            reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
+            letUnits: sql`COALESCE(${unitTypes.letUnits}, 0) + 1`,
+          };
+    const stockGuard =
+      outcomeSource === 'available_direct'
+        ? sql`COALESCE(${unitTypes.availableUnits}, 0) > 0`
+        : sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`;
 
     const updateResult = await tx
       .update(unitTypes)
-      .set({
-        reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
-        letUnits: sql`COALESCE(${unitTypes.letUnits}, 0) + 1`,
-      })
+      .set(updateSet)
       .where(
         and(
           eq(unitTypes.id, input.unitTypeId),
           eq(unitTypes.developmentId, input.developmentId),
           eq(unitTypes.isActive, 1),
-          sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`,
+          stockGuard,
         ),
       );
 
@@ -2294,7 +2349,11 @@ export async function markRentalUnitTypeLet(input: {
     const metadata = {
       transition: 'mark_let',
       outcome: 'let',
-      inventoryProjectionColumn: 'unit_types.reserved_units',
+      outcomeSource,
+      inventoryProjectionColumn:
+        outcomeSource === 'available_direct'
+          ? 'unit_types.available_units'
+          : 'unit_types.reserved_units',
       outcomeProjectionColumn: 'unit_types.let_units',
       ...(note ? { note } : {}),
       developmentName: development.name,

@@ -39,6 +39,10 @@ import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStat
 
 type Range = '7d' | '30d' | '90d';
 type OverviewTransactionType = 'sale' | 'rent' | 'auction';
+type DirectOutcomeIntent = {
+  engine: 'sale' | 'rent';
+  unit: any;
+};
 
 function normalizeOverviewTransactionType(value: unknown): OverviewTransactionType {
   const normalized = String(value || '')
@@ -263,6 +267,7 @@ export default function Overview() {
   const [developmentFilter, setDevelopmentFilter] = useState<string>('all');
   const [isReferralAccessOpen, setIsReferralAccessOpen] = useState(false);
   const [handoffDeal, setHandoffDeal] = useState<any | null>(null);
+  const [directOutcomeIntent, setDirectOutcomeIntent] = useState<DirectOutcomeIntent | null>(null);
   const [handoffNote, setHandoffNote] = useState('');
   const [operatingNote, setOperatingNote] = useState('');
 
@@ -468,8 +473,13 @@ export default function Overview() {
     });
 
   const markSaleUnitTypeSoldMutation = trpc.developer.markSaleUnitTypeSold.useMutation({
-    onSuccess: async () => {
-      toast.success('Sale unit marked sold.');
+    onSuccess: async (_data, variables) => {
+      toast.success(
+        variables.source === 'available_direct'
+          ? 'Available Sale unit marked sold.'
+          : 'Sale unit marked sold.',
+      );
+      setDirectOutcomeIntent(null);
       await Promise.all([
         saleOperatingInventoryQuery.refetch(),
         operatingEventsQuery.refetch(),
@@ -508,8 +518,13 @@ export default function Overview() {
   });
 
   const markRentalUnitTypeLetMutation = trpc.developer.markRentalUnitTypeLet.useMutation({
-    onSuccess: async () => {
-      toast.success('Rental unit marked let.');
+    onSuccess: async (_data, variables) => {
+      toast.success(
+        variables.source === 'available_direct'
+          ? 'Available rental unit marked let.'
+          : 'Rental unit marked let.',
+      );
+      setDirectOutcomeIntent(null);
       await Promise.all([
         rentalOperatingInventoryQuery.refetch(),
         operatingEventsQuery.refetch(),
@@ -1049,7 +1064,7 @@ export default function Overview() {
                             {formatNumber(soldUnits)} sold
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             disabled={availableUnits <= 0 || mutationPending}
                             onClick={() =>
@@ -1088,6 +1103,7 @@ export default function Overview() {
                               markSaleUnitTypeSoldMutation.mutate({
                                 developmentId: selectedDevelopmentId,
                                 unitTypeId: unit.id,
+                                source: 'reserved',
                               })
                             }
                             size="sm"
@@ -1095,6 +1111,15 @@ export default function Overview() {
                             variant="secondary"
                           >
                             Mark Sold
+                          </Button>
+                          <Button
+                            disabled={availableUnits <= 0 || mutationPending}
+                            onClick={() => setDirectOutcomeIntent({ engine: 'sale', unit })}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            Direct Sold
                           </Button>
                         </div>
                       </div>
@@ -1166,7 +1191,7 @@ export default function Overview() {
                           </p>
                           <p className="mt-1 text-xs text-slate-500">{leaseContext}</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             disabled={availableUnits <= 0 || mutationPending}
                             onClick={() =>
@@ -1205,6 +1230,7 @@ export default function Overview() {
                               markRentalUnitTypeLetMutation.mutate({
                                 developmentId: selectedDevelopmentId,
                                 unitTypeId: unit.id,
+                                source: 'held',
                               })
                             }
                             size="sm"
@@ -1212,6 +1238,15 @@ export default function Overview() {
                             variant="secondary"
                           >
                             Mark Let
+                          </Button>
+                          <Button
+                            disabled={availableUnits <= 0 || mutationPending}
+                            onClick={() => setDirectOutcomeIntent({ engine: 'rent', unit })}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            Direct Let
                           </Button>
                         </div>
                       </div>
@@ -1464,6 +1499,75 @@ export default function Overview() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog
+        open={!!directOutcomeIntent}
+        onOpenChange={open => {
+          if (!open) setDirectOutcomeIntent(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {directOutcomeIntent?.engine === 'rent'
+                ? 'Confirm Direct Rental Let'
+                : 'Confirm Direct Sale'}
+            </DialogTitle>
+            <DialogDescription>
+              This moves one available unit straight to{' '}
+              {directOutcomeIntent?.engine === 'rent' ? 'let' : 'sold'} and reduces public
+              availability for this unit type.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-md border border-slate-200 p-3 text-sm">
+            <p className="font-medium text-slate-900">
+              {directOutcomeIntent?.unit?.name || 'Selected unit type'}
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Current available:{' '}
+              {formatNumber(Number(directOutcomeIntent?.unit?.availableUnits || 0))}
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => setDirectOutcomeIntent(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                !selectedDevelopmentId ||
+                !directOutcomeIntent?.unit?.id ||
+                markSaleUnitTypeSoldMutation.isPending ||
+                markRentalUnitTypeLetMutation.isPending
+              }
+              onClick={() => {
+                if (!selectedDevelopmentId || !directOutcomeIntent?.unit?.id) return;
+                if (directOutcomeIntent.engine === 'rent') {
+                  markRentalUnitTypeLetMutation.mutate({
+                    developmentId: selectedDevelopmentId,
+                    unitTypeId: directOutcomeIntent.unit.id,
+                    source: 'available_direct',
+                  });
+                  return;
+                }
+                markSaleUnitTypeSoldMutation.mutate({
+                  developmentId: selectedDevelopmentId,
+                  unitTypeId: directOutcomeIntent.unit.id,
+                  source: 'available_direct',
+                });
+              }}
+              type="button"
+            >
+              {directOutcomeIntent?.engine === 'rent' ? 'Confirm Direct Let' : 'Confirm Direct Sold'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={!!handoffDeal}

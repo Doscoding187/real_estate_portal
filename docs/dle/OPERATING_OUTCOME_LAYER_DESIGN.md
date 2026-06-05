@@ -367,10 +367,12 @@ The dashboard should show:
 
 Outcome actions should be narrow:
 
-- Sale sold action should only appear when Sale inventory has reserved stock, unless a later direct
-  sale action is explicitly designed.
-- Rental let action should only appear when Rental inventory has held stock, unless a later direct
-  let action is explicitly designed.
+- Sale sold from reserved stock should only appear when Sale inventory has reserved stock.
+- Sale direct sold from available stock may appear when available stock exists, but it must require
+  explicit confirmation because it reduces public availability immediately.
+- Rental let from held stock should only appear when Rental inventory has held stock.
+- Rental direct let from available stock may appear when available stock exists, but it must require
+  explicit confirmation because it reduces public availability immediately.
 - Auction sold/passed-in actions should only appear for active lots. Withdrawn may appear for
   non-final lots where policy allows.
 
@@ -418,6 +420,19 @@ Implemented Sale sold from reserved inventory:
 The dashboard exposes explicit `sold_units` as `sold`. Failed Sale mutations do not invent sold
 movement from changed available/reserved counts.
 
+Implemented Sale direct sold from available inventory:
+
+- Uses the existing `developer.markSaleUnitTypeSold` endpoint with `source: available_direct`.
+- Requires Sale development ownership and `available_units > 0`.
+- Decrements `unit_types.available_units`.
+- Increments `unit_types.sold_units`.
+- Refreshes `developments.available_units` from active unit types.
+- Writes `inventory_status_changed` with `available` -> `sold` and `quantity_delta = -1`.
+- Shows a separate `Direct Sold` dashboard action with confirmation that public availability will
+  reduce.
+- Browser proof covers confirmation, event readback, counter refresh, aggregate availability
+  refresh, and packaging-field preservation.
+
 Implemented Rental let from held inventory:
 
 - Added `developer.markRentalUnitTypeLet`.
@@ -434,6 +449,19 @@ Implemented Rental let from held inventory:
 
 The dashboard exposes explicit `let_units` as `let`. Failed Rental mutations do not invent let
 movement from changed available/held counts.
+
+Implemented Rental direct let from available inventory:
+
+- Uses the existing `developer.markRentalUnitTypeLet` endpoint with `source: available_direct`.
+- Requires Rental development ownership and `available_units > 0`.
+- Decrements `unit_types.available_units`.
+- Increments `unit_types.let_units`.
+- Refreshes `developments.available_units` from active unit types.
+- Writes `inventory_status_changed` with `available` -> `let` and `quantity_delta = -1`.
+- Shows a separate `Direct Let` dashboard action with confirmation that public availability will
+  reduce.
+- Browser proof covers confirmation, event readback, counter refresh, aggregate availability
+  refresh, Rental-native language, and packaging-field preservation.
 
 Implemented Auction sold/passed-in/withdrawn outcomes:
 
@@ -456,7 +484,8 @@ Implemented Auction sold/passed-in/withdrawn outcomes:
    current card/page copy still invites incompatible actions.
 2. Design and implement lead-stage synchronization explicitly.
 3. Design and implement distribution/referral outcome handoff explicitly.
-4. Add explicit Sale/Rental outcome projections before broad sold/let reporting.
+4. Add lot-level Auction bidder/outcome records only when reporting needs exceed current lifecycle
+   status proof.
 
 ## Completed First Implementation Slice
 

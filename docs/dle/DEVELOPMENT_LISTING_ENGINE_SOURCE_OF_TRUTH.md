@@ -350,8 +350,8 @@ Recommended order from here:
 1. Run and monitor a controlled create/draft autosave rollout
 2. Keep edit-development autosave separate until partial-step ownership is proven
 3. Continue operating-layer hardening from the browser-proven Sale reserve/release, Sale sold,
-   Rental hold/release, Rental let, Auction registration open/activation, and Auction outcome
-   mutations
+   Sale direct-available sold, Rental hold/release, Rental let, Rental direct-available let,
+   Auction registration open/activation, and Auction outcome mutations
 4. Treat explicit selected-lead outcome sync as implemented and browser-proven; do not repeat it
    unless extending Rental/Auction browser coverage or fixing a discovered bug
 5. Treat the first distribution/referral handoff bridge as implemented and browser-proven:
@@ -367,8 +367,9 @@ Recommended order from here:
 10. Search card and lead form alignment
 11. Developer dashboard and inventory impact
 12. Admin review impact
-13. Treat explicit Sale/Rental outcome counters as implemented for first operating reports; keep
-    Auction lot-level bidder/outcome records as future work until needed
+13. Treat explicit Sale/Rental outcome counters and direct available-to-outcome paths as
+    implemented for first operating reports; keep Auction lot-level bidder/outcome records as
+    future work until needed
 
 ## 19. Definition of World-Class
 
