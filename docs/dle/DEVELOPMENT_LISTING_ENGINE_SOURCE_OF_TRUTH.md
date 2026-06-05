@@ -352,9 +352,9 @@ Recommended order from here:
 3. Continue operating-layer hardening from the browser-proven Sale reserve/release, Sale sold,
    Rental hold/release, Rental let, Auction registration open/activation, and Auction outcome
    mutations
-4. Use `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` before coding lead-stage synchronization or
-   distribution/referral outcome handoff
-5. Implement explicit lead-stage synchronization for Sale sold, Rental let, and Auction outcomes
+4. Treat explicit selected-lead outcome sync as implemented and browser-proven; do not repeat it
+   unless extending Rental/Auction browser coverage or fixing a discovered bug
+5. Use `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` before coding distribution/referral outcome handoff
 6. Design and implement distribution/referral outcome handoff without bypassing deal or commission
    readiness checks
 7. Continue the transaction-engine product experience audit

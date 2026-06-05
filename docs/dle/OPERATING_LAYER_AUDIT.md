@@ -4,8 +4,8 @@ Date: 2026-06-04
 Status: Read-only dashboard operating surfaces cover inventory, lead risk, and distribution
 readiness. Sale reserve/release, Sale sold from reserved inventory, Rental hold/release, Rental let
 from held inventory, Auction registration open/rollback, Auction time-gated activation, and Auction
-sold/passed-in/withdrawn outcomes are implemented and browser-proven. Lead synchronization and
-distribution/referral outcome handoff remain future layers.
+sold/passed-in/withdrawn outcomes, and explicit selected-lead outcome sync are implemented and
+browser-proven. Distribution/referral outcome handoff remains a future layer.
 
 ## Purpose
 
@@ -358,7 +358,21 @@ Implemented Auction outcome layer:
 - Browser proof in `e2e/dle/operating-mutation-failure-trust.spec.ts` verifies stale Auction sold
   failure does not claim success and writes no operating event.
 
+Implemented lead outcome sync handoff:
+
+- Implemented explicit selected-lead synchronization from
+  `docs/dle/OUTCOME_HANDOFF_CONTRACT.md`.
+- `developer.syncLeadOutcome` derives the transaction type from the owned development and supports
+  Sale sold, Rental let, Auction sold, Auction passed-in, and Auction withdrawn outcome actions.
+- The mutation updates only the selected lead projection, writes a `lead_stage_changed` DLE event,
+  and logs a local lead activity; it does not mutate inventory, distribution deals, or commission
+  state.
+- Browser proof in `e2e/dle/lead-outcome-sync.spec.ts` verifies Sale sold selected-lead sync,
+  transaction-native success copy, event/activity persistence, and unsafe direct close rejection
+  without false success.
+
 Recommended next architecture work:
 
-- Use `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` to implement explicit lead-stage synchronization
-  before automating any distribution/referral deal or commission side effects.
+- Design the first distribution/referral handoff slice from `docs/dle/OUTCOME_HANDOFF_CONTRACT.md`
+  without bypassing distribution deal-stage, document, payout milestone, manager review, or
+  commission readiness guardrails.

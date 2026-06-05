@@ -3,9 +3,9 @@
 Date: 2026-06-04
 Status: Contract implemented through operating note/readback, Sale reserve/release, Sale sold from
 reserved inventory, Rental hold/release, Rental let from held inventory, Auction registration
-open/rollback, Auction time-gated activation, and Auction sold/passed-in/withdrawn outcomes. Lead
-stage synchronization and distribution/referral outcome handoff remain future transaction-specific
-slices.
+open/rollback, Auction time-gated activation, Auction sold/passed-in/withdrawn outcomes, and
+explicit selected-lead outcome sync. Distribution/referral outcome handoff remains a future
+transaction-specific slice.
 
 ## Purpose
 
@@ -289,6 +289,10 @@ Current mutation status:
 - Browser proof confirms Auction outcome success, `auction_outcome_recorded` event readback, stale
   active-state failure without false success, stable Auction packaging fields, and public/search
   Auction outcome language.
+- Explicit selected-lead outcome sync has been implemented from the developer lead detail panel.
+- Browser proof confirms Sale sold selected-lead sync to `closed_won`, `lead_stage_changed` DLE
+  event readback, local lead activity persistence, and unsafe direct close rejection without false
+  success.
 
 ## Browser Proof Requirements
 
@@ -313,19 +317,24 @@ Before calling operating mutations safe, prove:
   `auction_outcome_recorded` events. Status: passed in browser/DB proof.
 - Failed stale Auction sold outcome does not claim success, refreshes the dashboard back to backend
   truth, and writes no operating event. Status: passed in browser/DB proof.
+- Selected Sale lead outcome sync moves only the chosen deal-stage lead to `closed_won`, writes
+  `lead_stage_changed`, and logs a lead activity. Status: passed in browser/DB proof.
+- Unsafe selected-lead outcome sync from `qualified` directly to `closed_won` fails without a
+  success toast and without extra operating events. Status: passed in browser/DB proof.
 - Sale public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.
 
 ## Open Questions Before Broader Operating Mutation Work
 
-Resolved by `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` for the next implementation slice:
+Resolved by `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` and the explicit lead outcome sync slice:
 
 - Keep the current shared lead funnel first, with transaction-native display overlays for Sale,
   Rental, and Auction.
+- Treat selected lead sync as an explicit action, not an automatic inventory side effect.
 - Reference distribution deal events from DLE operating events for the first handoff slice; do not
   silently mirror or mutate distribution deal state from inventory outcomes.
-- Treat lead sync and distribution handoff as explicit actions after inventory outcomes. A failed
-  downstream handoff should not roll back inventory truth unless a later bundled transaction
+- Treat distribution handoff as an explicit action after inventory and lead outcomes. A failed
+  downstream handoff should not roll back inventory or lead truth unless a later bundled transaction
   contract explicitly says so.
 
 Still open:

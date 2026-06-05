@@ -49,6 +49,13 @@ type LeadItem = {
   notes?: string | null;
 };
 
+type OutcomeSyncAction =
+  | 'sale_sold'
+  | 'rental_let'
+  | 'auction_sold'
+  | 'auction_passed_in'
+  | 'auction_withdrawn';
+
 const STAGE_TABS: Array<{ key: StageTab; label: string }> = [
   { key: 'new', label: 'New' },
   { key: 'contacted', label: 'Contacted' },
@@ -59,6 +66,8 @@ const STAGE_TABS: Array<{ key: StageTab; label: string }> = [
   { key: 'won', label: 'Won' },
   { key: 'lost', label: 'Lost' },
 ];
+
+const LEADS_QUERY_LIMIT = 200;
 
 function formatRelative(ts?: string | null): string {
   if (!ts) return 'n/a';
@@ -106,6 +115,34 @@ function slaBadgeClass(status: 'ok' | 'warning' | 'breach'): string {
   return 'bg-emerald-100 text-emerald-700 border-emerald-200';
 }
 
+function normalizeDevelopmentTransactionType(value: unknown): 'sale' | 'rent' | 'auction' | null {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'auction') return 'auction';
+  if (normalized === 'for_rent' || normalized === 'rent' || normalized === 'rental') return 'rent';
+  if (normalized === 'for_sale' || normalized === 'sale' || normalized === 'sales') return 'sale';
+  return null;
+}
+
+function getOutcomeSyncActions(transactionType: 'sale' | 'rent' | 'auction' | null): Array<{
+  label: string;
+  value: OutcomeSyncAction;
+}> {
+  if (transactionType === 'sale') {
+    return [{ label: 'Sold', value: 'sale_sold' }];
+  }
+  if (transactionType === 'rent') {
+    return [{ label: 'Lease signed / Let', value: 'rental_let' }];
+  }
+  if (transactionType === 'auction') {
+    return [
+      { label: 'Sold at auction', value: 'auction_sold' },
+      { label: 'Passed in follow-up', value: 'auction_passed_in' },
+      { label: 'Withdrawn follow-up', value: 'auction_withdrawn' },
+    ];
+  }
+  return [];
+}
+
 export default function LeadsManager() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -133,6 +170,8 @@ export default function LeadsManager() {
   const [activityDescription, setActivityDescription] = useState('');
   const [transitionTarget, setTransitionTarget] = useState('');
   const [transitionNotes, setTransitionNotes] = useState('');
+  const [outcomeSyncAction, setOutcomeSyncAction] = useState<OutcomeSyncAction | ''>('');
+  const [outcomeSyncNote, setOutcomeSyncNote] = useState('');
   const [nextActionType, setNextActionType] = useState<
     'call' | 'email' | 'whatsapp' | 'schedule_viewing' | 'send_brochure' | 'other'
   >('call');
@@ -211,7 +250,7 @@ export default function LeadsManager() {
     q: debouncedSearch || undefined,
     from: toIsoRangeDateStart(dateFrom),
     to: toIsoRangeDateEnd(dateTo),
-    limit: 500,
+    limit: LEADS_QUERY_LIMIT,
     offset: 0,
   });
 
@@ -220,7 +259,7 @@ export default function LeadsManager() {
       developmentId: selectedDevelopmentId,
       range: rangeFilter,
       sla: attentionFilter === 'all' ? undefined : attentionFilter,
-      limit: 500,
+      limit: LEADS_QUERY_LIMIT,
     },
     {
       refetchOnWindowFocus: false,
@@ -250,6 +289,19 @@ export default function LeadsManager() {
       await invalidateLeadViews();
     },
     onError: error => toast.error(error.message || 'Could not transition lead.'),
+  });
+
+  const outcomeSyncMutation = trpc.developer.syncLeadOutcome.useMutation({
+    onSuccess: async data => {
+      toast.success(`Lead synced: ${data.displayLabel}.`);
+      setOutcomeSyncNote('');
+      await Promise.all([
+        utils.developer.getLeads.invalidate(),
+        utils.developer.getFunnelAttention.invalidate(),
+        utils.developer.getFunnelKPIs.invalidate(),
+      ]);
+    },
+    onError: error => toast.error(error.message || 'Could not sync lead outcome.'),
   });
 
   const logActivityMutation = trpc.developer.logLeadActivity.useMutation({
@@ -319,14 +371,27 @@ export default function LeadsManager() {
     () => activeLeads.find(lead => lead.id === selectedLeadId) || null,
     [activeLeads, selectedLeadId],
   );
+  const selectedLeadDevelopment = useMemo(() => {
+    if (!selectedLead?.developmentId) return null;
+    return developments.find((dev: any) => String(dev.id) === String(selectedLead.developmentId)) || null;
+  }, [developments, selectedLead?.developmentId]);
+  const selectedLeadTransactionType = normalizeDevelopmentTransactionType(
+    (selectedLeadDevelopment as any)?.transactionType,
+  );
+  const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
 
   useEffect(() => {
     if (!selectedLead) {
       setTransitionTarget('');
+      setOutcomeSyncAction('');
       return;
     }
     setTransitionTarget(selectedLead.allowedTransitions?.[0] || '');
-  }, [selectedLead?.id]);
+    const actions = getOutcomeSyncActions(
+      normalizeDevelopmentTransactionType((selectedLeadDevelopment as any)?.transactionType),
+    );
+    setOutcomeSyncAction(actions[0]?.value || '');
+  }, [selectedLead?.id, selectedLeadDevelopment]);
 
   const PAGE_SIZE = 20;
   const totalPages = Math.max(1, Math.ceil(activeLeads.length / PAGE_SIZE));
@@ -369,6 +434,24 @@ export default function LeadsManager() {
       leadId: Number(selectedLead.id),
       toStage: transitionTarget as any,
       notes: transitionNotes.trim() || undefined,
+    });
+  };
+
+  const handleOutcomeSync = () => {
+    if (!selectedLead || !outcomeSyncAction) return;
+    if (
+      (outcomeSyncAction === 'auction_passed_in' || outcomeSyncAction === 'auction_withdrawn') &&
+      outcomeSyncNote.trim().length < 3
+    ) {
+      toast.error('Auction passed-in or withdrawn lead sync requires a note.');
+      return;
+    }
+
+    outcomeSyncMutation.mutate({
+      developmentId: Number(selectedLead.developmentId),
+      leadId: Number(selectedLead.id),
+      outcome: outcomeSyncAction,
+      note: outcomeSyncNote.trim() || undefined,
     });
   };
 
@@ -719,6 +802,48 @@ export default function LeadsManager() {
                     Move Lead
                   </Button>
                 </div>
+
+                {outcomeSyncActions.length > 0 && (
+                  <div className="space-y-2 border rounded-md p-3">
+                    <p className="text-sm font-medium">Outcome Sync</p>
+                    <Select
+                      value={outcomeSyncAction}
+                      onValueChange={value => setOutcomeSyncAction(value as OutcomeSyncAction)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select outcome" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {outcomeSyncActions.map(action => (
+                          <SelectItem key={action.value} value={action.value}>
+                            {action.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Textarea
+                      value={outcomeSyncNote}
+                      onChange={e => setOutcomeSyncNote(e.target.value)}
+                      placeholder="Outcome note..."
+                      rows={2}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleOutcomeSync}
+                      disabled={
+                        outcomeSyncMutation.isPending ||
+                        !outcomeSyncAction ||
+                        !selectedLead.developmentId ||
+                        ((outcomeSyncAction === 'auction_passed_in' ||
+                          outcomeSyncAction === 'auction_withdrawn') &&
+                          outcomeSyncNote.trim().length < 3)
+                      }
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Sync Outcome
+                    </Button>
+                  </div>
+                )}
 
                 <div className="space-y-2 border rounded-md p-3">
                   <p className="text-sm font-medium">Log Activity</p>

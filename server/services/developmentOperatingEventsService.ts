@@ -1,12 +1,26 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 
-import { developmentOperatingEvents, developments, unitTypes } from '../../drizzle/schema';
+import {
+  developmentOperatingEvents,
+  developments,
+  leads,
+  unitTypes,
+} from '../../drizzle/schema';
 import {
   DEVELOPMENT_OPERATING_SOURCE_SURFACES,
   type DEVELOPMENT_OPERATING_TRANSACTION_TYPES,
 } from '../../drizzle/schema/developmentOperations';
+import {
+  canonicalStageToUpdate,
+  deriveCanonicalLeadStage,
+  formatLeadTimestamp,
+} from './developerFunnelService';
 import { getDb } from '../db-connection';
+import {
+  isLeadTransitionAllowed,
+  type LeadStage,
+} from '../../shared/developerFunnel';
 
 type DevelopmentOperatingSourceSurface =
   (typeof DEVELOPMENT_OPERATING_SOURCE_SURFACES)[number];
@@ -31,6 +45,14 @@ export const AUCTION_REGISTRATION_TRANSITIONS = [
 export type AuctionRegistrationTransition = (typeof AUCTION_REGISTRATION_TRANSITIONS)[number];
 export const AUCTION_OUTCOME_TRANSITIONS = ['sold', 'passed_in', 'withdrawn'] as const;
 export type AuctionOutcomeTransition = (typeof AUCTION_OUTCOME_TRANSITIONS)[number];
+export const LEAD_OUTCOME_SYNC_ACTIONS = [
+  'sale_sold',
+  'rental_let',
+  'auction_sold',
+  'auction_passed_in',
+  'auction_withdrawn',
+] as const;
+export type LeadOutcomeSyncAction = (typeof LEAD_OUTCOME_SYNC_ACTIONS)[number];
 type AuctionLifecycleStatus =
   | 'scheduled'
   | 'registration_open'
@@ -90,6 +112,11 @@ function readAffectedRows(result: unknown): number {
     return Number.isFinite(affectedRows) ? affectedRows : 0;
   }
   return 0;
+}
+
+function appendLeadSyncNote(existing: string | null | undefined, next: string): string {
+  const line = `[${new Date().toISOString()}] ${next}`;
+  return existing ? `${existing}\n${line}` : line;
 }
 
 function normalizeEventLimit(limit?: number): number {
@@ -241,6 +268,97 @@ export function getAuctionOutcomeTransitionStatuses(input: {
     code: 'BAD_REQUEST',
     message: 'Unsupported Auction outcome transition.',
   });
+}
+
+export function getLeadOutcomeSyncTarget(input: {
+  transactionType: DevelopmentOperatingTransactionType;
+  outcome: LeadOutcomeSyncAction;
+  note?: string | null;
+}): { toStage: LeadStage; displayLabel: string; activityLabel: string } {
+  const note = String(input.note || '').trim();
+
+  if (input.outcome === 'sale_sold') {
+    if (input.transactionType !== 'for_sale') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Sale sold lead sync is only available for Sale developments.',
+      });
+    }
+    return { toStage: 'closed_won', displayLabel: 'Sold', activityLabel: 'Sale lead synced as sold' };
+  }
+
+  if (input.outcome === 'rental_let') {
+    if (input.transactionType !== 'for_rent') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Rental let lead sync is only available for Rental developments.',
+      });
+    }
+    return {
+      toStage: 'closed_won',
+      displayLabel: 'Lease signed / Let',
+      activityLabel: 'Rental lead synced as lease signed / let',
+    };
+  }
+
+  if (input.outcome === 'auction_sold') {
+    if (input.transactionType !== 'auction') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Auction sold lead sync is only available for Auction developments.',
+      });
+    }
+    return {
+      toStage: 'closed_won',
+      displayLabel: 'Sold at auction',
+      activityLabel: 'Auction lead synced as sold at auction',
+    };
+  }
+
+  if (input.outcome === 'auction_passed_in' || input.outcome === 'auction_withdrawn') {
+    if (input.transactionType !== 'auction') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Auction lost-outcome lead sync is only available for Auction developments.',
+      });
+    }
+    if (note.length < 3) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Auction passed-in or withdrawn lead sync requires a note.',
+      });
+    }
+    const displayLabel = input.outcome === 'auction_passed_in' ? 'Passed in follow-up' : 'Withdrawn follow-up';
+    return {
+      toStage: 'closed_lost',
+      displayLabel,
+      activityLabel: `Auction lead synced as ${displayLabel.toLowerCase()}`,
+    };
+  }
+
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: 'Unsupported lead outcome sync action.',
+  });
+}
+
+export function validateLeadOutcomeSyncTransition(input: {
+  fromStage: LeadStage;
+  toStage: LeadStage;
+}) {
+  if (input.fromStage === input.toStage) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Lead is already at ${input.toStage}.`,
+    });
+  }
+
+  if (!isLeadTransitionAllowed(input.fromStage, input.toStage)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Invalid lead outcome sync from ${input.fromStage} to ${input.toStage}.`,
+    });
+  }
 }
 
 function toNonNegativeInt(value: unknown): number {
@@ -435,6 +553,181 @@ export async function createDevelopmentOperatingNote(input: {
   }
 
   return event;
+}
+
+export async function syncLeadOutcome(input: {
+  developerId: number;
+  developmentId: number;
+  leadId: number;
+  actorUserId: number;
+  outcome: LeadOutcomeSyncAction;
+  sourceOutcomeEventId?: number | null;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  const note = input.note ? String(input.note).trim() : '';
+  const target = getLeadOutcomeSyncTarget({
+    transactionType: development.transactionType,
+    outcome: input.outcome,
+    note,
+  });
+  const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
+
+  return await db.transaction(async (tx: any) => {
+    const [lead] = await tx
+      .select()
+      .from(leads)
+      .where(and(eq(leads.id, input.leadId), eq(leads.developmentId, input.developmentId)))
+      .limit(1);
+
+    if (!lead) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Lead not found for this development.',
+      });
+    }
+
+    let sourceOutcomeEvent: typeof developmentOperatingEvents.$inferSelect | null = null;
+    if (input.sourceOutcomeEventId) {
+      const [event] = await tx
+        .select()
+        .from(developmentOperatingEvents)
+        .where(
+          and(
+            eq(developmentOperatingEvents.id, input.sourceOutcomeEventId),
+            eq(developmentOperatingEvents.developmentId, input.developmentId),
+          ),
+        )
+        .limit(1);
+      if (!event) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Source outcome event not found for this development.',
+        });
+      }
+      sourceOutcomeEvent = event;
+    }
+
+    const fromStage = deriveCanonicalLeadStage(lead);
+    validateLeadOutcomeSyncTransition({ fromStage, toStage: target.toStage });
+
+    const syncNote = note
+      ? `${target.activityLabel}. ${note}`
+      : target.activityLabel;
+    const updateSet: any = {
+      ...canonicalStageToUpdate(target.toStage),
+      notes: appendLeadSyncNote(lead.notes, syncNote),
+      updatedAt: formatLeadTimestamp(),
+    };
+
+    const updateResult = await tx.update(leads).set(updateSet).where(eq(leads.id, input.leadId));
+    if (readAffectedRows(updateResult) < 1) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Lead outcome sync could not update the lead.',
+      });
+    }
+
+    await tx.execute(sql`
+      insert into lead_activities (leadId, activityType, description)
+      values (
+        ${input.leadId},
+        ${'status_change'},
+        ${`${target.activityLabel}: ${fromStage} -> ${target.toStage}`}
+      )
+    `);
+
+    const metadata = {
+      transition: 'lead_outcome_sync',
+      outcome: input.outcome,
+      sourceOutcomeEventId: input.sourceOutcomeEventId || null,
+      displayLabel: target.displayLabel,
+      activityLabel: target.activityLabel,
+      ...(note ? { note } : {}),
+      ...(sourceOutcomeEvent
+        ? {
+            sourceOutcomeEventType: sourceOutcomeEvent.eventType,
+            sourceOutcomeFromStatus: sourceOutcomeEvent.fromStatus,
+            sourceOutcomeToStatus: sourceOutcomeEvent.toStatus,
+          }
+        : {}),
+      developmentName: development.name,
+      leadName: lead.name,
+    };
+
+    const insertResult = await tx.insert(developmentOperatingEvents).values({
+      developmentId: input.developmentId,
+      leadId: input.leadId,
+      transactionType: development.transactionType,
+      eventType: 'lead_stage_changed',
+      fromStatus: fromStage,
+      toStatus: target.toStage,
+      beforeData: {
+        leadId: input.leadId,
+        stage: fromStage,
+        status: lead.status,
+        funnelStage: lead.funnelStage,
+        unitId: lead.unitId,
+        unitName: lead.unitName,
+      },
+      afterData: {
+        leadId: input.leadId,
+        stage: target.toStage,
+        displayLabel: target.displayLabel,
+        outcome: input.outcome,
+        sourceOutcomeEventId: input.sourceOutcomeEventId || null,
+      },
+      metadata,
+      actorUserId: input.actorUserId,
+      sourceSurface,
+    });
+
+    const insertedId = readInsertId(insertResult);
+    if (!insertedId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Lead outcome sync event could not be saved.',
+      });
+    }
+
+    const [event] = await tx
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.id, insertedId),
+          eq(developmentOperatingEvents.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+
+    const [updatedLead] = await tx.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+
+    if (!event || !updatedLead) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Lead outcome sync was saved but could not be read back.',
+      });
+    }
+
+    return {
+      fromStage,
+      toStage: target.toStage,
+      displayLabel: target.displayLabel,
+      event,
+      lead: {
+        id: updatedLead.id,
+        developmentId: updatedLead.developmentId,
+        name: updatedLead.name,
+        status: updatedLead.status,
+        funnelStage: updatedLead.funnelStage,
+        stage: deriveCanonicalLeadStage(updatedLead),
+        unitId: updatedLead.unitId,
+        unitName: updatedLead.unitName,
+      },
+    };
+  });
 }
 
 export async function listSaleOperatingInventory(input: {

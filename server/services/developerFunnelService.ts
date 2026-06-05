@@ -77,6 +77,10 @@ function minutesBetween(from: Date, to: Date): number {
   return Math.max(0, Math.round((to.getTime() - from.getTime()) / 60000));
 }
 
+export function formatLeadTimestamp(date = new Date()): string {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function appendNote(existing: string | null | undefined, next: string): string {
   const stamp = new Date().toISOString();
   const line = `[${stamp}] ${next}`;
@@ -236,7 +240,9 @@ export function deriveCanonicalLeadStage(lead: LeadRow): LeadStage {
   return 'new';
 }
 
-function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferInsert> {
+export function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferInsert> {
+  const now = formatLeadTimestamp();
+
   switch (stage) {
     case 'new':
       return { status: 'new', funnelStage: 'interest', lostReason: null };
@@ -244,7 +250,7 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
       return {
         status: 'contacted',
         funnelStage: 'affordability',
-        lastContactedAt: new Date().toISOString(),
+        lastContactedAt: now,
         lostReason: null,
       };
     case 'qualified':
@@ -259,14 +265,14 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
       return {
         status: 'converted',
         funnelStage: 'bond',
-        convertedAt: new Date().toISOString(),
+        convertedAt: now,
         lostReason: null,
       };
     case 'closed_won':
       return {
         status: 'closed',
         funnelStage: 'sale',
-        convertedAt: new Date().toISOString(),
+        convertedAt: now,
         lostReason: null,
       };
     case 'closed_lost':

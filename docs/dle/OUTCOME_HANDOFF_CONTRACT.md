@@ -1,7 +1,8 @@
 # DLE Outcome Handoff Contract
 
 Date: 2026-06-05
-Status: Design contract. No runtime automation is implemented in this slice.
+Status: Lead-stage synchronization is implemented for explicit selected-lead outcome sync.
+Distribution/referral handoff remains future contract-backed work.
 
 ## Purpose
 
@@ -40,6 +41,25 @@ Current lead anchors:
   - `transitionLead`, `logLeadActivity`, `assignLead`, `setLeadNextAction`
 - `development_operating_events`
   - event type contract already includes `lead_stage_changed`
+
+Implemented lead outcome sync:
+
+- `developer.syncLeadOutcome`
+  - requires `developmentId`, selected `leadId`, and transaction-native outcome action
+  - derives transaction type from the owned development
+  - supports Sale sold, Rental let, Auction sold, Auction passed-in, and Auction withdrawn mappings
+  - requires an explicit note for Auction passed-in/withdrawn loss sync
+- `server/services/developmentOperatingEventsService.ts`
+  - validates selected lead ownership within the development
+  - uses the shared lead transition guardrails from `shared/developerFunnel.ts`
+  - updates the selected lead projection and writes a `lead_stage_changed` DLE event in one
+    transaction
+  - logs a local `lead_activities` status-change row using transaction-native language
+- `client/src/components/developer/LeadsManager.tsx`
+  - exposes transaction-native Outcome Sync actions from the lead detail panel
+  - shows no success unless the backend mutation succeeds
+- `e2e/dle/lead-outcome-sync.spec.ts`
+  - browser-proves Sale sold selected-lead sync and unsafe direct close rejection
 
 Current distribution/referral anchors:
 
@@ -284,17 +304,9 @@ changed.
 
 ## Next Implementation Slice Recommendation
 
-Implement lead-stage synchronization first, before distribution handoff:
+Lead-stage synchronization has been implemented first, before distribution handoff.
 
-1. Add a narrow service for explicit lead outcome sync.
-2. Require a selected `leadId`.
-3. Support only safe first mappings:
-   - Sale sold -> `closed_won`
-   - Rental let -> `closed_won`
-   - Auction sold -> `closed_won`
-   - Auction passed-in/withdrawn -> `closed_lost` only with explicit note
-4. Write `lead_stage_changed` DLE operating events and lead activities.
-5. Browser-proof no false success, transaction-native labels, and no inventory field wipes.
-
-After that, design and implement distribution/referral handoff using existing distribution deal
-stage and commission readiness guardrails.
+Next, design and implement distribution/referral handoff using existing distribution deal stage and
+commission readiness guardrails. The first distribution slice should link or request review for one
+explicit `distributionDealId`; it must not silently advance deals or commission state from inventory
+or lead outcomes.

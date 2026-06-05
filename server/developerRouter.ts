@@ -41,6 +41,7 @@ import {
   markRentalUnitTypeLet,
   markSaleUnitTypeSold,
   recordAuctionLotOutcome,
+  syncLeadOutcome,
   transitionAuctionRegistration,
   transitionRentalUnitHold,
   transitionSaleUnitReservation,
@@ -1617,6 +1618,37 @@ export const developerRouter = router({
         toStage: input.toStage,
         notes: input.notes,
         force: input.force,
+      });
+    }),
+
+  syncLeadOutcome: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        leadId: z.number().int().positive(),
+        outcome: z.enum([
+          'sale_sold',
+          'rental_let',
+          'auction_sold',
+          'auction_passed_in',
+          'auction_withdrawn',
+        ]),
+        sourceOutcomeEventId: z.number().int().positive().nullable().optional(),
+        note: z.string().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await syncLeadOutcome({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        leadId: input.leadId,
+        actorUserId: user.id,
+        outcome: input.outcome,
+        sourceOutcomeEventId: input.sourceOutcomeEventId ?? null,
+        note: input.note,
+        sourceSurface: 'developer_leads_manager',
       });
     }),
 

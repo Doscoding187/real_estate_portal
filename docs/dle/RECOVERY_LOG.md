@@ -2478,3 +2478,73 @@ Next recommended slice:
   leaving distribution deal/commission automation for a later contract-backed slice.
 Commit hash/tag: This entry will be included in `docs(dle): add outcome handoff contract`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Lead Outcome Sync Operating Handoff
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first explicit selected-lead outcome synchronization slice before any
+distribution/referral or commission handoff automation.
+Files changed:
+- server/services/developerFunnelService.ts
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/LeadsManager.tsx
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-04/qa-dle-lead-outcome-sync-sale-sold.png
+- docs/dle/evidence/2026-06-04/qa-dle-lead-outcome-sync-invalid-no-false-success.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+- `git status --short` reviewed; unrelated homepage/evidence/playwright dirty files were not
+  staged.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Developer lead detail panel shows transaction-native Sale `Sold` Outcome Sync.
+- Selected Sale deal-stage lead syncs to `closed_won`, updates `leads.status`/`funnelStage`, writes
+  a `lead_stage_changed` DLE operating event, and logs a local lead activity.
+- Unsafe direct close from `qualified` to `closed_won` is rejected by the backend, shows no success
+  toast, leaves the lead projection unchanged, and writes no extra operating event.
+Proof and fixes:
+- Added `developer.syncLeadOutcome`.
+- The service derives transaction type from the owned development and requires the selected lead to
+  belong to the development.
+- Lead sync uses shared funnel transition guardrails instead of bypassing the canonical lead model.
+- Sale sold, Rental let, Auction sold, Auction passed-in, and Auction withdrawn outcome mappings
+  are defined; Auction passed-in/withdrawn require a note.
+- The mutation updates only the selected lead and audit/activity rows; it does not mutate
+  inventory, distribution deals, commission state, media, location, governance, highlights, pricing,
+  unit definitions, or wizard `stepData`.
+- Fixed the Leads Control Center query limit to match the router maximum of 200, avoiding false
+  empty-state output from rejected tRPC queries.
+- Normalized shared lead timestamp writes to MySQL-compatible timestamp strings.
+- Used the local `lead_activities.activityType` shape for the activity audit row because the local
+  QA database table is older than the Drizzle schema projection.
+Remaining risks:
+- Browser proof currently covers the Sale selected-lead path and unsafe direct close rejection.
+  Rental and Auction outcome sync mappings are covered by helper tests but still need browser proof
+  when those flows become active UI priorities.
+- Distribution/referral deal handoff is still intentionally not automated.
+- Commission readiness, documents, payout milestones, and manager review remain owned by
+  distribution services.
+- Local `lead_activities` schema differs from the current Drizzle schema (`activityType` vs `type`,
+  no `userId`); this slice used a raw insert to preserve local QA compatibility without adding a
+  migration.
+- Sale sold and Rental let counts remain inferred projections until explicit reporting fields are
+  designed.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Design and implement the first explicit distribution/referral handoff slice from
+  `docs/dle/OUTCOME_HANDOFF_CONTRACT.md`, requiring a selected `distributionDealId` and preserving
+  distribution deal-stage, document, payout milestone, manager review, and commission guardrails.
+Commit hash/tag: This entry will be included in `feat(dle): add lead outcome sync`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

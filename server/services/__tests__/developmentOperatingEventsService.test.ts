@@ -6,12 +6,14 @@ import {
   getAuctionRegistrationReadinessIssue,
   getAuctionRegistrationTransitionStatuses,
   getDevelopmentOperatingEventNote,
+  getLeadOutcomeSyncTarget,
   getRentalUnitHoldTransitionStatuses,
   getRentalUnitOutcomeTransitionStatuses,
   getSaleUnitOutcomeTransitionStatuses,
   getSaleUnitReservationTransitionStatuses,
   normalizeOperatingSourceSurface,
   parseDevelopmentOperatingEventJson,
+  validateLeadOutcomeSyncTransition,
 } from '../developmentOperatingEventsService';
 
 describe('development operating events service helpers', () => {
@@ -139,6 +141,77 @@ describe('development operating events service helpers', () => {
         outcome: 'withdrawn',
       }),
     ).toThrow('Final Auction outcomes cannot be withdrawn again.');
+  });
+
+  it('maps transaction-native lead outcome sync targets', () => {
+    expect(
+      getLeadOutcomeSyncTarget({
+        transactionType: 'for_sale',
+        outcome: 'sale_sold',
+      }),
+    ).toEqual({
+      toStage: 'closed_won',
+      displayLabel: 'Sold',
+      activityLabel: 'Sale lead synced as sold',
+    });
+    expect(
+      getLeadOutcomeSyncTarget({
+        transactionType: 'for_rent',
+        outcome: 'rental_let',
+      }),
+    ).toEqual({
+      toStage: 'closed_won',
+      displayLabel: 'Lease signed / Let',
+      activityLabel: 'Rental lead synced as lease signed / let',
+    });
+    expect(
+      getLeadOutcomeSyncTarget({
+        transactionType: 'auction',
+        outcome: 'auction_sold',
+      }),
+    ).toEqual({
+      toStage: 'closed_won',
+      displayLabel: 'Sold at auction',
+      activityLabel: 'Auction lead synced as sold at auction',
+    });
+    expect(
+      getLeadOutcomeSyncTarget({
+        transactionType: 'auction',
+        outcome: 'auction_passed_in',
+        note: 'Reserve not met',
+      }),
+    ).toEqual({
+      toStage: 'closed_lost',
+      displayLabel: 'Passed in follow-up',
+      activityLabel: 'Auction lead synced as passed in follow-up',
+    });
+  });
+
+  it('rejects unsafe lead outcome sync targets and transitions', () => {
+    expect(() =>
+      getLeadOutcomeSyncTarget({
+        transactionType: 'for_sale',
+        outcome: 'rental_let',
+      }),
+    ).toThrow('Rental let lead sync is only available for Rental developments.');
+    expect(() =>
+      getLeadOutcomeSyncTarget({
+        transactionType: 'auction',
+        outcome: 'auction_withdrawn',
+      }),
+    ).toThrow('Auction passed-in or withdrawn lead sync requires a note.');
+    expect(() =>
+      validateLeadOutcomeSyncTransition({
+        fromStage: 'qualified',
+        toStage: 'closed_won',
+      }),
+    ).toThrow('Invalid lead outcome sync from qualified to closed_won.');
+    expect(() =>
+      validateLeadOutcomeSyncTransition({
+        fromStage: 'deal_in_progress',
+        toStage: 'closed_won',
+      }),
+    ).not.toThrow();
   });
 
   it('requires Auction registration readiness before opening registration', () => {

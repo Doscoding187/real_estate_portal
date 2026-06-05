@@ -1,9 +1,9 @@
 # DLE Operating Outcome Layer Design
 
 Date: 2026-06-04
-Status: Sale sold from reserved inventory, Rental let from held inventory, and Auction
-sold/passed-in/withdrawn outcomes are implemented and browser-proven. Lead-stage synchronization
-and distribution/referral outcome handoff remain future transaction-specific slices.
+Status: Sale sold from reserved inventory, Rental let from held inventory, Auction
+sold/passed-in/withdrawn outcomes, and explicit selected-lead outcome sync are implemented and
+browser-proven. Distribution/referral outcome handoff remains a future transaction-specific slice.
 
 ## Purpose
 
