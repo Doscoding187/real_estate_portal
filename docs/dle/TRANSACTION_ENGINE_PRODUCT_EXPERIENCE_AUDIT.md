@@ -265,8 +265,8 @@ The browser proof now seeds publish-ready Rental and Auction developments throug
   `Download Auction Pack`.
 
 This confirms the new public-detail merchandising section survives the real backend seed, publish,
-approval, route rendering, and browser-visible text path for the two transaction lanes that needed
-to earn more proof.
+approval, route rendering, browser-visible text path, and a mobile viewport fit check for the two
+transaction lanes that needed to earn more proof.
 
 ## Remaining Product Gaps
 

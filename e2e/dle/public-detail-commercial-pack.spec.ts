@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import dotenv from 'dotenv';
 import { inArray } from 'drizzle-orm';
 
@@ -179,6 +179,20 @@ async function seedAuctionDevelopment(
   };
 }
 
+async function expectPackFitsViewport(page: Page) {
+  const pack = page.locator('#commercial-pack');
+  await pack.scrollIntoViewIfNeeded();
+  await expect(pack).toBeVisible();
+
+  const fitsViewport = await pack.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    return rect.left >= -1 && rect.right <= viewportWidth + 1 && rect.width <= viewportWidth + 1;
+  });
+
+  expect(fitsViewport).toBe(true);
+}
+
 test.describe.serial('DLE public detail commercial pack browser proof', () => {
   const createdUserIds: number[] = [];
   const createdDeveloperIds: number[] = [];
@@ -238,5 +252,21 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(auctionPack.getByText('Pack available')).toBeVisible();
     await expect(auctionPack.getByRole('button', { name: 'Check Bidder Readiness' })).toBeVisible();
     await expect(auctionPack.getByRole('button', { name: 'Download Auction Pack' })).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto(`/development/${rental.slug}`);
+    const mobileRentalPack = page.locator('#commercial-pack');
+    await expectPackFitsViewport(page);
+    await expect(mobileRentalPack.getByText('Lease path at a glance')).toBeVisible();
+    await expect(mobileRentalPack.getByRole('button', { name: 'Check Rental Fit' })).toBeVisible();
+
+    await page.goto(`/development/${auction.slug}`);
+    const mobileAuctionPack = page.locator('#commercial-pack');
+    await expectPackFitsViewport(page);
+    await expect(mobileAuctionPack.getByText('Bidder path at a glance')).toBeVisible();
+    await expect(
+      mobileAuctionPack.getByRole('button', { name: 'Check Bidder Readiness' }),
+    ).toBeVisible();
   });
 });

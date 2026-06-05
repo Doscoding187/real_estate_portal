@@ -3058,14 +3058,14 @@ Uncommitted reason, if any: None. Slice will be committed after final hygiene ch
 Date: 2026-06-05
 Branch: refine/homepage-phase1-clarity-trust
 Goal: Browser-proof that Rental and Auction public development detail pages visibly render the new
-transaction-specific commercial pack section.
+transaction-specific commercial pack section on desktop and remain within the viewport on mobile.
 Files changed:
 - e2e/dle/public-detail-commercial-pack.spec.ts
 - e2e/dle/rental-auction-public-merchandising.spec.ts
 - docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
-- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/public-detail-commercial-pack.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/public-detail-commercial-pack.spec.ts --project="Desktop Chrome" --workers=1` passed, including mobile viewport fit checks.
 - `pnpm run check` passed.
 - `git diff --check` passed.
 Manual/browser flows verified:
@@ -3076,6 +3076,8 @@ Manual/browser flows verified:
   page, and verified `Auction Pack`, `Bidder path at a glance`, starting-bid range,
   registration/reserve signal, lot availability, document availability, `Check Bidder Readiness`,
   and `Download Auction Pack`.
+- Switched the browser viewport to 390x844 and verified the Rental and Auction commercial pack
+  sections stay within the viewport while their transaction-specific primary CTAs remain visible.
 Proof and fixes:
 - Added a narrow Playwright proof for the new commercial-pack section instead of overloading the
   broader public merchandising spec with search and lead capture.
@@ -3084,7 +3086,8 @@ Proof and fixes:
 - Earlier attempts to extend the broad public merchandising spec confirmed the commercial pack was
   visible, but the full lead/search flow exceeded the useful timeout budget for this narrow slice.
 Remaining risks:
-- This browser proof validates text and route rendering, not screenshot diffing or mobile spacing.
+- This browser proof validates text, route rendering, and basic mobile viewport fit, not screenshot
+  diffing.
 - Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
 Next recommended slice:
 - Continue with browser screenshot evidence for public detail mobile/desktop layout, or move to
