@@ -227,7 +227,20 @@ function formatOperatingEventTime(value?: string | null): string {
 
 function getOverviewOperatingEventLabel(eventType?: string | null): string {
   if (eventType === 'operating_note_added') return 'Operating note';
+  if (eventType === 'distribution_handoff_created') return 'Referral handoff';
   return String(eventType || 'Operating event').replace(/_/g, ' ');
+}
+
+function formatDistributionStage(value?: string | null): string {
+  return String(value || 'viewing_scheduled')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function formatDistributionCommissionStatus(value?: string | null): string {
+  return String(value || 'not_ready')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
 }
 
 export default function Overview() {
@@ -238,6 +251,8 @@ export default function Overview() {
   const [range, setRange] = useState<Range>('30d');
   const [developmentFilter, setDevelopmentFilter] = useState<string>('all');
   const [isReferralAccessOpen, setIsReferralAccessOpen] = useState(false);
+  const [handoffDeal, setHandoffDeal] = useState<any | null>(null);
+  const [handoffNote, setHandoffNote] = useState('');
   const [operatingNote, setOperatingNote] = useState('');
 
   const isSuperAdmin = user?.role === 'super_admin';
@@ -305,6 +320,17 @@ export default function Overview() {
     {
       enabled:
         !!selectedDevelopmentId && distributionSettingsQuery.data?.distributionEnabled === true,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  const distributionDealsQuery = trpc.distribution.developer.listDeals.useQuery(
+    {
+      developmentId: selectedDevelopmentId || undefined,
+      limit: 5,
+    },
+    {
+      enabled: !!selectedDevelopmentId && distributionSettingsQuery.data?.distributionEnabled === true,
       refetchOnWindowFocus: false,
     },
   );
@@ -390,6 +416,22 @@ export default function Overview() {
     },
     onError: error => {
       toast.error(error.message || 'Could not add operating note.');
+    },
+  });
+
+  const createDistributionHandoffMutation = trpc.developer.createDistributionHandoff.useMutation({
+    onSuccess: async data => {
+      toast.success(data.resultLabel || 'Referral handoff review requested.');
+      setHandoffDeal(null);
+      setHandoffNote('');
+      await Promise.all([
+        operatingEventsQuery.refetch(),
+        distributionDealsQuery.refetch(),
+        distributionDashboardQuery.refetch(),
+      ]);
+    },
+    onError: error => {
+      toast.error(error.message || 'Could not request referral handoff review.');
     },
   });
 
@@ -610,6 +652,7 @@ export default function Overview() {
   }, [distributionDashboardQuery.data, selectedDevelopmentId]);
   const distributionPanelVisible =
     !!selectedDevelopmentId && distributionSettings?.distributionEnabled === true;
+  const distributionDeals = distributionDealsQuery.data || [];
   const operatingReadiness = buildOverviewOperatingReadiness({
     development: selectedDevelopment,
     stageCounts,
@@ -1411,6 +1454,84 @@ export default function Overview() {
         </Card>
       )}
 
+      <Dialog
+        open={!!handoffDeal}
+        onOpenChange={open => {
+          if (!open) {
+            setHandoffDeal(null);
+            setHandoffNote('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Request Referral Handoff Review</DialogTitle>
+            <DialogDescription>
+              Send the distribution manager a review note for this referral deal.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-md border border-slate-200 p-3 text-sm">
+              <p className="font-medium">
+                {handoffDeal?.buyerName || `Referral deal #${handoffDeal?.id || ''}`}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Badge variant="outline">
+                  {formatDistributionStage(handoffDeal?.currentStage)}
+                </Badge>
+                <Badge variant="secondary">
+                  {formatDistributionCommissionStatus(handoffDeal?.commissionStatus)}
+                </Badge>
+              </div>
+            </div>
+
+            <Textarea
+              className="min-h-28 resize-none"
+              data-testid="dle-distribution-handoff-note"
+              maxLength={2000}
+              onChange={event => setHandoffNote(event.target.value)}
+              placeholder="Add the buyer, unit, document, or outcome context the manager should review"
+              value={handoffNote}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setHandoffDeal(null);
+                setHandoffNote('');
+              }}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              data-testid="dle-distribution-handoff-submit"
+              disabled={
+                !selectedDevelopmentId ||
+                !handoffDeal?.id ||
+                handoffNote.trim().length < 3 ||
+                createDistributionHandoffMutation.isPending
+              }
+              onClick={() => {
+                if (!selectedDevelopmentId || !handoffDeal?.id) return;
+                createDistributionHandoffMutation.mutate({
+                  developmentId: selectedDevelopmentId,
+                  distributionDealId: Number(handoffDeal.id),
+                  action: 'request_review',
+                  note: handoffNote,
+                });
+              }}
+              type="button"
+            >
+              {createDistributionHandoffMutation.isPending ? 'Requesting...' : 'Request Review'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isReferralAccessOpen} onOpenChange={setIsReferralAccessOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -1722,6 +1843,70 @@ export default function Overview() {
                   >
                     Open Referral Leads
                   </Button>
+                </div>
+
+                <div className="rounded-md border border-slate-200 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">Referral Handoff Queue</p>
+                      <p className="text-xs text-muted-foreground">
+                        Request manager review without changing deal stage or commission status.
+                      </p>
+                    </div>
+                    <Badge variant="outline">{formatNumber(distributionDeals.length)}</Badge>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {distributionDealsQuery.isLoading && (
+                      <p className="text-sm text-muted-foreground">Loading referral deals...</p>
+                    )}
+
+                    {!distributionDealsQuery.isLoading && distributionDeals.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No referral deals are linked to this development yet.
+                      </p>
+                    )}
+
+                    {distributionDeals.map((deal: any) => (
+                      <div
+                        className="rounded-md border border-slate-200 bg-white p-3"
+                        key={deal.id}
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-medium">
+                                {deal.buyerName || `Referral deal #${deal.id}`}
+                              </p>
+                              <Badge variant="outline">
+                                {formatDistributionStage(deal.currentStage)}
+                              </Badge>
+                              <Badge variant="secondary">
+                                {formatDistributionCommissionStatus(deal.commissionStatus)}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {deal.agentDisplayName || 'Referral partner'}; manager{' '}
+                              {deal.managerDisplayName || 'unassigned'}
+                            </p>
+                          </div>
+                          <Button
+                            data-testid={`dle-distribution-handoff-open-${deal.id}`}
+                            onClick={() => {
+                              setHandoffDeal(deal);
+                              setHandoffNote('');
+                            }}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                            Request Review
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

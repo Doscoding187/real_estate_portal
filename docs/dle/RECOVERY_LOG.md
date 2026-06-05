@@ -2548,3 +2548,60 @@ Next recommended slice:
   distribution deal-stage, document, payout milestone, manager review, and commission guardrails.
 Commit hash/tag: This entry will be included in `feat(dle): add lead outcome sync`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Distribution Handoff Review Bridge
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first explicit distribution/referral handoff bridge from the DLE operating
+layer without bypassing distribution deal-stage, document, manager, milestone, or commission
+guardrails.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-05/qa-dle-distribution-handoff-review.png
+Tests run:
+- `pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Developer dashboard Distribution Impact panel lists recent referral deals for the selected
+  development.
+- Developer can open `Request Review`, add a note, and submit an explicit handoff request.
+- Success appears only after the backend mutation succeeds.
+- Operating history shows a `Referral handoff` DLE event.
+Proof and fixes:
+- Added `developer.createDistributionHandoff`.
+- Added service guardrails for `link_only`, `request_review`, and guarded
+  `stage_transition_requested` handoff actions.
+- The service verifies owned development scope, selected distribution deal ownership, optional lead
+  ownership, and optional source operating event ownership.
+- A handoff writes both a `distribution_deal_events` note and a
+  `distribution_handoff_created` DLE operating event in one transaction.
+- Browser/database proof confirms `distribution_deals.current_stage` remains `contract_signed` and
+  `commission_status` remains `not_ready` after the handoff review request.
+- Direct `commission_pending` and `commission_paid` stage request shortcuts are rejected by helper
+  guardrails.
+- The mutation does not mutate inventory, leads, public packaging, media, location, governance,
+  pricing, unit definitions, wizard `stepData`, distribution deal stage, or commission state.
+Remaining risks:
+- This is a review bridge only; it does not implement manager-side approval workflow or stage
+  transition from the DLE surface.
+- Future stage movement must remain inside distribution services and reuse their document, manager,
+  milestone, and commission readiness checks.
+- The browser proof covers the Sale/referral dashboard handoff path; Rental and Auction may need
+  transaction-specific distribution semantics before claiming full referral maturity.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Add manager/developer review readback around handoff requests or continue operating-layer
+  reporting without allowing DLE to silently advance distribution stages or commission state.
+Commit hash/tag: This entry will be included in `feat(dle): add distribution handoff review`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

@@ -2,7 +2,7 @@
 
 Date: 2026-06-05
 Status: Lead-stage synchronization is implemented for explicit selected-lead outcome sync.
-Distribution/referral handoff remains future contract-backed work.
+The first distribution/referral handoff bridge is implemented for explicit review requests.
 
 ## Purpose
 
@@ -77,6 +77,29 @@ Current distribution/referral anchors:
   - payout readiness checks for configured milestones
 - `development_operating_events`
   - event type contract already includes `distribution_handoff_created`
+
+Implemented distribution/referral handoff:
+
+- `developer.createDistributionHandoff`
+  - requires `developmentId`, explicit `distributionDealId`, action, and actor-owned development
+    scope
+  - verifies the referral deal belongs to the selected development
+  - optionally verifies `leadId` and source DLE outcome event belong to the same development
+  - supports `link_only`, `request_review`, and guarded `stage_transition_requested` request
+    semantics
+  - rejects direct `commission_pending` and `commission_paid` request shortcuts
+- `server/services/developmentOperatingEventsService.ts`
+  - writes a `distribution_deal_events` note and a `distribution_handoff_created` DLE operating
+    event in one transaction
+  - records the current deal stage and commission status as context
+  - does not update `distribution_deals.current_stage` or commission status
+- `client/src/components/developer/Overview.tsx`
+  - shows a referral handoff queue in the Distribution Impact panel for the selected development
+  - requires a review note before sending a handoff request
+  - shows no success unless the backend mutation succeeds
+- `e2e/dle/distribution-handoff.spec.ts`
+  - browser-proves dashboard review request, DLE audit event, distribution note event, and unchanged
+    deal stage/commission state
 
 ## Hard Boundary
 
@@ -304,9 +327,9 @@ changed.
 
 ## Next Implementation Slice Recommendation
 
-Lead-stage synchronization has been implemented first, before distribution handoff.
+Lead-stage synchronization and the first distribution/referral review handoff are implemented.
 
-Next, design and implement distribution/referral handoff using existing distribution deal stage and
-commission readiness guardrails. The first distribution slice should link or request review for one
-explicit `distributionDealId`; it must not silently advance deals or commission state from inventory
-or lead outcomes.
+Next, keep operating-layer work focused on useful manager/developer review surfaces and reporting
+without moving distribution deal stages from DLE. Any future stage movement must call or share
+distribution service guardrails, especially document, manager, milestone, and commission readiness
+checks.

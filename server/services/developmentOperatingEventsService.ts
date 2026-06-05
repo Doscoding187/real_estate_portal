@@ -4,9 +4,12 @@ import { TRPCError } from '@trpc/server';
 import {
   developmentOperatingEvents,
   developments,
+  distributionDealEvents,
+  distributionDeals,
   leads,
   unitTypes,
 } from '../../drizzle/schema';
+import { DISTRIBUTION_DEAL_STAGE_VALUES } from '../../drizzle/schema/distribution';
 import {
   DEVELOPMENT_OPERATING_SOURCE_SURFACES,
   type DEVELOPMENT_OPERATING_TRANSACTION_TYPES,
@@ -53,6 +56,13 @@ export const LEAD_OUTCOME_SYNC_ACTIONS = [
   'auction_withdrawn',
 ] as const;
 export type LeadOutcomeSyncAction = (typeof LEAD_OUTCOME_SYNC_ACTIONS)[number];
+export const DISTRIBUTION_HANDOFF_ACTIONS = [
+  'link_only',
+  'request_review',
+  'stage_transition_requested',
+] as const;
+export type DistributionHandoffAction = (typeof DISTRIBUTION_HANDOFF_ACTIONS)[number];
+type DistributionDealStage = (typeof DISTRIBUTION_DEAL_STAGE_VALUES)[number];
 type AuctionLifecycleStatus =
   | 'scheduled'
   | 'registration_open'
@@ -340,6 +350,63 @@ export function getLeadOutcomeSyncTarget(input: {
     code: 'BAD_REQUEST',
     message: 'Unsupported lead outcome sync action.',
   });
+}
+
+export function getDistributionHandoffTarget(input: {
+  action: DistributionHandoffAction;
+  note?: string;
+  requestedStage?: string | null;
+}) {
+  const note = String(input.note || '').trim();
+
+  if (input.action === 'link_only') {
+    return {
+      action: input.action,
+      toStatus: 'linked_only',
+      resultLabel: 'Referral deal linked to DLE outcome context',
+      noteRequired: false,
+      requestedStage: null,
+    };
+  }
+
+  if (note.length < 3) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'A handoff review note is required.',
+    });
+  }
+
+  if (input.action === 'request_review') {
+    return {
+      action: input.action,
+      toStatus: 'review_requested',
+      resultLabel: 'Referral handoff review requested',
+      noteRequired: true,
+      requestedStage: null,
+    };
+  }
+
+  const requestedStage = String(input.requestedStage || '').trim() as DistributionDealStage;
+  if (!DISTRIBUTION_DEAL_STAGE_VALUES.includes(requestedStage)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'A valid requested distribution stage is required.',
+    });
+  }
+  if (requestedStage === 'commission_pending' || requestedStage === 'commission_paid') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Commission stage requests must go through distribution readiness review.',
+    });
+  }
+
+  return {
+    action: input.action,
+    toStatus: 'stage_transition_requested',
+    resultLabel: 'Distribution stage review requested',
+    noteRequired: true,
+    requestedStage,
+  };
 }
 
 export function validateLeadOutcomeSyncTransition(input: {
@@ -725,6 +792,225 @@ export async function syncLeadOutcome(input: {
         stage: deriveCanonicalLeadStage(updatedLead),
         unitId: updatedLead.unitId,
         unitName: updatedLead.unitName,
+      },
+    };
+  });
+}
+
+export async function createDistributionHandoff(input: {
+  developerId: number;
+  developmentId: number;
+  distributionDealId: number;
+  actorUserId: number;
+  action: DistributionHandoffAction;
+  leadId?: number | null;
+  sourceOutcomeEventId?: number | null;
+  requestedStage?: string | null;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  const note = input.note ? String(input.note).trim() : '';
+  const target = getDistributionHandoffTarget({
+    action: input.action,
+    note,
+    requestedStage: input.requestedStage,
+  });
+  const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
+
+  return await db.transaction(async (tx: any) => {
+    const [deal] = await tx
+      .select({
+        id: distributionDeals.id,
+        developmentId: distributionDeals.developmentId,
+        buyerName: distributionDeals.buyerName,
+        buyerEmail: distributionDeals.buyerEmail,
+        buyerPhone: distributionDeals.buyerPhone,
+        agentId: distributionDeals.agentId,
+        ownerType: distributionDeals.ownerType,
+        ownerId: distributionDeals.ownerId,
+        assignedAgentId: distributionDeals.assignedAgentId,
+        visibilityScope: distributionDeals.visibilityScope,
+        currentStage: distributionDeals.currentStage,
+        commissionStatus: distributionDeals.commissionStatus,
+        managerUserId: distributionDeals.managerUserId,
+      })
+      .from(distributionDeals)
+      .where(
+        and(
+          eq(distributionDeals.id, input.distributionDealId),
+          eq(distributionDeals.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+
+    if (!deal) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Referral deal not found for this development.',
+      });
+    }
+
+    let lead: typeof leads.$inferSelect | null = null;
+    if (input.leadId) {
+      const [row] = await tx
+        .select()
+        .from(leads)
+        .where(and(eq(leads.id, input.leadId), eq(leads.developmentId, input.developmentId)))
+        .limit(1);
+      if (!row) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Lead not found for this development.',
+        });
+      }
+      lead = row;
+    }
+
+    let sourceOutcomeEvent: typeof developmentOperatingEvents.$inferSelect | null = null;
+    if (input.sourceOutcomeEventId) {
+      const [event] = await tx
+        .select()
+        .from(developmentOperatingEvents)
+        .where(
+          and(
+            eq(developmentOperatingEvents.id, input.sourceOutcomeEventId),
+            eq(developmentOperatingEvents.developmentId, input.developmentId),
+          ),
+        )
+        .limit(1);
+      if (!event) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Source operating event not found for this development.',
+        });
+      }
+      if (
+        !['inventory_status_changed', 'auction_outcome_recorded', 'lead_stage_changed'].includes(
+          String(event.eventType),
+        )
+      ) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Source event must be an inventory, auction outcome, or lead-stage event.',
+        });
+      }
+      sourceOutcomeEvent = event;
+    }
+
+    const handoffNote =
+      note || `${target.resultLabel} for ${deal.buyerName || 'referral deal'}.`;
+    const metadata = {
+      source: 'dle.distribution_handoff',
+      action: target.action,
+      resultLabel: target.resultLabel,
+      developmentName: development.name,
+      developmentId: input.developmentId,
+      distributionDealId: input.distributionDealId,
+      leadId: input.leadId || null,
+      leadName: lead?.name || null,
+      sourceOutcomeEventId: input.sourceOutcomeEventId || null,
+      sourceOutcomeEventType: sourceOutcomeEvent?.eventType || null,
+      requestedStage: target.requestedStage,
+      currentStage: deal.currentStage,
+      commissionStatus: deal.commissionStatus,
+      note: handoffNote,
+    };
+
+    const distributionEventInsert = await tx.insert(distributionDealEvents).values({
+      dealId: input.distributionDealId,
+      eventType: 'note',
+      fromStage: deal.currentStage,
+      toStage: deal.currentStage,
+      actorUserId: input.actorUserId,
+      ownerType: deal.ownerType || 'agent',
+      ownerId: deal.ownerId,
+      assignedAgentId: deal.assignedAgentId || deal.agentId,
+      visibilityScope: deal.visibilityScope || 'private',
+      metadata,
+      notes: handoffNote,
+    });
+    const distributionEventId = readInsertId(distributionEventInsert);
+    if (!distributionEventId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Referral handoff note could not be saved.',
+      });
+    }
+
+    const operatingEventInsert = await tx.insert(developmentOperatingEvents).values({
+      developmentId: input.developmentId,
+      leadId: input.leadId || null,
+      distributionDealId: input.distributionDealId,
+      transactionType: development.transactionType,
+      eventType: 'distribution_handoff_created',
+      fromStatus: deal.currentStage,
+      toStatus: target.toStatus,
+      beforeData: {
+        distributionDealId: input.distributionDealId,
+        currentStage: deal.currentStage,
+        commissionStatus: deal.commissionStatus,
+        buyerName: deal.buyerName,
+      },
+      afterData: {
+        action: target.action,
+        resultLabel: target.resultLabel,
+        requestedStage: target.requestedStage,
+        distributionEventId,
+        stageChanged: false,
+        commissionChanged: false,
+      },
+      metadata,
+      actorUserId: input.actorUserId,
+      sourceSurface,
+    });
+    const operatingEventId = readInsertId(operatingEventInsert);
+    if (!operatingEventId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'DLE referral handoff event could not be saved.',
+      });
+    }
+
+    const [event] = await tx
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.id, operatingEventId),
+          eq(developmentOperatingEvents.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+    const [dealAfter] = await tx
+      .select({
+        id: distributionDeals.id,
+        currentStage: distributionDeals.currentStage,
+        commissionStatus: distributionDeals.commissionStatus,
+      })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, input.distributionDealId))
+      .limit(1);
+
+    if (!event || !dealAfter) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Referral handoff was saved but could not be read back.',
+      });
+    }
+
+    return {
+      action: target.action,
+      resultLabel: target.resultLabel,
+      distributionEventId,
+      event,
+      distributionDeal: {
+        id: dealAfter.id,
+        buyerName: deal.buyerName,
+        currentStage: dealAfter.currentStage,
+        commissionStatus: dealAfter.commissionStatus,
+        stageChanged: dealAfter.currentStage !== deal.currentStage,
+        commissionChanged: dealAfter.commissionStatus !== deal.commissionStatus,
       },
     };
   });

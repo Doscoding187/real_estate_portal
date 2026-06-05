@@ -6,6 +6,7 @@ import {
   getAuctionRegistrationReadinessIssue,
   getAuctionRegistrationTransitionStatuses,
   getDevelopmentOperatingEventNote,
+  getDistributionHandoffTarget,
   getLeadOutcomeSyncTarget,
   getRentalUnitHoldTransitionStatuses,
   getRentalUnitOutcomeTransitionStatuses,
@@ -212,6 +213,60 @@ describe('development operating events service helpers', () => {
         toStage: 'closed_won',
       }),
     ).not.toThrow();
+  });
+
+  it('maps distribution handoff actions without implying deal stage movement', () => {
+    expect(getDistributionHandoffTarget({ action: 'link_only' })).toEqual({
+      action: 'link_only',
+      toStatus: 'linked_only',
+      resultLabel: 'Referral deal linked to DLE outcome context',
+      noteRequired: false,
+      requestedStage: null,
+    });
+
+    expect(
+      getDistributionHandoffTarget({
+        action: 'request_review',
+        note: 'Please review the signed offer pack.',
+      }),
+    ).toEqual({
+      action: 'request_review',
+      toStatus: 'review_requested',
+      resultLabel: 'Referral handoff review requested',
+      noteRequired: true,
+      requestedStage: null,
+    });
+  });
+
+  it('requires explicit review context and blocks commission-stage shortcuts', () => {
+    expect(() =>
+      getDistributionHandoffTarget({
+        action: 'request_review',
+        note: ' ',
+      }),
+    ).toThrow('A handoff review note is required.');
+
+    expect(() =>
+      getDistributionHandoffTarget({
+        action: 'stage_transition_requested',
+        note: 'Ready for manager review.',
+        requestedStage: 'commission_pending',
+      }),
+    ).toThrow('Commission stage requests must go through distribution readiness review.');
+
+    expect(
+      getDistributionHandoffTarget({
+        action: 'stage_transition_requested',
+        note: 'Bond approval uploaded for manager review.',
+        requestedStage: 'bond_approved',
+      }),
+    ).toEqual({
+      action: 'stage_transition_requested',
+      toStatus: 'stage_transition_requested',
+      resultLabel: 'Distribution stage review requested',
+      noteRequired: true,
+      requestedStage: 'bond_approved',
+    });
   });
 
   it('requires Auction registration readiness before opening registration', () => {

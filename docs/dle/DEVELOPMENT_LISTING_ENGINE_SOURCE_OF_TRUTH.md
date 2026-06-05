@@ -354,9 +354,11 @@ Recommended order from here:
    mutations
 4. Treat explicit selected-lead outcome sync as implemented and browser-proven; do not repeat it
    unless extending Rental/Auction browser coverage or fixing a discovered bug
-5. Use `docs/dle/OUTCOME_HANDOFF_CONTRACT.md` before coding distribution/referral outcome handoff
-6. Design and implement distribution/referral outcome handoff without bypassing deal or commission
-   readiness checks
+5. Treat the first distribution/referral handoff bridge as implemented and browser-proven:
+   developer dashboard review requests create DLE and distribution audit events without moving deal
+   stage or commission state
+6. Keep any future distribution stage movement inside distribution services and their document,
+   manager, milestone, and commission readiness checks
 7. Continue the transaction-engine product experience audit
 8. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
 9. Product audit of public development page merchandising

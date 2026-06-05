@@ -33,6 +33,7 @@ import {
 } from './services/developerFunnelService';
 import {
   activateAuctionLot,
+  createDistributionHandoff,
   createDevelopmentOperatingNote,
   listAuctionOperatingInventory,
   listRentalOperatingInventory,
@@ -1649,6 +1650,48 @@ export const developerRouter = router({
         sourceOutcomeEventId: input.sourceOutcomeEventId ?? null,
         note: input.note,
         sourceSurface: 'developer_leads_manager',
+      });
+    }),
+
+  createDistributionHandoff: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        distributionDealId: z.number().int().positive(),
+        action: z.enum(['link_only', 'request_review', 'stage_transition_requested']),
+        leadId: z.number().int().positive().nullable().optional(),
+        sourceOutcomeEventId: z.number().int().positive().nullable().optional(),
+        requestedStage: z
+          .enum([
+            'viewing_scheduled',
+            'viewing_completed',
+            'application_submitted',
+            'contract_signed',
+            'bond_approved',
+            'commission_pending',
+            'commission_paid',
+            'cancelled',
+          ])
+          .nullable()
+          .optional(),
+        note: z.string().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDeveloperDistributionEnabled();
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await createDistributionHandoff({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        distributionDealId: input.distributionDealId,
+        actorUserId: user.id,
+        action: input.action,
+        leadId: input.leadId ?? null,
+        sourceOutcomeEventId: input.sourceOutcomeEventId ?? null,
+        requestedStage: input.requestedStage ?? null,
+        note: input.note,
+        sourceSurface: 'developer_dashboard',
       });
     }),
 
