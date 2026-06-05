@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Bed, Bath, House, LandPlot, Mail, Building2, MessageCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { withApiBase } from '@/lib/mediaUtils';
+import {
+  getDevelopmentSearchCardAvailabilityLabel,
+  getDevelopmentSearchCardContactLabel,
+  normalizeDevelopmentSearchCardListingType,
+} from '@/lib/developmentSearchCardMerchandising';
+
+export { getDevelopmentSearchCardAvailabilityLabel, getDevelopmentSearchCardContactLabel };
 
 export interface ListingResultCardData {
   id: string;
@@ -43,73 +50,6 @@ export interface ListingResultCardData {
   contactPhone?: string;
   contactWhatsapp?: string;
   contactEmail?: string;
-}
-
-function normalizeListingType(value?: string | null): 'sale' | 'rent' | 'auction' {
-  if (value === 'rent') return 'rent';
-  if (value === 'auction') return 'auction';
-  return 'sale';
-}
-
-function toNonNegativeInt(value: unknown): number | null {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.max(0, Math.trunc(parsed));
-}
-
-function pluralize(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
-export function getDevelopmentSearchCardAvailabilityLabel(input: {
-  listingType?: 'sale' | 'rent' | 'auction' | null;
-  totalUnits?: number | null;
-  availableUnits?: number | null;
-  auctionStatus?: string | null;
-}): string | null {
-  const listingType = normalizeListingType(input.listingType);
-  const availableUnits = toNonNegativeInt(input.availableUnits);
-  const totalUnits = toNonNegativeInt(input.totalUnits);
-  const auctionStatus = String(input.auctionStatus || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, '_');
-
-  if (listingType === 'auction') {
-    if (auctionStatus === 'sold') return 'Sold at auction';
-    if (auctionStatus === 'passed_in') return 'Passed in';
-    if (auctionStatus === 'withdrawn') return 'Withdrawn';
-    if (auctionStatus === 'active') return 'Auction active';
-    if (auctionStatus === 'registration_open') return 'Registration open';
-    if (availableUnits === null) return null;
-    if (availableUnits > 0) return `${pluralize(availableUnits, 'lot')} open`;
-    return totalUnits && totalUnits > 0 ? 'Registration closed' : 'Auction availability on request';
-  }
-
-  if (availableUnits === null) return null;
-
-  if (listingType === 'rent') {
-    if (availableUnits > 0) return `${pluralize(availableUnits, 'rental')} available`;
-    return totalUnits && totalUnits > 0 ? 'Fully let' : 'Rental availability on request';
-  }
-
-  if (availableUnits > 0) return `${availableUnits} available`;
-  return totalUnits && totalUnits > 0 ? 'Sold out' : 'Availability on request';
-}
-
-export function getDevelopmentSearchCardContactLabel(input: {
-  listingType?: 'sale' | 'rent' | 'auction' | null;
-  isDevelopmentListing?: boolean;
-  isPrivateListing?: boolean;
-}): string {
-  if (!input.isDevelopmentListing) {
-    return input.isPrivateListing ? 'Contact Seller' : 'Contact Agent';
-  }
-
-  const listingType = normalizeListingType(input.listingType);
-  if (listingType === 'rent') return 'Contact Leasing Team';
-  if (listingType === 'auction') return 'Contact Auction Team';
-  return 'Contact Developer';
 }
 
 function formatPrice(
@@ -171,15 +111,16 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const listingHref =
     data.href ||
     (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
+  const cardListingType = normalizeDevelopmentSearchCardListingType(data.listingType);
   const contactCtaLabel = getDevelopmentSearchCardContactLabel({
-    listingType: data.listingType,
+    listingType: cardListingType,
     isDevelopmentListing,
     isPrivateListing,
   });
   const availabilityLabel =
     isDevelopmentListing && data.listingType
       ? getDevelopmentSearchCardAvailabilityLabel({
-          listingType: data.listingType,
+          listingType: cardListingType,
           totalUnits: data.totalUnits,
           availableUnits: data.availableUnits,
           auctionStatus: data.auctionStatus,
@@ -280,7 +221,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             <p className="mt-3 text-lg font-semibold tracking-tight text-blue-600 sm:text-xl">
               {formatPrice(data.price, {
                 from: isDevelopmentListing,
-                listingType: data.listingType,
+                listingType: cardListingType,
               })}
             </p>
             {availabilityLabel && (

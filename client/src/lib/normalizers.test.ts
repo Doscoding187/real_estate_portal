@@ -61,6 +61,8 @@ describe('property card normalizers', () => {
       contactRole: 'developer',
       unitTypeId: 'unit-a',
       unitDisplayOrder: 0,
+      totalUnits: 8,
+      availableUnits: 5,
       identity: {
         role: 'developer',
         name: 'Builder Group',
@@ -79,6 +81,39 @@ describe('property card normalizers', () => {
       listingSource: 'development',
       unitTypeId: 'unit-a',
       unitDisplayOrder: 0,
+      totalUnits: 8,
+      availableUnits: 5,
+    });
+  });
+
+  it('carries transaction inventory through grid card normalization', () => {
+    const props = searchCardResultToPropertyCardProps({
+      id: 'dev-2-rental-a',
+      href: '/development/rental-development/unit/rental-a',
+      title: 'Rental Studio',
+      price: 12500,
+      location: 'Rosebank, Johannesburg',
+      image: '/rental-a.jpg',
+      images: [],
+      propertyType: 'apartment',
+      listingType: 'rent',
+      listingSource: 'development',
+      contactRole: 'developer',
+      totalUnits: 6,
+      availableUnits: 2,
+      identity: {
+        role: 'developer',
+        name: 'Rental Builder',
+      },
+      highlights: [],
+      listedDate: new Date('2026-03-20T00:00:00.000Z'),
+    });
+
+    expect(props).toMatchObject({
+      listingType: 'rent',
+      listingSource: 'development',
+      totalUnits: 6,
+      availableUnits: 2,
     });
   });
 

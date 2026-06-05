@@ -16,6 +16,11 @@ import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { ResponsiveHighlights } from './ResponsiveHighlights';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import {
+  getDevelopmentSearchCardAvailabilityLabel,
+  getDevelopmentSearchCardContactLabel,
+  normalizeDevelopmentSearchCardListingType,
+} from '@/lib/developmentSearchCardMerchandising';
 
 interface ImageUrls {
   thumbnail: string;
@@ -77,6 +82,9 @@ export interface PropertyCardProps {
   development?: DevelopmentInfo;
   unitTypeId?: string;
   unitDisplayOrder?: number;
+  totalUnits?: number | null;
+  availableUnits?: number | null;
+  auctionStatus?: string | null;
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
@@ -109,6 +117,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   development,
   unitTypeId,
   unitDisplayOrder,
+  totalUnits,
+  availableUnits,
+  auctionStatus,
   badges,
   imageCount = 15,
   videoCount = 2,
@@ -158,23 +169,31 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, '_');
-  const isAuctionListing =
-    normalizedListingType === 'auction' ||
-    normalizedListingType === 'auctions' ||
-    String(transactionType || '').toLowerCase() === 'auction';
+  const cardListingType = normalizeDevelopmentSearchCardListingType(normalizedListingType);
+  const isAuctionListing = cardListingType === 'auction';
   const priceLabel =
     price > 0
-      ? isAuctionListing
-        ? `Starting bid ${formatCurrency(price)}`
+      ? isDevelopmentListing && cardListingType === 'rent'
+        ? `Rent from ${formatCurrency(price)}`
+        : isAuctionListing
+        ? `${isDevelopmentListing ? 'Bid from' : 'Starting bid'} ${formatCurrency(price)}`
         : isDevelopmentListing
         ? `From ${formatCurrency(price)}`
         : formatCurrency(price)
       : 'Price on request';
-  const contactButtonLabel = isDevelopmentListing
-    ? 'Contact Developer'
-    : isPrivateListing
-      ? 'Contact Seller'
-      : 'Contact Agent';
+  const availabilityLabel = isDevelopmentListing
+    ? getDevelopmentSearchCardAvailabilityLabel({
+        listingType: cardListingType,
+        totalUnits,
+        availableUnits,
+        auctionStatus,
+      })
+    : null;
+  const contactButtonLabel = getDevelopmentSearchCardContactLabel({
+    listingType: cardListingType,
+    isDevelopmentListing,
+    isPrivateListing,
+  });
   const displayBadges = Array.isArray(badges)
     ? badges.filter(badge => !String(badge || '').toLowerCase().startsWith('part of '))
     : [];
@@ -377,6 +396,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             )}
 
             <div className="text-xl font-bold text-[#1e1b4b]">{priceLabel}</div>
+            {availabilityLabel && (
+              <div className="mt-1 inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                {availabilityLabel}
+              </div>
+            )}
           </div>
 
           {/* Specs */}

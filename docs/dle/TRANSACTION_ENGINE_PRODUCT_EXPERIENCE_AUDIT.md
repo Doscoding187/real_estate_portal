@@ -198,6 +198,24 @@ The public search card should:
 This improves the first buyer-facing touchpoint: search results now preview the same transaction
 lane a user will see on the public page, unit card, unit-detail page, and lead form.
 
+## Tenth Product-Visibility Slice
+
+Make grid-mode property cards preserve transaction-native development merchandising.
+
+The public search grid should:
+
+- keep the same Sale, Rental, and Auction inventory labels as list-mode search cards;
+- use `Rent from` for Rental development cards and `Bid from` for Auction development cards;
+- use `Contact Leasing Team` and `Contact Auction Team` CTAs where the transaction lane requires
+  it;
+- carry `totalUnits`, `availableUnits`, and `auctionStatus` through
+  `searchCardResultToPropertyCardProps`;
+- share the same label helpers as list-mode cards so future transaction copy changes do not split
+  between views.
+
+This closes the view-switching gap from the prior slice: a buyer should not lose rental or auction
+intent just because they switch from list results to grid results.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.

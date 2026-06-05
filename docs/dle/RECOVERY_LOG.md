@@ -2933,3 +2933,45 @@ Next recommended slice:
   merchandising sections.
 Commit hash/tag: This entry will be included in `feat(dle): show search card inventory intent`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Grid Card Transaction Inventory Merchandising
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make public search grid cards preserve the same transaction-native development inventory,
+pricing, and contact language as list-mode search cards.
+Files changed:
+- client/src/lib/developmentSearchCardMerchandising.ts
+- client/src/components/property-results/ListingResultCard.tsx
+- client/src/components/PropertyCard.tsx
+- client/src/lib/normalizers.ts
+- client/src/lib/normalizers.test.ts
+- client/src/components/__tests__/PropertyCard.development-merchandising.test.tsx
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/property-results/__tests__/ListingResultCard.test.tsx client/src/lib/normalizers.test.ts client/src/components/__tests__/PropertyCard.development-merchandising.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual flows verified:
+- Focused component/normalizer proof only; no browser screenshots in this slice.
+Proof and fixes:
+- Shared Sale/Rental/Auction search-card merchandising helpers now live in
+  `client/src/lib/developmentSearchCardMerchandising.ts`.
+- List-mode result cards and grid-mode property cards now use the same availability and contact
+  labels.
+- Grid-mode Rental development cards now render `Rent from`, rental availability, and
+  `Contact Leasing Team`.
+- Grid-mode Auction development cards now render `Bid from`, auction lifecycle/availability, and
+  `Contact Auction Team`.
+- `searchCardResultToPropertyCardProps` now carries `totalUnits`, `availableUnits`, and
+  `auctionStatus` into `PropertyCard`.
+Remaining risks:
+- This is component-level proof; browser view-switch screenshots are still useful before calling
+  search merchandising fully product-proven.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Browser-proof SearchResults grid/list switching for Sale, Rental, and Auction, or continue
+  deeper public page merchandising sections.
+Commit hash/tag: This entry will be included in `feat(dle): show grid card inventory intent`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
