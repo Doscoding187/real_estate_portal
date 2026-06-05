@@ -367,7 +367,8 @@ Recommended order from here:
 10. Search card and lead form alignment
 11. Developer dashboard and inventory impact
 12. Admin review impact
-13. Add explicit Sale/Rental outcome projections before broad sold/let reporting claims
+13. Treat explicit Sale/Rental outcome counters as implemented for first operating reports; keep
+    Auction lot-level bidder/outcome records as future work until needed
 
 ## 19. Definition of World-Class
 

@@ -224,14 +224,14 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
     await expect(page.getByText('Rental Inventory')).toBeVisible();
     await expect(page.getByText('Sales Inventory')).toHaveCount(0);
     await expect(page.getByText(seed.unitTypeName)).toBeVisible();
-    await expect(page.getByText('6 rentals available, 1 held, 3 let projection')).toBeVisible();
+    await expect(page.getByText('6 rentals available, 1 held, 3 let')).toBeVisible();
     await expect(page.getByText('12 months', { exact: false })).toBeVisible();
     await expect(page.getByText('R27k deposit', { exact: false })).toBeVisible();
     await expect(page.getByText('Furnished', { exact: false })).toBeVisible();
 
     await page.getByRole('button', { name: 'Hold', exact: true }).click();
     await expect(page.getByText('Rental unit held.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('5 rentals available, 2 held, 3 let projection')).toBeVisible({
+    await expect(page.getByText('5 rentals available, 2 held, 3 let')).toBeVisible({
       timeout: 15_000,
     });
     await expect(page.getByText('inventory status changed')).toBeVisible({ timeout: 15_000 });
@@ -246,10 +246,11 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
       .limit(1);
     expect(Number(unit.availableUnits)).toBe(5);
     expect(Number(unit.reservedUnits)).toBe(2);
+    expect(Number(unit.letUnits)).toBe(3);
 
     await page.getByRole('button', { name: 'Mark Let', exact: true }).click();
     await expect(page.getByText('Rental unit marked let.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('5 rentals available, 1 held, 4 let projection')).toBeVisible({
+    await expect(page.getByText('5 rentals available, 1 held, 4 let')).toBeVisible({
       timeout: 15_000,
     });
     await page.screenshot({
@@ -263,10 +264,11 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
       .limit(1);
     expect(Number(unit.availableUnits)).toBe(5);
     expect(Number(unit.reservedUnits)).toBe(1);
+    expect(Number(unit.letUnits)).toBe(4);
 
     await page.getByRole('button', { name: 'Release', exact: true }).click();
     await expect(page.getByText('Rental hold released.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('6 rentals available, 0 held, 4 let projection')).toBeVisible({
+    await expect(page.getByText('6 rentals available, 0 held, 4 let')).toBeVisible({
       timeout: 15_000,
     });
     await page.screenshot({
@@ -280,6 +282,7 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
       .limit(1);
     expect(Number(unit.availableUnits)).toBe(6);
     expect(Number(unit.reservedUnits)).toBe(0);
+    expect(Number(unit.letUnits)).toBe(4);
 
     const events = await db!
       .select()
@@ -308,8 +311,11 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
     expect(parseJsonObject(letEvent.metadata).outcome).toBe('let');
     expect(parseJsonObject(letEvent.beforeData).heldUnits).toBe(2);
     expect(parseJsonObject(letEvent.afterData).heldUnits).toBe(1);
-    expect(parseJsonObject(letEvent.beforeData).letUnitsProjected).toBe(3);
-    expect(parseJsonObject(letEvent.afterData).letUnitsProjected).toBe(4);
+    expect(parseJsonObject(letEvent.beforeData).letUnits).toBe(3);
+    expect(parseJsonObject(letEvent.afterData).letUnits).toBe(4);
+    expect(parseJsonObject(letEvent.metadata).outcomeProjectionColumn).toBe(
+      'unit_types.let_units',
+    );
 
     expect(releaseEvent.eventType).toBe('inventory_status_changed');
     expect(releaseEvent.transactionType).toBe('for_rent');

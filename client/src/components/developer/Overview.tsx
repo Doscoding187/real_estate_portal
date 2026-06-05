@@ -1031,7 +1031,7 @@ export default function Overview() {
                   {saleOperatingInventory.map((unit: any) => {
                     const availableUnits = Number(unit.availableUnits || 0);
                     const reservedUnits = Number(unit.reservedUnits || 0);
-                    const soldUnitsProjected = Number(unit.soldUnitsProjected || 0);
+                    const soldUnits = Number(unit.soldUnits || 0);
                     const mutationPending =
                       transitionSaleUnitReservationMutation.isPending ||
                       markSaleUnitTypeSoldMutation.isPending;
@@ -1046,7 +1046,7 @@ export default function Overview() {
                           <p className="text-xs text-muted-foreground">
                             {formatNumber(availableUnits)} available,{' '}
                             {formatNumber(reservedUnits)} reserved,{' '}
-                            {formatNumber(soldUnitsProjected)} sold projection
+                            {formatNumber(soldUnits)} sold
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -1132,7 +1132,7 @@ export default function Overview() {
                   {rentalOperatingInventory.map((unit: any) => {
                     const availableUnits = Number(unit.availableUnits || 0);
                     const heldUnits = Number(unit.heldUnits || 0);
-                    const letUnitsProjected = Number(unit.letUnitsProjected || 0);
+                    const letUnits = Number(unit.letUnits || 0);
                     const rentFrom = Number(unit.monthlyRentFrom || 0);
                     const rentTo = Number(unit.monthlyRentTo || 0);
                     const rentLabel =
@@ -1162,7 +1162,7 @@ export default function Overview() {
                           <p className="text-xs text-muted-foreground">
                             {formatNumber(availableUnits)} rentals available,{' '}
                             {formatNumber(heldUnits)} held,{' '}
-                            {formatNumber(letUnitsProjected)} let projection
+                            {formatNumber(letUnits)} let
                           </p>
                           <p className="mt-1 text-xs text-slate-500">{leaseContext}</p>
                         </div>

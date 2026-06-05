@@ -285,7 +285,7 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
 
     const sale = seed.developments.sale;
     await selectDevelopment(page, sale.name);
-    await expect(page.getByText('1 available, 1 reserved, 0 sold projection')).toBeVisible();
+    await expect(page.getByText('1 available, 1 reserved, 0 sold')).toBeVisible();
     await db!
       .update(unitTypes)
       .set({ availableUnits: 0, reservedUnits: 1 })
@@ -297,7 +297,7 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
       timeout: 15_000,
     });
     await expect(page.getByText('Unit reserved.')).toHaveCount(0);
-    await expect(page.getByText('0 available, 1 reserved, 1 sold projection')).toBeVisible({
+    await expect(page.getByText('0 available, 1 reserved, 0 sold')).toBeVisible({
       timeout: 15_000,
     });
     await expectNoOperatingEvents(sale.id);
@@ -315,7 +315,7 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
       timeout: 15_000,
     });
     await expect(page.getByText('Sale unit marked sold.')).toHaveCount(0);
-    await expect(page.getByText('0 available, 0 reserved, 2 sold projection')).toBeVisible({
+    await expect(page.getByText('0 available, 0 reserved, 0 sold')).toBeVisible({
       timeout: 15_000,
     });
     await expectNoOperatingEvents(sale.id);
@@ -325,7 +325,7 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
 
     const rental = seed.developments.rental;
     await selectDevelopment(page, rental.name);
-    await expect(page.getByText('1 rentals available, 1 held, 0 let projection')).toBeVisible();
+    await expect(page.getByText('1 rentals available, 1 held, 0 let')).toBeVisible();
     await db!
       .update(unitTypes)
       .set({ availableUnits: 0, reservedUnits: 1 })
@@ -340,7 +340,7 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
       page.getByText('No available rental units can be held for this unit type.'),
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Rental unit held.')).toHaveCount(0);
-    await expect(page.getByText('0 rentals available, 1 held, 1 let projection')).toBeVisible({
+    await expect(page.getByText('0 rentals available, 1 held, 0 let')).toBeVisible({
       timeout: 15_000,
     });
     await expectNoOperatingEvents(rental.id);
@@ -358,7 +358,7 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
       page.getByText('No held rental units can be marked let for this unit type.'),
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Rental unit marked let.')).toHaveCount(0);
-    await expect(page.getByText('0 rentals available, 0 held, 2 let projection')).toBeVisible({
+    await expect(page.getByText('0 rentals available, 0 held, 0 let')).toBeVisible({
       timeout: 15_000,
     });
     await expectNoOperatingEvents(rental.id);

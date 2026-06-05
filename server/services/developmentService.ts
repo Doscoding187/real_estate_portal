@@ -2302,6 +2302,13 @@ export async function persistUnitTypes(
     const totalUnits = Math.max(0, sanitizeInt(unitData.totalUnits) ?? 0);
     const availableUnits = Math.max(0, sanitizeInt(unitData.availableUnits) ?? 0);
     const reservedUnits = Math.max(0, sanitizeInt((unitData as any).reservedUnits) ?? 0);
+    const inferredOutcomeUnits = Math.max(totalUnits - availableUnits - reservedUnits, 0);
+    const soldUnits = isSaleUnit
+      ? Math.max(0, sanitizeInt((unitData as any).soldUnits) ?? inferredOutcomeUnits)
+      : 0;
+    const letUnits = isRentUnit
+      ? Math.max(0, sanitizeInt((unitData as any).letUnits) ?? inferredOutcomeUnits)
+      : 0;
     if (availableUnits + reservedUnits > totalUnits) {
       const unitName = String(unitData.label || unitData.name || unitId).trim() || 'Unnamed Unit';
       throw new TRPCError({
@@ -2376,6 +2383,8 @@ export async function persistUnitTypes(
       availableUnits,
       totalUnits,
       reservedUnits,
+      soldUnits,
+      letUnits,
 
       completionDate: asDateOnlyOrNull(unitData.completionDate),
 

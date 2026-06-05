@@ -218,7 +218,7 @@ including payout readiness checks for commission-protected stages.
 
 Inventory outcome:
 
-- Sale unit type moved from reserved projection to sold projection.
+- Sale unit type moved from reserved inventory into explicit `sold_units` projection.
 
 Lead handoff:
 
@@ -234,7 +234,7 @@ Distribution handoff:
 
 Inventory outcome:
 
-- Rental unit type moved from held projection to let projection.
+- Rental unit type moved from held inventory into explicit `let_units` projection.
 
 Lead handoff:
 

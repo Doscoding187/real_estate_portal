@@ -2741,3 +2741,62 @@ Next recommended slice:
   guardrails or move back to transaction-engine product experience work.
 Commit hash/tag: This entry will be included in `feat(dle): acknowledge manager handoffs`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Explicit Sale/Rental Outcome Counters
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Replace temporary inferred Sale/Rental sold/let display projections with explicit
+unit-type outcome counters so operating reports are not derived from
+`total_units - available_units - reserved_units`.
+Files changed:
+- drizzle/schema/developments.ts
+- server/migrations/0070_add_unit_outcome_counters.sql
+- server/services/developmentService.ts
+- server/services/developmentOperatingEventsService.ts
+- client/src/components/developer/Overview.tsx
+- e2e/dle/sale-operating-reservation.spec.ts
+- e2e/dle/rental-operating-hold.spec.ts
+- e2e/dle/operating-mutation-failure-trust.spec.ts
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- Refreshed focused operating evidence under `docs/dle/evidence/2026-06-04/`
+Tests run:
+- `pnpm db:migrate:local` passed after sandbox elevation; local target confirmed
+  `127.0.0.1:3306/listify_local`, migration `0070_add_unit_outcome_counters.sql` executed, and
+  `db:verify:distribution` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/sale-operating-reservation.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-operating-hold.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/operating-mutation-failure-trust.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` pending final hygiene.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Sale dashboard reads explicit `sold_units` as `sold`, increments it on `Mark Sold`, and preserves
+  available/reserved behavior.
+- Rental dashboard reads explicit `let_units` as `let`, increments it on `Mark Let`, and preserves
+  available/held behavior.
+- Failed Sale/Rental mutations now refresh backend truth without fabricating sold/let counts from
+  stale available/reserved count edits.
+Proof and fixes:
+- Added `unit_types.sold_units` and `unit_types.let_units` with migration backfill by parent
+  transaction type.
+- New unit persistence initializes explicit counters from supplied values or from the legacy
+  inferred remainder for first-time imported/seeded Sale/Rental unit inventory.
+- Sale sold outcome decrements `reserved_units` and increments `sold_units` in the same
+  transaction as the operating event.
+- Rental let outcome decrements `reserved_units` and increments `let_units` in the same
+  transaction as the operating event.
+- Operating event snapshots and metadata now name the explicit outcome projection columns.
+Remaining risks:
+- Auction still uses lifecycle status per lot/type; bidder/outcome records remain future work if
+  lot-level auction reporting becomes necessary.
+- Direct-available Sale sold and Rental let remain future explicit outcome paths.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Continue transaction-engine product experience work or add direct-available sold/let outcome
+  paths behind explicit confirmation and the same event/counter guardrails.
+Commit hash/tag: This entry will be included in `feat(dle): add explicit outcome counters`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

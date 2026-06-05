@@ -434,7 +434,7 @@ function toNonNegativeInt(value: unknown): number {
   return Math.max(0, Math.trunc(numeric));
 }
 
-function calculateProjectedSoldUnits(input: {
+function calculateInferredOutcomeUnits(input: {
   totalUnits?: unknown;
   availableUnits?: unknown;
   reservedUnits?: unknown;
@@ -445,12 +445,22 @@ function calculateProjectedSoldUnits(input: {
   return Math.max(totalUnits - availableUnits - reservedUnits, 0);
 }
 
-function calculateProjectedLetUnits(input: {
+function readExplicitSoldUnits(input: {
   totalUnits?: unknown;
   availableUnits?: unknown;
   reservedUnits?: unknown;
+  soldUnits?: unknown;
 }): number {
-  return calculateProjectedSoldUnits(input);
+  return toNonNegativeInt(input.soldUnits ?? calculateInferredOutcomeUnits(input));
+}
+
+function readExplicitLetUnits(input: {
+  totalUnits?: unknown;
+  availableUnits?: unknown;
+  reservedUnits?: unknown;
+  letUnits?: unknown;
+}): number {
+  return toNonNegativeInt(input.letUnits ?? calculateInferredOutcomeUnits(input));
 }
 
 function toPositiveNumberOrNull(value: unknown): number | null {
@@ -1033,6 +1043,7 @@ export async function listSaleOperatingInventory(input: {
       totalUnits: unitTypes.totalUnits,
       availableUnits: unitTypes.availableUnits,
       reservedUnits: unitTypes.reservedUnits,
+      soldUnits: unitTypes.soldUnits,
       priceFrom: unitTypes.priceFrom,
       priceTo: unitTypes.priceTo,
       basePriceFrom: unitTypes.basePriceFrom,
@@ -1054,7 +1065,7 @@ export async function listSaleOperatingInventory(input: {
       totalUnits: toNonNegativeInt(item.totalUnits),
       availableUnits: toNonNegativeInt(item.availableUnits),
       reservedUnits: toNonNegativeInt(item.reservedUnits),
-      soldUnitsProjected: calculateProjectedSoldUnits(item),
+      soldUnits: readExplicitSoldUnits(item),
       priceFrom: item.priceFrom != null ? Number(item.priceFrom) : null,
       priceTo: item.priceTo != null ? Number(item.priceTo) : null,
       basePriceFrom: item.basePriceFrom != null ? Number(item.basePriceFrom) : null,
@@ -1081,6 +1092,7 @@ export async function listRentalOperatingInventory(input: {
       totalUnits: unitTypes.totalUnits,
       availableUnits: unitTypes.availableUnits,
       heldUnitsProjection: unitTypes.reservedUnits,
+      letUnits: unitTypes.letUnits,
       monthlyRentFrom: unitTypes.monthlyRentFrom,
       monthlyRentTo: unitTypes.monthlyRentTo,
       depositRequired: unitTypes.depositRequired,
@@ -1105,10 +1117,11 @@ export async function listRentalOperatingInventory(input: {
       totalUnits: toNonNegativeInt(item.totalUnits),
       availableUnits: toNonNegativeInt(item.availableUnits),
       heldUnits: toNonNegativeInt(item.heldUnitsProjection),
-      letUnitsProjected: calculateProjectedLetUnits({
+      letUnits: readExplicitLetUnits({
         totalUnits: item.totalUnits,
         availableUnits: item.availableUnits,
         reservedUnits: item.heldUnitsProjection,
+        letUnits: item.letUnits,
       }),
       monthlyRentFrom: item.monthlyRentFrom != null ? Number(item.monthlyRentFrom) : null,
       monthlyRentTo: item.monthlyRentTo != null ? Number(item.monthlyRentTo) : null,
@@ -1732,6 +1745,7 @@ async function transitionUnitAvailability(
         totalUnits: unitTypes.totalUnits,
         availableUnits: unitTypes.availableUnits,
         reservedUnits: unitTypes.reservedUnits,
+        soldUnits: unitTypes.soldUnits,
       })
       .from(unitTypes)
       .where(
@@ -1973,7 +1987,7 @@ export async function markSaleUnitTypeSold(input: {
       totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
       availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
       reservedUnits: toNonNegativeInt(beforeUnit.reservedUnits),
-      soldUnitsProjected: calculateProjectedSoldUnits(beforeUnit),
+      soldUnits: readExplicitSoldUnits(beforeUnit),
     };
 
     if (beforeSnapshot.reservedUnits <= 0) {
@@ -1987,6 +2001,7 @@ export async function markSaleUnitTypeSold(input: {
       .update(unitTypes)
       .set({
         reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
+        soldUnits: sql`COALESCE(${unitTypes.soldUnits}, 0) + 1`,
       })
       .where(
         and(
@@ -2012,6 +2027,7 @@ export async function markSaleUnitTypeSold(input: {
         totalUnits: unitTypes.totalUnits,
         availableUnits: unitTypes.availableUnits,
         reservedUnits: unitTypes.reservedUnits,
+        soldUnits: unitTypes.soldUnits,
       })
       .from(unitTypes)
       .where(
@@ -2046,13 +2062,13 @@ export async function markSaleUnitTypeSold(input: {
       totalUnits: toNonNegativeInt(afterUnit.totalUnits),
       availableUnits: toNonNegativeInt(afterUnit.availableUnits),
       reservedUnits: toNonNegativeInt(afterUnit.reservedUnits),
-      soldUnitsProjected: calculateProjectedSoldUnits(afterUnit),
+      soldUnits: readExplicitSoldUnits(afterUnit),
     };
     const metadata = {
       transition: 'mark_sold',
       outcome: 'sold',
       inventoryProjectionColumn: 'unit_types.reserved_units',
-      soldProjection: 'total_units - available_units - reserved_units',
+      outcomeProjectionColumn: 'unit_types.sold_units',
       ...(note ? { note } : {}),
       developmentName: development.name,
     };
@@ -2153,6 +2169,7 @@ export async function markRentalUnitTypeLet(input: {
         totalUnits: unitTypes.totalUnits,
         availableUnits: unitTypes.availableUnits,
         reservedUnits: unitTypes.reservedUnits,
+        letUnits: unitTypes.letUnits,
         monthlyRentFrom: unitTypes.monthlyRentFrom,
         monthlyRentTo: unitTypes.monthlyRentTo,
         depositRequired: unitTypes.depositRequired,
@@ -2179,7 +2196,7 @@ export async function markRentalUnitTypeLet(input: {
       totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
       availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
       heldUnits: toNonNegativeInt(beforeUnit.reservedUnits),
-      letUnitsProjected: calculateProjectedLetUnits(beforeUnit),
+      letUnits: readExplicitLetUnits(beforeUnit),
       monthlyRentFrom:
         beforeUnit.monthlyRentFrom != null ? Number(beforeUnit.monthlyRentFrom) : null,
       monthlyRentTo: beforeUnit.monthlyRentTo != null ? Number(beforeUnit.monthlyRentTo) : null,
@@ -2200,6 +2217,7 @@ export async function markRentalUnitTypeLet(input: {
       .update(unitTypes)
       .set({
         reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
+        letUnits: sql`COALESCE(${unitTypes.letUnits}, 0) + 1`,
       })
       .where(
         and(
@@ -2225,6 +2243,7 @@ export async function markRentalUnitTypeLet(input: {
         totalUnits: unitTypes.totalUnits,
         availableUnits: unitTypes.availableUnits,
         reservedUnits: unitTypes.reservedUnits,
+        letUnits: unitTypes.letUnits,
         monthlyRentFrom: unitTypes.monthlyRentFrom,
         monthlyRentTo: unitTypes.monthlyRentTo,
         depositRequired: unitTypes.depositRequired,
@@ -2264,7 +2283,7 @@ export async function markRentalUnitTypeLet(input: {
       totalUnits: toNonNegativeInt(afterUnit.totalUnits),
       availableUnits: toNonNegativeInt(afterUnit.availableUnits),
       heldUnits: toNonNegativeInt(afterUnit.reservedUnits),
-      letUnitsProjected: calculateProjectedLetUnits(afterUnit),
+      letUnits: readExplicitLetUnits(afterUnit),
       monthlyRentFrom: afterUnit.monthlyRentFrom != null ? Number(afterUnit.monthlyRentFrom) : null,
       monthlyRentTo: afterUnit.monthlyRentTo != null ? Number(afterUnit.monthlyRentTo) : null,
       depositRequired:
@@ -2276,7 +2295,7 @@ export async function markRentalUnitTypeLet(input: {
       transition: 'mark_let',
       outcome: 'let',
       inventoryProjectionColumn: 'unit_types.reserved_units',
-      letProjection: 'total_units - available_units - reserved_units',
+      outcomeProjectionColumn: 'unit_types.let_units',
       ...(note ? { note } : {}),
       developmentName: development.name,
     };

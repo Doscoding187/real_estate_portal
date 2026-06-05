@@ -1,9 +1,9 @@
 # DLE Operating Outcome Layer Design
 
 Date: 2026-06-04
-Status: Sale sold from reserved inventory, Rental let from held inventory, Auction
-sold/passed-in/withdrawn outcomes, and explicit selected-lead outcome sync are implemented and
-browser-proven. Distribution/referral outcome handoff remains a future transaction-specific slice.
+Status: Sale sold from reserved inventory, Rental let from held inventory, explicit Sale/Rental
+outcome counters, Auction sold/passed-in/withdrawn outcomes, explicit selected-lead outcome sync,
+and the first distribution/referral review handoff are implemented and browser-proven.
 
 ## Purpose
 
@@ -68,7 +68,9 @@ Current canonical records:
 
 Current constraints:
 
-- `unit_types` does not have explicit `sold_units`, `let_units`, or `passed_in_units` columns.
+- `unit_types` now has explicit `sold_units` and `let_units` counters for Sale/Rental outcome
+  reporting.
+- `unit_types` does not have explicit `passed_in_units` or bidder/outcome records for Auction.
 - `unit_types.reserved_units` is already used as Sale reserved and Rental held projection.
 - Auction lifecycle uses `unit_types.auction_status`.
 - `development_units.status` has individual-unit Sale-friendly states, but the current DLE
@@ -87,12 +89,14 @@ For implementation slices, use these projections deliberately and document the t
 
 - Sale outcome:
   - decrement `unit_types.reserved_units`;
+  - increment `unit_types.sold_units`;
   - decrement `unit_types.available_units` only if the sold unit is taken directly from available
     stock;
   - keep `developments.available_units` equal to the sum of active unit-type available stock;
   - write `inventory_status_changed` with `reserved` or `available` -> `sold`.
 - Rental outcome:
   - decrement `unit_types.reserved_units` when a held rental becomes let;
+  - increment `unit_types.let_units`;
   - decrement `unit_types.available_units` only if the let is taken directly from available stock;
   - keep `developments.available_units` equal to active rental availability;
   - write `inventory_status_changed` with `held` or `available` -> `let`.
@@ -101,23 +105,22 @@ For implementation slices, use these projections deliberately and document the t
   - do not use `reserved_units` as bidder or auction outcome count;
   - write `auction_outcome_recorded` for sold, passed-in, and withdrawn outcomes.
 
-Longer-term schema recommendation:
+Schema projection status:
 
-- Add explicit type-level outcome counters before broad reporting:
-  - Sale: `sold_units`.
-  - Rental: `let_units`.
-  - Auction: use lifecycle status per lot/type, and add bidder/outcome records if lot-level
-    granularity becomes necessary.
+- Sale `sold_units` and Rental `let_units` are implemented as explicit type-level outcome
+  counters.
+- Auction continues to use lifecycle status per lot/type; bidder/outcome records remain future work
+  if lot-level granularity becomes necessary.
 
 Reason:
 
-- Inferring sold/let only from `total - available - reserved` is acceptable as a temporary display
-  projection, but it is weak for audit, reporting, and partial outcome reversals.
+- Inferring sold/let only from `total - available - reserved` was acceptable as a temporary display
+  projection, but it was weak for audit, reporting, and partial outcome reversals.
 
 Hard guardrail:
 
-- Do not call inferred sold/let counts canonical reporting data until explicit projections or
-  individual-unit outcomes are implemented.
+- Do not reintroduce inferred sold/let counts as canonical reporting data now that explicit
+  counters exist.
 - Do not reuse `reserved_units` for sold units, let units, bidder counts, auction registrations, or
   passed-in outcomes.
 - Do not update public copy to imply precise sold/let reporting if the current slice only supports
@@ -404,15 +407,16 @@ Implemented Sale sold from reserved inventory:
 - Added `developer.markSaleUnitTypeSold`.
 - Requires Sale development ownership and `reserved_units > 0`.
 - Decrements only `unit_types.reserved_units`.
+- Increments `unit_types.sold_units`.
 - Keeps `unit_types.available_units` unchanged for reserved-to-sold.
 - Refreshes `developments.available_units` from active unit types.
 - Writes `inventory_status_changed` with `reserved` -> `sold` and `quantity_delta = 0`.
 - Shows `Mark Sold` in the Sale dashboard only when reserved stock exists.
-- Browser proof covers success, event readback, dashboard projection refresh, no false success on
+- Browser proof covers success, event readback, dashboard counter refresh, no false success on
   stale reserved-stock failure, and packaging-field preservation.
 
-The dashboard exposes `sold projection` from `total_units - available_units - reserved_units`.
-That remains a temporary projection, not canonical sold-count reporting.
+The dashboard exposes explicit `sold_units` as `sold`. Failed Sale mutations do not invent sold
+movement from changed available/reserved counts.
 
 Implemented Rental let from held inventory:
 
@@ -420,15 +424,16 @@ Implemented Rental let from held inventory:
 - Requires Rental development ownership and `reserved_units > 0` as the current held-count
   projection.
 - Decrements only `unit_types.reserved_units`.
+- Increments `unit_types.let_units`.
 - Keeps `unit_types.available_units` unchanged for held-to-let.
 - Refreshes `developments.available_units` from active unit types.
 - Writes `inventory_status_changed` with `held` -> `let` and `quantity_delta = 0`.
 - Shows `Mark Let` in the Rental dashboard only when held stock exists.
-- Browser proof covers success, event readback, dashboard projection refresh, no false success on
+- Browser proof covers success, event readback, dashboard counter refresh, no false success on
   stale held-stock failure, public Rental language, and packaging-field preservation.
 
-The dashboard exposes `let projection` from `total_units - available_units - reserved_units`.
-That remains a temporary projection, not canonical let-count reporting.
+The dashboard exposes explicit `let_units` as `let`. Failed Rental mutations do not invent let
+movement from changed available/held counts.
 
 Implemented Auction sold/passed-in/withdrawn outcomes:
 

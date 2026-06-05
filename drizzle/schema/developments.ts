@@ -534,6 +534,8 @@ export const unitTypes = mysqlTable(
     totalUnits: int('total_units').default(0).notNull(),
     availableUnits: int('available_units').default(0).notNull(),
     reservedUnits: int('reserved_units').default(0),
+    soldUnits: int('sold_units').default(0).notNull(),
+    letUnits: int('let_units').default(0).notNull(),
     transferCostsIncluded: tinyint('transfer_costs_included').default(0),
     monthlyLevy: int('monthly_levy'),
     monthlyLevyTo: int('monthly_levy_to'),
