@@ -2852,3 +2852,44 @@ Next recommended slice:
   public availability copy around live sold/let outcome states.
 Commit hash/tag: This entry will be included in `feat(dle): support direct outcome transitions`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Unit Detail Transaction-Native Merchandising
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the public development unit-detail page speak the correct commercial language for Sale,
+Rental, and Auction before a buyer, renter, or bidder opens the lead path.
+Files changed:
+- client/src/pages/DevelopmentUnitDetailPage.tsx
+- client/src/pages/DevelopmentUnitDetailPage.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/DevelopmentUnitDetailPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual flows verified:
+- Focused helper proof only; no browser screenshots in this slice.
+Proof and fixes:
+- Sale unit-detail availability keeps existing `Only X left`, `X available`, `Currently sold out`,
+  and `Availability on request` behavior.
+- Rental unit-detail availability now uses `Only X rentals available`, `X rentals available`,
+  `Fully let`, and `Rental availability on request`.
+- Auction unit-detail availability now uses `Only X lots open`, `X lots open`,
+  `Registration closed`, `Auction availability on request`, and lifecycle outcome labels for sold,
+  passed-in, and withdrawn lots.
+- Unit-detail action copy now changes by transaction lane: Sale keeps affordability/sales copy,
+  Rental uses rental pack/rental fit/leasing-team copy, and Auction uses bidder pack/bidder
+  readiness/auction-team copy.
+- Mobile unit-detail action labels now follow the same transaction lane instead of always showing
+  sale-shaped `Enquire` / `Afford` copy.
+Remaining risks:
+- This is component-helper proof, not a full browser merchandising screenshot pass.
+- Broader public development page sections and search-card merchandising still need continued
+  product audit.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Continue public merchandising with search card/result-card outcome language or run a browser
+  screenshot proof for Rental/Auction unit-detail pages.
+Commit hash/tag: This entry will be included in `feat(dle): tailor unit detail merchandising`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

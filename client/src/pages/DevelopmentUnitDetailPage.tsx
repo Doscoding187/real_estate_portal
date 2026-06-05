@@ -73,6 +73,7 @@ const formatExactRand = (value: unknown) => {
 };
 
 type UnitTransactionType = 'sale' | 'rent' | 'auction';
+type UnitLeadDialogMode = 'brochure' | 'contact' | 'qualification' | 'info';
 
 const toSharedTransactionType = (
   transactionType: UnitTransactionType,
@@ -161,17 +162,121 @@ export function getDevelopmentUnitPricingModel(unit: any, transactionType: unkno
 }
 
 export function getDevelopmentUnitAvailabilityLabel(unit: any): string {
+  return getDevelopmentUnitAvailabilityState(unit).label;
+}
+
+const pluralize = (count: number, singular: string, plural = `${singular}s`) =>
+  `${count} ${count === 1 ? singular : plural}`;
+
+export function getDevelopmentUnitAvailabilityState(unit: any, transactionType?: unknown) {
+  const normalizedTransactionType = normalizeUnitTransactionType(transactionType);
   const inventory = calculateInventorySummary(unit ?? {});
   const availabilityCount = inventory.available;
   const totalCount = inventory.total;
+  const auctionStatus = String(unit?.auctionStatus || unit?.auction_status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
 
-  return availabilityCount > 0
-    ? availabilityCount <= 3
-      ? `Only ${availabilityCount} left`
-      : `${availabilityCount} available`
-    : totalCount > 0
-      ? 'Currently sold out'
-      : 'Availability on request';
+  if (normalizedTransactionType === 'rent') {
+    if (availabilityCount > 0) {
+      return {
+        label:
+          availabilityCount <= 3
+            ? `Only ${pluralize(availabilityCount, 'rental')} available`
+            : `${pluralize(availabilityCount, 'rental')} available`,
+      };
+    }
+
+    return {
+      label: totalCount > 0 ? 'Fully let' : 'Rental availability on request',
+    };
+  }
+
+  if (normalizedTransactionType === 'auction') {
+    if (auctionStatus === 'sold') return { label: 'Sold at auction' };
+    if (auctionStatus === 'passed_in') return { label: 'Passed in' };
+    if (auctionStatus === 'withdrawn') return { label: 'Withdrawn' };
+
+    if (availabilityCount > 0) {
+      return {
+        label:
+          availabilityCount <= 3
+            ? `Only ${pluralize(availabilityCount, 'lot')} open`
+            : `${pluralize(availabilityCount, 'lot')} open`,
+      };
+    }
+
+    return {
+      label: totalCount > 0 ? 'Registration closed' : 'Auction availability on request',
+    };
+  }
+
+  return {
+    label:
+      availabilityCount > 0
+        ? availabilityCount <= 3
+          ? `Only ${availabilityCount} left`
+          : `${availabilityCount} available`
+        : totalCount > 0
+          ? 'Currently sold out'
+          : 'Availability on request',
+  };
+}
+
+export function getDevelopmentUnitActionCopy(transactionType: unknown): {
+  primaryLabel: string;
+  secondaryLabel: string;
+  secondaryMode: UnitLeadDialogMode;
+  mobilePrimaryLabel: string;
+  mobileSecondaryLabel: string;
+  teamLabel: string;
+  supportLines: string[];
+} {
+  const normalizedTransactionType = normalizeUnitTransactionType(transactionType);
+
+  if (normalizedTransactionType === 'rent') {
+    return {
+      primaryLabel: 'Request rental pack',
+      secondaryLabel: 'Check rental fit',
+      secondaryMode: 'qualification',
+      mobilePrimaryLabel: 'Rent pack',
+      mobileSecondaryLabel: 'Fit',
+      teamLabel: 'leasing team',
+      supportLines: [
+        'Rental pack, lease terms, and availability guidance sent to your inbox',
+        'Leasing callback for occupation timing and next steps',
+      ],
+    };
+  }
+
+  if (normalizedTransactionType === 'auction') {
+    return {
+      primaryLabel: 'Request bidder pack',
+      secondaryLabel: 'Ask about bidder readiness',
+      secondaryMode: 'info',
+      mobilePrimaryLabel: 'Bidder pack',
+      mobileSecondaryLabel: 'Bid ready',
+      teamLabel: 'auction team',
+      supportLines: [
+        'Bidder pack, registration rules, and auction timing sent to your inbox',
+        'Auction callback for registration and next steps',
+      ],
+    };
+  }
+
+  return {
+    primaryLabel: 'Enquire about this unit',
+    secondaryLabel: 'Check affordability',
+    secondaryMode: 'qualification',
+    mobilePrimaryLabel: 'Enquire',
+    mobileSecondaryLabel: 'Afford',
+    teamLabel: 'sales team',
+    supportLines: [
+      'Pricing pack and availability guidance sent to your inbox',
+      'Sales callback for availability and next steps',
+    ],
+  };
 }
 
 const formatParkingLabel = (parkingType: unknown, parkingBays: unknown) => {
@@ -464,7 +569,12 @@ export default function DevelopmentUnitDetailPage() {
   const optionalExtras = Array.isArray(selectedUnit?.extras)
     ? selectedUnit.extras.filter((item: any) => item && (item.label || item.name))
     : [];
-  const availabilityLabel = getDevelopmentUnitAvailabilityLabel(selectedUnit);
+  const availabilityState = getDevelopmentUnitAvailabilityState(
+    selectedUnit,
+    pricingModel.transactionType,
+  );
+  const availabilityLabel = availabilityState.label;
+  const actionCopy = getDevelopmentUnitActionCopy(pricingModel.transactionType);
   const positioningLine =
     Number(selectedUnit?.bedrooms || 0) >= 3
       ? 'Well suited to growing families who need more layout flexibility.'
@@ -515,6 +625,14 @@ export default function DevelopmentUnitDetailPage() {
       path: getDevelopmentUnitRouteKey(selectedUnit),
     });
     setLocation(`/development/${development.slug}/qualification?${query.toString()}`);
+  };
+
+  const runSecondaryAction = (ctaLocation: string) => {
+    if (actionCopy.secondaryMode === 'qualification') {
+      goToQualification();
+      return;
+    }
+    openLeadDialog(actionCopy.secondaryMode, ctaLocation);
   };
 
   const navigateToSiblingUnit = (unit: any, ctaLocation: string) => {
@@ -922,7 +1040,8 @@ export default function DevelopmentUnitDetailPage() {
                   </h2>
                   <p className="mt-3 text-sm text-slate-600">
                     Every enquiry from this page is tied directly to {selectedUnit.name}, so the
-                    sales team can respond with the right layout, pricing, and next steps.
+                    {actionCopy.teamLabel} can respond with the right layout, pricing, and next
+                    steps.
                   </p>
                 </div>
 
@@ -930,9 +1049,14 @@ export default function DevelopmentUnitDetailPage() {
                   {[
                     {
                       title: 'Get pricing and details',
-                      body: 'Request the latest pricing, specifications, and available options for this unit type.',
+                      body:
+                        pricingModel.transactionType === 'rent'
+                          ? 'Request the latest monthly rent, lease terms, specifications, and available rental options.'
+                          : pricingModel.transactionType === 'auction'
+                            ? 'Request the latest bidder pack, auction terms, specifications, and lot status.'
+                            : 'Request the latest pricing, specifications, and available options for this unit type.',
                       action: () => openLeadDialog('info', 'unit_detail_intent_info'),
-                      label: 'Request information',
+                      label: actionCopy.primaryLabel,
                     },
                     {
                       title: 'Have the floor plan emailed',
@@ -942,7 +1066,7 @@ export default function DevelopmentUnitDetailPage() {
                     },
                     {
                       title: 'Talk to sales',
-                      body: 'Request a callback to discuss stock, timelines, and the best fit within the development.',
+                      body: `Request a callback to discuss stock, timelines, and the best fit with the ${actionCopy.teamLabel}.`,
                       action: () => openLeadDialog('contact', 'unit_detail_intent_contact'),
                       label: 'Request callback',
                     },
@@ -1107,14 +1231,14 @@ export default function DevelopmentUnitDetailPage() {
                         className="h-11 w-full bg-orange-500 text-white hover:bg-orange-600"
                         onClick={() => openLeadDialog('info', 'unit_detail_action_panel_info')}
                       >
-                        Enquire about this unit
+                        {actionCopy.primaryLabel}
                       </Button>
                       <Button
                         variant="outline"
                         className="h-11 w-full border-blue-200 text-blue-700 hover:bg-blue-50"
-                        onClick={goToQualification}
+                        onClick={() => runSecondaryAction('unit_detail_action_panel_secondary')}
                       >
-                        Check affordability
+                        {actionCopy.secondaryLabel}
                       </Button>
                       <Button
                         variant="outline"
@@ -1143,14 +1267,15 @@ export default function DevelopmentUnitDetailPage() {
                     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                       <p className="text-sm font-semibold text-emerald-900">Next step support</p>
                       <ul className="mt-3 space-y-2 text-sm text-emerald-800">
-                        <li className="flex gap-2">
-                          <Mail className="mt-0.5 h-4 w-4 shrink-0" />
-                          Pricing pack and availability guidance sent to your inbox
-                        </li>
-                        <li className="flex gap-2">
-                          <Phone className="mt-0.5 h-4 w-4 shrink-0" />
-                          Sales callback for availability and next steps
-                        </li>
+                        {actionCopy.supportLines.map((line, index) => {
+                          const Icon = index === 0 ? Mail : Phone;
+                          return (
+                            <li className="flex gap-2" key={line}>
+                              <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                              {line}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   </div>
@@ -1173,10 +1298,15 @@ export default function DevelopmentUnitDetailPage() {
               className="h-10 bg-orange-500 px-3 hover:bg-orange-600"
               onClick={() => openLeadDialog('info', 'unit_detail_mobile_info')}
             >
-              Enquire
+              {actionCopy.mobilePrimaryLabel}
             </Button>
-            <Button size="sm" variant="outline" className="h-10 px-3" onClick={goToQualification}>
-              Afford
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10 px-3"
+              onClick={() => runSecondaryAction('unit_detail_mobile_secondary')}
+            >
+              {actionCopy.mobileSecondaryLabel}
             </Button>
           </div>
         </div>

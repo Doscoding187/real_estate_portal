@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getDevelopmentUnitActionCopy,
   getDevelopmentUnitAvailabilityLabel,
+  getDevelopmentUnitAvailabilityState,
   getDevelopmentUnitPricingModel,
   normalizeUnitTransactionType,
 } from './DevelopmentUnitDetailPage';
@@ -83,5 +85,72 @@ describe('DevelopmentUnitDetailPage pricing model', () => {
         availableUnits: 0,
       }),
     ).toBe('Currently sold out');
+  });
+
+  it('uses Rental-native availability labels and actions', () => {
+    expect(
+      getDevelopmentUnitAvailabilityState(
+        {
+          totalUnits: 5,
+          availableUnits: 2,
+        },
+        'for_rent',
+      ).label,
+    ).toBe('Only 2 rentals available');
+
+    expect(
+      getDevelopmentUnitAvailabilityState(
+        {
+          totalUnits: 5,
+          availableUnits: 0,
+        },
+        'for_rent',
+      ).label,
+    ).toBe('Fully let');
+
+    const copy = getDevelopmentUnitActionCopy('for_rent');
+    expect(copy.primaryLabel).toBe('Request rental pack');
+    expect(copy.secondaryLabel).toBe('Check rental fit');
+    expect(copy.teamLabel).toBe('leasing team');
+    expect(copy.supportLines[0]).toContain('lease terms');
+  });
+
+  it('uses Auction-native availability labels and actions', () => {
+    expect(
+      getDevelopmentUnitAvailabilityState(
+        {
+          totalUnits: 4,
+          availableUnits: 2,
+        },
+        'auction',
+      ).label,
+    ).toBe('Only 2 lots open');
+
+    expect(
+      getDevelopmentUnitAvailabilityState(
+        {
+          totalUnits: 1,
+          availableUnits: 1,
+          auctionStatus: 'sold',
+        },
+        'auction',
+      ).label,
+    ).toBe('Sold at auction');
+
+    expect(
+      getDevelopmentUnitAvailabilityState(
+        {
+          totalUnits: 3,
+          availableUnits: 0,
+        },
+        'auction',
+      ).label,
+    ).toBe('Registration closed');
+
+    const copy = getDevelopmentUnitActionCopy('auction');
+    expect(copy.primaryLabel).toBe('Request bidder pack');
+    expect(copy.secondaryLabel).toBe('Ask about bidder readiness');
+    expect(copy.secondaryMode).toBe('info');
+    expect(copy.teamLabel).toBe('auction team');
   });
 });

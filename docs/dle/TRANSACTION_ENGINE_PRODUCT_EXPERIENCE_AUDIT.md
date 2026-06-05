@@ -161,6 +161,26 @@ This keeps the qualification route commercially honest. It does not yet replace 
 calculation model with dedicated Rental and Auction rules, but it stops the UI from hiding the
 assumptions behind generic affordability language.
 
+## Eighth Product-Visibility Slice
+
+Make public unit-detail availability and action copy transaction-native.
+
+The public unit-detail page should:
+
+- keep Sale unit-detail language focused on availability, sold-out state, affordability, and sales
+  enquiry;
+- use Rental unit-detail language for rentals available, fully let state, rental packs, rental fit,
+  lease terms, and leasing-team contact;
+- use Auction unit-detail language for lots open, registration closed, sold/passed-in/withdrawn
+  states, bidder packs, bidder readiness, and auction-team contact;
+- keep existing lead-dialog context intact while improving the words users see before they act;
+- avoid generic `sold out`, `Check affordability`, and sales-team phrasing on Rental and Auction
+  unit pages.
+
+This closes a buyer-facing merchandising gap that remained after public development cards and lead
+dialogs became transaction-aware: the unit-specific page now speaks the same commercial language as
+the transaction engine.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -169,7 +189,7 @@ assumptions behind generic affordability language.
 - Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal
   pack, and urgency should become first-class product language.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
-  labels, availability, and primary CTAs.
+  labels, availability, primary CTAs, unit-card copy, and unit-detail CTAs.
 - Add deeper Rental/Auction qualification rules where needed, such as lease qualification ratios,
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
