@@ -3015,3 +3015,40 @@ Next recommended slice:
   for unit-detail/search cards now that the transaction wording is stable.
 Commit hash/tag: This entry will be included in `test(dle): prove search card view switching`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Public Detail Commercial Pack Merchandising
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the public development detail page summarize the transaction-specific commercial pack
+before users reach unit inventory or lead capture.
+Files changed:
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/DevelopmentDetail.test.ts` passed.
+- `pnpm run check` passed after adding explicit numeric inventory reducer typing.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Focused helper/render code proof only; no browser screenshot in this slice.
+Proof and fixes:
+- Added `getDevelopmentDetailCommercialPack` as a pure transaction-aware helper.
+- Sale public detail pages now surface a `Buyer Pack` summary for pricing, available homes, buyer
+  readiness, ownership, and brochure access.
+- Rental public detail pages now surface a `Rental Pack` summary for rent, rental availability,
+  lease signals, renter readiness, and rental-pack access.
+- Auction public detail pages now surface an `Auction Pack` summary for bid guidance, auction
+  status, lots, bidder readiness, and auction-pack access.
+- The commercial pack is rendered on the public detail page before available units, with CTA labels
+  aligned to the transaction lane.
+Remaining risks:
+- Component/helper proof only; a browser screenshot pass would still be useful for visual spacing
+  and mobile layout.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Browser-proof the public detail commercial pack for Rental and Auction, or continue refining the
+  wizard-side guided packaging experience.
+Commit hash/tag: This entry will be included in `feat(dle): show public detail commercial pack`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

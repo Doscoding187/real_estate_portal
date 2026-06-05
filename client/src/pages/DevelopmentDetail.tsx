@@ -452,6 +452,191 @@ export function getDevelopmentDetailPricingContext(
   };
 }
 
+type DevelopmentDetailCommercialPackItem = {
+  label: string;
+  value: string;
+};
+
+export type DevelopmentDetailCommercialPack = {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  items: DevelopmentDetailCommercialPackItem[];
+  primaryActionLabel: string;
+  secondaryActionLabel: string;
+};
+
+const getInventoryTotals = (
+  development: Record<string, unknown>,
+  units: Array<Record<string, unknown>>,
+): { total: number; available: number } => {
+  const totals = units.reduce<{ total: number; available: number }>(
+    (acc, unit) => {
+      const summary = calculateInventorySummary(unit);
+      acc.total += summary.total;
+      acc.available += summary.available;
+      return acc;
+    },
+    { total: 0, available: 0 },
+  );
+
+  if (totals.total > 0) return totals;
+
+  const summary = calculateInventorySummary({
+    totalUnits: development.totalUnits,
+    availableUnits:
+      development.availableUnits !== undefined && development.availableUnits !== null
+        ? development.availableUnits
+        : development.totalUnits,
+  });
+
+  return {
+    total: summary.total,
+    available: summary.available,
+  };
+};
+
+const formatCommercialPackPriceRange = (priceFrom: number, priceTo?: number) => {
+  if (!Number.isFinite(priceFrom) || priceFrom <= 0) return 'On request';
+  if (priceTo && priceTo > priceFrom) {
+    return `${formatSARandShort(priceFrom)} - ${formatSARandShort(priceTo)}`;
+  }
+  return formatSARandShort(priceFrom);
+};
+
+const firstPositiveUnitValue = (units: Array<Record<string, unknown>>, keys: string[]) => {
+  for (const unit of units) {
+    for (const key of keys) {
+      const value = toPositiveNumber(unit[key]);
+      if (value !== null) return value;
+    }
+  }
+  return null;
+};
+
+export function getDevelopmentDetailCommercialPack(
+  development: Record<string, unknown>,
+  units: Array<Record<string, unknown>> = [],
+  options: { hasBrochure?: boolean } = {},
+): DevelopmentDetailCommercialPack {
+  const pricing = getDevelopmentDetailPricingContext(development, units);
+  const inventory = getInventoryTotals(development, units);
+  const unitTypeCount = units.length;
+  const priceRange = formatCommercialPackPriceRange(pricing.priceFrom, pricing.priceTo);
+  const documentLabel = options.hasBrochure ? 'Pack available' : 'Pack request available';
+
+  if (pricing.transactionType === 'rent') {
+    const deposit = firstPositiveUnitValue(units, ['depositRequired', 'depositAmount']);
+    const leaseTerm = units
+      .map(unit => String(unit.leaseTerm || '').trim())
+      .find(Boolean);
+    const furnished = units.some(unit => Boolean(unit.isFurnished));
+    const leaseSignals = [
+      deposit ? `deposit from ${formatSARandShort(deposit)}` : null,
+      leaseTerm || null,
+      furnished ? 'furnished options' : null,
+    ].filter((item): item is string => !!item);
+
+    return {
+      eyebrow: 'Rental Pack',
+      title: 'Lease path at a glance',
+      summary:
+        'Rental pricing, availability, lease signals, and enquiry steps are packaged for renters before they contact the leasing team.',
+      primaryActionLabel: 'Check Rental Fit',
+      secondaryActionLabel: options.hasBrochure ? 'Download Rental Pack' : 'Request Rental Pack',
+      items: [
+        { label: 'Rent', value: `${pricing.priceLabel} ${priceRange}` },
+        {
+          label: 'Availability',
+          value:
+            inventory.total > 0
+              ? `${inventory.available} of ${inventory.total} rentals available`
+              : 'Rental availability on request',
+        },
+        {
+          label: 'Lease signals',
+          value: leaseSignals.length > 0 ? leaseSignals.join(' · ') : 'Lease details on request',
+        },
+        {
+          label: 'Renter readiness',
+          value: 'Rental fit check and leasing-team enquiry available',
+        },
+        { label: 'Documents', value: documentLabel },
+      ],
+    };
+  }
+
+  if (pricing.transactionType === 'auction') {
+    const auctionStatus = units
+      .map(unit => String(unit.auctionStatus || '').trim())
+      .find(Boolean);
+    const reserve =
+      firstPositiveUnitValue(units, ['reservePrice']) ?? toPositiveNumber(development.reservePriceFrom);
+    const auctionSignals = [
+      auctionStatus ? formatDevelopmentDetailLabel(auctionStatus) : 'Auction timing on request',
+      reserve ? `reserve guidance from ${formatSARandShort(reserve)}` : null,
+    ].filter((item): item is string => !!item);
+
+    return {
+      eyebrow: 'Auction Pack',
+      title: 'Bidder path at a glance',
+      summary:
+        'Auction pricing, registration state, bidder readiness, and document signals are packaged before a bidder registers interest.',
+      primaryActionLabel: 'Check Bidder Readiness',
+      secondaryActionLabel: options.hasBrochure ? 'Download Auction Pack' : 'Request Auction Pack',
+      items: [
+        { label: 'Bid guidance', value: `${pricing.priceLabel} ${priceRange}` },
+        {
+          label: 'Auction status',
+          value: auctionSignals.join(' · '),
+        },
+        {
+          label: 'Lots',
+          value:
+            inventory.total > 0
+              ? `${inventory.available} of ${inventory.total} lots open`
+              : 'Lot availability on request',
+        },
+        {
+          label: 'Bidder readiness',
+          value: 'Bidder readiness check and auction-team enquiry available',
+        },
+        { label: 'Documents', value: documentLabel },
+      ],
+    };
+  }
+
+  const ownership = String(development.ownershipType || '').trim();
+
+  return {
+    eyebrow: 'Buyer Pack',
+    title: 'Sales path at a glance',
+    summary:
+      'Sales pricing, inventory, buyer readiness, and document signals are packaged so buyers know what to do next.',
+    primaryActionLabel: 'Start Qualification',
+    secondaryActionLabel: options.hasBrochure ? 'Download Brochure' : 'Request Brochure',
+    items: [
+      { label: 'Pricing', value: `${pricing.priceLabel} ${priceRange}` },
+      {
+        label: 'Availability',
+        value:
+          inventory.total > 0
+            ? `${inventory.available} of ${inventory.total} homes available`
+            : 'Availability on request',
+      },
+      {
+        label: 'Buyer readiness',
+        value: 'Affordability check and sales-team enquiry available',
+      },
+      {
+        label: 'Ownership',
+        value: ownership ? formatDevelopmentDetailLabel(ownership) : 'Ownership details on request',
+      },
+      { label: 'Documents', value: documentLabel },
+    ],
+  };
+}
+
 export function getDevelopmentDetailLeadUnitContext(
   unit: Record<string, unknown> | null | undefined,
   fallbackTransactionType: unknown,
@@ -1623,6 +1808,9 @@ export default function DevelopmentDetail() {
   })();
 
   const detailPricing = getDevelopmentDetailPricingContext(dev, development.units || []);
+  const commercialPack = getDevelopmentDetailCommercialPack(dev, development.units || [], {
+    hasBrochure: !!brochureUrl,
+  });
   const developmentHighlights = getDevelopmentDetailHighlights(dev);
   const derivedPriceFrom = detailPricing.priceFrom;
   const priceToDisplay = detailPricing.priceTo;
@@ -2153,6 +2341,70 @@ export default function DevelopmentDetail() {
                     <Separator className="bg-slate-200" />
                   </>
                 )}
+
+                <section id="commercial-pack" className="w-full">
+                  <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                            {commercialPack.eyebrow}
+                          </p>
+                          <CardTitle className="mt-2 font-bold text-slate-900">
+                            {commercialPack.title}
+                          </CardTitle>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="w-fit border-emerald-200 bg-emerald-50 text-emerald-700"
+                        >
+                          Market ready signals
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                        {commercialPack.summary}
+                      </p>
+
+                      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {commercialPack.items.map(item => (
+                          <div
+                            key={`${item.label}-${item.value}`}
+                            className="rounded-lg border border-slate-200 bg-white px-4 py-3"
+                          >
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                              {item.label}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                        <Button
+                          className="bg-orange-500 text-white hover:bg-orange-600"
+                          onClick={() => navigateToQualification('commercial_pack')}
+                        >
+                          <ArrowUpRight className="mr-2 h-4 w-4" />
+                          {commercialPack.primaryActionLabel}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                          onClick={() => openLeadDialog('brochure', 'commercial_pack')}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          {commercialPack.secondaryActionLabel}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+
+                <Separator className="bg-slate-200" />
 
                 {/* Floor Plans Section - CRITICAL: Carousel overflow contained */}
                 <section id="available-units" className="w-full">

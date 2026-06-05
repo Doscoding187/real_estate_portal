@@ -4,6 +4,7 @@ import {
   buildDevelopmentDetailAmenityGroups,
   formatDevelopmentDetailLabel,
   getDevelopmentDetailActionPanelCopy,
+  getDevelopmentDetailCommercialPack,
   getDevelopmentDetailHighlights,
   getDevelopmentDetailLeadUnitContext,
   getDevelopmentDetailMediaBuckets,
@@ -108,6 +109,108 @@ describe('DevelopmentDetail pricing context', () => {
         '2 auction unit types available',
       ]),
     });
+  });
+
+  it('builds sale commercial pack copy for buyer packaging', () => {
+    const pack = getDevelopmentDetailCommercialPack(
+      {
+        transactionType: 'for_sale',
+        ownershipType: 'sectional-title',
+      },
+      [
+        {
+          basePriceFrom: 1_450_000,
+          basePriceTo: 1_650_000,
+          totalUnits: 8,
+          availableUnits: 5,
+        },
+      ],
+      { hasBrochure: true },
+    );
+
+    expect(pack).toMatchObject({
+      eyebrow: 'Buyer Pack',
+      title: 'Sales path at a glance',
+      primaryActionLabel: 'Start Qualification',
+      secondaryActionLabel: 'Download Brochure',
+    });
+    expect(pack.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Availability', value: '5 of 8 homes available' }),
+        expect.objectContaining({ label: 'Ownership', value: 'Sectional Title' }),
+      ]),
+    );
+  });
+
+  it('builds rental commercial pack copy for lease packaging', () => {
+    const pack = getDevelopmentDetailCommercialPack(
+      { transactionType: 'for_rent' },
+      [
+        {
+          monthlyRentFrom: 12_500,
+          monthlyRentTo: 14_500,
+          depositRequired: 25_000,
+          leaseTerm: '12 months',
+          isFurnished: true,
+          totalUnits: 6,
+          availableUnits: 2,
+        },
+      ],
+      { hasBrochure: false },
+    );
+
+    expect(pack).toMatchObject({
+      eyebrow: 'Rental Pack',
+      title: 'Lease path at a glance',
+      primaryActionLabel: 'Check Rental Fit',
+      secondaryActionLabel: 'Request Rental Pack',
+    });
+    expect(pack.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Rent', value: expect.stringContaining('Rent From') }),
+        expect.objectContaining({ label: 'Availability', value: '2 of 6 rentals available' }),
+        expect.objectContaining({
+          label: 'Lease signals',
+          value: expect.stringContaining('furnished options'),
+        }),
+      ]),
+    );
+  });
+
+  it('builds auction commercial pack copy for bidder packaging', () => {
+    const pack = getDevelopmentDetailCommercialPack(
+      { transactionType: 'auction' },
+      [
+        {
+          startingBid: 850_000,
+          reservePrice: 950_000,
+          auctionStatus: 'registration_open',
+          totalUnits: 1,
+          availableUnits: 1,
+        },
+      ],
+      { hasBrochure: true },
+    );
+
+    expect(pack).toMatchObject({
+      eyebrow: 'Auction Pack',
+      title: 'Bidder path at a glance',
+      primaryActionLabel: 'Check Bidder Readiness',
+      secondaryActionLabel: 'Download Auction Pack',
+    });
+    expect(pack.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Bid guidance',
+          value: expect.stringContaining('Starting Bid'),
+        }),
+        expect.objectContaining({
+          label: 'Auction status',
+          value: expect.stringContaining('Registration Open'),
+        }),
+        expect.objectContaining({ label: 'Lots', value: '1 of 1 lots open' }),
+      ]),
+    );
   });
 
   it('uses rental unit monthly rent instead of stale sale prices', () => {

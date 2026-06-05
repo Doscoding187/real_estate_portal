@@ -234,6 +234,23 @@ The browser proof now seeds one published development per transaction lane, then
 This upgrades the previous component proof into browser evidence that buyer-facing search
 merchandising survives the actual route, query, rendering, and view-toggle path.
 
+## Twelfth Product-Visibility Slice
+
+Add a transaction-native commercial pack section to the public development page.
+
+The public development detail page now surfaces a concise pack summary before unit inventory:
+
+- Sale uses `Buyer Pack` and frames pricing, available homes, buyer readiness, ownership, and
+  brochure access;
+- Rental uses `Rental Pack` and frames rent, rental availability, lease signals, renter readiness,
+  and rental-pack access;
+- Auction uses `Auction Pack` and frames bid guidance, auction status, lots, bidder readiness, and
+  auction-pack access.
+
+This makes the public page feel less like a collection of fields and more like a guided commercial
+package. It turns backend transaction truth into visible next-step clarity before a buyer, renter,
+or bidder reaches the unit carousel or lead form.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
