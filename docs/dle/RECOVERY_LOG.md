@@ -669,6 +669,42 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-05 - Unit Type Packaging Readiness Panel
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make Rental and Auction unit setup feel like guided transaction packaging instead of generic
+pricing fields.
+Files changed:
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Component/helper proof only; no browser screenshot in this slice.
+Proof and fixes:
+- Added `getUnitTypesPhasePackagingChecklist` as a transaction-aware helper for Buyer, Rental, and
+  Auction unit package readiness.
+- Rental unit setup now surfaces a readiness panel for monthly rent, deposit, lease term, furnished
+  state, and rental availability while the developer edits pricing.
+- Auction unit setup now surfaces a readiness panel for starting bid, auction window, reserve
+  strategy, lifecycle, and lot availability while the developer edits pricing.
+- The panel is advisory only and does not change persistence, validation, schemas, APIs, or runtime
+  save behavior.
+Remaining risks:
+- The panel has focused helper tests but has not yet been browser-proofed in the wizard dialog.
+- Legal-pack/document readiness is still represented at development/media level, not as a dedicated
+  auction unit field.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Browser-proof the Unit Types pricing tab for Rental and Auction, including mobile dialog fit, then
+  continue toward dashboard/admin/distribution operating surfaces.
+Commit hash/tag: This entry will be included in `feat(dle): show unit packaging readiness`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-04 - Auction Time-Gated Activation Operating Mutation
 
 Date: 2026-06-04

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAuctionLifecycleLabel,
   getUnitTypesPhaseMerchandisingPreview,
+  getUnitTypesPhasePackagingChecklist,
   getUnitTypesPhasePriceDisplay,
   getUnitTypesPhaseTransactionCopy,
   isValidUnitTypesPhaseMonthlyRentRange,
@@ -164,5 +165,101 @@ describe('UnitTypesPhase transaction helpers', () => {
       supportingDetails: expect.arrayContaining(['Reserve tracked internally']),
     });
     expect(auctionPreview.supportingDetails.some(detail => detail.includes('2030'))).toBe(true);
+  });
+
+  it('builds Rental package readiness around lease clarity and availability', () => {
+    const checklist = getUnitTypesPhasePackagingChecklist(
+      {
+        name: '2 Bedroom Rental',
+        description: 'Lease-ready rental unit.',
+        monthlyRentFrom: 14_500,
+        depositRequired: 29_000,
+        leaseTerm: '12 months',
+        isFurnished: false,
+        availableUnits: 4,
+      },
+      'for_rent',
+    );
+
+    expect(checklist.title).toBe('Rental package readiness');
+    expect(checklist.summary).toContain('lease clarity');
+    expect(checklist.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Monthly rent', state: 'complete' }),
+        expect.objectContaining({ label: 'Deposit', state: 'complete' }),
+        expect.objectContaining({ label: 'Lease term', state: 'complete' }),
+        expect.objectContaining({ label: 'Furnished state', state: 'complete' }),
+        expect.objectContaining({ label: 'Rental availability', state: 'complete' }),
+      ]),
+    );
+  });
+
+  it('flags incomplete Rental package readiness before autosave can imply safety', () => {
+    const checklist = getUnitTypesPhasePackagingChecklist(
+      {
+        monthlyRentFrom: 0,
+        availableUnits: 0,
+      },
+      'for_rent',
+    );
+
+    expect(checklist.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Monthly rent', state: 'missing' }),
+        expect.objectContaining({ label: 'Deposit', state: 'attention' }),
+        expect.objectContaining({ label: 'Lease term', state: 'attention' }),
+        expect.objectContaining({ label: 'Rental availability', state: 'missing' }),
+      ]),
+    );
+  });
+
+  it('builds Auction package readiness around bidding terms and lot availability', () => {
+    const checklist = getUnitTypesPhasePackagingChecklist(
+      {
+        startingBid: 850_000,
+        reservePrice: 950_000,
+        auctionStartDate: '2030-02-01T09:00:00.000Z',
+        auctionEndDate: '2030-02-08T17:00:00.000Z',
+        auctionStatus: 'registration_open',
+        availableUnits: 2,
+      },
+      'auction',
+    );
+
+    expect(checklist.title).toBe('Auction package readiness');
+    expect(checklist.summary).toContain('bidding terms');
+    expect(checklist.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Starting bid', state: 'complete' }),
+        expect.objectContaining({ label: 'Auction window', state: 'complete' }),
+        expect.objectContaining({ label: 'Reserve strategy', state: 'complete' }),
+        expect.objectContaining({
+          label: 'Auction lifecycle',
+          detail: 'Registration open',
+          state: 'complete',
+        }),
+        expect.objectContaining({ label: 'Lot availability', state: 'complete' }),
+      ]),
+    );
+  });
+
+  it('keeps missing Auction package readiness distinct from sale or rental pricing', () => {
+    const checklist = getUnitTypesPhasePackagingChecklist(
+      {
+        priceFrom: 1_200_000,
+        monthlyRentFrom: 12_500,
+        availableUnits: 0,
+      },
+      'auction',
+    );
+
+    expect(checklist.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Starting bid', state: 'missing' }),
+        expect.objectContaining({ label: 'Auction window', state: 'missing' }),
+        expect.objectContaining({ label: 'Reserve strategy', state: 'attention' }),
+        expect.objectContaining({ label: 'Lot availability', state: 'missing' }),
+      ]),
+    );
   });
 });

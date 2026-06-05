@@ -48,6 +48,7 @@ import {
   Layers,
   Sparkles,
   AlertCircle,
+  CheckCircle2,
   Copy,
   Maximize,
 } from 'lucide-react';
@@ -374,6 +375,163 @@ export const getUnitTypesPhaseMerchandisingPreview = (
       availableUnits > 0 ? `${availableUnits} units for sale` : 'Sold out',
       'Buyer price band',
       'Purchase enquiry context',
+    ],
+  };
+};
+
+export const getUnitTypesPhasePackagingChecklist = (
+  unit: Partial<UnitType>,
+  transactionType: unknown,
+) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+  const availableUnits = Math.max(0, Number((unit as any).availableUnits ?? 0));
+  const totalUnits = Math.max(0, Number((unit as any).totalUnits ?? 0));
+  const inventoryCaptured = availableUnits > 0 || totalUnits > 0;
+  const unitStoryCaptured =
+    String(unit.name ?? '').trim().length > 0 && String(unit.description ?? '').trim().length > 0;
+  const mediaCaptured =
+    ((unit as any).baseMedia?.gallery?.length ?? 0) > 0 ||
+    ((unit as any).baseMedia?.floorPlans?.length ?? 0) > 0;
+
+  if (normalized === 'for_rent') {
+    const monthlyRentFrom = Number((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0);
+    const depositRequired = Number((unit as any).depositRequired ?? 0);
+    const leaseTerm = String((unit as any).leaseTerm ?? '').trim();
+
+    return {
+      transactionType: normalized,
+      title: 'Rental package readiness',
+      summary: 'Package this unit type around lease clarity, renter qualification, and availability.',
+      items: [
+        {
+          label: 'Monthly rent',
+          detail:
+            monthlyRentFrom > 0
+              ? `${formatUnitTypeCurrency(monthlyRentFrom)} / month`
+              : 'Required before publishing rental inventory.',
+          state: monthlyRentFrom > 0 ? 'complete' : 'missing',
+        },
+        {
+          label: 'Deposit',
+          detail:
+            depositRequired > 0
+              ? `${formatUnitTypeCurrency(depositRequired)} deposit`
+              : 'Confirm the upfront deposit or mark it for follow-up.',
+          state: depositRequired > 0 ? 'complete' : 'attention',
+        },
+        {
+          label: 'Lease term',
+          detail: leaseTerm || 'Add the lease term renters should expect.',
+          state: leaseTerm ? 'complete' : 'attention',
+        },
+        {
+          label: 'Furnished state',
+          detail:
+            typeof (unit as any).isFurnished === 'boolean'
+              ? (unit as any).isFurnished
+                ? 'Furnished'
+                : 'Unfurnished'
+              : 'Confirm furnished or unfurnished.',
+          state: typeof (unit as any).isFurnished === 'boolean' ? 'complete' : 'attention',
+        },
+        {
+          label: 'Rental availability',
+          detail:
+            availableUnits > 0
+              ? `${availableUnits} rental units available`
+              : 'Add available units so renters see live availability.',
+          state: availableUnits > 0 ? 'complete' : 'missing',
+        },
+      ],
+    };
+  }
+
+  if (normalized === 'auction') {
+    const startingBid = Number((unit as any).startingBid ?? 0);
+    const reservePrice = Number((unit as any).reservePrice ?? 0);
+    const auctionStartDate = formatUnitTypesPhaseDate((unit as any).auctionStartDate);
+    const auctionEndDate = formatUnitTypesPhaseDate((unit as any).auctionEndDate);
+    const hasAuctionWindow = Boolean(auctionStartDate && auctionEndDate);
+
+    return {
+      transactionType: normalized,
+      title: 'Auction package readiness',
+      summary: 'Package this lot around bidding terms, registration readiness, and auction urgency.',
+      items: [
+        {
+          label: 'Starting bid',
+          detail:
+            startingBid > 0
+              ? `${formatUnitTypeCurrency(startingBid)} starting bid`
+              : 'Required before auction inventory can publish.',
+          state: startingBid > 0 ? 'complete' : 'missing',
+        },
+        {
+          label: 'Auction window',
+          detail:
+            hasAuctionWindow
+              ? `${auctionStartDate} - ${auctionEndDate}`
+              : 'Set when bidding opens and closes.',
+          state: hasAuctionWindow ? 'complete' : 'missing',
+        },
+        {
+          label: 'Reserve strategy',
+          detail:
+            reservePrice > 0
+              ? 'Reserve tracked internally'
+              : 'Confirm reserve before bidder registration opens.',
+          state: reservePrice > 0 ? 'complete' : 'attention',
+        },
+        {
+          label: 'Auction lifecycle',
+          detail: getAuctionLifecycleLabel((unit as any).auctionStatus || 'scheduled'),
+          state: 'complete',
+        },
+        {
+          label: 'Lot availability',
+          detail:
+            availableUnits > 0
+              ? `${availableUnits} lots open`
+              : 'Add open lots before sending bidders to this auction.',
+          state: availableUnits > 0 ? 'complete' : 'missing',
+        },
+      ],
+    };
+  }
+
+  const salePrice = Number(unit.priceFrom ?? unit.basePriceFrom ?? 0);
+
+  return {
+    transactionType: normalized,
+    title: 'Buyer package readiness',
+    summary: 'Package this unit type around price clarity, inventory, media, and buyer confidence.',
+    items: [
+      {
+        label: 'Sale price',
+        detail:
+          salePrice > 0
+            ? `${formatUnitTypeCurrency(salePrice)} starting price`
+            : 'Add the starting sale price.',
+        state: salePrice > 0 ? 'complete' : 'missing',
+      },
+      {
+        label: 'Buyer-facing story',
+        detail: unitStoryCaptured ? 'Name and description captured' : 'Add a name and description.',
+        state: unitStoryCaptured ? 'complete' : 'missing',
+      },
+      {
+        label: 'Unit media',
+        detail: mediaCaptured ? 'Photos or floor plans attached' : 'Add unit photos or floor plans.',
+        state: mediaCaptured ? 'complete' : 'attention',
+      },
+      {
+        label: 'Sale availability',
+        detail:
+          inventoryCaptured && availableUnits > 0
+            ? `${availableUnits} units for sale`
+            : 'Add available units for buyer cards.',
+        state: inventoryCaptured && availableUnits > 0 ? 'complete' : 'missing',
+      },
     ],
   };
 };
@@ -1339,6 +1497,55 @@ export function UnitTypesPhase() {
     </div>
   );
 
+  const renderPackagingReadiness = () => {
+    const checklist = getUnitTypesPhasePackagingChecklist(formData, normalizedTransactionType);
+    const completedCount = checklist.items.filter(item => item.state === 'complete').length;
+
+    return (
+      <div
+        data-testid="unit-packaging-readiness"
+        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{checklist.title}</p>
+            <p className="mt-1 max-w-2xl text-xs text-slate-500">{checklist.summary}</p>
+          </div>
+          <Badge variant="secondary" className="w-fit shrink-0">
+            {completedCount}/{checklist.items.length} ready
+          </Badge>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {checklist.items.map(item => {
+            const isComplete = item.state === 'complete';
+            return (
+              <div
+                key={item.label}
+                className={cn(
+                  'flex items-start gap-2 rounded-md border px-3 py-2',
+                  isComplete
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                    : 'border-amber-200 bg-amber-50 text-amber-900',
+                )}
+              >
+                {isComplete ? (
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                ) : (
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold">{item.label}</p>
+                  <p className="text-[11px] leading-snug opacity-80">{item.detail}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const subtypeOptions =
     UNIT_SUBTYPE_OPTIONS[(formData.unitCategory as 'house' | 'apartment') || 'apartment'];
   const isHouseUnit = formData.unitCategory === 'house';
@@ -1784,6 +1991,7 @@ export function UnitTypesPhase() {
               </TabsContent>
 
               <TabsContent value="pricing" className="mt-0 space-y-6">
+                {renderPackagingReadiness()}
                 {isAuction
                   ? renderAuctionPricingUI()
                   : isRental
