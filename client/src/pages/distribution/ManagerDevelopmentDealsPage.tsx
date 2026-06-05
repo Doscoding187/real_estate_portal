@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
+import { toast } from 'sonner';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 
 type StatusFilter = 'needs_docs' | 'all';
 
@@ -38,6 +39,21 @@ export default function ManagerDevelopmentDealsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_docs');
 
   const developmentId = Number(params?.developmentId || 0);
+  const utils = trpc.useUtils();
+
+  const acknowledgeHandoffMutation = trpc.distribution.manager.acknowledgeDleHandoff.useMutation({
+    onSuccess: () => {
+      toast.success('DLE handoff acknowledged.');
+      void utils.distribution.manager.listDealsForDevelopment.invalidate({
+        developmentId,
+        statusFilter,
+        limit: 200,
+      });
+    },
+    onError: error => {
+      toast.error(error.message || 'DLE handoff could not be acknowledged.');
+    },
+  });
 
   const assignedDevelopmentsQuery = trpc.distribution.manager.getAssignedDevelopments.useQuery(
     undefined,
@@ -135,10 +151,9 @@ export default function ManagerDevelopmentDealsPage() {
               const handoff = deal.latestDleHandoff;
 
               return (
-                <button
+                <div
                   key={deal.dealId}
                   className="w-full rounded border bg-white p-3 text-left hover:border-blue-300"
-                  onClick={() => setLocation(`/distribution/manager/deals/${Number(deal.dealId)}`)}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -154,6 +169,14 @@ export default function ManagerDevelopmentDealsPage() {
                       <Badge variant={needsAttention ? 'destructive' : 'default'}>
                         {needsAttention ? 'Needs attention' : 'On track'}
                       </Badge>
+                      <Button
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                        onClick={() => setLocation(`/distribution/manager/deals/${Number(deal.dealId)}`)}
+                      >
+                        Open Checklist
+                      </Button>
                     </div>
                   </div>
                   {handoff ? (
@@ -170,9 +193,49 @@ export default function ManagerDevelopmentDealsPage() {
                       {handoff.note ? (
                         <p className="mt-1 text-xs text-slate-700">{handoff.note}</p>
                       ) : null}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {handoff.acknowledgedAt ? (
+                          <div
+                            className="flex flex-wrap items-center gap-2 text-xs text-emerald-700"
+                            data-testid={`dle-manager-handoff-acknowledged-${deal.dealId}`}
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="font-medium">Acknowledged</span>
+                            <span className="text-slate-500">
+                              {formatHandoffTime(handoff.acknowledgedAt)}
+                            </span>
+                            {handoff.acknowledgementNote ? (
+                              <span className="basis-full text-slate-700">
+                                {handoff.acknowledgementNote}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <Button
+                            data-testid={`dle-manager-handoff-ack-${deal.dealId}`}
+                            disabled={acknowledgeHandoffMutation.isPending}
+                            onClick={() =>
+                              acknowledgeHandoffMutation.mutate({
+                                dealId: Number(deal.dealId),
+                                handoffEventId: Number(handoff.id),
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            {acknowledgeHandoffMutation.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                            )}
+                            Acknowledge
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ) : null}
-                </button>
+                </div>
               );
             })}
 

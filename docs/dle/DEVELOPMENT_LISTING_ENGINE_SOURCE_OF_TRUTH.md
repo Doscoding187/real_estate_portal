@@ -356,8 +356,9 @@ Recommended order from here:
    unless extending Rental/Auction browser coverage or fixing a discovered bug
 5. Treat the first distribution/referral handoff bridge as implemented and browser-proven:
    developer dashboard review requests create DLE and distribution audit events, and the referral
-   handoff queue plus manager deal list read back the latest review state without moving deal stage
-   or commission state
+   handoff queue plus manager deal list read back the latest review state; managers can
+   acknowledge a DLE handoff as an audit-only distribution note, and developer/manager surfaces
+   read back that acknowledgement without moving deal stage or commission state
 6. Keep any future distribution stage movement inside distribution services and their document,
    manager, milestone, and commission readiness checks
 7. Continue the transaction-engine product experience audit

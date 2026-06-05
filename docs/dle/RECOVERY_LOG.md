@@ -2690,3 +2690,54 @@ Next recommended slice:
   product experience work, without allowing DLE readback to mutate deal stage or commission state.
 Commit hash/tag: This entry will be included in `feat(dle): show manager handoff readback`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Manager Handoff Acknowledgement
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Let distribution managers acknowledge DLE referral handoff review requests as audit-only
+notes, then show that acknowledgement back to both manager and developer surfaces without changing
+deal stage or commission state.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/distribution/ManagerDevelopmentDealsPage.tsx
+- client/src/components/developer/Overview.tsx
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-05/qa-dle-distribution-handoff-manager-acknowledged.png
+- docs/dle/evidence/2026-06-05/qa-dle-distribution-handoff-developer-acknowledged.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Developer dashboard sends a referral handoff review request and reads it back on the selected
+  referral deal row.
+- Distribution manager deal list reads back the latest DLE handoff, then acknowledges it.
+- Manager row reads back `Acknowledged`, timestamp, and acknowledgement note.
+- Developer Distribution Impact row reads back `Manager acknowledged`, timestamp, and
+  acknowledgement note.
+- Browser/database proof confirms `distribution_deals.current_stage` remains `contract_signed` and
+  `commission_status` remains `not_ready`.
+Proof and fixes:
+- Added `distribution.manager.acknowledgeDleHandoff` as a manager-scoped audit-only mutation.
+- The mutation validates that the selected DLE handoff event belongs to the selected distribution
+  deal and writes a `distribution_deal_events` note with source
+  `distribution.manager.acknowledgeDleHandoff`.
+- Extended latest handoff readback to include acknowledgement timestamp, actor id, and note.
+- Manager deal rows can acknowledge the latest DLE handoff and read back `Acknowledged`.
+- Developer Distribution Impact rows read back `Manager acknowledged`.
+- Browser proof generated manager and developer acknowledgement screenshots under
+  `docs/dle/evidence/2026-06-05/`.
+Remaining risks:
+- Acknowledgement does not process or advance the deal; future processing must remain inside
+  distribution service guardrails.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- After this passes, decide whether to add manager processing actions behind distribution
+  guardrails or move back to transaction-engine product experience work.
+Commit hash/tag: This entry will be included in `feat(dle): acknowledge manager handoffs`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

@@ -321,6 +321,34 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
       path: `${evidenceDir}/qa-dle-distribution-handoff-manager-readback.png`,
     });
 
+    await page.getByTestId(`dle-manager-handoff-ack-${seed.dealId}`).click();
+    await expect(page.getByText('DLE handoff acknowledged.')).toBeVisible({
+      timeout: 15_000,
+    });
+    const managerAcknowledgement = page.getByTestId(
+      `dle-manager-handoff-acknowledged-${seed.dealId}`,
+    );
+    await expect(managerAcknowledgement).toBeVisible({ timeout: 15_000 });
+    await expect(managerAcknowledgement.getByText('Acknowledged', { exact: true })).toBeVisible();
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-distribution-handoff-manager-acknowledged.png`,
+    });
+
+    await loginAsSeededDeveloper(page, seed);
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, seed.developmentName);
+    const developerAcknowledgement = page.getByTestId(
+      `dle-distribution-handoff-acknowledged-${seed.dealId}`,
+    );
+    await expect(developerAcknowledgement).toBeVisible({ timeout: 15_000 });
+    await expect(developerAcknowledgement.getByText('Manager acknowledged')).toBeVisible();
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-distribution-handoff-developer-acknowledged.png`,
+    });
+
     const [afterDeal] = await db!
       .select()
       .from(distributionDeals)
@@ -346,14 +374,33 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     const distributionEvents = await db!
       .select()
       .from(distributionDealEvents)
-      .where(eq(distributionDealEvents.dealId, seed.dealId));
-    expect(distributionEvents).toHaveLength(1);
-    expect(distributionEvents[0].eventType).toBe('note');
-    expect(distributionEvents[0].fromStage).toBe('contract_signed');
-    expect(distributionEvents[0].toStage).toBe('contract_signed');
-    expect(distributionEvents[0].notes).toContain('Buyer signed offer pack uploaded');
-    expect(parseJsonObject(distributionEvents[0].metadata).source).toBe(
-      'dle.distribution_handoff',
+      .where(eq(distributionDealEvents.dealId, seed.dealId))
+      .orderBy(desc(distributionDealEvents.id));
+    expect(distributionEvents).toHaveLength(2);
+
+    const handoffNoteEvent = distributionEvents.find(
+      event => parseJsonObject(event.metadata).source === 'dle.distribution_handoff',
     );
+    expect(handoffNoteEvent).toBeTruthy();
+    expect(handoffNoteEvent!.eventType).toBe('note');
+    expect(handoffNoteEvent!.fromStage).toBe('contract_signed');
+    expect(handoffNoteEvent!.toStage).toBe('contract_signed');
+    expect(handoffNoteEvent!.notes).toContain('Buyer signed offer pack uploaded');
+
+    const acknowledgementEvent = distributionEvents.find(
+      event =>
+        parseJsonObject(event.metadata).source ===
+        'distribution.manager.acknowledgeDleHandoff',
+    );
+    expect(acknowledgementEvent).toBeTruthy();
+    expect(acknowledgementEvent!.eventType).toBe('note');
+    expect(acknowledgementEvent!.fromStage).toBe('contract_signed');
+    expect(acknowledgementEvent!.toStage).toBe('contract_signed');
+    expect(acknowledgementEvent!.notes).toContain('DLE handoff acknowledged');
+    expect(parseJsonObject(acknowledgementEvent!.metadata).handoffEventId).toBe(
+      operatingEvents[0].id,
+    );
+    expect(parseJsonObject(acknowledgementEvent!.metadata).stageChanged).toBe(false);
+    expect(parseJsonObject(acknowledgementEvent!.metadata).commissionChanged).toBe(false);
   });
 });

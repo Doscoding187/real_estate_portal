@@ -97,14 +97,23 @@ Implemented distribution/referral handoff:
   - shows a referral handoff queue in the Distribution Impact panel for the selected development
   - requires a review note before sending a handoff request
   - reads back the latest DLE handoff status, note, and timestamp on the selected referral deal row
+  - reads back manager acknowledgement state, note, and timestamp when the manager has
+    acknowledged the handoff
   - shows no success unless the backend mutation succeeds
 - `client/src/pages/distribution/ManagerDevelopmentDealsPage.tsx`
   - reads back the same latest DLE handoff status, note, and timestamp on manager referral deal rows
+  - allows a manager to acknowledge the latest DLE handoff as an audit note only
+  - reads back acknowledgement state, note, and timestamp after successful acknowledgement
   - does not expose a DLE-owned stage or commission action from the readback block
+- `distribution.manager.acknowledgeDleHandoff`
+  - verifies the selected distribution deal and latest DLE handoff event belong together
+  - writes a `distribution_deal_events` note with source
+    `distribution.manager.acknowledgeDleHandoff`
+  - preserves the current distribution deal stage and commission status
 - `e2e/dle/distribution-handoff.spec.ts`
   - browser-proves dashboard review request, developer row-level handoff readback, manager
-    row-level handoff readback, DLE audit event, distribution note event, and unchanged deal
-    stage/commission state
+    row-level handoff readback, manager acknowledgement, developer acknowledgement readback, DLE
+    audit event, distribution note events, and unchanged deal stage/commission state
 
 ## Hard Boundary
 
@@ -332,9 +341,10 @@ changed.
 
 ## Next Implementation Slice Recommendation
 
-Lead-stage synchronization and the first distribution/referral review handoff are implemented.
+Lead-stage synchronization, the first distribution/referral review handoff, and audit-only manager
+handoff acknowledgement are implemented.
 
 Next, keep operating-layer work focused on useful manager/developer review surfaces and reporting
-without moving distribution deal stages from DLE. Future manager actions may acknowledge or process
-handoff notes, but any stage movement must call or share distribution service guardrails, especially
-document, manager, milestone, and commission readiness checks.
+without moving distribution deal stages from DLE. Future manager actions may process handoff notes,
+but any stage movement must call or share distribution service guardrails, especially document,
+manager, milestone, and commission readiness checks.

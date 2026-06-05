@@ -26,6 +26,7 @@ import {
   ArrowUpRight,
   BarChart3,
   Building2,
+  CheckCircle2,
   Clock3,
   Filter,
   PhoneCall,
@@ -1921,6 +1922,23 @@ export default function Overview() {
                                     <p className="mt-1 text-xs text-slate-700">
                                       {latestHandoff.note}
                                     </p>
+                                  )}
+                                  {latestHandoff.acknowledgedAt && (
+                                    <div
+                                      className="mt-2 flex flex-wrap items-center gap-2 text-xs text-emerald-700"
+                                      data-testid={`dle-distribution-handoff-acknowledged-${deal.id}`}
+                                    >
+                                      <CheckCircle2 className="h-4 w-4" />
+                                      <span className="font-medium">Manager acknowledged</span>
+                                      <span className="text-muted-foreground">
+                                        {formatOperatingEventTime(latestHandoff.acknowledgedAt)}
+                                      </span>
+                                      {latestHandoff.acknowledgementNote && (
+                                        <span className="basis-full text-slate-700">
+                                          {latestHandoff.acknowledgementNote}
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}

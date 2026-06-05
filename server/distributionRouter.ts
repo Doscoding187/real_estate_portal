@@ -1084,6 +1084,9 @@ type LatestDleHandoffReadback = {
   resultLabel: string | null;
   note: string | null;
   eventAt: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedByUserId: number | null;
+  acknowledgementNote: string | null;
 };
 
 async function getLatestDleHandoffByDealIds(
@@ -1125,7 +1128,45 @@ async function getLatestDleHandoffByDealIds(
       resultLabel: typeof metadata.resultLabel === 'string' ? metadata.resultLabel : null,
       note: typeof metadata.note === 'string' ? metadata.note : null,
       eventAt: handoff.eventAt || handoff.createdAt || null,
+      acknowledgedAt: null,
+      acknowledgedByUserId: null,
+      acknowledgementNote: null,
     });
+  }
+
+  const acknowledgementRows = await db
+    .select({
+      id: distributionDealEvents.id,
+      dealId: distributionDealEvents.dealId,
+      actorUserId: distributionDealEvents.actorUserId,
+      metadata: distributionDealEvents.metadata,
+      notes: distributionDealEvents.notes,
+      eventAt: distributionDealEvents.eventAt,
+      createdAt: distributionDealEvents.createdAt,
+    })
+    .from(distributionDealEvents)
+    .where(
+      and(
+        eq(distributionDealEvents.eventType, 'note'),
+        inArray(distributionDealEvents.dealId, dealIds),
+      ),
+    )
+    .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id));
+
+  for (const acknowledgement of acknowledgementRows) {
+    const dealId = Number(acknowledgement.dealId || 0);
+    const latestHandoff = latestHandoffByDealId.get(dealId);
+    if (!latestHandoff || latestHandoff.acknowledgedAt) continue;
+
+    const metadata = parseMetadataObject(acknowledgement.metadata) || {};
+    if (metadata.source !== 'distribution.manager.acknowledgeDleHandoff') continue;
+
+    const metadataHandoffId = Number(metadata.handoffEventId || 0);
+    if (metadataHandoffId && metadataHandoffId !== latestHandoff.id) continue;
+
+    latestHandoff.acknowledgedAt = acknowledgement.eventAt || acknowledgement.createdAt || null;
+    latestHandoff.acknowledgedByUserId = toNumberOrNull(acknowledgement.actorUserId);
+    latestHandoff.acknowledgementNote = acknowledgement.notes || null;
   }
 
   return latestHandoffByDealId;
@@ -5387,6 +5428,112 @@ const managerDistributionRouter = router({
         .map(({ needsDocs: _needsDocs, ...row }) => row);
 
       return rows;
+    }),
+
+  acknowledgeDleHandoff: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        handoffEventId: z.number().int().positive(),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      const [deal] = await db
+        .select({
+          id: distributionDeals.id,
+          programId: distributionDeals.programId,
+          developmentId: distributionDeals.developmentId,
+          agentId: distributionDeals.agentId,
+          managerUserId: distributionDeals.managerUserId,
+          currentStage: distributionDeals.currentStage,
+          commissionStatus: distributionDeals.commissionStatus,
+          ownerType: distributionDeals.ownerType,
+          ownerId: distributionDeals.ownerId,
+          assignedAgentId: distributionDeals.assignedAgentId,
+          visibilityScope: distributionDeals.visibilityScope,
+        })
+        .from(distributionDeals)
+        .where(eq(distributionDeals.id, input.dealId))
+        .limit(1);
+
+      if (!deal) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Distribution deal not found.',
+        });
+      }
+
+      if (ctx.user!.role !== 'super_admin') {
+        await assertManagerScope(db, ctx.user!.id, {
+          programId: Number(deal.programId),
+          developmentId: Number(deal.developmentId),
+        });
+        assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
+      }
+
+      const [handoffEvent] = await db
+        .select({
+          id: developmentOperatingEvents.id,
+          developmentId: developmentOperatingEvents.developmentId,
+          distributionDealId: developmentOperatingEvents.distributionDealId,
+          eventType: developmentOperatingEvents.eventType,
+        })
+        .from(developmentOperatingEvents)
+        .where(
+          and(
+            eq(developmentOperatingEvents.id, input.handoffEventId),
+            eq(developmentOperatingEvents.eventType, 'distribution_handoff_created'),
+            eq(developmentOperatingEvents.developmentId, Number(deal.developmentId)),
+            eq(developmentOperatingEvents.distributionDealId, input.dealId),
+          ),
+        )
+        .limit(1);
+
+      if (!handoffEvent) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'DLE handoff event not found for this distribution deal.',
+        });
+      }
+
+      const acknowledgementNote =
+        input.note || 'DLE handoff acknowledged for manager review.';
+
+      await db.insert(distributionDealEvents).values({
+        dealId: input.dealId,
+        fromStage: deal.currentStage,
+        toStage: deal.currentStage,
+        eventType: 'note',
+        actorUserId: ctx.user!.id,
+        ownerType: deal.ownerType || 'agent',
+        ownerId: deal.ownerId,
+        assignedAgentId: deal.assignedAgentId || deal.agentId,
+        visibilityScope: deal.visibilityScope || 'private',
+        metadata: {
+          source: 'distribution.manager.acknowledgeDleHandoff',
+          handoffEventId: input.handoffEventId,
+          action: 'acknowledge',
+          currentStage: deal.currentStage,
+          commissionStatus: deal.commissionStatus,
+          stageChanged: false,
+          commissionChanged: false,
+        } as any,
+        notes: acknowledgementNote,
+      });
+
+      return {
+        success: true,
+        dealId: input.dealId,
+        handoffEventId: input.handoffEventId,
+        stageChanged: false,
+        commissionChanged: false,
+      };
     }),
 
   getDealChecklist: protectedProcedure
