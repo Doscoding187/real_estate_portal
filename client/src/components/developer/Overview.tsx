@@ -144,6 +144,121 @@ export function buildOverviewOperatingReadiness(input: {
   };
 }
 
+function toOverviewPositiveNumber(value: unknown): number | null {
+  const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function formatOverviewPriceRange(from: number | null, to?: number | null, suffix = ''): string {
+  if (!from) return 'Not set';
+  const rangeTo = to && to > from ? ` - ${formatZARCompact(to)}` : '';
+  return `${formatZARCompact(from)}${rangeTo}${suffix}`;
+}
+
+function rangesMatch(
+  leftFrom: number | null,
+  leftTo: number | null,
+  rightFrom: number | null,
+  rightTo: number | null,
+): boolean {
+  if (!leftFrom || !rightFrom) return false;
+  const normalizedLeftTo = leftTo && leftTo > 0 ? leftTo : leftFrom;
+  const normalizedRightTo = rightTo && rightTo > 0 ? rightTo : rightFrom;
+  return (
+    Math.round(leftFrom) === Math.round(rightFrom) &&
+    Math.round(normalizedLeftTo) === Math.round(normalizedRightTo)
+  );
+}
+
+function getInventoryRange(items: any[], fromKeys: string[], toKeys: string[] = []) {
+  const fromValues = items
+    .flatMap(item => fromKeys.map(key => toOverviewPositiveNumber(item?.[key])))
+    .filter((value): value is number => value != null);
+  const toValues = items
+    .flatMap(item => toKeys.map(key => toOverviewPositiveNumber(item?.[key])))
+    .filter((value): value is number => value != null);
+
+  if (fromValues.length === 0) return { from: null, to: null };
+  return {
+    from: Math.min(...fromValues),
+    to: toValues.length > 0 ? Math.max(...toValues) : Math.max(...fromValues),
+  };
+}
+
+export function buildOverviewPricingHealth(input: {
+  development?: any | null;
+  inventoryItems?: any[] | null;
+}) {
+  if (!input.development) return null;
+
+  const transactionType = normalizeOverviewTransactionType(input.development.transactionType);
+  const inventoryItems = Array.isArray(input.inventoryItems) ? input.inventoryItems : [];
+
+  if (transactionType === 'rent') {
+    const publicFrom = toOverviewPositiveNumber(input.development.monthlyRentFrom);
+    const publicTo = toOverviewPositiveNumber(input.development.monthlyRentTo);
+    const inventory = getInventoryRange(inventoryItems, ['monthlyRentFrom'], ['monthlyRentTo']);
+    const aligned = rangesMatch(publicFrom, publicTo, inventory.from, inventory.to);
+
+    return {
+      transactionType,
+      title: 'Rental pricing health',
+      status: aligned ? 'Aligned' : 'Review needed',
+      state: aligned ? 'aligned' : 'attention',
+      publicLabel: 'Public rent range',
+      publicValue: formatOverviewPriceRange(publicFrom, publicTo, ' / month'),
+      inventoryLabel: 'Live unit rent range',
+      inventoryValue: formatOverviewPriceRange(inventory.from, inventory.to, ' / month'),
+      help: aligned
+        ? 'Public rent language matches live rental inventory.'
+        : 'Review development rent mirrors or rental unit pricing before promoting this package.',
+    };
+  }
+
+  if (transactionType === 'auction') {
+    const publicFrom = toOverviewPositiveNumber(input.development.startingBidFrom);
+    const inventory = getInventoryRange(inventoryItems, ['startingBid']);
+    const aligned = rangesMatch(publicFrom, publicFrom, inventory.from, inventory.from);
+
+    return {
+      transactionType,
+      title: 'Auction bid health',
+      status: aligned ? 'Aligned' : 'Review needed',
+      state: aligned ? 'aligned' : 'attention',
+      publicLabel: 'Public bid from',
+      publicValue: formatOverviewPriceRange(publicFrom, null),
+      inventoryLabel: 'Live lot bid from',
+      inventoryValue: formatOverviewPriceRange(inventory.from, null),
+      help: aligned
+        ? 'Public bid language matches live auction lots.'
+        : 'Review development bid mirrors or lot starting bids before pushing auction traffic.',
+    };
+  }
+
+  const publicFrom = toOverviewPositiveNumber(input.development.priceFrom);
+  const publicTo = toOverviewPositiveNumber(input.development.priceTo);
+  const inventory = getInventoryRange(
+    inventoryItems,
+    ['priceFrom', 'basePriceFrom'],
+    ['priceTo', 'basePriceTo'],
+  );
+  const aligned = rangesMatch(publicFrom, publicTo, inventory.from, inventory.to);
+
+  return {
+    transactionType,
+    title: 'Sale pricing health',
+    status: aligned ? 'Aligned' : 'Review needed',
+    state: aligned ? 'aligned' : 'attention',
+    publicLabel: 'Public price band',
+    publicValue: formatOverviewPriceRange(publicFrom, publicTo),
+    inventoryLabel: 'Live unit price band',
+    inventoryValue: formatOverviewPriceRange(inventory.from, inventory.to),
+    help: aligned
+      ? 'Public price language matches live sale inventory.'
+      : 'Review development price mirrors or unit sale pricing before sales follow-up.',
+  };
+}
+
 function formatNumber(n?: number): string {
   if (typeof n !== 'number' || Number.isNaN(n)) return '0';
   return new Intl.NumberFormat().format(n);
@@ -690,6 +805,21 @@ export default function Overview() {
   const saleOperatingInventory = saleOperatingInventoryQuery.data?.items || [];
   const rentalOperatingInventory = rentalOperatingInventoryQuery.data?.items || [];
   const auctionOperatingInventory = auctionOperatingInventoryQuery.data?.items || [];
+  const pricingInventoryLoaded =
+    selectedDevelopmentTransactionType === 'rent'
+      ? !rentalOperatingInventoryQuery.isLoading
+      : selectedDevelopmentTransactionType === 'auction'
+        ? !auctionOperatingInventoryQuery.isLoading
+        : !saleOperatingInventoryQuery.isLoading;
+  const pricingHealth = buildOverviewPricingHealth({
+    development: pricingInventoryLoaded ? selectedDevelopment : null,
+    inventoryItems:
+      selectedDevelopmentTransactionType === 'rent'
+        ? rentalOperatingInventory
+        : selectedDevelopmentTransactionType === 'auction'
+          ? auctionOperatingInventory
+          : saleOperatingInventory,
+  });
 
   const snapshotTiles = [
     { label: 'New', value: stageCounts.new || 0, stage: 'new' },
@@ -1018,6 +1148,44 @@ export default function Overview() {
                 {operatingReadiness.queueLabel}
               </Button>
             </div>
+
+            {pricingHealth && (
+              <div
+                className="rounded-md border border-slate-200 p-3"
+                data-testid="dle-pricing-health"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{pricingHealth.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{pricingHealth.help}</p>
+                  </div>
+                  <Badge
+                    variant={pricingHealth.state === 'aligned' ? 'secondary' : 'outline'}
+                    className={
+                      pricingHealth.state === 'aligned'
+                        ? 'w-fit bg-emerald-50 text-emerald-700'
+                        : 'w-fit border-amber-200 bg-amber-50 text-amber-700'
+                    }
+                  >
+                    {pricingHealth.status}
+                  </Badge>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-md bg-slate-50 p-3">
+                    <p className="text-xs text-muted-foreground">{pricingHealth.publicLabel}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {pricingHealth.publicValue}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-slate-50 p-3">
+                    <p className="text-xs text-muted-foreground">{pricingHealth.inventoryLabel}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {pricingHealth.inventoryValue}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {selectedDevelopmentTransactionType === 'sale' && (
               <div className="rounded-md border border-slate-200 p-3">

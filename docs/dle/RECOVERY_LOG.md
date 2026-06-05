@@ -669,6 +669,44 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-05 - Developer Dashboard Pricing Health
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add a read-only operating-layer pricing health signal so developers can see whether public
+price/rent/bid mirrors align with live unit inventory before follow-up, promotion, or distribution.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/Overview.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Focused helper/component proof only; no browser screenshot in this slice.
+Proof and fixes:
+- Added `buildOverviewPricingHealth` as a transaction-aware helper for Sale public price bands,
+  Rental public rent ranges, and Auction public starting-bid mirrors.
+- The selected-development `Operating Readiness` panel now shows a `Pricing health` card after the
+  relevant live inventory query has loaded.
+- Sale compares public price mirrors against live unit sale pricing.
+- Rental compares public rent mirrors against live rental unit rent ranges.
+- Auction compares public bid-from mirrors against live lot starting bids.
+- The panel is read-only and does not mutate inventory, pricing, lead stages, distribution deals,
+  commissions, schemas, or autosave behavior.
+Remaining risks:
+- This is component-helper proof; browser screenshot evidence for dashboard pricing health remains
+  useful.
+- The health check only compares current mirror fields to unit inventory; it does not yet create a
+  pricing adjustment workflow or operating event.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Browser-proof dashboard pricing health for Rental and Auction, or design the first audited
+  pricing-adjustment workflow if live pricing edits should become an operating action.
+Commit hash/tag: This entry will be included in `feat(dle): show dashboard pricing health`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-05 - Unit Type Packaging Readiness Browser Proof
 
 Date: 2026-06-05
