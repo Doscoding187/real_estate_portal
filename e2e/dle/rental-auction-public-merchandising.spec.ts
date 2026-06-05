@@ -219,7 +219,12 @@ test.describe.serial('DLE rental and auction public merchandising', () => {
       timeout: 15_000,
     });
     await expect(input.page.getByText(input.development.unitName).first()).toBeVisible();
-    await input.page.getByRole('button', { name: /Request Callback|Join Waitlist/i }).first().click();
+    await input.page
+      .getByRole('button', {
+        name: /Request Callback|Join Waitlist|Request Rental Details|Register Auction Interest|Request Auction Details/i,
+      })
+      .first()
+      .click();
 
     const dialog = input.page.getByRole('dialog');
     await expect(dialog).toBeVisible();

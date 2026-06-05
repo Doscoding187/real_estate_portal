@@ -251,6 +251,23 @@ This makes the public page feel less like a collection of fields and more like a
 package. It turns backend transaction truth into visible next-step clarity before a buyer, renter,
 or bidder reaches the unit carousel or lead form.
 
+## Thirteenth Product-Visibility Slice
+
+Browser-proof the public detail commercial pack for Rental and Auction.
+
+The browser proof now seeds publish-ready Rental and Auction developments through
+`developmentService`, opens the real public `/development/:slug` pages, and verifies:
+
+- Rental shows `Rental Pack`, `Lease path at a glance`, rent range, rental availability, deposit
+  signal, document availability, `Check Rental Fit`, and `Download Rental Pack`;
+- Auction shows `Auction Pack`, `Bidder path at a glance`, starting-bid range, registration/reserve
+  signal, lot availability, document availability, `Check Bidder Readiness`, and
+  `Download Auction Pack`.
+
+This confirms the new public-detail merchandising section survives the real backend seed, publish,
+approval, route rendering, and browser-visible text path for the two transaction lanes that needed
+to earn more proof.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.

@@ -3052,3 +3052,42 @@ Next recommended slice:
   wizard-side guided packaging experience.
 Commit hash/tag: This entry will be included in `feat(dle): show public detail commercial pack`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Public Detail Commercial Pack Browser Proof
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-proof that Rental and Auction public development detail pages visibly render the new
+transaction-specific commercial pack section.
+Files changed:
+- e2e/dle/public-detail-commercial-pack.spec.ts
+- e2e/dle/rental-auction-public-merchandising.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/public-detail-commercial-pack.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Seeded a publish-ready Rental development through `developmentService`, opened its public detail
+  page, and verified `Rental Pack`, `Lease path at a glance`, rent range, rental availability,
+  deposit signal, document availability, `Check Rental Fit`, and `Download Rental Pack`.
+- Seeded a publish-ready Auction development through `developmentService`, opened its public detail
+  page, and verified `Auction Pack`, `Bidder path at a glance`, starting-bid range,
+  registration/reserve signal, lot availability, document availability, `Check Bidder Readiness`,
+  and `Download Auction Pack`.
+Proof and fixes:
+- Added a narrow Playwright proof for the new commercial-pack section instead of overloading the
+  broader public merchandising spec with search and lead capture.
+- Updated the older Rental/Auction public merchandising helper to recognize transaction-native unit
+  CTAs such as `Request Rental Details` and `Register Auction Interest`.
+- Earlier attempts to extend the broad public merchandising spec confirmed the commercial pack was
+  visible, but the full lead/search flow exceeded the useful timeout budget for this narrow slice.
+Remaining risks:
+- This browser proof validates text and route rendering, not screenshot diffing or mobile spacing.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Continue with browser screenshot evidence for public detail mobile/desktop layout, or move to
+  wizard-side guided packaging improvements for Rental and Auction.
+Commit hash/tag: This entry will be included in `test(dle): prove public detail commercial pack`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
