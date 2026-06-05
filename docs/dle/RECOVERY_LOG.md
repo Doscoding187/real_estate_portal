@@ -2605,3 +2605,45 @@ Next recommended slice:
   reporting without allowing DLE to silently advance distribution stages or commission state.
 Commit hash/tag: This entry will be included in `feat(dle): add distribution handoff review`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Distribution Handoff Queue Readback
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make distribution handoff review requests visible on the referral deal row after success,
+without turning DLE readback into distribution deal-stage or commission automation.
+Files changed:
+- server/distributionRouter.ts
+- client/src/components/developer/Overview.tsx
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-05/qa-dle-distribution-handoff-review-readback.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed before docs; rerun after docs before commit.
+- `git diff --check` pending final hygiene.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Developer dashboard Distribution Impact panel lists the selected development's referral deals.
+- After `Request Review` succeeds, the same referral deal row shows latest DLE handoff readback:
+  `Review requested`, note text, and timestamp.
+- The operating history still shows the `Referral handoff` DLE event.
+Proof and fixes:
+- Enriched `distribution.developer.listDeals` with `latestDleHandoff` from
+  `development_operating_events` for `distribution_handoff_created` events.
+- The readback is derived from DLE operating events and does not mutate `distribution_deals`.
+- Browser/database proof still confirms `distribution_deals.current_stage` remains
+  `contract_signed` and `commission_status` remains `not_ready` after review request.
+- Added row-level Playwright assertions for the readback block and note text.
+Remaining risks:
+- This is developer-side readback only; manager-side review handling is still not implemented.
+- Future stage movement must remain inside distribution services and reuse their document, manager,
+  milestone, and commission readiness checks.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Add manager-side handoff review visibility or continue transaction-engine product experience work,
+  while keeping DLE readback separate from deal-stage and commission mutation.
+Commit hash/tag: This entry will be included in `feat(dle): show distribution handoff readback`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

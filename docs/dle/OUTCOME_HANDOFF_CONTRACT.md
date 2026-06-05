@@ -96,10 +96,11 @@ Implemented distribution/referral handoff:
 - `client/src/components/developer/Overview.tsx`
   - shows a referral handoff queue in the Distribution Impact panel for the selected development
   - requires a review note before sending a handoff request
+  - reads back the latest DLE handoff status, note, and timestamp on the selected referral deal row
   - shows no success unless the backend mutation succeeds
 - `e2e/dle/distribution-handoff.spec.ts`
-  - browser-proves dashboard review request, DLE audit event, distribution note event, and unchanged
-    deal stage/commission state
+  - browser-proves dashboard review request, row-level handoff readback, DLE audit event,
+    distribution note event, and unchanged deal stage/commission state
 
 ## Hard Boundary
 
@@ -330,6 +331,6 @@ changed.
 Lead-stage synchronization and the first distribution/referral review handoff are implemented.
 
 Next, keep operating-layer work focused on useful manager/developer review surfaces and reporting
-without moving distribution deal stages from DLE. Any future stage movement must call or share
-distribution service guardrails, especially document, manager, milestone, and commission readiness
-checks.
+without moving distribution deal stages from DLE. A manager-side review/readback surface may now
+consume the same handoff notes, but any future stage movement must call or share distribution
+service guardrails, especially document, manager, milestone, and commission readiness checks.

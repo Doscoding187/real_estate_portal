@@ -265,8 +265,14 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     await expect(page.getByText('Referral handoff', { exact: true })).toBeVisible({
       timeout: 15_000,
     });
+    const handoffReadback = page.getByTestId(
+      `dle-distribution-handoff-readback-${seed.dealId}`,
+    );
+    await expect(handoffReadback).toBeVisible({ timeout: 15_000 });
+    await expect(handoffReadback.getByText('Review requested')).toBeVisible();
+    await expect(handoffReadback.getByText('Buyer signed offer pack uploaded')).toBeVisible();
     await page.screenshot({
-      path: `${evidenceDir}/qa-dle-distribution-handoff-review.png`,
+      path: `${evidenceDir}/qa-dle-distribution-handoff-review-readback.png`,
     });
 
     const [afterDeal] = await db!

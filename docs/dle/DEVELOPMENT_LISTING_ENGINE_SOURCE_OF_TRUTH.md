@@ -355,8 +355,8 @@ Recommended order from here:
 4. Treat explicit selected-lead outcome sync as implemented and browser-proven; do not repeat it
    unless extending Rental/Auction browser coverage or fixing a discovered bug
 5. Treat the first distribution/referral handoff bridge as implemented and browser-proven:
-   developer dashboard review requests create DLE and distribution audit events without moving deal
-   stage or commission state
+   developer dashboard review requests create DLE and distribution audit events, and the referral
+   handoff queue reads back the latest review state without moving deal stage or commission state
 6. Keep any future distribution stage movement inside distribution services and their document,
    manager, milestone, and commission readiness checks
 7. Continue the transaction-engine product experience audit

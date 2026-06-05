@@ -243,6 +243,16 @@ function formatDistributionCommissionStatus(value?: string | null): string {
     .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function formatDistributionHandoffStatus(value?: string | null): string {
+  const normalized = String(value || '').trim();
+  const labels: Record<string, string> = {
+    linked_only: 'Linked',
+    review_requested: 'Review requested',
+    stage_transition_requested: 'Stage review requested',
+  };
+  return labels[normalized] || 'Handoff recorded';
+}
+
 export default function Overview() {
   const { user } = useAuth();
   const { status: onboardingStatus, isLoading: onboardingLoading } = useDeveloperOnboardingStatus();
@@ -1867,45 +1877,71 @@ export default function Overview() {
                       </p>
                     )}
 
-                    {distributionDeals.map((deal: any) => (
-                      <div
-                        className="rounded-md border border-slate-200 bg-white p-3"
-                        key={deal.id}
-                      >
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-medium">
-                                {deal.buyerName || `Referral deal #${deal.id}`}
-                              </p>
-                              <Badge variant="outline">
-                                {formatDistributionStage(deal.currentStage)}
-                              </Badge>
-                              <Badge variant="secondary">
-                                {formatDistributionCommissionStatus(deal.commissionStatus)}
-                              </Badge>
+                    {distributionDeals.map((deal: any) => {
+                      const latestHandoff = deal.latestDleHandoff;
+                      return (
+                        <div
+                          className="rounded-md border border-slate-200 bg-white p-3"
+                          key={deal.id}
+                        >
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="space-y-2">
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-medium">
+                                    {deal.buyerName || `Referral deal #${deal.id}`}
+                                  </p>
+                                  <Badge variant="outline">
+                                    {formatDistributionStage(deal.currentStage)}
+                                  </Badge>
+                                  <Badge variant="secondary">
+                                    {formatDistributionCommissionStatus(deal.commissionStatus)}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {deal.agentDisplayName || 'Referral partner'}; manager{' '}
+                                  {deal.managerDisplayName || 'unassigned'}
+                                </p>
+                              </div>
+
+                              {latestHandoff && (
+                                <div
+                                  className="rounded-md border border-cyan-100 bg-cyan-50 p-2"
+                                  data-testid={`dle-distribution-handoff-readback-${deal.id}`}
+                                >
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline">
+                                      {formatDistributionHandoffStatus(latestHandoff.status)}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatOperatingEventTime(latestHandoff.eventAt)}
+                                    </span>
+                                  </div>
+                                  {latestHandoff.note && (
+                                    <p className="mt-1 text-xs text-slate-700">
+                                      {latestHandoff.note}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              {deal.agentDisplayName || 'Referral partner'}; manager{' '}
-                              {deal.managerDisplayName || 'unassigned'}
-                            </p>
+                            <Button
+                              data-testid={`dle-distribution-handoff-open-${deal.id}`}
+                              onClick={() => {
+                                setHandoffDeal(deal);
+                                setHandoffNote('');
+                              }}
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              <ShieldCheck className="mr-2 h-4 w-4" />
+                              Request Review
+                            </Button>
                           </div>
-                          <Button
-                            data-testid={`dle-distribution-handoff-open-${deal.id}`}
-                            onClick={() => {
-                              setHandoffDeal(deal);
-                              setHandoffNote('');
-                            }}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            <ShieldCheck className="mr-2 h-4 w-4" />
-                            Request Review
-                          </Button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
