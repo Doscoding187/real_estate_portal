@@ -10,6 +10,27 @@ import { Loader2 } from 'lucide-react';
 
 type StatusFilter = 'needs_docs' | 'all';
 
+function formatHandoffStatus(value?: string | null): string {
+  const labels: Record<string, string> = {
+    linked_only: 'Linked',
+    review_requested: 'Developer review requested',
+    stage_transition_requested: 'Stage review requested',
+  };
+  return labels[String(value || '').trim()] || 'DLE handoff';
+}
+
+function formatHandoffTime(value?: string | null): string {
+  if (!value) return 'Just now';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Just now';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export default function ManagerDevelopmentDealsPage() {
   const [match, params] = useRoute('/distribution/manager/developments/:developmentId');
   const { isAuthenticated, loading } = useAuth();
@@ -111,6 +132,7 @@ export default function ManagerDevelopmentDealsPage() {
             {(dealsQuery.data || []).map((deal: any) => {
               const pendingRequired = Number(deal.docs.requiredCount) - Number(deal.docs.verifiedRequiredCount);
               const needsAttention = pendingRequired > 0 || Boolean(deal.docs.hasRejections);
+              const handoff = deal.latestDleHandoff;
 
               return (
                 <button
@@ -134,6 +156,22 @@ export default function ManagerDevelopmentDealsPage() {
                       </Badge>
                     </div>
                   </div>
+                  {handoff ? (
+                    <div
+                      className="mt-3 rounded border border-cyan-100 bg-cyan-50 p-2"
+                      data-testid={`dle-manager-handoff-readback-${deal.dealId}`}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{formatHandoffStatus(handoff.status)}</Badge>
+                        <span className="text-xs text-slate-500">
+                          {formatHandoffTime(handoff.eventAt)}
+                        </span>
+                      </div>
+                      {handoff.note ? (
+                        <p className="mt-1 text-xs text-slate-700">{handoff.note}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </button>
               );
             })}

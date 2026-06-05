@@ -1077,6 +1077,60 @@ function parseMetadataObject(value: unknown) {
   return null;
 }
 
+type LatestDleHandoffReadback = {
+  id: number;
+  action: string | null;
+  status: string | null;
+  resultLabel: string | null;
+  note: string | null;
+  eventAt: string | null;
+};
+
+async function getLatestDleHandoffByDealIds(
+  db: any,
+  rawDealIds: Array<number | string | null | undefined>,
+) {
+  const dealIds = Array.from(
+    new Set(rawDealIds.map(value => Number(value || 0)).filter(Boolean)),
+  );
+  const latestHandoffByDealId = new Map<number, LatestDleHandoffReadback>();
+  if (!dealIds.length) return latestHandoffByDealId;
+
+  const handoffRows = await db
+    .select({
+      id: developmentOperatingEvents.id,
+      distributionDealId: developmentOperatingEvents.distributionDealId,
+      toStatus: developmentOperatingEvents.toStatus,
+      metadata: developmentOperatingEvents.metadata,
+      eventAt: developmentOperatingEvents.eventAt,
+      createdAt: developmentOperatingEvents.createdAt,
+    })
+    .from(developmentOperatingEvents)
+    .where(
+      and(
+        eq(developmentOperatingEvents.eventType, 'distribution_handoff_created'),
+        inArray(developmentOperatingEvents.distributionDealId, dealIds),
+      ),
+    )
+    .orderBy(desc(developmentOperatingEvents.eventAt), desc(developmentOperatingEvents.id));
+
+  for (const handoff of handoffRows) {
+    const dealId = Number(handoff.distributionDealId || 0);
+    if (!dealId || latestHandoffByDealId.has(dealId)) continue;
+    const metadata = parseMetadataObject(handoff.metadata) || {};
+    latestHandoffByDealId.set(dealId, {
+      id: Number(handoff.id),
+      action: typeof metadata.action === 'string' ? metadata.action : null,
+      status: handoff.toStatus || null,
+      resultLabel: typeof metadata.resultLabel === 'string' ? metadata.resultLabel : null,
+      note: typeof metadata.note === 'string' ? metadata.note : null,
+      eventAt: handoff.eventAt || handoff.createdAt || null,
+    });
+  }
+
+  return latestHandoffByDealId;
+}
+
 function normalizeReferralSubmissionSnapshot(
   rawMetadata: unknown,
 ): ReferralSubmissionSnapshot | null {
@@ -5259,6 +5313,7 @@ const managerDistributionRouter = router({
       }
 
       const dealIds = dealRows.map(row => Number(row.dealId));
+      const latestHandoffByDealId = await getLatestDleHandoffByDealIds(db, dealIds);
       const dealDocsRows =
         dealIds.length && requiredTemplateIds.length
           ? await db
@@ -5324,6 +5379,7 @@ const managerDistributionRouter = router({
               verifiedRequiredCount,
               hasRejections: docState.hasRejections,
             },
+            latestDleHandoff: latestHandoffByDealId.get(dealId) || null,
             needsDocs,
           };
         })
@@ -8069,51 +8125,10 @@ const developerDistributionRouter = router({
         db,
         rows.map(row => Number(row.agentId)),
       );
-      const dealIds = rows.map(row => Number(row.id)).filter(Boolean);
-      const handoffRows = dealIds.length
-        ? await db
-            .select({
-              id: developmentOperatingEvents.id,
-              distributionDealId: developmentOperatingEvents.distributionDealId,
-              toStatus: developmentOperatingEvents.toStatus,
-              metadata: developmentOperatingEvents.metadata,
-              eventAt: developmentOperatingEvents.eventAt,
-              createdAt: developmentOperatingEvents.createdAt,
-            })
-            .from(developmentOperatingEvents)
-            .where(
-              and(
-                eq(developmentOperatingEvents.eventType, 'distribution_handoff_created'),
-                inArray(developmentOperatingEvents.distributionDealId, dealIds),
-              ),
-            )
-            .orderBy(desc(developmentOperatingEvents.eventAt), desc(developmentOperatingEvents.id))
-        : [];
-      const latestHandoffByDealId = new Map<
-        number,
-        {
-          id: number;
-          action: string | null;
-          status: string | null;
-          resultLabel: string | null;
-          note: string | null;
-          eventAt: string | null;
-        }
-      >();
-
-      for (const handoff of handoffRows) {
-        const dealId = Number(handoff.distributionDealId || 0);
-        if (!dealId || latestHandoffByDealId.has(dealId)) continue;
-        const metadata = parseMetadataObject(handoff.metadata) || {};
-        latestHandoffByDealId.set(dealId, {
-          id: Number(handoff.id),
-          action: typeof metadata.action === 'string' ? metadata.action : null,
-          status: handoff.toStatus || null,
-          resultLabel: typeof metadata.resultLabel === 'string' ? metadata.resultLabel : null,
-          note: typeof metadata.note === 'string' ? metadata.note : null,
-          eventAt: handoff.eventAt || handoff.createdAt || null,
-        });
-      }
+      const latestHandoffByDealId = await getLatestDleHandoffByDealIds(
+        db,
+        rows.map(row => Number(row.id)),
+      );
 
       return rows.map(row => ({
         ...row,

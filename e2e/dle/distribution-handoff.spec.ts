@@ -33,6 +33,7 @@ type Seed = {
   dealId: number;
   buyerName: string;
   email: string;
+  managerEmail: string;
 };
 
 function getInsertId(result: unknown): number {
@@ -78,6 +79,33 @@ async function loginAsSeededDeveloper(page: Page, seed: Seed) {
   ]);
 }
 
+async function loginAsSeededManager(page: Page, seed: Seed) {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+  const sessionToken = await authService.createSessionToken(
+    seed.managerUserId,
+    seed.managerEmail,
+    `${seed.managerEmail} DLE Distribution Handoff Manager QA`,
+  );
+
+  await page.context().clearCookies();
+  await page.context().addCookies([
+    {
+      name: COOKIE_NAME,
+      value: sessionToken,
+      url: baseUrl,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    {
+      name: COOKIE_NAME,
+      value: sessionToken,
+      url: 'http://localhost:5000',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+}
+
 async function seedDistributionHandoffDevelopment(suffix: string): Promise<Seed> {
   const db = await getDb();
   expect(db).toBeTruthy();
@@ -105,8 +133,9 @@ async function seedDistributionHandoffDevelopment(suffix: string): Promise<Seed>
   });
   const developerId = getInsertId(developerInsert);
 
+  const managerEmail = `dle-handoff-manager-${suffix}@example.com`;
   const managerInsert = await db!.insert(users).values({
-    email: `dle-handoff-manager-${suffix}@example.com`,
+    email: managerEmail,
     passwordHash,
     role: 'super_admin',
     firstName: 'Referral',
@@ -195,6 +224,7 @@ async function seedDistributionHandoffDevelopment(suffix: string): Promise<Seed>
     dealId,
     buyerName,
     email,
+    managerEmail,
   };
 }
 
@@ -273,6 +303,22 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     await expect(handoffReadback.getByText('Buyer signed offer pack uploaded')).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-distribution-handoff-review-readback.png`,
+    });
+
+    await loginAsSeededManager(page, seed);
+    await page.goto(`/distribution/manager/developments/${seed.developmentId}`);
+    await expect(page.getByRole('heading', { name: 'Development Deals' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(seed.buyerName)).toBeVisible({ timeout: 15_000 });
+    const managerReadback = page.getByTestId(
+      `dle-manager-handoff-readback-${seed.dealId}`,
+    );
+    await expect(managerReadback).toBeVisible({ timeout: 15_000 });
+    await expect(managerReadback.getByText('Developer review requested')).toBeVisible();
+    await expect(managerReadback.getByText('Buyer signed offer pack uploaded')).toBeVisible();
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-distribution-handoff-manager-readback.png`,
     });
 
     const [afterDeal] = await db!

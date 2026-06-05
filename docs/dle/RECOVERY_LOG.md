@@ -2622,8 +2622,8 @@ Files changed:
 - docs/dle/evidence/2026-06-05/qa-dle-distribution-handoff-review-readback.png
 Tests run:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1` passed.
-- `pnpm run check` passed before docs; rerun after docs before commit.
-- `git diff --check` pending final hygiene.
+- `pnpm run check` passed.
+- `git diff --check` passed.
 Manual flows verified:
 - Local frontend `:3009`, backend `:5000`, and `listify_local`.
 - Developer dashboard Distribution Impact panel lists the selected development's referral deals.
@@ -2646,4 +2646,47 @@ Next recommended slice:
 - Add manager-side handoff review visibility or continue transaction-engine product experience work,
   while keeping DLE readback separate from deal-stage and commission mutation.
 Commit hash/tag: This entry will be included in `feat(dle): show distribution handoff readback`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Manager Distribution Handoff Readback
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make developer-created DLE handoff review requests visible to distribution managers on their
+deal review list without creating a DLE-owned stage or commission action.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/distribution/ManagerDevelopmentDealsPage.tsx
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-05/qa-dle-distribution-handoff-review-readback.png
+- docs/dle/evidence/2026-06-05/qa-dle-distribution-handoff-manager-readback.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed before docs; rerun after docs before commit.
+- `git diff --check` pending final hygiene.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Developer dashboard sends a review handoff and reads it back on the referral deal row.
+- Distribution manager deal list reads back the same latest DLE handoff status, note, and timestamp.
+- The handoff remains visible as review context, not as a stage transition control.
+Proof and fixes:
+- Added shared distribution-router readback helper for latest `distribution_handoff_created` DLE
+  event by distribution deal id.
+- Reused the helper in developer and manager deal list responses.
+- Manager deal rows now show `Developer review requested` and the developer note when a handoff
+  exists.
+- Browser/database proof still confirms `distribution_deals.current_stage` remains
+  `contract_signed` and `commission_status` remains `not_ready` after the handoff request.
+Remaining risks:
+- Manager-side acknowledgement/processing is not implemented; this slice is readback only.
+- Future acknowledgement or transition actions must stay separate from DLE readback and must reuse
+  distribution service guardrails for document, manager, milestone, and commission readiness.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Add an explicit manager acknowledgement action for handoff notes, or shift to transaction-engine
+  product experience work, without allowing DLE readback to mutate deal stage or commission state.
+Commit hash/tag: This entry will be included in `feat(dle): show manager handoff readback`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
