@@ -202,11 +202,13 @@ test.describe.serial('DLE Sale operating reservation browser proof', () => {
     });
     await selectDevelopment(page, seed.developmentName);
     await expect(page.getByText(seed.unitTypeName)).toBeVisible();
-    await expect(page.getByText('8 available, 2 reserved')).toBeVisible();
+    await expect(page.getByText('8 available, 2 reserved, 2 sold projection')).toBeVisible();
 
     await page.getByRole('button', { name: 'Reserve' }).click();
     await expect(page.getByText('Unit reserved.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('7 available, 3 reserved')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('7 available, 3 reserved, 2 sold projection')).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByText('inventory status changed')).toBeVisible({ timeout: 15_000 });
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-sale-operating-reserve.png`,
@@ -220,9 +222,28 @@ test.describe.serial('DLE Sale operating reservation browser proof', () => {
     expect(Number(unit.availableUnits)).toBe(7);
     expect(Number(unit.reservedUnits)).toBe(3);
 
+    await page.getByRole('button', { name: 'Mark Sold' }).click();
+    await expect(page.getByText('Sale unit marked sold.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('7 available, 2 reserved, 3 sold projection')).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-sale-operating-sold.png`,
+    });
+
+    [unit] = await db!
+      .select()
+      .from(unitTypes)
+      .where(eq(unitTypes.id, seed.unitTypeId))
+      .limit(1);
+    expect(Number(unit.availableUnits)).toBe(7);
+    expect(Number(unit.reservedUnits)).toBe(2);
+
     await page.getByRole('button', { name: 'Release' }).click();
     await expect(page.getByText('Reservation released.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('8 available, 2 reserved')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('8 available, 1 reserved, 3 sold projection')).toBeVisible({
+      timeout: 15_000,
+    });
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-sale-operating-release.png`,
     });
@@ -233,15 +254,15 @@ test.describe.serial('DLE Sale operating reservation browser proof', () => {
       .where(eq(unitTypes.id, seed.unitTypeId))
       .limit(1);
     expect(Number(unit.availableUnits)).toBe(8);
-    expect(Number(unit.reservedUnits)).toBe(2);
+    expect(Number(unit.reservedUnits)).toBe(1);
 
     const events = await db!
       .select()
       .from(developmentOperatingEvents)
       .where(eq(developmentOperatingEvents.developmentId, seed.developmentId))
       .orderBy(desc(developmentOperatingEvents.id));
-    expect(events).toHaveLength(2);
-    const [releaseEvent, reserveEvent] = events;
+    expect(events).toHaveLength(3);
+    const [releaseEvent, soldEvent, reserveEvent] = events;
     expect(reserveEvent.eventType).toBe('inventory_status_changed');
     expect(reserveEvent.transactionType).toBe('for_sale');
     expect(reserveEvent.unitTypeId).toBe(seed.unitTypeId);
@@ -252,6 +273,19 @@ test.describe.serial('DLE Sale operating reservation browser proof', () => {
     expect(parseJsonObject(reserveEvent.beforeData).availableUnits).toBe(8);
     expect(parseJsonObject(reserveEvent.afterData).availableUnits).toBe(7);
 
+    expect(soldEvent.eventType).toBe('inventory_status_changed');
+    expect(soldEvent.transactionType).toBe('for_sale');
+    expect(soldEvent.unitTypeId).toBe(seed.unitTypeId);
+    expect(soldEvent.fromStatus).toBe('reserved');
+    expect(soldEvent.toStatus).toBe('sold');
+    expect(Number(soldEvent.quantityDelta)).toBe(0);
+    expect(parseJsonObject(soldEvent.metadata).transition).toBe('mark_sold');
+    expect(parseJsonObject(soldEvent.metadata).outcome).toBe('sold');
+    expect(parseJsonObject(soldEvent.beforeData).reservedUnits).toBe(3);
+    expect(parseJsonObject(soldEvent.afterData).reservedUnits).toBe(2);
+    expect(parseJsonObject(soldEvent.beforeData).soldUnitsProjected).toBe(2);
+    expect(parseJsonObject(soldEvent.afterData).soldUnitsProjected).toBe(3);
+
     expect(releaseEvent.eventType).toBe('inventory_status_changed');
     expect(releaseEvent.transactionType).toBe('for_sale');
     expect(releaseEvent.unitTypeId).toBe(seed.unitTypeId);
@@ -259,8 +293,8 @@ test.describe.serial('DLE Sale operating reservation browser proof', () => {
     expect(releaseEvent.toStatus).toBe('available');
     expect(Number(releaseEvent.quantityDelta)).toBe(1);
     expect(parseJsonObject(releaseEvent.metadata).transition).toBe('release');
-    expect(parseJsonObject(releaseEvent.beforeData).reservedUnits).toBe(3);
-    expect(parseJsonObject(releaseEvent.afterData).reservedUnits).toBe(2);
+    expect(parseJsonObject(releaseEvent.beforeData).reservedUnits).toBe(2);
+    expect(parseJsonObject(releaseEvent.afterData).reservedUnits).toBe(1);
 
     const [afterDevelopment] = await db!
       .select()

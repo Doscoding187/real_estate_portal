@@ -125,9 +125,9 @@ async function seedFailedMutationDevelopments(suffix: string): Promise<Seed> {
         bathrooms: 2,
         basePriceFrom: 1_250_000,
         basePriceTo: 1_450_000,
-        totalUnits: 1,
+        totalUnits: 2,
         availableUnits: 1,
-        reservedUnits: 0,
+        reservedUnits: 1,
       },
     ],
   } as any);
@@ -285,10 +285,10 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
 
     const sale = seed.developments.sale;
     await selectDevelopment(page, sale.name);
-    await expect(page.getByText('1 available, 0 reserved')).toBeVisible();
+    await expect(page.getByText('1 available, 1 reserved, 0 sold projection')).toBeVisible();
     await db!
       .update(unitTypes)
-      .set({ availableUnits: 0, reservedUnits: 0 })
+      .set({ availableUnits: 0, reservedUnits: 1 })
       .where(eq(unitTypes.id, sale.unitTypeId));
     await db!.update(developments).set({ availableUnits: 0 }).where(eq(developments.id, sale.id));
 
@@ -297,10 +297,30 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
       timeout: 15_000,
     });
     await expect(page.getByText('Unit reserved.')).toHaveCount(0);
-    await expect(page.getByText('0 available, 0 reserved')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('0 available, 1 reserved, 1 sold projection')).toBeVisible({
+      timeout: 15_000,
+    });
     await expectNoOperatingEvents(sale.id);
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-operating-failed-sale-no-false-success.png`,
+    });
+
+    await db!
+      .update(unitTypes)
+      .set({ availableUnits: 0, reservedUnits: 0 })
+      .where(eq(unitTypes.id, sale.unitTypeId));
+
+    await page.getByRole('button', { name: 'Mark Sold', exact: true }).click();
+    await expect(page.getByText('No reserved units can be marked sold for this unit type.')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Sale unit marked sold.')).toHaveCount(0);
+    await expect(page.getByText('0 available, 0 reserved, 2 sold projection')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectNoOperatingEvents(sale.id);
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-operating-failed-sale-sold-no-false-success.png`,
     });
 
     const rental = seed.developments.rental;

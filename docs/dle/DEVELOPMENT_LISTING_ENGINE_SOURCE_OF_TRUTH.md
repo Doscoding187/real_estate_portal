@@ -351,7 +351,7 @@ Recommended order from here:
 3. Continue the operating-layer rollout from the browser-proven Sale reserve/release and Rental
    hold/release mutations plus Auction registration open/rollback
 4. Use `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md` before coding sold/let/Auction outcomes
-5. Implement Sale sold outcome from reserved inventory first
+5. Implement Rental let outcome from held inventory next
 6. Continue the transaction-engine product experience audit
 7. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
 8. Product audit of public development page merchandising

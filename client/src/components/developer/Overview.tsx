@@ -414,6 +414,26 @@ export default function Overview() {
       },
     });
 
+  const markSaleUnitTypeSoldMutation = trpc.developer.markSaleUnitTypeSold.useMutation({
+    onSuccess: async () => {
+      toast.success('Sale unit marked sold.');
+      await Promise.all([
+        saleOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+        utils.developer.getFunnelKPIs.invalidate(),
+      ]);
+    },
+    onError: async error => {
+      toast.error(error.message || 'Could not mark Sale unit sold.');
+      await Promise.all([
+        saleOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+      ]);
+    },
+  });
+
   const transitionRentalUnitHoldMutation = trpc.developer.transitionRentalUnitHold.useMutation({
     onSuccess: async (_data, variables) => {
       toast.success(variables.transition === 'hold' ? 'Rental unit held.' : 'Rental hold released.');
@@ -912,7 +932,10 @@ export default function Overview() {
                   {saleOperatingInventory.map((unit: any) => {
                     const availableUnits = Number(unit.availableUnits || 0);
                     const reservedUnits = Number(unit.reservedUnits || 0);
-                    const mutationPending = transitionSaleUnitReservationMutation.isPending;
+                    const soldUnitsProjected = Number(unit.soldUnitsProjected || 0);
+                    const mutationPending =
+                      transitionSaleUnitReservationMutation.isPending ||
+                      markSaleUnitTypeSoldMutation.isPending;
                     return (
                       <div
                         className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
@@ -922,7 +945,8 @@ export default function Overview() {
                           <p className="text-sm font-medium text-slate-900">{unit.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {formatNumber(availableUnits)} available,{' '}
-                            {formatNumber(reservedUnits)} reserved
+                            {formatNumber(reservedUnits)} reserved,{' '}
+                            {formatNumber(soldUnitsProjected)} sold projection
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -956,6 +980,21 @@ export default function Overview() {
                             variant="outline"
                           >
                             Release
+                          </Button>
+                          <Button
+                            disabled={reservedUnits <= 0 || mutationPending}
+                            onClick={() =>
+                              selectedDevelopmentId &&
+                              markSaleUnitTypeSoldMutation.mutate({
+                                developmentId: selectedDevelopmentId,
+                                unitTypeId: unit.id,
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                            variant="secondary"
+                          >
+                            Mark Sold
                           </Button>
                         </div>
                       </div>

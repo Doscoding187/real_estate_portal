@@ -1,7 +1,8 @@
 # DLE Operating Outcome Layer Design
 
 Date: 2026-06-04
-Status: Design-only. No schema, API, runtime, or test behavior changes in this slice.
+Status: Sale sold from reserved inventory is implemented and browser-proven. Rental let and Auction
+sold/passed-in/withdrawn outcomes remain future transaction-specific slices.
 
 ## Purpose
 
@@ -11,6 +12,7 @@ mutations.
 The DLE operating layer now has first live transitions:
 
 - Sale reserve/release.
+- Sale sold from reserved inventory.
 - Rental hold/release.
 - Auction registration open/rollback.
 - Auction time-gated activation.
@@ -79,8 +81,7 @@ Do not implement outcomes only as events.
 Events are audit history. The current operating state must also be queryable without replaying the
 event stream.
 
-For the next implementation slice, use these projections deliberately and document the temporary
-limits:
+For implementation slices, use these projections deliberately and document the temporary limits:
 
 - Sale outcome:
   - decrement `unit_types.reserved_units`;
@@ -395,16 +396,32 @@ Before any outcome implementation starts, the agent must confirm:
 - public output has transaction-native copy for the resulting state;
 - the browser proof can compare before/after packaging fields to catch field wipes.
 
+## Implementation Status
+
+Implemented Sale sold from reserved inventory:
+
+- Added `developer.markSaleUnitTypeSold`.
+- Requires Sale development ownership and `reserved_units > 0`.
+- Decrements only `unit_types.reserved_units`.
+- Keeps `unit_types.available_units` unchanged for reserved-to-sold.
+- Refreshes `developments.available_units` from active unit types.
+- Writes `inventory_status_changed` with `reserved` -> `sold` and `quantity_delta = 0`.
+- Shows `Mark Sold` in the Sale dashboard only when reserved stock exists.
+- Browser proof covers success, event readback, dashboard projection refresh, no false success on
+  stale reserved-stock failure, and packaging-field preservation.
+
+The dashboard exposes `sold projection` from `total_units - available_units - reserved_units`.
+That remains a temporary projection, not canonical sold-count reporting.
+
 ## Recommended Implementation Order
 
-1. Implement Sale sold outcome from reserved inventory.
-2. Implement Rental let outcome from held inventory.
-3. Implement Auction sold/passed-in/withdrawn outcome from active/non-final lifecycle.
-4. Strengthen transaction-native public availability language for all outcome states.
-5. Design and implement lead-stage synchronization explicitly.
-6. Design and implement distribution/referral outcome handoff explicitly.
+1. Implement Rental let outcome from held inventory.
+2. Implement Auction sold/passed-in/withdrawn outcome from active/non-final lifecycle.
+3. Strengthen transaction-native public availability language for all outcome states.
+4. Design and implement lead-stage synchronization explicitly.
+5. Design and implement distribution/referral outcome handoff explicitly.
 
-## First Implementation Slice Recommendation
+## Completed First Implementation Slice
 
 Implement Sale sold outcome first.
 
@@ -435,3 +452,26 @@ Do not include:
 - new sold-count reporting claims;
 - edit-development autosave;
 - broad inventory editing.
+
+## Next Implementation Slice Recommendation
+
+Implement Rental let outcome from held inventory.
+
+First Rental let slice should:
+
+- add a narrow Rental outcome endpoint;
+- require `reserved_units > 0` as the current held-count projection;
+- decrement only `reserved_units`;
+- keep `available_units` unchanged for held-to-let;
+- write `inventory_status_changed` with `held` -> `let`;
+- show Rental-native `Mark Let` / `Lease signed` action in the dashboard;
+- browser-proof no false success, event readback, Rental-native public availability language, and
+  field ownership.
+
+Do not include:
+
+- full application pipeline;
+- lease document workflow;
+- automatic lead conversion;
+- commission/deal closure;
+- edit-development autosave.

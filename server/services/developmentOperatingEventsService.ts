@@ -18,6 +18,8 @@ const MAX_EVENT_LIMIT = 50;
 
 export const SALE_UNIT_RESERVATION_TRANSITIONS = ['reserve', 'release'] as const;
 export type SaleUnitReservationTransition = (typeof SALE_UNIT_RESERVATION_TRANSITIONS)[number];
+export const SALE_UNIT_OUTCOME_TRANSITIONS = ['mark_sold'] as const;
+export type SaleUnitOutcomeTransition = (typeof SALE_UNIT_OUTCOME_TRANSITIONS)[number];
 export const RENTAL_UNIT_HOLD_TRANSITIONS = ['hold', 'release'] as const;
 export type RentalUnitHoldTransition = (typeof RENTAL_UNIT_HOLD_TRANSITIONS)[number];
 export const AUCTION_REGISTRATION_TRANSITIONS = [
@@ -143,6 +145,21 @@ export function getSaleUnitReservationTransitionStatuses(
   };
 }
 
+export function getSaleUnitOutcomeTransitionStatuses(transition: SaleUnitOutcomeTransition) {
+  if (transition === 'mark_sold') {
+    return {
+      fromStatus: 'reserved',
+      toStatus: 'sold',
+      quantityDelta: 0,
+    };
+  }
+
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: 'Unsupported Sale outcome transition.',
+  });
+}
+
 export function getRentalUnitHoldTransitionStatuses(transition: RentalUnitHoldTransition) {
   if (transition === 'hold') {
     return {
@@ -179,6 +196,17 @@ function toNonNegativeInt(value: unknown): number {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric)) return 0;
   return Math.max(0, Math.trunc(numeric));
+}
+
+function calculateProjectedSoldUnits(input: {
+  totalUnits?: unknown;
+  availableUnits?: unknown;
+  reservedUnits?: unknown;
+}): number {
+  const totalUnits = toNonNegativeInt(input.totalUnits);
+  const availableUnits = toNonNegativeInt(input.availableUnits);
+  const reservedUnits = toNonNegativeInt(input.reservedUnits);
+  return Math.max(totalUnits - availableUnits - reservedUnits, 0);
 }
 
 function toPositiveNumberOrNull(value: unknown): number | null {
@@ -388,6 +416,7 @@ export async function listSaleOperatingInventory(input: {
       totalUnits: toNonNegativeInt(item.totalUnits),
       availableUnits: toNonNegativeInt(item.availableUnits),
       reservedUnits: toNonNegativeInt(item.reservedUnits),
+      soldUnitsProjected: calculateProjectedSoldUnits(item),
       priceFrom: item.priceFrom != null ? Number(item.priceFrom) : null,
       priceTo: item.priceTo != null ? Number(item.priceTo) : null,
       basePriceFrom: item.basePriceFrom != null ? Number(item.basePriceFrom) : null,
@@ -1077,6 +1106,195 @@ export async function transitionSaleUnitReservation(input: {
   sourceSurface?: unknown;
 }) {
   return await transitionUnitAvailability(input, SALE_INVENTORY_TRANSITION_CONFIG);
+}
+
+export async function markSaleUnitTypeSold(input: {
+  developerId: number;
+  developmentId: number;
+  unitTypeId: string;
+  actorUserId: number;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== 'for_sale') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Sale sold outcomes are only available for Sale developments.',
+    });
+  }
+
+  const { fromStatus, toStatus, quantityDelta } =
+    getSaleUnitOutcomeTransitionStatuses('mark_sold');
+  const note = input.note ? String(input.note).trim() : '';
+  const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
+
+  return await db.transaction(async (tx: any) => {
+    const [beforeUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+      })
+      .from(unitTypes)
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+        ),
+      )
+      .limit(1);
+
+    if (!beforeUnit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Sale unit type not found.' });
+    }
+
+    const beforeSnapshot = {
+      unitTypeId: beforeUnit.id,
+      unitTypeName: beforeUnit.name,
+      totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
+      availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
+      reservedUnits: toNonNegativeInt(beforeUnit.reservedUnits),
+      soldUnitsProjected: calculateProjectedSoldUnits(beforeUnit),
+    };
+
+    if (beforeSnapshot.reservedUnits <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No reserved units can be marked sold for this unit type.',
+      });
+    }
+
+    const updateResult = await tx
+      .update(unitTypes)
+      .set({
+        reservedUnits: sql`COALESCE(${unitTypes.reservedUnits}, 0) - 1`,
+      })
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+          sql`COALESCE(${unitTypes.reservedUnits}, 0) > 0`,
+        ),
+      );
+
+    if (readAffectedRows(updateResult) < 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Sale inventory changed before the sold outcome could be saved.',
+      });
+    }
+
+    const [afterUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+      })
+      .from(unitTypes)
+      .where(
+        and(eq(unitTypes.id, input.unitTypeId), eq(unitTypes.developmentId, input.developmentId)),
+      )
+      .limit(1);
+
+    if (!afterUnit) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Sale sold outcome saved but could not be read back.',
+      });
+    }
+
+    const activeUnits = await tx
+      .select({ availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(and(eq(unitTypes.developmentId, input.developmentId), eq(unitTypes.isActive, 1)));
+    const aggregateAvailableUnits = activeUnits.reduce(
+      (sum: number, row: { availableUnits: unknown }) => sum + toNonNegativeInt(row.availableUnits),
+      0,
+    );
+
+    await tx
+      .update(developments)
+      .set({ availableUnits: aggregateAvailableUnits })
+      .where(eq(developments.id, input.developmentId));
+
+    const afterSnapshot = {
+      unitTypeId: afterUnit.id,
+      unitTypeName: afterUnit.name,
+      totalUnits: toNonNegativeInt(afterUnit.totalUnits),
+      availableUnits: toNonNegativeInt(afterUnit.availableUnits),
+      reservedUnits: toNonNegativeInt(afterUnit.reservedUnits),
+      soldUnitsProjected: calculateProjectedSoldUnits(afterUnit),
+    };
+    const metadata = {
+      transition: 'mark_sold',
+      outcome: 'sold',
+      inventoryProjectionColumn: 'unit_types.reserved_units',
+      soldProjection: 'total_units - available_units - reserved_units',
+      ...(note ? { note } : {}),
+      developmentName: development.name,
+    };
+    const insertResult = await tx.insert(developmentOperatingEvents).values({
+      developmentId: input.developmentId,
+      unitTypeId: input.unitTypeId,
+      transactionType: 'for_sale',
+      eventType: 'inventory_status_changed',
+      fromStatus,
+      toStatus,
+      quantityDelta,
+      beforeData: {
+        ...beforeSnapshot,
+        developmentAvailableUnits: toNonNegativeInt(development.availableUnits),
+      },
+      afterData: {
+        ...afterSnapshot,
+        developmentAvailableUnits: aggregateAvailableUnits,
+      },
+      metadata,
+      actorUserId: input.actorUserId,
+      sourceSurface,
+    });
+
+    const insertedId = readInsertId(insertResult);
+    if (!insertedId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Sale sold outcome event could not be saved.',
+      });
+    }
+
+    const [event] = await tx
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.id, insertedId),
+          eq(developmentOperatingEvents.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+
+    if (!event) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Sale sold outcome event was saved but could not be read back.',
+      });
+    }
+
+    return {
+      unit: afterSnapshot,
+      aggregateAvailableUnits,
+      event,
+    };
+  });
 }
 
 export async function transitionRentalUnitHold(input: {

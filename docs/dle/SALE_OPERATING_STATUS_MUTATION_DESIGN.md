@@ -1,7 +1,8 @@
 # DLE Sale Operating Status Mutation Design
 
 Date: 2026-06-04
-Status: Implemented and browser-proven for the first Sale reserve/release inventory mutation.
+Status: Implemented and browser-proven for Sale reserve/release and the first Sale sold outcome
+from reserved inventory.
 
 ## Purpose
 
@@ -177,9 +178,9 @@ Browser proof must show:
 
 ## Future Extensions
 
-After Sale reserve/release is proven:
+After Sale reserve/release and sold-from-reserved are proven:
 
 - Add Rental `available` -> `held` -> `available`.
 - Add Auction `scheduled` -> `registration_open` -> `active`.
-- Add status projections for sold, let, passed-in, withdrawn, and closed outcomes.
+- Add status projections for let, passed-in, withdrawn, and closed outcomes.
 - Add per-unit records only if unit-type-level counts are not enough for real operating workflows.

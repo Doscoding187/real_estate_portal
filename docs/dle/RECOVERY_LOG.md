@@ -2229,3 +2229,66 @@ Next recommended slice:
   no false success, field ownership, and Sale-native public availability language.
 Commit hash/tag: This entry will be included in `docs(dle): design operating outcome layer`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Sale Sold Operating Outcome
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first Sale outcome mutation by moving reserved Sale inventory to sold without
+rewriting packaging fields or enabling autosave.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/sale-operating-reservation.spec.ts
+- e2e/dle/operating-mutation-failure-trust.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-sale-operating-reserve.png
+- docs/dle/evidence/2026-06-04/qa-dle-sale-operating-sold.png
+- docs/dle/evidence/2026-06-04/qa-dle-sale-operating-release.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-sold-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-auction-no-false-success.png
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/SALE_OPERATING_STATUS_MUTATION_DESIGN.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts` passed.
+- `pnpm run check` passed before browser proof.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/sale-operating-reservation.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/operating-mutation-failure-trust.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- Final `pnpm run check` passed.
+- Final `git diff --check` passed.
+- `git status --short` reviewed; unrelated homepage/evidence/playwright dirty files were not
+  staged.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Sale dashboard reserve -> mark sold -> release flow.
+- Sale operating history readback for `available` -> `reserved`, `reserved` -> `sold`, and
+  `reserved` -> `available`.
+- Stale `Mark Sold` failure shows backend truth, shows no success toast, and writes no event.
+Proof and fixes:
+- Added `developer.markSaleUnitTypeSold`.
+- The mutation requires owned Sale development, active unit type, and `reserved_units > 0`.
+- The mutation decrements only `unit_types.reserved_units`; `available_units` remains unchanged for
+  reserved-to-sold because public availability was already reduced at reservation time.
+- The mutation refreshes `developments.available_units` from active unit types and writes
+  `inventory_status_changed` with `reserved` -> `sold`, `quantity_delta = 0`.
+- The dashboard shows a Sale-only `Mark Sold` action and a `sold projection` derived from
+  `total_units - available_units - reserved_units`.
+- Failed `Mark Sold` refetches backend truth and does not claim success.
+Remaining risks:
+- Sale sold count is still an inferred dashboard projection, not an explicit canonical
+  `sold_units` column.
+- No lead-stage conversion or distribution/referral deal outcome is automated.
+- Rental let and Auction sold/passed-in/withdrawn outcomes remain future slices.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Implement Rental let outcome from held inventory with Rental-native dashboard copy, event
+  readback, no false success proof, and field-ownership proof.
+Commit hash/tag: This entry will be included in `feat(dle): add sale sold outcome`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

@@ -6,6 +6,7 @@ import {
   getAuctionRegistrationTransitionStatuses,
   getDevelopmentOperatingEventNote,
   getRentalUnitHoldTransitionStatuses,
+  getSaleUnitOutcomeTransitionStatuses,
   getSaleUnitReservationTransitionStatuses,
   normalizeOperatingSourceSurface,
   parseDevelopmentOperatingEventJson,
@@ -57,6 +58,14 @@ describe('development operating events service helpers', () => {
       fromStatus: 'reserved',
       toStatus: 'available',
       quantityDelta: 1,
+    });
+  });
+
+  it('maps Sale sold outcome from reserved inventory without changing public availability', () => {
+    expect(getSaleUnitOutcomeTransitionStatuses('mark_sold')).toEqual({
+      fromStatus: 'reserved',
+      toStatus: 'sold',
+      quantityDelta: 0,
     });
   });
 
