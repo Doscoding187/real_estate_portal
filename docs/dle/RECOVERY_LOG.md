@@ -2362,3 +2362,75 @@ Next recommended slice:
   and field-ownership proof.
 Commit hash/tag: This entry will be included in `feat(dle): add rental let outcome`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Auction Outcome Operating Mutation
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement Auction sold, passed-in, and withdrawn operating outcomes from the canonical
+Auction lot lifecycle without rewriting packaging fields or enabling autosave.
+Files changed:
+- server/services/developmentOperatingEventsService.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- server/services/__tests__/developmentOperatingEventsService.test.ts
+- e2e/dle/auction-operating-outcomes.spec.ts
+- e2e/dle/operating-mutation-failure-trust.spec.ts
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-outcomes-dashboard.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-outcomes-public.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-operating-outcomes-search.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-auction-sold-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-auction-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-let-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-rental-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-no-false-success.png
+- docs/dle/evidence/2026-06-04/qa-dle-operating-failed-sale-sold-no-false-success.png
+- docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md
+- docs/dle/AUCTION_OPERATING_LIFECYCLE_DESIGN.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OPERATING_STATUS_AUDIT_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `SKIP_DB_INIT=1 pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts client/src/components/developer/Overview.test.ts client/src/pages/DevelopmentDetail.test.ts` passed.
+- `pnpm run check` passed before browser proof.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/auction-operating-outcomes.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/operating-mutation-failure-trust.spec.ts --project="Desktop Chrome" --workers=1` passed after fixing the browser selectors to match Sale generic and Auction lot-aware button labels.
+- Final focused tests, `pnpm run check`, and `git diff --check` passed.
+- `git status --short` reviewed; unrelated homepage/evidence/playwright dirty files were not
+  staged.
+Manual flows verified:
+- Local frontend `:3009`, backend `:5000`, and `listify_local`.
+- Auction dashboard active lot -> sold outcome.
+- Auction dashboard active lot -> passed-in outcome.
+- Auction dashboard registration-open lot -> withdrawn outcome.
+- Auction operating history readback for three `auction_outcome_recorded` events.
+- Stale Auction `Mark Sold` failure shows backend truth, shows no success toast, and writes no
+  event.
+- Auction public detail and search language remain Auction-native after outcomes.
+Proof and fixes:
+- Added `developer.recordAuctionLotOutcome`.
+- The mutation requires owned Auction development, active unit type, and transaction type
+  `auction`.
+- `sold` and `passed_in` require current `unit_types.auction_status = active`.
+- `withdrawn` is allowed only from non-final Auction statuses.
+- The mutation updates only `unit_types.auction_status`; it does not mutate counts, starting bid,
+  reserve price, auction window, unit size, parking, media, documents, location, governance,
+  highlights, unit definitions, or canonical wizard `stepData`.
+- The mutation writes `auction_outcome_recorded` with before/after lot snapshots and outcome
+  metadata.
+- The dashboard shows Auction-native `Mark Sold`, `Mark Passed In`, and `Withdraw` actions and
+  refetches Auction inventory, operating events, developments, and funnel KPIs after success or
+  failure.
+Remaining risks:
+- No bidder-registration record, winning-bidder record, deposit/payment workflow, reserve
+  validation, or post-auction negotiation workflow is automated.
+- No lead-stage conversion or distribution/referral deal outcome is automated.
+- Sale sold and Rental let counts remain inferred projections until explicit reporting fields are
+  designed.
+- The existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Design lead-stage synchronization and distribution/referral outcome handoff before automating
+  cross-surface side effects from Sale sold, Rental let, or Auction outcomes.
+Commit hash/tag: This entry will be included in `feat(dle): add auction outcome operations`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

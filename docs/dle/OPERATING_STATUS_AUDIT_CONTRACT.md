@@ -3,9 +3,9 @@
 Date: 2026-06-04
 Status: Contract implemented through operating note/readback, Sale reserve/release, Sale sold from
 reserved inventory, Rental hold/release, Rental let from held inventory, Auction registration
-open/rollback, and Auction time-gated activation. Outcome semantics are designed in
-`docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md`; Auction outcomes remain future
-transaction-specific slices.
+open/rollback, Auction time-gated activation, and Auction sold/passed-in/withdrawn outcomes. Lead
+stage synchronization and distribution/referral outcome handoff remain future transaction-specific
+slices.
 
 ## Purpose
 
@@ -36,11 +36,12 @@ Existing anchors:
 - `distribution_deal_events`: distribution deal stage/event history.
 - Read-only dashboard surfaces now show inventory, lead risk, and distribution readiness.
 
-Missing DLE operating anchors:
+Remaining DLE operating anchors:
 
 - No transaction-native unit operating status model beyond the first Sale `available`/`reserved`,
-  Rental `available`/`held`, and Auction `scheduled`/`registration_open`/`active` transitions.
-- No Rental application/lease outcome or Auction outcome mutations yet.
+  Rental `available`/`held`, and Auction `scheduled`/`registration_open`/`active`/outcome
+  transitions.
+- No Rental application/lease pipeline beyond the first held-to-let outcome mutation.
 - No DLE operating event stream coverage yet for price, release phase, public status, or
   distribution handoff changes.
 
@@ -278,11 +279,16 @@ Current mutation status:
   dashboard.
 - Auction `registration_open` -> `active` has been implemented from the developer dashboard with a
   server-side auction-window guard.
+- Auction `active` -> `sold`, `active` -> `passed_in`, and non-final -> `withdrawn` have been
+  implemented from the developer dashboard.
 - Auction lifecycle uses canonical `unit_types.auction_status`; registered bidders are not faked
   through `reserved_units`.
 - Browser proof confirms registration open/rollback, early activation failure, in-window
   activation, no count mutation, stable Auction packaging fields, and continued Auction
   public/search language.
+- Browser proof confirms Auction outcome success, `auction_outcome_recorded` event readback, stale
+  active-state failure without false success, stable Auction packaging fields, and public/search
+  Auction outcome language.
 
 ## Browser Proof Requirements
 
@@ -303,6 +309,10 @@ Before calling operating mutations safe, prove:
 - Failed Sale reserve, Rental hold, and Auction registration mutations do not claim success, refresh
   the dashboard back to backend truth, and write no operating events. Status: passed in browser/DB
   proof.
+- Auction sold, passed-in, and withdrawn outcomes cannot wipe Auction packaging fields and write
+  `auction_outcome_recorded` events. Status: passed in browser/DB proof.
+- Failed stale Auction sold outcome does not claim success, refreshes the dashboard back to backend
+  truth, and writes no operating event. Status: passed in browser/DB proof.
 - Sale public page labels remain transaction-native after the operating update.
 - Lead CTA links still preserve selected development and transaction context.
 

@@ -40,6 +40,7 @@ import {
   listDevelopmentOperatingEvents,
   markRentalUnitTypeLet,
   markSaleUnitTypeSold,
+  recordAuctionLotOutcome,
   transitionAuctionRegistration,
   transitionRentalUnitHold,
   transitionSaleUnitReservation,
@@ -1935,6 +1936,29 @@ export const developerRouter = router({
         developmentId: input.developmentId,
         unitTypeId: input.unitTypeId,
         actorUserId: user.id,
+        note: input.note,
+        sourceSurface: 'developer_dashboard',
+      });
+    }),
+
+  recordAuctionLotOutcome: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        unitTypeId: z.string().trim().min(1).max(DEVELOPMENT_UNIT_ID_MAX_LENGTH),
+        outcome: z.enum(['sold', 'passed_in', 'withdrawn']),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await recordAuctionLotOutcome({
+        developerId: profile.id,
+        developmentId: input.developmentId,
+        unitTypeId: input.unitTypeId,
+        actorUserId: user.id,
+        outcome: input.outcome,
         note: input.note,
         sourceSurface: 'developer_dashboard',
       });

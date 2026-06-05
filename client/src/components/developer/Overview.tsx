@@ -519,6 +519,31 @@ export default function Overview() {
     },
   });
 
+  const recordAuctionLotOutcomeMutation = trpc.developer.recordAuctionLotOutcome.useMutation({
+    onSuccess: async (_data, variables) => {
+      const labels: Record<string, string> = {
+        sold: 'Auction lot marked sold.',
+        passed_in: 'Auction lot marked passed in.',
+        withdrawn: 'Auction lot withdrawn.',
+      };
+      toast.success(labels[variables.outcome] || 'Auction outcome recorded.');
+      await Promise.all([
+        auctionOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+        utils.developer.getFunnelKPIs.invalidate(),
+      ]);
+    },
+    onError: async error => {
+      toast.error(error.message || 'Could not record Auction outcome.');
+      await Promise.all([
+        auctionOperatingInventoryQuery.refetch(),
+        operatingEventsQuery.refetch(),
+        utils.developer.getDevelopments.invalidate(),
+      ]);
+    },
+  });
+
   const isNewDeveloper = !developments || developments.length === 0;
   const profileStatus = (developerProfile as any)?.status as string | undefined;
   const profileRejectionReason = (developerProfile as any)?.rejectionReason as string | undefined;
@@ -959,6 +984,7 @@ export default function Overview() {
                     return (
                       <div
                         className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
+                        data-testid={`auction-lot-${unit.id}`}
                         key={unit.id}
                       >
                         <div>
@@ -1168,7 +1194,9 @@ export default function Overview() {
                     const auctionStatus = String(unit.auctionStatus || 'scheduled');
                     const mutationPending =
                       transitionAuctionRegistrationMutation.isPending ||
-                      activateAuctionLotMutation.isPending;
+                      activateAuctionLotMutation.isPending ||
+                      recordAuctionLotOutcomeMutation.isPending;
+                    const canWithdraw = !['sold', 'passed_in', 'withdrawn'].includes(auctionStatus);
                     return (
                       <div
                         className="flex flex-col gap-3 rounded-md border border-slate-200 p-3 md:flex-row md:items-center md:justify-between"
@@ -1245,6 +1273,62 @@ export default function Overview() {
                                 Close Registration
                               </Button>
                             </>
+                          )}
+                          {auctionStatus === 'active' && (
+                            <>
+                              <Button
+                                aria-label={`Mark ${unit.name} sold`}
+                                disabled={mutationPending}
+                                onClick={() =>
+                                  selectedDevelopmentId &&
+                                  recordAuctionLotOutcomeMutation.mutate({
+                                    developmentId: selectedDevelopmentId,
+                                    unitTypeId: unit.id,
+                                    outcome: 'sold',
+                                  })
+                                }
+                                size="sm"
+                                type="button"
+                              >
+                                Mark Sold
+                              </Button>
+                              <Button
+                                aria-label={`Mark ${unit.name} passed in`}
+                                disabled={mutationPending}
+                                onClick={() =>
+                                  selectedDevelopmentId &&
+                                  recordAuctionLotOutcomeMutation.mutate({
+                                    developmentId: selectedDevelopmentId,
+                                    unitTypeId: unit.id,
+                                    outcome: 'passed_in',
+                                  })
+                                }
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
+                                Mark Passed In
+                              </Button>
+                            </>
+                          )}
+                          {canWithdraw && (
+                            <Button
+                              aria-label={`Withdraw ${unit.name}`}
+                              disabled={mutationPending}
+                              onClick={() =>
+                                selectedDevelopmentId &&
+                                recordAuctionLotOutcomeMutation.mutate({
+                                  developmentId: selectedDevelopmentId,
+                                  unitTypeId: unit.id,
+                                  outcome: 'withdrawn',
+                                })
+                              }
+                              size="sm"
+                              type="button"
+                              variant="secondary"
+                            >
+                              Withdraw
+                            </Button>
                           )}
                         </div>
                       </div>

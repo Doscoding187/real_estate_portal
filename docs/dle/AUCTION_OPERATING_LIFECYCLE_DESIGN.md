@@ -1,8 +1,9 @@
 # DLE Auction Operating Lifecycle Design
 
 Date: 2026-06-04
-Status: Stage A registration open/rollback and Stage B time-gated activation are implemented and
-browser-proven. Outcomes remain future Auction-specific slices.
+Status: Stage A registration open/rollback, Stage B time-gated activation, and Stage C outcomes
+are implemented and browser-proven. Bidder registration, winning-bidder records, and
+distribution/referral outcome handoff remain future Auction-specific slices.
 
 ## Purpose
 
@@ -179,14 +180,37 @@ Rules:
 
 ### Stage C: Outcomes
 
-Future mutations:
+Third implementation mutation:
+
+```ts
+recordAuctionLotOutcome({
+  developerId,
+  developmentId,
+  unitTypeId,
+  actorUserId,
+  outcome: 'sold' | 'passed_in' | 'withdrawn',
+  note?: string,
+  sourceSurface?: 'developer_dashboard' | 'developer_units_manager' | 'system',
+})
+```
+
+Implemented transitions:
 
 - `active` -> `sold`
 - `active` -> `passed_in`
 - non-final -> `withdrawn`
 
-Outcome mutations must use `auction_outcome_recorded`, capture outcome metadata, and define whether
-public availability changes. They are not part of the first Auction operating slice.
+Rules:
+
+- `sold` requires current `auction_status = 'active'`.
+- `passed_in` requires current `auction_status = 'active'`.
+- `withdrawn` is allowed from non-final statuses and rejected from `sold`, `passed_in`, and
+  `withdrawn`.
+- The mutation updates only `unit_types.auction_status`.
+- The mutation writes `auction_outcome_recorded` in the same DB transaction.
+- Outcome events capture outcome metadata and before/after Auction lot snapshots.
+- No inventory counts, bidder records, pricing fields, auction windows, media, documents, location,
+  governance, highlights, unit definitions, or canonical wizard `stepData` are changed.
 
 ## Registration Model Boundary
 
@@ -261,7 +285,8 @@ The Auction operating panel should show:
 - Auction-native action:
   - Scheduled: `Open Registration`
   - Registration open: `Activate Auction` and `Close Registration`
-  - Active: no registration toggle; show active state
+  - Active: `Mark Sold` and `Mark Passed In`
+  - Non-final statuses: `Withdraw`
 - no Sale `Reserve` or Rental `Hold` controls
 - no fictional registered-bidder count
 
@@ -307,6 +332,19 @@ Stage B browser proof must additionally show:
 - Activation succeeds only inside the auction window. Status: passed.
 - Activation writes `registration_open` -> `active` atomically. Status: passed.
 
+Stage C browser proof must additionally show:
+
+- Active lots can be marked `sold` and `passed_in`. Status: passed.
+- A non-final lot can be marked `withdrawn`. Status: passed.
+- Outcome mutations write `auction_outcome_recorded` events atomically. Status: passed.
+- Starting bid, reserve price, auction window, unit size, parking, media, documents, location,
+  governance, highlights, unit definitions, and public packaging fields remain unchanged. Status:
+  passed for seeded DB/public proof.
+- Public detail and search output use Auction-native outcome language: `Sold at auction`,
+  `Passed in`, and `Withdrawn`. Status: passed.
+- A stale active-state outcome failure shows the backend error, does not show success, refreshes
+  backend truth, and writes no operating event. Status: passed.
+
 ## First Implementation Recommendation
 
 Implement Stage A first:
@@ -318,5 +356,6 @@ Implement Stage A first:
 5. Add Auction-only dashboard panel.
 6. Browser-proof lifecycle, field ownership, and public Auction language.
 
-Stage A and Stage B are now implemented. Do not implement outcomes in the same activation slice;
-sold, passed-in, and withdrawn need separate proof.
+Stage A, Stage B, and Stage C are now implemented. Do not add bidder registration, winning-bidder
+automation, payment/deposit handling, reserve validation, lead conversion, or distribution/referral
+closure without a separate contract and proof slice.

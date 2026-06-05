@@ -348,17 +348,19 @@ Recommended order from here:
 
 1. Run and monitor a controlled create/draft autosave rollout
 2. Keep edit-development autosave separate until partial-step ownership is proven
-3. Continue the operating-layer rollout from the browser-proven Sale reserve/release and Rental
-   hold/release mutations plus Auction registration open/rollback
-4. Use `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md` before coding sold/let/Auction outcomes
-5. Implement Auction sold/passed-in/withdrawn outcomes next
+3. Continue operating-layer hardening from the browser-proven Sale reserve/release, Sale sold,
+   Rental hold/release, Rental let, Auction registration open/activation, and Auction outcome
+   mutations
+4. Design lead-stage synchronization for Sale sold, Rental let, and Auction outcomes before
+   automating lead changes
+5. Design distribution/referral outcome handoff before automating deal or commission closure
 6. Continue the transaction-engine product experience audit
 7. Upgrade the wizard so Sale, Rental, and Auction feel like distinct packaging engines
 8. Product audit of public development page merchandising
 9. Search card and lead form alignment
 10. Developer dashboard and inventory impact
 11. Admin review impact
-12. Distribution/referral readiness
+12. Add explicit Sale/Rental outcome projections before broad sold/let reporting claims
 
 ## 19. Definition of World-Class
 

@@ -386,5 +386,33 @@ test.describe.serial('DLE operating failed mutation browser proof', () => {
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-operating-failed-auction-no-false-success.png`,
     });
+
+    await db!
+      .update(unitTypes)
+      .set({ auctionStatus: 'active' })
+      .where(eq(unitTypes.id, auction.unitTypeId));
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, auction.name);
+    await expect(page.getByText('Auction active', { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await db!
+      .update(unitTypes)
+      .set({ auctionStatus: 'passed_in' })
+      .where(eq(unitTypes.id, auction.unitTypeId));
+    await page.getByRole('button', { name: /Mark Failed Auction Lot .* sold/ }).click();
+    await expect(
+      page.getByText('Auction sold outcomes require an active auction lot.'),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Auction lot marked sold.')).toHaveCount(0);
+    await expect(page.getByText('Passed in', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expectNoOperatingEvents(auction.id);
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-operating-failed-auction-sold-no-false-success.png`,
+    });
   });
 });

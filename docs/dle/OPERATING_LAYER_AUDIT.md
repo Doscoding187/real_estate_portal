@@ -3,9 +3,9 @@
 Date: 2026-06-04
 Status: Read-only dashboard operating surfaces cover inventory, lead risk, and distribution
 readiness. Sale reserve/release, Sale sold from reserved inventory, Rental hold/release, Rental let
-from held inventory, Auction registration open/rollback, and Auction time-gated activation are
-implemented and browser-proven. Outcome mutations are designed in
-`docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md`; Auction outcomes remain the next implementation layer.
+from held inventory, Auction registration open/rollback, Auction time-gated activation, and Auction
+sold/passed-in/withdrawn outcomes are implemented and browser-proven. Lead synchronization and
+distribution/referral outcome handoff remain future layers.
 
 ## Purpose
 
@@ -343,7 +343,22 @@ Implemented Auction Stage B:
   count mutation, stable Auction package fields, public `Auction active` language, and preserved
   Auction search pricing.
 
-Recommended next implementation slice:
+Implemented Auction outcome layer:
 
-- Continue the outcome layer from `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md` with Auction
-  sold/passed-in/withdrawn.
+- Implemented Auction sold/passed-in/withdrawn outcomes from
+  `docs/dle/OPERATING_OUTCOME_LAYER_DESIGN.md`.
+- `developer.recordAuctionLotOutcome` requires an owned Auction development and active unit type.
+- `sold` and `passed_in` require current `auction_status = active`; `withdrawn` is allowed only
+  from non-final lifecycle statuses.
+- The dashboard exposes Auction-native `Mark Sold`, `Mark Passed In`, and `Withdraw` actions.
+- The mutation updates only `unit_types.auction_status` and writes `auction_outcome_recorded`.
+- Browser proof in `e2e/dle/auction-operating-outcomes.spec.ts` verifies outcome success, event
+  readback, no count mutation, field ownership, public outcome language, and Auction search
+  pricing.
+- Browser proof in `e2e/dle/operating-mutation-failure-trust.spec.ts` verifies stale Auction sold
+  failure does not claim success and writes no operating event.
+
+Recommended next architecture work:
+
+- Design lead-stage synchronization and distribution/referral outcome handoff before automating
+  cross-surface side effects from Sale sold, Rental let, or Auction outcomes.

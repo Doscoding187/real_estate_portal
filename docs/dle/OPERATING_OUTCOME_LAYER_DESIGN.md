@@ -1,9 +1,9 @@
 # DLE Operating Outcome Layer Design
 
 Date: 2026-06-04
-Status: Sale sold from reserved inventory and Rental let from held inventory are implemented and
-browser-proven. Auction sold/passed-in/withdrawn outcomes remain future transaction-specific
-slices.
+Status: Sale sold from reserved inventory, Rental let from held inventory, and Auction
+sold/passed-in/withdrawn outcomes are implemented and browser-proven. Lead-stage synchronization
+and distribution/referral outcome handoff remain future transaction-specific slices.
 
 ## Purpose
 
@@ -99,8 +99,7 @@ For implementation slices, use these projections deliberately and document the t
 - Auction outcome:
   - update `unit_types.auction_status` from `active` to `sold`, `passed_in`, or `withdrawn`;
   - do not use `reserved_units` as bidder or auction outcome count;
-  - write `auction_outcome_recorded` for sold/passed-in and `inventory_status_changed` or
-    `auction_outcome_recorded` for withdrawn, depending on the final implementation contract.
+  - write `auction_outcome_recorded` for sold, passed-in, and withdrawn outcomes.
 
 Longer-term schema recommendation:
 
@@ -431,12 +430,28 @@ Implemented Rental let from held inventory:
 The dashboard exposes `let projection` from `total_units - available_units - reserved_units`.
 That remains a temporary projection, not canonical let-count reporting.
 
+Implemented Auction sold/passed-in/withdrawn outcomes:
+
+- Added `developer.recordAuctionLotOutcome`.
+- Requires owned Auction development and an active unit type.
+- Requires `auction_status = active` for `sold` and `passed_in`.
+- Allows `withdrawn` from non-final statuses and rejects final statuses.
+- Updates only `unit_types.auction_status`.
+- Does not change Auction counts, starting bid, reserve price, auction window, media, documents,
+  location, governance, highlights, unit definitions, or canonical wizard `stepData`.
+- Writes `auction_outcome_recorded` with the requested outcome in event metadata.
+- Shows Auction-native `Mark Sold`, `Mark Passed In`, and `Withdraw` actions in the dashboard.
+- Browser proof covers sold, passed-in, and withdrawn outcomes, event readback, public/search
+  Auction outcome language, no false success on stale active-state failure, and packaging-field
+  preservation.
+
 ## Recommended Implementation Order
 
-1. Implement Auction sold/passed-in/withdrawn outcome from active/non-final lifecycle.
-2. Strengthen transaction-native public availability language for all outcome states.
-3. Design and implement lead-stage synchronization explicitly.
-4. Design and implement distribution/referral outcome handoff explicitly.
+1. Strengthen transaction-native public availability language for all outcome states where the
+   current card/page copy still invites incompatible actions.
+2. Design and implement lead-stage synchronization explicitly.
+3. Design and implement distribution/referral outcome handoff explicitly.
+4. Add explicit Sale/Rental outcome projections before broad sold/let reporting.
 
 ## Completed First Implementation Slice
 
@@ -493,19 +508,19 @@ Do not include:
 - commission/deal closure;
 - edit-development autosave.
 
-## Next Implementation Slice Recommendation
+## Completed Third Implementation Slice
 
 Implement Auction sold/passed-in/withdrawn outcome from the active/non-final lifecycle.
 
-First Auction outcome slice should:
+First Auction outcome slice:
 
-- add a narrow Auction outcome endpoint;
-- require `auction_status = active` for `sold` and `passed_in`;
-- allow `withdrawn` only from explicitly permitted non-final statuses;
-- update only `unit_types.auction_status`;
-- write `auction_outcome_recorded` or a documented event contract for each outcome;
-- show Auction-native outcome actions in the dashboard;
-- browser-proof no false success, event readback, public Auction outcome language, and field
+- added a narrow Auction outcome endpoint;
+- requires `auction_status = active` for `sold` and `passed_in`;
+- allows `withdrawn` only from explicitly permitted non-final statuses;
+- updates only `unit_types.auction_status`;
+- writes `auction_outcome_recorded` for each outcome;
+- shows Auction-native outcome actions in the dashboard;
+- browser-proves no false success, event readback, public Auction outcome language, and field
   ownership.
 
 Do not include:
@@ -516,3 +531,12 @@ Do not include:
 - automatic reserve validation;
 - post-auction negotiation workflow;
 - automatic lead conversion or distribution deal closure.
+
+## Next Implementation Slice Recommendation
+
+Design the outcome handoff layer before automating cross-surface side effects:
+
+- lead-stage synchronization for Sale sold, Rental let, and Auction outcomes;
+- distribution/referral deal outcome handoff;
+- explicit reporting projections for Sale sold and Rental let;
+- public/search CTA suppression where outcome states should not invite unavailable actions.

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getAuctionActivationReadinessIssue,
+  getAuctionOutcomeTransitionStatuses,
   getAuctionRegistrationReadinessIssue,
   getAuctionRegistrationTransitionStatuses,
   getDevelopmentOperatingEventNote,
@@ -102,6 +103,42 @@ describe('development operating events service helpers', () => {
       fromStatus: 'registration_open',
       toStatus: 'scheduled',
     });
+  });
+
+  it('maps Auction outcomes from active and non-final lifecycle statuses', () => {
+    expect(
+      getAuctionOutcomeTransitionStatuses({
+        currentStatus: 'active',
+        outcome: 'sold',
+      }),
+    ).toEqual({ fromStatus: 'active', toStatus: 'sold' });
+    expect(
+      getAuctionOutcomeTransitionStatuses({
+        currentStatus: 'active',
+        outcome: 'passed_in',
+      }),
+    ).toEqual({ fromStatus: 'active', toStatus: 'passed_in' });
+    expect(
+      getAuctionOutcomeTransitionStatuses({
+        currentStatus: 'registration_open',
+        outcome: 'withdrawn',
+      }),
+    ).toEqual({ fromStatus: 'registration_open', toStatus: 'withdrawn' });
+  });
+
+  it('rejects Auction final outcomes from invalid current lifecycle statuses', () => {
+    expect(() =>
+      getAuctionOutcomeTransitionStatuses({
+        currentStatus: 'scheduled',
+        outcome: 'sold',
+      }),
+    ).toThrow('Auction sold outcomes require an active auction lot.');
+    expect(() =>
+      getAuctionOutcomeTransitionStatuses({
+        currentStatus: 'sold',
+        outcome: 'withdrawn',
+      }),
+    ).toThrow('Final Auction outcomes cannot be withdrawn again.');
   });
 
   it('requires Auction registration readiness before opening registration', () => {

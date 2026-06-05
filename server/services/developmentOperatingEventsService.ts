@@ -29,6 +29,8 @@ export const AUCTION_REGISTRATION_TRANSITIONS = [
   'close_registration',
 ] as const;
 export type AuctionRegistrationTransition = (typeof AUCTION_REGISTRATION_TRANSITIONS)[number];
+export const AUCTION_OUTCOME_TRANSITIONS = ['sold', 'passed_in', 'withdrawn'] as const;
+export type AuctionOutcomeTransition = (typeof AUCTION_OUTCOME_TRANSITIONS)[number];
 type AuctionLifecycleStatus =
   | 'scheduled'
   | 'registration_open'
@@ -207,6 +209,38 @@ export function getAuctionRegistrationTransitionStatuses(
     fromStatus: 'registration_open',
     toStatus: 'scheduled',
   };
+}
+
+export function getAuctionOutcomeTransitionStatuses(input: {
+  currentStatus: AuctionLifecycleStatus;
+  outcome: AuctionOutcomeTransition;
+}): { fromStatus: AuctionLifecycleStatus; toStatus: AuctionLifecycleStatus } {
+  const { currentStatus, outcome } = input;
+
+  if (outcome === 'sold' || outcome === 'passed_in') {
+    if (currentStatus !== 'active') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Auction ${outcome.replace(/_/g, ' ')} outcomes require an active auction lot.`,
+      });
+    }
+    return { fromStatus: currentStatus, toStatus: outcome };
+  }
+
+  if (outcome === 'withdrawn') {
+    if (currentStatus === 'sold' || currentStatus === 'passed_in' || currentStatus === 'withdrawn') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Final Auction outcomes cannot be withdrawn again.',
+      });
+    }
+    return { fromStatus: currentStatus, toStatus: 'withdrawn' };
+  }
+
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: 'Unsupported Auction outcome transition.',
+  });
 }
 
 function toNonNegativeInt(value: unknown): number {
@@ -895,6 +929,177 @@ export async function activateAuctionLot(input: {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Auction activation event was saved but could not be read back.',
+      });
+    }
+
+    return {
+      unit: afterSnapshot,
+      event,
+    };
+  });
+}
+
+export async function recordAuctionLotOutcome(input: {
+  developerId: number;
+  developmentId: number;
+  unitTypeId: string;
+  actorUserId: number;
+  outcome: AuctionOutcomeTransition;
+  note?: string;
+  sourceSurface?: unknown;
+}) {
+  const { db, development } = await requireOwnedDevelopment(input);
+  if (development.transactionType !== 'auction') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Auction outcomes are only available for Auction developments.',
+    });
+  }
+
+  const note = input.note ? String(input.note).trim() : '';
+  const sourceSurface = normalizeOperatingSourceSurface(input.sourceSurface);
+
+  return await db.transaction(async (tx: any) => {
+    const [beforeUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+        startingBid: unitTypes.startingBid,
+        reservePrice: unitTypes.reservePrice,
+        auctionStartDate: unitTypes.auctionStartDate,
+        auctionEndDate: unitTypes.auctionEndDate,
+        auctionStatus: unitTypes.auctionStatus,
+      })
+      .from(unitTypes)
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+        ),
+      )
+      .limit(1);
+
+    if (!beforeUnit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Auction lot not found.' });
+    }
+
+    const currentStatus = (beforeUnit.auctionStatus || 'scheduled') as AuctionLifecycleStatus;
+    const { fromStatus, toStatus } = getAuctionOutcomeTransitionStatuses({
+      currentStatus,
+      outcome: input.outcome,
+    });
+
+    const beforeSnapshot = {
+      unitTypeId: beforeUnit.id,
+      unitTypeName: beforeUnit.name,
+      auctionStatus: currentStatus,
+      totalUnits: toNonNegativeInt(beforeUnit.totalUnits),
+      availableUnits: toNonNegativeInt(beforeUnit.availableUnits),
+      reservedUnits: toNonNegativeInt(beforeUnit.reservedUnits),
+      startingBid: toPositiveNumberOrNull(beforeUnit.startingBid),
+      reservePrice: toPositiveNumberOrNull(beforeUnit.reservePrice),
+      auctionStartDate: beforeUnit.auctionStartDate,
+      auctionEndDate: beforeUnit.auctionEndDate,
+    };
+
+    const updateResult = await tx
+      .update(unitTypes)
+      .set({ auctionStatus: toStatus })
+      .where(
+        and(
+          eq(unitTypes.id, input.unitTypeId),
+          eq(unitTypes.developmentId, input.developmentId),
+          eq(unitTypes.isActive, 1),
+          eq(unitTypes.auctionStatus, fromStatus),
+        ),
+      );
+
+    if (readAffectedRows(updateResult) < 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Auction lifecycle changed before the outcome could be saved.',
+      });
+    }
+
+    const [afterUnit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        developmentId: unitTypes.developmentId,
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+        startingBid: unitTypes.startingBid,
+        reservePrice: unitTypes.reservePrice,
+        auctionStartDate: unitTypes.auctionStartDate,
+        auctionEndDate: unitTypes.auctionEndDate,
+        auctionStatus: unitTypes.auctionStatus,
+      })
+      .from(unitTypes)
+      .where(
+        and(eq(unitTypes.id, input.unitTypeId), eq(unitTypes.developmentId, input.developmentId)),
+      )
+      .limit(1);
+
+    if (!afterUnit) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Auction outcome saved but could not be read back.',
+      });
+    }
+
+    const afterSnapshot = {
+      ...beforeSnapshot,
+      auctionStatus: afterUnit.auctionStatus || toStatus,
+    };
+    const metadata = {
+      transition: 'record_outcome',
+      outcome: input.outcome,
+      ...(note ? { note } : {}),
+      developmentName: development.name,
+    };
+    const insertResult = await tx.insert(developmentOperatingEvents).values({
+      developmentId: input.developmentId,
+      unitTypeId: input.unitTypeId,
+      transactionType: 'auction',
+      eventType: 'auction_outcome_recorded',
+      fromStatus,
+      toStatus,
+      beforeData: beforeSnapshot,
+      afterData: afterSnapshot,
+      metadata,
+      actorUserId: input.actorUserId,
+      sourceSurface,
+    });
+
+    const insertedId = readInsertId(insertResult);
+    if (!insertedId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Auction outcome event could not be saved.',
+      });
+    }
+
+    const [event] = await tx
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.id, insertedId),
+          eq(developmentOperatingEvents.developmentId, input.developmentId),
+        ),
+      )
+      .limit(1);
+
+    if (!event) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Auction outcome event was saved but could not be read back.',
       });
     }
 
