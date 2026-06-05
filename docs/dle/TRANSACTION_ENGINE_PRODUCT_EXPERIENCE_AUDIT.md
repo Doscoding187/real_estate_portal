@@ -216,6 +216,24 @@ The public search grid should:
 This closes the view-switching gap from the prior slice: a buyer should not lose rental or auction
 intent just because they switch from list results to grid results.
 
+## Eleventh Product-Visibility Slice
+
+Browser-proof search-result view switching for Sale, Rental, and Auction.
+
+The browser proof now seeds one published development per transaction lane, then verifies:
+
+- Sale search cards keep `From`, available inventory, and `Contact Developer` in list and grid
+  modes;
+- Rental search cards keep `Rent from`, rental availability, and `Contact Leasing Team` in list and
+  grid modes;
+- Auction search cards keep `Bid from`, auction registration state, and `Contact Auction Team` in
+  list and grid modes;
+- the seeded developments satisfy real publish-readiness gates rather than bypassing the packaging
+  contract.
+
+This upgrades the previous component proof into browser evidence that buyer-facing search
+merchandising survives the actual route, query, rendering, and view-toggle path.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.

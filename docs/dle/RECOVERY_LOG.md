@@ -2975,3 +2975,43 @@ Next recommended slice:
   deeper public page merchandising sections.
 Commit hash/tag: This entry will be included in `feat(dle): show grid card inventory intent`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Search Grid/List Browser Proof
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-proof that Sale, Rental, and Auction search-result merchandising survives switching
+between list and grid views.
+Files changed:
+- e2e/dle/search-grid-list-transaction-merchandising.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/search-grid-list-transaction-merchandising.spec.ts --project="Desktop Chrome" --workers=1` passed after rerun outside the sandbox.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Seeded one publish-ready Sale, Rental, and Auction development in `listify_local`.
+- Sale search route showed `From`, `5 available`, and `Contact Developer` in list and grid modes.
+- Rental search route showed `Rent from`, `2 rentals available`, and `Contact Leasing Team` in list
+  and grid modes.
+- Auction search route showed `Bid from`, `Registration open`, and `Contact Auction Team` in list
+  and grid modes.
+Proof and fixes:
+- Added a deterministic Playwright spec that seeds transaction-lane developments through
+  `developmentService`, publishes/approves them, and validates public search rendering through the
+  actual route/query/view-toggle path.
+- The first sandbox Playwright run failed before app assertions because Chromium could not launch
+  under the Linux sandbox.
+- The first unsandboxed app run caught fixture readiness gaps (`Description must be at least 50
+  characters`, then `Add at least 3 highlights`); the fixture data now satisfies those publish gates.
+- A single orphan seed from the first readiness failure was cleaned from `listify_local`; the spec
+  now tracks created IDs before publish so cleanup still runs if publish readiness fails again.
+Remaining risks:
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+- This proves search-result route merchandising, not deeper public page section layout.
+Next recommended slice:
+- Continue public development-page merchandising sections, or add a browser screenshot evidence pass
+  for unit-detail/search cards now that the transaction wording is stable.
+Commit hash/tag: This entry will be included in `test(dle): prove search card view switching`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
