@@ -37,9 +37,79 @@ export interface ListingResultCardData {
   listingType?: 'sale' | 'rent' | 'auction';
   unitTypeId?: string;
   unitDisplayOrder?: number;
+  totalUnits?: number | null;
+  availableUnits?: number | null;
+  auctionStatus?: string | null;
   contactPhone?: string;
   contactWhatsapp?: string;
   contactEmail?: string;
+}
+
+function normalizeListingType(value?: string | null): 'sale' | 'rent' | 'auction' {
+  if (value === 'rent') return 'rent';
+  if (value === 'auction') return 'auction';
+  return 'sale';
+}
+
+function toNonNegativeInt(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.trunc(parsed));
+}
+
+function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+export function getDevelopmentSearchCardAvailabilityLabel(input: {
+  listingType?: 'sale' | 'rent' | 'auction' | null;
+  totalUnits?: number | null;
+  availableUnits?: number | null;
+  auctionStatus?: string | null;
+}): string | null {
+  const listingType = normalizeListingType(input.listingType);
+  const availableUnits = toNonNegativeInt(input.availableUnits);
+  const totalUnits = toNonNegativeInt(input.totalUnits);
+  const auctionStatus = String(input.auctionStatus || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (listingType === 'auction') {
+    if (auctionStatus === 'sold') return 'Sold at auction';
+    if (auctionStatus === 'passed_in') return 'Passed in';
+    if (auctionStatus === 'withdrawn') return 'Withdrawn';
+    if (auctionStatus === 'active') return 'Auction active';
+    if (auctionStatus === 'registration_open') return 'Registration open';
+    if (availableUnits === null) return null;
+    if (availableUnits > 0) return `${pluralize(availableUnits, 'lot')} open`;
+    return totalUnits && totalUnits > 0 ? 'Registration closed' : 'Auction availability on request';
+  }
+
+  if (availableUnits === null) return null;
+
+  if (listingType === 'rent') {
+    if (availableUnits > 0) return `${pluralize(availableUnits, 'rental')} available`;
+    return totalUnits && totalUnits > 0 ? 'Fully let' : 'Rental availability on request';
+  }
+
+  if (availableUnits > 0) return `${availableUnits} available`;
+  return totalUnits && totalUnits > 0 ? 'Sold out' : 'Availability on request';
+}
+
+export function getDevelopmentSearchCardContactLabel(input: {
+  listingType?: 'sale' | 'rent' | 'auction' | null;
+  isDevelopmentListing?: boolean;
+  isPrivateListing?: boolean;
+}): string {
+  if (!input.isDevelopmentListing) {
+    return input.isPrivateListing ? 'Contact Seller' : 'Contact Agent';
+  }
+
+  const listingType = normalizeListingType(input.listingType);
+  if (listingType === 'rent') return 'Contact Leasing Team';
+  if (listingType === 'auction') return 'Contact Auction Team';
+  return 'Contact Developer';
 }
 
 function formatPrice(
@@ -101,11 +171,20 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const listingHref =
     data.href ||
     (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
-  const contactCtaLabel = isDevelopmentListing
-    ? 'Contact Developer'
-    : isPrivateListing
-      ? 'Contact Seller'
-      : 'Contact Agent';
+  const contactCtaLabel = getDevelopmentSearchCardContactLabel({
+    listingType: data.listingType,
+    isDevelopmentListing,
+    isPrivateListing,
+  });
+  const availabilityLabel =
+    isDevelopmentListing && data.listingType
+      ? getDevelopmentSearchCardAvailabilityLabel({
+          listingType: data.listingType,
+          totalUnits: data.totalUnits,
+          availableUnits: data.availableUnits,
+          auctionStatus: data.auctionStatus,
+        })
+      : null;
   const whatsappTarget = String(data.contactWhatsapp || data.contactPhone || '').trim();
   const emailTarget = String(data.contactEmail || '').trim();
   const resolvedImage =
@@ -204,6 +283,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 listingType: data.listingType,
               })}
             </p>
+            {availabilityLabel && (
+              <p className="mt-1 inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                {availabilityLabel}
+              </p>
+            )}
 
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 pr-2">
               {typeof data.area === 'number' && data.area > 0 && (

@@ -576,7 +576,9 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
       ? { unitDisplayOrder: item.unitDisplayOrder }
       : {}),
     ...(typeof item.priceTo === 'number' ? { priceTo: item.priceTo } : {}),
+    ...(typeof item.totalUnits === 'number' ? { totalUnits: item.totalUnits } : {}),
     ...(typeof item.availableUnits === 'number' ? { availableUnits: item.availableUnits } : {}),
+    ...(item.auctionStatus ? { auctionStatus: item.auctionStatus } : {}),
   };
 }
 
@@ -735,6 +737,11 @@ export class DevelopmentDerivedListingService {
         const erfSize = toNumberOrNull(row.yardSize) ?? undefined;
         const inventory = calculateInventorySummary(row);
         const availableUnits = inventory.total > 0 ? inventory.available : undefined;
+        const totalUnits = inventory.total > 0 ? inventory.total : undefined;
+        const auctionStatus =
+          typeof row.auctionStatus === 'string' && row.auctionStatus.trim()
+            ? row.auctionStatus.trim()
+            : null;
         const rankingScore = computeOrganicRankingScore({
           listedDate,
           title,
@@ -778,7 +785,9 @@ export class DevelopmentDerivedListingService {
           image: mediaSignals.image,
           images: mediaSignals.image ? [{ url: mediaSignals.image, thumbnailUrl: mediaSignals.image }] : [],
           badges: [stageBadge].filter(Boolean) as string[],
+          totalUnits,
           availableUnits,
+          auctionStatus,
           completionDate: row.completionDate || null,
           listedDate,
           latitude: toNumberOrNull(row.latitude) ?? undefined,

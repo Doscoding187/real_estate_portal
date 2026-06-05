@@ -181,6 +181,23 @@ This closes a buyer-facing merchandising gap that remained after public developm
 dialogs became transaction-aware: the unit-specific page now speaks the same commercial language as
 the transaction engine.
 
+## Ninth Product-Visibility Slice
+
+Make public search/result cards carry transaction-native availability and contact intent.
+
+The public search card should:
+
+- keep Sale cards familiar with available/sold-out inventory and developer contact;
+- use Rental card language for rentals available, fully let state, and leasing-team contact;
+- use Auction card language for lots open, registration open/closed, active auction, and
+  sold/passed-in/withdrawn outcomes;
+- carry backend-derived `totalUnits`, `availableUnits`, and `auctionStatus` through the shared
+  search-card result contract when available;
+- keep existing price labels and unit-route identity intact.
+
+This improves the first buyer-facing touchpoint: search results now preview the same transaction
+lane a user will see on the public page, unit card, unit-detail page, and lead form.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -189,7 +206,8 @@ the transaction engine.
 - Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal
   pack, and urgency should become first-class product language.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
-  labels, availability, primary CTAs, unit-card copy, and unit-detail CTAs.
+  labels, availability, primary CTAs, unit-card copy, unit-detail CTAs, and search-card inventory
+  labels.
 - Add deeper Rental/Auction qualification rules where needed, such as lease qualification ratios,
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,

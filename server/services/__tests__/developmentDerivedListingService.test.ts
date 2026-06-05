@@ -182,7 +182,9 @@ describe('DevelopmentDerivedListingService', () => {
       bedrooms: 2,
       bathrooms: 2,
       floorSize: 74,
+      totalUnits: 12,
       availableUnits: 7,
+      auctionStatus: 'scheduled',
       development: {
         id: 42,
         name: 'The Junction',
@@ -208,6 +210,9 @@ describe('DevelopmentDerivedListingService', () => {
         avatarUrl: 'https://example.com/brand-logo.jpg',
       },
       image: 'https://example.com/unit-primary.jpg',
+      totalUnits: 12,
+      availableUnits: 7,
+      auctionStatus: 'scheduled',
     });
   });
 

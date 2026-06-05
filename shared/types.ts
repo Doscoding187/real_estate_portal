@@ -917,7 +917,9 @@ export interface DevelopmentDerivedListing {
   image?: string | null;
   images?: ImageUrls[];
   badges?: string[];
+  totalUnits?: number;
   availableUnits?: number;
+  auctionStatus?: string | null;
   completionDate?: string | null;
   listedDate: Date;
   latitude?: number;
@@ -1003,7 +1005,9 @@ export interface SearchCardResult {
   developerBrand?: SearchCardDeveloperBrandRef;
   highlights: string[];
   badges?: string[];
+  totalUnits?: number;
   availableUnits?: number;
+  auctionStatus?: string | null;
   imageCount?: number;
   videoCount?: number;
   transactionType?: string;

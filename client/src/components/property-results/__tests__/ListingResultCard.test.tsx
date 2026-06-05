@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ListingResultCard } from '../ListingResultCard';
+import {
+  getDevelopmentSearchCardAvailabilityLabel,
+  getDevelopmentSearchCardContactLabel,
+  ListingResultCard,
+} from '../ListingResultCard';
 
 const setLocationMock = vi.fn();
 
@@ -68,6 +72,8 @@ describe('ListingResultCard development inventory identity', () => {
           },
           listingSource: 'development',
           listingType: 'rent',
+          totalUnits: 6,
+          availableUnits: 2,
           contactRole: 'developer',
           developmentId: 43,
           unitTypeId: 'rent-a',
@@ -77,6 +83,8 @@ describe('ListingResultCard development inventory identity', () => {
     );
 
     expect(screen.getByText('Rent from R 12,500')).toBeInTheDocument();
+    expect(screen.getByText('2 rentals available')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Contact Leasing Team/i })).toBeInTheDocument();
   });
 
   it('labels auction development search cards as bids instead of generic sale pricing', () => {
@@ -96,6 +104,9 @@ describe('ListingResultCard development inventory identity', () => {
           },
           listingSource: 'development',
           listingType: 'auction',
+          totalUnits: 1,
+          availableUnits: 1,
+          auctionStatus: 'registration_open',
           contactRole: 'developer',
           developmentId: 44,
           unitTypeId: 'auction-a',
@@ -105,5 +116,52 @@ describe('ListingResultCard development inventory identity', () => {
     );
 
     expect(screen.getByText('Bid from R 850,000')).toBeInTheDocument();
+    expect(screen.getByText('Registration open')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Contact Auction Team/i })).toBeInTheDocument();
+  });
+
+  it('formats development search-card inventory by transaction lane', () => {
+    expect(
+      getDevelopmentSearchCardAvailabilityLabel({
+        listingType: 'sale',
+        totalUnits: 4,
+        availableUnits: 0,
+      }),
+    ).toBe('Sold out');
+
+    expect(
+      getDevelopmentSearchCardAvailabilityLabel({
+        listingType: 'rent',
+        totalUnits: 4,
+        availableUnits: 0,
+      }),
+    ).toBe('Fully let');
+
+    expect(
+      getDevelopmentSearchCardAvailabilityLabel({
+        listingType: 'auction',
+        totalUnits: 1,
+        availableUnits: 1,
+        auctionStatus: 'sold',
+      }),
+    ).toBe('Sold at auction');
+  });
+
+  it('formats contact labels by development transaction lane', () => {
+    expect(getDevelopmentSearchCardContactLabel({ isDevelopmentListing: true })).toBe(
+      'Contact Developer',
+    );
+    expect(
+      getDevelopmentSearchCardContactLabel({
+        listingType: 'rent',
+        isDevelopmentListing: true,
+      }),
+    ).toBe('Contact Leasing Team');
+    expect(
+      getDevelopmentSearchCardContactLabel({
+        listingType: 'auction',
+        isDevelopmentListing: true,
+      }),
+    ).toBe('Contact Auction Team');
   });
 });

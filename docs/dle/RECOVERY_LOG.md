@@ -2893,3 +2893,43 @@ Next recommended slice:
   screenshot proof for Rental/Auction unit-detail pages.
 Commit hash/tag: This entry will be included in `feat(dle): tailor unit detail merchandising`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-05 - Search Card Transaction Inventory Merchandising
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make public development search cards carry transaction-native availability/outcome labels and
+contact intent before users open the public page or lead form.
+Files changed:
+- shared/types.ts
+- server/services/developmentDerivedListingService.ts
+- server/services/__tests__/developmentDerivedListingService.test.ts
+- client/src/pages/SearchResults.tsx
+- client/src/components/property-results/ListingResultCard.tsx
+- client/src/components/property-results/__tests__/ListingResultCard.test.tsx
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/property-results/__tests__/ListingResultCard.test.tsx server/services/__tests__/developmentDerivedListingService.test.ts` passed after rerun outside the sandbox because the first sandbox run hit local MySQL `EPERM`.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual flows verified:
+- Focused component/service proof only; no browser screenshots in this slice.
+Proof and fixes:
+- `ListingResultCard` now accepts optional `totalUnits`, `availableUnits`, and `auctionStatus`.
+- Development search cards now show transaction-native inventory labels: Sale available/sold out,
+  Rental rentals available/fully let, and Auction registration/open/outcome labels.
+- Development search card contact buttons now read `Contact Leasing Team` for Rental and
+  `Contact Auction Team` for Auction while Sale keeps `Contact Developer`.
+- Derived development search results now carry `totalUnits`, `availableUnits`, and `auctionStatus`
+  from the unit inventory row into shared search-card results.
+- `SearchResults` now passes those inventory fields into the rendered search result card.
+Remaining risks:
+- Existing grid-mode `PropertyCard` still uses its own normalization path; this slice covers the
+  primary list-card path.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Browser-proof Rental/Auction search-card merchandising or continue deeper public page
+  merchandising sections.
+Commit hash/tag: This entry will be included in `feat(dle): show search card inventory intent`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
