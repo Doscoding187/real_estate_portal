@@ -669,6 +669,53 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-05 - Unit Type Packaging Readiness Browser Proof
+
+Date: 2026-06-05
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-proof that Rental and Auction unit setup visibly shows the transaction-native
+packaging readiness panel inside the Unit Types pricing tab.
+Files changed:
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- e2e/dle/unit-packaging-readiness.spec.ts
+- docs/dle/evidence/2026-06-05/qa-dle-rental-unit-readiness-desktop.png
+- docs/dle/evidence/2026-06-05/qa-dle-rental-unit-readiness-mobile.png
+- docs/dle/evidence/2026-06-05/qa-dle-auction-unit-readiness-desktop.png
+- docs/dle/evidence/2026-06-05/qa-dle-auction-unit-readiness-mobile.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/unit-packaging-readiness.spec.ts --project="Desktop Chrome" --workers=1` passed after rerun outside the Linux sandbox.
+- `pnpm vitest run client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Seeded a canonical Rental draft directly at the Unit Types step, opened the existing unit type,
+  switched to Pricing, and verified `Rental package readiness`, `5/5 ready`, rent, deposit, lease
+  term, furnished state, and rental availability.
+- Seeded a canonical Auction draft directly at the Unit Types step, opened the existing unit type,
+  switched to Pricing, and verified `Auction package readiness`, `5/5 ready`, starting bid, auction
+  window, reserve strategy, registration-open lifecycle, and lot availability.
+- Switched to a 390x844 viewport for both lanes and verified the readiness panel stayed within the
+  viewport while the transaction title remained visible.
+Proof and fixes:
+- Added accessible labels to duplicate, edit, and remove unit-card action buttons so browser proof
+  can use stable user-level controls.
+- Added a focused Playwright spec for the readiness panel instead of expanding the full
+  save-resume-publish journey.
+- The first browser attempt failed before assertions because Chromium cannot launch in the Linux
+  sandbox; the unsandboxed run caught and fixed brittle text selectors/date formatting, then passed.
+Remaining risks:
+- This proves the readiness panel in the existing seeded-unit edit flow, not the full new-unit entry
+  flow from an empty draft.
+- The panel is still advisory; publish/readiness enforcement remains in the existing validation
+  paths.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Continue developer operating-layer proof for Rental/Auction dashboards, or add an empty-draft
+  Unit Types packaging proof if the new-unit creation path needs the same browser evidence.
+Commit hash/tag: This entry will be included in `test(dle): prove unit packaging readiness`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-05 - Unit Type Packaging Readiness Panel
 
 Date: 2026-06-05

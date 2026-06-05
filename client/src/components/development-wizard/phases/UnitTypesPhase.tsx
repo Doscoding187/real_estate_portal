@@ -1609,6 +1609,7 @@ export function UnitTypesPhase() {
                     variant="secondary"
                     className="h-8 w-8"
                     onClick={() => handleDuplicate(unit)}
+                    aria-label={`Duplicate ${unit.name}`}
                     title="Duplicate Unit Type"
                   >
                     <Copy className="w-4 h-4" />
@@ -1618,6 +1619,7 @@ export function UnitTypesPhase() {
                     variant="secondary"
                     className="h-8 w-8"
                     onClick={() => handleOpenDialog(unit)}
+                    aria-label={`Edit ${unit.name}`}
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
@@ -1626,6 +1628,7 @@ export function UnitTypesPhase() {
                     variant="destructive"
                     className="h-8 w-8"
                     onClick={() => removeUnitType(unit.id)}
+                    aria-label={`Remove ${unit.name}`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
