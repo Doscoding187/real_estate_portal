@@ -29,6 +29,7 @@ const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
 };
 
 type WizardTransactionEngine = 'sale' | 'rental' | 'auction';
+type WizardRemediationIntent = 'pricing' | null;
 
 const TRANSACTION_ENGINE_COPY: Record<
   WizardTransactionEngine,
@@ -100,9 +101,11 @@ export function getWizardTransactionEngineCopy(value: unknown) {
 
 function TransactionEngineGuidance({
   currentStepId,
+  remediationIntent,
   transactionType,
 }: {
   currentStepId: string | null;
+  remediationIntent?: WizardRemediationIntent;
   transactionType: unknown;
 }) {
   const copy = getWizardTransactionEngineCopy(transactionType);
@@ -149,6 +152,16 @@ function TransactionEngineGuidance({
           )}
         </div>
       </div>
+
+      {remediationIntent === 'pricing' && (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <p className="text-sm font-medium text-amber-950">Pricing health review</p>
+          <p className="mt-1 text-sm text-amber-900">
+            You opened this package from dashboard pricing health. Align the public pricing mirror
+            with the live unit inventory before promotion, follow-up, or distribution.
+          </p>
+        </div>
+      )}
     </section>
   );
 }
@@ -161,6 +174,7 @@ interface WizardEngineProps {
   isManualSaveDraftPending?: boolean;
   onSaveProgress?: () => void | Promise<unknown>;
   isSaveProgressPending?: boolean;
+  remediationIntent?: WizardRemediationIntent;
 }
 
 export function WizardEngine({
@@ -171,6 +185,7 @@ export function WizardEngine({
   isManualSaveDraftPending,
   onSaveProgress,
   isSaveProgressPending,
+  remediationIntent,
 }: WizardEngineProps) {
   const {
     workflowId,
@@ -249,6 +264,7 @@ export function WizardEngine({
         <div className="max-w-5xl mx-auto">
           <TransactionEngineGuidance
             currentStepId={currentStepId}
+            remediationIntent={remediationIntent}
             transactionType={activeTransactionType}
           />
 

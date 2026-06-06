@@ -238,7 +238,11 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
 
     await auctionHealth.getByRole('button', { name: 'Review Auction Bids' }).click();
     await expect(page).toHaveURL(
-      new RegExp(`/developer/create-development\\?id=${seed.auctionDevelopmentId}`),
+      new RegExp(
+        `/developer/create-development\\?id=${seed.auctionDevelopmentId}&remediation=pricing`,
+      ),
     );
+    await expect(page.getByText('Pricing health review')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { level: 2, name: 'Unit Types' })).toBeVisible();
   });
 });

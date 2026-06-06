@@ -3299,3 +3299,51 @@ Next recommended slice:
   supported query parameter that opens the relevant transaction pricing/unit step directly.
 Commit hash/tag: This entry will be included in `feat(dle): guide pricing health remediation`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-06 - Pricing Remediation Editor Landing
+
+Date: 2026-06-06
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make dashboard pricing-health remediation land inside the packaging editor with explicit
+pricing intent and the correct unit-inventory step.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- client/src/components/wizard/WizardEngine.tsx
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/developer/Overview.test.ts` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Auction dashboard pricing-health drift now routes to
+  `/developer/create-development?id=<auctionId>&remediation=pricing`.
+- The editor hydration respects the pricing remediation intent and lands on `unit_types` instead of
+  the previously saved edit step.
+- The wizard shell renders a `Pricing health review` cue explaining that the public pricing mirror
+  must be aligned with live unit inventory before promotion, follow-up, or distribution.
+- The browser proof verifies the dashboard CTA, the remediation query, the visible repair cue, and
+  the `Unit Types` step.
+Proof and fixes:
+- Added a narrow `remediation=pricing` route intent from the developer dashboard.
+- Added edit-mode hydration handling that prefers the `unit_types` step when the pricing
+  remediation intent is present and valid for the workflow.
+- Passed the remediation intent into `WizardEngine` and surfaced it in transaction-engine guidance.
+- Added component proof that remediation edit routes disable autosave, pass the intent to the shell,
+  and hydrate to `unit_types`.
+Remaining risks:
+- The remediation cue is step-level guidance; it does not yet highlight the exact stale field or unit
+  row that caused the drift.
+- A future slice should connect pricing-health diagnostics to specific field-level repair hints.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Add field-level pricing repair hints inside `UnitTypesPhase` for Sale, Rental, and Auction when
+  opened via `remediation=pricing`, or extend the dashboard health object with the exact stale
+  public-vs-live values for the wizard to display.
+Commit hash/tag: This entry will be included in `feat(dle): land pricing remediation in editor`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

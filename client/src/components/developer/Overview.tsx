@@ -793,7 +793,7 @@ export default function Overview() {
 
   const goToPackageEditor = () => {
     if (!selectedDevelopmentId) return;
-    setLocation(`/developer/create-development?id=${selectedDevelopmentId}`);
+    setLocation(`/developer/create-development?id=${selectedDevelopmentId}&remediation=pricing`);
   };
 
   const kpis: any = funnelKpisQuery.data || {};

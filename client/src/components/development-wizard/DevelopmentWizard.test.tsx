@@ -188,11 +188,17 @@ vi.mock('../wizard/WizardEngine', () => ({
     isManualSaveDraftPending,
     onSaveProgress,
     isSaveProgressPending,
+    remediationIntent,
   }: any) =>
     React.createElement(
       React.Fragment,
       null,
       React.createElement('span', { 'data-testid': 'wizard-save-status' }, saveStatus),
+      React.createElement(
+        'span',
+        { 'data-testid': 'wizard-remediation-intent' },
+        remediationIntent ?? 'none',
+      ),
       React.createElement(
         'button',
         {
@@ -1093,6 +1099,25 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
       },
     });
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Development loaded for editing.');
+  });
+
+  it('pricing remediation edit route lands on unit inventory with a repair cue', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/developer/create-development?id=987&brandProfileId=55&remediation=pricing',
+    );
+    testState.currentUrl =
+      '/developer/create-development?id=987&brandProfileId=55&remediation=pricing';
+    testState.editDevelopment.currentStepId = 'review_publish';
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().currentStepId).toBe('unit_types');
+    });
+    expect(screen.getByTestId('wizard-remediation-intent')).toHaveTextContent('pricing');
+    expect(testState.autoSaveOptions.enabled).toBe(false);
   });
 
   it('rehydrates the new canonical target when the mounted wizard changes from draft to edit', async () => {

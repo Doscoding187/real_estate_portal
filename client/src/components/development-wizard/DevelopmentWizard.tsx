@@ -45,6 +45,10 @@ const parseNumericParam = (value: string | null) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const parseRemediationIntent = (value: string | null) => {
+  return value === 'pricing' ? 'pricing' : null;
+};
+
 const getDraftStateSignature = (snapshot: any) => {
   const { _savedAt: _ignoredSavedAt, ...canonicalState } = snapshot ?? {};
   return JSON.stringify(canonicalState);
@@ -59,6 +63,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const urlParams = new URLSearchParams(window.location.search);
   const draftIdFromUrl = urlParams.get('draftId');
   const idFromUrl = urlParams.get('id');
+  const remediationIntent = parseRemediationIntent(urlParams.get('remediation'));
   const brandProfileId = urlParams.get('brandProfileId')
     ? parseInt(urlParams.get('brandProfileId')!, 10)
     : undefined;
@@ -69,7 +74,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const isEditMode = editId != null;
   const isDraftMode = draftId != null;
   const hydrationTargetKey = isEditMode
-    ? `edit:${editId}:brand:${brandProfileId ?? 'none'}`
+    ? `edit:${editId}:brand:${brandProfileId ?? 'none'}:remediation:${remediationIntent ?? 'none'}`
     : isDraftMode
       ? `draft:${draftId}:brand:${brandProfileId ?? 'none'}`
       : `create:brand:${brandProfileId ?? 'none'}`;
@@ -355,7 +360,9 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       const visibleSteps = workflow ? getVisibleSteps(workflow, wizardData) : [];
 
       const preferredStepId =
-        sourceStepId && visibleSteps.some(step => step.id === sourceStepId)
+        remediationIntent === 'pricing' && visibleSteps.some(step => step.id === 'unit_types')
+          ? 'unit_types'
+          : sourceStepId && visibleSteps.some(step => step.id === sourceStepId)
           ? sourceStepId
           : (visibleSteps.find(step => !sourceCompletedSteps.includes(step.id))?.id ??
             visibleSteps[0]?.id);
@@ -374,6 +381,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     hydrateDevelopment,
     initializeWorkflow,
     markHydratedBaseline,
+    remediationIntent,
     setWorkflowStep,
   ]);
 
@@ -618,6 +626,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         isManualSaveDraftPending={isManualSavingDraft}
         onSaveProgress={isEditMode ? handleSaveProgress : undefined}
         isSaveProgressPending={isSavingProgress}
+        remediationIntent={remediationIntent}
       />
     );
   };
