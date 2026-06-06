@@ -306,6 +306,96 @@ export const getUnitTypesPhasePricingRepairCopy = (transactionType: unknown) => 
   };
 };
 
+const toUnitTypesPhasePositiveNumber = (value: unknown): number | null => {
+  const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const getUnitTypesPhaseRange = (
+  items: Partial<UnitType>[],
+  fromKeys: string[],
+  toKeys: string[] = [],
+) => {
+  const fromValues = items
+    .flatMap(item => fromKeys.map(key => toUnitTypesPhasePositiveNumber((item as any)?.[key])))
+    .filter((value): value is number => value != null);
+  const toValues = items
+    .flatMap(item => toKeys.map(key => toUnitTypesPhasePositiveNumber((item as any)?.[key])))
+    .filter((value): value is number => value != null);
+
+  if (fromValues.length === 0) return { from: null, to: null };
+  return {
+    from: Math.min(...fromValues),
+    to: toValues.length > 0 ? Math.max(...toValues) : Math.max(...fromValues),
+  };
+};
+
+const formatUnitTypesPhaseRepairRange = (
+  from: number | null,
+  to?: number | null,
+  suffix = '',
+) => {
+  if (!from) return 'Not set';
+  const rangeTo = to && to > from ? ` - ${formatUnitTypeCurrency(to)}` : '';
+  return `${formatUnitTypeCurrency(from)}${rangeTo}${suffix}`;
+};
+
+export const getUnitTypesPhasePricingRepairDiagnostic = ({
+  developmentData,
+  transactionType,
+  unitTypes,
+}: {
+  developmentData?: Record<string, any> | null;
+  transactionType: unknown;
+  unitTypes?: Partial<UnitType>[] | null;
+}) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+  const units = Array.isArray(unitTypes) ? unitTypes : [];
+
+  if (normalized === 'for_rent') {
+    const publicFrom = toUnitTypesPhasePositiveNumber(developmentData?.monthlyRentFrom);
+    const publicTo = toUnitTypesPhasePositiveNumber(developmentData?.monthlyRentTo);
+    const live = getUnitTypesPhaseRange(units, ['monthlyRentFrom', 'monthlyRent'], ['monthlyRentTo']);
+
+    return {
+      transactionType: normalized,
+      publicLabel: 'Public rent range',
+      publicValue: formatUnitTypesPhaseRepairRange(publicFrom, publicTo, ' / month'),
+      liveLabel: 'Live unit rent range',
+      liveValue: formatUnitTypesPhaseRepairRange(live.from, live.to, ' / month'),
+    };
+  }
+
+  if (normalized === 'auction') {
+    const publicFrom = toUnitTypesPhasePositiveNumber(developmentData?.startingBidFrom);
+    const live = getUnitTypesPhaseRange(units, ['startingBid']);
+
+    return {
+      transactionType: normalized,
+      publicLabel: 'Public bid from',
+      publicValue: formatUnitTypesPhaseRepairRange(publicFrom),
+      liveLabel: 'Live lot bid from',
+      liveValue: formatUnitTypesPhaseRepairRange(live.from),
+    };
+  }
+
+  const publicFrom = toUnitTypesPhasePositiveNumber(developmentData?.priceFrom);
+  const publicTo = toUnitTypesPhasePositiveNumber(developmentData?.priceTo);
+  const live = getUnitTypesPhaseRange(
+    units,
+    ['priceFrom', 'basePriceFrom'],
+    ['priceTo', 'basePriceTo'],
+  );
+
+  return {
+    transactionType: normalized,
+    publicLabel: 'Public price band',
+    publicValue: formatUnitTypesPhaseRepairRange(publicFrom, publicTo),
+    liveLabel: 'Live unit price band',
+    liveValue: formatUnitTypesPhaseRepairRange(live.from, live.to),
+  };
+};
+
 export const getUnitTypesPhasePriceDisplay = (unit: Partial<UnitType>, transactionType: unknown) => {
   const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
   const rentFrom = Number((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0);
@@ -585,6 +675,7 @@ export const getUnitTypesPhasePackagingChecklist = (
 
 export function UnitTypesPhase() {
   const {
+    developmentData,
     unitTypes,
     addUnitType,
     updateUnitType,
@@ -602,6 +693,11 @@ export function UnitTypesPhase() {
   const isAuction = normalizedTransactionType === 'auction';
   const transactionCopy = getUnitTypesPhaseTransactionCopy(normalizedTransactionType);
   const pricingRepairCopy = getUnitTypesPhasePricingRepairCopy(normalizedTransactionType);
+  const pricingRepairDiagnostic = getUnitTypesPhasePricingRepairDiagnostic({
+    developmentData,
+    transactionType: normalizedTransactionType,
+    unitTypes,
+  });
   const isPricingRemediationRoute =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('remediation') === 'pricing';
@@ -1650,6 +1746,24 @@ export function UnitTypesPhase() {
                   {field}
                 </Badge>
               ))}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-md border border-amber-200 bg-white p-3">
+              <p className="text-xs font-medium text-amber-800">
+                {pricingRepairDiagnostic.publicLabel}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-950">
+                {pricingRepairDiagnostic.publicValue}
+              </p>
+            </div>
+            <div className="rounded-md border border-amber-200 bg-white p-3">
+              <p className="text-xs font-medium text-amber-800">
+                {pricingRepairDiagnostic.liveLabel}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-950">
+                {pricingRepairDiagnostic.liveValue}
+              </p>
             </div>
           </div>
         </div>

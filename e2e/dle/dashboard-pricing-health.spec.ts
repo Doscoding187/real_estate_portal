@@ -249,5 +249,9 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
     await expect(repairHints.getByText('Starting bid', { exact: true })).toBeVisible();
     await expect(repairHints.getByText('Reserve price', { exact: true })).toBeVisible();
     await expect(repairHints.getByText('Auction window', { exact: true })).toBeVisible();
+    await expect(repairHints.getByText('Public bid from')).toBeVisible();
+    await expect(repairHints.getByText('Live lot bid from')).toBeVisible();
+    await expect(repairHints.getByText('R 800 000')).toBeVisible();
+    await expect(repairHints.getByText('R 850 000')).toBeVisible();
   });
 });

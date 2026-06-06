@@ -106,6 +106,12 @@ describe('development hydration adapter', () => {
       },
       monthlyLevyFrom: 1250,
       ratesFrom: 900,
+      priceFrom: 1_200_000,
+      priceTo: 1_450_000,
+      monthlyRentFrom: 12_500,
+      monthlyRentTo: 15_000,
+      startingBidFrom: 850_000,
+      reservePriceFrom: 950_000,
       amenities: ['access_control'],
       highlights: ['Existing highlight'],
     };
@@ -127,8 +133,41 @@ describe('development hydration adapter', () => {
       media: currentDevelopmentData.media,
       monthlyLevyFrom: 1250,
       ratesFrom: 900,
+      priceFrom: 1_200_000,
+      priceTo: 1_450_000,
+      monthlyRentFrom: 12_500,
+      monthlyRentTo: 15_000,
+      startingBidFrom: 850_000,
+      reservePriceFrom: 950_000,
       amenities: ['access_control'],
       highlights: ['Existing highlight'],
+    });
+  });
+
+  it('hydrates public transaction pricing mirrors from edit payloads', () => {
+    const result = buildHydratedDevelopmentDataUpdates({
+      source: {
+        transactionType: 'auction',
+        priceFrom: null,
+        monthlyRentFrom: null,
+        startingBidFrom: '800000.00',
+        reservePriceFrom: '950000.00',
+      },
+      snapshotStepData: {},
+      currentDevelopmentData: {
+        transactionType: 'for_sale',
+        location: {},
+        media: { heroImage: null, photos: [], videos: [], documents: [] },
+        amenities: [],
+        highlights: [],
+      },
+      normalizeTransactionType: value => value,
+    });
+
+    expect(result.updates).toMatchObject({
+      transactionType: 'auction',
+      startingBidFrom: '800000.00',
+      reservePriceFrom: '950000.00',
     });
   });
 

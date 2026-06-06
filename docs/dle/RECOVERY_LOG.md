@@ -669,6 +669,54 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-06 - Unit Pricing Repair Diagnostics
+
+Date: 2026-06-06
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Show exact public-vs-live pricing diagnostics inside the Unit Types repair panel so pricing
+remediation is actionable from the dashboard handoff.
+Files changed:
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx
+- client/src/lib/developmentHydrationAdapter.ts
+- client/src/lib/developmentHydrationAdapter.test.ts
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/developer/Overview.test.ts client/src/lib/developmentHydrationAdapter.test.ts` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Auction pricing-health drift still routes from the dashboard into
+  `/developer/create-development?id=<auctionId>&remediation=pricing`.
+- The editor lands on `Unit Types`, shows the shell-level `Pricing health review` cue, and shows the
+  Unit Types repair panel.
+- The Auction repair panel displays `Public bid from` with `R 800 000` and `Live lot bid from` with
+  `R 850 000`, proving the wizard can compare stale public mirrors against live lot inventory.
+- Rental dashboard pricing health remains aligned and browser evidence was refreshed.
+Proof and fixes:
+- Added `getUnitTypesPhasePricingRepairDiagnostic` with Sale, Rental, and Auction-specific public
+  mirror and live inventory labels.
+- Rendered diagnostic value cards inside `unit-pricing-repair-hints`.
+- Fixed edit hydration so top-level transaction pricing mirrors (`priceFrom/priceTo`,
+  `monthlyRentFrom/monthlyRentTo`, `startingBidFrom/reservePriceFrom`) are preserved from edit
+  payloads instead of disappearing from wizard `developmentData`.
+- Extended unit and browser coverage for the diagnostic values and the hydration boundary.
+Remaining risks:
+- The repair panel now shows exact public and live values, but it still does not visually mark the
+  individual unit row that caused the drift.
+- Sale and Rental diagnostics have helper proof; Auction has full dashboard-to-wizard browser proof
+  in this slice.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Highlight the affected unit row(s) or add row-level pricing drift badges so developers know where
+  to edit without comparing values manually.
+Commit hash/tag: This entry will be included in `feat(dle): show pricing repair diagnostics`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-05 - Developer Dashboard Pricing Health
 
 Date: 2026-06-05

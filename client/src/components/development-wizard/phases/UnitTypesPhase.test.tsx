@@ -4,6 +4,7 @@ import {
   getUnitTypesPhaseMerchandisingPreview,
   getUnitTypesPhasePackagingChecklist,
   getUnitTypesPhasePriceDisplay,
+  getUnitTypesPhasePricingRepairDiagnostic,
   getUnitTypesPhasePricingRepairCopy,
   getUnitTypesPhaseTransactionCopy,
   isValidUnitTypesPhaseMonthlyRentRange,
@@ -97,6 +98,59 @@ describe('UnitTypesPhase transaction helpers', () => {
     expect(getUnitTypesPhasePricingRepairCopy('auction')).toMatchObject({
       title: 'Auction bid repair fields',
       fields: expect.arrayContaining(['Starting bid', 'Reserve price', 'Auction window']),
+    });
+  });
+
+  it('builds transaction-specific pricing repair diagnostics from public mirrors and unit inventory', () => {
+    const saleDiagnostic = getUnitTypesPhasePricingRepairDiagnostic({
+      developmentData: { priceFrom: 1_200_000, priceTo: 1_650_000 },
+      transactionType: 'for_sale',
+      unitTypes: [
+        { basePriceFrom: 1_200_000, basePriceTo: 1_450_000 },
+        { priceFrom: 1_350_000, priceTo: 1_650_000 },
+      ],
+    });
+    expect({
+      ...saleDiagnostic,
+      publicValue: normalizeCurrencySpacing(saleDiagnostic.publicValue),
+      liveValue: normalizeCurrencySpacing(saleDiagnostic.liveValue),
+    }).toMatchObject({
+      publicLabel: 'Public price band',
+      publicValue: 'R 1 200 000 - R 1 650 000',
+      liveLabel: 'Live unit price band',
+      liveValue: 'R 1 200 000 - R 1 650 000',
+    });
+
+    const rentalDiagnostic = getUnitTypesPhasePricingRepairDiagnostic({
+      developmentData: { monthlyRentFrom: 13_500, monthlyRentTo: 15_500 },
+      transactionType: 'for_rent',
+      unitTypes: [{ monthlyRentFrom: 13_500, monthlyRentTo: 15_500 }],
+    });
+    expect({
+      ...rentalDiagnostic,
+      publicValue: normalizeCurrencySpacing(rentalDiagnostic.publicValue),
+      liveValue: normalizeCurrencySpacing(rentalDiagnostic.liveValue),
+    }).toMatchObject({
+      publicLabel: 'Public rent range',
+      publicValue: 'R 13 500 - R 15 500 / month',
+      liveLabel: 'Live unit rent range',
+      liveValue: 'R 13 500 - R 15 500 / month',
+    });
+
+    const auctionDiagnostic = getUnitTypesPhasePricingRepairDiagnostic({
+      developmentData: { startingBidFrom: 800_000 },
+      transactionType: 'auction',
+      unitTypes: [{ startingBid: 850_000 }],
+    });
+    expect({
+      ...auctionDiagnostic,
+      publicValue: normalizeCurrencySpacing(auctionDiagnostic.publicValue),
+      liveValue: normalizeCurrencySpacing(auctionDiagnostic.liveValue),
+    }).toMatchObject({
+      publicLabel: 'Public bid from',
+      publicValue: 'R 800 000',
+      liveLabel: 'Live lot bid from',
+      liveValue: 'R 850 000',
     });
   });
 

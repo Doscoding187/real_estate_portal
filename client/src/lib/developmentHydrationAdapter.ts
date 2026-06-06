@@ -257,6 +257,42 @@ export function buildHydratedDevelopmentDataUpdates({
       canonicalHydrationSnapshot.transferCostsIncluded,
       currentDevelopmentData.transferCostsIncluded,
     ),
+    priceFrom: firstDefined(
+      canonicalHydrationSnapshot.priceFrom,
+      source.priceFrom,
+      source.developmentData?.priceFrom,
+      currentDevelopmentData.priceFrom,
+    ),
+    priceTo: firstDefined(
+      canonicalHydrationSnapshot.priceTo,
+      source.priceTo,
+      source.developmentData?.priceTo,
+      currentDevelopmentData.priceTo,
+    ),
+    monthlyRentFrom: firstDefined(
+      canonicalHydrationSnapshot.monthlyRentFrom,
+      source.monthlyRentFrom,
+      source.developmentData?.monthlyRentFrom,
+      currentDevelopmentData.monthlyRentFrom,
+    ),
+    monthlyRentTo: firstDefined(
+      canonicalHydrationSnapshot.monthlyRentTo,
+      source.monthlyRentTo,
+      source.developmentData?.monthlyRentTo,
+      currentDevelopmentData.monthlyRentTo,
+    ),
+    startingBidFrom: firstDefined(
+      canonicalHydrationSnapshot.startingBidFrom,
+      source.startingBidFrom,
+      source.developmentData?.startingBidFrom,
+      currentDevelopmentData.startingBidFrom,
+    ),
+    reservePriceFrom: firstDefined(
+      canonicalHydrationSnapshot.reservePriceFrom,
+      source.reservePriceFrom,
+      source.developmentData?.reservePriceFrom,
+      currentDevelopmentData.reservePriceFrom,
+    ),
 
     highlights: rawHighlights,
     amenities: normalizedAmenities,
