@@ -714,7 +714,7 @@ Remaining risks:
 Next recommended slice:
 - Highlight the affected unit row(s) or add row-level pricing drift badges so developers know where
   to edit without comparing values manually.
-Commit hash/tag: This entry will be included in `feat(dle): show pricing repair diagnostics`.
+Commit hash/tag: `50d5ebee feat(dle): show pricing repair diagnostics`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
 ## 2026-06-05 - Developer Dashboard Pricing Health
@@ -3435,4 +3435,50 @@ Next recommended slice:
 - Carry the exact public-vs-live pricing diagnostics into the wizard so the Unit Types repair panel
   can identify the stale mirror and affected unit row.
 Commit hash/tag: This entry will be included in `feat(dle): show unit pricing repair hints`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-06 - Unit Pricing Row-Level Repair Guidance
+
+Date: 2026-06-06
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make pricing remediation point developers to the unit rows that define the live pricing values
+currently drifting from the public mirror.
+Files changed:
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/developer/Overview.test.ts client/src/lib/developmentHydrationAdapter.test.ts` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Auction pricing-health drift still routes from the dashboard into
+  `/developer/create-development?id=<auctionId>&remediation=pricing`.
+- The repair panel now shows `Rows to review` and names the affected auction lot that sets the live
+  bid-from value.
+- The affected unit card now carries `Pricing attention: Sets live bid from`, so the developer sees
+  the remediation target where the edit action lives.
+- The browser proof verifies the public mirror `R 800 000`, the duplicated live value `R 850 000`
+  in both the diagnostic and row badge, and the affected auction lot name.
+Proof and fixes:
+- Added `getUnitTypesPhasePricingRepairAffectedUnits` for Sale, Rental, and Auction row-level
+  drift contributors.
+- Rendered row-level repair guidance inside `unit-pricing-repair-hints`.
+- Added card-level amber styling and a pricing-attention badge for affected units during pricing
+  remediation.
+- Extended helper and browser coverage for row-level drift guidance.
+Remaining risks:
+- Row guidance identifies the current live min/max contributors, not the historical source of the
+  stale public mirror. That is the honest available evidence without a pricing audit trail.
+- Sale and Rental row guidance has helper proof; Auction has full dashboard-to-wizard browser proof
+  in this slice.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Add the same full browser proof standard for Sale and Rental pricing remediation, or begin an
+  audit-history-backed pricing change trail if row-level historical causality becomes important.
+Commit hash/tag: This entry will be included in `feat(dle): show pricing repair row guidance`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

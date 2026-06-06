@@ -252,6 +252,11 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
     await expect(repairHints.getByText('Public bid from')).toBeVisible();
     await expect(repairHints.getByText('Live lot bid from')).toBeVisible();
     await expect(repairHints.getByText('R 800 000')).toBeVisible();
-    await expect(repairHints.getByText('R 850 000')).toBeVisible();
+    await expect(repairHints.getByText('R 850 000')).toHaveCount(2);
+    await expect(repairHints.getByText('Rows to review')).toBeVisible();
+    await expect(
+      repairHints.getByText(new RegExp(`Pricing Health Auction Lot ${suffix}`)),
+    ).toBeVisible();
+    await expect(page.getByText('Pricing attention: Sets live bid from')).toBeVisible();
   });
 });

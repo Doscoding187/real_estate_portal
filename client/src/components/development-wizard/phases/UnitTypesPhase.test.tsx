@@ -4,6 +4,7 @@ import {
   getUnitTypesPhaseMerchandisingPreview,
   getUnitTypesPhasePackagingChecklist,
   getUnitTypesPhasePriceDisplay,
+  getUnitTypesPhasePricingRepairAffectedUnits,
   getUnitTypesPhasePricingRepairDiagnostic,
   getUnitTypesPhasePricingRepairCopy,
   getUnitTypesPhaseTransactionCopy,
@@ -152,6 +153,61 @@ describe('UnitTypesPhase transaction helpers', () => {
       liveLabel: 'Live lot bid from',
       liveValue: 'R 850 000',
     });
+  });
+
+  it('identifies unit rows responsible for public-vs-live pricing drift', () => {
+    const saleRows = getUnitTypesPhasePricingRepairAffectedUnits({
+      developmentData: { priceFrom: 1_000_000, priceTo: 1_500_000 },
+      transactionType: 'for_sale',
+      unitTypes: [
+        { id: 'sale-a', name: 'Starter Apartment', basePriceFrom: 1_200_000, basePriceTo: 1_350_000 },
+        { id: 'sale-b', name: 'Penthouse', basePriceFrom: 1_400_000, basePriceTo: 1_650_000 },
+      ],
+    });
+    expect(saleRows).toEqual([
+      {
+        id: 'sale-a',
+        name: 'Starter Apartment',
+        reason: 'Sets live price from',
+        value: expect.stringContaining('1'),
+      },
+      {
+        id: 'sale-b',
+        name: 'Penthouse',
+        reason: 'Sets live price to',
+        value: expect.stringContaining('1'),
+      },
+    ]);
+
+    const rentalRows = getUnitTypesPhasePricingRepairAffectedUnits({
+      developmentData: { monthlyRentFrom: 12_000, monthlyRentTo: 15_000 },
+      transactionType: 'for_rent',
+      unitTypes: [
+        { id: 'rent-a', name: 'Two Bed Rental', monthlyRentFrom: 13_500, monthlyRentTo: 15_500 },
+      ],
+    });
+    expect(rentalRows).toMatchObject([
+      {
+        id: 'rent-a',
+        name: 'Two Bed Rental',
+        reason: 'Sets live rent from, Sets live rent to',
+      },
+    ]);
+    expect(normalizeCurrencySpacing(rentalRows[0].value)).toBe('R 13 500, R 15 500');
+
+    const auctionRows = getUnitTypesPhasePricingRepairAffectedUnits({
+      developmentData: { startingBidFrom: 800_000 },
+      transactionType: 'auction',
+      unitTypes: [{ id: 'auction-a', name: 'Auction Lot', startingBid: 850_000 }],
+    });
+    expect(auctionRows).toMatchObject([
+      {
+        id: 'auction-a',
+        name: 'Auction Lot',
+        reason: 'Sets live bid from',
+      },
+    ]);
+    expect(normalizeCurrencySpacing(auctionRows[0].value)).toBe('R 850 000');
   });
 
   it('validates optional monthly rent upper range against monthly rent from', () => {

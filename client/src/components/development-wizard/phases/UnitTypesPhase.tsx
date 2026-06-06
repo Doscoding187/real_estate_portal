@@ -396,6 +396,102 @@ export const getUnitTypesPhasePricingRepairDiagnostic = ({
   };
 };
 
+export const getUnitTypesPhasePricingRepairAffectedUnits = ({
+  developmentData,
+  transactionType,
+  unitTypes,
+}: {
+  developmentData?: Record<string, any> | null;
+  transactionType: unknown;
+  unitTypes?: Partial<UnitType>[] | null;
+}) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+  const units = Array.isArray(unitTypes) ? unitTypes : [];
+  const affected = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      reason: string;
+      value: string;
+    }
+  >();
+
+  const addAffectedUnit = (
+    unit: Partial<UnitType>,
+    priceKeys: string[],
+    target: number | null,
+    reason: string,
+  ) => {
+    if (!target) return;
+    const unitValue = priceKeys
+      .map(key => toUnitTypesPhasePositiveNumber((unit as any)?.[key]))
+      .find(value => value === target);
+    if (!unitValue) return;
+
+    const id = String(unit.id ?? unit.name ?? `${reason}-${unitValue}`);
+    const existing = affected.get(id);
+    const name = String(unit.name ?? unit.label ?? 'Unnamed unit');
+    const formattedValue = formatUnitTypeCurrency(unitValue);
+
+    affected.set(id, {
+      id,
+      name,
+      reason: existing ? `${existing.reason}, ${reason}` : reason,
+      value: existing ? `${existing.value}, ${formattedValue}` : formattedValue,
+    });
+  };
+
+  if (normalized === 'for_rent') {
+    const publicFrom = toUnitTypesPhasePositiveNumber(developmentData?.monthlyRentFrom);
+    const publicTo = toUnitTypesPhasePositiveNumber(developmentData?.monthlyRentTo);
+    const live = getUnitTypesPhaseRange(units, ['monthlyRentFrom', 'monthlyRent'], ['monthlyRentTo']);
+
+    units.forEach(unit => {
+      if (publicFrom !== live.from) {
+        addAffectedUnit(unit, ['monthlyRentFrom', 'monthlyRent'], live.from, 'Sets live rent from');
+      }
+      if (publicTo !== live.to) {
+        addAffectedUnit(unit, ['monthlyRentTo'], live.to, 'Sets live rent to');
+      }
+    });
+
+    return Array.from(affected.values());
+  }
+
+  if (normalized === 'auction') {
+    const publicFrom = toUnitTypesPhasePositiveNumber(developmentData?.startingBidFrom);
+    const live = getUnitTypesPhaseRange(units, ['startingBid']);
+
+    units.forEach(unit => {
+      if (publicFrom !== live.from) {
+        addAffectedUnit(unit, ['startingBid'], live.from, 'Sets live bid from');
+      }
+    });
+
+    return Array.from(affected.values());
+  }
+
+  const publicFrom = toUnitTypesPhasePositiveNumber(developmentData?.priceFrom);
+  const publicTo = toUnitTypesPhasePositiveNumber(developmentData?.priceTo);
+  const live = getUnitTypesPhaseRange(
+    units,
+    ['priceFrom', 'basePriceFrom'],
+    ['priceTo', 'basePriceTo'],
+  );
+
+  units.forEach(unit => {
+    if (publicFrom !== live.from) {
+      addAffectedUnit(unit, ['priceFrom', 'basePriceFrom'], live.from, 'Sets live price from');
+    }
+    if (publicTo !== live.to) {
+      addAffectedUnit(unit, ['priceTo', 'basePriceTo'], live.to, 'Sets live price to');
+    }
+  });
+
+  return Array.from(affected.values());
+};
+
 export const getUnitTypesPhasePriceDisplay = (unit: Partial<UnitType>, transactionType: unknown) => {
   const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
   const rentFrom = Number((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0);
@@ -698,6 +794,12 @@ export function UnitTypesPhase() {
     transactionType: normalizedTransactionType,
     unitTypes,
   });
+  const pricingRepairAffectedUnits = getUnitTypesPhasePricingRepairAffectedUnits({
+    developmentData,
+    transactionType: normalizedTransactionType,
+    unitTypes,
+  });
+  const pricingRepairAffectedUnitIds = new Set(pricingRepairAffectedUnits.map(unit => unit.id));
   const isPricingRemediationRoute =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('remediation') === 'pricing';
@@ -1766,6 +1868,27 @@ export function UnitTypesPhase() {
               </p>
             </div>
           </div>
+          {pricingRepairAffectedUnits.length > 0 ? (
+            <div className="mt-4 rounded-md border border-amber-200 bg-white p-3">
+              <p className="text-xs font-semibold uppercase text-amber-800">Rows to review</p>
+              <div className="mt-2 space-y-2">
+                {pricingRepairAffectedUnits.map(unit => (
+                  <div
+                    key={unit.id}
+                    className="flex flex-col gap-1 rounded-md border border-amber-100 bg-amber-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-950">{unit.name}</p>
+                      <p className="text-xs text-amber-900">{unit.reason}</p>
+                    </div>
+                    <Badge variant="outline" className="w-fit border-amber-300 bg-white text-amber-900">
+                      {unit.value}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -1791,8 +1914,19 @@ export function UnitTypesPhase() {
               unit,
               normalizedTransactionType,
             );
+            const pricingRepairUnit = pricingRepairAffectedUnits.find(
+              affected => affected.id === String(unit.id ?? unit.name),
+            );
             return (
-              <Card key={unit.id} className="group hover:shadow-lg transition-all border-slate-200">
+              <Card
+                key={unit.id}
+                className={cn(
+                  'group hover:shadow-lg transition-all',
+                  pricingRepairAffectedUnitIds.has(String(unit.id ?? unit.name))
+                    ? 'border-amber-300 bg-amber-50/40'
+                    : 'border-slate-200',
+                )}
+              >
               <div className="h-40 bg-slate-100 relative">
                 {unit.baseMedia?.gallery?.[0] ? (
                   <img src={unit.baseMedia.gallery[0].url} className="w-full h-full object-cover" />
@@ -1858,6 +1992,14 @@ export function UnitTypesPhase() {
                     <span className="text-xs text-slate-500"> {priceDisplay.suffix}</span>
                   ) : null}
                 </p>
+                {pricingRepairUnit ? (
+                  <Badge
+                    variant="outline"
+                    className="mt-2 w-fit border-amber-300 bg-white text-amber-900"
+                  >
+                    Pricing attention: {pricingRepairUnit.reason}
+                  </Badge>
+                ) : null}
               </CardHeader>
               <CardContent className="text-sm text-slate-600 space-y-1">
                 <div className="flex gap-4 items-center">
