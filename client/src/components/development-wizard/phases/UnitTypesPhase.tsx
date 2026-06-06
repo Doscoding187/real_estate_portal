@@ -259,6 +259,53 @@ export const getUnitTypesPhaseTransactionCopy = (transactionType: unknown) => {
   };
 };
 
+export const getUnitTypesPhasePricingRepairCopy = (transactionType: unknown) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+
+  if (normalized === 'for_rent') {
+    return {
+      transactionType: normalized,
+      title: 'Rental rent repair fields',
+      summary:
+        'Align public rent mirrors with live rental inventory before leasing follow-up or referral distribution.',
+      fields: [
+        'Monthly rent from',
+        'Monthly rent to',
+        'Deposit',
+        'Lease term',
+        'Rental availability',
+      ],
+      action: 'Edit the rental unit cards whose monthly rent range no longer matches the public rent range.',
+    };
+  }
+
+  if (normalized === 'auction') {
+    return {
+      transactionType: normalized,
+      title: 'Auction bid repair fields',
+      summary:
+        'Align public bid mirrors with live lot inventory before pushing auction traffic or bidder registration.',
+      fields: [
+        'Starting bid',
+        'Reserve price',
+        'Auction window',
+        'Auction lifecycle',
+        'Lot availability',
+      ],
+      action: 'Edit the auction lots whose starting bid no longer matches the public bid-from value.',
+    };
+  }
+
+  return {
+    transactionType: normalized,
+    title: 'Sale price repair fields',
+    summary:
+      'Align public sale price mirrors with live sale inventory before buyer follow-up or promotion.',
+    fields: ['Base price', 'Maximum price', 'Available stock', 'Reserved stock', 'Unit story'],
+    action: 'Edit the sale unit cards whose price band no longer matches the public sale price band.',
+  };
+};
+
 export const getUnitTypesPhasePriceDisplay = (unit: Partial<UnitType>, transactionType: unknown) => {
   const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
   const rentFrom = Number((unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0);
@@ -554,6 +601,10 @@ export function UnitTypesPhase() {
   const isRental = normalizedTransactionType === 'for_rent';
   const isAuction = normalizedTransactionType === 'auction';
   const transactionCopy = getUnitTypesPhaseTransactionCopy(normalizedTransactionType);
+  const pricingRepairCopy = getUnitTypesPhasePricingRepairCopy(normalizedTransactionType);
+  const isPricingRemediationRoute =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('remediation') === 'pricing';
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1570,6 +1621,39 @@ export function UnitTypesPhase() {
           <Plus className="w-4 h-4 mr-2" /> Add Unit Type
         </Button>
       </div>
+
+      {isPricingRemediationRoute && (
+        <div
+          data-testid="unit-pricing-repair-hints"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-4"
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="flex gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+              <div>
+                <p className="text-sm font-semibold text-amber-950">{pricingRepairCopy.title}</p>
+                <p className="mt-1 max-w-2xl text-sm text-amber-900">
+                  {pricingRepairCopy.summary}
+                </p>
+                <p className="mt-2 text-xs font-medium text-amber-950">
+                  {pricingRepairCopy.action}
+                </p>
+              </div>
+            </div>
+            <div className="flex max-w-xl flex-wrap gap-2">
+              {pricingRepairCopy.fields.map(field => (
+                <Badge
+                  key={field}
+                  variant="outline"
+                  className="border-amber-300 bg-white text-amber-900"
+                >
+                  {field}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {unitTypes.length === 0 ? (
         <Card className="border-2 border-dashed border-slate-300 py-12 text-center">

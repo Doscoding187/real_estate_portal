@@ -3347,3 +3347,44 @@ Next recommended slice:
   public-vs-live values for the wizard to display.
 Commit hash/tag: This entry will be included in `feat(dle): land pricing remediation in editor`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-06 - Unit Pricing Repair Hints
+
+Date: 2026-06-06
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the pricing-remediation Unit Types landing explain the exact transaction-specific fields
+developers should inspect.
+Files changed:
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/components/developer/Overview.test.ts` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed after tightening field-label locators.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Auction pricing-health drift still routes from the dashboard into
+  `/developer/create-development?id=<auctionId>&remediation=pricing`.
+- The editor lands on `Unit Types`, shows the shell-level `Pricing health review` cue, and now also
+  shows a Unit Types repair panel.
+- The Auction repair panel displays `Auction bid repair fields` plus exact field chips for
+  `Starting bid`, `Reserve price`, and `Auction window`.
+Proof and fixes:
+- Added `getUnitTypesPhasePricingRepairCopy` with Sale, Rental, and Auction-specific repair fields.
+- Rendered `unit-pricing-repair-hints` only when the route has `remediation=pricing`.
+- Extended Unit Types helper tests so repair hints remain transaction-specific.
+- Extended the browser proof to verify the Auction field-level repair hints after dashboard handoff.
+Remaining risks:
+- The repair panel names the fields but does not yet compute which individual unit row caused the
+  public-vs-live drift.
+- Rental and Sale remediation panels have helper proof but not separate browser proof in this slice.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Carry the exact public-vs-live pricing diagnostics into the wizard so the Unit Types repair panel
+  can identify the stale mirror and affected unit row.
+Commit hash/tag: This entry will be included in `feat(dle): show unit pricing repair hints`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

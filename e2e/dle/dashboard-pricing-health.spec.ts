@@ -244,5 +244,10 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
     );
     await expect(page.getByText('Pricing health review')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('heading', { level: 2, name: 'Unit Types' })).toBeVisible();
+    const repairHints = page.getByTestId('unit-pricing-repair-hints');
+    await expect(repairHints.getByText('Auction bid repair fields')).toBeVisible();
+    await expect(repairHints.getByText('Starting bid', { exact: true })).toBeVisible();
+    await expect(repairHints.getByText('Reserve price', { exact: true })).toBeVisible();
+    await expect(repairHints.getByText('Auction window', { exact: true })).toBeVisible();
   });
 });

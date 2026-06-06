@@ -4,6 +4,7 @@ import {
   getUnitTypesPhaseMerchandisingPreview,
   getUnitTypesPhasePackagingChecklist,
   getUnitTypesPhasePriceDisplay,
+  getUnitTypesPhasePricingRepairCopy,
   getUnitTypesPhaseTransactionCopy,
   isValidUnitTypesPhaseMonthlyRentRange,
   normalizeUnitTypesPhaseTransactionType,
@@ -80,6 +81,23 @@ describe('UnitTypesPhase transaction helpers', () => {
     );
     expect(normalizeCurrencySpacing(auctionDisplay.display)).toBe('R 850 000');
     expect(auctionDisplay.suffix).toBe('starting bid');
+  });
+
+  it('builds transaction-specific pricing repair hints for remediation routes', () => {
+    expect(getUnitTypesPhasePricingRepairCopy('for_sale')).toMatchObject({
+      title: 'Sale price repair fields',
+      fields: expect.arrayContaining(['Base price', 'Maximum price', 'Available stock']),
+    });
+
+    expect(getUnitTypesPhasePricingRepairCopy('for_rent')).toMatchObject({
+      title: 'Rental rent repair fields',
+      fields: expect.arrayContaining(['Monthly rent from', 'Monthly rent to', 'Deposit']),
+    });
+
+    expect(getUnitTypesPhasePricingRepairCopy('auction')).toMatchObject({
+      title: 'Auction bid repair fields',
+      fields: expect.arrayContaining(['Starting bid', 'Reserve price', 'Auction window']),
+    });
   });
 
   it('validates optional monthly rent upper range against monthly rent from', () => {
