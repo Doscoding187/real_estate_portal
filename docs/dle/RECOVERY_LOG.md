@@ -3215,3 +3215,45 @@ Next recommended slice:
   wizard-side guided packaging improvements for Rental and Auction.
 Commit hash/tag: This entry will be included in `test(dle): prove public detail commercial pack`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-06 - Dashboard Pricing Health Browser Proof
+
+Date: 2026-06-06
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-proof that the developer dashboard pricing-health panel makes transaction-specific
+public-vs-live inventory alignment visible for Rental and Auction packages.
+Files changed:
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed after rerunning outside the sandbox because Chromium could not launch inside the restricted sandbox.
+- `pnpm vitest run client/src/components/developer/Overview.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Seeded a publish-ready Rental development through `developmentService`, selected it in the
+  developer dashboard, and verified `Rental pricing health`, `Aligned`, `Public rent range`,
+  `Live unit rent range`, and matching `R13.5k - R15.5k / month` values.
+- Seeded a publish-ready Auction development, deliberately drifted the public `startingBidFrom`
+  mirror from the live lot starting bid, selected it in the developer dashboard, and verified
+  `Auction bid health`, `Review needed`, `Public bid from`, `Live lot bid from`, `R800k`, and
+  `R850k`.
+- Captured screenshot evidence for both dashboard states.
+Proof and fixes:
+- Added a focused Playwright browser proof for the dashboard pricing-health panel added in the
+  previous implementation slice.
+- Proved both the happy aligned Rental state and the attention Auction drift state through the real
+  developer dashboard, not only helper-level tests.
+Remaining risks:
+- This proof covers Rental and Auction dashboard pricing mirrors. Sale coverage remains in the
+  component/helper tests unless a future browser slice needs parity evidence.
+- The panel is read-only operating guidance; remediation still depends on follow-up edit/package
+  workflows.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Continue toward guided packaging improvements in the wizard/dashboard, especially making
+  transaction-specific remediation paths actionable when pricing health needs review.
+Commit hash/tag: This entry will be included in `test(dle): prove dashboard pricing health`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
