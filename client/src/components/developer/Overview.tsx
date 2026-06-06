@@ -212,6 +212,10 @@ export function buildOverviewPricingHealth(input: {
       help: aligned
         ? 'Public rent language matches live rental inventory.'
         : 'Review development rent mirrors or rental unit pricing before promoting this package.',
+      actionLabel: aligned ? null : 'Review Rental Pricing',
+      actionHelp: aligned
+        ? null
+        : 'Open the packaging wizard to align public rent mirrors with live rental inventory.',
     };
   }
 
@@ -232,6 +236,10 @@ export function buildOverviewPricingHealth(input: {
       help: aligned
         ? 'Public bid language matches live auction lots.'
         : 'Review development bid mirrors or lot starting bids before pushing auction traffic.',
+      actionLabel: aligned ? null : 'Review Auction Bids',
+      actionHelp: aligned
+        ? null
+        : 'Open the packaging wizard to align public bid mirrors with live auction lots.',
     };
   }
 
@@ -256,6 +264,10 @@ export function buildOverviewPricingHealth(input: {
     help: aligned
       ? 'Public price language matches live sale inventory.'
       : 'Review development price mirrors or unit sale pricing before sales follow-up.',
+    actionLabel: aligned ? null : 'Review Sale Pricing',
+    actionHelp: aligned
+      ? null
+      : 'Open the packaging wizard to align public price mirrors with live sale inventory.',
   };
 }
 
@@ -779,6 +791,11 @@ export default function Overview() {
     setLocation(`/developer/leads?${search.toString()}`);
   };
 
+  const goToPackageEditor = () => {
+    if (!selectedDevelopmentId) return;
+    setLocation(`/developer/create-development?id=${selectedDevelopmentId}`);
+  };
+
   const kpis: any = funnelKpisQuery.data || {};
   const stageCounts: any = kpis.stageCounts || {};
   const conversion: any = kpis.conversion || {};
@@ -1184,6 +1201,20 @@ export default function Overview() {
                     </p>
                   </div>
                 </div>
+                {pricingHealth.actionLabel && (
+                  <div className="mt-3 flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 md:flex-row md:items-center md:justify-between">
+                    <p className="text-sm text-amber-900">{pricingHealth.actionHelp}</p>
+                    <Button
+                      className="w-fit"
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={goToPackageEditor}
+                    >
+                      {pricingHealth.actionLabel}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 

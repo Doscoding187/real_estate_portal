@@ -229,8 +229,16 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
     await expect(auctionHealth.getByText('R800k')).toBeVisible();
     await expect(auctionHealth.getByText('R850k')).toBeVisible();
     await expect(auctionHealth.getByText('Review development bid mirrors')).toBeVisible();
+    await expect(
+      auctionHealth.getByRole('button', { name: 'Review Auction Bids' }),
+    ).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-dashboard-auction-pricing-health.png`,
     });
+
+    await auctionHealth.getByRole('button', { name: 'Review Auction Bids' }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/developer/create-development\\?id=${seed.auctionDevelopmentId}`),
+    );
   });
 });

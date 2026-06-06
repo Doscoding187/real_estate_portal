@@ -137,8 +137,10 @@ describe('Developer Overview operating readiness', () => {
       state: 'attention',
       publicLabel: 'Public rent range',
       inventoryLabel: 'Live unit rent range',
+      actionLabel: 'Review Rental Pricing',
     });
     expect(health?.help).toContain('Review development rent mirrors');
+    expect(health?.actionHelp).toContain('align public rent mirrors');
   });
 
   it('builds Auction bid health without collapsing into sale price language', () => {
@@ -156,6 +158,24 @@ describe('Developer Overview operating readiness', () => {
       publicLabel: 'Public bid from',
       inventoryLabel: 'Live lot bid from',
     });
+  });
+
+  it('guides Auction bid drift back into the package editor lane', () => {
+    const health = buildOverviewPricingHealth({
+      development: {
+        transactionType: 'auction',
+        startingBidFrom: 800_000,
+      },
+      inventoryItems: [{ startingBid: 850_000 }],
+    });
+
+    expect(health).toMatchObject({
+      title: 'Auction bid health',
+      status: 'Review needed',
+      state: 'attention',
+      actionLabel: 'Review Auction Bids',
+    });
+    expect(health?.actionHelp).toContain('align public bid mirrors');
   });
 
   it('formats operating event metadata without relying on one JSON shape', () => {

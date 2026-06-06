@@ -3257,3 +3257,45 @@ Next recommended slice:
   transaction-specific remediation paths actionable when pricing health needs review.
 Commit hash/tag: This entry will be included in `test(dle): prove dashboard pricing health`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-06 - Dashboard Pricing Health Remediation Path
+
+Date: 2026-06-06
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Turn dashboard pricing-health drift from a passive warning into a transaction-aware packaging
+remediation path.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-06/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/Overview.test.ts` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed outside the sandbox.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Rental aligned pricing health still shows the aligned rent-range state without a remediation CTA.
+- Auction public-bid drift now shows `Review Auction Bids` inside the pricing-health panel.
+- Clicking `Review Auction Bids` routes the developer to `/developer/create-development?id=<auctionId>`
+  for the same development, preserving the transaction-first packaging path.
+- Refreshed dashboard screenshot evidence captures the updated Rental and Auction pricing-health
+  states.
+Proof and fixes:
+- Added transaction-native remediation labels and helper text to pricing-health output for Sale,
+  Rental, and Auction drift states.
+- Rendered the remediation block only when pricing health needs attention.
+- Extended helper tests for Rental and Auction drift guidance.
+- Extended the existing browser proof to verify the Auction CTA and route into the package editor.
+Remaining risks:
+- The CTA opens the package editor but does not yet deep-link to the exact pricing/unit step.
+- The wizard still needs a transaction-aware "pricing health repair" landing state so the developer
+  knows exactly what to align after navigation.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Add a focused package-editor landing cue for `?id=<developmentId>` pricing remediation, or add a
+  supported query parameter that opens the relevant transaction pricing/unit step directly.
+Commit hash/tag: This entry will be included in `feat(dle): guide pricing health remediation`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
