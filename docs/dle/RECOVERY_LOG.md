@@ -3760,3 +3760,56 @@ Next recommended slice:
   distribution stages from DLE.
 Commit hash/tag: This entry will be included in `test(dle): prove rental auction lead outcome sync`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Rental/Auction Distribution Handoff Browser Proof
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Extend the explicit distribution/referral handoff proof beyond Sale so Rental and Auction can
+request manager review without DLE mutating distribution deal stages or commission state.
+Files changed:
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-review-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-manager-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-manager-acknowledged.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-developer-acknowledged.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-rental-review-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-auction-review-readback.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Sale referral handoff still proves developer dashboard review request, developer row readback,
+  manager row readback, manager acknowledgement, developer acknowledgement readback, DLE handoff
+  event, distribution note events, and unchanged deal stage/commission state.
+- Rental referral handoff now proves the developer can request review from the dashboard, read back
+  the note, persist `transactionType: for_rent` on the DLE handoff event, and leave distribution
+  deal stage and commission state unchanged.
+- Auction referral handoff now proves the developer can request review from the dashboard, read
+  back the note, persist `transactionType: auction` on the DLE handoff event, and leave
+  distribution deal stage and commission state unchanged.
+Proof and fixes:
+- Generalized the distribution handoff e2e seed to create Sale, Rental, or Auction developments
+  under the same DLE handoff contract.
+- Moved this spec's evidence output to 2026-06-07 so the current proof is grouped with the active
+  recovery work.
+- Updated the handoff contract and operating-layer audit to reflect Rental/Auction browser proof.
+Remaining risks:
+- Rental and Auction manager acknowledgement are not separately screenshotted in this slice; Sale
+  continues to prove the manager acknowledgement path, while Rental/Auction prove transaction type
+  and no hidden stage/commission mutation through the same service path.
+- Distribution programme semantics are still shared and sale-shaped. Rental leasing referral terms
+  and Auction bidder/referral payout rules remain future product work.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Next recommended slice:
+- Add a transaction-native manager reporting/readback surface for Rental/Auction handoffs, or
+  define Rental/Auction-specific distribution programme semantics before allowing any stage
+  transition requests from DLE.
+Commit hash/tag: This entry will be included in `test(dle): prove rental auction distribution handoff`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

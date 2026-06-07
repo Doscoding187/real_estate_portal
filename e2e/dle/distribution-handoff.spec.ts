@@ -19,8 +19,10 @@ import { getDb } from '../../server/db-connection';
 import { developmentService } from '../../server/services/developmentService';
 import { COOKIE_NAME } from '../../shared/const';
 
-const evidenceDir = 'docs/dle/evidence/2026-06-05';
+const evidenceDir = 'docs/dle/evidence/2026-06-07';
 fs.mkdirSync(evidenceDir, { recursive: true });
+
+type HandoffTransactionType = 'for_sale' | 'for_rent' | 'auction';
 
 type Seed = {
   userId: number;
@@ -34,6 +36,7 @@ type Seed = {
   buyerName: string;
   email: string;
   managerEmail: string;
+  transactionType: HandoffTransactionType;
 };
 
 function getInsertId(result: unknown): number {
@@ -106,7 +109,99 @@ async function loginAsSeededManager(page: Page, seed: Seed) {
   ]);
 }
 
-async function seedDistributionHandoffDevelopment(suffix: string): Promise<Seed> {
+function buildTransactionDevelopmentPayload(input: {
+  suffix: string;
+  transactionType: HandoffTransactionType;
+  unitTypeId: string;
+}) {
+  const { suffix, transactionType, unitTypeId } = input;
+  const commonPayload = {
+    name: `DLE Distribution Handoff ${suffix}`,
+    developmentType: 'residential',
+    transactionType,
+    address: '18 Referral Handoff Road',
+    city: 'Cape Town',
+    province: 'Western Cape',
+    suburb: 'Referral Proof',
+    description: 'Distribution handoff browser proof keeps DLE and referral ownership separate.',
+    highlights: ['Manager review ready', 'Commission protected', 'Audit linked'],
+    images: [{ url: 'https://example.com/dle-distribution-handoff.jpg' }],
+  };
+
+  if (transactionType === 'for_rent') {
+    return {
+      ...commonPayload,
+      name: `DLE Rental Distribution Handoff ${suffix}`,
+      status: 'leasing',
+      monthlyRentFrom: 13_500,
+      monthlyRentTo: 15_500,
+      unitTypes: [
+        {
+          id: unitTypeId,
+          name: `Referral Handoff Rental Unit ${suffix}`,
+          bedrooms: 2,
+          bathrooms: 2,
+          monthlyRentFrom: 13_500,
+          monthlyRentTo: 15_500,
+          depositRequired: 27_000,
+          leaseTerm: '12 months',
+          totalUnits: 4,
+          availableUnits: 2,
+          reservedUnits: 1,
+        },
+      ],
+    };
+  }
+
+  if (transactionType === 'auction') {
+    return {
+      ...commonPayload,
+      name: `DLE Auction Distribution Handoff ${suffix}`,
+      status: 'launching-soon',
+      startingBidFrom: 850_000,
+      reservePriceFrom: 950_000,
+      unitTypes: [
+        {
+          id: unitTypeId,
+          name: `Referral Handoff Auction Lot ${suffix}`,
+          bedrooms: 2,
+          bathrooms: 2,
+          startingBid: 850_000,
+          reservePrice: 950_000,
+          totalUnits: 1,
+          availableUnits: 1,
+          reservedUnits: 0,
+          auctionStatus: 'active',
+        },
+      ],
+    };
+  }
+
+  return {
+    ...commonPayload,
+    status: 'selling',
+    priceFrom: 1_750_000,
+    priceTo: 1_950_000,
+    unitTypes: [
+      {
+        id: unitTypeId,
+        name: `Referral Handoff Sale Unit ${suffix}`,
+        bedrooms: 2,
+        bathrooms: 2,
+        basePriceFrom: 1_750_000,
+        basePriceTo: 1_950_000,
+        totalUnits: 4,
+        availableUnits: 2,
+        reservedUnits: 1,
+      },
+    ],
+  };
+}
+
+async function seedDistributionHandoffDevelopment(
+  suffix: string,
+  transactionType: HandoffTransactionType = 'for_sale',
+): Promise<Seed> {
   const db = await getDb();
   expect(db).toBeTruthy();
 
@@ -156,35 +251,11 @@ async function seedDistributionHandoffDevelopment(suffix: string): Promise<Seed>
   });
   const agentUserId = getInsertId(agentInsert);
 
-  const unitTypeId = `handoff-sale-${suffix}`.slice(0, 36);
-  const created = await developmentService.createDevelopment(userId, {
-    name: `DLE Distribution Handoff ${suffix}`,
-    developmentType: 'residential',
-    transactionType: 'for_sale',
-    address: '18 Referral Handoff Road',
-    city: 'Cape Town',
-    province: 'Western Cape',
-    suburb: 'Referral Proof',
-    status: 'selling',
-    description: 'Distribution handoff browser proof keeps DLE and referral ownership separate.',
-    highlights: ['Manager review ready', 'Commission protected', 'Audit linked'],
-    images: [{ url: 'https://example.com/dle-distribution-handoff.jpg' }],
-    priceFrom: 1_750_000,
-    priceTo: 1_950_000,
-    unitTypes: [
-      {
-        id: unitTypeId,
-        name: `Referral Handoff Sale Unit ${suffix}`,
-        bedrooms: 2,
-        bathrooms: 2,
-        basePriceFrom: 1_750_000,
-        basePriceTo: 1_950_000,
-        totalUnits: 4,
-        availableUnits: 2,
-        reservedUnits: 1,
-      },
-    ],
-  } as any);
+  const unitTypeId = `handoff-${transactionType}-${suffix}`.slice(0, 36);
+  const created = await developmentService.createDevelopment(
+    userId,
+    buildTransactionDevelopmentPayload({ suffix, transactionType, unitTypeId }) as any,
+  );
   const developmentId = Number(created.id);
 
   const programInsert = await db!.insert(distributionPrograms).values({
@@ -225,6 +296,7 @@ async function seedDistributionHandoffDevelopment(suffix: string): Promise<Seed>
     buyerName,
     email,
     managerEmail,
+    transactionType,
   };
 }
 
@@ -238,22 +310,26 @@ async function selectDevelopment(page: Page, developmentName: string) {
 
 test.describe.serial('DLE distribution handoff browser proof', () => {
   let seed: Seed | null = null;
+  const cleanupSeeds: Seed[] = [];
 
   test.afterAll(async () => {
     const db = await getDb();
-    if (!db || !seed) return;
+    if (!db) return;
 
-    await db.delete(distributionDealEvents).where(eq(distributionDealEvents.dealId, seed.dealId));
-    await db
-      .delete(developmentOperatingEvents)
-      .where(eq(developmentOperatingEvents.developmentId, seed.developmentId));
-    await db.delete(distributionDeals).where(eq(distributionDeals.id, seed.dealId));
-    await db.delete(distributionPrograms).where(eq(distributionPrograms.id, seed.programId));
-    await db.delete(developments).where(eq(developments.id, seed.developmentId));
-    await db.delete(developers).where(eq(developers.id, seed.developerId));
-    await db.delete(users).where(eq(users.id, seed.agentUserId));
-    await db.delete(users).where(eq(users.id, seed.managerUserId));
-    await db.delete(users).where(eq(users.id, seed.userId));
+    const seedsToClean = [...(seed ? [seed] : []), ...cleanupSeeds];
+    for (const cleanup of seedsToClean.reverse()) {
+      await db.delete(distributionDealEvents).where(eq(distributionDealEvents.dealId, cleanup.dealId));
+      await db
+        .delete(developmentOperatingEvents)
+        .where(eq(developmentOperatingEvents.developmentId, cleanup.developmentId));
+      await db.delete(distributionDeals).where(eq(distributionDeals.id, cleanup.dealId));
+      await db.delete(distributionPrograms).where(eq(distributionPrograms.id, cleanup.programId));
+      await db.delete(developments).where(eq(developments.id, cleanup.developmentId));
+      await db.delete(developers).where(eq(developers.id, cleanup.developerId));
+      await db.delete(users).where(eq(users.id, cleanup.agentUserId));
+      await db.delete(users).where(eq(users.id, cleanup.managerUserId));
+      await db.delete(users).where(eq(users.id, cleanup.userId));
+    }
   });
 
   test('requests referral handoff review without changing distribution stage or commission', async ({
@@ -402,5 +478,127 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     );
     expect(parseJsonObject(acknowledgementEvent!.metadata).stageChanged).toBe(false);
     expect(parseJsonObject(acknowledgementEvent!.metadata).commissionChanged).toBe(false);
+  });
+
+  test('requests Rental referral handoff review without changing stage or commission', async ({
+    page,
+  }) => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const rentalSeed = await seedDistributionHandoffDevelopment(suffix, 'for_rent');
+    cleanupSeeds.push(rentalSeed);
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const [beforeDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, rentalSeed.dealId))
+      .limit(1);
+
+    await loginAsSeededDeveloper(page, rentalSeed);
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, rentalSeed.developmentName);
+    await expect(page.getByText('Distribution Impact')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(rentalSeed.buyerName)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByTestId(`dle-distribution-handoff-open-${rentalSeed.dealId}`).click();
+    await page
+      .getByTestId('dle-distribution-handoff-note')
+      .fill('Rental application pack is ready. Please review referral handoff without commission movement.');
+    await page.getByTestId('dle-distribution-handoff-submit').click();
+    await expect(page.getByText('Referral handoff review requested')).toBeVisible({
+      timeout: 15_000,
+    });
+    const handoffReadback = page.getByTestId(
+      `dle-distribution-handoff-readback-${rentalSeed.dealId}`,
+    );
+    await expect(handoffReadback).toBeVisible({ timeout: 15_000 });
+    await expect(handoffReadback.getByText('Rental application pack is ready')).toBeVisible();
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-distribution-handoff-rental-review-readback.png`,
+    });
+
+    const [afterDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, rentalSeed.dealId))
+      .limit(1);
+    expect(afterDeal.currentStage).toBe(beforeDeal.currentStage);
+    expect(afterDeal.commissionStatus).toBe(beforeDeal.commissionStatus);
+
+    const operatingEvents = await db!
+      .select()
+      .from(developmentOperatingEvents)
+      .where(eq(developmentOperatingEvents.developmentId, rentalSeed.developmentId));
+    expect(operatingEvents).toHaveLength(1);
+    expect(operatingEvents[0].eventType).toBe('distribution_handoff_created');
+    expect(operatingEvents[0].transactionType).toBe('for_rent');
+    expect(operatingEvents[0].distributionDealId).toBe(rentalSeed.dealId);
+    expect(parseJsonObject(operatingEvents[0].afterData).stageChanged).toBe(false);
+    expect(parseJsonObject(operatingEvents[0].afterData).commissionChanged).toBe(false);
+  });
+
+  test('requests Auction referral handoff review without changing stage or commission', async ({
+    page,
+  }) => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const auctionSeed = await seedDistributionHandoffDevelopment(suffix, 'auction');
+    cleanupSeeds.push(auctionSeed);
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const [beforeDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, auctionSeed.dealId))
+      .limit(1);
+
+    await loginAsSeededDeveloper(page, auctionSeed);
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, auctionSeed.developmentName);
+    await expect(page.getByText('Distribution Impact')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(auctionSeed.buyerName)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByTestId(`dle-distribution-handoff-open-${auctionSeed.dealId}`).click();
+    await page
+      .getByTestId('dle-distribution-handoff-note')
+      .fill('Auction bidder file needs manager review before any referral stage or commission movement.');
+    await page.getByTestId('dle-distribution-handoff-submit').click();
+    await expect(page.getByText('Referral handoff review requested')).toBeVisible({
+      timeout: 15_000,
+    });
+    const handoffReadback = page.getByTestId(
+      `dle-distribution-handoff-readback-${auctionSeed.dealId}`,
+    );
+    await expect(handoffReadback).toBeVisible({ timeout: 15_000 });
+    await expect(handoffReadback.getByText('Auction bidder file needs manager review')).toBeVisible();
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-distribution-handoff-auction-review-readback.png`,
+    });
+
+    const [afterDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, auctionSeed.dealId))
+      .limit(1);
+    expect(afterDeal.currentStage).toBe(beforeDeal.currentStage);
+    expect(afterDeal.commissionStatus).toBe(beforeDeal.commissionStatus);
+
+    const operatingEvents = await db!
+      .select()
+      .from(developmentOperatingEvents)
+      .where(eq(developmentOperatingEvents.developmentId, auctionSeed.developmentId));
+    expect(operatingEvents).toHaveLength(1);
+    expect(operatingEvents[0].eventType).toBe('distribution_handoff_created');
+    expect(operatingEvents[0].transactionType).toBe('auction');
+    expect(operatingEvents[0].distributionDealId).toBe(auctionSeed.dealId);
+    expect(parseJsonObject(operatingEvents[0].afterData).stageChanged).toBe(false);
+    expect(parseJsonObject(operatingEvents[0].afterData).commissionChanged).toBe(false);
   });
 });

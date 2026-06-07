@@ -114,9 +114,11 @@ Implemented distribution/referral handoff:
     `distribution.manager.acknowledgeDleHandoff`
   - preserves the current distribution deal stage and commission status
 - `e2e/dle/distribution-handoff.spec.ts`
-  - browser-proves dashboard review request, developer row-level handoff readback, manager
+  - browser-proves Sale dashboard review request, developer row-level handoff readback, manager
     row-level handoff readback, manager acknowledgement, developer acknowledgement readback, DLE
     audit event, distribution note events, and unchanged deal stage/commission state
+  - browser-proves Rental and Auction review requests preserve their transaction type in DLE
+    handoff events while leaving distribution deal stage and commission state unchanged
 
 ## Hard Boundary
 

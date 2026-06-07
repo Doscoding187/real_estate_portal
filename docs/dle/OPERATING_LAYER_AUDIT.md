@@ -374,6 +374,10 @@ Implemented lead outcome sync handoff:
 
 Recommended next architecture work:
 
-- Design the first distribution/referral handoff slice from `docs/dle/OUTCOME_HANDOFF_CONTRACT.md`
-  without bypassing distribution deal-stage, document, payout milestone, manager review, or
-  commission readiness guardrails.
+- Distribution/referral handoff review is now browser-proven for Sale, Rental, and Auction through
+  `e2e/dle/distribution-handoff.spec.ts`. Sale covers manager acknowledgement readback end to end;
+  Rental and Auction prove transaction-native DLE handoff event typing and unchanged distribution
+  deal stage/commission state.
+- Continue distribution/referral work with manager review/reporting surfaces or transaction-native
+  referral programme semantics without bypassing distribution deal-stage, document, payout
+  milestone, manager review, or commission readiness guardrails.
