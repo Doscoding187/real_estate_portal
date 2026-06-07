@@ -389,6 +389,8 @@ Recommended next architecture work:
 - The partner referral tracker now receives referral development `transactionType` and overlays
   shared pipeline stages with buyer, renter, or bidder labels so partners do not see every DLE
   referral as a sale journey.
+- The partner referral detail page now uses the same transaction context for status rails,
+  next-action hints, WhatsApp/contact labels, summary fields, and application-document copy.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

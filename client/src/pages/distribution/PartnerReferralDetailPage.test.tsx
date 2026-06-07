@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import PartnerReferralDetailPage, { getReferralAffordabilityDisplay } from './PartnerReferralDetailPage';
+import PartnerReferralDetailPage, {
+  getReferralAffordabilityDisplay,
+  getReferralDetailStageLabel,
+  getReferralDetailTransactionCopy,
+  normalizeReferralDetailTransactionType,
+} from './PartnerReferralDetailPage';
 
 const {
   mockUseAuth,
@@ -89,6 +94,26 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 describe('PartnerReferralDetailPage affordability display', () => {
+  it('uses transaction-aware detail labels for rental and auction referrals', () => {
+    expect(normalizeReferralDetailTransactionType('for_rent')).toBe('rent');
+    expect(normalizeReferralDetailTransactionType('auction')).toBe('auction');
+    expect(normalizeReferralDetailTransactionType('for_sale')).toBe('sale');
+    expect(getReferralDetailStageLabel('application_submitted', 'for_rent')).toBe(
+      'Rental application submitted',
+    );
+    expect(getReferralDetailStageLabel('contract_signed', 'auction')).toBe(
+      'Auction terms accepted',
+    );
+    expect(getReferralDetailTransactionCopy('for_rent')).toMatchObject({
+      participantLabel: 'Renter',
+      statusTitle: 'Renter Status and Reward Progress',
+    });
+    expect(getReferralDetailTransactionCopy('auction')).toMatchObject({
+      participantLabel: 'Bidder',
+      statusTitle: 'Bidder Status and Reward Progress',
+    });
+  });
+
   it('uses matched listing labels for rent and auction attachments', () => {
     const rent = getReferralAffordabilityDisplay({
       transactionType: 'rent',
@@ -144,6 +169,7 @@ describe('PartnerReferralDetailPage', () => {
         development: {
           developmentId: 100,
           name: 'Sky City',
+          transactionType: 'for_sale',
           city: 'Johannesburg',
           province: 'Gauteng',
         },
@@ -235,6 +261,7 @@ describe('PartnerReferralDetailPage', () => {
     expect(screen.getByText('Application and Supporting Documents')).toBeInTheDocument();
     expect(screen.getByText('Developer sale agreement')).toBeInTheDocument();
     expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
+    expect(screen.getByText('Buyer application documents')).toBeInTheDocument();
     expect(screen.getByText('Unit / house plans')).toBeInTheDocument();
     expect(screen.getByText('Upload signed copy')).toBeInTheDocument();
   });
@@ -251,6 +278,10 @@ describe('PartnerReferralDetailPage', () => {
       refetch: vi.fn(),
       data: {
         ...current,
+        development: {
+          ...current.development,
+          transactionType: 'for_rent',
+        },
         affordability: {
           ...current.affordability,
           transactionType: 'rent',
@@ -265,5 +296,77 @@ describe('PartnerReferralDetailPage', () => {
     expect(screen.getByText('Matched monthly rent:')).toBeInTheDocument();
     expect(screen.getByText(/\/ month/)).toBeInTheDocument();
     expect(screen.queryByText('Purchase price estimate:')).not.toBeInTheDocument();
+  });
+
+  it('renders rental referral detail with renter journey language', () => {
+    mockExportPackUseMutation.mockReturnValue({
+      isPending: false,
+      mutate: vi.fn(),
+    });
+    const current = mockGetReferralUseQuery().data;
+    mockGetReferralUseQuery.mockReturnValue({
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      data: {
+        ...current,
+        development: {
+          ...current.development,
+          transactionType: 'for_rent',
+        },
+        status: 'application_submitted',
+        affordability: {
+          ...current.affordability,
+          transactionType: 'rent',
+          listingPriceFrom: 12500,
+          listingPriceTo: 14000,
+        },
+      },
+    });
+
+    render(<PartnerReferralDetailPage />);
+
+    expect(screen.getByText('Rental referral')).toBeInTheDocument();
+    expect(screen.getByText('Renter Status and Reward Progress')).toBeInTheDocument();
+    expect(screen.getAllByText('Rental application submitted').length).toBeGreaterThan(0);
+    expect(screen.getByText('Renter:')).toBeInTheDocument();
+    expect(screen.getByText('Renter application documents')).toBeInTheDocument();
+    expect(screen.getByText(/renter qualification files/i)).toBeInTheDocument();
+  });
+
+  it('renders auction referral detail with bidder journey language', () => {
+    mockExportPackUseMutation.mockReturnValue({
+      isPending: false,
+      mutate: vi.fn(),
+    });
+    const current = mockGetReferralUseQuery().data;
+    mockGetReferralUseQuery.mockReturnValue({
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      data: {
+        ...current,
+        development: {
+          ...current.development,
+          transactionType: 'auction',
+        },
+        status: 'contract_signed',
+        affordability: {
+          ...current.affordability,
+          transactionType: 'auction',
+          listingPriceFrom: 850000,
+          listingPriceTo: 900000,
+        },
+      },
+    });
+
+    render(<PartnerReferralDetailPage />);
+
+    expect(screen.getByText('Auction referral')).toBeInTheDocument();
+    expect(screen.getByText('Bidder Status and Reward Progress')).toBeInTheDocument();
+    expect(screen.getAllByText('Auction terms accepted').length).toBeGreaterThan(0);
+    expect(screen.getByText('Bidder:')).toBeInTheDocument();
+    expect(screen.getByText('Bidder application documents')).toBeInTheDocument();
+    expect(screen.getByText(/bidder readiness files/i)).toBeInTheDocument();
   });
 });

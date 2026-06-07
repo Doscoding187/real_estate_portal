@@ -121,6 +121,12 @@ Implemented distribution/referral handoff:
   - reads referral development transaction type from `listMyReferrals`
   - overlays shared referral stages with buyer, renter, or bidder labels
   - keeps reward tracking generic to programme terms instead of presenting every referral as a sale
+- `client/src/pages/distribution/PartnerReferralDetailPage.tsx`
+  - uses the referral development transaction type on the detail page
+  - shows buyer, renter, or bidder status rails, next-action hints, summary labels, and document
+    copy
+  - preserves programme-owned payout and commission rules instead of turning Rental/Auction
+    referrals into hidden stage mutations
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

@@ -3986,3 +3986,43 @@ Next recommended slice:
   terms, or define Rental/Auction-specific referral document/payout semantics.
 Commit hash/tag: This entry will be included in `feat(dle): label partner referral journeys`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Partner Referral Detail Transaction Context
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Carry buyer/renter/bidder transaction language from the referral list into the partner
+referral detail page without changing distribution stage, commission, or payout ownership.
+Files changed:
+- client/src/pages/distribution/PartnerReferralDetailPage.tsx
+- client/src/pages/distribution/PartnerReferralDetailPage.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerReferralDetailPage.test.tsx` passed.
+- `pnpm vitest run server/__tests__/distributionManagerChecklist.integration.test.ts` passed,
+  completing the DB-backed checklist proof that was previously blocked by sandbox MySQL access.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Referral detail now derives transaction context from `referral.development.transactionType`,
+  falling back to affordability transaction metadata.
+- Sale, Rental, and Auction detail pages now use transaction-aware status rails, next-action
+  hints, participant labels, WhatsApp labels, summary labels, and application-document copy.
+- Rental detail uses renter/application/lease language; Auction detail uses
+  bidder/registration/auction-terms language.
+Guardrails:
+- No schema, migration, deal-stage, commission, lead, inventory, or payout mutation changes.
+- Payout rules remain programme-owned through existing distribution services.
+- This is a transaction-aware detail display overlay over the shared referral stage model.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Partner programme terms and referral submission still contain buyer/sale-shaped copy in places.
+- The underlying distribution programme terms and stage names remain shared and sale-shaped.
+Next recommended slice:
+- Carry transaction-aware language into partner referral submission and programme terms, or define
+  Rental/Auction-specific referral document/payout semantics.
+Commit hash/tag: This entry will be included in `feat(dle): label referral detail journeys`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

@@ -33,6 +33,109 @@ function getStageLabel(stage: string | null | undefined) {
     .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+type ReferralDetailTransaction = 'sale' | 'rent' | 'auction';
+
+export function normalizeReferralDetailTransactionType(value: unknown): ReferralDetailTransaction {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['for_rent', 'rent', 'rental', 'to_rent', 'to-rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getReferralDetailTransactionCopy(transactionType: unknown) {
+  const lane = normalizeReferralDetailTransactionType(transactionType);
+  if (lane === 'rent') {
+    return {
+      referralTypeLabel: 'Rental referral',
+      participantLabel: 'Renter',
+      participantLower: 'renter',
+      statusTitle: 'Renter Status and Reward Progress',
+      backLabel: 'Back to My Referrals',
+      submitAnotherLabel: 'Submit Another Referral',
+      contactLabel: 'WhatsApp Renter',
+      applicationDocumentsTitle: 'Renter application documents',
+      applicationDocumentsDescription:
+        'These are renter qualification files such as ID, proof of income, bank statements, deposit confirmation, or lease-readiness evidence.',
+      noApplicationDocuments:
+        'No renter application documents are configured for this referral yet.',
+      supportingDocumentsDescription:
+        'Share these with the renter. They do not change application progress.',
+    };
+  }
+  if (lane === 'auction') {
+    return {
+      referralTypeLabel: 'Auction referral',
+      participantLabel: 'Bidder',
+      participantLower: 'bidder',
+      statusTitle: 'Bidder Status and Reward Progress',
+      backLabel: 'Back to My Referrals',
+      submitAnotherLabel: 'Submit Another Referral',
+      contactLabel: 'WhatsApp Bidder',
+      applicationDocumentsTitle: 'Bidder application documents',
+      applicationDocumentsDescription:
+        'These are bidder readiness files such as ID, FICA, proof of funds, auction registration, or auction terms evidence.',
+      noApplicationDocuments:
+        'No bidder application documents are configured for this referral yet.',
+      supportingDocumentsDescription:
+        'Share these with the bidder. They do not change application progress.',
+    };
+  }
+  return {
+    referralTypeLabel: 'Buyer referral',
+    participantLabel: 'Buyer',
+    participantLower: 'buyer',
+    statusTitle: 'Buyer Status and Reward Progress',
+    backLabel: 'Back to My Referrals',
+    submitAnotherLabel: 'Submit Another Referral',
+    contactLabel: 'WhatsApp Buyer',
+    applicationDocumentsTitle: 'Buyer application documents',
+    applicationDocumentsDescription:
+      'These are buyer qualification files such as ID, income proof, bank statements, pre-approval, or proof of funds.',
+    noApplicationDocuments:
+      'No buyer application documents are configured for this referral yet.',
+    supportingDocumentsDescription:
+      'Share these with the buyer. They do not change application progress.',
+  };
+}
+
+export function getReferralDetailStageLabel(
+  stage: string | null | undefined,
+  transactionType: unknown,
+) {
+  const normalized = normalizeStage(stage);
+  const lane = normalizeReferralDetailTransactionType(transactionType);
+  const labels: Record<ReferralDetailTransaction, Record<string, string>> = {
+    sale: {
+      viewing_scheduled: 'Submitted',
+      viewing_completed: 'Viewing completed',
+      application_submitted: 'Application submitted',
+      contract_signed: 'Contract signed',
+      bond_approved: 'Bond approved',
+      commission_pending: 'Reward pending',
+      commission_paid: 'Reward paid',
+    },
+    rent: {
+      viewing_scheduled: 'Renter submitted',
+      viewing_completed: 'Rental viewing completed',
+      application_submitted: 'Rental application submitted',
+      contract_signed: 'Lease signed',
+      bond_approved: 'Lease conditions met',
+      commission_pending: 'Rental reward pending',
+      commission_paid: 'Rental reward paid',
+    },
+    auction: {
+      viewing_scheduled: 'Bidder submitted',
+      viewing_completed: 'Bidder contacted',
+      application_submitted: 'Bidder registered',
+      contract_signed: 'Auction terms accepted',
+      bond_approved: 'Bidder approved',
+      commission_pending: 'Auction reward pending',
+      commission_paid: 'Auction reward paid',
+    },
+  };
+  return labels[lane][normalized] || getStageLabel(normalized);
+}
+
 function getStageProgress(stage: string | null | undefined) {
   const normalized = normalizeStage(stage);
   const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
@@ -43,23 +146,35 @@ function getStageProgress(stage: string | null | undefined) {
 function getNextActionHint(input: {
   status: string;
   docProgress: { requiredCount: number; verifiedRequiredCount: number };
+  transactionType?: unknown;
 }) {
   const normalized = normalizeStage(input.status);
+  const lane = normalizeReferralDetailTransactionType(input.transactionType);
   if (normalized === 'commission_paid') {
-    return 'Referral reward paid. Download supporting documents and submit your next buyer.';
+    return 'Referral reward paid. Download supporting documents and submit your next referral.';
   }
   if (normalized === 'commission_pending') {
+    if (lane === 'rent') return 'Renter converted. Monitor rental reward approval and payment timing.';
+    if (lane === 'auction') return 'Bidder converted. Monitor auction reward approval and payment timing.';
     return 'Buyer converted. Monitor reward approval and payment timing.';
   }
   if (normalized === 'bond_approved' || normalized === 'contract_signed') {
+    if (lane === 'rent') return 'Keep renter documents complete while lease reward review is processed.';
+    if (lane === 'auction') return 'Keep bidder documents complete while auction reward review is processed.';
     return 'Keep all required documents complete while payout milestone is processed.';
   }
   if (normalized === 'application_submitted') {
     if (input.docProgress.verifiedRequiredCount < input.docProgress.requiredCount) {
+      if (lane === 'rent') return 'Upload and verify remaining renter documents to avoid reward delays.';
+      if (lane === 'auction') return 'Upload and verify remaining bidder documents to avoid reward delays.';
       return 'Upload and verify remaining required documents to avoid reward delays.';
     }
+    if (lane === 'rent') return 'Rental application submitted. Track manager feedback and lease progression.';
+    if (lane === 'auction') return 'Bidder registration submitted. Track manager feedback and auction readiness.';
     return 'Application submitted. Track manager feedback and bond progression.';
   }
+  if (lane === 'rent') return 'Coordinate renter viewing and progress this renter to application stage.';
+  if (lane === 'auction') return 'Coordinate bidder follow-up and progress this bidder to registration stage.';
   return 'Coordinate buyer viewing and progress this buyer to application stage.';
 }
 
@@ -264,12 +379,16 @@ export default function PartnerReferralDetailPage() {
         calcVersion?: string | null;
       }
     | null;
+  const transactionType =
+    referral.development?.transactionType || referral.affordability?.transactionType || 'sale';
+  const transactionCopy = getReferralDetailTransactionCopy(transactionType);
   const journeyProgress = getStageProgress(referral.status);
   const nextActionHint =
     referral.journey?.nextAction ||
     getNextActionHint({
       status: String(referral.status || ''),
       docProgress: referral.docProgress,
+      transactionType,
     });
   const actionCode = String(referral.journey?.actionCode || '');
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
@@ -285,7 +404,7 @@ export default function PartnerReferralDetailPage() {
     ? referral.programTerms.sourceDocuments
     : [];
   const affordabilityDisplay = getReferralAffordabilityDisplay({
-    transactionType: referral.affordability?.transactionType,
+    transactionType,
     purchasePriceEstimate: referral.affordability?.purchasePriceEstimate,
     listingPriceFrom: referral.affordability?.listingPriceFrom,
     listingPriceTo: referral.affordability?.listingPriceTo,
@@ -297,18 +416,22 @@ export default function PartnerReferralDetailPage() {
         <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
             <div>
-              <p className="text-[10px] font-semibold uppercase text-blue-100">Buyer referral</p>
+              <p className="text-[10px] font-semibold uppercase text-blue-100">
+                {transactionCopy.referralTypeLabel}
+              </p>
               <h1 className="mt-1 text-[28px] font-semibold">{referral.development.name}</h1>
               <p className="mt-2 text-[13px] text-[#ece6da]">Deal #{referral.dealId}</p>
             </div>
-            <Badge className="bg-white text-primary hover:bg-white">{getStageLabel(referral.status)}</Badge>
+            <Badge className="bg-white text-primary hover:bg-white">
+              {getReferralDetailStageLabel(referral.status, transactionType)}
+            </Badge>
           </div>
           <CardContent className="flex flex-wrap gap-2 bg-primary/5 py-4">
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
-              Back to My Buyers
+              {transactionCopy.backLabel}
             </Button>
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
-              Submit Another Buyer
+              {transactionCopy.submitAnotherLabel}
             </Button>
             {referral.matchSnapshotId ? (
               <Button
@@ -332,7 +455,7 @@ export default function PartnerReferralDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <WalletCards className="h-4 w-4 text-primary" />
-              Buyer Status and Reward Progress
+              {transactionCopy.statusTitle}
             </CardTitle>
             <CardDescription>
               Stage {journeyProgress.index + 1} of {JOURNEY_STAGES.length} ({journeyProgress.percent}
@@ -355,7 +478,7 @@ export default function PartnerReferralDetailPage() {
                       reached ? 'bg-primary/10 text-primary' : 'bg-[#f5f0e8] text-muted-foreground'
                     }`}
                   >
-                    {getStageLabel(stage)}
+                    {getReferralDetailStageLabel(stage, transactionType)}
                   </span>
                 );
               })}
@@ -406,7 +529,7 @@ export default function PartnerReferralDetailPage() {
                       window.open(`https://wa.me/${whatsappPhone}?text=${msg}`, '_blank', 'noopener,noreferrer')
                     }
                   >
-                    WhatsApp Buyer
+                    {transactionCopy.contactLabel}
                   </Button>
                 );
               })()}
@@ -432,7 +555,8 @@ export default function PartnerReferralDetailPage() {
                 <span className="text-slate-500">Created:</span> {referral.createdAt}
               </p>
               <p>
-                <span className="text-slate-500">Buyer:</span> {referral.buyer.name || 'Not provided'}
+                <span className="text-slate-500">{transactionCopy.participantLabel}:</span>{' '}
+                {referral.buyer.name || 'Not provided'}
               </p>
               <p>
                 <span className="text-slate-500">Phone:</span> {referral.buyer.phone || 'Not provided'}
@@ -499,7 +623,8 @@ export default function PartnerReferralDetailPage() {
               Application and Supporting Documents
             </CardTitle>
             <CardDescription>
-              Upload completed application documents here. Supporting files are buyer-facing reference files.
+              Upload completed application documents here. Supporting files are
+              {` ${transactionCopy.participantLower}`}-facing reference files.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -580,9 +705,11 @@ export default function PartnerReferralDetailPage() {
               </div>
 
               <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
-                <p className="text-sm font-semibold text-foreground">Buyer application documents</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {transactionCopy.applicationDocumentsTitle}
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  These are buyer qualification files such as ID, income proof, bank statements, pre-approval, or proof of funds.
+                  {transactionCopy.applicationDocumentsDescription}
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {buyerApplicationDocuments.map((document: any) => (
@@ -604,7 +731,7 @@ export default function PartnerReferralDetailPage() {
                   ))}
                   {!buyerApplicationDocuments.length ? (
                     <p className="rounded border border-dashed bg-white p-3 text-sm text-muted-foreground sm:col-span-2">
-                      No buyer application documents are configured for this referral yet.
+                      {transactionCopy.noApplicationDocuments}
                     </p>
                   ) : null}
                 </div>
@@ -614,7 +741,7 @@ export default function PartnerReferralDetailPage() {
             <div className="rounded-md border border-primary/15 bg-white p-3">
               <p className="text-sm font-semibold text-foreground">Supporting documents</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Share these with the buyer. They do not change application progress.
+                {transactionCopy.supportingDocumentsDescription}
               </p>
               <div className="mt-3 space-y-2">
                 {supportingDocuments.map((document: any) => (
