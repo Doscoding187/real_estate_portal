@@ -3480,5 +3480,54 @@ Remaining risks:
 Next recommended slice:
 - Add the same full browser proof standard for Sale and Rental pricing remediation, or begin an
   audit-history-backed pricing change trail if row-level historical causality becomes important.
-Commit hash/tag: This entry will be included in `feat(dle): show pricing repair row guidance`.
+Commit hash/tag: `9ba1622d feat(dle): show pricing repair row guidance`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Sale Rental Auction Pricing Remediation Browser Proof
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove dashboard-to-wizard pricing remediation and row-level repair guidance across Sale,
+Rental, and Auction transaction engines.
+Files changed:
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-sale-pricing-health.png
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/Overview.test.ts client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Sale pricing drift shows `Review Sale Pricing`, routes to
+  `/developer/create-development?id=<saleId>&remediation=pricing`, and renders Sale repair guidance
+  with `Public price band`, `Live unit price band`, `Rows to review`, the affected sale unit, and
+  `Pricing attention: Sets live price from, Sets live price to`.
+- Rental pricing drift shows `Review Rental Pricing`, routes to
+  `/developer/create-development?id=<rentalId>&remediation=pricing`, and renders Rental repair
+  guidance with `Public rent range`, `Live unit rent range`, `Rows to review`, the affected rental
+  unit, and `Pricing attention: Sets live rent from, Sets live rent to`.
+- Auction bid drift still shows `Review Auction Bids`, routes to
+  `/developer/create-development?id=<auctionId>&remediation=pricing`, and renders Auction repair
+  guidance with `Public bid from`, `Live lot bid from`, `Rows to review`, the affected auction lot,
+  and `Pricing attention: Sets live bid from`.
+Proof and fixes:
+- Expanded the dashboard pricing-health browser proof seed to create Sale, Rental, and Auction
+  developments with deliberately stale public pricing mirrors.
+- Added transaction-specific assertions for dashboard warning copy, remediation CTA, wizard
+  handoff URL, exact repair diagnostics, affected row names, and card-level pricing attention
+  badges.
+- Wrote new browser evidence under `docs/dle/evidence/2026-06-07/`.
+Remaining risks:
+- This slice proves pricing remediation, not actual developer correction and save/update of the
+  stale mirrors.
+- Pricing row guidance still identifies current live min/max contributors rather than historical
+  causality.
+- Existing unrelated homepage/evidence/playwright dirty files were not touched or staged.
+Next recommended slice:
+- Prove the correction path: edit the affected row or public mirror, save progress/update, return
+  to dashboard, and verify pricing health becomes aligned for Sale, Rental, and Auction.
+Commit hash/tag: This entry will be included in `test(dle): prove transaction pricing remediation`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

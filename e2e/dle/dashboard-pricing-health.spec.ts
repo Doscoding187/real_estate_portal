@@ -11,13 +11,15 @@ import { getDb } from '../../server/db-connection';
 import { developmentService } from '../../server/services/developmentService';
 import { COOKIE_NAME } from '../../shared/const';
 
-const evidenceDir = 'docs/dle/evidence/2026-06-06';
+const evidenceDir = 'docs/dle/evidence/2026-06-07';
 fs.mkdirSync(evidenceDir, { recursive: true });
 
 type Seed = {
   userId: number;
   developerId: number;
   email: string;
+  saleDevelopmentId: number;
+  saleDevelopmentName: string;
   rentalDevelopmentId: number;
   rentalDevelopmentName: string;
   auctionDevelopmentId: number;
@@ -80,6 +82,40 @@ async function seedPricingHealthDevelopments(suffix: string): Promise<Seed> {
     isVerified: 1,
   });
   const developerId = getInsertId(developerInsert);
+
+  const sale = await developmentService.createDevelopment(userId, {
+    name: `DLE Pricing Health Sale ${suffix}`,
+    developmentType: 'residential',
+    transactionType: 'for_sale',
+    address: '78 Pricing Health Sale Road',
+    city: 'Cape Town',
+    province: 'Western Cape',
+    suburb: 'Pricing Health Sale Proof',
+    status: 'selling',
+    ownershipType: 'sectional-title',
+    ownershipTypes: ['sectional-title'],
+    launchDate: '2029-01-10',
+    completionDate: '2030-03-31',
+    description: 'Sale pricing health browser proof catches public price mirror drift.',
+    highlights: ['Price mirror drift', 'Sales pack ready', 'Dashboard proof'],
+    images: [{ url: 'https://example.com/dle-pricing-health-sale.jpg' }],
+    priceFrom: 1_200_000,
+    priceTo: 1_650_000,
+    unitTypes: [
+      {
+        id: `pricing-sale-${suffix}`.slice(0, 36),
+        name: `Pricing Health Sale Two Bed ${suffix}`,
+        bedrooms: 2,
+        bathrooms: 2,
+        unitSize: 82,
+        priceFrom: 1_200_000,
+        priceTo: 1_650_000,
+        totalUnits: 8,
+        availableUnits: 5,
+        reservedUnits: 1,
+      },
+    ],
+  } as any);
 
   const rental = await developmentService.createDevelopment(userId, {
     name: `DLE Pricing Health Rental ${suffix}`,
@@ -154,11 +190,21 @@ async function seedPricingHealthDevelopments(suffix: string): Promise<Seed> {
     ],
   } as any);
 
+  await developmentService.publishDevelopment(Number(sale.id), userId);
+  await developmentService.approveDevelopment(Number(sale.id), 1);
   await developmentService.publishDevelopment(Number(rental.id), userId);
   await developmentService.approveDevelopment(Number(rental.id), 1);
   await developmentService.publishDevelopment(Number(auction.id), userId);
   await developmentService.approveDevelopment(Number(auction.id), 1);
 
+  await db!
+    .update(developments)
+    .set({ priceFrom: 1_000_000, priceTo: 1_500_000 } as any)
+    .where(eq(developments.id, Number(sale.id)));
+  await db!
+    .update(developments)
+    .set({ monthlyRentFrom: 12_000, monthlyRentTo: 15_000 } as any)
+    .where(eq(developments.id, Number(rental.id)));
   await db!
     .update(developments)
     .set({ startingBidFrom: 800_000 } as any)
@@ -168,6 +214,8 @@ async function seedPricingHealthDevelopments(suffix: string): Promise<Seed> {
     userId,
     developerId,
     email,
+    saleDevelopmentId: Number(sale.id),
+    saleDevelopmentName: String(sale.name),
     rentalDevelopmentId: Number(rental.id),
     rentalDevelopmentName: String(rental.name),
     auctionDevelopmentId: Number(auction.id),
@@ -192,12 +240,18 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
 
     await db
       .delete(developments)
-      .where(inArray(developments.id, [seed.rentalDevelopmentId, seed.auctionDevelopmentId]));
+      .where(
+        inArray(developments.id, [
+          seed.saleDevelopmentId,
+          seed.rentalDevelopmentId,
+          seed.auctionDevelopmentId,
+        ]),
+      );
     await db.delete(developers).where(eq(developers.id, seed.developerId));
     await db.delete(users).where(eq(users.id, seed.userId));
   });
 
-  test('shows Rental aligned pricing health and Auction bid drift on the developer dashboard', async ({
+  test('shows Sale, Rental, and Auction pricing drift remediation on the developer dashboard', async ({
     page,
   }) => {
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -209,17 +263,82 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
       timeout: 15_000,
     });
 
+    await selectDevelopment(page, seed.saleDevelopmentName);
+    const saleHealth = page.getByTestId('dle-pricing-health');
+    await expect(saleHealth.getByText('Sale pricing health')).toBeVisible({ timeout: 15_000 });
+    await expect(saleHealth.getByText('Review needed')).toBeVisible();
+    await expect(saleHealth.getByText('Public price band')).toBeVisible();
+    await expect(saleHealth.getByText('Live unit price band')).toBeVisible();
+    await expect(saleHealth.getByText('R1M - R1.5M')).toBeVisible();
+    await expect(saleHealth.getByText('R1.2M - R1.7M')).toBeVisible();
+    await expect(saleHealth.getByRole('button', { name: 'Review Sale Pricing' })).toBeVisible();
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-dashboard-sale-pricing-health.png`,
+    });
+
+    await saleHealth.getByRole('button', { name: 'Review Sale Pricing' }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/developer/create-development\\?id=${seed.saleDevelopmentId}&remediation=pricing`),
+    );
+    await expect(page.getByText('Pricing health review')).toBeVisible({ timeout: 15_000 });
+    const saleRepairHints = page.getByTestId('unit-pricing-repair-hints');
+    await expect(saleRepairHints.getByText('Sale price repair fields')).toBeVisible();
+    await expect(saleRepairHints.getByText('Public price band', { exact: true })).toBeVisible();
+    await expect(saleRepairHints.getByText('Live unit price band', { exact: true })).toBeVisible();
+    await expect(saleRepairHints.getByText('R 1 000 000 - R 1 500 000')).toBeVisible();
+    await expect(saleRepairHints.getByText('R 1 200 000 - R 1 650 000')).toBeVisible();
+    await expect(saleRepairHints.getByText('Rows to review')).toBeVisible();
+    await expect(
+      saleRepairHints.getByText(new RegExp(`Pricing Health Sale Two Bed ${suffix}`)),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Pricing attention: Sets live price from, Sets live price to'),
+    ).toBeVisible();
+
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
     await selectDevelopment(page, seed.rentalDevelopmentName);
     const rentalHealth = page.getByTestId('dle-pricing-health');
     await expect(rentalHealth.getByText('Rental pricing health')).toBeVisible({ timeout: 15_000 });
-    await expect(rentalHealth.getByText('Aligned')).toBeVisible();
+    await expect(rentalHealth.getByText('Review needed')).toBeVisible();
     await expect(rentalHealth.getByText('Public rent range')).toBeVisible();
     await expect(rentalHealth.getByText('Live unit rent range')).toBeVisible();
-    await expect(rentalHealth.getByText('R13.5k - R15.5k / month')).toHaveCount(2);
+    await expect(rentalHealth.getByText('R12k - R15k / month')).toBeVisible();
+    await expect(rentalHealth.getByText('R13.5k - R15.5k / month')).toBeVisible();
+    await expect(
+      rentalHealth.getByRole('button', { name: 'Review Rental Pricing' }),
+    ).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-dashboard-rental-pricing-health.png`,
     });
 
+    await rentalHealth.getByRole('button', { name: 'Review Rental Pricing' }).click();
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/developer/create-development\\?id=${seed.rentalDevelopmentId}&remediation=pricing`,
+      ),
+    );
+    await expect(page.getByText('Pricing health review')).toBeVisible({ timeout: 15_000 });
+    const rentalRepairHints = page.getByTestId('unit-pricing-repair-hints');
+    await expect(rentalRepairHints.getByText('Rental rent repair fields')).toBeVisible();
+    await expect(rentalRepairHints.getByText('Public rent range', { exact: true })).toBeVisible();
+    await expect(rentalRepairHints.getByText('Live unit rent range', { exact: true })).toBeVisible();
+    await expect(rentalRepairHints.getByText('R 12 000 - R 15 000 / month')).toBeVisible();
+    await expect(rentalRepairHints.getByText('R 13 500 - R 15 500 / month')).toBeVisible();
+    await expect(rentalRepairHints.getByText('Rows to review')).toBeVisible();
+    await expect(
+      rentalRepairHints.getByText(new RegExp(`Pricing Health Rental Two Bed ${suffix}`)),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Pricing attention: Sets live rent from, Sets live rent to'),
+    ).toBeVisible();
+
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
     await selectDevelopment(page, seed.auctionDevelopmentName);
     const auctionHealth = page.getByTestId('dle-pricing-health');
     await expect(auctionHealth.getByText('Auction bid health')).toBeVisible({ timeout: 15_000 });
@@ -249,8 +368,8 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
     await expect(repairHints.getByText('Starting bid', { exact: true })).toBeVisible();
     await expect(repairHints.getByText('Reserve price', { exact: true })).toBeVisible();
     await expect(repairHints.getByText('Auction window', { exact: true })).toBeVisible();
-    await expect(repairHints.getByText('Public bid from')).toBeVisible();
-    await expect(repairHints.getByText('Live lot bid from')).toBeVisible();
+    await expect(repairHints.getByText('Public bid from', { exact: true })).toBeVisible();
+    await expect(repairHints.getByText('Live lot bid from', { exact: true })).toBeVisible();
     await expect(repairHints.getByText('R 800 000')).toBeVisible();
     await expect(repairHints.getByText('R 850 000')).toHaveCount(2);
     await expect(repairHints.getByText('Rows to review')).toBeVisible();
