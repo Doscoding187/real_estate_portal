@@ -53,8 +53,38 @@ function formatCurrencyRange(
   return 'Price on request';
 }
 
+export function getPartnerDevelopmentOpportunityCopy(transactionType: unknown) {
+  const lane = normalizePartnerDevelopmentTransactionType(transactionType);
+  if (lane === 'rent') {
+    return {
+      participantLabel: 'Renter',
+      participantPlural: 'renters',
+      readyLabel: 'Open for renters',
+      submitLabel: 'Submit Renter',
+      preQualifyLabel: 'Pre-Qualify Renter',
+    };
+  }
+  if (lane === 'auction') {
+    return {
+      participantLabel: 'Bidder',
+      participantPlural: 'bidders',
+      readyLabel: 'Open for bidders',
+      submitLabel: 'Submit Bidder',
+      preQualifyLabel: 'Pre-Qualify Bidder',
+    };
+  }
+  return {
+    participantLabel: 'Buyer',
+    participantPlural: 'buyers',
+    readyLabel: 'Open for buyers',
+    submitLabel: 'Submit Buyer',
+    preQualifyLabel: 'Pre-Qualify Buyer',
+  };
+}
+
 function getOpportunityLabel(item: any) {
-  if (item.opportunity?.status === 'ready') return 'Open for buyers';
+  const opportunityCopy = getPartnerDevelopmentOpportunityCopy(item.transactionType);
+  if (item.opportunity?.status === 'ready') return opportunityCopy.readyLabel;
   if (item.opportunity?.status === 'pending_setup') return 'Coming soon';
   return 'Not accepting referrals yet';
 }
@@ -522,8 +552,8 @@ export default function PartnerDevelopmentsPage() {
             <p className="text-[10px] font-semibold uppercase text-blue-100">Referrer Workspace</p>
             <h1 className="mt-1 text-[28px] font-semibold text-white">Available Opportunities</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Use Submit mode for opportunities accepting buyers now, or Explore mode for what is
-              coming.
+              Use Submit mode for opportunities accepting buyer, renter, or bidder referrals now,
+              or Explore mode for what is coming.
             </p>
           </div>
 
@@ -641,6 +671,7 @@ export default function PartnerDevelopmentsPage() {
         <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {topDevelopments.map(item => {
             const pricing = getPartnerDevelopmentPricingContext(item);
+            const opportunityCopy = getPartnerDevelopmentOpportunityCopy(item.transactionType);
             return (
             <article
               key={item.developmentId}
@@ -730,7 +761,9 @@ export default function PartnerDevelopmentsPage() {
                       )
                     }
                   >
-                    {item.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Coming Soon'}
+                    {item.opportunity?.status === 'ready'
+                      ? opportunityCopy.submitLabel
+                      : 'Coming Soon'}
                   </Button>
                 </div>
                 {item.opportunity?.status !== 'ready' ? (
@@ -944,7 +977,7 @@ export default function PartnerDevelopmentsPage() {
                   className="gap-1"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Pre-Qualify Buyer
+                  {getPartnerDevelopmentOpportunityCopy(brochureItem.transactionType).preQualifyLabel}
                 </Button>
                 <Button
                   disabled={brochureItem.opportunity?.status !== 'ready'}
@@ -954,7 +987,9 @@ export default function PartnerDevelopmentsPage() {
                     )
                   }
                 >
-                  {brochureItem.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Coming Soon'}
+                  {brochureItem.opportunity?.status === 'ready'
+                    ? getPartnerDevelopmentOpportunityCopy(brochureItem.transactionType).submitLabel
+                    : 'Coming Soon'}
                 </Button>
               </div>
             </>

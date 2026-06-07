@@ -4067,3 +4067,45 @@ Next recommended slice:
   or the referral accelerator before defining Rental/Auction-specific payout semantics.
 Commit hash/tag: This entry will be included in `feat(dle): label referral submit journeys`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Partner Opportunity Card Transaction Context
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make partner development opportunity cards and brochure actions show buyer/renter/bidder
+journeys before the partner enters referral submission.
+Files changed:
+- client/src/pages/distribution/PartnerDevelopmentsPage.tsx
+- client/src/pages/distribution/PartnerDevelopmentsPage.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerDevelopmentsPage.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Partner opportunity cards now derive opportunity labels and submit CTA copy from each
+  development's `transactionType`.
+- Sale opportunities remain `Open for buyers` with `Submit Buyer`.
+- Rental opportunities now show `Open for renters` with `Submit Renter`.
+- Auction opportunities now show `Open for bidders` with `Submit Bidder`.
+- Brochure action copy now has transaction-native `Pre-Qualify` and submit labels for the selected
+  development.
+Guardrails:
+- No schema, migration, tRPC route, deal-stage, commission, payout, inventory, lead, or
+  accelerator route changes.
+- This slice only makes programme-term transaction context visible on the partner opportunity
+  merchandising surface.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The referral accelerator, public distribution marketing page, commissions page, and some
+  dashboard/pipeline labels still contain buyer/sale-shaped wording.
+- Rental/Auction-specific payout and document semantics remain future programme-design work.
+Next recommended slice:
+- Carry transaction-aware language into the referral accelerator or partner dashboard opportunity
+  modules, then define Rental/Auction-specific payout/document semantics once the display surfaces
+  stop implying every referral is a sale.
+Commit hash/tag: This entry will be included in `feat(dle): label partner opportunity lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

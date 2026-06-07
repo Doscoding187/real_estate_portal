@@ -132,6 +132,11 @@ Implemented distribution/referral handoff:
   - shows buyer, renter, or bidder capture, fit, document, review, and submit language
   - keeps the existing referral submission API and distribution-owned deal, payout, and commission
     guardrails unchanged
+- `client/src/pages/distribution/PartnerDevelopmentsPage.tsx`
+  - uses programme-term development `transactionType` on partner opportunity cards and brochure
+    actions
+  - labels ready opportunities and CTAs as buyer, renter, or bidder journeys before submission
+  - preserves the existing submit and accelerator routes without creating DLE-owned deal movement
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

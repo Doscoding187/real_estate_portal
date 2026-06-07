@@ -394,6 +394,9 @@ Recommended next architecture work:
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.
+- The partner development opportunity cards now label ready Sale, Rental, and Auction programmes
+  as buyer, renter, or bidder opportunities and carry the same transaction-native submit/prequalify
+  CTA language into the brochure action surface.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.
