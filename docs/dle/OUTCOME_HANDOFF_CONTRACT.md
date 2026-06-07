@@ -60,6 +60,9 @@ Implemented lead outcome sync:
   - shows no success unless the backend mutation succeeds
 - `e2e/dle/lead-outcome-sync.spec.ts`
   - browser-proves Sale sold selected-lead sync and unsafe direct close rejection
+  - browser-proves Rental let selected-lead sync with lease-native success/event/activity language
+  - browser-proves Auction sold and withdrawn selected-lead sync with bidder-native success,
+    event, note, and activity language
 
 Current distribution/referral anchors:
 

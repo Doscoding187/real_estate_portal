@@ -3706,3 +3706,57 @@ Next recommended slice:
   workflow proof for Rental and Auction.
 Commit hash/tag: This entry will be included in `test(dle): prove operating unit detail merchandising`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Rental/Auction Lead Outcome Sync Browser Proof
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Bring Rental and Auction selected-lead outcome synchronization up to the same browser-proof
+standard as Sale before broader autosave or UI upgrade work.
+Files changed:
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-sale-sold.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-invalid-no-false-success.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-rental-let.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-auction-sold.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-auction-withdrawn.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts` first failed inside the sandbox with local MySQL `EPERM`, then passed with local DB access.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Sale selected-lead outcome sync still closes one deal-stage lead as `Sold`, writes a
+  `lead_stage_changed` DLE event, writes a lead activity, and rejects unsafe direct close from
+  `qualified` without false success.
+- Rental selected-lead outcome sync closes one deal-stage renter lead with `Lease signed / Let`,
+  writes `transactionType: for_rent`, preserves a Rental-native display label in DLE event metadata,
+  and writes Rental-native lead activity copy.
+- Auction selected-lead sold sync closes one deal-stage bidder lead with `Sold at auction`, writes
+  `transactionType: auction`, and preserves Auction-native display label metadata.
+- Auction selected-lead withdrawn sync requires note input, moves only the selected bidder to
+  canonical `closed_lost`, stores the note and `Withdrawn follow-up` display label in DLE event
+  metadata, and writes Auction-native lead activity copy.
+Proof and fixes:
+- Extended the existing browser spec from Sale-only to Sale/Rental/Auction selected-lead outcome
+  sync coverage.
+- Added deterministic cleanup for multiple seeded developments and switched this spec's evidence
+  output to the 2026-06-07 folder to avoid refreshing older proof images.
+- Updated the outcome handoff and operating-layer docs so the architecture evidence reflects the
+  new Rental/Auction browser proof.
+Remaining risks:
+- Auction passed-in lead sync is still covered by the service mapping tests but not by a separate
+  browser screenshot; the browser proof covers the same lost-outcome note path through withdrawn.
+- Lead-stage synchronization remains explicit and selected-lead only. It intentionally does not
+  mutate inventory, distribution deals, or commission state.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Next recommended slice:
+- Add Rental/Auction distribution/referral handoff proof, or build a dashboard reporting/readback
+  layer that summarizes lead outcome sync state next to operating history without moving
+  distribution stages from DLE.
+Commit hash/tag: This entry will be included in `test(dle): prove rental auction lead outcome sync`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

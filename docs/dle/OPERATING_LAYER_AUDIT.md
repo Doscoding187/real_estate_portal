@@ -368,8 +368,9 @@ Implemented lead outcome sync handoff:
   and logs a local lead activity; it does not mutate inventory, distribution deals, or commission
   state.
 - Browser proof in `e2e/dle/lead-outcome-sync.spec.ts` verifies Sale sold selected-lead sync,
-  transaction-native success copy, event/activity persistence, and unsafe direct close rejection
-  without false success.
+  Rental let selected-lead sync, Auction sold selected-lead sync, Auction withdrawn selected-lead
+  sync with required note, transaction-native success copy, event/activity persistence, and unsafe
+  direct close rejection without false success.
 
 Recommended next architecture work:
 
