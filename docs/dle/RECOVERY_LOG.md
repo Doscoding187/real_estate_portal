@@ -4026,3 +4026,44 @@ Next recommended slice:
   Rental/Auction-specific referral document/payout semantics.
 Commit hash/tag: This entry will be included in `feat(dle): label referral detail journeys`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Partner Referral Submit Transaction Context
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Carry buyer/renter/bidder transaction language into partner referral submission without
+changing the distribution referral API, deal stage, commission, or payout ownership.
+Files changed:
+- client/src/pages/distribution/PartnerSubmitReferralPage.tsx
+- client/src/pages/distribution/PartnerSubmitReferralPage.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerSubmitReferralPage.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Referral submission now derives transaction context from the selected development's
+  `transactionType`.
+- Sale remains a buyer submission journey.
+- Rental opportunities now show renter capture, renter fit, rental route, monthly rent range,
+  renter application documents, and renter submission language.
+- Auction opportunities now show bidder capture, bidder fit, bidder route, bid range, bidder
+  application documents, and bidder submission language.
+Guardrails:
+- No schema, migration, tRPC route, deal-stage, commission, payout, inventory, or lead mutation
+  changes.
+- The existing `submitReferral` payload remains intact; this slice is a transaction-aware
+  product-language layer over the current distribution submission contract.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Programme terms, public distribution marketing, accelerator copy, commissions, and some manager
+  dashboard labels still contain buyer/sale-shaped wording.
+- Rental/Auction-specific payout and document semantics remain future programme-design work.
+Next recommended slice:
+- Carry transaction-aware language into partner programme terms, development opportunity cards,
+  or the referral accelerator before defining Rental/Auction-specific payout semantics.
+Commit hash/tag: This entry will be included in `feat(dle): label referral submit journeys`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

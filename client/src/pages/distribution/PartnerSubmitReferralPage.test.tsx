@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import PartnerSubmitReferralPage from './PartnerSubmitReferralPage';
+import PartnerSubmitReferralPage, {
+  getPartnerSubmitReferralCopy,
+  getPartnerSubmitRouteCopy,
+  normalizePartnerSubmitTransactionType,
+} from './PartnerSubmitReferralPage';
 
 const {
   mockUseAuth,
@@ -89,6 +93,7 @@ describe('PartnerSubmitReferralPage', () => {
           {
             developmentId: 101,
             developmentName: 'Sky City',
+            transactionType: 'for_sale',
             city: 'Johannesburg',
             province: 'Gauteng',
             program: {
@@ -131,6 +136,24 @@ describe('PartnerSubmitReferralPage', () => {
     });
   });
 
+  it('normalizes transaction-aware submission labels and route copy', () => {
+    expect(normalizePartnerSubmitTransactionType('for_rent')).toBe('rent');
+    expect(normalizePartnerSubmitTransactionType('auction')).toBe('auction');
+    expect(normalizePartnerSubmitTransactionType('for_sale')).toBe('sale');
+    expect(getPartnerSubmitReferralCopy('for_rent')).toMatchObject({
+      participantLabel: 'Renter',
+      pageTitle: 'Submit Renter',
+      documentsTitle: 'Renter application documents',
+    });
+    expect(getPartnerSubmitReferralCopy('auction')).toMatchObject({
+      participantLabel: 'Bidder',
+      pageTitle: 'Submit Bidder',
+      documentsTitle: 'Bidder application documents',
+    });
+    expect(getPartnerSubmitRouteCopy('cash', 'for_rent')).toMatch(/Deposit-ready renters/i);
+    expect(getPartnerSubmitRouteCopy('investor', 'auction')).toMatch(/Investor bidders/i);
+  });
+
   it('calls submit API and shows eligibility blockers when PROGRAM_NOT_ELIGIBLE is returned', async () => {
     const mutateSpy = vi.fn();
     mockSubmitReferralUseMutation.mockImplementation((opts: any) => ({
@@ -157,7 +180,7 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Buyer full name'), {
       target: { value: 'Jane Buyer' },
     });
-    
+
     const mainArea = screen.getByRole('main');
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
@@ -194,7 +217,7 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Buyer full name'), {
       target: { value: 'John Buyer' },
     });
-    
+
     const mainArea = screen.getByRole('main');
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
@@ -255,5 +278,109 @@ describe('PartnerSubmitReferralPage', () => {
     expect(screen.getByText('Developer sale agreement')).toBeInTheDocument();
     expect(screen.getByText('Unit / house plans')).toBeInTheDocument();
     expect(screen.getByText(/Bond buyers usually need income proof/i)).toBeInTheDocument();
+  });
+
+  it('renders renter submission language for rental opportunities', () => {
+    mockListEligibleUseQuery.mockReturnValue({
+      data: {
+        items: [
+          {
+            developmentId: 202,
+            developmentName: 'Harbour Rentals',
+            transactionType: 'for_rent',
+            city: 'Cape Town',
+            province: 'Western Cape',
+            program: { isActive: true, isReferralEnabled: true },
+            requiredDocuments: [
+              {
+                templateId: 11,
+                documentLabel: 'Renter ID document',
+                category: 'client_required_document',
+              },
+            ],
+            sourceDocuments: [],
+            opportunity: {
+              status: 'ready',
+              reasonCodes: [],
+              nextAction: 'submit_referral',
+              friendlyMessage: 'Ready for renter referrals.',
+            },
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
+    mockSubmitReferralUseMutation.mockReturnValue({ isPending: false, mutate: vi.fn() });
+
+    render(<PartnerSubmitReferralPage />);
+
+    expect(screen.getAllByText('Submit Renter').length).toBeGreaterThan(0);
+    expect(screen.getByText('Renter Submission Wizard')).toBeInTheDocument();
+    expect(screen.getByText(/ready for renter submission/i)).toBeInTheDocument();
+    expect(screen.getByText(/review, renter contact, qualification/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Renter full name')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Renter route')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deposit ready' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Monthly rent range')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Renter application documents')).toBeInTheDocument();
+    expect(screen.getByText('Renter ID document')).toBeInTheDocument();
+    expect(screen.getByText(/renter education and sharing/i)).toBeInTheDocument();
+  });
+
+  it('renders bidder submission language for auction opportunities', () => {
+    mockListEligibleUseQuery.mockReturnValue({
+      data: {
+        items: [
+          {
+            developmentId: 303,
+            developmentName: 'Auction Yard',
+            transactionType: 'auction',
+            city: 'Durban',
+            province: 'KwaZulu-Natal',
+            program: { isActive: true, isReferralEnabled: true },
+            requiredDocuments: [
+              {
+                templateId: 21,
+                documentLabel: 'Bidder FICA pack',
+                category: 'client_required_document',
+              },
+            ],
+            sourceDocuments: [],
+            opportunity: {
+              status: 'ready',
+              reasonCodes: [],
+              nextAction: 'submit_referral',
+              friendlyMessage: 'Ready for bidder referrals.',
+            },
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
+    mockSubmitReferralUseMutation.mockReturnValue({ isPending: false, mutate: vi.fn() });
+
+    render(<PartnerSubmitReferralPage />);
+
+    expect(screen.getAllByText('Submit Bidder').length).toBeGreaterThan(0);
+    expect(screen.getByText('Bidder Submission Wizard')).toBeInTheDocument();
+    expect(screen.getByText(/ready for bidder submission/i)).toBeInTheDocument();
+    expect(screen.getByText(/bidder contact, registration, auction readiness/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Bidder full name')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Bidder route')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cash bidder' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Bid range or ceiling')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Bidder application documents')).toBeInTheDocument();
+    expect(screen.getByText('Bidder FICA pack')).toBeInTheDocument();
+    expect(screen.getByText(/bidder education and sharing/i)).toBeInTheDocument();
   });
 });

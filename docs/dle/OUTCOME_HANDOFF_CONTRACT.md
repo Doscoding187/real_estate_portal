@@ -127,6 +127,11 @@ Implemented distribution/referral handoff:
     copy
   - preserves programme-owned payout and commission rules instead of turning Rental/Auction
     referrals into hidden stage mutations
+- `client/src/pages/distribution/PartnerSubmitReferralPage.tsx`
+  - uses the selected development transaction type while preparing a new referral submission
+  - shows buyer, renter, or bidder capture, fit, document, review, and submit language
+  - keeps the existing referral submission API and distribution-owned deal, payout, and commission
+    guardrails unchanged
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

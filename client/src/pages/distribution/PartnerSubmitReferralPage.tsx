@@ -16,6 +16,182 @@ type EligibilityReason = {
   message: string;
 };
 
+type PartnerSubmitTransactionType = 'sale' | 'rent' | 'auction';
+type BuyerRoute = 'bond' | 'cash' | 'investor';
+
+export function normalizePartnerSubmitTransactionType(value: unknown): PartnerSubmitTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (['rent', 'rental', 'for_rent', 'to_rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getPartnerSubmitReferralCopy(transactionType: unknown) {
+  const lane = normalizePartnerSubmitTransactionType(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      participantLabel: 'Renter',
+      participantLower: 'renter',
+      guidedLabel: 'Guided renter capture',
+      pageTitle: 'Submit Renter',
+      draftDescription: 'Drafts save locally in this browser while you prepare the renter profile.',
+      noStockMessage: 'You can still prepare your renter and return in seconds once stock sync completes.',
+      readyCountLabel: 'ready for renter submission.',
+      wizardTitle: 'Renter Submission Wizard',
+      preparingLabel: 'Preparing renter for',
+      steps: ['Renter basics', 'Renter fit', 'Documents', 'Review'],
+      nextSteps:
+        'Next steps after submission: review, renter contact, qualification, viewing, lease application, lease signing, then referral reward progress.',
+      namePlaceholder: 'Renter full name',
+      phonePlaceholder: 'Renter phone',
+      emailPlaceholder: 'Renter email',
+      intentPlaceholder: 'Renter intent (long-term lease, relocation, family, immediate move-in)',
+      routeLabel: 'Renter route',
+      routeOptions: [
+        { value: 'bond' as BuyerRoute, label: 'Employed renter' },
+        { value: 'cash' as BuyerRoute, label: 'Deposit ready' },
+        { value: 'investor' as BuyerRoute, label: 'Corporate renter' },
+      ],
+      budgetPlaceholder: 'Monthly rent range',
+      snapshotPlaceholder: 'Rental snapshot (income, deposit, employer, move-in timing)',
+      documentsTitle: 'Renter application documents',
+      noDocumentsMessage: 'No renter document checklist is published yet.',
+      developerDocumentsDescription:
+        'Download these templates, get the renter to sign where needed, then upload the completed files on the referral detail page after submission.',
+      supportingDocumentsDescription:
+        'These files are for renter education and sharing. They do not block the application.',
+      reviewTitle: 'Review renter submission',
+      fitLabel: 'Renter fit',
+      cannotSubmitTitle: 'This renter cannot be submitted yet',
+      cannotSubmitDescription:
+        'You can still continue preparing the renter profile while this is resolved.',
+      submitButtonLabel: 'Submit Renter',
+      submittingLabel: 'Submitting...',
+      successMessage: 'Renter submitted successfully.',
+      missingIdentityMessage: 'Provide at least renter name, phone, or email.',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      participantLabel: 'Bidder',
+      participantLower: 'bidder',
+      guidedLabel: 'Guided bidder capture',
+      pageTitle: 'Submit Bidder',
+      draftDescription: 'Drafts save locally in this browser while you prepare the bidder profile.',
+      noStockMessage: 'You can still prepare your bidder and return in seconds once stock sync completes.',
+      readyCountLabel: 'ready for bidder submission.',
+      wizardTitle: 'Bidder Submission Wizard',
+      preparingLabel: 'Preparing bidder for',
+      steps: ['Bidder basics', 'Bidder fit', 'Documents', 'Review'],
+      nextSteps:
+        'Next steps after submission: review, bidder contact, registration, auction readiness, auction terms, then referral reward progress.',
+      namePlaceholder: 'Bidder full name',
+      phonePlaceholder: 'Bidder phone',
+      emailPlaceholder: 'Bidder email',
+      intentPlaceholder: 'Bidder intent (cash bidder, investor, end-user, auction-ready)',
+      routeLabel: 'Bidder route',
+      routeOptions: [
+        { value: 'bond' as BuyerRoute, label: 'Finance-backed bidder' },
+        { value: 'cash' as BuyerRoute, label: 'Cash bidder' },
+        { value: 'investor' as BuyerRoute, label: 'Investor bidder' },
+      ],
+      budgetPlaceholder: 'Bid range or ceiling',
+      snapshotPlaceholder: 'Bidder snapshot (proof of funds, registration, deposit readiness)',
+      documentsTitle: 'Bidder application documents',
+      noDocumentsMessage: 'No bidder document checklist is published yet.',
+      developerDocumentsDescription:
+        'Download these templates, get the bidder to sign where needed, then upload the completed files on the referral detail page after submission.',
+      supportingDocumentsDescription:
+        'These files are for bidder education and sharing. They do not block auction readiness.',
+      reviewTitle: 'Review bidder submission',
+      fitLabel: 'Bidder fit',
+      cannotSubmitTitle: 'This bidder cannot be submitted yet',
+      cannotSubmitDescription:
+        'You can still continue preparing the bidder profile while this is resolved.',
+      submitButtonLabel: 'Submit Bidder',
+      submittingLabel: 'Submitting...',
+      successMessage: 'Bidder submitted successfully.',
+      missingIdentityMessage: 'Provide at least bidder name, phone, or email.',
+    };
+  }
+
+  return {
+    participantLabel: 'Buyer',
+    participantLower: 'buyer',
+    guidedLabel: 'Guided buyer capture',
+    pageTitle: 'Submit Buyer',
+    draftDescription: 'Drafts save locally in this browser while you prepare the buyer profile.',
+    noStockMessage: 'You can still prepare your buyer and return in seconds once stock sync completes.',
+    readyCountLabel: 'ready for buyer submission.',
+    wizardTitle: 'Buyer Submission Wizard',
+    preparingLabel: 'Preparing buyer for',
+    steps: ['Buyer basics', 'Buyer fit', 'Documents', 'Review'],
+    nextSteps:
+      'Next steps after submission: review, buyer contact, qualification, site visit, offer, sale, then referral reward progress.',
+    namePlaceholder: 'Buyer full name',
+    phonePlaceholder: 'Buyer phone',
+    emailPlaceholder: 'Buyer email',
+    intentPlaceholder: 'Buyer intent (first-time buyer, investor, family, cash buyer)',
+    routeLabel: 'Buyer route',
+    routeOptions: [
+      { value: 'bond' as BuyerRoute, label: 'Bond finance' },
+      { value: 'cash' as BuyerRoute, label: 'Cash buyer' },
+      { value: 'investor' as BuyerRoute, label: 'Investor' },
+    ],
+    budgetPlaceholder: 'Budget or price range',
+    snapshotPlaceholder: 'Affordability snapshot (income, deposit, pre-approval status)',
+    documentsTitle: 'Buyer application documents',
+    noDocumentsMessage: 'No buyer document checklist is published yet.',
+    developerDocumentsDescription:
+      'Download these templates, get the buyer to sign where needed, then upload the completed files on the referral detail page after submission.',
+    supportingDocumentsDescription:
+      'These files are for buyer education and sharing. They do not block the application.',
+    reviewTitle: 'Review buyer submission',
+    fitLabel: 'Buyer fit',
+    cannotSubmitTitle: 'This buyer cannot be submitted yet',
+    cannotSubmitDescription:
+      'You can still continue preparing the buyer profile while this is resolved.',
+    submitButtonLabel: 'Submit Buyer',
+    submittingLabel: 'Submitting...',
+    successMessage: 'Buyer submitted successfully.',
+    missingIdentityMessage: 'Provide at least buyer name, phone, or email.',
+  };
+}
+
+export function getPartnerSubmitRouteCopy(route: BuyerRoute, transactionType: unknown) {
+  const lane = normalizePartnerSubmitTransactionType(transactionType);
+  if (lane === 'rent') {
+    if (route === 'cash') {
+      return 'Deposit-ready renters usually need ID, proof of income, bank statements, and deposit confirmation before lease approval.';
+    }
+    if (route === 'investor') {
+      return 'Corporate renters usually need company details, authorized contact information, affordability evidence, and lease mandate confirmation.';
+    }
+    return 'Employed renters usually need ID, proof of income, bank statements, references, and deposit readiness before the manager can qualify them.';
+  }
+  if (lane === 'auction') {
+    if (route === 'cash') {
+      return 'Cash bidders usually need ID, FICA, proof of funds, registration confirmation, and deposit readiness before auction approval.';
+    }
+    if (route === 'investor') {
+      return 'Investor bidders usually need entity details, FICA, proof of funds or finance backing, and signed auction terms.';
+    }
+    return 'Finance-backed bidders usually need ID, proof of affordability, deposit readiness, and auction registration evidence before bidding.';
+  }
+  if (route === 'cash') {
+    return 'Cash buyers usually need ID, proof of address, and proof of funds or bank confirmation. Developer forms still need to be signed and returned.';
+  }
+  if (route === 'investor') {
+    return 'Investor buyers usually need affordability or proof-of-funds evidence plus the signed developer application pack.';
+  }
+  return 'Bond buyers usually need income proof, bank statements, and pre-approval or an affordability note before the manager can qualify them.';
+}
+
 export default function PartnerSubmitReferralPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -30,7 +206,7 @@ export default function PartnerSubmitReferralPage() {
   const [affordabilitySnapshot, setAffordabilitySnapshot] = useState('');
   const [notes, setNotes] = useState('');
   const [clientReference, setClientReference] = useState('');
-  const [buyerRoute, setBuyerRoute] = useState<'bond' | 'cash' | 'investor'>('bond');
+  const [buyerRoute, setBuyerRoute] = useState<BuyerRoute>('bond');
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [eligibilityBlockers, setEligibilityBlockers] = useState<string[]>([]);
@@ -108,7 +284,7 @@ export default function PartnerSubmitReferralPage() {
   const submitReferralMutation = trpc.distribution.partner.submitReferral.useMutation({
     onSuccess: result => {
       window.localStorage.removeItem('distribution-submit-buyer-draft');
-      toast.success('Buyer submitted successfully.');
+      toast.success(getPartnerSubmitReferralCopy(selectedDevelopment?.transactionType).successMessage);
       setLocation(`/distribution/partner/referrals/${Number(result.dealId)}`);
     },
     onError: error => {
@@ -166,6 +342,7 @@ export default function PartnerSubmitReferralPage() {
       ) || null,
     [availableItems, selectedDevelopmentId],
   );
+  const transactionCopy = getPartnerSubmitReferralCopy(selectedDevelopment?.transactionType);
   const selectedRequiredDocuments = selectedDevelopment?.requiredDocuments || [];
   const selectedBuyerDocuments = selectedRequiredDocuments.filter(
     (document: any) => document.category !== 'developer_document',
@@ -187,17 +364,8 @@ export default function PartnerSubmitReferralPage() {
   ]
     .filter(Boolean)
     .join('\n');
-  const steps = ['Buyer basics', 'Buyer fit', 'Documents', 'Review'];
-
-  function buyerRouteCopy() {
-    if (buyerRoute === 'cash') {
-      return 'Cash buyers usually need ID, proof of address, and proof of funds or bank confirmation. Developer forms still need to be signed and returned.';
-    }
-    if (buyerRoute === 'investor') {
-      return 'Investor buyers usually need affordability or proof-of-funds evidence plus the signed developer application pack.';
-    }
-    return 'Bond buyers usually need income proof, bank statements, and pre-approval or an affordability note before the manager can qualify them.';
-  }
+  const steps = transactionCopy.steps;
+  const routeCopy = getPartnerSubmitRouteCopy(buyerRoute, selectedDevelopment?.transactionType);
 
   function friendlyBlockerMessage(reason: EligibilityReason) {
     const code = String(reason.code || '').toUpperCase();
@@ -232,15 +400,17 @@ export default function PartnerSubmitReferralPage() {
       <main className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-6 md:px-7">
         <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
           <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
-            <p className="text-[10px] font-semibold uppercase text-blue-100">Guided buyer capture</p>
-            <h1 className="mt-1 text-[28px] font-semibold">Submit Buyer</h1>
+            <p className="text-[10px] font-semibold uppercase text-blue-100">
+              {transactionCopy.guidedLabel}
+            </p>
+            <h1 className="mt-1 text-[28px] font-semibold">{transactionCopy.pageTitle}</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
               Choose a ready opportunity, capture what matters, and see what happens next.
             </p>
           </div>
           <CardHeader>
             <CardDescription>
-              Drafts save locally in this browser while you prepare the buyer profile.
+              {transactionCopy.draftDescription}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -260,7 +430,7 @@ export default function PartnerSubmitReferralPage() {
                 We could not find developments linked to your referral network yet.
               </p>
               <p className="text-xs text-slate-500">
-                You can still prepare your buyer and return in seconds once stock sync completes.
+                {transactionCopy.noStockMessage}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -287,7 +457,7 @@ export default function PartnerSubmitReferralPage() {
               <CardHeader>
                 <CardTitle className="text-base">Available Developments</CardTitle>
                 <CardDescription>
-                  {referralReadyItems.length} ready for buyer submission.
+                  {referralReadyItems.length} {transactionCopy.readyCountLabel}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -340,11 +510,11 @@ export default function PartnerSubmitReferralPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <UserRound className="h-4 w-4 text-primary" />
-                    Buyer Submission Wizard
+                    {transactionCopy.wizardTitle}
                   </CardTitle>
                   <CardDescription>
                     {selectedDevelopment
-                      ? `Preparing buyer for ${selectedDevelopment.developmentName}`
+                      ? `${transactionCopy.preparingLabel} ${selectedDevelopment.developmentName}`
                       : 'Select a ready opportunity first'}
                   </CardDescription>
                 </CardHeader>
@@ -367,8 +537,7 @@ export default function PartnerSubmitReferralPage() {
                   </div>
                   <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-xs text-primary">
                     <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-                    Next steps after submission: review, buyer contact, qualification, site visit, offer,
-                    sale, then referral reward progress.
+                    {transactionCopy.nextSteps}
                   </div>
                   {selectedDevelopment &&
                   !selectedIsReady ? (
@@ -385,17 +554,17 @@ export default function PartnerSubmitReferralPage() {
                   {currentStep === 0 ? (
                     <div className="space-y-3">
                       <Input
-                        placeholder="Buyer full name"
+                        placeholder={transactionCopy.namePlaceholder}
                         value={buyerName}
                         onChange={event => setBuyerName(event.target.value)}
                       />
                       <Input
-                        placeholder="Buyer phone"
+                        placeholder={transactionCopy.phonePlaceholder}
                         value={buyerPhone}
                         onChange={event => setBuyerPhone(event.target.value)}
                       />
                       <Input
-                        placeholder="Buyer email"
+                        placeholder={transactionCopy.emailPlaceholder}
                         value={buyerEmail}
                         onChange={event => setBuyerEmail(event.target.value)}
                       />
@@ -405,18 +574,16 @@ export default function PartnerSubmitReferralPage() {
                   {currentStep === 1 ? (
                     <div className="space-y-3">
                       <Input
-                        placeholder="Buyer intent (first-time buyer, investor, family, cash buyer)"
+                        placeholder={transactionCopy.intentPlaceholder}
                         value={buyerIntent}
                         onChange={event => setBuyerIntent(event.target.value)}
                       />
                       <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
-                        <p className="text-xs font-semibold uppercase text-muted-foreground">Buyer route</p>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">
+                          {transactionCopy.routeLabel}
+                        </p>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                          {[
-                            { value: 'bond', label: 'Bond finance' },
-                            { value: 'cash', label: 'Cash buyer' },
-                            { value: 'investor', label: 'Investor' },
-                          ].map(option => (
+                          {transactionCopy.routeOptions.map(option => (
                             <button
                               key={option.value}
                               type="button"
@@ -425,13 +592,13 @@ export default function PartnerSubmitReferralPage() {
                                   ? 'border-primary bg-primary text-primary-foreground'
                                   : 'border-primary/15 bg-white text-foreground'
                               }`}
-                              onClick={() => setBuyerRoute(option.value as typeof buyerRoute)}
+                              onClick={() => setBuyerRoute(option.value)}
                             >
                               {option.label}
                             </button>
                           ))}
                         </div>
-                        <p className="mt-2 text-xs text-muted-foreground">{buyerRouteCopy()}</p>
+                        <p className="mt-2 text-xs text-muted-foreground">{routeCopy}</p>
                       </div>
                       <Input
                         placeholder="Preferred area or suburb"
@@ -439,12 +606,12 @@ export default function PartnerSubmitReferralPage() {
                         onChange={event => setPreferredArea(event.target.value)}
                       />
                       <Input
-                        placeholder="Budget or price range"
+                        placeholder={transactionCopy.budgetPlaceholder}
                         value={budgetRange}
                         onChange={event => setBudgetRange(event.target.value)}
                       />
                       <Input
-                        placeholder="Affordability snapshot (income, deposit, pre-approval status)"
+                        placeholder={transactionCopy.snapshotPlaceholder}
                         value={affordabilitySnapshot}
                         onChange={event => setAffordabilitySnapshot(event.target.value)}
                       />
@@ -456,9 +623,9 @@ export default function PartnerSubmitReferralPage() {
                       <div className="rounded-md border border-primary/15 bg-primary/5 p-3 text-sm">
                         <p className="flex items-center gap-2 font-medium text-foreground">
                           <FileCheck2 className="h-4 w-4 text-primary" />
-                          Buyer application documents
+                          {transactionCopy.documentsTitle}
                         </p>
-                        <p className="mt-1 text-xs text-muted-foreground">{buyerRouteCopy()}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{routeCopy}</p>
                         {selectedBuyerDocuments.length ? (
                           <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                             {selectedBuyerDocuments.map((document: any) => (
@@ -467,7 +634,7 @@ export default function PartnerSubmitReferralPage() {
                           </ul>
                         ) : (
                           <p className="mt-2 text-xs text-slate-600">
-                            No buyer document checklist is published yet.
+                            {transactionCopy.noDocumentsMessage}
                           </p>
                         )}
                       </div>
@@ -477,7 +644,7 @@ export default function PartnerSubmitReferralPage() {
                           Developer application documents
                         </p>
                         <p className="mt-1 text-xs text-amber-800">
-                          Download these templates, get the buyer to sign where needed, then upload the completed files on the referral detail page after submission.
+                          {transactionCopy.developerDocumentsDescription}
                         </p>
                         {selectedDeveloperApplicationDocuments.length ? (
                           <div className="mt-2 space-y-2">
@@ -515,7 +682,7 @@ export default function PartnerSubmitReferralPage() {
                           Supporting documents
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          These files are for buyer education and sharing. They do not block the application.
+                          {transactionCopy.supportingDocumentsDescription}
                         </p>
                         {selectedSupportingDocuments.length ? (
                           <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -560,11 +727,17 @@ export default function PartnerSubmitReferralPage() {
 
                   {currentStep === 3 ? (
                     <div className="rounded-md border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">Review buyer submission</p>
-                      <p className="mt-2">Buyer: {buyerName || buyerPhone || buyerEmail || 'Not captured yet'}</p>
+                      <p className="font-medium text-foreground">{transactionCopy.reviewTitle}</p>
+                      <p className="mt-2">
+                        {transactionCopy.participantLabel}:{' '}
+                        {buyerName || buyerPhone || buyerEmail || 'Not captured yet'}
+                      </p>
                       <p>Opportunity: {selectedDevelopment?.developmentName || 'Not selected yet'}</p>
-                      <p>Buyer fit: {[buyerRoute, buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}</p>
-                      <p>Buyer documents: {selectedBuyerDocuments.length || 0}</p>
+                      <p>
+                        {transactionCopy.fitLabel}:{' '}
+                        {[buyerRoute, buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}
+                      </p>
+                      <p>{transactionCopy.participantLabel} documents: {selectedBuyerDocuments.length || 0}</p>
                       <p>Developer application documents: {selectedDeveloperApplicationDocuments.length || 0}</p>
                       <p>Supporting files: {selectedSupportingDocuments.length || 0}</p>
                     </div>
@@ -572,9 +745,9 @@ export default function PartnerSubmitReferralPage() {
 
                   {eligibilityBlockers.length ? (
                     <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                      <p className="font-semibold">This buyer cannot be submitted yet</p>
+                      <p className="font-semibold">{transactionCopy.cannotSubmitTitle}</p>
                       <p className="mt-1 text-xs text-red-600">
-                        You can still continue preparing the buyer profile while this is resolved.
+                        {transactionCopy.cannotSubmitDescription}
                       </p>
                       <ul className="mt-1 list-disc space-y-1 pl-5">
                         {eligibilityBlockers.map(reason => (
@@ -626,7 +799,7 @@ export default function PartnerSubmitReferralPage() {
                         return;
                       }
                       if (!buyerName.trim() && !buyerPhone.trim() && !buyerEmail.trim()) {
-                        toast.error('Provide at least buyer name, phone, or email.');
+                        toast.error(transactionCopy.missingIdentityMessage);
                         return;
                       }
 
@@ -643,7 +816,9 @@ export default function PartnerSubmitReferralPage() {
                       });
                     }}
                   >
-                    {submitReferralMutation.isPending ? 'Submitting...' : 'Submit Buyer'}
+                    {submitReferralMutation.isPending
+                      ? transactionCopy.submittingLabel
+                      : transactionCopy.submitButtonLabel}
                   </Button>
                 </CardContent>
               </Card>
