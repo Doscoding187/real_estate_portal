@@ -3578,3 +3578,37 @@ Next recommended slice:
   correction proof once the unit-edit controls are stable enough for deterministic browser coverage.
 Commit hash/tag: This entry will be included in `fix(dle): persist auction pricing mirror updates`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Test DB Schema Unblocked Auction Mirror Regression
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Unblock the focused auction mirror persistence regression by bringing the local test database
+up to the current DLE operating schema.
+Files changed:
+- docs/dle/RECOVERY_LOG.md
+External/local state changed:
+- Applied `pnpm db:migrate:local` to `listify_local`; `0070_add_unit_outcome_counters.sql` skipped
+  existing `sold_units` and `let_units` columns and reran the outcome backfill statements.
+- Applied `pnpm db:migrate:test` to `listify_test`; Drizzle migrations and SQL migrations completed,
+  including `0070_add_unit_outcome_counters.sql`.
+Tests run:
+- `pnpm db:migrate:local` passed.
+- `pnpm db:migrate:test` first failed inside the sandbox with `connect EPERM 127.0.0.1:3306`, then
+  passed when rerun with local MySQL access.
+- `pnpm vitest run server/__tests__/developerRouter.edit-update.test.ts -t "preserves auction terms through helper submit and partial edit"` passed after migrating `listify_test`.
+Proof and fixes:
+- Confirmed the prior server-regression blocker was test DB schema drift, not the auction mirror
+  persistence implementation.
+- The focused regression now proves partial updates persist `startingBidFrom` and `reservePriceFrom`
+  without syncing or wiping unit inventory.
+Remaining risks:
+- This slice changed local database state only; it does not add a new migration because the required
+  migration already exists as `server/migrations/0070_add_unit_outcome_counters.sql`.
+- Existing unrelated homepage, older evidence, Playwright report, and test-results changes were not
+  touched or staged.
+Next recommended slice:
+- Add UI-level pricing correction proof for the developer editing path, or continue Rental/Auction
+  operating proof now that backend persistence and test DB schema are aligned.
+Commit hash/tag: This entry will be included in `docs(dle): log test db schema recovery`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
