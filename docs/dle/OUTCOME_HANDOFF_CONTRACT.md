@@ -108,6 +108,10 @@ Implemented distribution/referral handoff:
   - allows a manager to acknowledge the latest DLE handoff as an audit note only
   - reads back acknowledgement state, note, and timestamp after successful acknowledgement
   - does not expose a DLE-owned stage or commission action from the readback block
+- `client/src/pages/distribution/ManagerDevelopmentOpsPage.tsx`
+  - shows manager assignment counts for Sale, Rental, and Auction engines
+  - labels assigned developments with transaction-native engine badges
+  - filters manager assignments by transaction lane before deal review
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

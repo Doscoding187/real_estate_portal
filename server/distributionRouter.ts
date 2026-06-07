@@ -5284,6 +5284,7 @@ const managerDistributionRouter = router({
       .select({
         developmentId: distributionManagerAssignments.developmentId,
         developmentName: developments.name,
+        transactionType: developments.transactionType,
         city: developments.city,
         province: developments.province,
         assignedAt: distributionManagerAssignments.assignedAt,
@@ -5297,6 +5298,7 @@ const managerDistributionRouter = router({
     return rows.map(row => ({
       developmentId: Number(row.developmentId),
       developmentName: String(row.developmentName || `Development #${row.developmentId}`),
+      transactionType: row.transactionType || null,
       city: row.city || null,
       province: row.province || null,
       assignedAt: row.assignedAt,

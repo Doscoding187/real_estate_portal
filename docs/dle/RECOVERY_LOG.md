@@ -669,6 +669,47 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-07 - Manager Transaction-Lane Assignment Triage
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the manager distribution operations surface transaction-first before deeper
+Rental/Auction programme semantics are introduced.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/distribution/ManagerDevelopmentOpsPage.tsx
+- client/src/pages/distribution/ManagerDevelopmentOpsPage.test.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/ManagerDevelopmentOpsPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `distribution.manager.getAssignedDevelopments` now returns each assigned development's
+  `transactionType`.
+- The manager distribution operations page now shows Sale, Rental, and Auction assignment counts.
+- Each assigned development card now carries a transaction-native engine badge.
+- Managers can filter assignments by `All engines`, `Sale engine`, `Rental engine`, or
+  `Auction engine` before entering deal review.
+Guardrails:
+- No schema, migration, deal-stage, commission, lead, or inventory mutation changes.
+- Distribution stage and commission ownership remain in distribution services.
+- This is a reporting/triage surface only; it does not claim Rental/Auction-specific payout or
+  programme semantics are solved.
+Remaining risks:
+- The manager deal checklist and programme terms remain shared and sale-shaped in places.
+- Browser proof for the assignment filter can be added later if this surface becomes a primary QA
+  checkpoint; the focused helper test currently protects the lane mapping and filtering logic.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Next recommended slice:
+- Define Rental/Auction-specific referral programme terminology and document/payout assumptions,
+  or add browser proof around manager transaction-lane triage if this becomes a release gate.
+Commit hash/tag: This entry will be included in `feat(dle): add manager transaction lane triage`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-06 - Unit Pricing Repair Diagnostics
 
 Date: 2026-06-06
