@@ -19,6 +19,8 @@ import { COOKIE_NAME } from '../../shared/const';
 
 const evidenceDir = 'docs/dle/evidence/2026-06-04';
 fs.mkdirSync(evidenceDir, { recursive: true });
+const unitDetailEvidenceDir = 'docs/dle/evidence/2026-06-07';
+fs.mkdirSync(unitDetailEvidenceDir, { recursive: true });
 
 type Seed = {
   userId: number;
@@ -258,7 +260,7 @@ test.describe.serial('DLE Auction operating outcome browser proof', () => {
       timeout: 15_000,
     });
     await selectDevelopment(page, seed.developmentName);
-    await expect(page.getByText('Auction Lots')).toBeVisible();
+    await expect(page.getByText('Auction Lots', { exact: true })).toBeVisible();
 
     await page
       .getByRole('button', { name: `Mark ${seed.soldLotName} sold`, exact: true })
@@ -376,6 +378,35 @@ test.describe.serial('DLE Auction operating outcome browser proof', () => {
     await expect(page.getByText('Bid from R 850,000')).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-auction-operating-outcomes-search.png`,
+    });
+
+    await page.goto(`/development/${seed.developmentSlug}/unit/${seed.soldLotId}`);
+    await expect(page.getByRole('heading', { name: seed.soldLotName })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Sold at auction').first()).toBeVisible();
+    await expect(page.getByText('Request bidder pack').first()).toBeVisible();
+    await page.screenshot({
+      path: `${unitDetailEvidenceDir}/qa-dle-auction-operating-unit-detail-sold.png`,
+    });
+
+    await page.goto(`/development/${seed.developmentSlug}/unit/${seed.passedLotId}`);
+    await expect(page.getByRole('heading', { name: seed.passedLotName })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Passed in').first()).toBeVisible();
+    await page.screenshot({
+      path: `${unitDetailEvidenceDir}/qa-dle-auction-operating-unit-detail-passed-in.png`,
+    });
+
+    await page.goto(`/development/${seed.developmentSlug}/unit/${seed.withdrawnLotId}`);
+    await expect(page.getByRole('heading', { name: seed.withdrawnLotName })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Withdrawn').first()).toBeVisible();
+    await expect(page.getByText('Ask about bidder readiness').first()).toBeVisible();
+    await page.screenshot({
+      path: `${unitDetailEvidenceDir}/qa-dle-auction-operating-unit-detail-withdrawn.png`,
     });
   });
 });

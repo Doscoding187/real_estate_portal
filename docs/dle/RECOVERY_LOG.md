@@ -3659,3 +3659,50 @@ Next recommended slice:
   product requirements demand row-level min/max correction across larger inventory sets.
 Commit hash/tag: This entry will be included in `test(dle): prove UI pricing correction`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Operating Unit Detail Merchandising Proof
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Extend the Rental and Auction operating-layer browser proof to the unit-detail merchandising
+surface so live operating changes are visible beyond the dashboard, public development page, and
+search cards.
+Files changed:
+- e2e/dle/rental-operating-hold.spec.ts
+- e2e/dle/auction-operating-outcomes.spec.ts
+- docs/dle/evidence/2026-06-07/qa-dle-rental-operating-unit-detail.png
+- docs/dle/evidence/2026-06-07/qa-dle-auction-operating-unit-detail-sold.png
+- docs/dle/evidence/2026-06-07/qa-dle-auction-operating-unit-detail-passed-in.png
+- docs/dle/evidence/2026-06-07/qa-dle-auction-operating-unit-detail-withdrawn.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-operating-hold.spec.ts e2e/dle/auction-operating-outcomes.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm vitest run client/src/pages/DevelopmentUnitDetailPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Rental operating mutations still prove hold, mark-let, release, direct-let, DB event logging,
+  public rental language, and rental search-card output.
+- After direct-let, the rental unit-detail route shows the unit name, `5 rentals available`,
+  `Request rental pack`, and `Check rental fit`.
+- Auction operating outcomes still prove sold, passed-in, withdrawn, DB event logging, public
+  outcome labels, and auction search-card output.
+- Auction unit-detail routes now prove sold lots show `Sold at auction`, passed-in lots show
+  `Passed in`, withdrawn lots show `Withdrawn`, and auction-native bidder CTAs remain visible.
+Proof and fixes:
+- Added unit-detail route assertions and screenshots to the existing Rental and Auction operating
+  browser specs.
+- Hardened two dashboard label assertions with exact matching so explanatory text does not collide
+  with the metric labels during browser proof.
+Remaining risks:
+- Rental browser proof verifies changed availability after operating mutation, but does not fully
+  let every unit; the fully-let unit-detail label remains covered by the focused helper unit test.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged. The focused browser run refreshed the older 2026-06-04
+  operating screenshots because those specs still write their original evidence paths; this slice
+  records the new unit-detail proof under 2026-06-07 only.
+Next recommended slice:
+- Continue from operating proof into either fully-let browser coverage or lead-stage/distribution
+  workflow proof for Rental and Auction.
+Commit hash/tag: This entry will be included in `test(dle): prove operating unit detail merchandising`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

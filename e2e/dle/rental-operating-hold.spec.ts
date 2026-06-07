@@ -19,6 +19,8 @@ import { COOKIE_NAME } from '../../shared/const';
 
 const evidenceDir = 'docs/dle/evidence/2026-06-04';
 fs.mkdirSync(evidenceDir, { recursive: true });
+const unitDetailEvidenceDir = 'docs/dle/evidence/2026-06-07';
+fs.mkdirSync(unitDetailEvidenceDir, { recursive: true });
 
 type Seed = {
   userId: number;
@@ -221,7 +223,7 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
       timeout: 15_000,
     });
     await selectDevelopment(page, seed.developmentName);
-    await expect(page.getByText('Rental Inventory')).toBeVisible();
+    await expect(page.getByText('Rental Inventory', { exact: true })).toBeVisible();
     await expect(page.getByText('Sales Inventory')).toHaveCount(0);
     await expect(page.getByText(seed.unitTypeName)).toBeVisible();
     await expect(page.getByText('6 rentals available, 1 held, 3 let')).toBeVisible();
@@ -433,6 +435,17 @@ test.describe.serial('DLE Rental operating hold browser proof', () => {
     await expect(page.getByText('Rent from R 13,500')).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-rental-operating-search-language.png`,
+    });
+
+    await page.goto(`/development/${seed.developmentSlug}/unit/${seed.unitTypeId}`);
+    await expect(page.getByRole('heading', { name: seed.unitTypeName })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('5 rentals available').first()).toBeVisible();
+    await expect(page.getByText('Request rental pack').first()).toBeVisible();
+    await expect(page.getByText('Check rental fit').first()).toBeVisible();
+    await page.screenshot({
+      path: `${unitDetailEvidenceDir}/qa-dle-rental-operating-unit-detail.png`,
     });
   });
 });
