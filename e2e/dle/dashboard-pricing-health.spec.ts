@@ -231,6 +231,20 @@ async function selectDevelopment(page: Page, developmentName: string) {
   });
 }
 
+async function correctPricingMirrors(seed: Seed) {
+  await developmentService.updateDevelopment(seed.saleDevelopmentId, seed.userId, {
+    priceFrom: 1_200_000,
+    priceTo: 1_650_000,
+  } as any);
+  await developmentService.updateDevelopment(seed.rentalDevelopmentId, seed.userId, {
+    monthlyRentFrom: 13_500,
+    monthlyRentTo: 15_500,
+  } as any);
+  await developmentService.updateDevelopment(seed.auctionDevelopmentId, seed.userId, {
+    startingBidFrom: 850_000,
+  } as any);
+}
+
 test.describe.serial('DLE dashboard pricing health browser proof', () => {
   let seed: Seed | null = null;
 
@@ -377,5 +391,35 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
       repairHints.getByText(new RegExp(`Pricing Health Auction Lot ${suffix}`)),
     ).toBeVisible();
     await expect(page.getByText('Pricing attention: Sets live bid from')).toBeVisible();
+
+    await correctPricingMirrors(seed);
+
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, seed.saleDevelopmentName);
+    const alignedSaleHealth = page.getByTestId('dle-pricing-health');
+    await expect(alignedSaleHealth.getByText('Sale pricing health')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(alignedSaleHealth.getByText('Aligned')).toBeVisible();
+    await expect(alignedSaleHealth.getByText('R1.2M - R1.7M')).toHaveCount(2);
+
+    await selectDevelopment(page, seed.rentalDevelopmentName);
+    const alignedRentalHealth = page.getByTestId('dle-pricing-health');
+    await expect(alignedRentalHealth.getByText('Rental pricing health')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(alignedRentalHealth.getByText('Aligned')).toBeVisible();
+    await expect(alignedRentalHealth.getByText('R13.5k - R15.5k / month')).toHaveCount(2);
+
+    await selectDevelopment(page, seed.auctionDevelopmentName);
+    const alignedAuctionHealth = page.getByTestId('dle-pricing-health');
+    await expect(alignedAuctionHealth.getByText('Auction bid health')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(alignedAuctionHealth.getByText('Aligned')).toBeVisible();
+    await expect(alignedAuctionHealth.getByText('R850k')).toHaveCount(2);
   });
 });

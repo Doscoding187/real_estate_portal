@@ -1502,6 +1502,8 @@ export async function updateDevelopment(
     'ratesTo',
     'monthlyRentFrom',
     'monthlyRentTo',
+    'startingBidFrom',
+    'reservePriceFrom',
   ]);
 
   const intFields = new Set([

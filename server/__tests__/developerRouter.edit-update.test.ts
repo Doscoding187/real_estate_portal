@@ -2781,6 +2781,26 @@ describeWithDb('developerRouter canonical edit updates', () => {
         }),
       ]),
     );
+
+    await caller.developer.updateDevelopment({
+      id: createdDevelopmentId,
+      data: {
+        startingBidFrom: 900_000,
+        reservePriceFrom: 1_100_000,
+      },
+    });
+
+    const [storedAfterMirrorCorrection] = await db
+      .select({
+        startingBidFrom: developments.startingBidFrom,
+        reservePriceFrom: developments.reservePriceFrom,
+      })
+      .from(developments)
+      .where(eq(developments.id, createdDevelopmentId))
+      .limit(1);
+
+    expect(Number(storedAfterMirrorCorrection.startingBidFrom)).toBe(900_000);
+    expect(Number(storedAfterMirrorCorrection.reservePriceFrom)).toBe(1_100_000);
   }, 120000);
 
   it('preserves omitted database fields during canonical metadata-only edits', async () => {

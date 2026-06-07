@@ -3531,3 +3531,50 @@ Next recommended slice:
   to dashboard, and verify pricing health becomes aligned for Sale, Rental, and Auction.
 Commit hash/tag: This entry will be included in `test(dle): prove transaction pricing remediation`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Pricing Remediation Correction Proof
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove that stale public pricing mirrors can be corrected and that Sale, Rental, and Auction
+dashboard pricing health returns to aligned after correction.
+Files changed:
+- e2e/dle/dashboard-pricing-health.spec.ts
+- server/services/developmentService.ts
+- server/__tests__/developerRouter.edit-update.test.ts
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-sale-pricing-health.png
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+- `pnpm vitest run server/__tests__/developerRouter.edit-update.test.ts -t "preserves auction terms through helper submit and partial edit"` was attempted, but the local test DB is behind the current schema and failed before the new assertion with `Unknown column 'sold_units' in 'field list'`.
+Manual/browser flows verified:
+- Sale pricing drift still routes to pricing remediation, then backend correction updates the public
+  mirror to `R1.2M - R1.7M` and the dashboard returns to `Aligned`.
+- Rental pricing drift still routes to pricing remediation, then backend correction updates the
+  public mirror to `R13.5k - R15.5k / month` and the dashboard returns to `Aligned`.
+- Auction bid drift still routes to pricing remediation, then backend correction updates the public
+  mirror to `R850k` and the dashboard returns to `Aligned`.
+Proof and fixes:
+- Extended the dashboard pricing-health browser proof so it verifies detection and correction for
+  all three transaction engines in one serial flow.
+- Fixed `developmentService.updateDevelopment` so auction public mirror fields `startingBidFrom`
+  and `reservePriceFrom` are treated as decimal update fields and actually persist during partial
+  updates.
+- Added a focused server regression assertion for auction mirror correction; it is blocked by local
+  test DB schema drift until the test database has the current `unit_types` columns.
+Remaining risks:
+- The correction proof uses the backend update service directly rather than manual unit-edit UI
+  controls, so it proves persistence/alignment but not the full developer editing UX.
+- The server regression should be rerun after applying the current test DB schema, because the
+  existing failure happens before the new auction mirror assertion.
+- Existing unrelated homepage, older evidence, Playwright report, and test-results changes were not
+  touched or staged.
+Next recommended slice:
+- Fix or migrate the local test DB schema so the server regression can run, then add UI-level
+  correction proof once the unit-edit controls are stable enough for deterministic browser coverage.
+Commit hash/tag: This entry will be included in `fix(dle): persist auction pricing mirror updates`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
