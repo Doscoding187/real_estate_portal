@@ -30,6 +30,64 @@ function getStageLabel(stage: string | null | undefined) {
   return normalized.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
 
+type PartnerReferralTransaction = 'sale' | 'rent' | 'auction';
+
+export function normalizePartnerReferralTransactionType(value: unknown): PartnerReferralTransaction {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['for_rent', 'rent', 'rental', 'to_rent', 'to-rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getPartnerReferralStageLabel(
+  stage: string | null | undefined,
+  transactionType: unknown,
+) {
+  const normalized = normalizeStage(stage);
+  const lane = normalizePartnerReferralTransactionType(transactionType);
+  const labels: Record<PartnerReferralTransaction, Record<string, string>> = {
+    sale: {
+      viewing_scheduled: 'Submitted',
+      viewing_completed: 'Viewing completed',
+      application_submitted: 'Application submitted',
+      contract_signed: 'Contract signed',
+      bond_approved: 'Bond approved',
+      commission_pending: 'Reward pending',
+      commission_paid: 'Reward paid',
+      cancelled: 'Cancelled',
+    },
+    rent: {
+      viewing_scheduled: 'Renter submitted',
+      viewing_completed: 'Rental viewing completed',
+      application_submitted: 'Rental application submitted',
+      contract_signed: 'Lease signed',
+      bond_approved: 'Lease conditions met',
+      commission_pending: 'Rental reward pending',
+      commission_paid: 'Rental reward paid',
+      cancelled: 'Rental cancelled',
+    },
+    auction: {
+      viewing_scheduled: 'Bidder submitted',
+      viewing_completed: 'Bidder contacted',
+      application_submitted: 'Bidder registered',
+      contract_signed: 'Auction terms accepted',
+      bond_approved: 'Bidder approved',
+      commission_pending: 'Auction reward pending',
+      commission_paid: 'Auction reward paid',
+      cancelled: 'Auction cancelled',
+    },
+  };
+
+  return labels[lane][normalized] || getStageLabel(normalized);
+}
+
+function getParticipantLabel(transactionType: unknown) {
+  const lane = normalizePartnerReferralTransactionType(transactionType);
+  if (lane === 'rent') return 'renter';
+  if (lane === 'auction') return 'bidder';
+  return 'buyer';
+}
+
 function getStageProgress(stage: string | null | undefined) {
   const normalized = normalizeStage(stage);
   const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
@@ -40,19 +98,31 @@ function getStageProgress(stage: string | null | undefined) {
 function getNextActionLabel(
   stage: string | null | undefined,
   docProgress?: { requiredCount: number; verifiedRequiredCount: number },
+  transactionType?: unknown,
 ) {
   const normalized = normalizeStage(stage);
+  const lane = normalizePartnerReferralTransactionType(transactionType);
   if (normalized === 'commission_paid') return 'View paid reward';
   if (normalized === 'commission_pending') return 'Track reward';
-  if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Protect payout';
+  if (normalized === 'bond_approved' || normalized === 'contract_signed') {
+    if (lane === 'rent') return 'Track lease reward';
+    if (lane === 'auction') return 'Track auction reward';
+    return 'Protect payout';
+  }
   if (normalized === 'application_submitted') {
     if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) {
+      if (lane === 'rent') return 'Upload rental docs';
+      if (lane === 'auction') return 'Upload bidder docs';
       return 'Upload missing docs';
     }
+    if (lane === 'rent') return 'Await leasing approval';
+    if (lane === 'auction') return 'Await bidder approval';
     return 'Await approval';
   }
   if (normalized === 'cancelled') return 'Review outcome';
-  return 'Move to next stage';
+  if (lane === 'rent') return 'Move renter forward';
+  if (lane === 'auction') return 'Move bidder forward';
+  return 'Move buyer forward';
 }
 
 function formatOwnerRole(ownerRole: string | null | undefined) {
@@ -137,17 +207,18 @@ export default function PartnerMyReferralsPage() {
         <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
           <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
             <p className="text-[10px] font-semibold uppercase text-blue-100">Referral tracker</p>
-            <h1 className="mt-1 text-[28px] font-semibold">My Buyers</h1>
+            <h1 className="mt-1 text-[28px] font-semibold">My Referrals</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Track buyer status, next steps, required documents, and referral reward progress.
+              Track buyer, renter, and bidder status, next steps, required documents, and referral
+              reward progress.
             </p>
           </div>
           <CardContent className="flex flex-wrap items-center gap-2 bg-primary/5 py-4">
             <Button variant="conversion" onClick={() => setLocation('/distribution/partner/submit')}>
-              Submit Buyer
+              Submit Referral
             </Button>
             <Button variant="conversion" onClick={() => setLocation('/distribution/partner/accelerator')}>
-              Match Buyer
+              Match Referral
             </Button>
             <label className="ml-auto flex items-center gap-2 text-sm">
               Status
@@ -181,7 +252,10 @@ export default function PartnerMyReferralsPage() {
               <WalletCards className="h-4 w-4 text-primary" />
               Journey to Referral Reward
             </CardTitle>
-            <CardDescription>Every buyer moves from review to site visit, agreement, and payout.</CardDescription>
+            <CardDescription>
+              Buyer, renter, and bidder journeys use transaction-aware labels while payout
+              readiness stays governed by programme terms.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
@@ -209,7 +283,7 @@ export default function PartnerMyReferralsPage() {
           <Card className="mb-4 border-red-200 bg-red-50">
             <CardContent className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-red-700">
               <p>
-                {atRiskCount} buyer{atRiskCount === 1 ? '' : 's'} need immediate
+                {atRiskCount} referral{atRiskCount === 1 ? '' : 's'} need immediate
                 follow-up.
               </p>
               <Button size="sm" onClick={() => setShowAtRiskOnly(true)}>
@@ -229,74 +303,84 @@ export default function PartnerMyReferralsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UsersRound className="h-4 w-4 text-primary" />
-              Buyer Tracker
+              Referral Tracker
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {visibleItems.map((item: any) => (
-              <div key={item.dealId} className="w-full rounded-md border border-primary/15 bg-white p-3 text-left">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{item.development.name}</p>
-                    <p className="text-xs text-slate-500">Deal #{item.dealId}</p>
-                    <p className="mt-1 text-xs text-slate-600">
-                      Next action: {item.journey?.nextAction || getNextActionLabel(item.status, item.docProgress)}
-                    </p>
-                    {item.journey?.slaDueAt ? (
-                      <p className={`mt-1 text-[11px] ${item.journey?.atRisk ? 'text-red-600' : 'text-slate-500'}`}>
-                        Owner: {formatOwnerRole(item.journey.ownerRole)} | SLA due {String(item.journey.slaDueAt)}
+            {visibleItems.map((item: any) => {
+              const transactionType = item.development?.transactionType;
+              const participantLabel = getParticipantLabel(transactionType);
+
+              return (
+                <div key={item.dealId} className="w-full rounded-md border border-primary/15 bg-white p-3 text-left">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{item.development.name}</p>
+                      <p className="text-xs text-slate-500">Deal #{item.dealId}</p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Next action:{' '}
+                        {item.journey?.nextAction ||
+                          getNextActionLabel(item.status, item.docProgress, transactionType)}
                       </p>
-                    ) : null}
+                      {item.journey?.slaDueAt ? (
+                        <p className={`mt-1 text-[11px] ${item.journey?.atRisk ? 'text-red-600' : 'text-slate-500'}`}>
+                          Owner: {formatOwnerRole(item.journey.ownerRole)} | SLA due {String(item.journey.slaDueAt)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {getPartnerReferralStageLabel(item.status, transactionType)}
+                      </Badge>
+                      <Badge variant="outline">{participantLabel}</Badge>
+                      <Badge variant="outline">
+                        {item.docProgress.verifiedRequiredCount}/{item.docProgress.requiredCount} docs
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{getStageLabel(item.status)}</Badge>
-                    <Badge variant="outline">
-                      {item.docProgress.verifiedRequiredCount}/{item.docProgress.requiredCount} docs
-                    </Badge>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#e7dfd3]">
+                    <div className="h-full rounded bg-primary" style={{ width: `${getStageProgress(item.status)}%` }} />
                   </div>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#e7dfd3]">
-                  <div className="h-full rounded bg-primary" style={{ width: `${getStageProgress(item.status)}%` }} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {getQuickActions(String(item.journey?.actionCode || '')).map(action => {
-                    if (action === 'open_commissions') {
-                      return (
-                        <Button
-                          key={action}
-                          size="sm"
-                          onClick={() => setLocation('/distribution/partner/commissions')}
-                        >
-                          Open Commissions
-                        </Button>
-                      );
-                    }
-                    if (action === 'submit_referral' || action === 'open_submit') {
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {getQuickActions(String(item.journey?.actionCode || '')).map(action => {
+                      if (action === 'open_commissions') {
+                        return (
+                          <Button
+                            key={action}
+                            size="sm"
+                            onClick={() => setLocation('/distribution/partner/commissions')}
+                          >
+                            Open Commissions
+                          </Button>
+                        );
+                      }
+                      if (action === 'submit_referral' || action === 'open_submit') {
+                        return (
+                          <Button
+                            key={action}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setLocation('/distribution/partner/submit')}
+                          >
+                            Submit Referral
+                          </Button>
+                        );
+                      }
                       return (
                         <Button
                           key={action}
                           size="sm"
                           variant="outline"
-                          onClick={() => setLocation('/distribution/partner/submit')}
+                          onClick={() => setLocation(`/distribution/partner/referrals/${Number(item.dealId)}`)}
                         >
-                          Submit Buyer
+                          Open Deal
                         </Button>
                       );
-                    }
-                    return (
-                      <Button
-                        key={action}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setLocation(`/distribution/partner/referrals/${Number(item.dealId)}`)}
-                      >
-                        Open Deal
-                      </Button>
-                    );
-                  })}
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {!referralsQuery.error && !visibleItems.length ? (
               <p className="py-6 text-center text-sm text-slate-500">

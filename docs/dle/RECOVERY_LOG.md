@@ -3946,3 +3946,43 @@ Next recommended slice:
   Rental/Auction-specific document and payout programme terminology.
 Commit hash/tag: This entry will be included in `feat(dle): add checklist transaction context`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Partner Referral Transaction Journey Labels
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the partner/referrer referral tracker show buyer, renter, and bidder journeys instead of
+presenting every referral as a sale-shaped buyer pipeline.
+Files changed:
+- server/services/distributionReferralSubmissionService.ts
+- client/src/pages/distribution/PartnerMyReferralsPage.tsx
+- client/src/pages/distribution/PartnerMyReferralsPage.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerMyReferralsPage.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `listMyReferrals` and `getMyReferralDeal` now return the development `transactionType`.
+- The partner referral tracker now labels shared pipeline stages as Sale, Rental, or Auction
+  journey states where appropriate.
+- Rental referrals show renter/application/lease language; Auction referrals show
+  bidder/registration/auction-terms language.
+- Reward tracking remains tied to programme terms and does not move stages or commission state.
+Guardrails:
+- No schema, migration, deal-stage, commission, lead, inventory, or payout mutation changes.
+- The shared referral stage model remains intact; this slice is a transaction-aware display
+  overlay.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Partner detail, commission, and programme-terms surfaces still need deeper Rental/Auction
+  terminology.
+- The underlying distribution programme terms and stage names remain shared and sale-shaped.
+Next recommended slice:
+- Carry the same transaction-aware referral terminology into partner referral detail and programme
+  terms, or define Rental/Auction-specific referral document/payout semantics.
+Commit hash/tag: This entry will be included in `feat(dle): label partner referral journeys`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

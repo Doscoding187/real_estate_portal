@@ -117,6 +117,10 @@ Implemented distribution/referral handoff:
   - labels checklists as Sale buyer, Rental applicant, or Auction bidder review surfaces
   - keeps readiness copy explicit that Rental/Auction lease, bidder, and payout semantics still
     require programme support before any stage or commission movement
+- `client/src/pages/distribution/PartnerMyReferralsPage.tsx`
+  - reads referral development transaction type from `listMyReferrals`
+  - overlays shared referral stages with buyer, renter, or bidder labels
+  - keeps reward tracking generic to programme terms instead of presenting every referral as a sale
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

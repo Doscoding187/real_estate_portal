@@ -811,6 +811,7 @@ export async function listMyReferralDeals(
       dealId: distributionDeals.id,
       developmentId: distributionDeals.developmentId,
       developmentName: developments.name,
+      transactionType: developments.transactionType,
       programId: distributionDeals.programId,
       assessmentId: distributionDeals.affordabilityAssessmentId,
       matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
@@ -850,6 +851,7 @@ export async function listMyReferralDeals(
       development: {
         developmentId: Number(row.developmentId),
         name: String(row.developmentName || `Development #${row.developmentId}`),
+        transactionType: row.transactionType || null,
       },
       status: String(row.status || 'viewing_scheduled'),
       assessmentId: row.assessmentId ? String(row.assessmentId) : null,
@@ -879,6 +881,7 @@ export async function getMyReferralDeal(
       programId: distributionDeals.programId,
       developmentId: distributionDeals.developmentId,
       developmentName: developments.name,
+      transactionType: developments.transactionType,
       city: developments.city,
       province: developments.province,
       buyerName: distributionDeals.buyerName,
@@ -976,6 +979,7 @@ export async function getMyReferralDeal(
     development: {
       developmentId: Number(deal.developmentId),
       name: String(deal.developmentName || `Development #${deal.developmentId}`),
+      transactionType: deal.transactionType || null,
       city: deal.city || null,
       province: deal.province || null,
     },

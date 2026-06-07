@@ -386,6 +386,9 @@ Recommended next architecture work:
 - The manager deal checklist now carries the development transaction type through
   `getDealChecklist` and shows buyer, rental-applicant, or bidder review language while preserving
   distribution-owned document, milestone, payout, and commission guardrails.
+- The partner referral tracker now receives referral development `transactionType` and overlays
+  shared pipeline stages with buyer, renter, or bidder labels so partners do not see every DLE
+  referral as a sale journey.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.
