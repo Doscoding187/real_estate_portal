@@ -1079,6 +1079,7 @@ function parseMetadataObject(value: unknown) {
 
 type LatestDleHandoffReadback = {
   id: number;
+  transactionType: string | null;
   action: string | null;
   status: string | null;
   resultLabel: string | null;
@@ -1103,6 +1104,7 @@ async function getLatestDleHandoffByDealIds(
     .select({
       id: developmentOperatingEvents.id,
       distributionDealId: developmentOperatingEvents.distributionDealId,
+      transactionType: developmentOperatingEvents.transactionType,
       toStatus: developmentOperatingEvents.toStatus,
       metadata: developmentOperatingEvents.metadata,
       eventAt: developmentOperatingEvents.eventAt,
@@ -1123,6 +1125,7 @@ async function getLatestDleHandoffByDealIds(
     const metadata = parseMetadataObject(handoff.metadata) || {};
     latestHandoffByDealId.set(dealId, {
       id: Number(handoff.id),
+      transactionType: handoff.transactionType || null,
       action: typeof metadata.action === 'string' ? metadata.action : null,
       status: handoff.toStatus || null,
       resultLabel: typeof metadata.resultLabel === 'string' ? metadata.resultLabel : null,

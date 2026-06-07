@@ -3813,3 +3813,50 @@ Next recommended slice:
   transition requests from DLE.
 Commit hash/tag: This entry will be included in `test(dle): prove rental auction distribution handoff`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Transaction-Native Handoff Readback Labels
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the already-proven Sale/Rental/Auction distribution handoff transaction type visible in
+developer and manager readback surfaces.
+Files changed:
+- server/distributionRouter.ts
+- client/src/components/developer/Overview.tsx
+- client/src/pages/distribution/ManagerDevelopmentDealsPage.tsx
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-review-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-manager-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-manager-acknowledged.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-developer-acknowledged.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-rental-review-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-auction-review-readback.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm vitest run server/services/__tests__/developmentOperatingEventsService.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Sale handoff readback now shows `Sale referral review` on both developer and manager surfaces.
+- Rental handoff readback now shows `Rental referral review` on both developer and manager
+  surfaces.
+- Auction handoff readback now shows `Auction referral review` on both developer and manager
+  surfaces.
+- The handoff remains review-only: no distribution deal stage or commission state changes.
+Proof and fixes:
+- Exposed `transactionType` from the latest DLE handoff readback helper in `distributionRouter`.
+- Added transaction-native handoff context badges to the developer dashboard and manager deals page.
+- Extended the browser handoff proof to assert the new labels across Sale, Rental, and Auction.
+Remaining risks:
+- The underlying distribution programme semantics are still shared and sale-shaped. This slice only
+  improves readback clarity; it does not introduce Rental/Auction-specific payout or stage models.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Next recommended slice:
+- Define Rental/Auction-specific distribution programme semantics or add manager reporting filters
+  for handoff transaction type.
+Commit hash/tag: This entry will be included in `feat(dle): show transaction handoff labels`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

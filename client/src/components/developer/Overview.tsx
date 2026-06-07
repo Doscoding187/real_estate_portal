@@ -385,6 +385,16 @@ function formatDistributionHandoffStatus(value?: string | null): string {
   return labels[normalized] || 'Handoff recorded';
 }
 
+function formatDistributionHandoffContext(transactionType?: string | null): string {
+  const normalized = String(transactionType || '').trim().toLowerCase();
+  if (normalized === 'for_rent' || normalized === 'rent' || normalized === 'rental') {
+    return 'Rental referral review';
+  }
+  if (normalized === 'auction') return 'Auction referral review';
+  if (normalized === 'for_sale' || normalized === 'sale') return 'Sale referral review';
+  return 'Referral review';
+}
+
 export default function Overview() {
   const { user } = useAuth();
   const { status: onboardingStatus, isLoading: onboardingLoading } = useDeveloperOnboardingStatus();
@@ -2216,6 +2226,11 @@ export default function Overview() {
                                   <div className="flex flex-wrap items-center gap-2">
                                     <Badge variant="outline">
                                       {formatDistributionHandoffStatus(latestHandoff.status)}
+                                    </Badge>
+                                    <Badge variant="secondary">
+                                      {formatDistributionHandoffContext(
+                                        latestHandoff.transactionType,
+                                      )}
                                     </Badge>
                                     <span className="text-xs text-muted-foreground">
                                       {formatOperatingEventTime(latestHandoff.eventAt)}

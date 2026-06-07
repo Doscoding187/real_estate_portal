@@ -119,6 +119,8 @@ Implemented distribution/referral handoff:
     audit event, distribution note events, and unchanged deal stage/commission state
   - browser-proves Rental and Auction review requests preserve their transaction type in DLE
     handoff events while leaving distribution deal stage and commission state unchanged
+  - browser-proves developer and manager readback surfaces show Sale, Rental, and Auction referral
+    review labels from the DLE handoff transaction type
 
 ## Hard Boundary
 

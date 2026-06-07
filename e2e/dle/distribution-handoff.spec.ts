@@ -376,6 +376,7 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     );
     await expect(handoffReadback).toBeVisible({ timeout: 15_000 });
     await expect(handoffReadback.getByText('Review requested')).toBeVisible();
+    await expect(handoffReadback.getByText('Sale referral review')).toBeVisible();
     await expect(handoffReadback.getByText('Buyer signed offer pack uploaded')).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-distribution-handoff-review-readback.png`,
@@ -392,6 +393,7 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     );
     await expect(managerReadback).toBeVisible({ timeout: 15_000 });
     await expect(managerReadback.getByText('Developer review requested')).toBeVisible();
+    await expect(managerReadback.getByText('Sale referral review')).toBeVisible();
     await expect(managerReadback.getByText('Buyer signed offer pack uploaded')).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-distribution-handoff-manager-readback.png`,
@@ -516,10 +518,23 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
       `dle-distribution-handoff-readback-${rentalSeed.dealId}`,
     );
     await expect(handoffReadback).toBeVisible({ timeout: 15_000 });
+    await expect(handoffReadback.getByText('Rental referral review')).toBeVisible();
     await expect(handoffReadback.getByText('Rental application pack is ready')).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-distribution-handoff-rental-review-readback.png`,
     });
+
+    await loginAsSeededManager(page, rentalSeed);
+    await page.goto(`/distribution/manager/developments/${rentalSeed.developmentId}`);
+    await expect(page.getByRole('heading', { name: 'Development Deals' })).toBeVisible({
+      timeout: 15_000,
+    });
+    const managerReadback = page.getByTestId(
+      `dle-manager-handoff-readback-${rentalSeed.dealId}`,
+    );
+    await expect(managerReadback).toBeVisible({ timeout: 15_000 });
+    await expect(managerReadback.getByText('Rental referral review')).toBeVisible();
+    await expect(managerReadback.getByText('Rental application pack is ready')).toBeVisible();
 
     const [afterDeal] = await db!
       .select()
@@ -577,10 +592,23 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
       `dle-distribution-handoff-readback-${auctionSeed.dealId}`,
     );
     await expect(handoffReadback).toBeVisible({ timeout: 15_000 });
+    await expect(handoffReadback.getByText('Auction referral review')).toBeVisible();
     await expect(handoffReadback.getByText('Auction bidder file needs manager review')).toBeVisible();
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-distribution-handoff-auction-review-readback.png`,
     });
+
+    await loginAsSeededManager(page, auctionSeed);
+    await page.goto(`/distribution/manager/developments/${auctionSeed.developmentId}`);
+    await expect(page.getByRole('heading', { name: 'Development Deals' })).toBeVisible({
+      timeout: 15_000,
+    });
+    const managerReadback = page.getByTestId(
+      `dle-manager-handoff-readback-${auctionSeed.dealId}`,
+    );
+    await expect(managerReadback).toBeVisible({ timeout: 15_000 });
+    await expect(managerReadback.getByText('Auction referral review')).toBeVisible();
+    await expect(managerReadback.getByText('Auction bidder file needs manager review')).toBeVisible();
 
     const [afterDeal] = await db!
       .select()

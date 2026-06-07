@@ -377,7 +377,9 @@ Recommended next architecture work:
 - Distribution/referral handoff review is now browser-proven for Sale, Rental, and Auction through
   `e2e/dle/distribution-handoff.spec.ts`. Sale covers manager acknowledgement readback end to end;
   Rental and Auction prove transaction-native DLE handoff event typing and unchanged distribution
-  deal stage/commission state.
+  deal stage/commission state. Developer and manager readback surfaces now show transaction-native
+  `Sale referral review`, `Rental referral review`, and `Auction referral review` labels from the
+  DLE handoff event.
 - Continue distribution/referral work with manager review/reporting surfaces or transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

@@ -20,6 +20,16 @@ function formatHandoffStatus(value?: string | null): string {
   return labels[String(value || '').trim()] || 'DLE handoff';
 }
 
+function formatHandoffContext(transactionType?: string | null): string {
+  const normalized = String(transactionType || '').trim().toLowerCase();
+  if (normalized === 'for_rent' || normalized === 'rent' || normalized === 'rental') {
+    return 'Rental referral review';
+  }
+  if (normalized === 'auction') return 'Auction referral review';
+  if (normalized === 'for_sale' || normalized === 'sale') return 'Sale referral review';
+  return 'Referral review';
+}
+
 function formatHandoffTime(value?: string | null): string {
   if (!value) return 'Just now';
   const date = new Date(value);
@@ -186,6 +196,9 @@ export default function ManagerDevelopmentDealsPage() {
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline">{formatHandoffStatus(handoff.status)}</Badge>
+                        <Badge variant="secondary">
+                          {formatHandoffContext(handoff.transactionType)}
+                        </Badge>
                         <span className="text-xs text-slate-500">
                           {formatHandoffTime(handoff.eventAt)}
                         </span>
