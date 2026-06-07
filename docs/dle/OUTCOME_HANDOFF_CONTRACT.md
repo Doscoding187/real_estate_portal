@@ -112,6 +112,11 @@ Implemented distribution/referral handoff:
   - shows manager assignment counts for Sale, Rental, and Auction engines
   - labels assigned developments with transaction-native engine badges
   - filters manager assignments by transaction lane before deal review
+- `client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx`
+  - reads the deal development's transaction type from `getDealChecklist`
+  - labels checklists as Sale buyer, Rental applicant, or Auction bidder review surfaces
+  - keeps readiness copy explicit that Rental/Auction lease, bidder, and payout semantics still
+    require programme support before any stage or commission movement
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

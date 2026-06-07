@@ -25,6 +25,7 @@ export type DealChecklistPayload = {
   buyerName: string | null;
   developmentId: number;
   developmentName: string;
+  transactionType: string | null;
   programId: number | null;
   payoutMilestone: string | null;
   currencyCode: string | null;
@@ -145,6 +146,7 @@ async function getDealScope(db: any, dealId: number) {
       buyerName: distributionDeals.buyerName,
       developmentId: distributionDeals.developmentId,
       developmentName: developments.name,
+      transactionType: developments.transactionType,
       currentStage: distributionDeals.currentStage,
       managerUserId: distributionDeals.managerUserId,
     })
@@ -166,6 +168,7 @@ async function getDealScope(db: any, dealId: number) {
     buyerName: deal.buyerName || null,
     developmentId: Number(deal.developmentId),
     developmentName: String(deal.developmentName || `Development #${deal.developmentId}`),
+    transactionType: deal.transactionType ? String(deal.transactionType) : null,
     currentStage: deal.currentStage ? String(deal.currentStage) : null,
     managerUserId: deal.managerUserId ? Number(deal.managerUserId) : null,
   };
@@ -335,6 +338,7 @@ export async function getDealChecklist(
     buyerName: dealScope.buyerName,
     developmentId: dealScope.developmentId,
     developmentName: dealScope.developmentName,
+    transactionType: dealScope.transactionType,
     programId: program ? Number(program.id) : null,
     payoutMilestone,
     currencyCode: program?.currencyCode ? String(program.currencyCode) : null,

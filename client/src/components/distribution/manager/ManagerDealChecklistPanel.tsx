@@ -13,6 +13,7 @@ type DealChecklist = {
   buyerName: string | null;
   developmentId: number;
   developmentName: string;
+  transactionType?: string | null;
   programId: number | null;
   payoutMilestone: string | null;
   currencyCode: string | null;
@@ -67,6 +68,56 @@ function formatActor(actor: { userId: number; name?: string } | null) {
   return actor.name || `User #${actor.userId}`;
 }
 
+type ChecklistTransactionLane = 'sale' | 'rent' | 'auction';
+
+export function normalizeChecklistTransactionLane(transactionType: unknown): ChecklistTransactionLane {
+  const normalized = String(transactionType || '').trim().toLowerCase();
+  if (['for_rent', 'rent', 'rental', 'to_rent', 'to-rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getChecklistTransactionCopy(transactionType: unknown) {
+  const lane = normalizeChecklistTransactionLane(transactionType);
+  if (lane === 'rent') {
+    return {
+      engineLabel: 'Rental engine',
+      participantLabel: 'Rental applicant',
+      readinessLabel: 'Referral Review Readiness',
+      readyLabel: 'Referral Review Ready',
+      notReadyLabel: 'Referral Review Not Ready',
+      documentTitle: 'Rental Applicant Document Checklist',
+      documentDescription: 'Update received and verification status for rental applicant documents.',
+      readinessNote:
+        'Rental referral readiness uses verified documents and current milestone checks. Lease, deposit, and rental commission rules still require the distribution programme to support them explicitly.',
+    };
+  }
+  if (lane === 'auction') {
+    return {
+      engineLabel: 'Auction engine',
+      participantLabel: 'Bidder',
+      readinessLabel: 'Bidder Review Readiness',
+      readyLabel: 'Bidder Review Ready',
+      notReadyLabel: 'Bidder Review Not Ready',
+      documentTitle: 'Bidder Document Checklist',
+      documentDescription: 'Update received and verification status for bidder documents.',
+      readinessNote:
+        'Auction referral readiness uses verified documents and current milestone checks. Bidder registration, proof-of-funds, auction terms, and auction commission rules still require explicit programme support.',
+    };
+  }
+  return {
+    engineLabel: 'Sale engine',
+    participantLabel: 'Buyer',
+    readinessLabel: 'Payout Readiness',
+    readyLabel: 'Payout Ready',
+    notReadyLabel: 'Payout Not Ready',
+    documentTitle: 'Buyer Document Checklist',
+    documentDescription: 'Update received and verification status for buyer documents.',
+    readinessNote:
+      'Payout readiness uses verified documents and any milestone checks the system can prove today. Unsupported milestones still require manual confirmation.',
+  };
+}
+
 export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
@@ -91,6 +142,7 @@ export function ManagerDealChecklistPanel({
   const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
   const [fileUrlByTemplateId, setFileUrlByTemplateId] = useState<Record<number, string>>({});
   const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
+  const transactionCopy = getChecklistTransactionCopy(checklist.transactionType);
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -124,10 +176,16 @@ export function ManagerDealChecklistPanel({
             {checklist.developmentName} | {checklist.dealRef}
           </CardTitle>
           <CardDescription>
-            {checklist.buyerName ? `Buyer: ${checklist.buyerName}` : 'Buyer details unavailable'}
+            {checklist.buyerName
+              ? `${transactionCopy.participantLabel}: ${checklist.buyerName}`
+              : `${transactionCopy.participantLabel} details unavailable`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-2 text-sm md:grid-cols-3">
+        <CardContent className="grid gap-2 text-sm md:grid-cols-4">
+          <div>
+            <p className="text-xs text-slate-500">Transaction Engine</p>
+            <p className="font-medium">{transactionCopy.engineLabel}</p>
+          </div>
           <div>
             <p className="text-xs text-slate-500">Commission</p>
             <p className="font-medium">{formatCommission(checklist)}</p>
@@ -145,8 +203,11 @@ export function ManagerDealChecklistPanel({
 
       <Card className={checklist.computed.payoutReady ? 'border-emerald-300' : 'border-amber-300'}>
         <CardHeader>
+          <CardDescription>{transactionCopy.readinessLabel}</CardDescription>
           <CardTitle className={checklist.computed.payoutReady ? 'text-emerald-700' : 'text-amber-700'}>
-            {checklist.computed.payoutReady ? 'Payout Ready' : 'Payout Not Ready'}
+            {checklist.computed.payoutReady
+              ? transactionCopy.readyLabel
+              : transactionCopy.notReadyLabel}
           </CardTitle>
           <CardDescription>
             Verified required documents: {checklist.computed.verifiedRequiredCount}/
@@ -161,16 +222,15 @@ export function ManagerDealChecklistPanel({
               </p>
             ))}
           <p className="text-xs text-slate-500">
-            Payout readiness uses verified documents and any milestone checks the system can prove
-            today. Unsupported milestones still require manual confirmation.
+            {transactionCopy.readinessNote}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Document Checklist</CardTitle>
-          <CardDescription>Update received and verification status per required document.</CardDescription>
+          <CardTitle>{transactionCopy.documentTitle}</CardTitle>
+          <CardDescription>{transactionCopy.documentDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2 rounded border bg-slate-50 p-2">

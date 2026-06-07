@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { ManagerDealChecklistPanel } from './ManagerDealChecklistPanel';
+import {
+  getChecklistTransactionCopy,
+  ManagerDealChecklistPanel,
+  normalizeChecklistTransactionLane,
+} from './ManagerDealChecklistPanel';
 
 const checklistFixture = {
   dealId: 12,
@@ -56,6 +60,24 @@ const checklistFixture = {
 };
 
 describe('ManagerDealChecklistPanel', () => {
+  it('normalizes checklist transaction lanes and copy', () => {
+    expect(normalizeChecklistTransactionLane('for_sale')).toBe('sale');
+    expect(normalizeChecklistTransactionLane('for_rent')).toBe('rent');
+    expect(normalizeChecklistTransactionLane('rental')).toBe('rent');
+    expect(normalizeChecklistTransactionLane('on_auction')).toBe('auction');
+
+    expect(getChecklistTransactionCopy('for_rent')).toMatchObject({
+      engineLabel: 'Rental engine',
+      participantLabel: 'Rental applicant',
+      documentTitle: 'Rental Applicant Document Checklist',
+    });
+    expect(getChecklistTransactionCopy('auction')).toMatchObject({
+      engineLabel: 'Auction engine',
+      participantLabel: 'Bidder',
+      documentTitle: 'Bidder Document Checklist',
+    });
+  });
+
   it('renders checklist rows with pending statuses and blockers', () => {
     render(
       <ManagerDealChecklistPanel
@@ -66,7 +88,10 @@ describe('ManagerDealChecklistPanel', () => {
     );
 
     expect(screen.getByText('Sky City | DEAL-12')).toBeInTheDocument();
+    expect(screen.getByText('Sale engine')).toBeInTheDocument();
+    expect(screen.getByText('Buyer: Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('Payout Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Buyer Document Checklist')).toBeInTheDocument();
     expect(screen.getByText(/2 required documents still need verification\./i)).toBeInTheDocument();
     expect(screen.getAllByDisplayValue('pending').length).toBeGreaterThan(0);
     expect(screen.getByText('ID Document')).toBeInTheDocument();
@@ -134,6 +159,38 @@ describe('ManagerDealChecklistPanel', () => {
 
     expect(screen.getByText('Payout Ready')).toBeInTheDocument();
     expect(screen.getByText('Verified required documents: 2/2')).toBeInTheDocument();
+  });
+
+  it('uses rental applicant review language without claiming payout semantics are solved', () => {
+    render(
+      <ManagerDealChecklistPanel
+        checklist={{ ...checklistFixture, transactionType: 'for_rent' } as any}
+        savingTemplateId={null}
+        onUpdateDocumentStatus={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByText('Rental engine')).toBeInTheDocument();
+    expect(screen.getByText('Rental applicant: Jane Doe')).toBeInTheDocument();
+    expect(screen.getByText('Referral Review Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Rental Applicant Document Checklist')).toBeInTheDocument();
+    expect(screen.getByText(/Lease, deposit, and rental commission rules/i)).toBeInTheDocument();
+  });
+
+  it('uses bidder review language for auction checklists', () => {
+    render(
+      <ManagerDealChecklistPanel
+        checklist={{ ...checklistFixture, transactionType: 'auction' } as any}
+        savingTemplateId={null}
+        onUpdateDocumentStatus={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByText('Auction engine')).toBeInTheDocument();
+    expect(screen.getByText('Bidder: Jane Doe')).toBeInTheDocument();
+    expect(screen.getByText('Bidder Review Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Bidder Document Checklist')).toBeInTheDocument();
+    expect(screen.getByText(/proof-of-funds, auction terms/i)).toBeInTheDocument();
   });
 
   it('triggers batch callbacks from quick actions', async () => {

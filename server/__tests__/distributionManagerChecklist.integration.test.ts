@@ -27,6 +27,7 @@ const describeWithDb: typeof describe = hasDb
 type SeedOptions = {
   includePrimaryAssignment?: boolean;
   requiredDocsCount?: number;
+  transactionType?: 'for_sale' | 'for_rent' | 'auction';
   payoutMilestone?:
     | 'attorney_instruction'
     | 'attorney_signing'
@@ -136,6 +137,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
 
   const requiredDocsCount = Math.max(0, options.requiredDocsCount ?? 2);
   const includePrimaryAssignment = options.includePrimaryAssignment ?? true;
+  const transactionType = options.transactionType ?? 'for_sale';
   const payoutMilestone = options.payoutMilestone ?? 'attorney_signing';
   const templateDocumentCodes = options.templateDocumentCodes ?? [
     'id_document',
@@ -156,6 +158,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   const [developmentInsert] = await db.insert(developments).values({
     name: `Distribution Dev ${Date.now()}`,
     developmentType: 'residential',
+    transactionType,
     city: 'Johannesburg',
     province: 'Gauteng',
     isPublished: 1,
@@ -424,6 +427,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     });
 
     expect(checklist.dealId).toBe(seed.dealId);
+    expect(checklist.transactionType).toBe('for_sale');
     expect(checklist.requiredDocuments).toHaveLength(2);
     expect(checklist.requiredDocuments.every((document: any) => document.status === 'pending')).toBe(
       true,

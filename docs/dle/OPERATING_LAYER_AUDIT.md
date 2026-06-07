@@ -383,6 +383,9 @@ Recommended next architecture work:
 - The manager distribution operations assignment list now carries `transactionType`, shows Sale,
   Rental, and Auction assignment counts, labels each assigned development by engine, and supports
   transaction-lane filtering before the manager enters deal review.
+- The manager deal checklist now carries the development transaction type through
+  `getDealChecklist` and shows buyer, rental-applicant, or bidder review language while preserving
+  distribution-owned document, milestone, payout, and commission guardrails.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

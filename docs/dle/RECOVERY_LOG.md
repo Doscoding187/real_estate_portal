@@ -3901,3 +3901,48 @@ Next recommended slice:
   for handoff transaction type.
 Commit hash/tag: This entry will be included in `feat(dle): show transaction handoff labels`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - Manager Checklist Transaction Context
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Carry Sale/Rental/Auction context into the manager deal checklist so the distribution review
+surface no longer reads as one generic sale-shaped payout checklist.
+Files changed:
+- server/services/distributionDealDocumentsService.ts
+- server/__tests__/distributionManagerChecklist.integration.test.ts
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx`
+  passed.
+- `pnpm vitest run server/__tests__/distributionManagerChecklist.integration.test.ts` attempted but
+  failed inside the sandbox with `connect EPERM 127.0.0.1:3306`; the escalated rerun request was
+  not approved, so DB-backed proof is pending.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `getDealChecklist` now returns the development `transactionType`.
+- The manager checklist panel now labels Sale as buyer review, Rental as rental-applicant review,
+  and Auction as bidder review.
+- Rental and Auction readiness copy explicitly says lease/deposit/bidder/auction payout semantics
+  still need programme support before any stage or commission assumption is made.
+Guardrails:
+- No schema, migration, deal-stage, commission, lead, or inventory mutation changes.
+- Distribution stage and commission movement remain owned by distribution services.
+- The checklist copy improves transaction clarity without pretending Rental/Auction programme
+  semantics are complete.
+Remaining risks:
+- The DB integration assertion for `transactionType` is written but still needs a local MySQL
+  run outside the sandbox.
+- The underlying distribution programme terms and stage names remain shared and sale-shaped.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Next recommended slice:
+- Run the DB-backed checklist integration test with local MySQL access, then define
+  Rental/Auction-specific document and payout programme terminology.
+Commit hash/tag: This entry will be included in `feat(dle): add checklist transaction context`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
