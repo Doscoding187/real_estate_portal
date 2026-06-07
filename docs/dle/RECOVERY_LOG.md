@@ -3612,3 +3612,50 @@ Next recommended slice:
   operating proof now that backend persistence and test DB schema are aligned.
 Commit hash/tag: This entry will be included in `docs(dle): log test db schema recovery`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-07 - UI Pricing Correction Proof
+
+Date: 2026-06-07
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove that dashboard pricing remediation can be corrected through the actual developer Unit
+Types editor and Save Progress path, not only through backend service calls.
+Files changed:
+- e2e/dle/dashboard-pricing-health.spec.ts
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-sale-pricing-health.png
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-rental-pricing-health.png
+- docs/dle/evidence/2026-06-07/qa-dle-dashboard-auction-pricing-health.png
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/dashboard-pricing-health.spec.ts --project="Desktop Chrome" --workers=1` passed.
+- `pnpm vitest run server/__tests__/developerRouter.edit-update.test.ts -t "preserves auction terms through helper submit and partial edit"` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Manual/browser flows verified:
+- Sale remediation opens the flagged unit row, edits the sale pricing fields in the Unit Types
+  dialog, saves the unit, clicks Save Progress, and returns the dashboard pricing health to
+  `Aligned` with `R1M - R1.5M` shown for both public and live pricing.
+- Rental remediation opens the flagged rental row, edits monthly rent from/to in the Unit Types
+  dialog, saves the unit, clicks Save Progress, and returns pricing health to `Aligned` with
+  `R12k - R15k / month` shown for both public and live rent.
+- Auction remediation opens the flagged auction lot, edits the starting bid in the Unit Types
+  dialog, saves the lot, clicks Save Progress, and returns bid health to `Aligned` with `R800k`
+  shown for both public and live bid-from.
+Proof and fixes:
+- Replaced the previous backend-only correction helper in the browser proof with real UI editing
+  through the Unit Types dialog.
+- Seeded test units now include descriptions, and the proof explicitly fills the Basic Info
+  description field before saving so it exercises the real editor validation path.
+- Increased this single browser proof timeout to 90 seconds because it now performs full
+  Sale/Rental/Auction detection, correction, Save Progress, and dashboard verification.
+Remaining risks:
+- The UI proof aligns live unit values to the stale public mirror values. It proves the developer
+  can repair drift through unit editing; public-mirror editing remains a separate UX path if needed.
+- The proof still uses one unit per transaction engine. Multi-row min/max correction can be added if
+  pricing diagnostics need broader inventory coverage.
+- Existing unrelated homepage, older evidence, Playwright report, and test-results changes were not
+  touched or staged.
+Next recommended slice:
+- Continue Rental/Auction proof at the operating layer, or add multi-row pricing remediation if
+  product requirements demand row-level min/max correction across larger inventory sets.
+Commit hash/tag: This entry will be included in `test(dle): prove UI pricing correction`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

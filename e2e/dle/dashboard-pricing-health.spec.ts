@@ -105,6 +105,7 @@ async function seedPricingHealthDevelopments(suffix: string): Promise<Seed> {
       {
         id: `pricing-sale-${suffix}`.slice(0, 36),
         name: `Pricing Health Sale Two Bed ${suffix}`,
+        description: 'Sale unit for UI pricing correction proof.',
         bedrooms: 2,
         bathrooms: 2,
         unitSize: 82,
@@ -139,6 +140,7 @@ async function seedPricingHealthDevelopments(suffix: string): Promise<Seed> {
       {
         id: `pricing-rental-${suffix}`.slice(0, 36),
         name: `Pricing Health Rental Two Bed ${suffix}`,
+        description: 'Rental unit for UI pricing correction proof.',
         bedrooms: 2,
         bathrooms: 2,
         unitSize: 76,
@@ -175,6 +177,7 @@ async function seedPricingHealthDevelopments(suffix: string): Promise<Seed> {
       {
         id: `pricing-auction-${suffix}`.slice(0, 36),
         name: `Pricing Health Auction Lot ${suffix}`,
+        description: 'Auction lot for UI pricing correction proof.',
         bedrooms: 3,
         bathrooms: 2,
         unitSize: 104,
@@ -231,18 +234,51 @@ async function selectDevelopment(page: Page, developmentName: string) {
   });
 }
 
-async function correctPricingMirrors(seed: Seed) {
-  await developmentService.updateDevelopment(seed.saleDevelopmentId, seed.userId, {
-    priceFrom: 1_200_000,
-    priceTo: 1_650_000,
-  } as any);
-  await developmentService.updateDevelopment(seed.rentalDevelopmentId, seed.userId, {
-    monthlyRentFrom: 13_500,
-    monthlyRentTo: 15_500,
-  } as any);
-  await developmentService.updateDevelopment(seed.auctionDevelopmentId, seed.userId, {
-    startingBidFrom: 850_000,
-  } as any);
+async function openPricingEditor(page: Page, unitName: string) {
+  await page.getByRole('button', { name: `Edit ${unitName}` }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Edit Unit Type' })).toBeVisible({
+    timeout: 10_000,
+  });
+  await dialog.getByRole('tab', { name: 'Basic Info' }).click();
+  await dialog
+    .getByPlaceholder('Highlight unique features...')
+    .fill(`${unitName} pricing correction validated through the editor.`);
+  await dialog.getByRole('tab', { name: 'Pricing' }).click();
+  return dialog;
+}
+
+async function saveEditedUnitAndProgress(page: Page) {
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('tab', { name: 'Stock' }).click();
+  await dialog.getByRole('button', { name: 'Update Unit Type' }).click();
+  await expect(dialog).toBeHidden({ timeout: 10_000 });
+
+  await page.getByRole('button', { name: 'Save Progress', exact: true }).click();
+  await expect(page.getByText('Progress saved')).toBeVisible({ timeout: 15_000 });
+}
+
+async function correctSaleUnitThroughUi(page: Page, unitName: string) {
+  const dialog = await openPricingEditor(page, unitName);
+  await dialog.getByRole('spinbutton').first().fill('1000000');
+  await dialog.getByRole('button', { name: 'Add Extra' }).click();
+  await dialog.getByPlaceholder('Item Label (e.g. Pool, AC)').fill('Public mirror alignment');
+  await dialog.getByPlaceholder('Price').fill('500000');
+  await saveEditedUnitAndProgress(page);
+}
+
+async function correctRentalUnitThroughUi(page: Page, unitName: string) {
+  const dialog = await openPricingEditor(page, unitName);
+  const rentInputs = dialog.getByRole('spinbutton');
+  await rentInputs.nth(0).fill('12000');
+  await rentInputs.nth(1).fill('15000');
+  await saveEditedUnitAndProgress(page);
+}
+
+async function correctAuctionUnitThroughUi(page: Page, unitName: string) {
+  const dialog = await openPricingEditor(page, unitName);
+  await dialog.getByRole('spinbutton').first().fill('800000');
+  await saveEditedUnitAndProgress(page);
 }
 
 test.describe.serial('DLE dashboard pricing health browser proof', () => {
@@ -268,6 +304,7 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
   test('shows Sale, Rental, and Auction pricing drift remediation on the developer dashboard', async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     seed = await seedPricingHealthDevelopments(suffix);
 
@@ -308,6 +345,19 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
     await expect(
       page.getByText('Pricing attention: Sets live price from, Sets live price to'),
     ).toBeVisible();
+    await correctSaleUnitThroughUi(page, `Pricing Health Sale Two Bed ${suffix}`);
+
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, seed.saleDevelopmentName);
+    const uiAlignedSaleHealth = page.getByTestId('dle-pricing-health');
+    await expect(uiAlignedSaleHealth.getByText('Sale pricing health')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(uiAlignedSaleHealth.getByText('Aligned')).toBeVisible();
+    await expect(uiAlignedSaleHealth.getByText('R1M - R1.5M')).toHaveCount(2);
 
     await page.goto('/developer/dashboard');
     await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
@@ -348,6 +398,19 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
     await expect(
       page.getByText('Pricing attention: Sets live rent from, Sets live rent to'),
     ).toBeVisible();
+    await correctRentalUnitThroughUi(page, `Pricing Health Rental Two Bed ${suffix}`);
+
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, seed.rentalDevelopmentName);
+    const uiAlignedRentalHealth = page.getByTestId('dle-pricing-health');
+    await expect(uiAlignedRentalHealth.getByText('Rental pricing health')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(uiAlignedRentalHealth.getByText('Aligned')).toBeVisible();
+    await expect(uiAlignedRentalHealth.getByText('R12k - R15k / month')).toHaveCount(2);
 
     await page.goto('/developer/dashboard');
     await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
@@ -391,8 +454,7 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
       repairHints.getByText(new RegExp(`Pricing Health Auction Lot ${suffix}`)),
     ).toBeVisible();
     await expect(page.getByText('Pricing attention: Sets live bid from')).toBeVisible();
-
-    await correctPricingMirrors(seed);
+    await correctAuctionUnitThroughUi(page, `Pricing Health Auction Lot ${suffix}`);
 
     await page.goto('/developer/dashboard');
     await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
@@ -404,7 +466,7 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
       timeout: 15_000,
     });
     await expect(alignedSaleHealth.getByText('Aligned')).toBeVisible();
-    await expect(alignedSaleHealth.getByText('R1.2M - R1.7M')).toHaveCount(2);
+    await expect(alignedSaleHealth.getByText('R1M - R1.5M')).toHaveCount(2);
 
     await selectDevelopment(page, seed.rentalDevelopmentName);
     const alignedRentalHealth = page.getByTestId('dle-pricing-health');
@@ -412,7 +474,7 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
       timeout: 15_000,
     });
     await expect(alignedRentalHealth.getByText('Aligned')).toBeVisible();
-    await expect(alignedRentalHealth.getByText('R13.5k - R15.5k / month')).toHaveCount(2);
+    await expect(alignedRentalHealth.getByText('R12k - R15k / month')).toHaveCount(2);
 
     await selectDevelopment(page, seed.auctionDevelopmentName);
     const alignedAuctionHealth = page.getByTestId('dle-pricing-health');
@@ -420,6 +482,6 @@ test.describe.serial('DLE dashboard pricing health browser proof', () => {
       timeout: 15_000,
     });
     await expect(alignedAuctionHealth.getByText('Aligned')).toBeVisible();
-    await expect(alignedAuctionHealth.getByText('R850k')).toHaveCount(2);
+    await expect(alignedAuctionHealth.getByText('R800k')).toHaveCount(2);
   });
 });
