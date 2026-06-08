@@ -406,6 +406,9 @@ Recommended next architecture work:
   application-document explanations as buyer, renter, or bidder surfaces from development
   transaction type while leaving document ownership, payout milestones, and commission semantics
   unchanged.
+- The public distribution-network marketing page now describes the funnel as a mixed
+  buyer/renter/bidder referral network, uses transaction-native opportunity-card CTAs, and passes
+  selected-development transaction type into the application form context.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

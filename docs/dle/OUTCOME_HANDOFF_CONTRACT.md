@@ -157,6 +157,18 @@ Implemented distribution/referral handoff:
     surfaces from programme-term development transaction type
   - preserves existing programme document, payout, commission, and referral-readiness semantics
     instead of inventing Rental/Auction-specific programme rules in the UI
+- `client/src/pages/distribution/DistributionNetworkPublicPage.tsx`
+  - moves the public referral-network marketing funnel from buyer-only copy to mixed
+    buyer/renter/bidder referral language
+  - labels public opportunity-card CTAs as `Refer a Buyer`, `Refer a Renter`, or
+    `Refer a Bidder` from development transaction type
+  - keeps payout language tied to configured programme milestones instead of hardcoding every
+    referral as an attorney-signing sale journey
+- `client/src/components/distribution/ReferralApplyForm.tsx`
+  - uses neutral client/referral application language by default
+  - labels selected-development context as buyer, renter, or bidder referral intent when the
+    public opportunity card passes transaction type
+  - preserves the existing public referrer-application mutation and notes payload
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

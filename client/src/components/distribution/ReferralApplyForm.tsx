@@ -18,28 +18,72 @@ import { trpc } from '@/lib/trpc';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type PartnerType = 'independent_agent' | 'small_brokerage' | 'referral_partner' | 'individual' | '';
-type BuyerIntent = 'ready' | 'regular' | 'exploring' | '';
+type ReferralIntent = 'ready' | 'regular' | 'exploring' | '';
 
 type FormState = {
   fullName: string;
   email: string;
   phone: string;
   partnerType: PartnerType;
-  buyerIntent: BuyerIntent;
+  referralIntent: ReferralIntent;
 };
 
 const PARTNER_LABELS: Record<Exclude<PartnerType, ''>, string> = {
   independent_agent: 'Independent Property Agent',
   small_brokerage: 'Small Brokerage',
   referral_partner: 'Referral Partner',
-  individual: 'Individual With Qualified Buyer',
+  individual: 'Individual With Qualified Client',
 };
 
-const INTENT_LABELS: Record<Exclude<BuyerIntent, ''>, string> = {
-  ready: 'I already have a buyer ready to refer',
-  regular: 'I regularly work with buyers',
+const INTENT_LABELS: Record<Exclude<ReferralIntent, ''>, string> = {
+  ready: 'I already have a client ready to refer',
+  regular: 'I regularly work with property clients',
   exploring: "I'm exploring / getting started",
 };
+
+type ReferralApplyTransactionType = 'sale' | 'rent' | 'auction';
+
+function normalizeReferralApplyTransactionType(value: unknown): ReferralApplyTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function getReferralApplyCopy(transactionType: unknown) {
+  const lane = normalizeReferralApplyTransactionType(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      participantPlural: 'renters',
+      participantLower: 'renter',
+      selectedDevelopmentLabel: 'Applying to refer renters for',
+      readyHint: 'If you already have a renter, keep their details ready for your first referral.',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      participantPlural: 'bidders',
+      participantLower: 'bidder',
+      selectedDevelopmentLabel: 'Applying to refer bidders for',
+      readyHint: 'If you already have a bidder, keep their details ready for your first referral.',
+    };
+  }
+
+  return {
+    participantPlural: 'buyers',
+    participantLower: 'buyer',
+    selectedDevelopmentLabel: 'Applying to refer buyers for',
+    readyHint: 'If you already have a buyer, keep their details ready for your first referral.',
+  };
+}
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -47,7 +91,13 @@ interface Props {
   onClose: () => void;
   interestedDevId?: number | null;
   /** Pass the loaded developments list so we can show the dev name */
-  developments?: Array<{ id: number; name: string; suburb?: string | null; city?: string | null }>;
+  developments?: Array<{
+    id: number;
+    name: string;
+    transactionType?: unknown;
+    suburb?: string | null;
+    city?: string | null;
+  }>;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -59,21 +109,22 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
     email: '',
     phone: '',
     partnerType: '',
-    buyerIntent: '',
+    referralIntent: '',
   });
 
   const interestedDev = useMemo(() => {
     if (!interestedDevId || !developments) return null;
     return developments.find(d => d.id === interestedDevId) ?? null;
   }, [interestedDevId, developments]);
+  const selectedCopy = getReferralApplyCopy(interestedDev?.transactionType);
 
   const notes = useMemo(() => {
     const parts: string[] = [];
     if (form.partnerType) parts.push(`Applicant type: ${PARTNER_LABELS[form.partnerType]}`);
-    if (form.buyerIntent) parts.push(`Buyer intent: ${INTENT_LABELS[form.buyerIntent]}`);
+    if (form.referralIntent) parts.push(`Referral intent: ${INTENT_LABELS[form.referralIntent]}`);
     if (interestedDevId) parts.push(`Interested Development ID: ${interestedDevId}`);
     return parts.join(' | ');
-  }, [form.partnerType, form.buyerIntent, interestedDevId]);
+  }, [form.partnerType, form.referralIntent, interestedDevId]);
 
   const canSubmit =
     form.fullName.trim().length >= 2 &&
@@ -109,7 +160,7 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
     // Brief delay before resetting so the exit animation plays
     setTimeout(() => {
       setSubmitted(false);
-      setForm({ fullName: '', email: '', phone: '', partnerType: '', buyerIntent: '' });
+      setForm({ fullName: '', email: '', phone: '', partnerType: '', referralIntent: '' });
     }, 300);
   };
 
@@ -199,8 +250,7 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
           </div>
 
           <p className="text-xs text-slate-500 mb-6 italic">
-            If you already have a buyer, keep their details ready — you'll need them to submit
-            your first referral.
+            {selectedCopy.readyHint}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
@@ -232,7 +282,7 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
             </div>
             <h2 className="text-2xl font-bold text-white">Join the Referral Network</h2>
             <p className="mt-1.5 text-sm text-slate-400">
-              Takes 2 minutes. No buyer required to apply.
+              Takes 2 minutes. No client required to apply.
             </p>
           </div>
 
@@ -241,7 +291,7 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
             <div className="flex items-center gap-2 border-b border-slate-100 bg-blue-50 px-6 py-3 sm:px-8">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-600" />
               <p className="text-xs text-slate-700">
-                Applying to refer buyers for{' '}
+                {selectedCopy.selectedDevelopmentLabel}{' '}
                 <strong className="font-semibold text-slate-900">{interestedDev.name}</strong>
                 {(interestedDev.suburb || interestedDev.city) && (
                   <span className="text-slate-500">
@@ -306,17 +356,17 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
                 <option value="independent_agent">Independent Property Agent</option>
                 <option value="small_brokerage">Small Brokerage</option>
                 <option value="referral_partner">Referral Partner</option>
-                <option value="individual">Individual With Qualified Buyer</option>
+                <option value="individual">Individual With Qualified Client</option>
               </SelectField>
 
               <SelectField
                 label="What best describes you?"
-                value={form.buyerIntent}
-                onChange={v => setForm(p => ({ ...p, buyerIntent: v as BuyerIntent }))}
+                value={form.referralIntent}
+                onChange={v => setForm(p => ({ ...p, referralIntent: v as ReferralIntent }))}
                 placeholder="Select situation"
               >
-                <option value="ready">I already have a buyer ready</option>
-                <option value="regular">I regularly work with buyers</option>
+                <option value="ready">I already have a client ready</option>
+                <option value="regular">I regularly work with property clients</option>
                 <option value="exploring">I'm exploring / getting started</option>
               </SelectField>
             </div>

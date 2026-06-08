@@ -87,6 +87,41 @@ function normalizePublicDistributionTransactionType(
   return 'sale';
 }
 
+export function getPublicDistributionReferralCopy(transactionType: unknown) {
+  const lane = normalizePublicDistributionTransactionType(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      transactionType: lane,
+      participantLabel: 'Renter',
+      participantLower: 'renter',
+      participantPlural: 'renters',
+      referCta: 'Refer a Renter',
+      pipelineLabels: ['Renter 1 - Qualifying', 'Renter 2 - Matched', 'Renter 3 - Lease Review'],
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      transactionType: lane,
+      participantLabel: 'Bidder',
+      participantLower: 'bidder',
+      participantPlural: 'bidders',
+      referCta: 'Refer a Bidder',
+      pipelineLabels: ['Bidder 1 - Qualifying', 'Bidder 2 - Matched', 'Bidder 3 - Auction Review'],
+    };
+  }
+
+  return {
+    transactionType: lane,
+    participantLabel: 'Buyer',
+    participantLower: 'buyer',
+    participantPlural: 'buyers',
+    referCta: 'Refer a Buyer',
+    pipelineLabels: ['Buyer 1 - Qualifying', 'Buyer 2 - Matched', 'Buyer 3 - At Signing'],
+  };
+}
+
 function toPositiveNumber(value: unknown): number | null {
   const numeric = Number(value ?? 0);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
@@ -349,17 +384,18 @@ export default function DistributionNetworkPublicPage() {
               </div>
 
               <h1 className="mx-auto mb-6 max-w-5xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-5xl">
-                You Already Know Buyers.
+                You Already Know Property Clients.
                 <br />
                 <span className="bg-[linear-gradient(135deg,#67e8f9,var(--brand-blue))] bg-clip-text text-transparent">
-                  Get Paid When They Buy Property.
+                  Get Paid When They Move.
                 </span>
               </h1>
 
               <p className="mx-auto max-w-2xl text-lg text-slate-300 mb-4 font-light">
                 No selling. No mandates. No listings to manage.
                 <br />
-                Just connect qualified buyers to the right development â€” and earn.
+                Just connect qualified buyers, renters, or bidders to the right development and
+                earn.
               </p>
 
               <div className="text-blue-200 text-sm md:text-base font-medium mb-10 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-4">
@@ -370,7 +406,7 @@ export default function DistributionNetworkPublicPage() {
                 <span className="hidden md:inline">Â·</span>
                 <span>Referral fee locked at submission</span>
                 <span className="hidden md:inline">Â·</span>
-                <span>Paid at attorney signing</span>
+                <span>Paid at the programme milestone</span>
               </div>
 
               <div className="mx-auto mb-4 flex w-full max-w-md flex-col items-center justify-center gap-4 sm:max-w-none sm:flex-row">
@@ -415,7 +451,7 @@ export default function DistributionNetworkPublicPage() {
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <Target className="h-5 w-5 text-emerald-400" />
-                  <span className="text-sm font-medium">We contact your buyer in 24hrs</span>
+                  <span className="text-sm font-medium">We contact your referral in 24hrs</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <ShieldCheck className="h-5 w-5 text-blue-400" />
@@ -443,6 +479,7 @@ export default function DistributionNetworkPublicPage() {
                     developments={developments?.map(d => ({
                       id: d.id,
                       name: d.name,
+                      transactionType: d.transactionType,
                       suburb: d.suburb,
                       city: d.city,
                     }))}
@@ -461,11 +498,11 @@ export default function DistributionNetworkPublicPage() {
                     Smart Matching Tool
                   </div>
                   <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl leading-tight mb-5">
-                    We match your buyer for you.
+                    We match your referral for you.
                   </h2>
                   <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                    Tell us about the buyer â€” income, location, bedroom needs â€” and we instantly
-                    show you which developments fit and your estimated payout.
+                    Tell us about the client: income, location, bedroom needs, and transaction
+                    intent. We show which developments fit and your estimated payout.
                   </p>
                   <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg text-slate-700 font-medium">
                     You don't need to know property details. You just need to know people. We handle
@@ -480,7 +517,7 @@ export default function DistributionNetworkPublicPage() {
                     {/* Income */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
-                        Buyer's gross income
+                        Client's gross income
                       </label>
                       <div className="relative">
                         <select
@@ -608,7 +645,7 @@ export default function DistributionNetworkPublicPage() {
                     className="w-full h-14 bg-[linear-gradient(135deg,#0f172a,#1e293b)] text-white text-base font-bold shadow-lg hover:bg-slate-800 group"
                     onClick={() => revealAndScrollToForm()}
                   >
-                    Submit Buyer Now
+                    Submit Referral Now
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
@@ -624,11 +661,11 @@ export default function DistributionNetworkPublicPage() {
                   Why This Works
                 </div>
                 <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">
-                  The buyer is already in your network.
+                  The client is already in your network.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  You speak to buyers daily. You just haven't had a structured, transparent way to
-                  monetize those conversations â€” until now.
+                  You speak to property clients daily. You just haven't had a structured,
+                  transparent way to monetize those conversations until now.
                 </p>
               </div>
 
@@ -639,10 +676,10 @@ export default function DistributionNetworkPublicPage() {
                       <Users className="h-5 w-5" />
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">
-                      You already know buyers
+                      You already know clients
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      Colleagues, friends, family â€” people planning to buy property are in your
+                      Colleagues, friends, family: people planning to buy, rent, or bid are in your
                       circle every single day.
                     </p>
                   </CardContent>
@@ -656,8 +693,8 @@ export default function DistributionNetworkPublicPage() {
                       We handle qualification
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      You don't need to know which development fits. Submit the buyer â€” we match,
-                      qualify, and close. Your job ends at the referral.
+                      You don't need to know which development fits. Submit the referral: we match,
+                      qualify, and hand off the right next step.
                     </p>
                   </CardContent>
                 </Card>
@@ -707,8 +744,8 @@ export default function DistributionNetworkPublicPage() {
                   High-Demand Developments. Ready Now.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  You don't need a mandate. Submit your pre-qualified buyers to any of these
-                  developments and secure your referral fee.
+                  You don't need a mandate. Submit buyer, renter, or bidder referrals to available
+                  developments and protect your referral fee.
                 </p>
               </div>
 
@@ -722,6 +759,7 @@ export default function DistributionNetworkPublicPage() {
                 <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {(developments ?? []).map((dev, i) => {
                     const pricing = getPublicDistributionDevelopmentPricing(dev);
+                    const referralCopy = getPublicDistributionReferralCopy(dev.transactionType);
 
                     const bgGradients = [
                       'linear-gradient(140deg, #0f172a 0%, var(--brand-blue) 100%)',
@@ -782,7 +820,7 @@ export default function DistributionNetworkPublicPage() {
                         </div>
                         <div className="opp-footer">
                           <button className="btn-refer" onClick={() => revealAndScrollToForm(dev.id)}>
-                            Refer a Buyer
+                            {referralCopy.referCta}
                           </button>
                           <button className="btn-details" onClick={() => revealAndScrollToForm(dev.id)}>
                             Details
@@ -825,8 +863,8 @@ export default function DistributionNetworkPublicPage() {
                   How you make money â€” repeatably.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  A simple 4-step loop you can run with multiple buyers simultaneously. This is a
-                  pipeline, not a one-off transaction.
+                  A simple 4-step loop you can run with multiple buyer, renter, or bidder referrals
+                  simultaneously. This is a pipeline, not a one-off transaction.
                 </p>
               </div>
 
@@ -839,10 +877,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-slate-100 shadow-sm text-primary font-black text-xl">
                       1
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Know a buyer</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Know a client</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Someone in your network is planning to buy. Income, area, rough budget â€”
-                      that's all you need.
+                      Someone in your network is planning to buy, rent, or bid. Income, area, rough
+                      budget: that's all you need.
                     </p>
                   </div>
 
@@ -865,8 +903,8 @@ export default function DistributionNetworkPublicPage() {
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">We qualify + match</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Our team contacts your buyer, qualifies them, and matches them to the right
-                      development.
+                      Our team contacts your referral, qualifies them, and matches them to the right
+                      development path.
                     </p>
                   </div>
 
@@ -874,10 +912,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-emerald-100 shadow-sm text-emerald-600 font-black text-xl">
                       <CircleDollarSign className="h-6 w-6" />
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Get paid at signing</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Get paid at milestone</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      When the sale is registered with the attorney, your referral payout is
-                      processed. Clear milestone.
+                      When the programme's payout milestone is reached, your referral payout is
+                      processed. Clear, configured milestone.
                     </p>
                   </div>
                 </div>
@@ -887,7 +925,7 @@ export default function DistributionNetworkPublicPage() {
                   <div className="flex-1">
                     <p className="text-slate-600 text-sm md:text-base">
                       Run this with{' '}
-                      <strong className="text-slate-900 font-bold">5 buyers simultaneously</strong>{' '}
+                      <strong className="text-slate-900 font-bold">5 referrals simultaneously</strong>{' '}
                       = R90k - R150k potential pipeline. This is your distribution engine.
                     </p>
                   </div>
@@ -896,16 +934,16 @@ export default function DistributionNetworkPublicPage() {
                       Buyer 1 - Qualifying
                     </span>
                     <span className="px-3 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold">
-                      Buyer 2 - Matched
+                      Renter 2 - Matched
                     </span>
                     <span className="px-3 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold">
-                      Buyer 3 - At Signing
+                      Bidder 3 - Auction Review
                     </span>
                     <span className="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 rounded-full text-xs font-medium">
-                      Buyer 4 - Submit â†’
+                      Referral 4 - Submit
                     </span>
                     <span className="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 rounded-full text-xs font-medium">
-                      Buyer 5 - Submit â†’
+                      Referral 5 - Submit
                     </span>
                   </div>
                 </div>
@@ -954,11 +992,11 @@ export default function DistributionNetworkPublicPage() {
                       Settlement gate
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">
-                      Paid After Attorney Signing
+                      Paid at Programme Milestone
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Referral fee releases once the sale is registered through legal channels.
-                      Milestone-based payment â€” no vague timelines or arbitrary delays.
+                      Referral fee releases when the configured programme milestone is reached.
+                      Milestone-based payment means no vague timelines or arbitrary delays.
                     </p>
                   </CardContent>
                 </Card>
@@ -970,8 +1008,8 @@ export default function DistributionNetworkPublicPage() {
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">Clear Stage Tracking</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      You're notified at every stage â€” submission, qualification, match, and
-                      signing. No need to chase for updates or wonder what's happening.
+                      You're notified at every stage: submission, qualification, match, and
+                      programme milestone. No need to chase for updates or wonder what's happening.
                     </p>
                   </CardContent>
                 </Card>
@@ -1007,7 +1045,7 @@ export default function DistributionNetworkPublicPage() {
                 <div className="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
                   <div className="text-3xl font-black text-slate-900 mb-2">140+</div>
                   <div className="text-sm text-slate-600 font-medium tracking-wide">
-                    Buyers matched
+                    Referrals matched
                   </div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">

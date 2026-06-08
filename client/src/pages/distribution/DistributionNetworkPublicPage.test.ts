@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateQualifyingIncome,
   getPublicDistributionDevelopmentPricing,
+  getPublicDistributionReferralCopy,
 } from './DistributionNetworkPublicPage';
+import { getReferralApplyCopy } from '@/components/distribution/ReferralApplyForm';
 
 describe('DistributionNetworkPublicPage development pricing', () => {
   it('uses sale price for purchase qualification and card labels', () => {
@@ -58,6 +60,32 @@ describe('DistributionNetworkPublicPage development pricing', () => {
       subline: 'Est. bond from R9k/month',
       qualifyingText: calculateQualifyingIncome(850_000),
       incomeFilterPrice: 850_000,
+    });
+  });
+
+  it('labels public opportunity CTAs by transaction lane', () => {
+    expect(getPublicDistributionReferralCopy('for_sale')).toMatchObject({
+      transactionType: 'sale',
+      referCta: 'Refer a Buyer',
+    });
+    expect(getPublicDistributionReferralCopy('for_rent')).toMatchObject({
+      transactionType: 'rent',
+      referCta: 'Refer a Renter',
+    });
+    expect(getPublicDistributionReferralCopy('on_auction')).toMatchObject({
+      transactionType: 'auction',
+      referCta: 'Refer a Bidder',
+    });
+  });
+
+  it('labels the application form context by selected development lane', () => {
+    expect(getReferralApplyCopy('for_rent')).toMatchObject({
+      selectedDevelopmentLabel: 'Applying to refer renters for',
+      readyHint: 'If you already have a renter, keep their details ready for your first referral.',
+    });
+    expect(getReferralApplyCopy('on_auction')).toMatchObject({
+      selectedDevelopmentLabel: 'Applying to refer bidders for',
+      readyHint: 'If you already have a bidder, keep their details ready for your first referral.',
     });
   });
 });

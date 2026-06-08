@@ -4241,3 +4241,47 @@ Next recommended slice:
   Rental/Auction-specific programme semantics when product rules are ready.
 Commit hash/tag: This entry will be included in `feat(dle): label programme terms lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Public Distribution Marketing Transaction Context
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the public distribution-network funnel stop presenting the referral programme as a
+buyer-only Sale journey when Rental and Auction developments can appear in the same public
+opportunity feed.
+Files changed:
+- client/src/pages/distribution/DistributionNetworkPublicPage.tsx
+- client/src/pages/distribution/DistributionNetworkPublicPage.test.ts
+- client/src/components/distribution/ReferralApplyForm.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/DistributionNetworkPublicPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Public distribution hero, matcher, problem framing, timeline, payout, and social-proof copy now
+  describe a mixed buyer/renter/bidder referral network instead of a buyer-only funnel.
+- Public opportunity cards now use `Refer a Buyer`, `Refer a Renter`, or `Refer a Bidder` from
+  development transaction type.
+- The public application form now uses neutral client/referral language by default.
+- Selected-development application context now labels buyer, renter, or bidder referrals when the
+  public card passes transaction type.
+Guardrails:
+- No schema, migration, tRPC route, deal-stage, commission, payout, inventory, lead, referrer
+  application, or partner-access mutation changes.
+- Payout copy now refers to configured programme milestones and does not claim Rental/Auction
+  payout semantics are solved.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Partner commissions page still contains shared commission/payout wording that may need
+  transaction-lane labels.
+- Rental/Auction-specific programme payout, deposit, bidder-registration, legal-pack, and
+  document-template semantics remain future product-design work.
+Next recommended slice:
+- Carry transaction context into the partner commissions page, then define Rental/Auction-specific
+  programme semantics when product rules are ready.
+Commit hash/tag: This entry will be included in `feat(dle): label public distribution lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
