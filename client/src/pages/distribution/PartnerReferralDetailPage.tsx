@@ -420,7 +420,7 @@ export default function PartnerReferralDetailPage() {
                 {transactionCopy.referralTypeLabel}
               </p>
               <h1 className="mt-1 text-[28px] font-semibold">{referral.development.name}</h1>
-              <p className="mt-2 text-[13px] text-[#ece6da]">Deal #{referral.dealId}</p>
+              <p className="mt-2 text-[13px] text-[#ece6da]">Referral #{referral.dealId}</p>
             </div>
             <Badge className="bg-white text-primary hover:bg-white">
               {getReferralDetailStageLabel(referral.status, transactionType)}
@@ -494,7 +494,7 @@ export default function PartnerReferralDetailPage() {
             <div className="mt-3 flex flex-wrap gap-2">
               {actionCode === 'track_payout' ? (
                 <Button size="sm" onClick={() => setLocation('/distribution/partner/commissions')}>
-                  Open Commissions
+                  Open Rewards
                 </Button>
               ) : null}
               {(actionCode === 'follow_up_manager' || referral.journey?.ownerRole === 'manager') &&
@@ -504,10 +504,10 @@ export default function PartnerReferralDetailPage() {
                   variant="conversion"
                   onClick={() => {
                     const subject = encodeURIComponent(
-                      `Referral follow-up: Deal #${referral.dealId} - ${referral.development.name}`,
+                      `Referral follow-up: Referral #${referral.dealId} - ${referral.development.name}`,
                     );
                     const body = encodeURIComponent(
-                      `Hi,\n\nI am following up on deal #${referral.dealId}.\nNext action: ${nextActionHint}\n\nThanks.`,
+                      `Hi,\n\nI am following up on referral #${referral.dealId}.\nNext action: ${nextActionHint}\n\nThanks.`,
                     );
                     window.open(`mailto:${referral.manager?.email}?subject=${subject}&body=${body}`);
                   }}

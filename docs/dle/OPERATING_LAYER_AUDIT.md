@@ -391,6 +391,9 @@ Recommended next architecture work:
   referral as a sale journey.
 - The partner referral detail page now uses the same transaction context for status rails,
   next-action hints, WhatsApp/contact labels, summary fields, and application-document copy.
+- Partner referral tracker/detail visible labels now use partner-facing `Referral #`,
+  `Open Referral`, and `Open Rewards` language instead of exposing internal deal/commission
+  labels, while preserving existing distribution ids, routes, stage codes, and payout model terms.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

@@ -4498,3 +4498,48 @@ Next recommended slice:
   programme semantics.
 Commit hash/tag: This entry will be included in `feat(dle): align partner reward language`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Partner Referral Tracker Reward Labels
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Remove visible internal deal/commission labels from partner referral tracker and referral
+detail surfaces so Sale, Rental, and Auction journeys read as referral/reward operations.
+Files changed:
+- client/src/pages/distribution/PartnerMyReferralsPage.tsx
+- client/src/pages/distribution/PartnerMyReferralsPage.test.tsx
+- client/src/pages/distribution/PartnerReferralDetailPage.tsx
+- client/src/pages/distribution/PartnerReferralDetailPage.test.tsx
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerMyReferralsPage.test.tsx client/src/pages/distribution/PartnerReferralDetailPage.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Partner referral tracker status filter now displays `Reward Pending` and `Reward Paid`.
+- Partner referral rows now display `Referral #...` instead of `Deal #...`.
+- Tracker quick actions now display `Open Rewards` and `Open Referral` instead of
+  `Open Commissions` and `Open Deal`.
+- Partner referral detail header now displays `Referral #...`.
+- Partner referral detail payout action now displays `Open Rewards`.
+- Manager follow-up mailto subject/body now references the referral rather than an internal deal.
+Guardrails:
+- No schema, migration, tRPC route, route path, action code, stage code, payout calculation,
+  commission status, deal mutation, lead, inventory, or operating-event changes.
+- Internal `dealId` and `commission_*` fields remain as distribution-owned compatibility/model
+  terms.
+- Rental/Auction payout milestones, document/legal terms, and programme semantics remain future
+  product-design work.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Some other admin/internal pages may still correctly use deal/commission terminology where the
+  audience is operating the distribution data model rather than viewing partner-facing referrals.
+- Deeper Rental/Auction-specific programme semantics remain future product-design work.
+Next recommended slice:
+- Finish the distribution copy sweep by distinguishing partner-facing reward language from
+  admin/internal commission model language, then move to product-defined Rental/Auction programme
+  semantics.
+Commit hash/tag: This entry will be included in `feat(dle): label partner referral rewards`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

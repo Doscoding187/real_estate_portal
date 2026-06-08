@@ -243,11 +243,54 @@ describe('PartnerReferralDetailPage', () => {
 
     render(<PartnerReferralDetailPage />);
 
+    expect(screen.getByText('Referral #42')).toBeInTheDocument();
+    expect(screen.queryByText('Deal #42')).not.toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Download Qualification Pack' });
     expect(button).toBeInTheDocument();
 
     fireEvent.click(button);
     expect(mutate).toHaveBeenCalledWith({ dealId: 42 });
+  });
+
+  it('uses referral and reward labels for payout and manager follow-up actions', () => {
+    mockExportPackUseMutation.mockReturnValue({
+      isPending: false,
+      mutate: vi.fn(),
+    });
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const current = mockGetReferralUseQuery().data;
+    mockGetReferralUseQuery.mockReturnValue({
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      data: {
+        ...current,
+        status: 'commission_pending',
+        journey: {
+          actionCode: 'track_payout',
+          ownerRole: 'manager',
+        },
+        manager: {
+          email: 'manager@example.com',
+        },
+      },
+    });
+
+    render(<PartnerReferralDetailPage />);
+
+    expect(screen.getByText('Referral #42')).toBeInTheDocument();
+    expect(screen.queryByText('Deal #42')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Rewards' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Commissions' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Contact Manager' }));
+    const mailtoUrl = String(openSpy.mock.calls[0]?.[0] || '');
+    expect(decodeURIComponent(mailtoUrl)).toContain('Referral #42');
+    expect(decodeURIComponent(mailtoUrl)).toContain('referral #42');
+    expect(decodeURIComponent(mailtoUrl)).not.toContain('Deal #42');
+    expect(decodeURIComponent(mailtoUrl)).not.toContain('deal #42');
+
+    openSpy.mockRestore();
   });
 
   it('shows application upload and supporting document sections', () => {

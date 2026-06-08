@@ -116,7 +116,9 @@ describe('PartnerMyReferralsPage', () => {
               requiredCount: 2,
               verifiedRequiredCount: 1,
             },
-            journey: {},
+            journey: {
+              actionCode: 'track_payout',
+            },
           },
           {
             dealId: 102,
@@ -139,9 +141,20 @@ describe('PartnerMyReferralsPage', () => {
 
     render(<PartnerMyReferralsPage />);
 
+    expect(screen.getByText('Referral #101')).toBeInTheDocument();
+    expect(screen.getByText('Referral #102')).toBeInTheDocument();
+    expect(screen.queryByText('Deal #101')).not.toBeInTheDocument();
+    expect(screen.getByText('Reward Pending')).toBeInTheDocument();
+    expect(screen.getByText('Reward Paid')).toBeInTheDocument();
+    expect(screen.queryByText('Commission Pending')).not.toBeInTheDocument();
+    expect(screen.queryByText('Commission Paid')).not.toBeInTheDocument();
     expect(screen.getByText('Rental application submitted')).toBeInTheDocument();
     expect(screen.getByText('renter')).toBeInTheDocument();
     expect(screen.getByText('Next action: Upload rental docs')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Rewards' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Open Referral' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Open Commissions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Deal' })).not.toBeInTheDocument();
     expect(screen.getByText('Auction terms accepted')).toBeInTheDocument();
     expect(screen.getByText('bidder')).toBeInTheDocument();
     expect(screen.getByText('Next action: Track auction reward')).toBeInTheDocument();

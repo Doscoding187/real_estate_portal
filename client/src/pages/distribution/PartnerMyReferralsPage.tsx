@@ -232,8 +232,8 @@ export default function PartnerMyReferralsPage() {
                 <option value="application_submitted">Application Submitted</option>
                 <option value="contract_signed">Contract Signed</option>
                 <option value="bond_approved">Bond Approved</option>
-                <option value="commission_pending">Commission Pending</option>
-                <option value="commission_paid">Commission Paid</option>
+                <option value="commission_pending">Reward Pending</option>
+                <option value="commission_paid">Reward Paid</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </label>
@@ -287,7 +287,7 @@ export default function PartnerMyReferralsPage() {
                 follow-up.
               </p>
               <Button size="sm" onClick={() => setShowAtRiskOnly(true)}>
-                Review At-Risk Deals
+                Review At-Risk Referrals
               </Button>
             </CardContent>
           </Card>
@@ -316,7 +316,7 @@ export default function PartnerMyReferralsPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="font-medium">{item.development.name}</p>
-                      <p className="text-xs text-slate-500">Deal #{item.dealId}</p>
+                      <p className="text-xs text-slate-500">Referral #{item.dealId}</p>
                       <p className="mt-1 text-xs text-slate-600">
                         Next action:{' '}
                         {item.journey?.nextAction ||
@@ -350,7 +350,7 @@ export default function PartnerMyReferralsPage() {
                             size="sm"
                             onClick={() => setLocation('/distribution/partner/commissions')}
                           >
-                            Open Commissions
+                            Open Rewards
                           </Button>
                         );
                       }
@@ -373,7 +373,7 @@ export default function PartnerMyReferralsPage() {
                           variant="outline"
                           onClick={() => setLocation(`/distribution/partner/referrals/${Number(item.dealId)}`)}
                         >
-                          Open Deal
+                          Open Referral
                         </Button>
                       );
                     })}
