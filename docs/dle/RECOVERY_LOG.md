@@ -4459,3 +4459,42 @@ Next recommended slice:
   Rental/Auction programme semantics when product rules are explicit.
 Commit hash/tag: This entry will be included in `feat(dle): neutralize referrer application copy`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Partner Dashboard Reward Language Alignment
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Remove commission-only wording from the partner dashboard prequalification/match surface so
+Sale, Rental, and Auction stock all read as referral reward opportunities.
+Files changed:
+- client/src/pages/distribution/PartnerDashboardPage.tsx
+- client/src/pages/distribution/PartnerDashboardPage.test.tsx
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerDashboardPage.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Renter, bidder, mixed-lane, and buyer dashboard empty match states now say estimated reward
+  instead of estimated commission.
+- Match result cards now use lane-aware reward labels:
+  `Est. rental reward`, `Est. auction reward`, `Est. referral reward`, or `Est. sale reward`.
+- Existing reward amount calculation inputs and outputs remain unchanged.
+Guardrails:
+- No schema, migration, tRPC route, affordability calculation, match scoring, commission amount,
+  payout status, deal stage, lead, inventory, or operating-event changes.
+- Reward language is display context only; Rental/Auction payout milestones and document/legal
+  semantics remain future product-design work.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Internal field names still use `commission` where the distribution data model owns payout
+  calculations.
+- Deeper Rental/Auction-specific programme semantics remain future product-design work.
+Next recommended slice:
+- Continue the distribution copy sweep for remaining visible `Deal #`/`Open Commissions` wording
+  in partner referral detail/tracker surfaces, then move to product-defined Rental/Auction
+  programme semantics.
+Commit hash/tag: This entry will be included in `feat(dle): align partner reward language`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

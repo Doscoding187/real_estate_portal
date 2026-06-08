@@ -163,8 +163,9 @@ export function getPartnerDashboardWorkspaceCopy(transactionTypes: unknown[]) {
       prequalDescription: 'Find what your renter can afford and match them to ready opportunities.',
       fitMatchesTitle: 'Renter Fit Matches',
       fitMatchesEmpty:
-        'Enter renter details and run pre-qualification to see matching stock and estimated commission.',
+        'Enter renter details and run pre-qualification to see matching stock and estimated reward.',
       affordabilityLabel: 'Renter can afford up to',
+      rewardEstimateLabel: 'Est. rental reward',
       funnelTitle: 'Renter Progress Funnel',
       submittedLabel: 'Submitted Renters',
       readySectionDescription: 'Ready opportunities your renters can be submitted to now.',
@@ -191,8 +192,9 @@ export function getPartnerDashboardWorkspaceCopy(transactionTypes: unknown[]) {
       prequalDescription: 'Find what your bidder can afford and match them to ready opportunities.',
       fitMatchesTitle: 'Bidder Fit Matches',
       fitMatchesEmpty:
-        'Enter bidder details and run pre-qualification to see matching stock and estimated commission.',
+        'Enter bidder details and run pre-qualification to see matching stock and estimated reward.',
       affordabilityLabel: 'Bidder can afford up to',
+      rewardEstimateLabel: 'Est. auction reward',
       funnelTitle: 'Bidder Progress Funnel',
       submittedLabel: 'Submitted Bidders',
       readySectionDescription: 'Ready opportunities your bidders can be submitted to now.',
@@ -220,8 +222,9 @@ export function getPartnerDashboardWorkspaceCopy(transactionTypes: unknown[]) {
         'Find what your buyer, renter, or bidder can afford and match them to ready opportunities.',
       fitMatchesTitle: 'Client Fit Matches',
       fitMatchesEmpty:
-        'Enter client details and run pre-qualification to see matching stock and estimated commission.',
+        'Enter client details and run pre-qualification to see matching stock and estimated reward.',
       affordabilityLabel: 'Client can afford up to',
+      rewardEstimateLabel: 'Est. referral reward',
       funnelTitle: 'Referral Progress Funnel',
       submittedLabel: 'Submitted Referrals',
       readySectionDescription:
@@ -248,8 +251,9 @@ export function getPartnerDashboardWorkspaceCopy(transactionTypes: unknown[]) {
     prequalDescription: 'Find what your buyer can afford and match them to ready opportunities.',
     fitMatchesTitle: 'Buyer Fit Matches',
     fitMatchesEmpty:
-      'Enter buyer details and run pre-qualification to see matching stock and estimated commission.',
+      'Enter buyer details and run pre-qualification to see matching stock and estimated reward.',
     affordabilityLabel: 'Buyer can afford up to',
+    rewardEstimateLabel: 'Est. sale reward',
     funnelTitle: 'Buyer Progress Funnel',
     submittedLabel: 'Submitted Buyers',
     readySectionDescription: 'Ready opportunities your buyers can be submitted to now.',
@@ -1149,7 +1153,7 @@ export default function PartnerDashboardPage() {
                           </span>
                         </div>
                         <p className="mt-1 text-[11px] text-success">
-                          Est. commission: {formatCurrency(commissionAmount)}
+                          {dashboardCopy.rewardEstimateLabel}: {formatCurrency(commissionAmount)}
                         </p>
                         <div className="mt-2 flex gap-2">
                           <Button

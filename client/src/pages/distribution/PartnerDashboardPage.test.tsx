@@ -129,8 +129,21 @@ describe('PartnerDashboardPage pricing helpers', () => {
       submitLabel: 'Submit Referral',
       matchLabel: 'Match Client',
       participantKpiLabel: 'My Referrals',
+      rewardEstimateLabel: 'Est. referral reward',
+      fitMatchesEmpty:
+        'Enter client details and run pre-qualification to see matching stock and estimated reward.',
       readySectionDescription:
         'Ready opportunities your buyers, renters, and bidders can be submitted to now.',
+    });
+    expect(getPartnerDashboardWorkspaceCopy(['for_rent'])).toMatchObject({
+      rewardEstimateLabel: 'Est. rental reward',
+      fitMatchesEmpty:
+        'Enter renter details and run pre-qualification to see matching stock and estimated reward.',
+    });
+    expect(getPartnerDashboardWorkspaceCopy(['auction'])).toMatchObject({
+      rewardEstimateLabel: 'Est. auction reward',
+      fitMatchesEmpty:
+        'Enter bidder details and run pre-qualification to see matching stock and estimated reward.',
     });
   });
 
@@ -424,6 +437,12 @@ describe('PartnerDashboardPage', () => {
     expect(screen.getByRole('button', { name: 'Match Client' })).toBeInTheDocument();
     expect(screen.getByText('Help Me Match My Client')).toBeInTheDocument();
     expect(screen.getByText('Client Fit Matches')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Enter client details and run pre-qualification to see matching stock and estimated reward.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/estimated commission/i)).not.toBeInTheDocument();
     expect(screen.getByText('Referral Progress Funnel')).toBeInTheDocument();
     expect(screen.getByText('Submitted Referrals')).toBeInTheDocument();
     expect(
