@@ -12,11 +12,11 @@ import '@/styles/advertise-responsive.css';
 type PartnerType = 'independent_agent' | 'small_brokerage' | 'referral_partner' | 'individual' | '';
 
 const REFERRAL_LOGIN_PATH = '/distribution-network/login';
-const partnerTypeLabels: Record<Exclude<PartnerType, ''>, string> = {
+export const partnerTypeLabels: Record<Exclude<PartnerType, ''>, string> = {
   independent_agent: 'Independent Property Agent',
   small_brokerage: 'Small Brokerage',
   referral_partner: 'Referral Partner',
-  individual: 'Individual With Qualified Buyer',
+  individual: 'Individual With Qualified Referral',
 };
 
 export default function DistributionReferralApplyPage() {
@@ -124,8 +124,8 @@ export default function DistributionReferralApplyPage() {
                   </span>
                 </h1>
                 <p className="mx-auto mt-3 max-w-sm text-sm text-slate-600">
-                  Takes 2 minutes. No buyer required to apply. We'll review and send your access
-                  details by email.
+                  Takes 2 minutes. No buyer, renter, or bidder required to apply. We'll review and
+                  send your access details by email.
                 </p>
               </div>
 
@@ -198,7 +198,7 @@ export default function DistributionReferralApplyPage() {
                             <option value="independent_agent">Independent Property Agent</option>
                             <option value="small_brokerage">Small Brokerage</option>
                             <option value="referral_partner">Referral Partner</option>
-                            <option value="individual">Individual With Qualified Buyer</option>
+                            <option value="individual">Individual With Qualified Referral</option>
                           </select>
                         </div>
                       </div>

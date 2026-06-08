@@ -420,6 +420,9 @@ Recommended next architecture work:
   into read models and label Sale, Rental, and Auction referral rows with Buyer, Renter, or Bidder
   participant context while preserving existing stage, payout, commission, onboarding, and partner
   access mutations.
+- The public referrer application entry point now uses transaction-neutral individual-applicant
+  copy and states that buyer, renter, or bidder referrals can come after approval, while preserving
+  existing application values, review, activation, and access behavior.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

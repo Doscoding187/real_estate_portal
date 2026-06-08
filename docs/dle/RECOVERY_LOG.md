@@ -4421,3 +4421,41 @@ Next recommended slice:
   programme semantics only once product rules are explicit.
 Commit hash/tag: This entry will be included in `feat(dle): label admin distribution lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Distribution Referrer Application Neutral Copy
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Remove buyer-only onboarding language from the public referrer application page so the
+distribution entry point matches the Sale/Rental/Auction referral network.
+Files changed:
+- client/src/pages/distribution/DistributionReferralApplyPage.tsx
+- client/src/pages/distribution/DistributionReferralApplyPage.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/DistributionReferralApplyPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The individual applicant type now reads `Individual With Qualified Referral` instead of
+  `Individual With Qualified Buyer`.
+- The public application intro now says no buyer, renter, or bidder is required to apply.
+- Submitted `partnerType` values, notes generation, approval flow, activation flow, routing, and
+  distribution application mutation behavior are unchanged.
+Guardrails:
+- No schema, migration, tRPC route, review mutation, account activation, referral submission,
+  payout, commission, lead, inventory, or operating-event changes.
+- This is copy/readiness alignment only; it does not introduce Rental/Auction programme terms or
+  payout semantics.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Some internal variable names and legacy local-storage keys still use `buyer` as compatibility
+  names while rendering transaction-aware copy.
+- Deeper Rental/Auction-specific programme semantics remain future product-design work.
+Next recommended slice:
+- Continue the distribution-wide copy sweep for remaining visible buyer-only wording, then move to
+  Rental/Auction programme semantics when product rules are explicit.
+Commit hash/tag: This entry will be included in `feat(dle): neutralize referrer application copy`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
