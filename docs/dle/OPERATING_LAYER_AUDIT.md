@@ -409,6 +409,9 @@ Recommended next architecture work:
 - The public distribution-network marketing page now describes the funnel as a mixed
   buyer/renter/bidder referral network, uses transaction-native opportunity-card CTAs, and passes
   selected-development transaction type into the application form context.
+- Partner commission entries now carry development transaction type into the partner rewards page,
+  where rows are labeled as Sale, Rental, or Auction rewards with Buyer, Renter, or Bidder
+  participant copy while preserving programme-owned payout semantics.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

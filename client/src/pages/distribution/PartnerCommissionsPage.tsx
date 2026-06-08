@@ -12,6 +12,8 @@ type EntryStatusFilter = 'all' | 'pending' | 'approved' | 'paid' | 'cancelled';
 const PENDING_STALE_DAYS = 7;
 const APPROVED_STALE_DAYS = 5;
 
+type PartnerCommissionTransactionType = 'sale' | 'rent' | 'auction';
+
 function formatCurrency(value: number | null | undefined, currency = 'ZAR') {
   const amount = Math.round(Number(value || 0));
   if (!Number.isFinite(amount)) return 'R 0';
@@ -36,6 +38,55 @@ function daysSince(value: unknown) {
   const date = toDate(value);
   if (!date) return null;
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function normalizePartnerCommissionTransactionType(
+  value: unknown,
+): PartnerCommissionTransactionType {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function getPartnerCommissionCopy(transactionType: unknown) {
+  const lane = normalizePartnerCommissionTransactionType(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      transactionType: lane,
+      laneLabel: 'Rental reward',
+      participantLabel: 'Renter',
+      stageContext: 'Lease/referral stage',
+      payoutDescription:
+        'Track rental reward entries from programme review to paid. Lease and deposit rules remain governed by programme terms.',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      transactionType: lane,
+      laneLabel: 'Auction reward',
+      participantLabel: 'Bidder',
+      stageContext: 'Auction/referral stage',
+      payoutDescription:
+        'Track auction reward entries from programme review to paid. Bidder, registration, and auction terms remain governed by programme terms.',
+    };
+  }
+
+  return {
+    transactionType: lane,
+    laneLabel: 'Sale reward',
+    participantLabel: 'Buyer',
+    stageContext: 'Sale/referral stage',
+    payoutDescription: 'Track sale reward entries from pending review to paid.',
+  };
 }
 
 export default function PartnerCommissionsPage() {
@@ -107,8 +158,10 @@ export default function PartnerCommissionsPage() {
       <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 md:px-7">
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Commissions</CardTitle>
-            <CardDescription>Track your payout pipeline from pending review to paid.</CardDescription>
+            <CardTitle>Referral Rewards</CardTitle>
+            <CardDescription>
+              Track buyer, renter, and bidder reward entries from programme review to paid.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
@@ -136,7 +189,7 @@ export default function PartnerCommissionsPage() {
 
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Commission Snapshot</CardTitle>
+            <CardTitle>Reward Snapshot</CardTitle>
             <CardDescription>Live totals from your current filtered view.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
@@ -193,36 +246,57 @@ export default function PartnerCommissionsPage() {
             <CardTitle>Payout Entries</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {(commissionsQuery.data || []).map((row: any) => (
-              <button
-                key={row.id}
-                className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
-                onClick={() => setLocation(`/distribution/partner/referrals/${Number(row.dealId)}`)}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{row.developmentName || 'Development'}</p>
-                    <p className="text-xs text-slate-500">Deal #{row.dealId} | Stage {formatStageLabel(row.dealStage)}</p>
-                    {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Buyer: {row.buyerName}</p> : null}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
-                    <div className="mt-1 flex flex-wrap justify-end gap-1">
-                      <Badge variant="secondary">{formatStageLabel(row.entryStatus)}</Badge>
-                      {row.triggerStage ? <Badge variant="outline">Trigger: {formatStageLabel(row.triggerStage)}</Badge> : null}
+            {(commissionsQuery.data || []).map((row: any) => {
+              const commissionCopy = getPartnerCommissionCopy(row.transactionType);
+
+              return (
+                <button
+                  key={row.id}
+                  className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
+                  onClick={() => setLocation(`/distribution/partner/referrals/${Number(row.dealId)}`)}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{row.developmentName || 'Development'}</p>
+                        <Badge variant="outline">{commissionCopy.laneLabel}</Badge>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Deal #{row.dealId} | {commissionCopy.stageContext}{' '}
+                        {formatStageLabel(row.dealStage)}
+                      </p>
+                      {row.buyerName ? (
+                        <p className="mt-1 text-xs text-slate-600">
+                          {commissionCopy.participantLabel}: {row.buyerName}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-foreground">
+                        {formatCurrency(row.commissionAmount, row.currency)}
+                      </p>
+                      <div className="mt-1 flex flex-wrap justify-end gap-1">
+                        <Badge variant="secondary">{formatStageLabel(row.entryStatus)}</Badge>
+                        {row.triggerStage ? (
+                          <Badge variant="outline">Trigger: {formatStageLabel(row.triggerStage)}</Badge>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                  {row.approvedAt ? <span>Approved: {String(row.approvedAt)}</span> : null}
-                  {row.paidAt ? <span>Paid: {String(row.paidAt)}</span> : null}
-                  {row.paymentReference ? <span>Ref: {row.paymentReference}</span> : null}
-                </div>
-              </button>
-            ))}
+                  <p className="mt-2 text-xs text-slate-500">{commissionCopy.payoutDescription}</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                    {row.approvedAt ? <span>Approved: {String(row.approvedAt)}</span> : null}
+                    {row.paidAt ? <span>Paid: {String(row.paidAt)}</span> : null}
+                    {row.paymentReference ? <span>Ref: {row.paymentReference}</span> : null}
+                  </div>
+                </button>
+              );
+            })}
 
             {!commissionsQuery.error && !(commissionsQuery.data || []).length ? (
-              <p className="py-6 text-center text-sm text-slate-500">No commission entries found for this filter yet.</p>
+              <p className="py-6 text-center text-sm text-slate-500">
+                No reward entries found for this filter yet.
+              </p>
             ) : null}
           </CardContent>
         </Card>

@@ -4276,12 +4276,53 @@ Guardrails:
 - Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
   test-results changes were not staged.
 Remaining risks:
-- Partner commissions page still contains shared commission/payout wording that may need
-  transaction-lane labels.
+- Partner commissions page still needs transaction-lane reward labels.
 - Rental/Auction-specific programme payout, deposit, bidder-registration, legal-pack, and
   document-template semantics remain future product-design work.
 Next recommended slice:
 - Carry transaction context into the partner commissions page, then define Rental/Auction-specific
   programme semantics when product rules are ready.
 Commit hash/tag: This entry will be included in `feat(dle): label public distribution lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Partner Rewards Transaction Context
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the partner commissions/rewards page show Sale, Rental, and Auction reward rows with
+buyer/renter/bidder participant context instead of displaying every linked participant as a buyer.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/distribution/PartnerCommissionsPage.tsx
+- client/src/pages/distribution/PartnerCommissionsPage.test.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerCommissionsPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Partner `myCommissionEntries` now returns development `transactionType` as read-only context.
+- Partner rewards page normalizes `for_rent` as Rental and `on_auction` as Auction.
+- Sale rows show `Sale reward` and `Buyer`.
+- Rental rows show `Rental reward`, `Renter`, and lease/programme-rule guardrail copy.
+- Auction rows show `Auction reward`, `Bidder`, and bidder/registration/auction-terms guardrail
+  copy.
+Guardrails:
+- No schema, migration, commission calculation, trigger-stage, payout status, deal-stage, lead,
+  inventory, or referral-detail navigation changes.
+- Rental/Auction payout wording remains tied to configured programme terms instead of claiming
+  lease, deposit, bidder-registration, or auction payout semantics are solved.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Deeper Rental/Auction-specific programme payout, deposit, bidder-registration, legal-pack, and
+  document-template semantics remain future product-design work.
+- Distribution manager dashboard/deal list may still contain buyer-shaped labels in older
+  operational surfaces.
+Next recommended slice:
+- Audit distribution manager dashboard/deal-list labels, then define Rental/Auction-specific
+  programme semantics when product rules are ready.
+Commit hash/tag: This entry will be included in `feat(dle): label partner reward lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

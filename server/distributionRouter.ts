@@ -7851,6 +7851,7 @@ const referrerDistributionRouter = router({
           programId: distributionCommissionEntries.programId,
           developmentId: distributionCommissionEntries.developmentId,
           developmentName: developments.name,
+          transactionType: developments.transactionType,
           commissionAmount: distributionCommissionEntries.commissionAmount,
           commissionPercent: distributionCommissionEntries.commissionPercent,
           calculationBaseAmount: distributionCommissionEntries.calculationBaseAmount,

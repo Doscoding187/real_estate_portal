@@ -169,6 +169,17 @@ Implemented distribution/referral handoff:
   - labels selected-development context as buyer, renter, or bidder referral intent when the
     public opportunity card passes transaction type
   - preserves the existing public referrer-application mutation and notes payload
+- `server/distributionRouter.ts`
+  - returns development `transactionType` on partner `myCommissionEntries` read models
+  - preserves existing commission calculation, status, trigger-stage, and payout mutation
+    ownership
+- `client/src/pages/distribution/PartnerCommissionsPage.tsx`
+  - labels partner reward entries as Sale, Rental, or Auction reward rows from development
+    transaction type
+  - displays the linked participant as Buyer, Renter, or Bidder while retaining the existing
+    distribution deal field names and referral-detail navigation
+  - keeps Rental/Auction payout copy explicit that lease, bidder, registration, and auction terms
+    remain governed by programme rules
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source
