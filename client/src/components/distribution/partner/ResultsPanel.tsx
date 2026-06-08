@@ -31,7 +31,7 @@ export function ResultsPanel({
             <p className="text-base font-semibold">{formatRand(assessment.outputs.indicativeLoanAmount)}</p>
           </div>
           <div className="rounded border bg-white p-2">
-            <p className="text-xs text-slate-500">Indicative purchase price</p>
+            <p className="text-xs text-slate-500">Indicative affordability ceiling</p>
             <p className="text-base font-semibold">{formatRand(assessment.outputs.purchasePrice)}</p>
           </div>
         </div>

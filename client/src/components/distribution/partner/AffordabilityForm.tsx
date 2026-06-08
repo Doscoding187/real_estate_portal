@@ -22,12 +22,12 @@ export function AffordabilityForm({ values, onChange, onSubmit, isSubmitting }: 
       <CardContent className="space-y-3">
         <div className="grid gap-3 md:grid-cols-2">
           <Input
-            placeholder="Buyer name (optional)"
+            placeholder="Client name (optional)"
             value={values.subjectName}
             onChange={event => onChange({ subjectName: event.target.value })}
           />
           <Input
-            placeholder="Buyer phone (optional)"
+            placeholder="Client phone (optional)"
             value={values.subjectPhone}
             onChange={event => onChange({ subjectPhone: event.target.value })}
           />

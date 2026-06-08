@@ -9,12 +9,43 @@ function formatRand(amount: number) {
 type MatchTransactionType = 'sale' | 'rent' | 'auction';
 
 export function normalizeAcceleratorMatchTransactionType(value: unknown): MatchTransactionType {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'rent' || normalized === 'rental' || normalized === 'for_rent' || normalized === 'to-rent') {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (
+    normalized === 'rent' ||
+    normalized === 'rental' ||
+    normalized === 'for_rent' ||
+    normalized === 'to_rent'
+  ) {
     return 'rent';
   }
-  if (normalized === 'auction') return 'auction';
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
   return 'sale';
+}
+
+export function getAcceleratorMatchTransactionCopy(transactionType: unknown) {
+  const lane = normalizeAcceleratorMatchTransactionType(transactionType);
+  if (lane === 'rent') {
+    return {
+      participantLabel: 'Renter',
+      submitLabel: 'Submit renter with this match',
+      ceilingLabel: 'Rental affordability ceiling',
+    };
+  }
+  if (lane === 'auction') {
+    return {
+      participantLabel: 'Bidder',
+      submitLabel: 'Submit bidder with this match',
+      ceilingLabel: 'Bidder affordability ceiling',
+    };
+  }
+  return {
+    participantLabel: 'Buyer',
+    submitLabel: 'Submit buyer with this match',
+    ceilingLabel: 'Affordability ceiling',
+  };
 }
 
 export function getAcceleratorMatchPriceText(input: {
@@ -37,7 +68,7 @@ export function getAcceleratorMatchPriceText(input: {
     return {
       transactionType,
       label: 'Starting bid',
-      text: range,
+      text: from > 0 ? `Bid from ${formatRand(from)}` : range,
     };
   }
   return {
@@ -71,56 +102,61 @@ export function MatchesGrid({
         ) : null}
 
         <div className="grid gap-3 lg:grid-cols-2">
-          {snapshot.matches.map(match => (
-            <div key={match.developmentId} className="rounded border bg-white p-3">
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{match.developmentName}</p>
-                  <p className="text-xs text-slate-500">{match.area}</p>
+          {snapshot.matches.map(match => {
+            const matchCopy = getAcceleratorMatchTransactionCopy(match.transactionType);
+            return (
+              <div key={match.developmentId} className="rounded border bg-white p-3">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{match.developmentName}</p>
+                    <p className="text-xs text-slate-500">{match.area}</p>
+                  </div>
+                  {match.logoUrl ? (
+                    <img src={match.logoUrl} alt="" className="h-8 w-8 rounded object-cover" />
+                  ) : null}
                 </div>
-                {match.logoUrl ? (
-                  <img src={match.logoUrl} alt="" className="h-8 w-8 rounded object-cover" />
-                ) : null}
-              </div>
 
-              <div className="mb-2 flex flex-wrap gap-2">
-                <Badge variant="outline">Best fit {(match.bestFitRatio * 100).toFixed(1)}%</Badge>
-                <Badge variant="secondary">Affordability ceiling {formatRand(match.purchasePrice)}</Badge>
-              </div>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <Badge variant="outline">Best fit {(match.bestFitRatio * 100).toFixed(1)}%</Badge>
+                  <Badge variant="secondary">
+                    {matchCopy.ceilingLabel} {formatRand(match.purchasePrice)}
+                  </Badge>
+                </div>
 
-              <div className="space-y-1 text-sm">
-                {match.unitOptions.slice(0, 4).map(unit => {
-                  const pricing = getAcceleratorMatchPriceText({
-                    transactionType: unit.transactionType || match.transactionType,
-                    priceFrom: unit.priceFrom,
-                    priceTo: unit.priceTo,
-                  });
-                  return (
-                    <div
-                      key={`${match.developmentId}-${unit.unitTypeId || unit.unitName}`}
-                      className="flex items-center justify-between gap-3 rounded border px-2 py-1"
-                    >
-                      <span>{unit.unitName}</span>
-                      <span className="text-right">
-                        <span className="block text-[10px] font-semibold uppercase text-slate-500">
-                          {pricing.label}
+                <div className="space-y-1 text-sm">
+                  {match.unitOptions.slice(0, 4).map(unit => {
+                    const pricing = getAcceleratorMatchPriceText({
+                      transactionType: unit.transactionType || match.transactionType,
+                      priceFrom: unit.priceFrom,
+                      priceTo: unit.priceTo,
+                    });
+                    return (
+                      <div
+                        key={`${match.developmentId}-${unit.unitTypeId || unit.unitName}`}
+                        className="flex items-center justify-between gap-3 rounded border px-2 py-1"
+                      >
+                        <span>{unit.unitName}</span>
+                        <span className="text-right">
+                          <span className="block text-[10px] font-semibold uppercase text-slate-500">
+                            {pricing.label}
+                          </span>
+                          <span className="font-medium">{pricing.text}</span>
                         </span>
-                        <span className="font-medium">{pricing.text}</span>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-              <button
-                className="mt-3 h-9 rounded border px-3 text-sm font-medium"
-                onClick={() => onSubmitReferral(Number(match.developmentId))}
-              >
-                Submit referral with this match
-              </button>
-              <p className="mt-1 text-xs text-slate-500">Assessment attached: {assessmentId}</p>
-            </div>
-          ))}
+                <button
+                  className="mt-3 h-9 rounded border px-3 text-sm font-medium"
+                  onClick={() => onSubmitReferral(Number(match.developmentId))}
+                >
+                  {matchCopy.submitLabel}
+                </button>
+                <p className="mt-1 text-xs text-slate-500">Assessment attached: {assessmentId}</p>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

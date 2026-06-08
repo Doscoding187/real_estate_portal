@@ -400,6 +400,8 @@ Recommended next architecture work:
 - The partner dashboard now derives workspace copy from available Sale/Rental/Auction stock so
   mixed programmes read as a general referral hub, Rental reads as renter-led, Auction reads as
   bidder-led, and row-level submit CTAs remain transaction-native.
+- The referral accelerator shared components now use neutral client capture, affordability ceiling
+  output language, and buyer/renter/bidder match-card submit actions from transaction type.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

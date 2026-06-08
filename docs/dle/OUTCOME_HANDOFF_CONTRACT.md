@@ -144,6 +144,14 @@ Implemented distribution/referral handoff:
     transaction-native copy
   - keeps dashboard actions routed through existing submit, accelerator, referral, and payout
     surfaces instead of creating DLE-owned distribution mutations
+- `client/src/components/distribution/partner/AffordabilityForm.tsx`
+  - captures accelerator subject details as a neutral client instead of forcing buyer-only language
+- `client/src/components/distribution/partner/ResultsPanel.tsx`
+  - labels qualification output as an affordability ceiling instead of a purchase-only price
+- `client/src/components/distribution/partner/MatchesGrid.tsx`
+  - labels match ceilings, unit pricing, and submit actions as buyer, renter, or bidder journeys
+    from match/unit transaction type
+  - preserves the existing accelerator assessment and submit-referral routing contract
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

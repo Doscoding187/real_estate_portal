@@ -4150,3 +4150,48 @@ Next recommended slice:
   copy, then revisit Rental/Auction-specific distribution programme semantics.
 Commit hash/tag: This entry will be included in `feat(dle): label partner dashboard lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Referral Accelerator Transaction Context
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the partner referral accelerator stop presenting qualification and matched inventory as
+a buyer-only purchase journey when Rental and Auction matches are present.
+Files changed:
+- client/src/components/distribution/partner/AffordabilityForm.tsx
+- client/src/components/distribution/partner/AffordabilityForm.test.tsx
+- client/src/components/distribution/partner/ResultsPanel.tsx
+- client/src/components/distribution/partner/ResultsPanel.test.tsx
+- client/src/components/distribution/partner/MatchesGrid.tsx
+- client/src/components/distribution/partner/MatchesGrid.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/partner/MatchesGrid.test.tsx client/src/components/distribution/partner/AffordabilityForm.test.tsx client/src/components/distribution/partner/ResultsPanel.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Accelerator form now captures `Client name` and `Client phone` instead of buyer-only fields.
+- Results panel now labels the output as an `Indicative affordability ceiling` instead of an
+  indicative purchase price.
+- Match grid now normalizes `for_rent` and `on_auction` correctly.
+- Rental match cards show rental affordability ceiling, monthly rent, and renter submit copy.
+- Auction match cards show bidder affordability ceiling, `Bid from` starting-bid copy, and bidder
+  submit copy.
+Guardrails:
+- No schema, migration, tRPC route, deal-stage, commission, payout, inventory, lead, or
+  assessment mutation changes.
+- Accelerator actions still use the existing assessment, match snapshot, and submit-referral
+  route contract.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Public distribution marketing page, programme terms card copy, and commissions page still
+  contain buyer/sale-shaped wording in places.
+- Rental/Auction-specific payout and document semantics remain future programme-design work.
+Next recommended slice:
+- Carry transaction-aware language into partner programme terms cards or the public distribution
+  marketing page, then define Rental/Auction-specific payout/document semantics.
+Commit hash/tag: This entry will be included in `feat(dle): label accelerator match lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
