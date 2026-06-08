@@ -397,6 +397,9 @@ Recommended next architecture work:
 - The partner development opportunity cards now label ready Sale, Rental, and Auction programmes
   as buyer, renter, or bidder opportunities and carry the same transaction-native submit/prequalify
   CTA language into the brochure action surface.
+- The partner dashboard now derives workspace copy from available Sale/Rental/Auction stock so
+  mixed programmes read as a general referral hub, Rental reads as renter-led, Auction reads as
+  bidder-led, and row-level submit CTAs remain transaction-native.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

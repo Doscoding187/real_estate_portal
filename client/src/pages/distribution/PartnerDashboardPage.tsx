@@ -105,10 +105,160 @@ function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: numb
 }
 
 export function normalizePartnerDashboardTransactionType(value: unknown): DevelopmentTransactionType {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'rent' || normalized === 'rental') return 'rent';
-  if (normalized === 'auction') return 'auction';
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (
+    normalized === 'rent' ||
+    normalized === 'rental' ||
+    normalized === 'for_rent' ||
+    normalized === 'to_rent'
+  ) {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
   return 'sale';
+}
+
+export function getPartnerDashboardOpportunityCopy(transactionType: unknown) {
+  const lane = normalizePartnerDashboardTransactionType(transactionType);
+  if (lane === 'rent') {
+    return {
+      participantLabel: 'Renter',
+      participantPlural: 'renters',
+      submitLabel: 'Submit Renter',
+    };
+  }
+  if (lane === 'auction') {
+    return {
+      participantLabel: 'Bidder',
+      participantPlural: 'bidders',
+      submitLabel: 'Submit Bidder',
+    };
+  }
+  return {
+    participantLabel: 'Buyer',
+    participantPlural: 'buyers',
+    submitLabel: 'Submit Buyer',
+  };
+}
+
+export function getPartnerDashboardWorkspaceCopy(transactionTypes: unknown[]) {
+  const lanes = new Set(transactionTypes.map(normalizePartnerDashboardTransactionType));
+  const hasMultipleLanes = lanes.size > 1;
+
+  if (!hasMultipleLanes && lanes.has('rent')) {
+    return {
+      title: 'My Renter Referral Hub',
+      intro: 'Add a renter, see where they fit, and track every next step to reward.',
+      submitLabel: 'Submit Renter',
+      matchLabel: 'Match Renter',
+      participantMetricLabel: 'My renters',
+      readyAttention: 'You are ready to submit your next renter.',
+      availableNote: 'Can accept renters',
+      participantKpiLabel: 'My Renters',
+      rewardNote: 'From active renters',
+      prequalTitle: 'Help Me Match My Renter',
+      prequalDescription: 'Find what your renter can afford and match them to ready opportunities.',
+      fitMatchesTitle: 'Renter Fit Matches',
+      fitMatchesEmpty:
+        'Enter renter details and run pre-qualification to see matching stock and estimated commission.',
+      affordabilityLabel: 'Renter can afford up to',
+      funnelTitle: 'Renter Progress Funnel',
+      submittedLabel: 'Submitted Renters',
+      readySectionDescription: 'Ready opportunities your renters can be submitted to now.',
+      motionTitle: 'My Renters in Motion',
+      needsActionPrefix: 'Renter needs action',
+      unlockNoun: 'renter',
+      emptyAttentionTitle: 'Match your first renter',
+      emptyAttentionDetail: 'Input renter affordability and generate matching opportunities.',
+    };
+  }
+
+  if (!hasMultipleLanes && lanes.has('auction')) {
+    return {
+      title: 'My Bidder Referral Hub',
+      intro: 'Add a bidder, see where they fit, and track every next step to reward.',
+      submitLabel: 'Submit Bidder',
+      matchLabel: 'Match Bidder',
+      participantMetricLabel: 'My bidders',
+      readyAttention: 'You are ready to submit your next bidder.',
+      availableNote: 'Can accept bidders',
+      participantKpiLabel: 'My Bidders',
+      rewardNote: 'From active bidders',
+      prequalTitle: 'Help Me Match My Bidder',
+      prequalDescription: 'Find what your bidder can afford and match them to ready opportunities.',
+      fitMatchesTitle: 'Bidder Fit Matches',
+      fitMatchesEmpty:
+        'Enter bidder details and run pre-qualification to see matching stock and estimated commission.',
+      affordabilityLabel: 'Bidder can afford up to',
+      funnelTitle: 'Bidder Progress Funnel',
+      submittedLabel: 'Submitted Bidders',
+      readySectionDescription: 'Ready opportunities your bidders can be submitted to now.',
+      motionTitle: 'My Bidders in Motion',
+      needsActionPrefix: 'Bidder needs action',
+      unlockNoun: 'bidder',
+      emptyAttentionTitle: 'Match your first bidder',
+      emptyAttentionDetail: 'Input bidder affordability and generate matching opportunities.',
+    };
+  }
+
+  if (hasMultipleLanes) {
+    return {
+      title: 'My Referral Hub',
+      intro: 'Add a buyer, renter, or bidder, see where they fit, and track every next step to reward.',
+      submitLabel: 'Submit Referral',
+      matchLabel: 'Match Client',
+      participantMetricLabel: 'My referrals',
+      readyAttention: 'You are ready to submit your next referral.',
+      availableNote: 'Can accept referrals',
+      participantKpiLabel: 'My Referrals',
+      rewardNote: 'From active referrals',
+      prequalTitle: 'Help Me Match My Client',
+      prequalDescription:
+        'Find what your buyer, renter, or bidder can afford and match them to ready opportunities.',
+      fitMatchesTitle: 'Client Fit Matches',
+      fitMatchesEmpty:
+        'Enter client details and run pre-qualification to see matching stock and estimated commission.',
+      affordabilityLabel: 'Client can afford up to',
+      funnelTitle: 'Referral Progress Funnel',
+      submittedLabel: 'Submitted Referrals',
+      readySectionDescription:
+        'Ready opportunities your buyers, renters, and bidders can be submitted to now.',
+      motionTitle: 'My Referrals in Motion',
+      needsActionPrefix: 'Referral needs action',
+      unlockNoun: 'referral',
+      emptyAttentionTitle: 'Match your first client',
+      emptyAttentionDetail: 'Input client affordability and generate matching opportunities.',
+    };
+  }
+
+  return {
+    title: 'My Buyer Referral Hub',
+    intro: 'Add a buyer, see where they fit, and track every next step to payout.',
+    submitLabel: 'Submit Buyer',
+    matchLabel: 'Match Buyer',
+    participantMetricLabel: 'My buyers',
+    readyAttention: 'You are ready to submit your next buyer.',
+    availableNote: 'Can accept buyers',
+    participantKpiLabel: 'My Buyers',
+    rewardNote: 'From active buyers',
+    prequalTitle: 'Help Me Match My Buyer',
+    prequalDescription: 'Find what your buyer can afford and match them to ready opportunities.',
+    fitMatchesTitle: 'Buyer Fit Matches',
+    fitMatchesEmpty:
+      'Enter buyer details and run pre-qualification to see matching stock and estimated commission.',
+    affordabilityLabel: 'Buyer can afford up to',
+    funnelTitle: 'Buyer Progress Funnel',
+    submittedLabel: 'Submitted Buyers',
+    readySectionDescription: 'Ready opportunities your buyers can be submitted to now.',
+    motionTitle: 'My Buyers in Motion',
+    needsActionPrefix: 'Buyer needs action',
+    unlockNoun: 'buyer',
+    emptyAttentionTitle: 'Match your first buyer',
+    emptyAttentionDetail: 'Input buyer affordability and generate matching opportunities.',
+  };
 }
 
 export function getPartnerDashboardPricingContext(input: {
@@ -137,7 +287,12 @@ export function getPartnerDashboardPricingContext(input: {
   }
 
   if (transactionType === 'auction') {
-    const text = rangeText === 'Price not configured' ? 'Starting bid not configured' : rangeText.replace(/^From /, 'Bid from ');
+    const text =
+      rangeText === 'Price not configured'
+        ? 'Starting bid not configured'
+        : referencePrice
+          ? `Bid from ${formatCurrency(referencePrice)}`
+          : rangeText.replace(/^From /, 'Bid from ');
     return {
       transactionType,
       label: 'Starting bid',
@@ -624,6 +779,10 @@ export default function PartnerDashboardPage() {
 
   const visibleStock = stockRows.slice(0, 7);
   const hiddenStockCount = Math.max(0, stockRows.length - visibleStock.length);
+  const dashboardCopy = useMemo(
+    () => getPartnerDashboardWorkspaceCopy(stockRows.map(row => row.transactionType)),
+    [stockRows],
+  );
   const stockByDevelopmentId = useMemo(() => {
     const map = new Map<number, AccessStockRow>();
     for (const row of stockRows) {
@@ -654,10 +813,13 @@ export default function PartnerDashboardPage() {
 
     const firstAtRisk = atRiskReferrals[0];
     if (firstAtRisk) {
+      const participant = getPartnerDashboardOpportunityCopy(
+        firstAtRisk.development?.transactionType,
+      ).participantLabel;
       items.push({
         id: `risk-${firstAtRisk.dealId}`,
         urgency: 'urgent',
-        title: `${firstAtRisk.buyer?.name || 'Buyer'} - SLA at risk`,
+        title: `${firstAtRisk.buyer?.name || participant} - SLA at risk`,
         detail:
           firstAtRisk.journey?.nextAction ||
           `${firstAtRisk.development?.name || 'Deal'} requires immediate follow-up.`,
@@ -668,10 +830,13 @@ export default function PartnerDashboardPage() {
 
     const firstMissingDocs = pendingDocReferrals[0];
     if (firstMissingDocs) {
+      const participant = getPartnerDashboardOpportunityCopy(
+        firstMissingDocs.development?.transactionType,
+      ).participantLabel;
       items.push({
         id: `docs-${firstMissingDocs.dealId}`,
         urgency: 'urgent',
-        title: `${firstMissingDocs.buyer?.name || 'Buyer'} - docs overdue`,
+        title: `${firstMissingDocs.buyer?.name || participant} - docs overdue`,
         detail: `${firstMissingDocs.development?.name || 'Deal'} - ${firstMissingDocs.docProgress?.verifiedRequiredCount || 0}/${firstMissingDocs.docProgress?.requiredCount || 0} verified`,
         timeLabel: 'Now',
         onClick: () => setLocation(`/distribution/partner/referrals/${Number(firstMissingDocs.dealId)}`),
@@ -683,7 +848,7 @@ export default function PartnerDashboardPage() {
       items.push({
         id: `viewing-${firstViewing.id}`,
         urgency: 'action',
-        title: `Viewing scheduled - ${firstViewing.buyerName || 'Buyer'}`,
+        title: `Viewing scheduled - ${firstViewing.buyerName || dashboardCopy.unlockNoun}`,
         detail: `${firstViewing.developmentName || 'Development'} - ${formatDateTime(firstViewing.scheduledStartAt)}`,
         timeLabel: formatRelativeTime(firstViewing.scheduledStartAt),
         onClick: () => setLocation('/distribution/partner/referrals'),
@@ -707,15 +872,24 @@ export default function PartnerDashboardPage() {
       items.push({
         id: 'empty',
         urgency: 'info',
-        title: 'Match your first buyer',
-        detail: 'Input buyer affordability and generate matching opportunities.',
+        title: dashboardCopy.emptyAttentionTitle,
+        detail: dashboardCopy.emptyAttentionDetail,
         timeLabel: '-',
         onClick: () => setLocation('/distribution/partner/accelerator'),
       });
     }
 
     return items.slice(0, 5);
-  }, [atRiskReferrals, pendingDocReferrals, viewingsQuery.data, visibleStock, setLocation]);
+  }, [
+    atRiskReferrals,
+    dashboardCopy.emptyAttentionDetail,
+    dashboardCopy.emptyAttentionTitle,
+    dashboardCopy.unlockNoun,
+    pendingDocReferrals,
+    viewingsQuery.data,
+    visibleStock,
+    setLocation,
+  ]);
 
   const showLoadingState =
     loading ||
@@ -752,10 +926,10 @@ export default function PartnerDashboardPage() {
                 - Good morning
               </p>
               <h1 className="text-[30px] font-semibold leading-tight text-white md:text-[36px]">
-                My Buyer Referral Hub
+                {dashboardCopy.title}
               </h1>
               <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#ece6da]">
-                Add a buyer, see where they fit, and track every next step to payout.
+                {dashboardCopy.intro}
               </p>
             </div>
               <div className="mt-6 flex flex-wrap gap-2">
@@ -765,7 +939,7 @@ export default function PartnerDashboardPage() {
                 onClick={() => setLocation('/distribution/partner/submit')}
               >
                   <UsersRound className="mr-2 h-4 w-4" />
-                Submit Buyer
+                {dashboardCopy.submitLabel}
               </Button>
               <Button
                   variant="conversion"
@@ -775,7 +949,7 @@ export default function PartnerDashboardPage() {
                 }
               >
                   <Search className="mr-2 h-4 w-4" />
-                Match Buyer
+                {dashboardCopy.matchLabel}
               </Button>
               </div>
             </div>
@@ -784,33 +958,33 @@ export default function PartnerDashboardPage() {
               <p className="text-[11px] font-semibold uppercase text-blue-100">Today at a glance</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <HeroMetric icon={<Home className="h-4 w-4" />} label="Can refer today" value={String(stockRows.length)} />
-                <HeroMetric icon={<UsersRound className="h-4 w-4" />} label="My buyers" value={String(activeDealsCount)} />
+                <HeroMetric icon={<UsersRound className="h-4 w-4" />} label={dashboardCopy.participantMetricLabel} value={String(activeDealsCount)} />
                 <HeroMetric icon={<WalletCards className="h-4 w-4" />} label="Potential reward" value={formatCurrency(potentialIncome, true)} />
                 <HeroMetric icon={<CheckCircle2 className="h-4 w-4" />} label="Docs needed" value={String(pendingDocReferrals.length)} tone="amber" />
               </div>
               <div className="mt-4 rounded-md bg-white/10 px-3 py-2 text-[12px] text-[#f4efe6]">
-                {attentionItems[0]?.title || 'You are ready to submit your next buyer.'}
+                {attentionItems[0]?.title || dashboardCopy.readyAttention}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 border-t border-white/15 bg-[#1e3a8a]/50 md:grid-cols-3 xl:grid-cols-7">
-            <KpiCell label="Available Opportunities" value={String(stockRows.length)} note="Can accept buyers" tone="light" />
-            <KpiCell label="My Buyers" value={String(activeDealsCount)} note="In progress" tone="light" />
+            <KpiCell label="Available Opportunities" value={String(stockRows.length)} note={dashboardCopy.availableNote} tone="light" />
+            <KpiCell label={dashboardCopy.participantKpiLabel} value={String(activeDealsCount)} note="In progress" tone="light" />
             <KpiCell label="Documents Needed" value={String(pendingDocReferrals.length)} note="Action needed" valueClassName="text-warning" />
             <KpiCell label="Needs Attention" value={String(atRiskReferrals.length)} note="Past next step" valueClassName="text-danger" />
             <KpiCell label="Pending Reward" value={formatCurrency(pendingIncome, true)} note="Awaiting approval" tone="light" />
             <KpiCell label="Paid Reward" value={formatCurrency(paidIncome, true)} note="This quarter" valueClassName="text-success" />
-            <KpiCell label="Potential Reward" value={formatCurrency(potentialIncome, true)} note="From active buyers" tone="light" />
+            <KpiCell label="Potential Reward" value={formatCurrency(potentialIncome, true)} note={dashboardCopy.rewardNote} tone="light" />
           </div>
         </section>
 
         <section id="prequal-engine" className="mt-5 overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-4 border-b border-primary/15 bg-primary/5 px-6 py-5">
             <div>
-              <h2 className="text-[16px] font-semibold text-foreground">Help Me Match My Buyer</h2>
+              <h2 className="text-[16px] font-semibold text-foreground">{dashboardCopy.prequalTitle}</h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Find what your buyer can afford and match them to ready opportunities.
+                {dashboardCopy.prequalDescription}
               </p>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-3 py-1 text-[10px] font-semibold uppercase text-success">
@@ -904,19 +1078,18 @@ export default function PartnerDashboardPage() {
 
             <div className="bg-[#f8fbff] p-6">
               <p className="mb-3 text-[10px] font-semibold uppercase text-muted-foreground">
-                Buyer Fit Matches
+                {dashboardCopy.fitMatchesTitle}
               </p>
 
               {!assessment ? (
                 <div className="flex min-h-[220px] flex-col items-center justify-center text-center text-[12px] text-muted-foreground">
-                  Enter buyer details and run pre-qualification to see matching stock and estimated
-                  commission.
+                  {dashboardCopy.fitMatchesEmpty}
                 </div>
               ) : (
                 <div>
                   <div className="mb-3 rounded-md border border-border bg-white p-3">
                     <p className="text-[11px] text-muted-foreground">
-                      Buyer can afford up to{' '}
+                      {dashboardCopy.affordabilityLabel}{' '}
                       <span className="font-mono font-semibold text-foreground">
                         {formatCurrency(assessment.outputs.purchasePrice)}
                       </span>
@@ -989,7 +1162,9 @@ export default function PartnerDashboardPage() {
                               )
                             }
                           >
-                            Submit Buyer
+                            {getPartnerDashboardOpportunityCopy(
+                              unitOption?.transactionType || match.transactionType || linkedStock?.transactionType,
+                            ).submitLabel}
                           </Button>
                           <Button
                             size="sm"
@@ -1022,7 +1197,7 @@ export default function PartnerDashboardPage() {
         <section className="mt-5">
           <Card className="border-primary/15 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-foreground">Buyer Progress Funnel</h3>
+              <h3 className="text-[15px] font-semibold text-foreground">{dashboardCopy.funnelTitle}</h3>
               <button
                 type="button"
                 className="text-[12px] text-primary hover:underline"
@@ -1037,7 +1212,7 @@ export default function PartnerDashboardPage() {
                 <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{stockRows.length}</p>
               </div>
               <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Submitted Buyers</p>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{dashboardCopy.submittedLabel}</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{referralItems.length}</p>
               </div>
               <div className="rounded-md border border-primary/15 bg-primary/5/60 px-3 py-2">
@@ -1064,7 +1239,7 @@ export default function PartnerDashboardPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-[17px] font-semibold text-foreground">What Can I Refer Today?</h3>
-              <p className="mt-1 text-[12px] text-muted-foreground">Ready opportunities your buyers can be submitted to now.</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">{dashboardCopy.readySectionDescription}</p>
             </div>
             <button
               type="button"
@@ -1141,7 +1316,7 @@ export default function PartnerDashboardPage() {
                           }
                           className="rounded-md bg-conversion px-3 py-2 text-[12px] font-semibold text-conversion-foreground hover:bg-conversion-hover"
                         >
-                          Submit Buyer
+                          {getPartnerDashboardOpportunityCopy(row.transactionType).submitLabel}
                         </button>
                       </div>
                     </div>
@@ -1171,7 +1346,7 @@ export default function PartnerDashboardPage() {
         <section className="mt-5 grid gap-4 lg:grid-cols-2">
           <Card className="border-primary/15 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-foreground">My Buyers in Motion</h3>
+              <h3 className="text-[13px] font-semibold text-foreground">{dashboardCopy.motionTitle}</h3>
               <button
                 type="button"
                 className="text-[12px] text-primary hover:underline"
@@ -1215,7 +1390,7 @@ export default function PartnerDashboardPage() {
             {staleDeal ? (
               <div className="mt-3 rounded-md bg-primary/10 px-3 py-2">
                 <p className="text-[11px] font-semibold text-primary">
-                  Buyer needs action: {staleDeal.buyerName || 'Buyer'}
+                  {dashboardCopy.needsActionPrefix}: {staleDeal.buyerName || dashboardCopy.unlockNoun}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {staleDeal.developmentName} - current stage {formatStageLabel(staleDeal.currentStage)}
@@ -1240,7 +1415,8 @@ export default function PartnerDashboardPage() {
             <div className="mt-4 rounded-md border border-border bg-surface p-3">
               <p className="text-[11px] font-semibold text-foreground">Next payout unlock</p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Move {unlockDealsRemaining} more buyer{unlockDealsRemaining === 1 ? '' : 's'} forward to unlock approximately{' '}
+                Move {unlockDealsRemaining} more {dashboardCopy.unlockNoun}
+                {unlockDealsRemaining === 1 ? '' : 's'} forward to unlock approximately{' '}
                 <strong className="text-[#1a7a40]">{formatCurrency(nextUnlockAmount)}</strong>
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded bg-foreground/15">

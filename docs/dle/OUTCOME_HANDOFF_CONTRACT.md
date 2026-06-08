@@ -137,6 +137,13 @@ Implemented distribution/referral handoff:
     actions
   - labels ready opportunities and CTAs as buyer, renter, or bidder journeys before submission
   - preserves the existing submit and accelerator routes without creating DLE-owned deal movement
+- `client/src/pages/distribution/PartnerDashboardPage.tsx`
+  - summarizes the partner workspace as buyer, renter, bidder, or mixed referral lanes from ready
+    stock transaction types
+  - labels hero actions, KPIs, match panels, funnel headings, stock cards, and submit CTAs with
+    transaction-native copy
+  - keeps dashboard actions routed through existing submit, accelerator, referral, and payout
+    surfaces instead of creating DLE-owned distribution mutations
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

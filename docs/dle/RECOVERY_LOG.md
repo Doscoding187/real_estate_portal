@@ -4109,3 +4109,44 @@ Next recommended slice:
   stop implying every referral is a sale.
 Commit hash/tag: This entry will be included in `feat(dle): label partner opportunity lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Partner Dashboard Transaction Context
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the partner dashboard read as a transaction-first referral workspace instead of a
+buyer-only hub when available stock includes Rental and Auction programmes.
+Files changed:
+- client/src/pages/distribution/PartnerDashboardPage.tsx
+- client/src/pages/distribution/PartnerDashboardPage.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/PartnerDashboardPage.test.tsx` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Dashboard transaction normalization now treats `for_rent` as Rental and `on_auction` as Auction.
+- Mixed Sale/Rental/Auction stock now renders the partner home as `My Referral Hub`, with neutral
+  client/referral matching, KPI, funnel, attention, and reward copy.
+- Row-level stock CTAs now show `Submit Buyer`, `Submit Renter`, or `Submit Bidder` by
+  transaction type.
+- Auction dashboard pricing now displays `Bid from` language instead of plain sale-shaped price
+  text.
+Guardrails:
+- No schema, migration, tRPC route, deal-stage, commission, payout, inventory, lead, or
+  accelerator route changes.
+- Dashboard actions still route through existing partner submit, accelerator, referrals, and
+  developments surfaces.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The standalone referral accelerator and public distribution marketing page still contain
+  buyer/sale-shaped language.
+- Rental/Auction-specific payout and document semantics remain future programme-design work.
+Next recommended slice:
+- Carry transaction-aware language into the referral accelerator match grid and qualification
+  copy, then revisit Rental/Auction-specific distribution programme semantics.
+Commit hash/tag: This entry will be included in `feat(dle): label partner dashboard lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

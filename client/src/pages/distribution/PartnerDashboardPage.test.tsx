@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerDashboardPage, {
+  getPartnerDashboardOpportunityCopy,
   getPartnerDashboardPricingContext,
+  getPartnerDashboardWorkspaceCopy,
   normalizePartnerDashboardTransactionType,
 } from './PartnerDashboardPage';
 
@@ -106,9 +108,30 @@ vi.mock('@/lib/trpc', () => ({
 
 describe('PartnerDashboardPage pricing helpers', () => {
   it('normalizes unsupported transaction types to sale', () => {
+    expect(normalizePartnerDashboardTransactionType('for_rent')).toBe('rent');
     expect(normalizePartnerDashboardTransactionType('rental')).toBe('rent');
     expect(normalizePartnerDashboardTransactionType('auction')).toBe('auction');
+    expect(normalizePartnerDashboardTransactionType('on_auction')).toBe('auction');
     expect(normalizePartnerDashboardTransactionType('leasehold')).toBe('sale');
+  });
+
+  it('summarizes dashboard copy for mixed transaction lanes', () => {
+    expect(getPartnerDashboardOpportunityCopy('for_rent')).toMatchObject({
+      participantLabel: 'Renter',
+      submitLabel: 'Submit Renter',
+    });
+    expect(getPartnerDashboardOpportunityCopy('auction')).toMatchObject({
+      participantLabel: 'Bidder',
+      submitLabel: 'Submit Bidder',
+    });
+    expect(getPartnerDashboardWorkspaceCopy(['for_sale', 'for_rent', 'auction'])).toMatchObject({
+      title: 'My Referral Hub',
+      submitLabel: 'Submit Referral',
+      matchLabel: 'Match Client',
+      participantKpiLabel: 'My Referrals',
+      readySectionDescription:
+        'Ready opportunities your buyers, renters, and bidders can be submitted to now.',
+    });
   });
 
   it('labels rental and auction prices without purchase-price copy', () => {
@@ -138,7 +161,7 @@ describe('PartnerDashboardPage pricing helpers', () => {
       shareText: auctionContext.shareText.replace(/\s/g, ' '),
     }).toMatchObject({
       label: 'Starting bid',
-      displayText: 'R 900 000',
+      displayText: 'Bid from R 900 000',
       shareText: 'Bid from R 900 000',
       referencePrice: 900000,
     });
@@ -171,6 +194,7 @@ describe('PartnerDashboardPage', () => {
           province: 'Gauteng',
           priceFrom: 850000,
           priceTo: 1200000,
+          transactionType: 'for_sale',
           accessStatus: 'active',
           commissionModel: 'flat_amount',
           defaultCommissionAmount: 25000,
@@ -223,6 +247,7 @@ describe('PartnerDashboardPage', () => {
             developmentName: 'Waterfall Estate',
             city: 'Midrand',
             province: 'Gauteng',
+            transactionType: 'for_sale',
           program: {
             commissionModel: 'flat_amount',
             defaultCommissionAmount: 25000,
@@ -248,6 +273,7 @@ describe('PartnerDashboardPage', () => {
             developmentName: 'Waterfall Estate',
             city: 'Midrand',
             province: 'Gauteng',
+            transactionType: 'for_sale',
           program: {
             commissionModel: 'flat_amount',
             defaultCommissionAmount: 25000,
@@ -338,5 +364,75 @@ describe('PartnerDashboardPage', () => {
     fireEvent.click(shareBtn);
     expect(openSpy).toHaveBeenCalled();
     expect(openSpy.mock.calls[0]?.[0]).toContain('wa.me');
+  });
+
+  it('renders mixed Sale, Rental, and Auction stock with transaction-native dashboard copy', () => {
+    mockReferrerMyAccessQuery.mockReturnValue({
+      data: [
+        {
+          developmentId: 10,
+          developmentName: 'Sales Estate',
+          city: 'Midrand',
+          province: 'Gauteng',
+          priceFrom: 850000,
+          priceTo: 1200000,
+          transactionType: 'for_sale',
+          accessStatus: 'active',
+          commissionModel: 'flat_amount',
+          defaultCommissionAmount: 25000,
+          defaultCommissionPercent: null,
+          unitTypes: [],
+        },
+        {
+          developmentId: 20,
+          developmentName: 'Harbour Rentals',
+          city: 'Cape Town',
+          province: 'Western Cape',
+          priceFrom: 12500,
+          priceTo: 15000,
+          transactionType: 'for_rent',
+          accessStatus: 'active',
+          commissionModel: 'flat_amount',
+          defaultCommissionAmount: 9000,
+          defaultCommissionPercent: null,
+          unitTypes: [],
+        },
+        {
+          developmentId: 30,
+          developmentName: 'Auction Yard',
+          city: 'Durban',
+          province: 'KwaZulu-Natal',
+          priceFrom: 850000,
+          priceTo: null,
+          transactionType: 'auction',
+          accessStatus: 'active',
+          commissionModel: 'flat_amount',
+          defaultCommissionAmount: 18000,
+          defaultCommissionPercent: null,
+          unitTypes: [],
+        },
+      ],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<PartnerDashboardPage />);
+
+    expect(screen.getByText('My Referral Hub')).toBeInTheDocument();
+    expect(screen.getByText(/Add a buyer, renter, or bidder/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit Referral' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Match Client' })).toBeInTheDocument();
+    expect(screen.getByText('Help Me Match My Client')).toBeInTheDocument();
+    expect(screen.getByText('Client Fit Matches')).toBeInTheDocument();
+    expect(screen.getByText('Referral Progress Funnel')).toBeInTheDocument();
+    expect(screen.getByText('Submitted Referrals')).toBeInTheDocument();
+    expect(
+      screen.getByText('Ready opportunities your buyers, renters, and bidders can be submitted to now.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit Buyer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit Renter' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit Bidder' })).toBeInTheDocument();
+    expect(screen.getByText('R 12 500 - R 15 000 / month')).toBeInTheDocument();
+    expect(screen.getByText('Bid from R 850 000')).toBeInTheDocument();
   });
 });
