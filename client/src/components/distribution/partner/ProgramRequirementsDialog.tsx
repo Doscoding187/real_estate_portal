@@ -7,9 +7,11 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getPartnerProgramTermsCopy } from './partnerProgramTermsCopy';
 
 type ProgramTermsItem = {
   developmentName: string;
+  transactionType?: unknown;
   requiredDocuments: Array<{
     templateId: number;
     documentCode: string;
@@ -48,16 +50,14 @@ export function ProgramRequirementsDialog({
   const sourceDocuments = [...(item.sourceDocuments || [])].sort(
     (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0),
   );
+  const termsCopy = getPartnerProgramTermsCopy(item.transactionType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{item.developmentName} Requirements</DialogTitle>
-          <DialogDescription>
-            Application documents are what the buyer must provide. Supporting files are what you can
-            share with the buyer before submitting.
-          </DialogDescription>
+          <DialogDescription>{termsCopy.documentOwnerDescription}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -66,7 +66,7 @@ export function ProgramRequirementsDialog({
               <div>
                 <p className="text-sm font-semibold text-slate-900">Supporting pack</p>
                 <p className="text-xs text-slate-500">
-                  Plans, maps, specifications, price lists, and other buyer-facing files.
+                  {termsCopy.supportingPackDescription}
                 </p>
               </div>
               <Badge variant="secondary">
@@ -109,7 +109,7 @@ export function ProgramRequirementsDialog({
               <div>
                 <p className="text-sm font-semibold text-slate-900">Application documents</p>
                 <p className="text-xs text-slate-500">
-                  These are the buyer documents needed for qualification and payout progress.
+                  {termsCopy.applicationDocumentsDescription}
                 </p>
               </div>
               <Badge variant="secondary">

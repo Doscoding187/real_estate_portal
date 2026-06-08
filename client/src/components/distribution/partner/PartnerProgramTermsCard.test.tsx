@@ -1,10 +1,15 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { PartnerProgramTermsCard, type ProgramTermsItem } from './PartnerProgramTermsCard';
+import {
+  getPartnerProgramTermsCopy,
+  normalizePartnerProgramTermsTransactionType,
+} from './partnerProgramTermsCopy';
 
 const itemFixture: ProgramTermsItem = {
   developmentId: 41,
   developmentName: 'Sky City',
+  transactionType: 'for_sale',
   city: 'Johannesburg',
   province: 'Gauteng',
   brand: {
@@ -75,6 +80,23 @@ const itemFixture: ProgramTermsItem = {
 };
 
 describe('PartnerProgramTermsCard', () => {
+  it('normalizes sale, rental, and auction transaction aliases', () => {
+    expect(normalizePartnerProgramTermsTransactionType('for_sale')).toBe('sale');
+    expect(normalizePartnerProgramTermsTransactionType('for_rent')).toBe('rent');
+    expect(normalizePartnerProgramTermsTransactionType('to-rent')).toBe('rent');
+    expect(normalizePartnerProgramTermsTransactionType('on auction')).toBe('auction');
+  });
+
+  it('returns transaction-aware programme terms copy', () => {
+    expect(getPartnerProgramTermsCopy('sale').supportingPackSummaryLabel).toBe('buyer-ready');
+    expect(getPartnerProgramTermsCopy('for_rent').supportingPackSummaryLabel).toBe(
+      'renter-ready',
+    );
+    expect(getPartnerProgramTermsCopy('on_auction').supportingPackSummaryLabel).toBe(
+      'bidder-ready',
+    );
+  });
+
   it('renders commission, payout, and docs summary from computed server fields', () => {
     render(<PartnerProgramTermsCard item={itemFixture} />);
 
@@ -93,6 +115,11 @@ describe('PartnerProgramTermsCard', () => {
 
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Sky City Requirements')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'Application documents are what the buyer must provide. Supporting files are what you can share with the buyer before submitting.',
+      ),
+    ).toBeInTheDocument();
 
     const orderedLabels = within(dialog)
       .getAllByText(/Proof of Address|ID Document|Optional Utility Bill/)
@@ -103,5 +130,47 @@ describe('PartnerProgramTermsCard', () => {
     expect(within(dialog).getByText('Unit / house plans')).toBeInTheDocument();
     expect(within(dialog).getByText('Site map')).toBeInTheDocument();
     expect(within(dialog).getByText('Pending')).toBeInTheDocument();
+  });
+
+  it('labels rental programme requirements as renter-ready', () => {
+    render(<PartnerProgramTermsCard item={{ ...itemFixture, transactionType: 'for_rent' }} />);
+
+    expect(screen.getByText('2 renter-ready files')).toBeInTheDocument();
+    expect(screen.queryByText('2 buyer-ready files')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /view requirements/i }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText(
+        'Application documents are what the renter must provide. Supporting files are what you can share with the renter before submitting.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'These are the renter documents needed for qualification and programme progress.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('labels auction programme requirements as bidder-ready', () => {
+    render(<PartnerProgramTermsCard item={{ ...itemFixture, transactionType: 'on_auction' }} />);
+
+    expect(screen.getByText('2 bidder-ready files')).toBeInTheDocument();
+    expect(screen.queryByText('2 buyer-ready files')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /view requirements/i }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText(
+        'Application documents are what the bidder must provide. Supporting files are what you can share with the bidder before submitting.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'These are the bidder documents needed for registration readiness and programme progress.',
+      ),
+    ).toBeInTheDocument();
   });
 });

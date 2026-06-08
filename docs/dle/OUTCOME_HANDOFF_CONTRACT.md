@@ -152,6 +152,11 @@ Implemented distribution/referral handoff:
   - labels match ceilings, unit pricing, and submit actions as buyer, renter, or bidder journeys
     from match/unit transaction type
   - preserves the existing accelerator assessment and submit-referral routing contract
+- `client/src/components/distribution/partner/PartnerProgramTermsCard.tsx`
+  - labels programme supporting packs and requirements dialogs as buyer, renter, or bidder
+    surfaces from programme-term development transaction type
+  - preserves existing programme document, payout, commission, and referral-readiness semantics
+    instead of inventing Rental/Auction-specific programme rules in the UI
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

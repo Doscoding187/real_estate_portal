@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProgramRequirementsDialog } from './ProgramRequirementsDialog';
+import { getPartnerProgramTermsCopy } from './partnerProgramTermsCopy';
 
 export type ProgramTermsItem = {
   developmentId: number;
   developmentName: string;
+  transactionType?: unknown;
   city?: string | null;
   province?: string | null;
   brand?: { brandProfileId: number; brandName: string } | null;
@@ -60,6 +62,7 @@ export function PartnerProgramTermsCard({
   onViewDetails?: () => void;
 }) {
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const termsCopy = getPartnerProgramTermsCopy(item.transactionType);
 
   const locationLabel = useMemo(
     () => [item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable',
@@ -105,7 +108,7 @@ export function PartnerProgramTermsCard({
             <p className="text-xs text-slate-500">Supporting pack</p>
             <p className="font-medium">
               {(item.sourceDocuments || []).length
-                ? `${(item.sourceDocuments || []).length} buyer-ready file${
+                ? `${(item.sourceDocuments || []).length} ${termsCopy.supportingPackSummaryLabel} file${
                     (item.sourceDocuments || []).length === 1 ? '' : 's'
                   }`
                 : 'No supporting files uploaded yet'}

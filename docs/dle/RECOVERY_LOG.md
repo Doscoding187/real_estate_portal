@@ -4195,3 +4195,49 @@ Next recommended slice:
   marketing page, then define Rental/Auction-specific payout/document semantics.
 Commit hash/tag: This entry will be included in `feat(dle): label accelerator match lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Partner Programme Terms Transaction Context
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make partner programme terms cards and requirements dialogs stop describing every
+supporting pack and application document as buyer-only when Rental and Auction programmes are
+present.
+Files changed:
+- client/src/components/distribution/partner/PartnerProgramTermsCard.tsx
+- client/src/components/distribution/partner/ProgramRequirementsDialog.tsx
+- client/src/components/distribution/partner/partnerProgramTermsCopy.ts
+- client/src/components/distribution/partner/PartnerProgramTermsCard.test.tsx
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/partner/PartnerProgramTermsCard.test.tsx`
+  passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Programme terms card transaction normalization treats `for_rent` as Rental and `on_auction` as
+  Auction.
+- Sale supporting packs remain `buyer-ready`.
+- Rental supporting packs now show `renter-ready` and the requirements dialog describes renter
+  application documents.
+- Auction supporting packs now show `bidder-ready` and the requirements dialog describes bidder
+  registration/readiness documents.
+Guardrails:
+- No schema, migration, tRPC route, deal-stage, commission, payout, inventory, lead, document
+  ownership, or referral-readiness mutation changes.
+- Programme requirements still use existing configured source documents and required-document
+  templates.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Rental/Auction-specific payout, deposit, bidder-registration, legal-pack, and document-template
+  semantics remain future programme-design work.
+- Public distribution marketing page and commissions page may still contain buyer/sale-shaped
+  wording in places.
+Next recommended slice:
+- Continue with public distribution marketing or commissions-page transaction context, then define
+  Rental/Auction-specific programme semantics when product rules are ready.
+Commit hash/tag: This entry will be included in `feat(dle): label programme terms lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

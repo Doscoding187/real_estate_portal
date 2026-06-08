@@ -402,6 +402,10 @@ Recommended next architecture work:
   bidder-led, and row-level submit CTAs remain transaction-native.
 - The referral accelerator shared components now use neutral client capture, affordability ceiling
   output language, and buyer/renter/bidder match-card submit actions from transaction type.
+- The partner programme terms card and requirements dialog now label supporting packs and
+  application-document explanations as buyer, renter, or bidder surfaces from development
+  transaction type while leaving document ownership, payout milestones, and commission semantics
+  unchanged.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.
