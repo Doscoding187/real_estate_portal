@@ -412,6 +412,10 @@ Recommended next architecture work:
 - Partner commission entries now carry development transaction type into the partner rewards page,
   where rows are labeled as Sale, Rental, or Auction rewards with Buyer, Renter, or Bidder
   participant copy while preserving programme-owned payout semantics.
+- Manager validation, pipeline, and selected-development deal lists now carry development
+  transaction type into read models and label Sale, Rental, and Auction referral rows with
+  Buyer, Renter, or Bidder participant context while preserving existing manager stage and payout
+  mutations.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

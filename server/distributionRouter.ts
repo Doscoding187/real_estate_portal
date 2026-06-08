@@ -5247,6 +5247,7 @@ const managerDistributionRouter = router({
         programId: distributionPrograms.id,
         developmentId: distributionManagerAssignments.developmentId,
         developmentName: developments.name,
+        transactionType: developments.transactionType,
         isPrimary: distributionManagerAssignments.isPrimary,
         workloadCapacity: distributionManagerAssignments.workloadCapacity,
         timezone: distributionManagerAssignments.timezone,
@@ -5347,9 +5348,11 @@ const managerDistributionRouter = router({
           dealId: distributionDeals.id,
           externalRef: distributionDeals.externalRef,
           buyerName: distributionDeals.buyerName,
+          transactionType: developments.transactionType,
           createdAt: distributionDeals.createdAt,
         })
         .from(distributionDeals)
+        .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
         .where(eq(distributionDeals.developmentId, input.developmentId))
         .orderBy(desc(distributionDeals.createdAt))
         .limit(input.limit);
@@ -5736,6 +5739,7 @@ const managerDistributionRouter = router({
           programId: distributionViewings.programId,
           developmentId: distributionViewings.developmentId,
           developmentName: developments.name,
+          transactionType: developments.transactionType,
           agentId: distributionViewings.agentId,
           managerUserId: distributionViewings.managerUserId,
           managerName: users.name,
@@ -5987,6 +5991,7 @@ const managerDistributionRouter = router({
           programId: distributionDeals.programId,
           developmentId: distributionDeals.developmentId,
           developmentName: developments.name,
+          transactionType: developments.transactionType,
           agentId: distributionDeals.agentId,
           buyerName: distributionDeals.buyerName,
           buyerEmail: distributionDeals.buyerEmail,
@@ -6197,6 +6202,7 @@ const managerDistributionRouter = router({
         id: distributionDeals.id,
         developmentId: distributionDeals.developmentId,
         developmentName: developments.name,
+        transactionType: developments.transactionType,
         agentId: distributionDeals.agentId,
         buyerName: distributionDeals.buyerName,
         buyerEmail: distributionDeals.buyerEmail,

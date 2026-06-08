@@ -10,6 +10,54 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 
 type StatusFilter = 'needs_docs' | 'all';
+type ManagerDevelopmentDealLane = 'sale' | 'rent' | 'auction';
+
+export function normalizeManagerDevelopmentDealLane(
+  transactionType: unknown,
+): ManagerDevelopmentDealLane {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function getManagerDevelopmentDealCopy(transactionType: unknown) {
+  const lane = normalizeManagerDevelopmentDealLane(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      transactionType: lane,
+      laneLabel: 'Rental referral',
+      participantLabel: 'Renter',
+      unknownParticipant: 'Renter unknown',
+      documentsDescription: 'Rental referrals that still need document processing',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      transactionType: lane,
+      laneLabel: 'Auction referral',
+      participantLabel: 'Bidder',
+      unknownParticipant: 'Bidder unknown',
+      documentsDescription: 'Auction referrals that still need document processing',
+    };
+  }
+
+  return {
+    transactionType: lane,
+    laneLabel: 'Sale referral',
+    participantLabel: 'Buyer',
+    unknownParticipant: 'Buyer unknown',
+    documentsDescription: 'Sale referrals that still need document processing',
+  };
+}
 
 function formatHandoffStatus(value?: string | null): string {
   const labels: Record<string, string> = {
@@ -118,7 +166,7 @@ export default function ManagerDevelopmentDealsPage() {
       <div className="mx-auto max-w-6xl px-4 pb-8 pt-24">
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Development Deals</CardTitle>
+            <CardTitle>Development Referrals</CardTitle>
             <CardDescription>{developmentLabel}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-2">
@@ -133,7 +181,7 @@ export default function ManagerDevelopmentDealsPage() {
                 onChange={event => setStatusFilter(event.target.value as StatusFilter)}
               >
                 <option value="needs_docs">Needs docs</option>
-                <option value="all">All deals</option>
+                <option value="all">All referrals</option>
               </select>
             </label>
           </CardContent>
@@ -147,11 +195,11 @@ export default function ManagerDevelopmentDealsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Deals</CardTitle>
+            <CardTitle>Referrals</CardTitle>
             <CardDescription>
               {statusFilter === 'needs_docs'
-                ? 'Deals that still need document processing'
-                : 'All deals for this development'}
+                ? 'Referrals that still need document processing'
+                : 'All referrals for this development'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -159,6 +207,9 @@ export default function ManagerDevelopmentDealsPage() {
               const pendingRequired = Number(deal.docs.requiredCount) - Number(deal.docs.verifiedRequiredCount);
               const needsAttention = pendingRequired > 0 || Boolean(deal.docs.hasRejections);
               const handoff = deal.latestDleHandoff;
+              const dealCopy = getManagerDevelopmentDealCopy(
+                deal.transactionType || handoff?.transactionType,
+              );
 
               return (
                 <div
@@ -167,9 +218,13 @@ export default function ManagerDevelopmentDealsPage() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium">{deal.dealRef}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{deal.dealRef}</p>
+                        <Badge variant="outline">{dealCopy.laneLabel}</Badge>
+                      </div>
                       <p className="text-xs text-slate-500">
-                        {deal.buyerName || 'Buyer unknown'} | {deal.createdAt}
+                        {dealCopy.participantLabel}: {deal.buyerName || dealCopy.unknownParticipant} |{' '}
+                        {deal.createdAt}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -254,7 +309,7 @@ export default function ManagerDevelopmentDealsPage() {
 
             {!dealsQuery.error && !(dealsQuery.data || []).length ? (
               <p className="py-6 text-center text-sm text-slate-500">
-                No deals found for this filter.
+                No referrals found for this filter.
               </p>
             ) : null}
           </CardContent>

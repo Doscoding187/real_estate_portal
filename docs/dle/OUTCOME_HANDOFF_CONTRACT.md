@@ -180,6 +180,19 @@ Implemented distribution/referral handoff:
     distribution deal field names and referral-detail navigation
   - keeps Rental/Auction payout copy explicit that lease, bidder, registration, and auction terms
     remain governed by programme rules
+- `server/distributionRouter.ts`
+  - returns development `transactionType` on manager assignment, validation, viewing, pipeline,
+    and development-deal read models
+  - preserves manager validation, stage transition, commission, payout, and handoff mutations
+- `client/src/pages/distribution/DistributionManagerDashboard.tsx`
+  - labels manager validation and pipeline rows as Sale, Rental, or Auction referrals
+  - displays linked participants as Buyer, Renter, or Bidder and labels stage actions with
+    sale/rental/auction language while preserving existing stage codes
+  - fixes validation-queue actions to submit the returned `dealId`
+- `client/src/pages/distribution/ManagerDevelopmentDealsPage.tsx`
+  - labels selected-development referral rows as Sale, Rental, or Auction referrals from read-model
+    transaction type or handoff fallback
+  - replaces buyer-only unknown participant copy with Buyer, Renter, or Bidder context
 - `distribution.manager.acknowledgeDleHandoff`
   - verifies the selected distribution deal and latest DLE handoff event belong together
   - writes a `distribution_deal_events` note with source

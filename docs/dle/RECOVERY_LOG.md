@@ -4326,3 +4326,51 @@ Next recommended slice:
   programme semantics when product rules are ready.
 Commit hash/tag: This entry will be included in `feat(dle): label partner reward lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Manager Referral Operations Transaction Context
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make manager validation, pipeline, and development referral lists show Sale, Rental, and
+Auction referral context instead of treating every row as a buyer/deal surface.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/distribution/DistributionManagerDashboard.tsx
+- client/src/pages/distribution/DistributionManagerDashboard.test.ts
+- client/src/pages/distribution/ManagerDevelopmentDealsPage.tsx
+- client/src/pages/distribution/ManagerDevelopmentDealsPage.test.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/DistributionManagerDashboard.test.ts client/src/pages/distribution/ManagerDevelopmentDealsPage.test.ts client/src/pages/distribution/ManagerDevelopmentOpsPage.test.ts`
+  passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Manager assignment, validation, viewing, pipeline, and development-deal read models now return
+  development `transactionType` where the client needs lane labels.
+- Distribution manager dashboard normalizes `for_rent` as Rental and `on_auction` as Auction.
+- Manager validation and pipeline rows now show Sale/Rental/Auction referral badges with
+  Buyer/Renter/Bidder participant labels.
+- Manager stage action button labels now use sale, lease, or auction terminology while preserving
+  existing stage codes.
+- Manager development deals list now shows `Development Referrals`, `Referrals`, and
+  Buyer/Renter/Bidder unknown-participant copy.
+- Validation-queue actions now submit the returned `dealId` instead of an undefined row id.
+Guardrails:
+- No schema, migration, manager-stage transition, commission calculation, payout status,
+  handoff acknowledgement, document verification, lead, or inventory mutation changes.
+- Rental/Auction stage labels remain overlays on the existing distribution-owned stage model.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Deeper Rental/Auction-specific programme payout, deposit, bidder-registration, legal-pack, and
+  document-template semantics remain future product-design work.
+- Super-admin distribution network tables may still contain buyer-shaped copy in non-partner,
+  non-manager surfaces.
+Next recommended slice:
+- Audit super-admin distribution network tables and any remaining distribution readback surfaces,
+  then define Rental/Auction-specific programme semantics when product rules are ready.
+Commit hash/tag: This entry will be included in `feat(dle): label manager referral lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

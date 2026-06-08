@@ -16,6 +16,88 @@ import {
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+type ManagerDistributionTransactionLane = 'sale' | 'rent' | 'auction';
+
+export function normalizeManagerDistributionTransactionLane(
+  transactionType: unknown,
+): ManagerDistributionTransactionLane {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (normalized === 'rent' || normalized === 'for_rent' || normalized === 'to_rent') {
+    return 'rent';
+  }
+  if (normalized === 'auction' || normalized === 'on_auction') return 'auction';
+  return 'sale';
+}
+
+export function getManagerDistributionDealCopy(transactionType: unknown) {
+  const lane = normalizeManagerDistributionTransactionLane(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      transactionType: lane,
+      laneLabel: 'Rental referral',
+      participantLabel: 'Renter',
+      unknownParticipant: 'Renter unknown',
+      stageContext: 'Lease/referral stage',
+      rewardContext: 'Rental reward',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      transactionType: lane,
+      laneLabel: 'Auction referral',
+      participantLabel: 'Bidder',
+      unknownParticipant: 'Bidder unknown',
+      stageContext: 'Auction/referral stage',
+      rewardContext: 'Auction reward',
+    };
+  }
+
+  return {
+    transactionType: lane,
+    laneLabel: 'Sale referral',
+    participantLabel: 'Buyer',
+    unknownParticipant: 'Buyer unknown',
+    stageContext: 'Sale/referral stage',
+    rewardContext: 'Sale reward',
+  };
+}
+
+export function getManagerDistributionStageActionLabel(stage: string, transactionType: unknown) {
+  const lane = normalizeManagerDistributionTransactionLane(transactionType);
+
+  const labels: Record<ManagerDistributionTransactionLane, Record<string, string>> = {
+    sale: {
+      application_submitted: 'Application submitted',
+      contract_signed: 'Contract signed',
+      bond_approved: 'Bond approved',
+      commission_pending: 'Reward pending',
+      cancelled: 'Cancel referral',
+    },
+    rent: {
+      application_submitted: 'Rental application submitted',
+      contract_signed: 'Lease signed',
+      bond_approved: 'Lease conditions met',
+      commission_pending: 'Rental reward pending',
+      cancelled: 'Cancel rental referral',
+    },
+    auction: {
+      application_submitted: 'Bidder registered',
+      contract_signed: 'Auction terms accepted',
+      bond_approved: 'Bidder approved',
+      commission_pending: 'Auction reward pending',
+      cancelled: 'Cancel auction referral',
+    },
+  };
+
+  return labels[lane][stage] || stage;
+}
+
 export default function DistributionManagerDashboard() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -94,7 +176,7 @@ export default function DistributionManagerDashboard() {
 
   const advanceStageMutation = trpc.distribution.manager.advanceDealStage.useMutation({
     onSuccess: () => {
-      toast.success('Deal stage updated');
+      toast.success('Referral stage updated');
       pipelineQuery.refetch();
       if (selectedDealId) timelineQuery.refetch();
     },
@@ -133,7 +215,7 @@ export default function DistributionManagerDashboard() {
           <CardHeader>
             <CardTitle>Distribution Manager Dashboard</CardTitle>
             <CardDescription>
-              Manage showings, validate outcomes, and drive deal progression for assigned programs.
+              Manage buyer, renter, and bidder referrals for assigned programmes.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
@@ -164,7 +246,7 @@ export default function DistributionManagerDashboard() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardDescription>Open Pipeline Deals</CardDescription>
+              <CardDescription>Open Pipeline Referrals</CardDescription>
               <CardTitle>{(pipelineQuery.data || []).length}</CardTitle>
             </CardHeader>
           </Card>
@@ -188,97 +270,117 @@ export default function DistributionManagerDashboard() {
               <CardTitle>Validation Queue</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {(validationQueueQuery.data || []).slice(0, 20).map((row: any) => (
-                <div key={row.id} className="rounded border p-3 space-y-2">
-                  <p className="font-medium">
-                    {row.developmentName} - {row.buyerName}
-                  </p>
-                  <p className="text-xs text-slate-500">Current stage: {row.currentStage}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        validateMutation.mutate({
-                          dealId: Number(row.id),
-                          outcome: 'completed_proceeding',
-                        })
-                      }
-                    >
-                      Proceeding
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        validateMutation.mutate({
-                          dealId: Number(row.id),
-                          outcome: 'completed_not_proceeding',
-                        })
-                      }
-                    >
-                      Not Proceeding
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        validateMutation.mutate({ dealId: Number(row.id), outcome: 'no_show' })
-                      }
-                    >
-                      No Show
-                    </Button>
+              {(validationQueueQuery.data || []).slice(0, 20).map((row: any) => {
+                const dealCopy = getManagerDistributionDealCopy(row.transactionType);
+
+                return (
+                  <div key={row.dealId} className="rounded border p-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">
+                        {row.developmentName} - {row.buyerName || dealCopy.unknownParticipant}
+                      </p>
+                      <Badge variant="outline">{dealCopy.laneLabel}</Badge>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {dealCopy.stageContext}: {row.currentStage}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          validateMutation.mutate({
+                            dealId: Number(row.dealId),
+                            outcome: 'completed_proceeding',
+                          })
+                        }
+                      >
+                        {dealCopy.participantLabel} proceeding
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          validateMutation.mutate({
+                            dealId: Number(row.dealId),
+                            outcome: 'completed_not_proceeding',
+                          })
+                        }
+                      >
+                        Not proceeding
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          validateMutation.mutate({
+                            dealId: Number(row.dealId),
+                            outcome: 'no_show',
+                          })
+                        }
+                      >
+                        No show
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Pipeline & Stage Controls</CardTitle>
+              <CardTitle>Referral Pipeline & Stage Controls</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {(pipelineQuery.data || []).slice(0, 24).map((deal: any) => (
-                <div key={deal.id} className="rounded border p-3 space-y-2">
-                  <button
-                    className="text-left w-full"
-                    onClick={() => setSelectedDealId(Number(deal.id))}
-                  >
-                    <p className="font-medium">
-                      {deal.developmentName} - {deal.buyerName}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
-                    </p>
-                  </button>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      'application_submitted',
-                      'contract_signed',
-                      'bond_approved',
-                      'commission_pending',
-                      'cancelled',
-                    ].map(stage => (
-                      <Button
-                        key={stage}
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          advanceStageMutation.mutate({
-                            dealId: Number(deal.id),
-                            toStage: stage as any,
-                            notes: null,
-                            rejectionReason: stage === 'cancelled' ? 'Cancelled by manager' : null,
-                          })
-                        }
-                      >
-                        {stage}
-                      </Button>
-                    ))}
+              {(pipelineQuery.data || []).slice(0, 24).map((deal: any) => {
+                const dealCopy = getManagerDistributionDealCopy(deal.transactionType);
+
+                return (
+                  <div key={deal.id} className="rounded border p-3 space-y-2">
+                    <button
+                      className="text-left w-full"
+                      onClick={() => setSelectedDealId(Number(deal.id))}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">
+                          {deal.developmentName} - {deal.buyerName || dealCopy.unknownParticipant}
+                        </p>
+                        <Badge variant="outline">{dealCopy.laneLabel}</Badge>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {dealCopy.stageContext}: {deal.currentStage} | {dealCopy.rewardContext}:{' '}
+                        {deal.commissionStatus}
+                      </p>
+                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        'application_submitted',
+                        'contract_signed',
+                        'bond_approved',
+                        'commission_pending',
+                        'cancelled',
+                      ].map(stage => (
+                        <Button
+                          key={stage}
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            advanceStageMutation.mutate({
+                              dealId: Number(deal.id),
+                              toStage: stage as any,
+                              notes: null,
+                              rejectionReason: stage === 'cancelled' ? 'Cancelled by manager' : null,
+                            })
+                          }
+                        >
+                          {getManagerDistributionStageActionLabel(stage, deal.transactionType)}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </div>
@@ -286,8 +388,8 @@ export default function DistributionManagerDashboard() {
         {selectedDealId && (
           <Card>
             <CardHeader>
-              <CardTitle>Deal Timeline</CardTitle>
-              <CardDescription>Deal #{selectedDealId}</CardDescription>
+              <CardTitle>Referral Timeline</CardTitle>
+              <CardDescription>Referral deal #{selectedDealId}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {(timelineQuery.data?.events || []).map((event: any) => (
