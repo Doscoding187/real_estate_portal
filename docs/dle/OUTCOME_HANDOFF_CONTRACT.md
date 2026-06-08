@@ -440,3 +440,10 @@ Next, keep operating-layer work focused on useful manager/developer review surfa
 without moving distribution deal stages from DLE. Future manager actions may process handoff notes,
 but any stage movement must call or share distribution service guardrails, especially document,
 manager, milestone, and commission readiness checks.
+
+Super-admin distribution network tables now carry the same transaction context into their deal and
+reward readbacks. The admin referral pipeline shows Sale/Rental/Auction referral lanes with
+Buyer/Renter/Bidder participant copy, and the rewards table labels Sale commission, Rental reward,
+or Auction reward rows from development transaction type. This is display/readback context only:
+DLE still does not move distribution deal stages, calculate payout readiness, or claim
+Rental/Auction-specific reward semantics beyond configured programme terms.

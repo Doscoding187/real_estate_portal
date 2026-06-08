@@ -4374,3 +4374,50 @@ Next recommended slice:
   then define Rental/Auction-specific programme semantics when product rules are ready.
 Commit hash/tag: This entry will be included in `feat(dle): label manager referral lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Super Admin Distribution Transaction Context
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the super-admin distribution network deal and reward tables show Sale, Rental, and
+Auction referral context instead of rendering every participant and payout as buyer/commission
+language.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/admin/DistributionNetworkPage.tsx
+- client/src/pages/admin/DistributionNetworkPage.test.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/admin/DistributionNetworkPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Super-admin `distribution.admin.listDeals` now returns development `transactionType` and
+  `buyerName` as read-only table context.
+- Super-admin `distribution.admin.listCommissionEntries` now returns development
+  `transactionType` as read-only reward context.
+- Distribution Network header, referral pipeline, and rewards/incentives copy now describe a mixed
+  Sale/Rental/Auction referral network.
+- Deal pipeline rows now badge Sale/Rental/Auction referral lanes and label participants as
+  Buyer/Renter/Bidder.
+- Rewards rows now label Sale commission, Rental reward, or Auction reward rows while preserving
+  existing payout status and amount fields.
+Guardrails:
+- No schema, migration, stage transition, payout calculation, commission status, partner access,
+  onboarding, referral application, lead, inventory, or operating-event mutation changes.
+- Rental/Auction reward language remains display context only; payout milestones, documents,
+  deposit, bidder-registration, and legal-pack semantics remain future product-design work.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Deeper Rental/Auction-specific programme payout, deposit, bidder-registration, legal-pack, and
+  document-template semantics remain future product-design work.
+- A final distribution-wide copy sweep may still find isolated buyer/deal wording in generic
+  labels that do not yet carry transaction type.
+Next recommended slice:
+- Run a distribution-wide transaction-language sweep, then move from labels into Rental/Auction
+  programme semantics only once product rules are explicit.
+Commit hash/tag: This entry will be included in `feat(dle): label admin distribution lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

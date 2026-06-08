@@ -416,6 +416,10 @@ Recommended next architecture work:
   transaction type into read models and label Sale, Rental, and Auction referral rows with
   Buyer, Renter, or Bidder participant context while preserving existing manager stage and payout
   mutations.
+- Super-admin distribution network deal and reward tables now carry development transaction type
+  into read models and label Sale, Rental, and Auction referral rows with Buyer, Renter, or Bidder
+  participant context while preserving existing stage, payout, commission, onboarding, and partner
+  access mutations.
 - Continue distribution/referral work with deeper transaction-native
   referral programme semantics without bypassing distribution deal-stage, document, payout
   milestone, manager review, or commission readiness guardrails.

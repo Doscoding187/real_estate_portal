@@ -35,6 +35,55 @@ function collectErrorMessages(...errors: Array<{ message?: string } | null | und
   );
 }
 
+export type AdminDistributionTransactionLane = 'sale' | 'rent' | 'auction';
+
+export function normalizeAdminDistributionTransactionLane(
+  value: unknown,
+): AdminDistributionTransactionLane {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['rent', 'rental', 'for_rent', 'to_rent'].includes(normalized)) return 'rent';
+  if (['auction', 'for_auction', 'on_auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getAdminDistributionReferralCopy(value: unknown) {
+  const lane = normalizeAdminDistributionTransactionLane(value);
+  if (lane === 'rent') {
+    return {
+      lane,
+      laneLabel: 'Rental',
+      referralLabel: 'Rental referral',
+      participantLabel: 'Renter',
+      unknownParticipant: 'Unknown Renter',
+      rewardLabel: 'Rental reward',
+      rewardStatusLabel: 'Reward status',
+      amountLabel: 'Reward',
+    };
+  }
+  if (lane === 'auction') {
+    return {
+      lane,
+      laneLabel: 'Auction',
+      referralLabel: 'Auction referral',
+      participantLabel: 'Bidder',
+      unknownParticipant: 'Unknown Bidder',
+      rewardLabel: 'Auction reward',
+      rewardStatusLabel: 'Reward status',
+      amountLabel: 'Reward',
+    };
+  }
+  return {
+    lane,
+    laneLabel: 'Sale',
+    referralLabel: 'Sale referral',
+    participantLabel: 'Buyer',
+    unknownParticipant: 'Unknown Buyer',
+    rewardLabel: 'Commission',
+    rewardStatusLabel: 'Commission status',
+    amountLabel: 'Commission',
+  };
+}
+
 function openInviteShareWindow(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
@@ -403,7 +452,7 @@ export default function DistributionNetworkPage() {
         <CardHeader>
           <CardTitle>Distribution Network</CardTitle>
           <CardDescription>
-            Super admin module for referral operations, managers, deal flow, and commission control.
+            Super admin module for referral operations, managers, transaction lanes, and reward control.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
@@ -1108,8 +1157,8 @@ export default function DistributionNetworkPage() {
       {(submoduleSlug === 'deal-pipeline' || submoduleSlug === 'viewing-scheduler') && (
         <Card>
           <CardHeader>
-            <CardTitle>Deal Pipeline</CardTitle>
-            <CardDescription>Current stage distribution across referral deals.</CardDescription>
+            <CardTitle>Referral Pipeline</CardTitle>
+            <CardDescription>Current stage distribution across Sale, Rental, and Auction referrals.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
@@ -1120,16 +1169,23 @@ export default function DistributionNetworkPage() {
               ))}
             </div>
             <div className="space-y-2">
-              {(dealsQuery.data || []).slice(0, 30).map((deal: any) => (
-                <div key={deal.id} className="rounded border p-3">
-                  <p className="font-medium">
-                    {deal.developmentName} - {deal.buyerName}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
-                  </p>
-                </div>
-              ))}
+              {(dealsQuery.data || []).slice(0, 30).map((deal: any) => {
+                const copy = getAdminDistributionReferralCopy(deal.transactionType);
+                return (
+                  <div key={deal.id} className="rounded border p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium">
+                        {deal.developmentName} - {deal.buyerName || copy.unknownParticipant}
+                      </p>
+                      <Badge variant="outline">{copy.referralLabel}</Badge>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {copy.participantLabel}: {deal.buyerName || copy.unknownParticipant} | Stage:{' '}
+                      {deal.currentStage} | {copy.rewardStatusLabel}: {deal.commissionStatus}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -1138,25 +1194,32 @@ export default function DistributionNetworkPage() {
       {submoduleSlug === 'commission-incentives' && (
         <Card>
           <CardHeader>
-            <CardTitle>Commission & Incentives</CardTitle>
-            <CardDescription>Commission entries and payout tracking.</CardDescription>
+            <CardTitle>Rewards & Incentives</CardTitle>
+            <CardDescription>Sale commissions, rental rewards, auction rewards, and payout tracking.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {(commissionQuery.data || []).slice(0, 40).map((entry: any) => (
-              <div key={entry.id} className="rounded border p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">
-                    {entry.developmentName} - {entry.buyerName || 'Unknown Buyer'}
+            {(commissionQuery.data || []).slice(0, 40).map((entry: any) => {
+              const copy = getAdminDistributionReferralCopy(entry.transactionType);
+              return (
+                <div key={entry.id} className="rounded border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">
+                      {entry.developmentName} - {entry.buyerName || copy.unknownParticipant}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline">{copy.rewardLabel}</Badge>
+                      <Badge variant="secondary">{entry.entryStatus}</Badge>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {copy.participantLabel}: {entry.buyerName || copy.unknownParticipant} |{' '}
+                    {copy.amountLabel}: {formatMoney(Number(entry.commissionAmount || 0))}
                   </p>
-                  <Badge variant="secondary">{entry.entryStatus}</Badge>
                 </div>
-                <p className="text-xs text-slate-500">
-                  Commission: {formatMoney(Number(entry.commissionAmount || 0))}
-                </p>
-              </div>
-            ))}
+              );
+            })}
             {!commissionQuery.isLoading && !(commissionQuery.data || []).length && (
-              <p className="text-sm text-slate-500">No commission entries found.</p>
+              <p className="text-sm text-slate-500">No reward entries found.</p>
             )}
           </CardContent>
         </Card>
