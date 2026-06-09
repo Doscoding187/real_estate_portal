@@ -397,6 +397,10 @@ Recommended next architecture work:
 - Partner workspace navigation and reward-entry rows now use `Rewards` and `Referral #` labels
   while preserving the existing `/distribution/partner/commissions` route and distribution-owned
   payout model fields.
+- Rental/Auction distribution programme semantics now have a dedicated contract in
+  `docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md`. Future Rental/Auction document,
+  readiness, stage, and reward automation must follow that contract instead of inferring rules
+  from display labels.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.
@@ -432,6 +436,7 @@ Recommended next architecture work:
 - The public referrer application entry point now uses transaction-neutral individual-applicant
   copy and states that buyer, renter, or bidder referrals can come after approval, while preserving
   existing application values, review, activation, and access behavior.
-- Continue distribution/referral work with deeper transaction-native
-  referral programme semantics without bypassing distribution deal-stage, document, payout
-  milestone, manager review, or commission readiness guardrails.
+- Continue distribution/referral work with deeper transaction-native referral programme semantics
+  by implementing the contract in `docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md` without
+  bypassing distribution deal-stage, document, payout milestone, manager review, or commission
+  readiness guardrails.

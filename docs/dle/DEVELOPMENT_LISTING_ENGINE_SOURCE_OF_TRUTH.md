@@ -170,6 +170,20 @@ If sale/rent/auction logic, readiness rules, field ownership, pricing helpers, o
 
 If users cannot feel the commercial intelligence, the engine is not finished.
 
+## 9A. Distribution Programme Semantics
+
+Sale, Rental, and Auction referral lanes may share distribution infrastructure, but they must not
+share hidden sale-only assumptions.
+
+Transaction-aware labels are not enough to automate Rental or Auction payout/readiness behavior.
+Future distribution work that touches Rental/Auction documents, stage movement, payout readiness,
+lease/deposit rules, bidder registration, auction terms, or legal-pack readiness must first follow
+`docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md`.
+
+Until those semantics are represented in product terms, read models, and tests, DLE operating
+outcomes may create review context only. They must not bypass distribution-owned manager review,
+document readiness, milestone checks, or reward/commission guardrails.
+
 ## 10. Autosave Principle
 
 Autosave must stay behind manual save/resume proof.

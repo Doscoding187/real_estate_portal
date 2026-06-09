@@ -4584,3 +4584,46 @@ Next recommended slice:
   requirements.
 Commit hash/tag: This entry will be included in `feat(dle): label partner rewards navigation`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-09 - Distribution Programme Semantics Contract
+
+Date: 2026-06-09
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the product and operating guardrails required before Rental/Auction distribution work
+moves beyond labels into document readiness, stage movement, payout readiness, or reward
+automation.
+Files changed:
+- docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `test -f docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md` passed.
+- `rg "Rental Programme Semantics|Auction Programme Semantics|DLE Handoff Rules" docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Added a dedicated contract for Rental and Auction distribution programme semantics.
+- Defined current allowed state, hard not-allowed automation, shared distribution shell ownership,
+  Sale baseline semantics, Rental lease/deposit semantics, Auction bidder/registration semantics,
+  document template requirements, payout rule requirements, DLE handoff rules, implementation
+  order, and non-goals.
+- Source-of-truth now warns future DLE sessions not to automate Rental/Auction programme behavior
+  from display labels.
+- Operating audit now points future distribution/referral work to the contract.
+Guardrails:
+- Documentation-only slice.
+- No schema, migration, tRPC route, runtime behavior, payout calculation, commission status, deal
+  mutation, lead, inventory, operating-event, UI component, or test fixture changes.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Contract still needs implementation in future schema/read-model/document-template/product slices.
+- Rental/Auction payout and document semantics remain unimplemented until a future code slice
+  explicitly adds them.
+Next recommended slice:
+- Implement the first read-only programme semantics surface: expose configured transaction lane,
+  document/readiness roles, and payout trigger labels without changing stage movement or reward
+  status.
+Commit hash/tag: This entry will be included in `docs(dle): define programme semantics contract`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
