@@ -44,6 +44,21 @@ type ManagerOption = {
 type RequiredDocumentDraft = {
   id?: number;
   category: 'developer_document' | 'client_required_document';
+  transactionType: 'all' | 'sale' | 'rent' | 'auction';
+  participantType: 'buyer' | 'renter' | 'bidder' | 'developer' | 'manager' | 'supporting';
+  readinessRole:
+    | 'submission'
+    | 'qualification'
+    | 'lease'
+    | 'auction_registration'
+    | 'auction_terms'
+    | 'payout'
+    | 'supporting';
+  requiredForStage?: string | null;
+  blocksPayout: boolean;
+  reviewOwner: 'manager' | 'admin' | 'developer' | 'system';
+  publiclyShareable: boolean;
+  programmeSpecific: boolean;
   documentCode:
     | 'id_document'
     | 'proof_of_address'
@@ -169,12 +184,58 @@ const documentCodeLabelMap: Record<RequiredDocumentDraft['documentCode'], string
   custom: 'Custom Document',
 };
 
+const transactionTypeOptions: Array<{ value: RequiredDocumentDraft['transactionType']; label: string }> = [
+  { value: 'all', label: 'All lanes' },
+  { value: 'sale', label: 'Sale' },
+  { value: 'rent', label: 'Rental' },
+  { value: 'auction', label: 'Auction' },
+];
+
+const participantTypeOptions: Array<{ value: RequiredDocumentDraft['participantType']; label: string }> = [
+  { value: 'buyer', label: 'Buyer' },
+  { value: 'renter', label: 'Renter' },
+  { value: 'bidder', label: 'Bidder' },
+  { value: 'developer', label: 'Developer' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'supporting', label: 'Supporting' },
+];
+
+const readinessRoleOptions: Array<{ value: RequiredDocumentDraft['readinessRole']; label: string }> = [
+  { value: 'submission', label: 'Submission' },
+  { value: 'qualification', label: 'Qualification' },
+  { value: 'lease', label: 'Lease' },
+  { value: 'auction_registration', label: 'Auction registration' },
+  { value: 'auction_terms', label: 'Auction terms' },
+  { value: 'payout', label: 'Payout' },
+  { value: 'supporting', label: 'Supporting' },
+];
+
+const reviewOwnerOptions: Array<{ value: RequiredDocumentDraft['reviewOwner']; label: string }> = [
+  { value: 'manager', label: 'Manager' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'developer', label: 'Developer' },
+  { value: 'system', label: 'System' },
+];
+
 const documentStarterPacks: Array<{
   id: string;
   label: string;
   description: string;
   category: RequiredDocumentDraft['category'];
-  documents: Array<Pick<RequiredDocumentDraft, 'documentCode' | 'documentLabel' | 'isRequired'>>;
+  documents: Array<
+    Pick<
+      RequiredDocumentDraft,
+      | 'documentCode'
+      | 'documentLabel'
+      | 'isRequired'
+      | 'transactionType'
+      | 'participantType'
+      | 'readinessRole'
+      | 'blocksPayout'
+      | 'publiclyShareable'
+      | 'programmeSpecific'
+    >
+  >;
 }> = [
   {
     id: 'bond-buyer',
@@ -182,10 +243,50 @@ const documentStarterPacks: Array<{
     description: 'ID, income, bank statement, and pre-approval for financed buyers.',
     category: 'client_required_document',
     documents: [
-      { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
-      { documentCode: 'proof_of_income', documentLabel: 'Latest payslip or proof of income', isRequired: true },
-      { documentCode: 'bank_statement', documentLabel: '3 months bank statements', isRequired: true },
-      { documentCode: 'pre_approval', documentLabel: 'Bond pre-approval', isRequired: true },
+      {
+        documentCode: 'id_document',
+        documentLabel: 'ID Document',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'buyer',
+        readinessRole: 'submission',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'proof_of_income',
+        documentLabel: 'Latest payslip or proof of income',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'buyer',
+        readinessRole: 'qualification',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'bank_statement',
+        documentLabel: '3 months bank statements',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'buyer',
+        readinessRole: 'qualification',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'pre_approval',
+        documentLabel: 'Bond pre-approval',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'buyer',
+        readinessRole: 'qualification',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
     ],
   },
   {
@@ -194,9 +295,39 @@ const documentStarterPacks: Array<{
     description: 'Lean checklist for buyers who do not need bond finance.',
     category: 'client_required_document',
     documents: [
-      { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
-      { documentCode: 'proof_of_address', documentLabel: 'Proof of address', isRequired: true },
-      { documentCode: 'bank_statement', documentLabel: 'Proof of funds or bank confirmation', isRequired: true },
+      {
+        documentCode: 'id_document',
+        documentLabel: 'ID Document',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'buyer',
+        readinessRole: 'submission',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'proof_of_address',
+        documentLabel: 'Proof of address',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'buyer',
+        readinessRole: 'submission',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'bank_statement',
+        documentLabel: 'Proof of funds or bank confirmation',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'buyer',
+        readinessRole: 'qualification',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
     ],
   },
   {
@@ -205,10 +336,50 @@ const documentStarterPacks: Array<{
     description: 'Developer-specific forms the referrer downloads, gets signed, and re-uploads.',
     category: 'developer_document',
     documents: [
-      { documentCode: 'sale_agreement', documentLabel: 'Sale agreement', isRequired: true },
-      { documentCode: 'custom', documentLabel: 'Building contract', isRequired: true },
-      { documentCode: 'custom', documentLabel: 'Price tracker / price schedule', isRequired: true },
-      { documentCode: 'signed_offer_to_purchase', documentLabel: 'Offer to purchase', isRequired: true },
+      {
+        documentCode: 'sale_agreement',
+        documentLabel: 'Sale agreement',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'developer',
+        readinessRole: 'payout',
+        blocksPayout: true,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'custom',
+        documentLabel: 'Building contract',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'developer',
+        readinessRole: 'payout',
+        blocksPayout: true,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'custom',
+        documentLabel: 'Price tracker / price schedule',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'developer',
+        readinessRole: 'supporting',
+        blocksPayout: false,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
+      {
+        documentCode: 'signed_offer_to_purchase',
+        documentLabel: 'Offer to purchase',
+        isRequired: true,
+        transactionType: 'sale',
+        participantType: 'developer',
+        readinessRole: 'payout',
+        blocksPayout: true,
+        publiclyShareable: false,
+        programmeSpecific: true,
+      },
     ],
   },
   {
@@ -217,10 +388,50 @@ const documentStarterPacks: Array<{
     description: 'Reference files the referrer can share, but that do not block the application.',
     category: 'developer_document',
     documents: [
-      { documentCode: 'custom', documentLabel: 'Unit / house plans', isRequired: false },
-      { documentCode: 'custom', documentLabel: 'Site map', isRequired: false },
-      { documentCode: 'custom', documentLabel: 'Specifications', isRequired: false },
-      { documentCode: 'transfer_documents', documentLabel: 'Transfer and costs guide', isRequired: false },
+      {
+        documentCode: 'custom',
+        documentLabel: 'Unit / house plans',
+        isRequired: false,
+        transactionType: 'all',
+        participantType: 'supporting',
+        readinessRole: 'supporting',
+        blocksPayout: false,
+        publiclyShareable: true,
+        programmeSpecific: false,
+      },
+      {
+        documentCode: 'custom',
+        documentLabel: 'Site map',
+        isRequired: false,
+        transactionType: 'all',
+        participantType: 'supporting',
+        readinessRole: 'supporting',
+        blocksPayout: false,
+        publiclyShareable: true,
+        programmeSpecific: false,
+      },
+      {
+        documentCode: 'custom',
+        documentLabel: 'Specifications',
+        isRequired: false,
+        transactionType: 'all',
+        participantType: 'supporting',
+        readinessRole: 'supporting',
+        blocksPayout: false,
+        publiclyShareable: true,
+        programmeSpecific: false,
+      },
+      {
+        documentCode: 'transfer_documents',
+        documentLabel: 'Transfer and costs guide',
+        isRequired: false,
+        transactionType: 'sale',
+        participantType: 'supporting',
+        readinessRole: 'supporting',
+        blocksPayout: false,
+        publiclyShareable: true,
+        programmeSpecific: false,
+      },
     ],
   },
 ];
@@ -326,6 +537,77 @@ function joinLines(value: unknown) {
         .filter(Boolean)
         .join('\n')
     : '';
+}
+
+function getDefaultDocumentSemantics(
+  category: RequiredDocumentDraft['category'] = 'client_required_document',
+): Pick<
+  RequiredDocumentDraft,
+  | 'transactionType'
+  | 'participantType'
+  | 'readinessRole'
+  | 'requiredForStage'
+  | 'blocksPayout'
+  | 'reviewOwner'
+  | 'publiclyShareable'
+  | 'programmeSpecific'
+> {
+  if (category === 'developer_document') {
+    return {
+      transactionType: 'all',
+      participantType: 'developer',
+      readinessRole: 'supporting',
+      requiredForStage: null,
+      blocksPayout: false,
+      reviewOwner: 'manager',
+      publiclyShareable: false,
+      programmeSpecific: true,
+    };
+  }
+
+  return {
+    transactionType: 'all',
+    participantType: 'supporting',
+    readinessRole: 'supporting',
+    requiredForStage: null,
+    blocksPayout: false,
+    reviewOwner: 'manager',
+    publiclyShareable: false,
+    programmeSpecific: true,
+  };
+}
+
+function normalizeDocumentDraft(document: Partial<RequiredDocumentDraft>): RequiredDocumentDraft {
+  const category =
+    document.category === 'developer_document' ? 'developer_document' : 'client_required_document';
+  const defaults = getDefaultDocumentSemantics(category);
+
+  return {
+    ...defaults,
+    category,
+    id: document.id,
+    transactionType: document.transactionType || defaults.transactionType,
+    participantType: document.participantType || defaults.participantType,
+    readinessRole: document.readinessRole || defaults.readinessRole,
+    requiredForStage:
+      typeof document.requiredForStage === 'string' && document.requiredForStage.trim()
+        ? document.requiredForStage.trim()
+        : null,
+    blocksPayout: Boolean(document.blocksPayout),
+    reviewOwner: document.reviewOwner || defaults.reviewOwner,
+    publiclyShareable: Boolean(document.publiclyShareable),
+    programmeSpecific:
+      typeof document.programmeSpecific === 'boolean'
+        ? document.programmeSpecific
+        : defaults.programmeSpecific,
+    documentCode: (document.documentCode || 'custom') as RequiredDocumentDraft['documentCode'],
+    documentLabel: String(document.documentLabel || ''),
+    templateFileUrl: document.templateFileUrl || null,
+    templateFileName: document.templateFileName || null,
+    isRequired: Boolean(document.isRequired),
+    isActive: typeof document.isActive === 'boolean' ? document.isActive : true,
+    sortOrder: Number(document.sortOrder || 0),
+  };
 }
 
 function getEmptyBrochureConfig(): BrochureConfigDraft {
@@ -541,9 +823,10 @@ function DevelopmentProgramConfigPanel({
       preset.primaryManagerUserId ? String(preset.primaryManagerUserId) : '',
     );
     setDocuments(
-      (preset.documents || []).map(document => ({
-        ...document,
+      (preset.documents || []).map((document, index) => ({
+        ...normalizeDocumentDraft(document),
         id: undefined,
+        sortOrder: index,
       })),
     );
   }, []);
@@ -588,13 +871,18 @@ function DevelopmentProgramConfigPanel({
     const list = (docsQuery.data || [])
       .filter((document: any) => document.isActive)
       .sort((a: any, b: any) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
-      .map((document: any) => ({
+      .map((document: any) => normalizeDocumentDraft({
         id: Number(document.id),
-        category: (
-          document.category === 'developer_document'
-            ? 'developer_document'
-            : 'client_required_document'
-        ) as RequiredDocumentDraft['category'],
+        category: document.category,
+        transactionType: document.transactionType,
+        participantType: document.participantType,
+        readinessRole: document.readinessRole,
+        requiredForStage: document.requiredForStage,
+        blocksPayout: Boolean(document.blocksPayout),
+        reviewOwner: document.reviewOwner,
+        publiclyShareable: Boolean(document.publiclyShareable),
+        programmeSpecific:
+          typeof document.programmeSpecific === 'boolean' ? document.programmeSpecific : true,
         documentCode: document.documentCode as RequiredDocumentDraft['documentCode'],
         documentLabel: String(document.documentLabel || ''),
         templateFileUrl: String(document.templateFileUrl || '') || null,
@@ -670,6 +958,7 @@ function DevelopmentProgramConfigPanel({
     setDocuments(current => [
       ...current,
       {
+        ...getDefaultDocumentSemantics(category),
         category,
         documentCode: 'custom',
         documentLabel: '',
@@ -686,6 +975,7 @@ function DevelopmentProgramConfigPanel({
     setDocuments(current => [
       ...current,
       {
+        ...getDefaultDocumentSemantics('developer_document'),
         category: 'developer_document',
         documentCode: 'custom',
         documentLabel: label,
@@ -705,6 +995,7 @@ function DevelopmentProgramConfigPanel({
     setDocuments(current => {
       const retained = current.filter(document => document.category !== pack.category);
       const nextPackDocuments = pack.documents.map((document, index) => ({
+        ...getDefaultDocumentSemantics(pack.category),
         id: undefined,
         category: pack.category,
         documentCode: document.documentCode,
@@ -714,6 +1005,12 @@ function DevelopmentProgramConfigPanel({
         isRequired: document.isRequired,
         isActive: true,
         sortOrder: retained.length + index,
+        transactionType: document.transactionType,
+        participantType: document.participantType,
+        readinessRole: document.readinessRole,
+        blocksPayout: document.blocksPayout,
+        publiclyShareable: document.publiclyShareable,
+        programmeSpecific: document.programmeSpecific,
       }));
 
       return [...retained, ...nextPackDocuments].map((document, index) => ({
@@ -1012,6 +1309,165 @@ function DevelopmentProgramConfigPanel({
                   </div>
                 </div>
               ) : null}
+              <div className="mt-2 rounded border border-slate-200 bg-slate-50 p-2">
+                <div className="grid gap-2 md:grid-cols-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                      Transaction lane
+                    </label>
+                    <Select
+                      value={document.transactionType}
+                      onValueChange={value =>
+                        updateDocumentAtIndex(index, item => ({
+                          ...item,
+                          transactionType: value as RequiredDocumentDraft['transactionType'],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {transactionTypeOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                      Participant
+                    </label>
+                    <Select
+                      value={document.participantType}
+                      onValueChange={value =>
+                        updateDocumentAtIndex(index, item => ({
+                          ...item,
+                          participantType: value as RequiredDocumentDraft['participantType'],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {participantTypeOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                      Readiness role
+                    </label>
+                    <Select
+                      value={document.readinessRole}
+                      onValueChange={value =>
+                        updateDocumentAtIndex(index, item => ({
+                          ...item,
+                          readinessRole: value as RequiredDocumentDraft['readinessRole'],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {readinessRoleOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                      Review owner
+                    </label>
+                    <Select
+                      value={document.reviewOwner}
+                      onValueChange={value =>
+                        updateDocumentAtIndex(index, item => ({
+                          ...item,
+                          reviewOwner: value as RequiredDocumentDraft['reviewOwner'],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {reviewOwnerOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="mt-2 grid gap-2 md:grid-cols-[minmax(180px,1fr)_auto_auto_auto]">
+                  <Input
+                    value={document.requiredForStage || ''}
+                    onChange={event =>
+                      updateDocumentAtIndex(index, item => ({
+                        ...item,
+                        requiredForStage: event.target.value,
+                      }))
+                    }
+                    placeholder="Required stage"
+                  />
+
+                  <div className="flex items-center gap-2 rounded border bg-white px-2 text-xs">
+                    <span>Blocks payout</span>
+                    <Switch
+                      checked={document.blocksPayout}
+                      onCheckedChange={checked =>
+                        updateDocumentAtIndex(index, item => ({
+                          ...item,
+                          blocksPayout: checked,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 rounded border bg-white px-2 text-xs">
+                    <span>Public</span>
+                    <Switch
+                      checked={document.publiclyShareable}
+                      onCheckedChange={checked =>
+                        updateDocumentAtIndex(index, item => ({
+                          ...item,
+                          publiclyShareable: checked,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 rounded border bg-white px-2 text-xs">
+                    <span>Programme-specific</span>
+                    <Switch
+                      checked={document.programmeSpecific}
+                      onCheckedChange={checked =>
+                        updateDocumentAtIndex(index, item => ({
+                          ...item,
+                          programmeSpecific: checked,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
 
@@ -1061,6 +1517,14 @@ function DevelopmentProgramConfigPanel({
       documents: documents.map((document, index) => ({
         id: preserveIds ? document.id : undefined,
         category: document.category,
+        transactionType: document.transactionType,
+        participantType: document.participantType,
+        readinessRole: document.readinessRole,
+        requiredForStage: document.requiredForStage?.trim() || null,
+        blocksPayout: document.blocksPayout,
+        reviewOwner: document.reviewOwner,
+        publiclyShareable: document.publiclyShareable,
+        programmeSpecific: document.programmeSpecific,
         documentCode: document.documentCode,
         documentLabel: resolveDocumentLabel(document),
         templateFileUrl:
@@ -1098,6 +1562,14 @@ function DevelopmentProgramConfigPanel({
       primaryManagerUserId: primaryManagerUserId ? Number(primaryManagerUserId) : null,
       documents: documents.map((document, index) => ({
         category: document.category,
+        transactionType: document.transactionType,
+        participantType: document.participantType,
+        readinessRole: document.readinessRole,
+        requiredForStage: document.requiredForStage?.trim() || null,
+        blocksPayout: document.blocksPayout,
+        reviewOwner: document.reviewOwner,
+        publiclyShareable: document.publiclyShareable,
+        programmeSpecific: document.programmeSpecific,
         documentCode: document.documentCode,
         documentLabel: resolveDocumentLabel(document),
         templateFileUrl:

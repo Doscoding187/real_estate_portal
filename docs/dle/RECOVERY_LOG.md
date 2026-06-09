@@ -4873,3 +4873,50 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): show admin programme semantics`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-09 - Admin Required Document Semantics Controls
+
+Date: 2026-06-09
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make persisted required-document transaction semantics visible and configurable in the admin
+partner-development onboarding drawer without enabling payout, stage, document-verification, or
+reward automation.
+Files changed:
+- client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx
+- client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.test.tsx
+- docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.test.tsx`
+  passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Each admin required-document row now exposes controls for:
+  transaction lane, participant type, readiness role, review owner, required stage, payout
+  blocking, public shareability, and programme specificity.
+- Existing server-provided metadata is hydrated into the drawer and preserved on save.
+- Document starter packs now seed explicit Sale/buyer/developer/supporting semantics where the
+  commercial meaning is known.
+- Brand presets and copy-to-other-development flows preserve the metadata instead of dropping it.
+- Focused component tests prove metadata readback/save preservation and starter-pack semantics in
+  the outbound `setDevelopmentRequiredDocuments` payload.
+Guardrails:
+- No server route, schema, migration, payout calculation, commission status, stage transition,
+  document verification, lead, inventory, operating-event, or reward-readiness mutation was added.
+- `blocksPayout` remains authoring/readback metadata only.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Manual review actions for Rental lease readiness and Auction bidder readiness are still not
+  implemented.
+- The authoring controls are functional but dense; future UX polish should make lane-specific
+  presets clearer before calling the distribution setup experience complete.
+Next recommended slice:
+- Design and implement explicit manual review actions/read models for Rental lease readiness and
+  Auction bidder readiness, keeping stage and payout automation disabled until review and payout
+  rules are proven.
+Commit hash/tag: This entry will be included in
+`feat(dle): configure document semantics in admin`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

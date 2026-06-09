@@ -423,6 +423,10 @@ Recommended next architecture work:
   explicit fields and keeps legacy label/code inference only as a fallback. The fields are still
   readback infrastructure: they do not move distribution stages, verify documents, or mark rewards
   ready.
+- The admin partner-development onboarding drawer now exposes those template semantics on each
+  required-document row and preserves them through save, starter-pack, brand-preset, and
+  copy-to-other-development flows. This makes the Rental/Auction readiness contract configurable
+  by admins without enabling payout or stage automation.
 - Super-admin deal pipeline and reward-entry rows now receive the same computed programme
   semantics read model. Admin rows show missing readiness roles and wrong-lane template warnings
   as review context only, while payout and stage mutations remain governed by existing admin

@@ -9,9 +9,11 @@ const {
   mockGetProgramReadinessUseQuery,
   mockSetProgramReferralEnabledUseMutation,
   mockGetDevelopmentRequiredDocumentsUseQuery,
+  mockGetDevelopmentAccessUseQuery,
   mockUpsertProgramUseMutation,
   mockAssignManagerUseMutation,
   mockSetDevelopmentRequiredDocumentsUseMutation,
+  mockSetDevelopmentBrochureConfigUseMutation,
   mockOnboardDevelopmentToPartnerNetworkUseMutation,
   mockGetBrandOnboardingPresetUseQuery,
   mockSetBrandOnboardingPresetUseMutation,
@@ -19,14 +21,17 @@ const {
   mockUseUtils,
   mockInvalidateReadiness,
   mockInvalidateDocs,
+  mockInvalidateAccess,
   mockInvalidateBrandPreset,
 } = vi.hoisted(() => ({
   mockGetProgramReadinessUseQuery: vi.fn(),
   mockSetProgramReferralEnabledUseMutation: vi.fn(),
   mockGetDevelopmentRequiredDocumentsUseQuery: vi.fn(),
+  mockGetDevelopmentAccessUseQuery: vi.fn(),
   mockUpsertProgramUseMutation: vi.fn(),
   mockAssignManagerUseMutation: vi.fn(),
   mockSetDevelopmentRequiredDocumentsUseMutation: vi.fn(),
+  mockSetDevelopmentBrochureConfigUseMutation: vi.fn(),
   mockOnboardDevelopmentToPartnerNetworkUseMutation: vi.fn(),
   mockGetBrandOnboardingPresetUseQuery: vi.fn(),
   mockSetBrandOnboardingPresetUseMutation: vi.fn(),
@@ -34,6 +39,7 @@ const {
   mockUseUtils: vi.fn(),
   mockInvalidateReadiness: vi.fn(),
   mockInvalidateDocs: vi.fn(),
+  mockInvalidateAccess: vi.fn(),
   mockInvalidateBrandPreset: vi.fn(),
 }));
 
@@ -51,6 +57,9 @@ vi.mock('@/lib/trpc', () => ({
         getDevelopmentRequiredDocuments: {
           useQuery: (input: unknown) => mockGetDevelopmentRequiredDocumentsUseQuery(input),
         },
+        getDevelopmentAccess: {
+          useQuery: (input: unknown) => mockGetDevelopmentAccessUseQuery(input),
+        },
         getBrandOnboardingPreset: {
           useQuery: (input: unknown) => mockGetBrandOnboardingPresetUseQuery(input),
         },
@@ -65,6 +74,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         setDevelopmentRequiredDocuments: {
           useMutation: () => mockSetDevelopmentRequiredDocumentsUseMutation(),
+        },
+        setDevelopmentBrochureConfig: {
+          useMutation: () => mockSetDevelopmentBrochureConfigUseMutation(),
         },
         setBrandOnboardingPreset: {
           useMutation: () => mockSetBrandOnboardingPresetUseMutation(),
@@ -115,6 +127,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
           getDevelopmentRequiredDocuments: {
             invalidate: mockInvalidateDocs.mockResolvedValue(undefined),
           },
+          getDevelopmentAccess: {
+            invalidate: mockInvalidateAccess.mockResolvedValue(undefined),
+          },
           getBrandOnboardingPreset: {
             invalidate: mockInvalidateBrandPreset.mockResolvedValue(undefined),
           },
@@ -129,6 +144,11 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     });
     mockGetDevelopmentRequiredDocumentsUseQuery.mockReturnValue({
       data: [],
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    mockGetDevelopmentAccessUseQuery.mockReturnValue({
+      data: { entity: { brochureConfigJson: null } },
       isLoading: false,
       refetch: vi.fn().mockResolvedValue(undefined),
     });
@@ -149,6 +169,10 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       isPending: false,
     });
     mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ success: true }),
+      isPending: false,
+    });
+    mockSetDevelopmentBrochureConfigUseMutation.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ success: true }),
       isPending: false,
     });
@@ -240,6 +264,92 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByDisplayValue('Bank Statements')).toBeInTheDocument();
   });
 
+  it('preserves explicit document semantics when saving existing checklists', async () => {
+    const docsMutateAsync = vi.fn().mockResolvedValue({ success: true });
+    mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: docsMutateAsync,
+      isPending: false,
+    });
+    mockGetDevelopmentRequiredDocumentsUseQuery.mockReturnValue({
+      data: [
+        {
+          id: 8,
+          developmentId: 1001,
+          category: 'client_required_document',
+          transactionType: 'rent',
+          participantType: 'renter',
+          readinessRole: 'lease',
+          requiredForStage: 'lease_signed',
+          blocksPayout: true,
+          reviewOwner: 'manager',
+          publiclyShareable: false,
+          programmeSpecific: true,
+          documentCode: 'custom',
+          documentLabel: 'Signed Lease Agreement',
+          isRequired: true,
+          sortOrder: 0,
+          isActive: true,
+        },
+      ],
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByDisplayValue('Signed Lease Agreement')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('lease_signed')).toBeInTheDocument();
+    expect(screen.getByText('Rental')).toBeInTheDocument();
+    expect(screen.getByText('Renter')).toBeInTheDocument();
+    expect(screen.getByText('Lease')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Save setup'));
+
+    await waitFor(() =>
+      expect(docsMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1001,
+          documents: [
+            expect.objectContaining({
+              id: 8,
+              category: 'client_required_document',
+              transactionType: 'rent',
+              participantType: 'renter',
+              readinessRole: 'lease',
+              requiredForStage: 'lease_signed',
+              blocksPayout: true,
+              reviewOwner: 'manager',
+              publiclyShareable: false,
+              programmeSpecific: true,
+              documentLabel: 'Signed Lease Agreement',
+            }),
+          ],
+        }),
+      ),
+    );
+  });
+
   it('applies buyer starter packs to the required document checklist', async () => {
     const docsMutateAsync = vi.fn().mockResolvedValue({ success: true });
     mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
@@ -289,17 +399,26 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
               category: 'client_required_document',
               documentCode: 'proof_of_income',
               documentLabel: 'Latest payslip or proof of income',
+              transactionType: 'sale',
+              participantType: 'buyer',
+              readinessRole: 'qualification',
             }),
             expect.objectContaining({
               category: 'client_required_document',
               documentCode: 'bank_statement',
               documentLabel: '3 months bank statements',
+              transactionType: 'sale',
+              participantType: 'buyer',
+              readinessRole: 'qualification',
             }),
             expect.objectContaining({
               category: 'client_required_document',
               documentCode: 'pre_approval',
               documentLabel: 'Bond pre-approval',
               isRequired: true,
+              transactionType: 'sale',
+              participantType: 'buyer',
+              readinessRole: 'qualification',
             }),
           ]),
         }),

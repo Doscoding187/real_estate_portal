@@ -242,6 +242,15 @@ Explicit metadata is still read-only for automation: it may configure visible re
 missing-role warnings, and wrong-lane warnings, but it must not move stages or mark rewards ready
 without explicit programme terms, review rules, and payout triggers.
 
+Admin configuration:
+
+- The partner-development onboarding drawer is the first admin authoring surface for this
+  metadata.
+- Starter packs should seed transaction-specific defaults where the commercial meaning is clear.
+- Saving, brand presets, and applying a setup to other developments must preserve metadata.
+- The controls are authoring/readback only; they do not verify documents, advance stages, or
+  approve rewards.
+
 ## Payout Rule Requirements
 
 Before Rental/Auction payout readiness can be automated, programme terms must describe:
@@ -294,7 +303,8 @@ Recommended next code slices:
 
 Status:
 
-- Steps 1, 2, and the first manager/admin readback surfaces are implemented.
+- Steps 1, 2, first manager/admin readback surfaces, and first admin authoring controls are
+  implemented.
 - Step 4 remains the next meaningful operating-design layer.
 - Step 5 remains explicitly out of scope until manual review and payout rules are proven.
 
