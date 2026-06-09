@@ -64,3 +64,41 @@ export function getPartnerProgramTermsCopy(transactionType: unknown) {
     supportingPackSummaryLabel: 'buyer-ready',
   };
 }
+
+export function getPartnerProgramSemanticsCopy(transactionType: unknown) {
+  const lane = normalizePartnerProgramTermsTransactionType(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      heading: 'Rental programme semantics',
+      summary:
+        'Rental rewards stay under manager review until lease, deposit, and rental document rules are configured.',
+      readinessLabel: 'Lease readiness needed',
+      readinessItems: ['Lease signed', 'Deposit received', 'Rental documents verified'],
+      guardrail:
+        'A let outcome can support review, but it does not prove reward readiness by itself.',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      heading: 'Auction programme semantics',
+      summary:
+        'Auction rewards stay under manager review until bidder, auction-term, and outcome rules are configured.',
+      readinessLabel: 'Bidder readiness needed',
+      readinessItems: ['Bidder approved', 'Auction terms accepted', 'Winning bidder confirmed'],
+      guardrail:
+        'An auction sold outcome can support review, but it does not prove reward readiness by itself.',
+    };
+  }
+
+  return {
+    heading: 'Sale programme semantics',
+    summary:
+      'Sale is the current baseline for configured programme rewards and payout milestones.',
+    readinessLabel: 'Sale readiness baseline',
+    readinessItems: ['Buyer documents', 'Configured sale milestone', 'Manager approval where required'],
+    guardrail:
+      'Reward readiness still follows the configured programme terms and distribution review.',
+  };
+}

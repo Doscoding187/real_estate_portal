@@ -3,7 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProgramRequirementsDialog } from './ProgramRequirementsDialog';
-import { getPartnerProgramTermsCopy } from './partnerProgramTermsCopy';
+import {
+  getPartnerProgramSemanticsCopy,
+  getPartnerProgramTermsCopy,
+} from './partnerProgramTermsCopy';
 
 export type ProgramTermsItem = {
   developmentId: number;
@@ -63,6 +66,7 @@ export function PartnerProgramTermsCard({
 }) {
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const termsCopy = getPartnerProgramTermsCopy(item.transactionType);
+  const semanticsCopy = getPartnerProgramSemanticsCopy(item.transactionType);
 
   const locationLabel = useMemo(
     () => [item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable',
@@ -113,6 +117,11 @@ export function PartnerProgramTermsCard({
                   }`
                 : 'No supporting files uploaded yet'}
             </p>
+          </div>
+          <div className="rounded border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold text-slate-600">{semanticsCopy.heading}</p>
+            <p className="mt-1 text-sm text-slate-700">{semanticsCopy.summary}</p>
+            <p className="mt-2 text-xs text-slate-500">{semanticsCopy.guardrail}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => setRequirementsOpen(true)}>

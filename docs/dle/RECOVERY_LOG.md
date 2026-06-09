@@ -4627,3 +4627,52 @@ Next recommended slice:
   status.
 Commit hash/tag: This entry will be included in `docs(dle): define programme semantics contract`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-09 - Read-Only Partner Programme Semantics Surface
+
+Date: 2026-06-09
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first read-only programme semantics surface so partner programme terms show
+Sale baseline, Rental lease/deposit readiness, and Auction bidder/outcome readiness without
+changing distribution stage or reward behavior.
+Files changed:
+- client/src/components/distribution/partner/partnerProgramTermsCopy.ts
+- client/src/components/distribution/partner/PartnerProgramTermsCard.tsx
+- client/src/components/distribution/partner/ProgramRequirementsDialog.tsx
+- client/src/components/distribution/partner/PartnerProgramTermsCard.test.tsx
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/partner/PartnerProgramTermsCard.test.tsx`
+  passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Partner programme cards now include a read-only programme semantics panel derived from the
+  development transaction type.
+- Requirements dialogs now show lane-specific readiness checkpoints:
+  - Sale: buyer documents, configured sale milestone, and manager approval where required.
+  - Rental: lease signed, deposit received, and rental documents verified.
+  - Auction: bidder approved, auction terms accepted, and winning bidder confirmed.
+- Rental copy states that a let outcome can support review but does not prove reward readiness by
+  itself.
+- Auction copy states that an auction sold outcome can support review but does not prove reward
+  readiness by itself.
+Guardrails:
+- No schema, migration, tRPC route, server read model, stage mutation, payout calculation,
+  commission status, deal mutation, lead, inventory, or operating-event changes.
+- This is a display/readiness guardrail only; configured distribution programme terms remain the
+  authority for rewards.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Rental/Auction document templates still do not carry formal lane/readiness-role metadata.
+- Rental/Auction payout/readiness automation remains intentionally unimplemented until programme
+  terms, document templates, manager review, and tests explicitly support it.
+Next recommended slice:
+- Add document-template lane/readiness metadata or a read model for required Rental/Auction
+  readiness roles, then show missing readiness in manager/admin review without changing payout
+  status.
+Commit hash/tag: This entry will be included in
+`feat(dle): surface programme semantics guardrails`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

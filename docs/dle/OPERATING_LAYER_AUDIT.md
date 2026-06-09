@@ -401,6 +401,11 @@ Recommended next architecture work:
   `docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md`. Future Rental/Auction document,
   readiness, stage, and reward automation must follow that contract instead of inferring rules
   from display labels.
+- The partner programme terms card and requirements dialog now surface read-only Sale, Rental, and
+  Auction programme semantics guardrails. Rental explicitly calls out lease/deposit/document
+  readiness before reward automation, and Auction explicitly calls out bidder/auction-term/outcome
+  readiness before reward automation, while leaving distribution-owned payout status and stage
+  mutations unchanged.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

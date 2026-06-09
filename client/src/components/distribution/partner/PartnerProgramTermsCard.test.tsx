@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { PartnerProgramTermsCard, type ProgramTermsItem } from './PartnerProgramTermsCard';
 import {
+  getPartnerProgramSemanticsCopy,
   getPartnerProgramTermsCopy,
   normalizePartnerProgramTermsTransactionType,
 } from './partnerProgramTermsCopy';
@@ -97,6 +98,16 @@ describe('PartnerProgramTermsCard', () => {
     );
   });
 
+  it('returns read-only programme semantics guardrails by transaction lane', () => {
+    expect(getPartnerProgramSemanticsCopy('sale').guardrail).toContain(
+      'configured programme terms',
+    );
+    expect(getPartnerProgramSemanticsCopy('for_rent').readinessItems).toContain('Lease signed');
+    expect(getPartnerProgramSemanticsCopy('on_auction').readinessItems).toContain(
+      'Winning bidder confirmed',
+    );
+  });
+
   it('renders commission, payout, and docs summary from computed server fields', () => {
     render(<PartnerProgramTermsCard item={itemFixture} />);
 
@@ -105,6 +116,7 @@ describe('PartnerProgramTermsCard', () => {
     expect(screen.getByText('Paid after transfer registration')).toBeInTheDocument();
     expect(screen.getByText('2 required documents')).toBeInTheDocument();
     expect(screen.getByText('2 buyer-ready files')).toBeInTheDocument();
+    expect(screen.getByText('Sale programme semantics')).toBeInTheDocument();
     expect(screen.getByText('Referrals Enabled')).toBeInTheDocument();
   });
 
@@ -151,6 +163,13 @@ describe('PartnerProgramTermsCard', () => {
         'These are the renter documents needed for qualification and programme progress.',
       ),
     ).toBeInTheDocument();
+    expect(within(dialog).getByText('Lease readiness needed')).toBeInTheDocument();
+    expect(within(dialog).getByText('Lease signed')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'A let outcome can support review, but it does not prove reward readiness by itself.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('labels auction programme requirements as bidder-ready', () => {
@@ -170,6 +189,13 @@ describe('PartnerProgramTermsCard', () => {
     expect(
       within(dialog).getByText(
         'These are the bidder documents needed for registration readiness and programme progress.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('Bidder readiness needed')).toBeInTheDocument();
+    expect(within(dialog).getByText('Winning bidder confirmed')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'An auction sold outcome can support review, but it does not prove reward readiness by itself.',
       ),
     ).toBeInTheDocument();
   });

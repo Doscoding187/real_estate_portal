@@ -7,7 +7,10 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getPartnerProgramTermsCopy } from './partnerProgramTermsCopy';
+import {
+  getPartnerProgramSemanticsCopy,
+  getPartnerProgramTermsCopy,
+} from './partnerProgramTermsCopy';
 
 type ProgramTermsItem = {
   developmentName: string;
@@ -51,6 +54,7 @@ export function ProgramRequirementsDialog({
     (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0),
   );
   const termsCopy = getPartnerProgramTermsCopy(item.transactionType);
+  const semanticsCopy = getPartnerProgramSemanticsCopy(item.transactionType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,6 +65,24 @@ export function ProgramRequirementsDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          <section>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{semanticsCopy.heading}</p>
+                  <p className="text-xs text-slate-500">{semanticsCopy.summary}</p>
+                </div>
+                <Badge variant="secondary">{semanticsCopy.readinessLabel}</Badge>
+              </div>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-600">
+                {semanticsCopy.readinessItems.map(item => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-slate-500">{semanticsCopy.guardrail}</p>
+            </div>
+          </section>
+
           <section>
             <div className="flex items-center justify-between gap-2">
               <div>
