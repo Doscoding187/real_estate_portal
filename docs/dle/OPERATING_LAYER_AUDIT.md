@@ -406,6 +406,11 @@ Recommended next architecture work:
   readiness before reward automation, and Auction explicitly calls out bidder/auction-term/outcome
   readiness before reward automation, while leaving distribution-owned payout status and stage
   mutations unchanged.
+- The manager deal checklist now has a read-only programme semantics panel. It shows Sale as the
+  current baseline, and shows Rental/Auction missing readiness metadata before automation:
+  Rental needs lease/deposit/document readiness roles, while Auction needs bidder/auction-term/
+  winning-bidder readiness roles. The panel is display-only and does not change document status,
+  stage movement, commission status, or payout readiness.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  getChecklistProgrammeSemanticsCopy,
   getChecklistTransactionCopy,
   ManagerDealChecklistPanel,
   normalizeChecklistTransactionLane,
@@ -76,6 +77,13 @@ describe('ManagerDealChecklistPanel', () => {
       participantLabel: 'Bidder',
       documentTitle: 'Bidder Document Checklist',
     });
+    expect(getChecklistProgrammeSemanticsCopy('for_rent')).toMatchObject({
+      heading: 'Rental programme semantics',
+      statusLabel: 'Readiness metadata not configured',
+    });
+    expect(getChecklistProgrammeSemanticsCopy('auction').requiredReadiness).toContain(
+      'Winning bidder confirmed',
+    );
   });
 
   it('renders checklist rows with pending statuses and blockers', () => {
@@ -91,6 +99,8 @@ describe('ManagerDealChecklistPanel', () => {
     expect(screen.getByText('Sale engine')).toBeInTheDocument();
     expect(screen.getByText('Buyer: Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('Payout Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Sale programme semantics')).toBeInTheDocument();
+    expect(screen.getByText('Current baseline')).toBeInTheDocument();
     expect(screen.getByText('Buyer Document Checklist')).toBeInTheDocument();
     expect(screen.getByText(/2 required documents still need verification\./i)).toBeInTheDocument();
     expect(screen.getAllByDisplayValue('pending').length).toBeGreaterThan(0);
@@ -173,6 +183,13 @@ describe('ManagerDealChecklistPanel', () => {
     expect(screen.getByText('Rental engine')).toBeInTheDocument();
     expect(screen.getByText('Rental applicant: Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('Referral Review Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Rental programme semantics')).toBeInTheDocument();
+    expect(screen.getByText('Readiness metadata not configured')).toBeInTheDocument();
+    expect(screen.getByText('Lease signed')).toBeInTheDocument();
+    expect(screen.getByText('Deposit received')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Document templates do not yet identify Rental readiness roles/i),
+    ).toBeInTheDocument();
     expect(screen.getByText('Rental Applicant Document Checklist')).toBeInTheDocument();
     expect(screen.getByText(/Lease, deposit, and rental commission rules/i)).toBeInTheDocument();
   });
@@ -189,6 +206,13 @@ describe('ManagerDealChecklistPanel', () => {
     expect(screen.getByText('Auction engine')).toBeInTheDocument();
     expect(screen.getByText('Bidder: Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('Bidder Review Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Auction programme semantics')).toBeInTheDocument();
+    expect(screen.getByText('Bidder approved')).toBeInTheDocument();
+    expect(screen.getByText('Auction terms accepted')).toBeInTheDocument();
+    expect(screen.getByText('Winning bidder confirmed')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Document templates do not yet identify Auction readiness roles/i),
+    ).toBeInTheDocument();
     expect(screen.getByText('Bidder Document Checklist')).toBeInTheDocument();
     expect(screen.getByText(/proof-of-funds, auction terms/i)).toBeInTheDocument();
   });

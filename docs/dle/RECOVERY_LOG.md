@@ -4676,3 +4676,47 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): surface programme semantics guardrails`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-09 - Manager Checklist Programme Semantics Readback
+
+Date: 2026-06-09
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Show managers the missing Rental/Auction document/readiness semantics before automation,
+without adding schema fields or changing document, stage, reward, or payout behavior.
+Files changed:
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx`
+  passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Manager deal checklist now includes a read-only programme semantics panel.
+- Sale shows as the current baseline for configured document verification and payout milestone
+  checks.
+- Rental shows missing readiness metadata and required readiness before automation:
+  lease signed, deposit received, and rental documents verified.
+- Auction shows missing readiness metadata and required readiness before automation:
+  bidder approved, auction terms accepted, and winning bidder confirmed.
+- The panel explicitly states Rental/Auction document templates do not yet identify the relevant
+  readiness roles and warns managers not to move/pay rewards from DLE outcomes alone.
+Guardrails:
+- No schema, migration, tRPC route, server read model, document mutation, stage mutation, payout
+  calculation, commission status, deal mutation, lead, inventory, or operating-event changes.
+- Existing document status controls and batch verification actions remain unchanged.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Formal document-template metadata still needs a dedicated schema/read-model slice.
+- Admin review surfaces still rely on existing deal/reward tables; the manager checklist now has
+  the clearest missing-readiness readback, but admin-specific readiness panels remain future work.
+Next recommended slice:
+- Design and add explicit document-template lane/readiness metadata or an equivalent read model,
+  with tests proving wrong-lane templates are ignored/rejected safely and payout status remains
+  unchanged until manager/admin review accepts readiness.
+Commit hash/tag: This entry will be included in
+`feat(dle): show manager programme semantics readiness`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

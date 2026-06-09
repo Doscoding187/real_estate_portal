@@ -118,6 +118,50 @@ export function getChecklistTransactionCopy(transactionType: unknown) {
   };
 }
 
+export function getChecklistProgrammeSemanticsCopy(transactionType: unknown) {
+  const lane = normalizeChecklistTransactionLane(transactionType);
+
+  if (lane === 'rent') {
+    return {
+      heading: 'Rental programme semantics',
+      statusLabel: 'Readiness metadata not configured',
+      description:
+        'This checklist can verify renter documents, but Rental reward automation still needs explicit lease, deposit, and payout rules.',
+      requiredReadiness: ['Lease signed', 'Deposit received', 'Rental documents verified'],
+      missingMetadata:
+        'Document templates do not yet identify Rental readiness roles such as lease, deposit, or payout blocking.',
+      guardrail:
+        'Do not move or pay a Rental reward from a let outcome until those programme rules are configured and reviewed.',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      heading: 'Auction programme semantics',
+      statusLabel: 'Readiness metadata not configured',
+      description:
+        'This checklist can verify bidder documents, but Auction reward automation still needs explicit bidder, auction-term, and outcome rules.',
+      requiredReadiness: ['Bidder approved', 'Auction terms accepted', 'Winning bidder confirmed'],
+      missingMetadata:
+        'Document templates do not yet identify Auction readiness roles such as registration, proof of funds, legal pack, or payout blocking.',
+      guardrail:
+        'Do not move or pay an Auction reward from an auction outcome until those programme rules are configured and reviewed.',
+    };
+  }
+
+  return {
+    heading: 'Sale programme semantics',
+    statusLabel: 'Current baseline',
+    description:
+      'Sale remains the current baseline for configured document verification and payout milestone checks.',
+    requiredReadiness: ['Buyer documents verified', 'Configured sale milestone satisfied'],
+    missingMetadata:
+      'Template lane/readiness metadata is still future work, but existing Sale milestones are broadly coherent.',
+    guardrail:
+      'Reward readiness still follows the configured programme terms and manager review.',
+  };
+}
+
 export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
@@ -143,6 +187,7 @@ export function ManagerDealChecklistPanel({
   const [fileUrlByTemplateId, setFileUrlByTemplateId] = useState<Record<number, string>>({});
   const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
   const transactionCopy = getChecklistTransactionCopy(checklist.transactionType);
+  const semanticsCopy = getChecklistProgrammeSemanticsCopy(checklist.transactionType);
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -224,6 +269,28 @@ export function ManagerDealChecklistPanel({
           <p className="text-xs text-slate-500">
             {transactionCopy.readinessNote}
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardDescription>{semanticsCopy.statusLabel}</CardDescription>
+          <CardTitle className="text-base">{semanticsCopy.heading}</CardTitle>
+          <CardDescription>{semanticsCopy.description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Required readiness before automation</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+              {semanticsCopy.requiredReadiness.map(item => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+            {semanticsCopy.missingMetadata}
+          </p>
+          <p className="text-xs text-slate-500">{semanticsCopy.guardrail}</p>
         </CardContent>
       </Card>
 
