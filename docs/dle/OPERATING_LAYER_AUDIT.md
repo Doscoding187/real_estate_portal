@@ -417,6 +417,10 @@ Recommended next architecture work:
   existing required-document templates. It is an equivalent read model, not a schema migration, and
   it always keeps automation disabled until explicit programme terms, document review rules, and
   payout triggers exist.
+- Super-admin deal pipeline and reward-entry rows now receive the same computed programme
+  semantics read model. Admin rows show missing readiness roles and wrong-lane template warnings
+  as review context only, while payout and stage mutations remain governed by existing admin
+  override rules and explicit justification requirements.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

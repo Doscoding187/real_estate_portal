@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getAdminDistributionReferralCopy,
+  getAdminProgrammeSemanticsNotice,
   normalizeAdminDistributionTransactionLane,
 } from './DistributionNetworkPage';
 
@@ -45,5 +46,41 @@ describe('admin distribution transaction lane copy', () => {
       rewardLabel: 'Commission',
       rewardStatusLabel: 'Commission status',
     });
+  });
+
+  it('summarizes missing programme semantics without claiming automation is active', () => {
+    expect(
+      getAdminProgrammeSemanticsNotice({
+        missingRoles: ['lease', 'payout'],
+        wrongLaneWarnings: [],
+        automationAllowed: false,
+      }),
+    ).toBe('Missing readiness: Lease, Payout Reward automation remains disabled.');
+  });
+
+  it('summarizes wrong-lane template warnings for admin review', () => {
+    expect(
+      getAdminProgrammeSemanticsNotice({
+        missingRoles: ['auction_terms'],
+        wrongLaneWarnings: [
+          'Sale Agreement looks like a payout document for another transaction lane.',
+        ],
+        automationAllowed: false,
+      }),
+    ).toBe(
+      'Missing readiness: Auction Terms Wrong-lane templates: Sale Agreement looks like a payout document for another transaction lane. Reward automation remains disabled.',
+    );
+  });
+
+  it('still returns read-only automation copy when roles are complete', () => {
+    expect(
+      getAdminProgrammeSemanticsNotice({
+        missingRoles: [],
+        wrongLaneWarnings: [],
+        automationAllowed: false,
+      }),
+    ).toBe(
+      'Programme semantics are read-only; reward automation remains disabled until explicit review rules exist.',
+    );
   });
 });

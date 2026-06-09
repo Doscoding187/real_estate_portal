@@ -84,6 +84,42 @@ export function getAdminDistributionReferralCopy(value: unknown) {
   };
 }
 
+function formatProgrammeRole(role: unknown) {
+  return String(role || '')
+    .split('_')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+export function getAdminProgrammeSemanticsNotice(programmeSemantics: any) {
+  if (!programmeSemantics) return null;
+
+  const missingRoles = Array.isArray(programmeSemantics.missingRoles)
+    ? programmeSemantics.missingRoles
+    : [];
+  const wrongLaneWarnings = Array.isArray(programmeSemantics.wrongLaneWarnings)
+    ? programmeSemantics.wrongLaneWarnings
+    : [];
+
+  if (!missingRoles.length && !wrongLaneWarnings.length) {
+    return programmeSemantics.automationAllowed === false
+      ? 'Programme semantics are read-only; reward automation remains disabled until explicit review rules exist.'
+      : null;
+  }
+
+  const parts: string[] = [];
+  if (missingRoles.length) {
+    parts.push(`Missing readiness: ${missingRoles.map(formatProgrammeRole).join(', ')}`);
+  }
+  if (wrongLaneWarnings.length) {
+    parts.push(`Wrong-lane templates: ${wrongLaneWarnings.join(' ')}`);
+  }
+  parts.push('Reward automation remains disabled.');
+
+  return parts.join(' ');
+}
+
 function openInviteShareWindow(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
@@ -1171,6 +1207,7 @@ export default function DistributionNetworkPage() {
             <div className="space-y-2">
               {(dealsQuery.data || []).slice(0, 30).map((deal: any) => {
                 const copy = getAdminDistributionReferralCopy(deal.transactionType);
+                const programmeNotice = getAdminProgrammeSemanticsNotice(deal.programmeSemantics);
                 return (
                   <div key={deal.id} className="rounded border p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1183,6 +1220,11 @@ export default function DistributionNetworkPage() {
                       {copy.participantLabel}: {deal.buyerName || copy.unknownParticipant} | Stage:{' '}
                       {deal.currentStage} | {copy.rewardStatusLabel}: {deal.commissionStatus}
                     </p>
+                    {programmeNotice ? (
+                      <p className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                        {programmeNotice}
+                      </p>
+                    ) : null}
                   </div>
                 );
               })}
@@ -1200,6 +1242,7 @@ export default function DistributionNetworkPage() {
           <CardContent className="space-y-2">
             {(commissionQuery.data || []).slice(0, 40).map((entry: any) => {
               const copy = getAdminDistributionReferralCopy(entry.transactionType);
+              const programmeNotice = getAdminProgrammeSemanticsNotice(entry.programmeSemantics);
               return (
                 <div key={entry.id} className="rounded border p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1215,6 +1258,11 @@ export default function DistributionNetworkPage() {
                     {copy.participantLabel}: {entry.buyerName || copy.unknownParticipant} |{' '}
                     {copy.amountLabel}: {formatMoney(Number(entry.commissionAmount || 0))}
                   </p>
+                  {programmeNotice ? (
+                    <p className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                      {programmeNotice}
+                    </p>
+                  ) : null}
                 </div>
               );
             })}

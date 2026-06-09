@@ -4773,3 +4773,47 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): derive programme readiness roles`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-09 - Admin Programme Semantics Readback
+
+Date: 2026-06-09
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Surface the programme-semantics read model in super-admin deal and reward review rows
+without changing payout, stage, commission, document, or operating behavior.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/admin/DistributionNetworkPage.tsx
+- client/src/pages/admin/DistributionNetworkPage.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/admin/DistributionNetworkPage.test.ts` passed.
+- `pnpm vitest run server/services/__tests__/distributionProgrammeSemanticsService.test.ts`
+  passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Super-admin `listDeals` rows now include `programmeSemantics` derived from existing required
+  document templates.
+- Super-admin `listCommissionEntries` rows now include the same read model.
+- Admin deal-pipeline rows and reward-entry rows show a compact read-only notice for:
+  - missing readiness roles;
+  - wrong-lane template warnings;
+  - automation-disabled state.
+- Admin helper tests prove the notice keeps reward automation disabled in the visible copy.
+Guardrails:
+- No schema, migration, route path, document mutation, stage mutation, payout calculation,
+  commission status, deal mutation, lead, inventory, or operating-event changes.
+- Admin status override behavior and justification requirements are unchanged.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The read model still infers roles from existing document category/code/label data.
+- Formal document-template columns and migration rules remain future work.
+Next recommended slice:
+- Design the formal schema/migration for document-template lane/readiness metadata, including
+  backwards-compatible defaults and tests for wrong-lane rejection/ignore behavior before any
+  payout or stage automation is considered.
+Commit hash/tag: This entry will be included in
+`feat(dle): show admin programme semantics`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

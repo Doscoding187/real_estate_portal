@@ -93,6 +93,7 @@ import {
   isMissingRequiredDocumentsSchemaError,
   listDevelopmentRequiredDocumentsOrEmpty,
 } from './services/distributionRequiredDocumentsService';
+import { buildDistributionProgrammeSemanticsReadModel } from './services/distributionProgrammeSemanticsService';
 import {
   brandOnboardingPresetSchema,
   getBrandOnboardingPreset,
@@ -1714,13 +1715,53 @@ async function listDeals(input: z.infer<typeof listDealsInput>) {
     db,
     rows.map(row => Number(row.agentId)),
   );
+  const programmeSemanticsByDevelopmentId = await getProgrammeSemanticsByDevelopmentId(
+    db,
+    rows.map(row => ({
+      developmentId: Number(row.developmentId),
+      transactionType: row.transactionType,
+    })),
+  );
 
   return rows.map(row => ({
     ...row,
     agentDisplayName:
       userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
     documentsComplete: hasCompleteDocuments(referralSnapshotsByDeal.get(Number(row.id)) || null),
+    programmeSemantics: programmeSemanticsByDevelopmentId.get(Number(row.developmentId)) || null,
   }));
+}
+
+async function getProgrammeSemanticsByDevelopmentId(
+  db: any,
+  rows: Array<{ developmentId: number; transactionType: unknown }>,
+) {
+  const uniqueRows = new Map<number, unknown>();
+  for (const row of rows) {
+    if (Number.isFinite(row.developmentId) && row.developmentId > 0) {
+      uniqueRows.set(row.developmentId, row.transactionType);
+    }
+  }
+
+  const result = new Map<number, ReturnType<typeof buildDistributionProgrammeSemanticsReadModel>>();
+  for (const [developmentId, transactionType] of uniqueRows.entries()) {
+    const documents = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
+    result.set(
+      developmentId,
+      buildDistributionProgrammeSemanticsReadModel({
+        transactionType,
+        documents: documents.map(document => ({
+          templateId: Number(document.id),
+          documentCode: document.documentCode,
+          documentLabel: document.documentLabel,
+          category: document.category,
+          isRequired: document.isRequired,
+        })),
+      }),
+    );
+  }
+
+  return result;
 }
 
 async function getDealById(db: any, dealId: number) {
@@ -4564,12 +4605,20 @@ const adminDistributionRouter = router({
         db,
         rows.map(row => Number(row.agentId)),
       );
+      const programmeSemanticsByDevelopmentId = await getProgrammeSemanticsByDevelopmentId(
+        db,
+        rows.map(row => ({
+          developmentId: Number(row.developmentId),
+          transactionType: row.transactionType,
+        })),
+      );
 
       return rows.map(row => ({
         ...row,
         agentDisplayName:
           userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
         agentEmail: userDirectory.get(Number(row.agentId))?.email || null,
+        programmeSemantics: programmeSemanticsByDevelopmentId.get(Number(row.developmentId)) || null,
       }));
     }),
 
