@@ -48,6 +48,23 @@ type DealChecklist = {
     allRequiredVerified: boolean;
     payoutReady: boolean;
     blockers: string[];
+    programmeSemantics?: {
+      transactionLane: 'sale' | 'rent' | 'auction';
+      expectedRoles: string[];
+      configuredRoles: string[];
+      missingRoles: string[];
+      wrongLaneWarnings: string[];
+      documentRoles: Array<{
+        templateId: number;
+        documentLabel: string;
+        documentCode: string;
+        readinessRole: string;
+        appliesToLane: boolean;
+        blocksPayoutAutomation: boolean;
+      }>;
+      automationAllowed: false;
+      automationBlockedReason: string;
+    };
   };
 };
 
@@ -66,6 +83,14 @@ function formatCommission(checklist: DealChecklist) {
 function formatActor(actor: { userId: number; name?: string } | null) {
   if (!actor) return 'Unassigned';
   return actor.name || `User #${actor.userId}`;
+}
+
+function formatReadinessRole(role: string) {
+  return role
+    .split('_')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 type ChecklistTransactionLane = 'sale' | 'rent' | 'auction';
@@ -188,6 +213,9 @@ export function ManagerDealChecklistPanel({
   const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
   const transactionCopy = getChecklistTransactionCopy(checklist.transactionType);
   const semanticsCopy = getChecklistProgrammeSemanticsCopy(checklist.transactionType);
+  const semanticsReadModel = checklist.computed.programmeSemantics;
+  const missingReadinessRoles = semanticsReadModel?.missingRoles || [];
+  const configuredReadinessRoles = semanticsReadModel?.configuredRoles || [];
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -282,13 +310,43 @@ export function ManagerDealChecklistPanel({
           <div>
             <p className="text-xs font-semibold text-slate-500">Required readiness before automation</p>
             <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-              {semanticsCopy.requiredReadiness.map(item => (
-                <li key={item}>{item}</li>
+              {(semanticsReadModel?.expectedRoles || semanticsCopy.requiredReadiness).map(item => (
+                <li key={item}>{formatReadinessRole(item)}</li>
               ))}
             </ul>
           </div>
+          {configuredReadinessRoles.length ? (
+            <div>
+              <p className="text-xs font-semibold text-slate-500">Configured from current templates</p>
+              <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                {configuredReadinessRoles.map(item => (
+                  <li key={item}>{formatReadinessRole(item)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {missingReadinessRoles.length ? (
+            <div>
+              <p className="text-xs font-semibold text-slate-500">Missing readiness metadata</p>
+              <ul className="mt-1 list-disc space-y-1 pl-4 text-amber-800">
+                {missingReadinessRoles.map(item => (
+                  <li key={item}>{formatReadinessRole(item)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {semanticsReadModel?.wrongLaneWarnings.length ? (
+            <div>
+              <p className="text-xs font-semibold text-slate-500">Wrong-lane template warnings</p>
+              <ul className="mt-1 list-disc space-y-1 pl-4 text-amber-800">
+                {semanticsReadModel.wrongLaneWarnings.map(item => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-            {semanticsCopy.missingMetadata}
+            {semanticsReadModel?.automationBlockedReason || semanticsCopy.missingMetadata}
           </p>
           <p className="text-xs text-slate-500">{semanticsCopy.guardrail}</p>
         </CardContent>

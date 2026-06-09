@@ -194,6 +194,58 @@ describe('ManagerDealChecklistPanel', () => {
     expect(screen.getByText(/Lease, deposit, and rental commission rules/i)).toBeInTheDocument();
   });
 
+  it('surfaces configured, missing, and wrong-lane readiness roles from the read model', () => {
+    render(
+      <ManagerDealChecklistPanel
+        checklist={
+          {
+            ...checklistFixture,
+            transactionType: 'for_rent',
+            computed: {
+              ...checklistFixture.computed,
+              programmeSemantics: {
+                transactionLane: 'rent',
+                expectedRoles: ['submission', 'qualification', 'lease', 'payout'],
+                configuredRoles: ['submission', 'qualification'],
+                missingRoles: ['lease', 'payout'],
+                wrongLaneWarnings: [
+                  'Sale Agreement looks like a payout document for another transaction lane.',
+                ],
+                documentRoles: [
+                  {
+                    templateId: 1001,
+                    documentLabel: 'ID Document',
+                    documentCode: 'id_document',
+                    readinessRole: 'submission',
+                    appliesToLane: true,
+                    blocksPayoutAutomation: false,
+                  },
+                ],
+                automationAllowed: false,
+                automationBlockedReason:
+                  'Readiness metadata is display-only until programme terms, document review rules, and payout triggers are explicitly configured.',
+              },
+            },
+          } as any
+        }
+        savingTemplateId={null}
+        onUpdateDocumentStatus={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByText('Configured from current templates')).toBeInTheDocument();
+    expect(screen.getByText('Missing readiness metadata')).toBeInTheDocument();
+    expect(screen.getByText('Wrong-lane template warnings')).toBeInTheDocument();
+    expect(screen.getAllByText('Submission').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Qualification').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Lease').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Payout').length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getByText('Sale Agreement looks like a payout document for another transaction lane.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Readiness metadata is display-only/i)).toBeInTheDocument();
+  });
+
   it('uses bidder review language for auction checklists', () => {
     render(
       <ManagerDealChecklistPanel

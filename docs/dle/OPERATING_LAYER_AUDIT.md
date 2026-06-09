@@ -411,6 +411,12 @@ Recommended next architecture work:
   Rental needs lease/deposit/document readiness roles, while Auction needs bidder/auction-term/
   winning-bidder readiness roles. The panel is display-only and does not change document status,
   stage movement, commission status, or payout readiness.
+- The manager checklist now receives a computed programme semantics read model from
+  `server/services/distributionProgrammeSemanticsService.ts`. The read model derives transaction
+  lane, expected roles, configured roles, missing roles, and wrong-lane template warnings from
+  existing required-document templates. It is an equivalent read model, not a schema migration, and
+  it always keeps automation disabled until explicit programme terms, document review rules, and
+  payout triggers exist.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

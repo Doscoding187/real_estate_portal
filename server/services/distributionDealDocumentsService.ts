@@ -12,6 +12,10 @@ import { getDb } from '../db';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 import { assertDealIsMutable } from './distributionDealMutationGuards';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import {
+  buildDistributionProgrammeSemanticsReadModel,
+  type DistributionProgrammeSemanticsReadModel,
+} from './distributionProgrammeSemanticsService';
 
 export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
 
@@ -62,6 +66,7 @@ export type DealChecklistPayload = {
     allRequiredVerified: boolean;
     payoutReady: boolean;
     blockers: string[];
+    programmeSemantics: DistributionProgrammeSemanticsReadModel;
   };
 };
 
@@ -317,6 +322,17 @@ export async function getDealChecklist(
       status: document.status,
     })),
   });
+  const programmeSemantics = buildDistributionProgrammeSemanticsReadModel({
+    transactionType: dealScope.transactionType,
+    documents: requiredDocuments.map(document => ({
+      templateId: document.templateId,
+      documentCode: document.documentCode,
+      documentLabel: document.documentLabel,
+      category: document.category,
+      isRequired: document.isRequired,
+      status: document.status,
+    })),
+  });
   const payoutMilestoneSatisfied = payoutMilestoneEvaluation.satisfied;
   const payoutReady = allRequiredVerified && payoutMilestoneSatisfied;
   const blockers: string[] = [];
@@ -354,6 +370,7 @@ export async function getDealChecklist(
       allRequiredVerified,
       payoutReady,
       blockers,
+      programmeSemantics,
     },
   };
 }

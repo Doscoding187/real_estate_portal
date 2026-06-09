@@ -4720,3 +4720,56 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): show manager programme semantics readiness`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-09 - Programme Semantics Required-Document Read Model
+
+Date: 2026-06-09
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add an equivalent read model for document-template lane/readiness semantics so managers can
+see expected roles, configured roles, missing roles, and wrong-lane template warnings without a
+schema migration or automation behavior change.
+Files changed:
+- server/services/distributionProgrammeSemanticsService.ts
+- server/services/__tests__/distributionProgrammeSemanticsService.test.ts
+- server/services/distributionDealDocumentsService.ts
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx`
+  passed.
+- `pnpm vitest run server/services/__tests__/distributionProgrammeSemanticsService.test.ts`
+  passed with local MySQL test setup allowed after sandbox blocked `127.0.0.1:3306`.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Added `buildDistributionProgrammeSemanticsReadModel` to derive:
+  transaction lane, expected readiness roles, configured roles, missing roles, wrong-lane template
+  warnings, per-document inferred roles, and payout-automation blocking state.
+- `getDealChecklist` now includes `computed.programmeSemantics`.
+- Manager deal checklist uses the server read model when available, showing:
+  - required readiness before automation;
+  - configured roles from current templates;
+  - missing readiness metadata;
+  - wrong-lane template warnings.
+- Server tests prove Rental readiness-role derivation, Auction missing payout context, wrong-lane
+  Sale document detection in a Rental programme, and `automationAllowed: false`.
+- Client tests prove the manager checklist surfaces configured/missing/wrong-lane read model data.
+Guardrails:
+- No schema, migration, tRPC route, document mutation, stage mutation, payout calculation,
+  commission status, deal mutation, lead, inventory, or operating-event changes.
+- Existing required-document verification and batch actions remain unchanged.
+- The read model is explicitly display-only and does not make Rental/Auction rewards ready.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The read model infers roles from existing category/code/label data; formal template columns are
+  still needed before any blocking or automation behavior can rely on these roles.
+- Admin review surfaces do not yet expose the same read model.
+Next recommended slice:
+- Surface `computed.programmeSemantics` in the admin deal/reward review context, then design the
+  formal schema/migration for lane/readiness metadata with backwards-compatible migration rules.
+Commit hash/tag: This entry will be included in
+`feat(dle): derive programme readiness roles`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
