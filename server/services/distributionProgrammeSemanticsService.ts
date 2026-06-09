@@ -1,6 +1,15 @@
 type DistributionDocumentCategory = 'developer_document' | 'client_required_document';
 
 export type DistributionProgrammeLane = 'sale' | 'rent' | 'auction';
+export type DistributionProgrammeTemplateLane = DistributionProgrammeLane | 'all';
+export type DistributionProgrammeParticipantType =
+  | 'buyer'
+  | 'renter'
+  | 'bidder'
+  | 'developer'
+  | 'manager'
+  | 'supporting';
+export type DistributionProgrammeReviewOwner = 'manager' | 'admin' | 'developer' | 'system';
 
 export type DistributionReadinessRole =
   | 'submission'
@@ -17,6 +26,14 @@ export type DistributionProgrammeSemanticsDocument = {
   documentLabel: string;
   category: DistributionDocumentCategory;
   isRequired: boolean;
+  transactionType?: DistributionProgrammeTemplateLane | null;
+  participantType?: DistributionProgrammeParticipantType | null;
+  readinessRole?: DistributionReadinessRole | null;
+  requiredForStage?: string | null;
+  blocksPayout?: boolean | null;
+  reviewOwner?: DistributionProgrammeReviewOwner | null;
+  publiclyShareable?: boolean | null;
+  programmeSpecific?: boolean | null;
   status?: string | null;
 };
 
@@ -61,6 +78,10 @@ function inferReadinessRole(
   lane: DistributionProgrammeLane,
   document: DistributionProgrammeSemanticsDocument,
 ): DistributionReadinessRole {
+  if (document.readinessRole && document.readinessRole !== 'supporting') {
+    return document.readinessRole;
+  }
+
   const text = normalizedDocumentText(document);
   const code = String(document.documentCode || '').toLowerCase();
 
@@ -109,6 +130,10 @@ function documentAppliesToLane(
   lane: DistributionProgrammeLane,
   document: DistributionProgrammeSemanticsDocument,
 ) {
+  if (document.transactionType && document.transactionType !== 'all') {
+    return document.transactionType === lane;
+  }
+
   const text = normalizedDocumentText(document);
   const code = String(document.documentCode || '').toLowerCase();
   const saleOnly =
@@ -158,7 +183,9 @@ export function buildDistributionProgrammeSemanticsReadModel(input: {
         readinessRole,
         appliesToLane,
         blocksPayoutAutomation:
-          appliesToLane && readinessRole !== 'supporting' && readinessRole !== 'submission',
+          typeof document.blocksPayout === 'boolean'
+            ? appliesToLane && document.blocksPayout
+            : appliesToLane && readinessRole !== 'supporting' && readinessRole !== 'submission',
       };
     });
 

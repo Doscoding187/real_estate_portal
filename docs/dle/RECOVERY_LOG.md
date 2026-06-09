@@ -669,6 +669,62 @@ Next recommended slice:
 Commit hash/tag: This entry is included in `test(dle): prove auction wizard canonical parity`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
 
+## 2026-06-09 - Required Document Semantics Metadata
+
+Date: 2026-06-09
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add formal document-template lane/readiness metadata so Rental and Auction programme
+semantics can be configured explicitly instead of relying only on document label inference.
+Files changed:
+- drizzle/schema/distribution.ts
+- server/migrations/0071_add_development_required_document_semantics.sql
+- scripts/db-verify-distribution-schema.ts
+- server/services/distributionRequiredDocumentsService.ts
+- server/services/distributionProgrammeSemanticsService.ts
+- server/services/distributionDealDocumentsService.ts
+- server/distributionRouter.ts
+- server/services/__tests__/distributionProgrammeSemanticsService.test.ts
+- docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/distributionProgrammeSemanticsService.test.ts`
+  first hit sandbox-blocked local MySQL access, then passed with local test DB access allowed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `development_required_documents` now stores explicit metadata for:
+  transaction lane, participant type, readiness role, required stage, payout blocking, review
+  owner, public shareability, and programme specificity.
+- The distribution schema verifier now treats those metadata columns as required distribution
+  infrastructure.
+- Super-admin required-document configuration accepts, persists, and returns the metadata.
+- Required-document reads preserve existing category/template data on partially migrated
+  databases and default only the new metadata to neutral values.
+- The programme semantics read model now prefers explicit metadata and falls back to legacy
+  category/code/label inference.
+- Focused semantics tests prove explicit Rental metadata configures readiness, wrong-lane Sale
+  metadata is ignored for Rental readiness, and payout automation remains disabled.
+Guardrails:
+- No payout calculation, commission status, stage transition, lead, inventory, operating-event, or
+  reward-readiness mutation was added.
+- `blocksPayout` is readback metadata only; it does not move money or mark rewards ready.
+- Existing manager/admin programme semantics surfaces remain display/review context only.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Admin UI controls for editing the new metadata fields are not yet built; this slice adds the
+  server/schema contract first.
+- Manual review actions for Rental lease readiness and Auction bidder readiness still need a
+  dedicated product slice before any automation can be considered.
+Next recommended slice:
+- Add admin UI controls/readback for configuring document-template semantics, then design manual
+  review actions for Rental lease readiness and Auction bidder readiness while keeping payout and
+  stage automation disabled.
+Commit hash/tag: This entry will be included in
+`feat(dle): add document semantics metadata`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
 ## 2026-06-07 - Manager Transaction-Lane Assignment Triage
 
 Date: 2026-06-07

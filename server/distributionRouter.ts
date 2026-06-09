@@ -5,6 +5,10 @@ import {
   DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES,
   DISTRIBUTION_DEAL_STAGE_VALUES,
   DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES,
+  DEVELOPMENT_REQUIRED_DOCUMENT_PARTICIPANT_TYPE_VALUES,
+  DEVELOPMENT_REQUIRED_DOCUMENT_READINESS_ROLE_VALUES,
+  DEVELOPMENT_REQUIRED_DOCUMENT_REVIEW_OWNER_VALUES,
+  DEVELOPMENT_REQUIRED_DOCUMENT_TRANSACTION_TYPE_VALUES,
   DISTRIBUTION_TIER_VALUES,
   DISTRIBUTION_VIEWING_STATUS_VALUES,
   DISTRIBUTION_IDENTITY_TYPE_VALUES,
@@ -3068,6 +3072,20 @@ const adminDistributionRouter = router({
             category: z.enum(['developer_document', 'client_required_document']).default(
               'client_required_document',
             ),
+            transactionType: z
+              .enum(DEVELOPMENT_REQUIRED_DOCUMENT_TRANSACTION_TYPE_VALUES)
+              .default('all'),
+            participantType: z
+              .enum(DEVELOPMENT_REQUIRED_DOCUMENT_PARTICIPANT_TYPE_VALUES)
+              .default('supporting'),
+            readinessRole: z
+              .enum(DEVELOPMENT_REQUIRED_DOCUMENT_READINESS_ROLE_VALUES)
+              .default('supporting'),
+            requiredForStage: z.string().trim().max(64).nullable().optional(),
+            blocksPayout: z.boolean().default(false),
+            reviewOwner: z.enum(DEVELOPMENT_REQUIRED_DOCUMENT_REVIEW_OWNER_VALUES).default('manager'),
+            publiclyShareable: z.boolean().default(false),
+            programmeSpecific: z.boolean().default(true),
             documentCode: z.enum([
               'id_document',
               'proof_of_address',
@@ -3096,6 +3114,14 @@ const adminDistributionRouter = router({
       const normalizedDocuments = input.documents.map((document, index) => ({
         id: document.id,
         category: document.category,
+        transactionType: document.transactionType,
+        participantType: document.participantType,
+        readinessRole: document.readinessRole,
+        requiredForStage: document.requiredForStage?.trim() || null,
+        blocksPayout: document.blocksPayout,
+        reviewOwner: document.reviewOwner,
+        publiclyShareable: document.publiclyShareable,
+        programmeSpecific: document.programmeSpecific,
         documentCode: document.documentCode,
         documentLabel: normalizeRequiredDocumentLabel(document.documentLabel),
         templateFileUrl: document.templateFileUrl?.trim() || null,
@@ -3144,6 +3170,14 @@ const adminDistributionRouter = router({
         documentCode: string;
         documentLabel: string;
         category: 'developer_document' | 'client_required_document';
+        transactionType: string;
+        participantType: string;
+        readinessRole: string;
+        requiredForStage: string | null;
+        blocksPayout: boolean;
+        reviewOwner: string;
+        publiclyShareable: boolean;
+        programmeSpecific: boolean;
         templateFileUrl: string | null;
         templateFileName: string | null;
         templateUploadedAt: string | null;
@@ -3173,6 +3207,14 @@ const adminDistributionRouter = router({
                   documentCode: document.documentCode,
                   documentLabel: document.documentLabel,
                   category: document.category,
+                  transactionType: document.transactionType,
+                  participantType: document.participantType,
+                  readinessRole: document.readinessRole,
+                  requiredForStage: document.requiredForStage,
+                  blocksPayout: document.blocksPayout ? 1 : 0,
+                  reviewOwner: document.reviewOwner,
+                  publiclyShareable: document.publiclyShareable ? 1 : 0,
+                  programmeSpecific: document.programmeSpecific ? 1 : 0,
                   templateFileUrl:
                     document.category === 'developer_document' ? document.templateFileUrl : null,
                   templateFileName:
@@ -3203,6 +3245,14 @@ const adminDistributionRouter = router({
               documentCode: document.documentCode,
               documentLabel: document.documentLabel,
               category: document.category,
+              transactionType: document.transactionType,
+              participantType: document.participantType,
+              readinessRole: document.readinessRole,
+              requiredForStage: document.requiredForStage,
+              blocksPayout: document.blocksPayout ? 1 : 0,
+              reviewOwner: document.reviewOwner,
+              publiclyShareable: document.publiclyShareable ? 1 : 0,
+              programmeSpecific: document.programmeSpecific ? 1 : 0,
               templateFileUrl:
                 document.category === 'developer_document' ? document.templateFileUrl : null,
               templateFileName:
@@ -3240,6 +3290,14 @@ const adminDistributionRouter = router({
                 documentCode: developmentRequiredDocuments.documentCode,
                 documentLabel: developmentRequiredDocuments.documentLabel,
                 category: developmentRequiredDocuments.category,
+                transactionType: developmentRequiredDocuments.transactionType,
+                participantType: developmentRequiredDocuments.participantType,
+                readinessRole: developmentRequiredDocuments.readinessRole,
+                requiredForStage: developmentRequiredDocuments.requiredForStage,
+                blocksPayout: developmentRequiredDocuments.blocksPayout,
+                reviewOwner: developmentRequiredDocuments.reviewOwner,
+                publiclyShareable: developmentRequiredDocuments.publiclyShareable,
+                programmeSpecific: developmentRequiredDocuments.programmeSpecific,
                 templateFileUrl: developmentRequiredDocuments.templateFileUrl,
                 templateFileName: developmentRequiredDocuments.templateFileName,
                 templateUploadedAt: developmentRequiredDocuments.templateUploadedAt,
@@ -3261,6 +3319,17 @@ const adminDistributionRouter = router({
               String(row.category || 'client_required_document') === 'developer_document'
                 ? 'developer_document'
                 : 'client_required_document',
+            transactionType: String(row.transactionType || 'all'),
+            participantType: String(row.participantType || 'supporting'),
+            readinessRole: String(row.readinessRole || 'supporting'),
+            requiredForStage:
+              typeof row.requiredForStage === 'string' && row.requiredForStage.trim()
+                ? row.requiredForStage.trim()
+                : null,
+            blocksPayout: boolFromTinyInt(row.blocksPayout),
+            reviewOwner: String(row.reviewOwner || 'manager'),
+            publiclyShareable: boolFromTinyInt(row.publiclyShareable),
+            programmeSpecific: boolFromTinyInt(row.programmeSpecific),
             templateFileUrl:
               typeof row.templateFileUrl === 'string' && row.templateFileUrl.trim()
                 ? row.templateFileUrl.trim()

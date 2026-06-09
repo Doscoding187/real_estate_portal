@@ -110,6 +110,35 @@ export const DEVELOPMENT_REQUIRED_DOCUMENT_CATEGORY_VALUES = [
   'developer_document',
   'client_required_document',
 ] as const;
+export const DEVELOPMENT_REQUIRED_DOCUMENT_TRANSACTION_TYPE_VALUES = [
+  'all',
+  'sale',
+  'rent',
+  'auction',
+] as const;
+export const DEVELOPMENT_REQUIRED_DOCUMENT_PARTICIPANT_TYPE_VALUES = [
+  'buyer',
+  'renter',
+  'bidder',
+  'developer',
+  'manager',
+  'supporting',
+] as const;
+export const DEVELOPMENT_REQUIRED_DOCUMENT_READINESS_ROLE_VALUES = [
+  'submission',
+  'qualification',
+  'lease',
+  'auction_registration',
+  'auction_terms',
+  'payout',
+  'supporting',
+] as const;
+export const DEVELOPMENT_REQUIRED_DOCUMENT_REVIEW_OWNER_VALUES = [
+  'manager',
+  'admin',
+  'developer',
+  'system',
+] as const;
 const DEVELOPMENT_DOCUMENT_TYPE_VALUES = [
   'price_list',
   'house_plan',
@@ -387,6 +416,34 @@ export const developmentRequiredDocuments = mysqlTable(
     )
       .default('client_required_document')
       .notNull(),
+    transactionType: mysqlEnum(
+      'transaction_type',
+      DEVELOPMENT_REQUIRED_DOCUMENT_TRANSACTION_TYPE_VALUES as unknown as [string, ...string[]],
+    )
+      .default('all')
+      .notNull(),
+    participantType: mysqlEnum(
+      'participant_type',
+      DEVELOPMENT_REQUIRED_DOCUMENT_PARTICIPANT_TYPE_VALUES as unknown as [string, ...string[]],
+    )
+      .default('supporting')
+      .notNull(),
+    readinessRole: mysqlEnum(
+      'readiness_role',
+      DEVELOPMENT_REQUIRED_DOCUMENT_READINESS_ROLE_VALUES as unknown as [string, ...string[]],
+    )
+      .default('supporting')
+      .notNull(),
+    requiredForStage: varchar('required_for_stage', { length: 64 }),
+    blocksPayout: tinyint('blocks_payout').default(0).notNull(),
+    reviewOwner: mysqlEnum(
+      'review_owner',
+      DEVELOPMENT_REQUIRED_DOCUMENT_REVIEW_OWNER_VALUES as unknown as [string, ...string[]],
+    )
+      .default('manager')
+      .notNull(),
+    publiclyShareable: tinyint('publicly_shareable').default(0).notNull(),
+    programmeSpecific: tinyint('programme_specific').default(1).notNull(),
     templateFileUrl: varchar('template_file_url', { length: 2048 }),
     templateFileName: varchar('template_file_name', { length: 255 }),
     templateUploadedAt: timestamp('template_uploaded_at', { mode: 'string' }),
@@ -403,6 +460,8 @@ export const developmentRequiredDocuments = mysqlTable(
     index('idx_development_required_documents_development').on(table.developmentId),
     index('idx_development_required_documents_code').on(table.developmentId, table.documentCode),
     index('idx_development_required_documents_category').on(table.developmentId, table.category),
+    index('idx_development_required_documents_transaction').on(table.developmentId, table.transactionType),
+    index('idx_development_required_documents_role').on(table.developmentId, table.readinessRole),
     index('idx_development_required_documents_required').on(table.isRequired),
     index('idx_development_required_documents_active').on(table.isActive),
     index('idx_development_required_documents_order').on(table.developmentId, table.sortOrder),

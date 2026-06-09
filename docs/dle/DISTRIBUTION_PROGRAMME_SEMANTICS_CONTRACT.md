@@ -225,7 +225,7 @@ enough metadata to answer:
 - What counts as verified?
 - Can it be reused across developments or must it be programme-specific?
 
-Minimum future template fields or equivalent read model:
+Persisted template metadata now exists on `development_required_documents`:
 
 - `transactionType`: sale, rent, auction, or all;
 - `participantType`: buyer, renter, bidder, developer, manager, supporting;
@@ -235,6 +235,12 @@ Minimum future template fields or equivalent read model:
 - `reviewOwner`;
 - `publiclyShareable`;
 - `programmeSpecific`.
+
+The programme semantics read model must prefer these explicit fields when present and fall back to
+legacy category/code/label inference only for older rows or partially migrated environments.
+Explicit metadata is still read-only for automation: it may configure visible readiness roles,
+missing-role warnings, and wrong-lane warnings, but it must not move stages or mark rewards ready
+without explicit programme terms, review rules, and payout triggers.
 
 ## Payout Rule Requirements
 
@@ -286,6 +292,12 @@ Recommended next code slices:
 4. Add explicit manual review actions for Rental lease readiness and Auction bidder readiness.
 5. Only then consider guarded stage movement or reward-readiness automation.
 
+Status:
+
+- Steps 1, 2, and the first manager/admin readback surfaces are implemented.
+- Step 4 remains the next meaningful operating-design layer.
+- Step 5 remains explicitly out of scope until manual review and payout rules are proven.
+
 Each implementation slice must prove:
 
 - wrong transaction lane is rejected or ignored safely;
@@ -296,7 +308,7 @@ Each implementation slice must prove:
 
 ## Non-Goals
 
-This contract does not implement schema changes, migrations, routes, mutations, or payout logic.
+This contract does not implement payout logic or automatic stage movement.
 
 This contract does not rename existing internal database fields.
 

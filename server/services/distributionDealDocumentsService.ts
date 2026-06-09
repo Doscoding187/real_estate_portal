@@ -43,6 +43,21 @@ export type DealChecklistPayload = {
     documentCode: string;
     documentLabel: string;
     category: 'developer_document' | 'client_required_document';
+    transactionType: 'all' | 'sale' | 'rent' | 'auction';
+    participantType: 'buyer' | 'renter' | 'bidder' | 'developer' | 'manager' | 'supporting';
+    readinessRole:
+      | 'submission'
+      | 'qualification'
+      | 'lease'
+      | 'auction_registration'
+      | 'auction_terms'
+      | 'payout'
+      | 'supporting';
+    requiredForStage: string | null;
+    blocksPayout: boolean;
+    reviewOwner: 'manager' | 'admin' | 'developer' | 'system';
+    publiclyShareable: boolean;
+    programmeSpecific: boolean;
     templateFileUrl: string | null;
     templateFileName: string | null;
     templateUploadedAt: string | null;
@@ -275,6 +290,14 @@ export async function getDealChecklist(
       documentCode: String(template.documentCode),
       documentLabel: String(template.documentLabel || ''),
       category: template.category,
+      transactionType: template.transactionType,
+      participantType: template.participantType,
+      readinessRole: template.readinessRole,
+      requiredForStage: template.requiredForStage,
+      blocksPayout: template.blocksPayout,
+      reviewOwner: template.reviewOwner,
+      publiclyShareable: template.publiclyShareable,
+      programmeSpecific: template.programmeSpecific,
       templateFileUrl: template.templateFileUrl || null,
       templateFileName: template.templateFileName || null,
       templateUploadedAt: template.templateUploadedAt || null,
@@ -329,6 +352,14 @@ export async function getDealChecklist(
       documentCode: document.documentCode,
       documentLabel: document.documentLabel,
       category: document.category,
+      transactionType: document.transactionType,
+      participantType: document.participantType,
+      readinessRole: document.readinessRole,
+      requiredForStage: document.requiredForStage,
+      blocksPayout: document.blocksPayout,
+      reviewOwner: document.reviewOwner,
+      publiclyShareable: document.publiclyShareable,
+      programmeSpecific: document.programmeSpecific,
       isRequired: document.isRequired,
       status: document.status,
     })),

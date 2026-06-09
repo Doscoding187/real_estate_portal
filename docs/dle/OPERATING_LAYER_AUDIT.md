@@ -417,6 +417,12 @@ Recommended next architecture work:
   existing required-document templates. It is an equivalent read model, not a schema migration, and
   it always keeps automation disabled until explicit programme terms, document review rules, and
   payout triggers exist.
+- Required document templates now have persisted transaction semantics metadata:
+  `transactionType`, `participantType`, `readinessRole`, `requiredForStage`, `blocksPayout`,
+  `reviewOwner`, `publiclyShareable`, and `programmeSpecific`. The read model prefers these
+  explicit fields and keeps legacy label/code inference only as a fallback. The fields are still
+  readback infrastructure: they do not move distribution stages, verify documents, or mark rewards
+  ready.
 - Super-admin deal pipeline and reward-entry rows now receive the same computed programme
   semantics read model. Admin rows show missing readiness roles and wrong-lane template warnings
   as review context only, while payout and stage mutations remain governed by existing admin

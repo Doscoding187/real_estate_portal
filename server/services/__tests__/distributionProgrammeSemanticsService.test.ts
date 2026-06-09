@@ -131,4 +131,50 @@ describe('distributionProgrammeSemanticsService', () => {
       blocksPayoutAutomation: false,
     });
   });
+
+  it('uses explicit template metadata before label inference', () => {
+    const readModel = buildDistributionProgrammeSemanticsReadModel({
+      transactionType: 'for_rent',
+      documents: [
+        {
+          templateId: 30,
+          documentCode: 'custom',
+          documentLabel: 'Occupancy Pack',
+          category: 'client_required_document',
+          transactionType: 'rent',
+          participantType: 'renter',
+          readinessRole: 'lease',
+          blocksPayout: true,
+          isRequired: true,
+        },
+        {
+          templateId: 31,
+          documentCode: 'custom',
+          documentLabel: 'Payout Approval',
+          category: 'client_required_document',
+          transactionType: 'sale',
+          participantType: 'buyer',
+          readinessRole: 'payout',
+          blocksPayout: true,
+          isRequired: true,
+        },
+      ],
+    });
+
+    expect(readModel.configuredRoles).toEqual(['lease']);
+    expect(readModel.missingRoles).toEqual(['submission', 'qualification', 'payout']);
+    expect(readModel.wrongLaneWarnings).toEqual([
+      'Payout Approval looks like a payout document for another transaction lane.',
+    ]);
+    expect(readModel.documentRoles.find(role => role.templateId === 30)).toMatchObject({
+      readinessRole: 'lease',
+      appliesToLane: true,
+      blocksPayoutAutomation: true,
+    });
+    expect(readModel.documentRoles.find(role => role.templateId === 31)).toMatchObject({
+      readinessRole: 'payout',
+      appliesToLane: false,
+      blocksPayoutAutomation: false,
+    });
+  });
 });
