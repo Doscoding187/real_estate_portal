@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getPartnerCommissionCopy,
+  getPartnerRewardEntryReference,
   normalizePartnerCommissionTransactionType,
 } from './PartnerCommissionsPage';
 
@@ -29,5 +30,10 @@ describe('PartnerCommissionsPage transaction copy', () => {
       participantLabel: 'Bidder',
       stageContext: 'Auction/referral stage',
     });
+  });
+
+  it('uses partner-facing referral references for reward rows', () => {
+    expect(getPartnerRewardEntryReference(42)).toBe('Referral #42');
+    expect(getPartnerRewardEntryReference('7')).toBe('Referral #7');
   });
 });

@@ -394,6 +394,9 @@ Recommended next architecture work:
 - Partner referral tracker/detail visible labels now use partner-facing `Referral #`,
   `Open Referral`, and `Open Rewards` language instead of exposing internal deal/commission
   labels, while preserving existing distribution ids, routes, stage codes, and payout model terms.
+- Partner workspace navigation and reward-entry rows now use `Rewards` and `Referral #` labels
+  while preserving the existing `/distribution/partner/commissions` route and distribution-owned
+  payout model fields.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

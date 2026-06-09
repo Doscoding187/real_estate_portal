@@ -4543,3 +4543,44 @@ Next recommended slice:
   semantics.
 Commit hash/tag: This entry will be included in `feat(dle): label partner referral rewards`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-08 - Partner Rewards Navigation Labels
+
+Date: 2026-06-08
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Finish the partner-facing rewards label cleanup by removing remaining visible
+`Commissions`/`Deal #` copy from the referral sidebar and rewards row references.
+Files changed:
+- client/src/components/referral/ReferralSidebar.tsx
+- client/src/components/referral/ReferralSidebar.test.ts
+- client/src/pages/distribution/PartnerCommissionsPage.tsx
+- client/src/pages/distribution/PartnerCommissionsPage.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/referral/ReferralSidebar.test.ts client/src/pages/distribution/PartnerCommissionsPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Partner workspace navigation now labels the payout destination as `Rewards` while preserving the
+  existing `/distribution/partner/commissions` route.
+- Partner rewards rows now display `Referral #...` instead of `Deal #...`.
+- Reward page transaction copy remains Sale/Rental/Auction-aware and payout calculations are
+  unchanged.
+Guardrails:
+- No schema, migration, tRPC route, route path, nav destination, badge calculation, payout
+  calculation, commission status, deal mutation, lead, inventory, or operating-event changes.
+- Internal `commission` route/data-model names remain as distribution-owned compatibility/model
+  terms.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Internal/operator surfaces may still use deal/commission language where the audience is managing
+  the distribution model directly.
+- Deeper Rental/Auction-specific programme semantics remain future product-design work.
+Next recommended slice:
+- Move from copy sweep to product-defined Rental/Auction programme semantics, starting with a
+  focused document/readiness contract for rental lease/deposit and auction bidder-registration
+  requirements.
+Commit hash/tag: This entry will be included in `feat(dle): label partner rewards navigation`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

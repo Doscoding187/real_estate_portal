@@ -89,6 +89,10 @@ export function getPartnerCommissionCopy(transactionType: unknown) {
   };
 }
 
+export function getPartnerRewardEntryReference(dealId: unknown) {
+  return `Referral #${Number(dealId) || 0}`;
+}
+
 export default function PartnerCommissionsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -262,7 +266,7 @@ export default function PartnerCommissionsPage() {
                         <Badge variant="outline">{commissionCopy.laneLabel}</Badge>
                       </div>
                       <p className="text-xs text-slate-500">
-                        Deal #{row.dealId} | {commissionCopy.stageContext}{' '}
+                        {getPartnerRewardEntryReference(row.dealId)} | {commissionCopy.stageContext}{' '}
                         {formatStageLabel(row.dealStage)}
                       </p>
                       {row.buyerName ? (
