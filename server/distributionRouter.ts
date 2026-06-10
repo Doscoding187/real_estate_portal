@@ -994,6 +994,150 @@ async function getUserDirectoryByIds(db: any, userIds: number[]) {
   return directory;
 }
 
+type AdminManualReadinessReviewSnapshot = {
+  reviewType: 'rental_lease_readiness' | 'auction_bidder_readiness';
+  label: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  notes: string | null;
+  reviewedAt: string | null;
+  reviewedBy: { userId: number; name: string | null } | null;
+};
+
+function normalizeAdminManualReadinessLane(transactionType: unknown): 'sale' | 'rent' | 'auction' {
+  const normalized = String(transactionType || '').trim().toLowerCase();
+  if (['for_rent', 'rent', 'rental', 'to_rent', 'to-rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction', 'on-auction', 'for_auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+function getAdminManualReadinessDefinitions(transactionType: unknown): Array<{
+  reviewType: AdminManualReadinessReviewSnapshot['reviewType'];
+  label: string;
+}> {
+  const lane = normalizeAdminManualReadinessLane(transactionType);
+  if (lane === 'rent') {
+    return [{ reviewType: 'rental_lease_readiness', label: 'Lease readiness review' }];
+  }
+  if (lane === 'auction') {
+    return [{ reviewType: 'auction_bidder_readiness', label: 'Bidder readiness review' }];
+  }
+  return [];
+}
+
+function getAdminManualReadinessEventMetadata(row: any): {
+  kind?: string;
+  reviewType?: AdminManualReadinessReviewSnapshot['reviewType'];
+  status?: AdminManualReadinessReviewSnapshot['status'];
+} {
+  const metadata = row?.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return {};
+  return metadata as any;
+}
+
+async function getManualReadinessReviewsByDealId(
+  db: any,
+  rows: Array<{ dealId: number; transactionType: unknown }>,
+) {
+  const result = new Map<number, AdminManualReadinessReviewSnapshot[]>();
+  const uniqueRows = new Map<number, unknown>();
+  for (const row of rows) {
+    if (Number.isFinite(row.dealId) && row.dealId > 0) {
+      uniqueRows.set(row.dealId, row.transactionType);
+    }
+  }
+
+  for (const [dealId, transactionType] of uniqueRows.entries()) {
+    const definitions = getAdminManualReadinessDefinitions(transactionType);
+    if (definitions.length) {
+      result.set(
+        dealId,
+        definitions.map(definition => ({
+          reviewType: definition.reviewType,
+          label: definition.label,
+          status: 'pending',
+          notes: null,
+          reviewedAt: null,
+          reviewedBy: null,
+        })),
+      );
+    }
+  }
+
+  const dealIds = Array.from(uniqueRows.keys());
+  if (!dealIds.length) {
+    return result;
+  }
+
+  const events = await db
+    .select({
+      id: distributionDealEvents.id,
+      dealId: distributionDealEvents.dealId,
+      actorUserId: distributionDealEvents.actorUserId,
+      metadata: distributionDealEvents.metadata,
+      notes: distributionDealEvents.notes,
+      eventAt: distributionDealEvents.eventAt,
+    })
+    .from(distributionDealEvents)
+    .where(
+      and(
+        inArray(distributionDealEvents.dealId, dealIds),
+        eq(distributionDealEvents.eventType, 'validation'),
+      ),
+    )
+    .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id));
+
+  const actorIds = new Set<number>();
+  const latestByDealAndType = new Map<string, (typeof events)[number]>();
+  for (const event of events) {
+    const metadata = getAdminManualReadinessEventMetadata(event);
+    if (metadata.kind !== 'manual_readiness_review') continue;
+    if (
+      metadata.reviewType !== 'rental_lease_readiness' &&
+      metadata.reviewType !== 'auction_bidder_readiness'
+    ) {
+      continue;
+    }
+    if (metadata.status !== 'accepted' && metadata.status !== 'rejected') continue;
+    const key = `${Number(event.dealId)}:${metadata.reviewType}`;
+    if (!latestByDealAndType.has(key)) {
+      latestByDealAndType.set(key, event);
+      if (event.actorUserId) actorIds.add(Number(event.actorUserId));
+    }
+  }
+
+  const actorDirectory = await getUserDirectoryByIds(db, Array.from(actorIds));
+  for (const [dealId, transactionType] of uniqueRows.entries()) {
+    const reviews = getAdminManualReadinessDefinitions(transactionType).map(definition => {
+      const latest = latestByDealAndType.get(`${dealId}:${definition.reviewType}`);
+      const metadata = getAdminManualReadinessEventMetadata(latest);
+      const status: AdminManualReadinessReviewSnapshot['status'] =
+        metadata.status === 'accepted' || metadata.status === 'rejected'
+          ? metadata.status
+          : 'pending';
+      const actor = latest?.actorUserId
+        ? actorDirectory.get(Number(latest.actorUserId)) || null
+        : null;
+
+      return {
+        reviewType: definition.reviewType,
+        label: definition.label,
+        status,
+        notes: latest?.notes || null,
+        reviewedAt: latest?.eventAt || null,
+        reviewedBy: latest?.actorUserId
+          ? {
+              userId: Number(latest.actorUserId),
+              name: actor?.displayName || null,
+            }
+          : null,
+      };
+    });
+    if (reviews.length) result.set(dealId, reviews);
+  }
+
+  return result;
+}
+
 async function getLatestViewingValidationByDealIds(db: any, dealIds: number[]) {
   const result = new Map<
     number,
@@ -1727,6 +1871,13 @@ async function listDeals(input: z.infer<typeof listDealsInput>) {
       transactionType: row.transactionType,
     })),
   );
+  const manualReadinessReviewsByDealId = await getManualReadinessReviewsByDealId(
+    db,
+    rows.map(row => ({
+      dealId: Number(row.id),
+      transactionType: row.transactionType,
+    })),
+  );
 
   return rows.map(row => ({
     ...row,
@@ -1734,6 +1885,7 @@ async function listDeals(input: z.infer<typeof listDealsInput>) {
       userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
     documentsComplete: hasCompleteDocuments(referralSnapshotsByDeal.get(Number(row.id)) || null),
     programmeSemantics: programmeSemanticsByDevelopmentId.get(Number(row.developmentId)) || null,
+    manualReadinessReviews: manualReadinessReviewsByDealId.get(Number(row.id)) || [],
   }));
 }
 
@@ -5184,12 +5336,28 @@ const adminDistributionRouter = router({
         db,
         rows.map(row => Number(row.agentId)),
       );
+      const programmeSemanticsByDevelopmentId = await getProgrammeSemanticsByDevelopmentId(
+        db,
+        rows.map(row => ({
+          developmentId: Number(row.developmentId),
+          transactionType: row.transactionType,
+        })),
+      );
+      const manualReadinessReviewsByDealId = await getManualReadinessReviewsByDealId(
+        db,
+        rows.map(row => ({
+          dealId: Number(row.dealId),
+          transactionType: row.transactionType,
+        })),
+      );
 
       return rows.map(row => ({
         ...row,
         agentDisplayName:
           userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
         agentEmail: userDirectory.get(Number(row.agentId))?.email || null,
+        programmeSemantics: programmeSemanticsByDevelopmentId.get(Number(row.developmentId)) || null,
+        manualReadinessReviews: manualReadinessReviewsByDealId.get(Number(row.dealId)) || [],
       }));
     }),
 

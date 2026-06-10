@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getAdminDistributionReferralCopy,
+  getAdminManualReadinessNotice,
   getAdminProgrammeSemanticsNotice,
   normalizeAdminDistributionTransactionLane,
 } from './DistributionNetworkPage';
@@ -81,6 +82,36 @@ describe('admin distribution transaction lane copy', () => {
       }),
     ).toBe(
       'Programme semantics are read-only; reward automation remains disabled until explicit review rules exist.',
+    );
+  });
+
+  it('summarizes pending manual readiness without claiming reward readiness', () => {
+    expect(
+      getAdminManualReadinessNotice([
+        {
+          label: 'Lease readiness review',
+          status: 'pending',
+          notes: null,
+          reviewedBy: null,
+        },
+      ]),
+    ).toBe(
+      'Manual readiness: Lease readiness review pending. Reward automation remains disabled.',
+    );
+  });
+
+  it('summarizes accepted manual readiness as review context only', () => {
+    expect(
+      getAdminManualReadinessNotice([
+        {
+          label: 'Bidder readiness review',
+          status: 'accepted',
+          notes: 'Bidder docs reviewed.',
+          reviewedBy: { userId: 42, name: 'Admin Reviewer' },
+        },
+      ]),
+    ).toBe(
+      'Manual readiness: Bidder readiness review accepted by Admin Reviewer. Note: Bidder docs reviewed. Reward automation remains disabled.',
     );
   });
 });

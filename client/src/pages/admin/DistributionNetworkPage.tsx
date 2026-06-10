@@ -120,6 +120,28 @@ export function getAdminProgrammeSemanticsNotice(programmeSemantics: any) {
   return parts.join(' ');
 }
 
+function formatManualReadinessStatus(status: unknown) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'accepted') return 'accepted';
+  if (normalized === 'rejected') return 'rejected';
+  return 'pending';
+}
+
+export function getAdminManualReadinessNotice(manualReadinessReviews: any) {
+  const reviews = Array.isArray(manualReadinessReviews) ? manualReadinessReviews : [];
+  if (!reviews.length) return null;
+
+  const parts = reviews.map(review => {
+    const label = String(review?.label || 'Manual readiness review');
+    const status = formatManualReadinessStatus(review?.status);
+    const reviewer = review?.reviewedBy?.name ? ` by ${review.reviewedBy.name}` : '';
+    const notes = review?.notes ? ` Note: ${review.notes}` : '';
+    return `${label} ${status}${status === 'pending' ? '' : reviewer}.${notes}`;
+  });
+
+  return `Manual readiness: ${parts.join(' ')} Reward automation remains disabled.`;
+}
+
 function openInviteShareWindow(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
@@ -1208,6 +1230,9 @@ export default function DistributionNetworkPage() {
               {(dealsQuery.data || []).slice(0, 30).map((deal: any) => {
                 const copy = getAdminDistributionReferralCopy(deal.transactionType);
                 const programmeNotice = getAdminProgrammeSemanticsNotice(deal.programmeSemantics);
+                const manualReadinessNotice = getAdminManualReadinessNotice(
+                  deal.manualReadinessReviews,
+                );
                 return (
                   <div key={deal.id} className="rounded border p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1223,6 +1248,11 @@ export default function DistributionNetworkPage() {
                     {programmeNotice ? (
                       <p className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
                         {programmeNotice}
+                      </p>
+                    ) : null}
+                    {manualReadinessNotice ? (
+                      <p className="mt-2 rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800">
+                        {manualReadinessNotice}
                       </p>
                     ) : null}
                   </div>
@@ -1243,6 +1273,9 @@ export default function DistributionNetworkPage() {
             {(commissionQuery.data || []).slice(0, 40).map((entry: any) => {
               const copy = getAdminDistributionReferralCopy(entry.transactionType);
               const programmeNotice = getAdminProgrammeSemanticsNotice(entry.programmeSemantics);
+              const manualReadinessNotice = getAdminManualReadinessNotice(
+                entry.manualReadinessReviews,
+              );
               return (
                 <div key={entry.id} className="rounded border p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1261,6 +1294,11 @@ export default function DistributionNetworkPage() {
                   {programmeNotice ? (
                     <p className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
                       {programmeNotice}
+                    </p>
+                  ) : null}
+                  {manualReadinessNotice ? (
+                    <p className="mt-2 rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800">
+                      {manualReadinessNotice}
                     </p>
                   ) : null}
                 </div>

@@ -436,6 +436,10 @@ Recommended next architecture work:
   document roles are verified, and accepted/rejected reviews are recorded as team-visible
   validation events only. These actions do not move stages, alter commission state, approve
   rewards, change payout readiness, or mutate DLE inventory.
+- Super-admin deal pipeline and reward-entry rows now surface the latest manual Rental/Auction
+  readiness decision as read-only context. Admins can see pending, accepted, or rejected manual
+  readiness reviews and notes without the row implying reward readiness or changing payout/stage
+  behavior.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

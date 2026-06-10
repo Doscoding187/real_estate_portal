@@ -4973,3 +4973,47 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): add manual readiness review`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-10 - Admin Manual Readiness Readback
+
+Date: 2026-06-10
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Surface manager-recorded Rental/Auction manual readiness decisions in super-admin deal and
+reward review rows without adding payout, stage, commission, document, lead, inventory, or reward
+automation.
+Files changed:
+- server/distributionRouter.ts
+- client/src/pages/admin/DistributionNetworkPage.tsx
+- client/src/pages/admin/DistributionNetworkPage.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/admin/DistributionNetworkPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Super-admin deal rows now include `manualReadinessReviews` derived from the latest
+  `manual_readiness_review` validation event per deal and transaction lane.
+- Super-admin reward rows now include the same manual readiness readback.
+- Reward rows also receive `programmeSemantics`, matching the existing UI expectation and keeping
+  semantics warnings visible in the reward review surface.
+- Admin UI copy summarizes pending, accepted, and rejected manual readiness reviews while always
+  stating that reward automation remains disabled.
+Guardrails:
+- No schema, migration, stage transition, payout calculation, commission status mutation, reward
+  readiness automation, document status mutation, lead mutation, DLE inventory mutation, or
+  operating-event mutation was added.
+- Manual readiness remains review context only.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Browser proof of a full manager decision appearing in admin rows is still useful before any
+  guarded payout/stage automation is considered.
+- Full Rental/Auction reward automation remains intentionally unimplemented until programme terms,
+  payout triggers, and override rules are proven.
+Next recommended slice:
+- Add browser proof for manager manual readiness review readback across manager checklist and admin
+  deal/reward rows, or begin the next Rental/Auction operating proof that does not automate payout.
+Commit hash/tag: This entry will be included in
+`feat(dle): show admin manual readiness`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
