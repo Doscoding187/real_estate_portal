@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
 type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+type ManualReadinessReviewType = 'rental_lease_readiness' | 'auction_bidder_readiness';
+type ManualReadinessReviewStatus = 'pending' | 'accepted' | 'rejected';
 
 type DealChecklist = {
   dealId: number;
@@ -65,6 +67,17 @@ type DealChecklist = {
       automationAllowed: false;
       automationBlockedReason: string;
     };
+    manualReadinessReviews?: Array<{
+      reviewType: ManualReadinessReviewType;
+      label: string;
+      description: string;
+      requiredRoles: string[];
+      status: ManualReadinessReviewStatus;
+      notes: string | null;
+      reviewedAt: string | null;
+      reviewedBy: { userId: number; name?: string } | null;
+      blockers: string[];
+    }>;
   };
 };
 
@@ -190,13 +203,16 @@ export function getChecklistProgrammeSemanticsCopy(transactionType: unknown) {
 export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
+  savingReviewType,
   isBatchSaving,
   onUpdateDocumentStatus,
+  onUpdateManualReadinessReview,
   onMarkAllRequiredReceived,
   onMarkAllRequiredVerified,
 }: {
   checklist: DealChecklist;
   savingTemplateId: number | null;
+  savingReviewType?: string | null;
   isBatchSaving?: boolean;
   onUpdateDocumentStatus: (input: {
     templateId: number;
@@ -205,12 +221,18 @@ export function ManagerDealChecklistPanel({
     submittedFileUrl?: string | null;
     submittedFileName?: string | null;
   }) => Promise<void>;
+  onUpdateManualReadinessReview?: (input: {
+    reviewType: ManualReadinessReviewType;
+    status: Exclude<ManualReadinessReviewStatus, 'pending'>;
+    notes?: string | null;
+  }) => Promise<void>;
   onMarkAllRequiredReceived?: () => Promise<void>;
   onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
   const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
   const [fileUrlByTemplateId, setFileUrlByTemplateId] = useState<Record<number, string>>({});
   const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
+  const [reviewNotesByType, setReviewNotesByType] = useState<Record<string, string>>({});
   const transactionCopy = getChecklistTransactionCopy(checklist.transactionType);
   const semanticsCopy = getChecklistProgrammeSemanticsCopy(checklist.transactionType);
   const semanticsReadModel = checklist.computed.programmeSemantics;
@@ -232,6 +254,14 @@ export function ManagerDealChecklistPanel({
     setFileUrlByTemplateId(nextUrls);
     setFileNameByTemplateId(nextNames);
   }, [checklist.requiredDocuments]);
+
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const review of checklist.computed.manualReadinessReviews || []) {
+      next[review.reviewType] = review.notes || '';
+    }
+    setReviewNotesByType(next);
+  }, [checklist.computed.manualReadinessReviews]);
 
   const orderedDocuments = useMemo(
     () =>
@@ -351,6 +381,102 @@ export function ManagerDealChecklistPanel({
           <p className="text-xs text-slate-500">{semanticsCopy.guardrail}</p>
         </CardContent>
       </Card>
+
+      {checklist.computed.manualReadinessReviews?.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manual Readiness Review</CardTitle>
+            <CardDescription>
+              Records manager readiness decisions without changing stage, payout, or reward status.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {checklist.computed.manualReadinessReviews.map(review => {
+              const isSavingReview = savingReviewType === review.reviewType;
+              const canAccept = review.blockers.length === 0;
+
+              return (
+                <div key={review.reviewType} className="rounded border p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{review.label}</p>
+                      <p className="mt-1 text-xs text-slate-600">{review.description}</p>
+                    </div>
+                    <Badge
+                      variant={
+                        review.status === 'accepted'
+                          ? 'default'
+                          : review.status === 'rejected'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                    >
+                      {formatReadinessRole(review.status)}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-2 text-xs text-slate-600">
+                    Required roles: {review.requiredRoles.map(formatReadinessRole).join(', ')}
+                  </div>
+                  {review.blockers.length ? (
+                    <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                      {review.blockers.map(blocker => (
+                        <p key={blocker}>- {blocker}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="mt-3 grid gap-2 md:grid-cols-[minmax(200px,1fr)_auto_auto]">
+                    <Input
+                      value={reviewNotesByType[review.reviewType] || ''}
+                      disabled={isSavingReview}
+                      placeholder="Manual review note"
+                      onChange={event =>
+                        setReviewNotesByType(current => ({
+                          ...current,
+                          [review.reviewType]: event.target.value,
+                        }))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isSavingReview || !canAccept || !onUpdateManualReadinessReview}
+                      onClick={() =>
+                        void onUpdateManualReadinessReview?.({
+                          reviewType: review.reviewType,
+                          status: 'accepted',
+                          notes: reviewNotesByType[review.reviewType] || null,
+                        })
+                      }
+                    >
+                      Accept readiness
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isSavingReview || !onUpdateManualReadinessReview}
+                      onClick={() =>
+                        void onUpdateManualReadinessReview?.({
+                          reviewType: review.reviewType,
+                          status: 'rejected',
+                          notes: reviewNotesByType[review.reviewType] || null,
+                        })
+                      }
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Last reviewed: {review.reviewedAt || 'Pending'} |{' '}
+                    {formatActor(review.reviewedBy)}
+                  </p>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

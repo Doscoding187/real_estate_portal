@@ -194,6 +194,92 @@ describe('ManagerDealChecklistPanel', () => {
     expect(screen.getByText(/Lease, deposit, and rental commission rules/i)).toBeInTheDocument();
   });
 
+  it('shows manual readiness review blockers and disables acceptance until ready', () => {
+    render(
+      <ManagerDealChecklistPanel
+        checklist={
+          {
+            ...checklistFixture,
+            transactionType: 'for_rent',
+            computed: {
+              ...checklistFixture.computed,
+              manualReadinessReviews: [
+                {
+                  reviewType: 'rental_lease_readiness',
+                  label: 'Lease readiness review',
+                  description:
+                    'Manager confirms the rental applicant has lease-readiness evidence. This does not move stages or approve reward payout.',
+                  requiredRoles: ['lease'],
+                  status: 'pending',
+                  notes: null,
+                  reviewedAt: null,
+                  reviewedBy: null,
+                  blockers: ['1 readiness document still need verification.'],
+                },
+              ],
+            },
+          } as any
+        }
+        savingTemplateId={null}
+        onUpdateDocumentStatus={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByText('Manual Readiness Review')).toBeInTheDocument();
+    expect(screen.getByText('Lease readiness review')).toBeInTheDocument();
+    expect(screen.getByText(/does not move stages or approve reward payout/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 readiness document still need verification/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Accept readiness' })).toBeDisabled();
+  });
+
+  it('calls manual readiness review callback for accepted auction readiness', async () => {
+    const onUpdateManualReadinessReview = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <ManagerDealChecklistPanel
+        checklist={
+          {
+            ...checklistFixture,
+            transactionType: 'auction',
+            computed: {
+              ...checklistFixture.computed,
+              manualReadinessReviews: [
+                {
+                  reviewType: 'auction_bidder_readiness',
+                  label: 'Bidder readiness review',
+                  description:
+                    'Manager confirms bidder registration and auction terms evidence. This does not move stages or approve reward payout.',
+                  requiredRoles: ['auction_registration', 'auction_terms'],
+                  status: 'pending',
+                  notes: null,
+                  reviewedAt: null,
+                  reviewedBy: null,
+                  blockers: [],
+                },
+              ],
+            },
+          } as any
+        }
+        savingTemplateId={null}
+        onUpdateDocumentStatus={vi.fn().mockResolvedValue(undefined)}
+        onUpdateManualReadinessReview={onUpdateManualReadinessReview}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Manual review note'), {
+      target: { value: 'Bidder approved after terms check.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Accept readiness' }));
+
+    await waitFor(() =>
+      expect(onUpdateManualReadinessReview).toHaveBeenCalledWith({
+        reviewType: 'auction_bidder_readiness',
+        status: 'accepted',
+        notes: 'Bidder approved after terms check.',
+      }),
+    );
+  });
+
   it('surfaces configured, missing, and wrong-lane readiness roles from the read model', () => {
     render(
       <ManagerDealChecklistPanel

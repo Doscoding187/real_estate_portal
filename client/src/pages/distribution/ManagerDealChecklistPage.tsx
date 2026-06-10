@@ -43,6 +43,7 @@ export default function ManagerDealChecklistPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [savingTemplateId, setSavingTemplateId] = useState<number | null>(null);
+  const [savingReviewType, setSavingReviewType] = useState<string | null>(null);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [localChecklist, setLocalChecklist] = useState<any | null>(null);
 
@@ -56,6 +57,8 @@ export default function ManagerDealChecklistPage() {
   );
 
   const updateDocumentStatusMutation = trpc.distribution.manager.updateDealDocumentStatus.useMutation();
+  const updateManualReadinessReviewMutation =
+    trpc.distribution.manager.updateManualReadinessReview.useMutation();
 
   useEffect(() => {
     if (loading) return;
@@ -167,6 +170,35 @@ export default function ManagerDealChecklistPage() {
     }
   }
 
+  async function handleUpdateManualReadinessReview(input: {
+    reviewType: 'rental_lease_readiness' | 'auction_bidder_readiness';
+    status: 'accepted' | 'rejected';
+    notes?: string | null;
+  }) {
+    if (!localChecklist) return;
+    const previousChecklist = localChecklist;
+    setSavingReviewType(input.reviewType);
+
+    try {
+      const updatedChecklist = await updateManualReadinessReviewMutation.mutateAsync({
+        dealId,
+        reviewType: input.reviewType,
+        status: input.status,
+        notes: input.notes,
+      });
+      setLocalChecklist(updatedChecklist);
+      toast.success(
+        input.status === 'accepted' ? 'Manual readiness accepted.' : 'Manual readiness rejected.',
+      );
+    } catch (error: any) {
+      setLocalChecklist(previousChecklist);
+      toast.error(error?.message || 'Failed to update manual readiness review');
+      throw error;
+    } finally {
+      setSavingReviewType(null);
+    }
+  }
+
   if (loading || checklistQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -215,8 +247,10 @@ export default function ManagerDealChecklistPage() {
         <ManagerDealChecklistPanel
           checklist={localChecklist}
           savingTemplateId={savingTemplateId}
+          savingReviewType={savingReviewType}
           isBatchSaving={isBatchSaving}
           onUpdateDocumentStatus={handleUpdateDocumentStatus}
+          onUpdateManualReadinessReview={handleUpdateManualReadinessReview}
           onMarkAllRequiredReceived={() => handleBatchUpdateRequired('received')}
           onMarkAllRequiredVerified={() => handleBatchUpdateRequired('verified')}
         />

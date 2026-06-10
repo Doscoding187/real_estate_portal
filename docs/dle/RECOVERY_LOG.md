@@ -4920,3 +4920,56 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): configure document semantics in admin`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-10 - Manual Rental/Auction Readiness Review
+
+Date: 2026-06-10
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add explicit manager manual readiness review actions for Rental lease readiness and Auction
+bidder readiness without enabling stage, payout, commission, lead, inventory, or reward automation.
+Files changed:
+- server/services/distributionDealDocumentsService.ts
+- server/distributionRouter.ts
+- server/__tests__/distributionManagerChecklist.integration.test.ts
+- client/src/pages/distribution/ManagerDealChecklistPage.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx
+- docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx`
+  passed.
+- `pnpm db:migrate:test` passed to bring the local test DB up to the latest document-semantics
+  schema.
+- `pnpm vitest run server/__tests__/distributionManagerChecklist.integration.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `getDealChecklist` now derives lane-specific manual readiness review state for Rental and
+  Auction from required-document semantics and prior validation events.
+- Rental lease readiness acceptance is blocked until required lease-role documents are verified.
+- Auction bidder readiness acceptance is blocked until both auction registration and auction terms
+  documents are verified.
+- Accepted/rejected manual reviews are stored as `distribution_deal_events` validation events with
+  metadata proving `stageChanged`, `commissionChanged`, and `payoutReadyChanged` are false.
+- The manager checklist UI shows blockers, notes, accepted/rejected state, actor readback, and
+  manual Accept/Reject controls.
+Guardrails:
+- No schema, migration, stage transition, payout calculation, commission status mutation, reward
+  readiness automation, lead mutation, DLE inventory mutation, or operating-event mutation was
+  added.
+- Manual review acceptance is review context only; it does not replace payout milestone rules.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Manual review readback is currently on the manager checklist; admin deal/reward rows may still
+  need compact readback of the latest manual decision.
+- Full Rental/Auction reward automation remains intentionally unimplemented until programme terms,
+  payout triggers, and override rules are proven.
+Next recommended slice:
+- Add admin readback or browser proof for manager manual readiness review before considering any
+  guarded payout/stage automation.
+Commit hash/tag: This entry will be included in
+`feat(dle): add manual readiness review`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

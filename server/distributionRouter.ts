@@ -63,6 +63,7 @@ import { getProgramReadinessByDevelopmentId } from './services/distributionProgr
 import {
   assertDealPayoutReady,
   getDealChecklist,
+  updateManualReadinessReview,
   upsertDealDocumentStatus,
 } from './services/distributionDealDocumentsService';
 import { assertDealIsMutable } from './services/distributionDealMutationGuards';
@@ -5707,6 +5708,33 @@ const managerDistributionRouter = router({
           notes: input.notes,
           submittedFileUrl: input.submittedFileUrl,
           submittedFileName: input.submittedFileName,
+        },
+        ctx.user!.id,
+        { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
+      );
+    }),
+
+  updateManualReadinessReview: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        reviewType: z.enum(['rental_lease_readiness', 'auction_bidder_readiness']),
+        status: z.enum(['accepted', 'rejected']),
+        notes: z.string().max(2000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      return await updateManualReadinessReview(
+        {
+          dealId: input.dealId,
+          reviewType: input.reviewType,
+          status: input.status,
+          notes: input.notes,
         },
         ctx.user!.id,
         { skipAssignmentCheck: ctx.user!.role === 'super_admin' },

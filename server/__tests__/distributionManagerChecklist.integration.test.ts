@@ -6,6 +6,7 @@ import {
   developmentRequiredDocuments,
   developments,
   distributionCommissionEntries,
+  distributionDealEvents,
   distributionDealDocuments,
   distributionDeals,
   distributionIdentities,
@@ -47,10 +48,24 @@ type SeedOptions = {
     | 'transfer_documents'
     | 'custom'
   >;
+  templateSemantics?: Array<{
+    transactionType?: 'all' | 'sale' | 'rent' | 'auction';
+    participantType?: 'buyer' | 'renter' | 'bidder' | 'developer' | 'manager' | 'supporting';
+    readinessRole?:
+      | 'submission'
+      | 'qualification'
+      | 'lease'
+      | 'auction_registration'
+      | 'auction_terms'
+      | 'payout'
+      | 'supporting';
+    blocksPayout?: boolean;
+  }>;
 };
 
 const createdState = {
   dealDocumentIds: [] as number[],
+  dealEventIds: [] as number[],
   dealIds: [] as number[],
   templateIds: [] as number[],
   assignmentIds: [] as number[],
@@ -191,10 +206,15 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   const templateIds: number[] = [];
   for (let index = 0; index < requiredDocsCount; index += 1) {
     const templateCode = templateDocumentCodes[index] || 'custom';
+    const semantics = options.templateSemantics?.[index] || {};
     const [templateInsert] = await db.insert(developmentRequiredDocuments).values({
       developmentId,
       documentCode: templateCode as any,
       documentLabel: `Required document ${index + 1}`,
+      transactionType: semantics.transactionType || 'all',
+      participantType: semantics.participantType || 'supporting',
+      readinessRole: semantics.readinessRole || 'supporting',
+      blocksPayout: semantics.blocksPayout ? 1 : 0,
       isRequired: 1,
       sortOrder: index,
       isActive: 1,
@@ -297,6 +317,11 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       await db.delete(distributionDealDocuments).where(inArray(distributionDealDocuments.id, dealDocumentIds));
     }
 
+    const dealEventIds = uniqueIds(createdState.dealEventIds);
+    if (dealEventIds.length) {
+      await db.delete(distributionDealEvents).where(inArray(distributionDealEvents.id, dealEventIds));
+    }
+
     const validationIds = uniqueIds(createdState.validationIds);
     if (validationIds.length) {
       await db
@@ -355,6 +380,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     }
 
     createdState.dealDocumentIds = [];
+    createdState.dealEventIds = [];
     createdState.dealIds = [];
     createdState.templateIds = [];
     createdState.assignmentIds = [];
@@ -578,6 +604,166 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       dealId: seed.dealId,
     });
     expect(completeChecklist.computed.payoutReady).toBe(true);
+  });
+
+  it('records rental lease readiness review without moving stage or payout readiness', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+      transactionType: 'for_rent',
+      templateDocumentCodes: ['custom'],
+      templateSemantics: [
+        {
+          transactionType: 'rent',
+          participantType: 'renter',
+          readinessRole: 'lease',
+          blocksPayout: true,
+        },
+      ],
+    });
+    const caller = buildCaller(seed.managerUserId);
+
+    const initialChecklist = await caller.distribution.manager.getDealChecklist({
+      dealId: seed.dealId,
+    });
+    expect(initialChecklist.computed.manualReadinessReviews).toEqual([
+      expect.objectContaining({
+        reviewType: 'rental_lease_readiness',
+        status: 'pending',
+        blockers: ['1 readiness document still need verification.'],
+      }),
+    ]);
+
+    await expect(
+      caller.distribution.manager.updateManualReadinessReview({
+        dealId: seed.dealId,
+        reviewType: 'rental_lease_readiness',
+        status: 'accepted',
+        notes: 'Lease pack approved.',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+      status: 'verified',
+    });
+
+    const reviewedChecklist = await caller.distribution.manager.updateManualReadinessReview({
+      dealId: seed.dealId,
+      reviewType: 'rental_lease_readiness',
+      status: 'accepted',
+      notes: 'Lease pack approved.',
+    });
+
+    expect(reviewedChecklist.computed.manualReadinessReviews[0]).toMatchObject({
+      reviewType: 'rental_lease_readiness',
+      status: 'accepted',
+      notes: 'Lease pack approved.',
+      blockers: [],
+    });
+    expect(reviewedChecklist.computed.payoutReady).toBe(true);
+
+    const db = await getDb();
+    const [deal] = await db!
+      .select({
+        currentStage: distributionDeals.currentStage,
+        commissionStatus: distributionDeals.commissionStatus,
+      })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, seed.dealId))
+      .limit(1);
+    expect(deal?.currentStage).toBe('viewing_scheduled');
+    expect(deal?.commissionStatus).toBe('not_ready');
+
+    const events = await db!
+      .select({
+        id: distributionDealEvents.id,
+        eventType: distributionDealEvents.eventType,
+        metadata: distributionDealEvents.metadata,
+      })
+      .from(distributionDealEvents)
+      .where(eq(distributionDealEvents.dealId, seed.dealId));
+    createdState.dealEventIds.push(...events.map(event => Number(event.id)));
+    expect(events).toEqual([
+      expect.objectContaining({
+        eventType: 'validation',
+        metadata: expect.objectContaining({
+          kind: 'manual_readiness_review',
+          reviewType: 'rental_lease_readiness',
+          status: 'accepted',
+          stageChanged: false,
+          commissionChanged: false,
+          payoutReadyChanged: false,
+        }),
+      }),
+    ]);
+  });
+
+  it('requires auction registration and terms evidence before bidder readiness review can be accepted', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+      transactionType: 'auction',
+      templateDocumentCodes: ['custom', 'custom'],
+      templateSemantics: [
+        {
+          transactionType: 'auction',
+          participantType: 'bidder',
+          readinessRole: 'auction_registration',
+        },
+        {
+          transactionType: 'auction',
+          participantType: 'bidder',
+          readinessRole: 'auction_terms',
+        },
+      ],
+    });
+    const caller = buildCaller(seed.managerUserId);
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+      status: 'verified',
+    });
+
+    await expect(
+      caller.distribution.manager.updateManualReadinessReview({
+        dealId: seed.dealId,
+        reviewType: 'auction_bidder_readiness',
+        status: 'accepted',
+        notes: 'Bidder ready.',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[1],
+      status: 'verified',
+    });
+
+    await expect(
+      caller.distribution.manager.updateManualReadinessReview({
+        dealId: seed.dealId,
+        reviewType: 'auction_bidder_readiness',
+        status: 'accepted',
+        notes: 'Bidder ready.',
+      }),
+    ).resolves.toMatchObject({
+      computed: {
+        manualReadinessReviews: [
+          expect.objectContaining({
+            reviewType: 'auction_bidder_readiness',
+            status: 'accepted',
+            blockers: [],
+          }),
+        ],
+      },
+    });
   });
 
   it('blocks manager transition to commission_pending until payout readiness is satisfied', async () => {

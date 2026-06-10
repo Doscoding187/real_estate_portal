@@ -1,8 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
   developments,
   distributionDealDocuments,
+  distributionDealEvents,
   distributionDeals,
   distributionManagerAssignments,
   distributionPrograms,
@@ -18,6 +19,8 @@ import {
 } from './distributionProgrammeSemanticsService';
 
 export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+export type DealManualReadinessReviewType = 'rental_lease_readiness' | 'auction_bidder_readiness';
+export type DealManualReadinessReviewStatus = 'pending' | 'accepted' | 'rejected';
 
 type ChecklistOptions = {
   skipAssignmentCheck?: boolean;
@@ -82,6 +85,17 @@ export type DealChecklistPayload = {
     payoutReady: boolean;
     blockers: string[];
     programmeSemantics: DistributionProgrammeSemanticsReadModel;
+    manualReadinessReviews: Array<{
+      reviewType: DealManualReadinessReviewType;
+      label: string;
+      description: string;
+      requiredRoles: string[];
+      status: DealManualReadinessReviewStatus;
+      notes: string | null;
+      reviewedAt: string | null;
+      reviewedBy: { userId: number; name?: string } | null;
+      blockers: string[];
+    }>;
   };
 };
 
@@ -92,6 +106,13 @@ type UpsertDealDocumentStatusInput = {
   notes?: string | null;
   submittedFileUrl?: string | null;
   submittedFileName?: string | null;
+};
+
+type UpdateManualReadinessReviewInput = {
+  dealId: number;
+  reviewType: DealManualReadinessReviewType;
+  status: Exclude<DealManualReadinessReviewStatus, 'pending'>;
+  notes?: string | null;
 };
 
 function boolFromTinyInt(value: unknown) {
@@ -117,8 +138,61 @@ function formatUserDisplayName(row: { name?: string | null; firstName?: string |
   return fullName || undefined;
 }
 
+function formatReadinessRole(role: string) {
+  return role.replace(/_/g, ' ');
+}
+
 function sqlDateNow() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function normalizeChecklistLane(transactionType: unknown): 'sale' | 'rent' | 'auction' {
+  const normalized = String(transactionType || '').trim().toLowerCase();
+  if (['for_rent', 'rent', 'rental', 'to_rent', 'to-rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+function getManualReviewDefinitions(transactionType: unknown): Array<{
+  reviewType: DealManualReadinessReviewType;
+  label: string;
+  description: string;
+  requiredRoles: Array<'lease' | 'auction_registration' | 'auction_terms'>;
+}> {
+  const lane = normalizeChecklistLane(transactionType);
+  if (lane === 'rent') {
+    return [
+      {
+        reviewType: 'rental_lease_readiness',
+        label: 'Lease readiness review',
+        description:
+          'Manager confirms the rental applicant has lease-readiness evidence. This does not move stages or approve reward payout.',
+        requiredRoles: ['lease'],
+      },
+    ];
+  }
+  if (lane === 'auction') {
+    return [
+      {
+        reviewType: 'auction_bidder_readiness',
+        label: 'Bidder readiness review',
+        description:
+          'Manager confirms bidder registration and auction terms evidence. This does not move stages or approve reward payout.',
+        requiredRoles: ['auction_registration', 'auction_terms'],
+      },
+    ];
+  }
+  return [];
+}
+
+function getManualReviewMetadata(row: any): {
+  kind?: string;
+  reviewType?: DealManualReadinessReviewType;
+  status?: DealManualReadinessReviewStatus;
+} {
+  const metadata = row?.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return {};
+  return metadata as any;
 }
 
 async function assertAssignedManagerForDevelopment(
@@ -252,6 +326,22 @@ export async function getDealChecklist(
           ),
         )
     : [];
+  const manualReviewEvents = await db
+    .select({
+      id: distributionDealEvents.id,
+      actorUserId: distributionDealEvents.actorUserId,
+      metadata: distributionDealEvents.metadata,
+      notes: distributionDealEvents.notes,
+      eventAt: distributionDealEvents.eventAt,
+    })
+    .from(distributionDealEvents)
+    .where(
+      and(
+        eq(distributionDealEvents.dealId, dealScope.dealId),
+        eq(distributionDealEvents.eventType, 'validation'),
+      ),
+    )
+    .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id));
 
   const persistedByTemplateId = new Map<number, (typeof persistedDealDocs)[number]>();
   const actorIds = new Set<number>();
@@ -260,6 +350,12 @@ export async function getDealChecklist(
     if (row.receivedBy) actorIds.add(Number(row.receivedBy));
     if (row.verifiedBy) actorIds.add(Number(row.verifiedBy));
     if (row.submittedBy) actorIds.add(Number(row.submittedBy));
+  }
+  for (const row of manualReviewEvents) {
+    const metadata = getManualReviewMetadata(row);
+    if (metadata.kind === 'manual_readiness_review' && row.actorUserId) {
+      actorIds.add(Number(row.actorUserId));
+    }
   }
 
   const actorDirectory = new Map<number, { name?: string }>();
@@ -367,6 +463,67 @@ export async function getDealChecklist(
   const payoutMilestoneSatisfied = payoutMilestoneEvaluation.satisfied;
   const payoutReady = allRequiredVerified && payoutMilestoneSatisfied;
   const blockers: string[] = [];
+  const latestManualReviewByType = new Map<
+    DealManualReadinessReviewType,
+    (typeof manualReviewEvents)[number]
+  >();
+  for (const event of manualReviewEvents) {
+    const metadata = getManualReviewMetadata(event);
+    if (metadata.kind !== 'manual_readiness_review') continue;
+    if (
+      metadata.reviewType !== 'rental_lease_readiness' &&
+      metadata.reviewType !== 'auction_bidder_readiness'
+    ) {
+      continue;
+    }
+    if (!latestManualReviewByType.has(metadata.reviewType)) {
+      latestManualReviewByType.set(metadata.reviewType, event);
+    }
+  }
+  const manualReadinessReviews = getManualReviewDefinitions(dealScope.transactionType).map(definition => {
+    const latest = latestManualReviewByType.get(definition.reviewType);
+    const latestMetadata = getManualReviewMetadata(latest);
+    const roleDocuments = requiredDocuments.filter(
+      document =>
+        definition.requiredRoles.includes(document.readinessRole as any) &&
+        (document.transactionType === 'all' ||
+          document.transactionType === normalizeChecklistLane(dealScope.transactionType)),
+    );
+    const blockersForReview: string[] = [];
+    if (!roleDocuments.length) {
+      blockersForReview.push(
+        `No required ${definition.requiredRoles.map(formatReadinessRole).join(', ')} document templates are configured.`,
+      );
+    } else {
+      const unverified = roleDocuments.filter(document => document.status !== 'verified');
+      if (unverified.length) {
+        blockersForReview.push(
+          `${unverified.length} readiness document${unverified.length === 1 ? '' : 's'} still need verification.`,
+        );
+      }
+    }
+    const status: DealManualReadinessReviewStatus =
+      latestMetadata.status === 'accepted' || latestMetadata.status === 'rejected'
+        ? latestMetadata.status
+        : 'pending';
+
+    return {
+      reviewType: definition.reviewType,
+      label: definition.label,
+      description: definition.description,
+      requiredRoles: definition.requiredRoles,
+      status,
+      notes: latest?.notes || null,
+      reviewedAt: latest?.eventAt || null,
+      reviewedBy: latest?.actorUserId
+        ? {
+            userId: Number(latest.actorUserId),
+            name: actorDirectory.get(Number(latest.actorUserId))?.name,
+          }
+        : null,
+      blockers: blockersForReview,
+    };
+  });
 
   if (requiredCount === 0) {
     blockers.push('No required document templates are configured for this development.');
@@ -402,6 +559,7 @@ export async function getDealChecklist(
       payoutReady,
       blockers,
       programmeSemantics,
+      manualReadinessReviews,
     },
   };
 }
@@ -532,6 +690,65 @@ export async function upsertDealDocumentStatus(
       verifiedBy,
       notes: notes ?? null,
     });
+  });
+
+  return await getDealChecklist(input.dealId, actorUserId, options);
+}
+
+export async function updateManualReadinessReview(
+  input: UpdateManualReadinessReviewInput,
+  actorUserId: number,
+  options?: ChecklistOptions,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const dealScope = await getDealScope(db, input.dealId);
+  assertDealIsMutable(dealScope.currentStage, 'update readiness review');
+  await assertAssignedManagerForDevelopment(db, {
+    developmentId: dealScope.developmentId,
+    actorUserId,
+    dealManagerUserId: dealScope.managerUserId,
+    skipAssignmentCheck: options?.skipAssignmentCheck,
+  });
+
+  const definitions = getManualReviewDefinitions(dealScope.transactionType);
+  const definition = definitions.find(candidate => candidate.reviewType === input.reviewType);
+  if (!definition) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Manual readiness review is not available for this transaction lane.',
+    });
+  }
+
+  const checklist = await getDealChecklist(input.dealId, actorUserId, options);
+  const currentReview = checklist.computed.manualReadinessReviews.find(
+    review => review.reviewType === input.reviewType,
+  );
+
+  if (input.status === 'accepted' && currentReview?.blockers.length) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `Manual readiness review is blocked: ${currentReview.blockers.join(', ')}`,
+    });
+  }
+
+  await db.insert(distributionDealEvents).values({
+    dealId: input.dealId,
+    eventType: 'validation',
+    actorUserId,
+    visibilityScope: 'team',
+    metadata: {
+      kind: 'manual_readiness_review',
+      reviewType: input.reviewType,
+      status: input.status,
+      transactionLane: normalizeChecklistLane(dealScope.transactionType),
+      requiredRoles: definition.requiredRoles,
+      stageChanged: false,
+      commissionChanged: false,
+      payoutReadyChanged: false,
+    } as any,
+    notes: input.notes?.trim() || null,
   });
 
   return await getDealChecklist(input.dealId, actorUserId, options);

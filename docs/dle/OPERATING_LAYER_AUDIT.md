@@ -431,6 +431,11 @@ Recommended next architecture work:
   semantics read model. Admin rows show missing readiness roles and wrong-lane template warnings
   as review context only, while payout and stage mutations remain governed by existing admin
   override rules and explicit justification requirements.
+- The manager deal checklist now exposes manual readiness review controls for Rental lease
+  readiness and Auction bidder readiness. Acceptance is blocked until the matching required
+  document roles are verified, and accepted/rejected reviews are recorded as team-visible
+  validation events only. These actions do not move stages, alter commission state, approve
+  rewards, change payout readiness, or mutate DLE inventory.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

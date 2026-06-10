@@ -305,8 +305,10 @@ Status:
 
 - Steps 1, 2, first manager/admin readback surfaces, and first admin authoring controls are
   implemented.
-- Step 4 remains the next meaningful operating-design layer.
-- Step 5 remains explicitly out of scope until manual review and payout rules are proven.
+- Step 4 is implemented as manager manual readiness review actions for Rental lease readiness and
+  Auction bidder readiness. The actions record validation events and visible readback only.
+- Step 5 remains explicitly out of scope. Manual review acceptance does not move stages, approve
+  rewards, change commission state, or automate payout readiness.
 
 Each implementation slice must prove:
 
