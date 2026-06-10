@@ -5017,3 +5017,52 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): show admin manual readiness`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-10 - Admin Manual Readiness Browser Proof
+
+Date: 2026-06-10
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove in-browser that manager-recorded Rental/Auction manual readiness decisions appear in
+super-admin deal and reward review rows without changing payout, stage, commission, document
+ownership, lead, inventory, or reward automation.
+Files changed:
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-10/qa-dle-admin-manual-readiness-manager-rental.png
+- docs/dle/evidence/2026-06-10/qa-dle-admin-manual-readiness-manager-auction.png
+- docs/dle/evidence/2026-06-10/qa-dle-admin-manual-readiness-deal-pipeline.png
+- docs/dle/evidence/2026-06-10/qa-dle-admin-manual-readiness-reward-rows.png
+Tests run:
+- `pnpm db:migrate:local` passed and verified `listify_local` distribution schema readiness.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1 -g "shows manager manual readiness"` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The browser test seeds Rental and Auction referral deals with verified readiness documents and
+  pending reward rows.
+- The manager checklist UI accepts Rental lease readiness and Auction bidder readiness with notes.
+- Super-admin deal pipeline rows show the accepted manual readiness decision, reviewer, note, and
+  explicit `Reward automation remains disabled` copy.
+- Super-admin reward rows show the same manual readiness readback.
+- DB assertions prove deal stage and commission status remain unchanged after manual readiness
+  acceptance, and validation-event metadata records `stageChanged`, `commissionChanged`, and
+  `payoutReadyChanged` as false.
+Guardrails:
+- No schema, migration file, payout calculation, stage transition, commission status mutation,
+  reward readiness automation, lead mutation, DLE inventory mutation, or operating-event mutation
+  was added.
+- `pnpm db:migrate:local` was required only because the local manual-QA DB was behind the committed
+  document-semantics migration.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Manual readiness is now proven as readback context, but full Rental/Auction reward automation is
+  still intentionally unimplemented until programme terms, payout triggers, and override rules are
+  proven.
+Next recommended slice:
+- Continue Rental/Auction operating proof that does not automate payout, or begin a separate
+  design/test slice for guarded payout/stage automation rules.
+Commit hash/tag: This entry will be included in
+`test(dle): prove admin manual readiness readback`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

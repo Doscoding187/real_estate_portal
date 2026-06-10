@@ -8,9 +8,13 @@ dotenv.config({ path: '.env.local' });
 import {
   developers,
   developmentOperatingEvents,
+  developmentRequiredDocuments,
+  distributionCommissionEntries,
   developments,
+  distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
+  distributionManagerAssignments,
   distributionPrograms,
   users,
 } from '../../drizzle/schema';
@@ -21,6 +25,8 @@ import { COOKIE_NAME } from '../../shared/const';
 
 const evidenceDir = 'docs/dle/evidence/2026-06-07';
 fs.mkdirSync(evidenceDir, { recursive: true });
+const manualReadinessEvidenceDir = 'docs/dle/evidence/2026-06-10';
+fs.mkdirSync(manualReadinessEvidenceDir, { recursive: true });
 
 type HandoffTransactionType = 'for_sale' | 'for_rent' | 'auction';
 
@@ -33,6 +39,10 @@ type Seed = {
   developmentName: string;
   programId: number;
   dealId: number;
+  commissionEntryId?: number;
+  requiredDocumentIds?: number[];
+  dealDocumentIds?: number[];
+  managerAssignmentId?: number;
   buyerName: string;
   email: string;
   managerEmail: string;
@@ -40,7 +50,8 @@ type Seed = {
 };
 
 function getInsertId(result: unknown): number {
-  return Number((result as Array<{ insertId: number }>)[0]?.insertId);
+  if (Array.isArray(result)) return Number(result[0]?.insertId || 0);
+  return Number((result as { insertId?: number })?.insertId || 0);
 }
 
 function parseJsonObject(value: unknown): Record<string, any> {
@@ -300,6 +311,98 @@ async function seedDistributionHandoffDevelopment(
   };
 }
 
+async function seedManualReadinessPrerequisites(seed: Seed) {
+  const db = await getDb();
+  expect(db).toBeTruthy();
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  const [assignmentInsert] = await db!.insert(distributionManagerAssignments).values({
+    developmentId: seed.developmentId,
+    managerUserId: seed.managerUserId,
+    isPrimary: 1,
+    isActive: 1,
+    assignedAt: now,
+    workloadCapacity: 0,
+    timezone: null,
+  } as any);
+  seed.managerAssignmentId = getInsertId(assignmentInsert);
+
+  const requiredDocumentInputs =
+    seed.transactionType === 'auction'
+      ? [
+          {
+            documentLabel: 'Auction registration pack',
+            transactionType: 'auction',
+            participantType: 'bidder',
+            readinessRole: 'auction_registration',
+          },
+          {
+            documentLabel: 'Auction terms acceptance',
+            transactionType: 'auction',
+            participantType: 'bidder',
+            readinessRole: 'auction_terms',
+          },
+        ]
+      : [
+          {
+            documentLabel: 'Lease readiness pack',
+            transactionType: 'rent',
+            participantType: 'renter',
+            readinessRole: 'lease',
+          },
+        ];
+
+  const requiredDocumentIds: number[] = [];
+  const dealDocumentIds: number[] = [];
+  for (const [index, documentInput] of requiredDocumentInputs.entries()) {
+    const [documentInsert] = await db!.insert(developmentRequiredDocuments).values({
+      developmentId: seed.developmentId,
+      documentCode: 'custom' as any,
+      documentLabel: documentInput.documentLabel,
+      transactionType: documentInput.transactionType as any,
+      participantType: documentInput.participantType as any,
+      readinessRole: documentInput.readinessRole as any,
+      blocksPayout: 1,
+      isRequired: 1,
+      sortOrder: index,
+      isActive: 1,
+    });
+    const requiredDocumentId = getInsertId(documentInsert);
+    requiredDocumentIds.push(requiredDocumentId);
+
+    const [dealDocumentInsert] = await db!.insert(distributionDealDocuments).values({
+      dealId: seed.dealId,
+      developmentRequiredDocumentId: requiredDocumentId,
+      status: 'verified',
+      receivedAt: now,
+      verifiedAt: now,
+      receivedBy: seed.managerUserId,
+      verifiedBy: seed.managerUserId,
+      notes: 'Browser proof pre-verified readiness document.',
+    } as any);
+    dealDocumentIds.push(getInsertId(dealDocumentInsert));
+  }
+
+  const [commissionInsert] = await db!.insert(distributionCommissionEntries).values({
+    dealId: seed.dealId,
+    programId: seed.programId,
+    developmentId: seed.developmentId,
+    agentId: seed.agentUserId,
+    calculationBaseAmount: seed.transactionType === 'for_rent' ? 27_000 : 950_000,
+    commissionPercent: '2.50',
+    commissionAmount: seed.transactionType === 'for_rent' ? 675 : 23_750,
+    currency: 'ZAR',
+    triggerStage: 'contract_signed',
+    entryStatus: 'pending',
+    notes: 'Browser proof reward row; manual readiness must remain read-only.',
+    createdBy: seed.managerUserId,
+  } as any);
+
+  seed.requiredDocumentIds = requiredDocumentIds;
+  seed.dealDocumentIds = dealDocumentIds;
+  seed.commissionEntryId = getInsertId(commissionInsert);
+}
+
 async function selectDevelopment(page: Page, developmentName: string) {
   await page.getByRole('combobox').nth(1).click();
   await page.getByRole('option', { name: developmentName }).click();
@@ -319,11 +422,33 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     const seedsToClean = [...(seed ? [seed] : []), ...cleanupSeeds];
     for (const cleanup of seedsToClean.reverse()) {
       await db.delete(distributionDealEvents).where(eq(distributionDealEvents.dealId, cleanup.dealId));
+      if (cleanup.dealDocumentIds?.length) {
+        for (const dealDocumentId of cleanup.dealDocumentIds) {
+          await db.delete(distributionDealDocuments).where(eq(distributionDealDocuments.id, dealDocumentId));
+        }
+      }
+      if (cleanup.commissionEntryId) {
+        await db
+          .delete(distributionCommissionEntries)
+          .where(eq(distributionCommissionEntries.id, cleanup.commissionEntryId));
+      }
       await db
         .delete(developmentOperatingEvents)
         .where(eq(developmentOperatingEvents.developmentId, cleanup.developmentId));
       await db.delete(distributionDeals).where(eq(distributionDeals.id, cleanup.dealId));
       await db.delete(distributionPrograms).where(eq(distributionPrograms.id, cleanup.programId));
+      if (cleanup.requiredDocumentIds?.length) {
+        for (const requiredDocumentId of cleanup.requiredDocumentIds) {
+          await db
+            .delete(developmentRequiredDocuments)
+            .where(eq(developmentRequiredDocuments.id, requiredDocumentId));
+        }
+      }
+      if (cleanup.managerAssignmentId) {
+        await db
+          .delete(distributionManagerAssignments)
+          .where(eq(distributionManagerAssignments.id, cleanup.managerAssignmentId));
+      }
       await db.delete(developments).where(eq(developments.id, cleanup.developmentId));
       await db.delete(developers).where(eq(developers.id, cleanup.developerId));
       await db.delete(users).where(eq(users.id, cleanup.agentUserId));
@@ -628,5 +753,158 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     expect(operatingEvents[0].distributionDealId).toBe(auctionSeed.dealId);
     expect(parseJsonObject(operatingEvents[0].afterData).stageChanged).toBe(false);
     expect(parseJsonObject(operatingEvents[0].afterData).commissionChanged).toBe(false);
+  });
+
+  test('shows manager manual readiness decisions in admin deal and reward rows without automation', async ({
+    page,
+  }) => {
+    const rentalSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const auctionSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const rentalSeed = await seedDistributionHandoffDevelopment(rentalSuffix, 'for_rent');
+    const auctionSeed = await seedDistributionHandoffDevelopment(auctionSuffix, 'auction');
+    cleanupSeeds.push(rentalSeed, auctionSeed);
+    await seedManualReadinessPrerequisites(rentalSeed);
+    await seedManualReadinessPrerequisites(auctionSeed);
+
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const [rentalBeforeDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, rentalSeed.dealId))
+      .limit(1);
+    const [auctionBeforeDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, auctionSeed.dealId))
+      .limit(1);
+
+    await loginAsSeededManager(page, rentalSeed);
+    await page.goto(`/distribution/manager/deals/${rentalSeed.dealId}`);
+    await expect(page.getByRole('heading', { name: 'Manual Readiness Review' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Lease readiness review')).toBeVisible();
+    await page.getByPlaceholder('Manual review note').fill('Lease readiness accepted in browser proof.');
+    await page.getByRole('button', { name: 'Accept readiness' }).click();
+    await expect(page.getByText('Manual readiness accepted.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Accepted', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({
+      path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-manager-rental.png`,
+    });
+
+    await loginAsSeededManager(page, auctionSeed);
+    await page.goto(`/distribution/manager/deals/${auctionSeed.dealId}`);
+    await expect(page.getByRole('heading', { name: 'Manual Readiness Review' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Bidder readiness review')).toBeVisible();
+    await page.getByPlaceholder('Manual review note').fill('Bidder readiness accepted in browser proof.');
+    await page.getByRole('button', { name: 'Accept readiness' }).click();
+    await expect(page.getByText('Manual readiness accepted.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Accepted', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({
+      path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-manager-auction.png`,
+    });
+
+    await page.goto('/admin/distribution/deal-pipeline');
+    await expect(page.getByRole('heading', { name: 'Distribution Network' })).toBeVisible({
+      timeout: 15_000,
+    });
+    const rentalDealRow = page.locator('div.rounded.border').filter({
+      hasText: rentalSeed.developmentName,
+    });
+    await expect(rentalDealRow.getByText('Manual readiness: Lease readiness review accepted')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(rentalDealRow.getByText('Lease readiness accepted in browser proof')).toBeVisible();
+    await expect(
+      rentalDealRow.getByText(
+        'Manual readiness: Lease readiness review accepted by Referral Manager. Note: Lease readiness accepted in browser proof. Reward automation remains disabled.',
+      ),
+    ).toBeVisible();
+
+    const auctionDealRow = page.locator('div.rounded.border').filter({
+      hasText: auctionSeed.developmentName,
+    });
+    await expect(
+      auctionDealRow.getByText('Manual readiness: Bidder readiness review accepted'),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(auctionDealRow.getByText('Bidder readiness accepted in browser proof')).toBeVisible();
+    await expect(
+      auctionDealRow.getByText(
+        'Manual readiness: Bidder readiness review accepted by Referral Manager. Note: Bidder readiness accepted in browser proof. Reward automation remains disabled.',
+      ),
+    ).toBeVisible();
+    await page.screenshot({
+      path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-deal-pipeline.png`,
+    });
+
+    await page.goto('/admin/distribution/commission-incentives');
+    await expect(page.getByRole('heading', { name: 'Distribution Network' })).toBeVisible({
+      timeout: 15_000,
+    });
+    const rentalRewardRow = page.locator('div.rounded.border').filter({
+      hasText: rentalSeed.developmentName,
+    });
+    await expect(
+      rentalRewardRow.getByText('Manual readiness: Lease readiness review accepted'),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      rentalRewardRow.getByText(
+        'Manual readiness: Lease readiness review accepted by Referral Manager. Note: Lease readiness accepted in browser proof. Reward automation remains disabled.',
+      ),
+    ).toBeVisible();
+
+    const auctionRewardRow = page.locator('div.rounded.border').filter({
+      hasText: auctionSeed.developmentName,
+    });
+    await expect(
+      auctionRewardRow.getByText('Manual readiness: Bidder readiness review accepted'),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      auctionRewardRow.getByText(
+        'Manual readiness: Bidder readiness review accepted by Referral Manager. Note: Bidder readiness accepted in browser proof. Reward automation remains disabled.',
+      ),
+    ).toBeVisible();
+    await page.screenshot({
+      path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-reward-rows.png`,
+    });
+
+    const [rentalAfterDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, rentalSeed.dealId))
+      .limit(1);
+    const [auctionAfterDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, auctionSeed.dealId))
+      .limit(1);
+    expect(rentalAfterDeal.currentStage).toBe(rentalBeforeDeal.currentStage);
+    expect(rentalAfterDeal.commissionStatus).toBe(rentalBeforeDeal.commissionStatus);
+    expect(auctionAfterDeal.currentStage).toBe(auctionBeforeDeal.currentStage);
+    expect(auctionAfterDeal.commissionStatus).toBe(auctionBeforeDeal.commissionStatus);
+
+    const manualEvents = await db!
+      .select()
+      .from(distributionDealEvents)
+      .where(eq(distributionDealEvents.eventType, 'validation'));
+    const rentalManualEvent = manualEvents.find(
+      event =>
+        event.dealId === rentalSeed.dealId &&
+        parseJsonObject(event.metadata).kind === 'manual_readiness_review',
+    );
+    const auctionManualEvent = manualEvents.find(
+      event =>
+        event.dealId === auctionSeed.dealId &&
+        parseJsonObject(event.metadata).kind === 'manual_readiness_review',
+    );
+    expect(parseJsonObject(rentalManualEvent?.metadata).stageChanged).toBe(false);
+    expect(parseJsonObject(rentalManualEvent?.metadata).commissionChanged).toBe(false);
+    expect(parseJsonObject(rentalManualEvent?.metadata).payoutReadyChanged).toBe(false);
+    expect(parseJsonObject(auctionManualEvent?.metadata).stageChanged).toBe(false);
+    expect(parseJsonObject(auctionManualEvent?.metadata).commissionChanged).toBe(false);
+    expect(parseJsonObject(auctionManualEvent?.metadata).payoutReadyChanged).toBe(false);
   });
 });

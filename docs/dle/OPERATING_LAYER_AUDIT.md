@@ -440,6 +440,10 @@ Recommended next architecture work:
   readiness decision as read-only context. Admins can see pending, accepted, or rejected manual
   readiness reviews and notes without the row implying reward readiness or changing payout/stage
   behavior.
+- Browser proof in `e2e/dle/distribution-handoff.spec.ts` verifies the full manager-to-admin
+  manual readiness readback path for Rental and Auction: manager accepts verified readiness,
+  super-admin deal/reward rows show the decision and note, and distribution stage/commission state
+  remain unchanged.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.
