@@ -5066,3 +5066,41 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `test(dle): prove admin manual readiness readback`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-10 - Manager Checklist Truthful Optimistic Readiness
+
+Date: 2026-06-10
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prevent the manager checklist from briefly claiming payout/readiness is ready from verified
+documents alone when server-owned payout milestone blockers or manual/programme readback still
+exist.
+Files changed:
+- client/src/pages/distribution/ManagerDealChecklistPage.tsx
+- client/src/pages/distribution/ManagerDealChecklistPage.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/distribution/ManagerDealChecklistPage.test.ts` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Optimistic document-status updates preserve existing server-computed fields such as
+  `programmeSemantics` and `manualReadinessReviews`.
+- Optimistic updates remove stale document-verification blockers but preserve non-document
+  blockers such as payout milestone requirements.
+- Local UI can downgrade readiness when a verified document is changed away from verified, but it
+  cannot locally upgrade payout readiness ahead of the authoritative backend response.
+Guardrails:
+- No schema, API, payout calculation, stage transition, commission status mutation, document
+  mutation, lead mutation, DLE inventory mutation, or automation behavior was added.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The visible phrase `Referral Review Ready` still maps to `computed.payoutReady`; future UX may
+  need clearer milestone-vs-document wording before guarded Rental/Auction automation.
+Next recommended slice:
+- Continue with a design/test slice for guarded Rental/Auction payout/stage automation rules, or
+  further tighten manager checklist language around document readiness versus payout readiness.
+Commit hash/tag: This entry will be included in
+`fix(dle): keep manager readiness optimistic state truthful`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

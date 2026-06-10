@@ -444,6 +444,10 @@ Recommended next architecture work:
   manual readiness readback path for Rental and Auction: manager accepts verified readiness,
   super-admin deal/reward rows show the decision and note, and distribution stage/commission state
   remain unchanged.
+- The manager checklist optimistic document-status update now preserves server-owned computed
+  readback fields and never upgrades payout/readiness locally when milestone blockers remain. This
+  prevents a transient false `ready` state while the backend mutation is still returning the
+  authoritative checklist.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

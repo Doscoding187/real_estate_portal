@@ -11,7 +11,14 @@ import { ManagerDealChecklistPanel } from '@/components/distribution/manager/Man
 
 type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
 
-function computeChecklistSummary(checklist: any) {
+function isDocumentReadinessBlocker(blocker: string) {
+  return (
+    blocker === 'No required documents are configured for this development.' ||
+    /required documents? still need verification/i.test(blocker)
+  );
+}
+
+export function computeChecklistSummary(checklist: any) {
   const requiredDocuments = (checklist.requiredDocuments || []) as Array<any>;
   const requiredOnly = requiredDocuments.filter(document => Boolean(document.isRequired));
   const requiredCount = requiredOnly.length;
@@ -28,13 +35,20 @@ function computeChecklistSummary(checklist: any) {
       `${remaining} required document${remaining === 1 ? '' : 's'} still need verification.`,
     );
   }
+  const previousComputed = checklist.computed || {};
+  const previousNonDocumentBlockers = Array.isArray(previousComputed.blockers)
+    ? previousComputed.blockers.filter((blocker: string) => !isDocumentReadinessBlocker(blocker))
+    : [];
+  const nextBlockers = [...blockers, ...previousNonDocumentBlockers];
+  const wasPayoutReady = Boolean(previousComputed.payoutReady);
 
   return {
+    ...previousComputed,
     requiredCount,
     verifiedRequiredCount,
     allRequiredVerified,
-    payoutReady: allRequiredVerified,
-    blockers,
+    payoutReady: wasPayoutReady && allRequiredVerified && nextBlockers.length === 0,
+    blockers: nextBlockers,
   };
 }
 
