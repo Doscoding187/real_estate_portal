@@ -70,11 +70,15 @@ describe('ManagerDealChecklistPanel', () => {
     expect(getChecklistTransactionCopy('for_rent')).toMatchObject({
       engineLabel: 'Rental engine',
       participantLabel: 'Rental applicant',
+      readinessLabel: 'Rental Checklist Readiness',
+      readyLabel: 'Checklist Ready for Manual Review',
       documentTitle: 'Rental Applicant Document Checklist',
     });
     expect(getChecklistTransactionCopy('auction')).toMatchObject({
       engineLabel: 'Auction engine',
       participantLabel: 'Bidder',
+      readinessLabel: 'Auction Checklist Readiness',
+      readyLabel: 'Checklist Ready for Manual Review',
       documentTitle: 'Bidder Document Checklist',
     });
     expect(getChecklistProgrammeSemanticsCopy('for_rent')).toMatchObject({
@@ -182,7 +186,7 @@ describe('ManagerDealChecklistPanel', () => {
 
     expect(screen.getByText('Rental engine')).toBeInTheDocument();
     expect(screen.getByText('Rental applicant: Jane Doe')).toBeInTheDocument();
-    expect(screen.getByText('Referral Review Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Checklist Not Ready for Manual Review')).toBeInTheDocument();
     expect(screen.getByText('Rental programme semantics')).toBeInTheDocument();
     expect(screen.getByText('Readiness metadata not configured')).toBeInTheDocument();
     expect(screen.getByText('Lease signed')).toBeInTheDocument();
@@ -191,7 +195,9 @@ describe('ManagerDealChecklistPanel', () => {
       screen.getByText(/Document templates do not yet identify Rental readiness roles/i),
     ).toBeInTheDocument();
     expect(screen.getByText('Rental Applicant Document Checklist')).toBeInTheDocument();
-    expect(screen.getByText(/Lease, deposit, and rental commission rules/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Lease, deposit, payout, and reward movement still require explicit Rental programme rules/i),
+    ).toBeInTheDocument();
   });
 
   it('shows manual readiness review blockers and disables acceptance until ready', () => {
@@ -343,7 +349,7 @@ describe('ManagerDealChecklistPanel', () => {
 
     expect(screen.getByText('Auction engine')).toBeInTheDocument();
     expect(screen.getByText('Bidder: Jane Doe')).toBeInTheDocument();
-    expect(screen.getByText('Bidder Review Not Ready')).toBeInTheDocument();
+    expect(screen.getByText('Checklist Not Ready for Manual Review')).toBeInTheDocument();
     expect(screen.getByText('Auction programme semantics')).toBeInTheDocument();
     expect(screen.getByText('Bidder approved')).toBeInTheDocument();
     expect(screen.getByText('Auction terms accepted')).toBeInTheDocument();
@@ -352,7 +358,9 @@ describe('ManagerDealChecklistPanel', () => {
       screen.getByText(/Document templates do not yet identify Auction readiness roles/i),
     ).toBeInTheDocument();
     expect(screen.getByText('Bidder Document Checklist')).toBeInTheDocument();
-    expect(screen.getByText(/proof-of-funds, auction terms/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Bidder approval, auction terms, payout, and reward movement still require explicit Auction programme rules/i),
+    ).toBeInTheDocument();
   });
 
   it('triggers batch callbacks from quick actions', async () => {

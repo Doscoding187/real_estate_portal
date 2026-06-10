@@ -5104,3 +5104,43 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `fix(dle): keep manager readiness optimistic state truthful`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-10 - Manager Checklist Manual Review Copy
+
+Date: 2026-06-10
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Tighten Rental/Auction manager checklist language so verified documents and milestone checks
+are described as checklist readiness for manual review, not as solved referral/reward readiness.
+Files changed:
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx`
+  passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Rental readiness card copy now says `Rental Checklist Readiness` and
+  `Checklist Not Ready for Manual Review` / `Checklist Ready for Manual Review`.
+- Auction readiness card copy now says `Auction Checklist Readiness` and
+  `Checklist Not Ready for Manual Review` / `Checklist Ready for Manual Review`.
+- Rental and Auction notes explicitly state that payout/reward movement still requires explicit
+  transaction-specific programme rules and manual review.
+- Focused component tests assert the new language and keep Sale payout copy unchanged.
+Guardrails:
+- No schema, API, payout calculation, stage transition, commission status mutation, document
+  mutation, lead mutation, DLE inventory mutation, or automation behavior was added.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- This is copy/readback correctness only. Full Rental/Auction payout and stage automation still
+  requires a separate rules design and tests.
+Next recommended slice:
+- Design/test the explicit guarded Rental/Auction payout/stage automation rules, keeping them
+  disabled until programme terms, document requirements, manager approval, and DLE outcome
+  conditions are all represented.
+Commit hash/tag: This entry will be included in
+`fix(dle): clarify manager checklist readiness copy`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

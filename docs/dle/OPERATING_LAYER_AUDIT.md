@@ -448,6 +448,9 @@ Recommended next architecture work:
   readback fields and never upgrades payout/readiness locally when milestone blockers remain. This
   prevents a transient false `ready` state while the backend mutation is still returning the
   authoritative checklist.
+- Rental and Auction manager checklist copy now describes the top readiness card as checklist
+  readiness for manual review, not referral/reward readiness. The note explicitly says reward
+  movement still needs transaction-specific programme rules and manual review.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

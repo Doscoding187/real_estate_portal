@@ -121,26 +121,26 @@ export function getChecklistTransactionCopy(transactionType: unknown) {
     return {
       engineLabel: 'Rental engine',
       participantLabel: 'Rental applicant',
-      readinessLabel: 'Referral Review Readiness',
-      readyLabel: 'Referral Review Ready',
-      notReadyLabel: 'Referral Review Not Ready',
+      readinessLabel: 'Rental Checklist Readiness',
+      readyLabel: 'Checklist Ready for Manual Review',
+      notReadyLabel: 'Checklist Not Ready for Manual Review',
       documentTitle: 'Rental Applicant Document Checklist',
       documentDescription: 'Update received and verification status for rental applicant documents.',
       readinessNote:
-        'Rental referral readiness uses verified documents and current milestone checks. Lease, deposit, and rental commission rules still require the distribution programme to support them explicitly.',
+        'This confirms verified documents and current milestone checks only. Lease, deposit, payout, and reward movement still require explicit Rental programme rules and manual review.',
     };
   }
   if (lane === 'auction') {
     return {
       engineLabel: 'Auction engine',
       participantLabel: 'Bidder',
-      readinessLabel: 'Bidder Review Readiness',
-      readyLabel: 'Bidder Review Ready',
-      notReadyLabel: 'Bidder Review Not Ready',
+      readinessLabel: 'Auction Checklist Readiness',
+      readyLabel: 'Checklist Ready for Manual Review',
+      notReadyLabel: 'Checklist Not Ready for Manual Review',
       documentTitle: 'Bidder Document Checklist',
       documentDescription: 'Update received and verification status for bidder documents.',
       readinessNote:
-        'Auction referral readiness uses verified documents and current milestone checks. Bidder registration, proof-of-funds, auction terms, and auction commission rules still require explicit programme support.',
+        'This confirms verified documents and current milestone checks only. Bidder approval, auction terms, payout, and reward movement still require explicit Auction programme rules and manual review.',
     };
   }
   return {
