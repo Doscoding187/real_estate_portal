@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOverviewOperatingReview,
   buildOverviewOperatingReadiness,
   buildOverviewPricingHealth,
   getOverviewAuctionLifecycleLabel,
@@ -199,5 +200,61 @@ describe('Developer Overview operating readiness', () => {
         afterData: '{"note":"Fallback afterData note"}',
       }),
     ).toBe('Fallback afterData note');
+  });
+
+  it('builds read-only operating review context without merging ownership lanes', () => {
+    const review = buildOverviewOperatingReview({
+      operatingEvents: [
+        {
+          eventType: 'distribution_handoff_created',
+          toStatus: 'review_requested',
+          metadata: { note: 'Manager should review referral context.' },
+        },
+        {
+          eventType: 'lead_stage_changed',
+          fromStatus: 'deal_in_progress',
+          toStatus: 'closed_won',
+          metadata: { displayLabel: 'Lease signed / Let' },
+        },
+        {
+          eventType: 'inventory_status_changed',
+          fromStatus: 'held',
+          toStatus: 'let',
+          metadata: { note: 'Rental unit marked let.' },
+        },
+      ],
+      distributionDeals: [
+        {
+          latestDleHandoff: {
+            status: 'review_requested',
+            note: 'Referral review requested by developer.',
+            eventAt: '2026-06-11T12:00:00.000Z',
+          },
+        },
+      ],
+    });
+
+    expect(review.inventory).toMatchObject({
+      state: 'recorded',
+      detail: 'Rental unit marked let.',
+    });
+    expect(review.lead).toMatchObject({
+      state: 'recorded',
+      label: 'Lead synced',
+      detail: 'Lease signed / Let',
+    });
+    expect(review.handoff).toMatchObject({
+      state: 'recorded',
+      label: 'Review requested',
+      detail: 'Referral review requested by developer.',
+    });
+  });
+
+  it('shows explicit missing operating review states instead of implying automation', () => {
+    expect(buildOverviewOperatingReview({ operatingEvents: [], distributionDeals: [] })).toMatchObject({
+      inventory: { state: 'missing', label: 'Inventory outcome not recorded' },
+      lead: { state: 'missing', label: 'Lead sync not recorded' },
+      handoff: { state: 'missing', label: 'Distribution handoff not requested' },
+    });
   });
 });

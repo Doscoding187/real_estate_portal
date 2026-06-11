@@ -536,9 +536,6 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     await expect(page.getByText('Referral handoff review requested')).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText('Referral handoff', { exact: true })).toBeVisible({
-      timeout: 15_000,
-    });
     const handoffReadback = page.getByTestId(
       `dle-distribution-handoff-readback-${seed.dealId}`,
     );
@@ -546,13 +543,27 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     await expect(handoffReadback.getByText('Review requested')).toBeVisible();
     await expect(handoffReadback.getByText('Sale referral review')).toBeVisible();
     await expect(handoffReadback.getByText('Buyer signed offer pack uploaded')).toBeVisible();
+    const operatingReview = page.getByTestId('dle-operating-review-context');
+    await expect(operatingReview).toBeVisible();
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText(
+      'Inventory outcome not recorded',
+    );
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText(
+      'Lead sync not recorded',
+    );
+    await expect(page.getByTestId('dle-operating-review-handoff')).toContainText(
+      'Review requested',
+    );
+    await expect(page.getByTestId('dle-operating-review-handoff')).toContainText(
+      'Buyer signed offer pack uploaded',
+    );
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-distribution-handoff-review-readback.png`,
     });
 
     await loginAsSeededManager(page, seed);
     await page.goto(`/distribution/manager/developments/${seed.developmentId}`);
-    await expect(page.getByRole('heading', { name: 'Development Deals' })).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Development Referrals' })).toBeVisible({
       timeout: 15_000,
     });
     await expect(page.getByText(seed.buyerName)).toBeVisible({ timeout: 15_000 });

@@ -5595,3 +5595,57 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): structure lead outcome readback`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Operating Review Context
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add a read-only dashboard review context that links inventory outcome, selected-lead sync,
+and distribution handoff state in one operating surface without moving distribution stages,
+commission state, reward state, payout readiness, lead stages, or DLE inventory.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-review-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-manager-readback.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-manager-acknowledged.png
+- docs/dle/evidence/2026-06-07/qa-dle-distribution-handoff-developer-acknowledged.png
+Tests run:
+- `pnpm vitest run client/src/components/developer/Overview.test.ts` passed with 12 tests.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1 -g "requests referral handoff review without changing"`
+  passed with 1 test after tightening stale/ambiguous selectors.
+- `pnpm run check` will be run before commit.
+- `git diff --check` will be run before commit.
+Functional proof:
+- The Developer Control Tower now shows an `Operating Review` card for the selected development.
+- The card reads back separate `Inventory outcome`, `Selected lead sync`, and `Referral handoff`
+  lanes.
+- Missing inventory and lead states are explicit: `Inventory outcome not recorded` and
+  `Lead sync not recorded`.
+- The referral handoff lane reads back `Review requested` plus the developer handoff note after a
+  Sale referral review request.
+- Existing browser proof still verifies manager readback, manager acknowledgement, developer
+  acknowledgement readback, DLE audit event, distribution note events, and unchanged deal stage and
+  commission state.
+Guardrails:
+- No schema, migration, route, mutation, stage transition, commission movement, payout readiness,
+  document verification, lead transition, DLE inventory mutation, or operating-event write path was
+  changed.
+- The new dashboard surface is readback only. It links operating context without becoming an
+  authority for inventory outcomes, selected-lead sync, distribution handoff, rewards, or payouts.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The Operating Review card currently chooses the latest matching event/readback per lane. Deeper
+  audit workflows may need a typed linkage model connecting a specific inventory outcome, lead sync,
+  and distribution handoff as one review bundle.
+Next recommended slice:
+- Add a richer dashboard proof where all three lanes are recorded and linked, or design a typed
+  operating review linkage model before using the card for manager/admin decision workflows.
+Commit hash/tag: This entry will be included in
+`feat(dle): show operating review context`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

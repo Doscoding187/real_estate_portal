@@ -1,11 +1,11 @@
 # DLE Operating Layer Audit
 
 Date: 2026-06-04
-Status: Read-only dashboard operating surfaces cover inventory, lead risk, and distribution
-readiness. Sale reserve/release, Sale sold from reserved inventory, Rental hold/release, Rental let
-from held inventory, Auction registration open/rollback, Auction time-gated activation, and Auction
-sold/passed-in/withdrawn outcomes, and explicit selected-lead outcome sync are implemented and
-browser-proven. Distribution/referral outcome handoff remains a future layer.
+Status: Read-only dashboard operating surfaces cover inventory, lead risk, distribution readiness,
+and operating review context. Sale reserve/release, Sale sold from reserved inventory, Rental
+hold/release, Rental let from held inventory, Auction registration open/rollback, Auction
+time-gated activation, Auction sold/passed-in/withdrawn outcomes, explicit selected-lead outcome
+sync, and distribution/referral review handoff are implemented and browser-proven.
 
 ## Purpose
 
@@ -483,6 +483,11 @@ Recommended next architecture work:
   `lead_stage_changed` DLE operating event when available, with legacy UI inference only as
   fallback. Browser proof in `e2e/dle/lead-outcome-sync.spec.ts` verifies those labels after
   selected-lead sync without changing distribution stage or reward semantics.
+- The developer dashboard now has an `Operating Review` context card for the selected development.
+  It links inventory outcome, selected-lead sync, and referral handoff state as separate read-only
+  statuses. Missing states are explicit, and handoff state can read from the latest referral deal
+  handoff without moving distribution stages, reward state, commission state, payout readiness, or
+  DLE inventory.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

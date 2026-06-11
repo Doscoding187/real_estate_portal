@@ -419,6 +419,21 @@ Preferred first implementation mode:
 
 ## Dashboard And UI Contract
 
+Implemented readback:
+
+- The developer dashboard now shows an `Operating Review` card for the selected development.
+- The card shows three separate lanes:
+  - `Inventory outcome`
+  - `Selected lead sync`
+  - `Referral handoff`
+- Inventory and lead lanes are sourced from DLE operating events. The referral handoff lane can use
+  the latest distribution deal handoff readback or DLE handoff event context.
+- The card is display-only. It does not move inventory status, lead stage, distribution deal stage,
+  commission status, reward state, payout readiness, or document verification.
+- Missing states must be explicit, such as `Inventory outcome not recorded`,
+  `Lead sync not recorded`, and `Distribution handoff not requested`, so the UI never implies
+  automation happened in the background.
+
 The developer dashboard should eventually show:
 
 - inventory outcome status;

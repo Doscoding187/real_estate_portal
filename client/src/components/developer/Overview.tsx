@@ -345,6 +345,77 @@ export function getOverviewOperatingEventNote(event: {
   return typeof note === 'string' ? note.trim() : '';
 }
 
+function isInventoryOutcomeEvent(eventType?: string | null): boolean {
+  return eventType === 'inventory_status_changed' || eventType === 'auction_outcome_recorded';
+}
+
+export function buildOverviewOperatingReview(input: {
+  operatingEvents?: any[];
+  distributionDeals?: any[];
+}) {
+  const events = Array.isArray(input.operatingEvents) ? input.operatingEvents : [];
+  const distributionDeals = Array.isArray(input.distributionDeals) ? input.distributionDeals : [];
+  const latestInventoryOutcome = events.find(event => isInventoryOutcomeEvent(event.eventType));
+  const latestLeadSync = events.find(event => event.eventType === 'lead_stage_changed');
+  const latestHandoffEvent = events.find(event => event.eventType === 'distribution_handoff_created');
+  const latestDealHandoff = distributionDeals
+    .map(deal => deal?.latestDleHandoff)
+    .filter(Boolean)
+    .sort((a, b) => {
+      const bTime = new Date(b.eventAt || b.createdAt || 0).getTime();
+      const aTime = new Date(a.eventAt || a.createdAt || 0).getTime();
+      return bTime - aTime;
+    })[0];
+
+  const leadMetadata = parseOverviewOperatingEventJson(latestLeadSync?.metadata);
+  const handoffMetadata = parseOverviewOperatingEventJson(latestHandoffEvent?.metadata);
+  const handoffStatus = latestDealHandoff?.status || latestHandoffEvent?.toStatus || handoffMetadata.status;
+
+  return {
+    inventory: latestInventoryOutcome
+      ? {
+          state: 'recorded' as const,
+          label: getOverviewOperatingEventLabel(latestInventoryOutcome.eventType),
+          detail:
+            getOverviewOperatingEventNote(latestInventoryOutcome) ||
+            `${latestInventoryOutcome.fromStatus || 'Inventory'} -> ${latestInventoryOutcome.toStatus || 'updated'}`,
+        }
+      : {
+          state: 'missing' as const,
+          label: 'Inventory outcome not recorded',
+          detail: 'No live inventory outcome is linked in the current operating history.',
+        },
+    lead: latestLeadSync
+      ? {
+          state: 'recorded' as const,
+          label: 'Lead synced',
+          detail:
+            String(leadMetadata.displayLabel || '').trim() ||
+            `${latestLeadSync.fromStatus || 'Lead'} -> ${latestLeadSync.toStatus || 'updated'}`,
+        }
+      : {
+          state: 'missing' as const,
+          label: 'Lead sync not recorded',
+          detail: 'No selected-lead outcome sync is linked in the current operating history.',
+        },
+    handoff:
+      latestDealHandoff || latestHandoffEvent
+        ? {
+            state: 'recorded' as const,
+            label: formatDistributionHandoffStatus(handoffStatus),
+            detail:
+              latestDealHandoff?.note ||
+              getOverviewOperatingEventNote(latestHandoffEvent) ||
+              'Distribution handoff is recorded for manager review.',
+          }
+        : {
+            state: 'missing' as const,
+            label: 'Distribution handoff not requested',
+            detail: 'No referral review handoff is linked in the current operating history.',
+          },
+  };
+}
+
 function formatOperatingEventTime(value?: string | null): string {
   if (!value) return 'Just now';
   const date = new Date(value);
@@ -829,6 +900,14 @@ export default function Overview() {
     distributionSummary,
   });
   const operatingEvents = operatingEventsQuery.data?.items || [];
+  const operatingReview = useMemo(
+    () =>
+      buildOverviewOperatingReview({
+        operatingEvents,
+        distributionDeals,
+      }),
+    [operatingEvents, distributionDeals],
+  );
   const saleOperatingInventory = saleOperatingInventoryQuery.data?.items || [];
   const rentalOperatingInventory = rentalOperatingInventoryQuery.data?.items || [];
   const auctionOperatingInventory = auctionOperatingInventoryQuery.data?.items || [];
@@ -2106,6 +2185,44 @@ export default function Overview() {
           )}
         </CardContent>
       </Card>
+
+      {selectedDevelopmentId && (
+        <Card className="card" data-testid="dle-operating-review-context">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="w-4 h-4 text-cyan-600" />
+              Operating Review
+            </CardTitle>
+            <CardDescription>
+              Read-only context linking inventory outcomes, selected-lead sync, and referral
+              handoff state.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-md border border-slate-200 p-3" data-testid="dle-operating-review-inventory">
+                <p className="text-xs font-medium text-muted-foreground">Inventory outcome</p>
+                <p className="mt-1 text-sm font-semibold">{operatingReview.inventory.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{operatingReview.inventory.detail}</p>
+              </div>
+              <div className="rounded-md border border-slate-200 p-3" data-testid="dle-operating-review-lead">
+                <p className="text-xs font-medium text-muted-foreground">Selected lead sync</p>
+                <p className="mt-1 text-sm font-semibold">{operatingReview.lead.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{operatingReview.lead.detail}</p>
+              </div>
+              <div className="rounded-md border border-slate-200 p-3" data-testid="dle-operating-review-handoff">
+                <p className="text-xs font-medium text-muted-foreground">Referral handoff</p>
+                <p className="mt-1 text-sm font-semibold">{operatingReview.handoff.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{operatingReview.handoff.detail}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              These statuses are readback only. DLE inventory, lead stages, referral deal stages,
+              and rewards remain separate operating decisions.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedDevelopmentId && (
         <Card className="card">
