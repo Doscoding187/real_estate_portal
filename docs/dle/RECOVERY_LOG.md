@@ -5491,3 +5491,54 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `test(dle): prove draft transaction rule readback`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Lead Outcome Transaction Readback Labels
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make selected-lead outcome sync visibly transaction-native in the developer Leads Control
+Center without changing canonical lead stages, distribution stages, reward state, or payout
+semantics.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-sale-sold.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-invalid-no-false-success.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-rental-let.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-auction-sold.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-auction-withdrawn.png
+Tests run:
+- `pnpm run check` passed before browser proof.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 3 tests.
+Functional proof:
+- Sale selected-lead sync still moves the explicit selected lead through the existing
+  `lead_stage_changed` path and now shows `Sold` as outcome readback in the list row and detail
+  panel.
+- Rental selected-lead sync still uses canonical `closed_won` stage projection, while the Leads
+  Control Center now shows `Lease signed / Let`.
+- Auction selected-lead sync now shows `Sold at auction` for won bidder context and
+  `Withdrawn follow-up` for explicit loss follow-up context.
+- The existing unsafe direct-close rejection still proves no false success and no extra operating
+  event is written for an invalid lead-stage transition.
+Guardrails:
+- No route, schema, migration, lead transition rule, distribution deal-stage, commission, payout,
+  document verification, inventory mutation, or operating-event mutation was changed.
+- Canonical `closed_won` / `closed_lost` stage values remain visible for audit and filtering.
+- The new labels are readback overlays only; they do not imply distribution/reward readiness.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The label currently derives from development transaction type and lead notes for Auction
+  loss-follow-up nuance. A future structured lead-outcome projection could remove that note-based
+  inference if reporting needs become deeper.
+Next recommended slice:
+- Continue operating-layer reporting with linked outcome/lead/distribution context on dashboard
+  review surfaces, or design structured lead-outcome projection if note-derived labels become too
+  weak for audit/reporting.
+Commit hash/tag: This entry will be included in
+`feat(dle): label lead outcome readback`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

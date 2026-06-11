@@ -58,11 +58,15 @@ Implemented lead outcome sync:
 - `client/src/components/developer/LeadsManager.tsx`
   - exposes transaction-native Outcome Sync actions from the lead detail panel
   - shows no success unless the backend mutation succeeds
+  - keeps canonical lead stage badges visible for filtering/audit while adding transaction-native
+    outcome readback labels for synced closed leads
 - `e2e/dle/lead-outcome-sync.spec.ts`
   - browser-proves Sale sold selected-lead sync and unsafe direct close rejection
   - browser-proves Rental let selected-lead sync with lease-native success/event/activity language
   - browser-proves Auction sold and withdrawn selected-lead sync with bidder-native success,
     event, note, and activity language
+  - browser-proves the Leads Control Center renders Sale, Rental, and Auction outcome labels after
+    sync instead of relying only on raw `closed_won` / `closed_lost` stage text
 
 Current distribution/referral anchors:
 
@@ -447,3 +451,11 @@ Buyer/Renter/Bidder participant copy, and the rewards table labels Sale commissi
 or Auction reward rows from development transaction type. This is display/readback context only:
 DLE still does not move distribution deal stages, calculate payout readiness, or claim
 Rental/Auction-specific reward semantics beyond configured programme terms.
+
+Latest developer lead readback improvement:
+
+- The Leads Control Center now adds transaction-native outcome labels to selected closed leads:
+  Sale `Sold`, Rental `Lease signed / Let`, Auction `Sold at auction`, `Passed in follow-up`, or
+  `Withdrawn follow-up`.
+- The canonical stage remains visible and unchanged for filtering, guardrails, and audit. This is
+  display/readback only, not a new lead transition, distribution deal movement, or payout signal.

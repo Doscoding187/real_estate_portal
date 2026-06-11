@@ -143,6 +143,30 @@ function getOutcomeSyncActions(transactionType: 'sale' | 'rent' | 'auction' | nu
   return [];
 }
 
+function getLeadOutcomeDisplayLabel(
+  lead: Pick<LeadItem, 'stage' | 'notes'>,
+  transactionType: 'sale' | 'rent' | 'auction' | null,
+): string | null {
+  if (lead.stage === 'closed_won') {
+    if (transactionType === 'rent') return 'Lease signed / Let';
+    if (transactionType === 'auction') return 'Sold at auction';
+    if (transactionType === 'sale') return 'Sold';
+  }
+
+  if (lead.stage === 'closed_lost') {
+    const notes = String(lead.notes || '').toLowerCase();
+    if (transactionType === 'auction') {
+      if (notes.includes('withdrawn follow-up')) return 'Withdrawn follow-up';
+      if (notes.includes('passed in follow-up')) return 'Passed in follow-up';
+      return 'Auction follow-up closed';
+    }
+    if (transactionType === 'rent') return 'Rental follow-up closed';
+    if (transactionType === 'sale') return 'Buyer follow-up closed';
+  }
+
+  return null;
+}
+
 export default function LeadsManager() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -379,6 +403,16 @@ export default function LeadsManager() {
     (selectedLeadDevelopment as any)?.transactionType,
   );
   const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
+  const developmentTransactionById = useMemo(() => {
+    const map = new Map<string, 'sale' | 'rent' | 'auction' | null>();
+    for (const development of developments as any[]) {
+      map.set(
+        String(development.id),
+        normalizeDevelopmentTransactionType(development.transactionType),
+      );
+    }
+    return map;
+  }, [developments]);
 
   useEffect(() => {
     if (!selectedLead) {
@@ -646,32 +680,47 @@ export default function LeadsManager() {
               <>
                 <ScrollArea className="h-[62vh] px-4 pb-4">
                   <div className="space-y-2 pt-2">
-                    {pagedLeads.map(lead => (
-                      <button
-                        key={lead.id}
-                        className={`w-full text-left border rounded-lg p-3 transition-colors ${
-                          selectedLeadId === lead.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:bg-slate-50'
-                        }`}
-                        onClick={() => setSelectedLeadId(lead.id)}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="font-medium text-sm">{lead.contact.name || 'Unnamed lead'}</p>
-                            <p className="text-xs text-muted-foreground">{lead.contact.email || '-'}</p>
-                          </div>
-                          <Badge className={stageBadgeClass(lead.stage)}>{lead.stage}</Badge>
-                        </div>
+                    {pagedLeads.map(lead => {
+                      const leadTransactionType = developmentTransactionById.get(String(lead.developmentId)) || null;
+                      const outcomeLabel = getLeadOutcomeDisplayLabel(lead, leadTransactionType);
 
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <span>{lead.source.channel}</span>
-                          <span>•</span>
-                          <span>{formatRelative(lead.lastActivityAt || lead.createdAt)}</span>
-                          <Badge className={slaBadgeClass(lead.sla.status)}>{lead.sla.status}</Badge>
-                        </div>
-                      </button>
-                    ))}
+                      return (
+                        <button
+                          key={lead.id}
+                          className={`w-full text-left border rounded-lg p-3 transition-colors ${
+                            selectedLeadId === lead.id
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:bg-slate-50'
+                          }`}
+                          onClick={() => setSelectedLeadId(lead.id)}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-medium text-sm">{lead.contact.name || 'Unnamed lead'}</p>
+                              <p className="text-xs text-muted-foreground">{lead.contact.email || '-'}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <Badge className={stageBadgeClass(lead.stage)}>{lead.stage}</Badge>
+                              {outcomeLabel && (
+                                <Badge
+                                  data-testid={`dle-lead-outcome-label-${lead.id}`}
+                                  variant="outline"
+                                >
+                                  {outcomeLabel}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>{lead.source.channel}</span>
+                            <span>•</span>
+                            <span>{formatRelative(lead.lastActivityAt || lead.createdAt)}</span>
+                            <Badge className={slaBadgeClass(lead.sla.status)}>{lead.sla.status}</Badge>
+                          </div>
+                        </button>
+                      );
+                    })}
 
                     {!pagedLeads.length && (
                       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -734,6 +783,17 @@ export default function LeadsManager() {
                       <span className="text-muted-foreground">Stage</span>
                       <Badge className={stageBadgeClass(selectedLead.stage)}>{selectedLead.stage}</Badge>
                     </div>
+                    {getLeadOutcomeDisplayLabel(selectedLead, selectedLeadTransactionType) && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Outcome</span>
+                        <span
+                          className="text-right font-medium"
+                          data-testid={`dle-lead-outcome-detail-${selectedLead.id}`}
+                        >
+                          {getLeadOutcomeDisplayLabel(selectedLead, selectedLeadTransactionType)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">SLA</span>
                       <Badge className={slaBadgeClass(selectedLead.sla.status)}>{selectedLead.sla.status}</Badge>

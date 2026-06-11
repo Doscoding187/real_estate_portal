@@ -465,6 +465,8 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     );
     await expect(page.getByText(seed.wonLeadName).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('closed_won').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-outcome-label-${seed.wonLeadId}`)).toHaveText('Sold');
+    await expect(page.getByTestId(`dle-lead-outcome-detail-${seed.wonLeadId}`)).toHaveText('Sold');
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-lead-outcome-sync-sale-sold.png`,
     });
@@ -554,6 +556,12 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     );
     await expect(page.getByText(rentalSeed.leadName).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('closed_won').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-outcome-label-${rentalSeed.leadId}`)).toHaveText(
+      'Lease signed / Let',
+    );
+    await expect(page.getByTestId(`dle-lead-outcome-detail-${rentalSeed.leadId}`)).toHaveText(
+      'Lease signed / Let',
+    );
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-lead-outcome-sync-rental-let.png`,
     });
@@ -608,6 +616,16 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     expect(leadEvents[0].toStatus).toBe('closed_won');
     expect(parseJsonObject(leadEvents[0].metadata).displayLabel).toBe('Sold at auction');
 
+    await page.goto(
+      `/developer/leads?developmentId=${soldSeed.developmentId}&stage=won&leadId=${soldSeed.leadId}`,
+    );
+    await expect(page.getByText(soldSeed.leadName).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-outcome-label-${soldSeed.leadId}`)).toHaveText(
+      'Sold at auction',
+    );
+    await expect(page.getByTestId(`dle-lead-outcome-detail-${soldSeed.leadId}`)).toHaveText(
+      'Sold at auction',
+    );
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-lead-outcome-sync-auction-sold.png`,
     });
@@ -669,6 +687,12 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       timeout: 15_000,
     });
     await expect(page.getByText('closed_lost').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-outcome-label-${withdrawnSeed.leadId}`)).toHaveText(
+      'Withdrawn follow-up',
+    );
+    await expect(page.getByTestId(`dle-lead-outcome-detail-${withdrawnSeed.leadId}`)).toHaveText(
+      'Withdrawn follow-up',
+    );
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-lead-outcome-sync-auction-withdrawn.png`,
     });
