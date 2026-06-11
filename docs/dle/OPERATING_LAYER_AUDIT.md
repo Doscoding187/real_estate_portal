@@ -479,8 +479,10 @@ Recommended next architecture work:
 - Developer lead outcome readback now keeps canonical lead stages for guardrails and filtering, but
   adds transaction-native outcome labels for closed synced leads: Sale `Sold`, Rental
   `Lease signed / Let`, Auction `Sold at auction`, `Passed in follow-up`, or
-  `Withdrawn follow-up`. Browser proof in `e2e/dle/lead-outcome-sync.spec.ts` verifies those
-  labels after selected-lead sync without changing distribution stage or reward semantics.
+  `Withdrawn follow-up`. The lead read model now sources those labels from the latest
+  `lead_stage_changed` DLE operating event when available, with legacy UI inference only as
+  fallback. Browser proof in `e2e/dle/lead-outcome-sync.spec.ts` verifies those labels after
+  selected-lead sync without changing distribution stage or reward semantics.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

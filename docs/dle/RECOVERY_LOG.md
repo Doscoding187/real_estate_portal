@@ -5532,13 +5532,66 @@ Guardrails:
 - Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
   test-results changes were not staged.
 Remaining risks:
-- The label currently derives from development transaction type and lead notes for Auction
-  loss-follow-up nuance. A future structured lead-outcome projection could remove that note-based
-  inference if reporting needs become deeper.
+- This slice still derives the label in the UI from development transaction type and lead notes for
+  Auction loss-follow-up nuance. A future structured lead-outcome projection should remove that
+  note-based inference if reporting needs become deeper.
 Next recommended slice:
 - Continue operating-layer reporting with linked outcome/lead/distribution context on dashboard
   review surfaces, or design structured lead-outcome projection if note-derived labels become too
   weak for audit/reporting.
 Commit hash/tag: This entry will be included in
 `feat(dle): label lead outcome readback`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Structured Lead Outcome Readback
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Move developer lead outcome labels from UI note inference to structured readback sourced
+from DLE `lead_stage_changed` operating events, without changing lead transitions, inventory
+outcomes, distribution stages, reward state, or payout semantics.
+Files changed:
+- server/services/developerFunnelService.ts
+- server/services/__tests__/developerFunnelService.contract.test.ts
+- client/src/components/developer/LeadsManager.tsx
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-sale-sold.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-invalid-no-false-success.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-rental-let.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-auction-sold.png
+- docs/dle/evidence/2026-06-07/qa-dle-lead-outcome-sync-auction-withdrawn.png
+Tests run:
+- `pnpm run check` passed.
+- `pnpm vitest run server/services/__tests__/developerFunnelService.contract.test.ts` passed with
+  7 tests after rerunning outside the sandbox so it could reach the local MySQL test database.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 3 tests.
+Functional proof:
+- `deriveLeadOutcomeReadbackFromEvent` parses only `lead_stage_changed` operating events that carry
+  a `displayLabel`, returning label, outcome, source event id, from-stage, to-stage, and source.
+- `listDeveloperLeads` now attaches the latest structured `lead.outcome` readback for returned
+  leads from `development_operating_events`.
+- The Leads Control Center prefers structured `lead.outcome.label` and only falls back to legacy
+  transaction/note inference for older rows without event readback.
+- Browser/API proof verifies Sale `Sold`, Rental `Lease signed / Let`, Auction `Sold at auction`,
+  and Auction `Withdrawn follow-up` readback through the developer lead read model and visible UI.
+Guardrails:
+- No route, schema, migration, lead transition rule, distribution deal-stage, commission, payout,
+  document verification, inventory mutation, or operating-event mutation was changed.
+- The operating event readback is display context only. It does not become a new authority for
+  lead transitions, distribution handoff, commission readiness, or reward payout.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The structured readback still depends on `displayLabel` metadata written by the existing lead
+  sync mutation. If future reporting needs require richer analytics, add a persisted
+  lead-outcome projection or typed metadata contract instead of deriving broader state from labels.
+Next recommended slice:
+- Add dashboard review context that links inventory outcome, selected lead sync, and distribution
+  handoff state in one read-only operating surface, without moving distribution deal stages from
+  DLE.
+Commit hash/tag: This entry will be included in
+`feat(dle): structure lead outcome readback`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

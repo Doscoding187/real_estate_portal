@@ -60,6 +60,11 @@ Implemented lead outcome sync:
   - shows no success unless the backend mutation succeeds
   - keeps canonical lead stage badges visible for filtering/audit while adding transaction-native
     outcome readback labels for synced closed leads
+- `server/services/developerFunnelService.ts`
+  - returns structured `lead.outcome` readback from the latest `lead_stage_changed`
+    `development_operating_events` row for that lead
+  - uses event metadata `displayLabel` / `outcome` as readback context only, not as a new mutation
+    authority
 - `e2e/dle/lead-outcome-sync.spec.ts`
   - browser-proves Sale sold selected-lead sync and unsafe direct close rejection
   - browser-proves Rental let selected-lead sync with lease-native success/event/activity language
@@ -457,5 +462,8 @@ Latest developer lead readback improvement:
 - The Leads Control Center now adds transaction-native outcome labels to selected closed leads:
   Sale `Sold`, Rental `Lease signed / Let`, Auction `Sold at auction`, `Passed in follow-up`, or
   `Withdrawn follow-up`.
+- These labels now come from structured developer lead readback sourced from the latest
+  `lead_stage_changed` DLE operating event when available. Legacy note-based inference remains only
+  a UI fallback for older rows without event readback.
 - The canonical stage remains visible and unchanged for filtering, guardrails, and audit. This is
   display/readback only, not a new lead transition, distribution deal movement, or payout signal.

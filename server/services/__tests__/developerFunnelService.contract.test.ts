@@ -3,6 +3,7 @@ import { isLeadTransitionAllowed } from '../../../shared/developerFunnel';
 import {
   computeLeadSla,
   deriveCanonicalLeadStage,
+  deriveLeadOutcomeReadbackFromEvent,
   evaluateDistributionAssignmentGate,
   getAvailableLeadOwnerTypes,
 } from '../developerFunnelService';
@@ -84,5 +85,43 @@ describe('developer funnel contract', () => {
         leadEligible: true,
       }),
     ).toEqual({ allowed: true });
+  });
+
+  it('derives structured lead outcome readback from DLE operating events', () => {
+    expect(
+      deriveLeadOutcomeReadbackFromEvent({
+        id: 42,
+        eventType: 'lead_stage_changed',
+        fromStatus: 'deal_in_progress',
+        toStatus: 'closed_won',
+        metadata: {
+          displayLabel: 'Lease signed / Let',
+          outcome: 'rental_let',
+        },
+      }),
+    ).toEqual({
+      label: 'Lease signed / Let',
+      sourceEventId: 42,
+      outcome: 'rental_let',
+      fromStage: 'deal_in_progress',
+      toStage: 'closed_won',
+      source: 'development_operating_events',
+    });
+
+    expect(
+      deriveLeadOutcomeReadbackFromEvent({
+        id: 43,
+        eventType: 'inventory_status_changed',
+        metadata: { displayLabel: 'Sold' },
+      }),
+    ).toBeNull();
+
+    expect(
+      deriveLeadOutcomeReadbackFromEvent({
+        id: 44,
+        eventType: 'lead_stage_changed',
+        metadata: {},
+      }),
+    ).toBeNull();
   });
 });

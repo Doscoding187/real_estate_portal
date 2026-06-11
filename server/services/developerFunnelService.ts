@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '../db';
 import {
+  developmentOperatingEvents,
   developments,
   distributionAgentAccess,
   distributionIdentities,
@@ -20,6 +21,15 @@ import {
 } from '../../shared/developerFunnel';
 
 type LeadRow = typeof leads.$inferSelect;
+
+type LeadOutcomeReadback = {
+  label: string;
+  sourceEventId: number;
+  outcome: string | null;
+  fromStage: string | null;
+  toStage: string | null;
+  source: 'development_operating_events';
+};
 
 type FunnelListParams = {
   developerId: number;
@@ -114,6 +124,42 @@ function parseOwnerOverride(notes: string | null | undefined): LeadOwnerType | n
 
 function appendOwnerOverride(existing: string | null | undefined, ownerType: LeadOwnerType): string {
   return appendNote(existing, `owner_override:${ownerType}`);
+}
+
+function parseJsonObject(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value !== 'string') return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function deriveLeadOutcomeReadbackFromEvent(event: {
+  id: number;
+  eventType?: string | null;
+  fromStatus?: string | null;
+  toStatus?: string | null;
+  metadata?: unknown;
+}): LeadOutcomeReadback | null {
+  if (event.eventType !== 'lead_stage_changed') return null;
+
+  const metadata = parseJsonObject(event.metadata);
+  const displayLabel = String(metadata.displayLabel || '').trim();
+  if (!displayLabel) return null;
+
+  return {
+    label: displayLabel,
+    sourceEventId: Number(event.id),
+    outcome: metadata.outcome ? String(metadata.outcome) : null,
+    fromStage: event.fromStatus || null,
+    toStage: event.toStatus || null,
+    source: 'development_operating_events',
+  };
 }
 
 function isDistributionSourceValue(value: string | null | undefined): boolean {
@@ -388,6 +434,7 @@ function normalizeLeadRow(
   lead: LeadRow,
   ownerName: string | null,
   distributionEnabledForDevelopment: boolean,
+  outcome: LeadOutcomeReadback | null = null,
 ) {
   const stage = deriveCanonicalLeadStage(lead);
   const owner = deriveOwner(lead, ownerName);
@@ -423,6 +470,7 @@ function normalizeLeadRow(
       type: sla.nextActionType,
       at: sla.nextActionAt,
     },
+    outcome,
     flags: {
       duplicate: lostReason === 'duplicate',
       spam: lostReason === 'spam',
@@ -505,12 +553,49 @@ export async function listDeveloperLeads(params: FunnelListParams) {
     new Set(rows.map(row => Number(row.lead.developmentId || 0)).filter(id => Number.isFinite(id) && id > 0)),
   ) as number[];
   const distributionEnabledMap = await getDistributionEnabledMapForDevelopments(developmentIds);
+  const leadIds = rows.map(row => Number(row.lead.id)).filter(id => Number.isFinite(id) && id > 0);
+  const outcomeReadbackByLeadId = new Map<number, LeadOutcomeReadback>();
+
+  if (leadIds.length) {
+    const outcomeRows = await db
+      .select({
+        id: developmentOperatingEvents.id,
+        leadId: developmentOperatingEvents.leadId,
+        eventType: developmentOperatingEvents.eventType,
+        fromStatus: developmentOperatingEvents.fromStatus,
+        toStatus: developmentOperatingEvents.toStatus,
+        metadata: developmentOperatingEvents.metadata,
+        eventAt: developmentOperatingEvents.eventAt,
+      })
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          inArray(developmentOperatingEvents.leadId, leadIds),
+          eq(developmentOperatingEvents.eventType, 'lead_stage_changed'),
+        ),
+      )
+      .orderBy(desc(developmentOperatingEvents.eventAt), desc(developmentOperatingEvents.id));
+
+    for (const event of outcomeRows) {
+      const leadId = Number(event.leadId || 0);
+      if (!leadId || outcomeReadbackByLeadId.has(leadId)) continue;
+      const readback = deriveLeadOutcomeReadbackFromEvent(event);
+      if (readback) {
+        outcomeReadbackByLeadId.set(leadId, readback);
+      }
+    }
+  }
 
   const normalized = rows.map(row => {
     const developmentId = Number(row.lead.developmentId || 0);
     const distributionEnabledForDevelopment =
       developmentId > 0 ? distributionEnabledMap.get(developmentId) === true : false;
-    return normalizeLeadRow(row.lead, row.ownerName || null, distributionEnabledForDevelopment);
+    return normalizeLeadRow(
+      row.lead,
+      row.ownerName || null,
+      distributionEnabledForDevelopment,
+      outcomeReadbackByLeadId.get(Number(row.lead.id)) || null,
+    );
   });
 
   const filteredByStage = params.stage

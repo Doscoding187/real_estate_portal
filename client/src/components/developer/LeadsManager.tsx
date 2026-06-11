@@ -42,6 +42,14 @@ type LeadItem = {
   source: { channel: string; utmSource?: string; utmCampaign?: string };
   stage: string;
   allowedTransitions?: string[];
+  outcome?: {
+    label: string;
+    sourceEventId: number;
+    outcome?: string | null;
+    fromStage?: string | null;
+    toStage?: string | null;
+    source?: string;
+  } | null;
   owner: { ownerType: string; ownerId: string | null; ownerName?: string | null };
   sla: { status: 'ok' | 'warning' | 'breach'; timeToFirstContactMins?: number | null };
   nextAction: { type?: string | null; at?: string | null };
@@ -144,9 +152,12 @@ function getOutcomeSyncActions(transactionType: 'sale' | 'rent' | 'auction' | nu
 }
 
 function getLeadOutcomeDisplayLabel(
-  lead: Pick<LeadItem, 'stage' | 'notes'>,
+  lead: Pick<LeadItem, 'stage' | 'notes' | 'outcome'>,
   transactionType: 'sale' | 'rent' | 'auction' | null,
 ): string | null {
+  const structuredLabel = String(lead.outcome?.label || '').trim();
+  if (structuredLabel) return structuredLabel;
+
   if (lead.stage === 'closed_won') {
     if (transactionType === 'rent') return 'Lease signed / Let';
     if (transactionType === 'auction') return 'Sold at auction';

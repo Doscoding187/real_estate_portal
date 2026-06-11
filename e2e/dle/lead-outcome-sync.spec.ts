@@ -460,6 +460,17 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     expect((activities[0] as any).activityType).toBe('status_change');
     expect((activities[0] as any).description).toContain('Sale lead synced as sold');
 
+    const saleLeadReadModel = await listDeveloperLeads({
+      developerId: seed.developerId,
+      developmentId: seed.developmentId,
+    });
+    expect(saleLeadReadModel.items.find(item => item.id === String(seed.wonLeadId))?.outcome).toMatchObject({
+      label: 'Sold',
+      outcome: 'sale_sold',
+      toStage: 'closed_won',
+      source: 'development_operating_events',
+    });
+
     await page.goto(
       `/developer/leads?developmentId=${seed.developmentId}&stage=won&leadId=${seed.wonLeadId}`,
     );
@@ -551,6 +562,19 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       'Rental lead synced as lease signed / let',
     );
 
+    const rentalLeadReadModel = await listDeveloperLeads({
+      developerId: rentalSeed.developerId,
+      developmentId: rentalSeed.developmentId,
+    });
+    expect(
+      rentalLeadReadModel.items.find(item => item.id === String(rentalSeed.leadId))?.outcome,
+    ).toMatchObject({
+      label: 'Lease signed / Let',
+      outcome: 'rental_let',
+      toStage: 'closed_won',
+      source: 'development_operating_events',
+    });
+
     await page.goto(
       `/developer/leads?developmentId=${rentalSeed.developmentId}&stage=won&leadId=${rentalSeed.leadId}`,
     );
@@ -616,6 +640,19 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     expect(leadEvents[0].toStatus).toBe('closed_won');
     expect(parseJsonObject(leadEvents[0].metadata).displayLabel).toBe('Sold at auction');
 
+    const soldAuctionLeadReadModel = await listDeveloperLeads({
+      developerId: soldSeed.developerId,
+      developmentId: soldSeed.developmentId,
+    });
+    expect(
+      soldAuctionLeadReadModel.items.find(item => item.id === String(soldSeed.leadId))?.outcome,
+    ).toMatchObject({
+      label: 'Sold at auction',
+      outcome: 'auction_sold',
+      toStage: 'closed_won',
+      source: 'development_operating_events',
+    });
+
     await page.goto(
       `/developer/leads?developmentId=${soldSeed.developmentId}&stage=won&leadId=${soldSeed.leadId}`,
     );
@@ -679,6 +716,20 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     expect((activities[0] as any).description).toContain(
       'Auction lead synced as withdrawn follow-up',
     );
+
+    const withdrawnAuctionLeadReadModel = await listDeveloperLeads({
+      developerId: withdrawnSeed.developerId,
+      developmentId: withdrawnSeed.developmentId,
+    });
+    expect(
+      withdrawnAuctionLeadReadModel.items.find(item => item.id === String(withdrawnSeed.leadId))
+        ?.outcome,
+    ).toMatchObject({
+      label: 'Withdrawn follow-up',
+      outcome: 'auction_withdrawn',
+      toStage: 'closed_lost',
+      source: 'development_operating_events',
+    });
 
     await page.goto(
       `/developer/leads?developmentId=${withdrawnSeed.developmentId}&stage=lost&leadId=${withdrawnSeed.leadId}`,
