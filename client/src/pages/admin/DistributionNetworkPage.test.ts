@@ -73,15 +73,40 @@ describe('admin distribution transaction lane copy', () => {
     );
   });
 
+  it('summarizes transaction rule model triggers as read-only admin context', () => {
+    expect(
+      getAdminProgrammeSemanticsNotice({
+        missingRoles: ['lease'],
+        wrongLaneWarnings: [],
+        automationAllowed: false,
+        transactionRuleModel: {
+          implementationStatus: 'transaction_specific_rules_required',
+          payoutTriggers: ['lease_signed', 'deposit_received', 'first_rent_paid', 'manual_approval'],
+          requiredConditions: [
+            'Rental programme payout trigger is explicitly selected.',
+            'Manager manual rental readiness review is accepted.',
+          ],
+        },
+      }),
+    ).toBe(
+      'Missing readiness: Lease Rule model: transaction-specific rules required; triggers: Lease Signed, Deposit Received, First Rent Paid, Manual Approval; required conditions: 2. Reward automation remains disabled.',
+    );
+  });
+
   it('still returns read-only automation copy when roles are complete', () => {
     expect(
       getAdminProgrammeSemanticsNotice({
         missingRoles: [],
         wrongLaneWarnings: [],
         automationAllowed: false,
+        transactionRuleModel: {
+          implementationStatus: 'shared_sale_shell',
+          payoutTriggers: ['contract_signed', 'bond_approved'],
+          requiredConditions: ['Required buyer documents are verified.'],
+        },
       }),
     ).toBe(
-      'Programme semantics are read-only; reward automation remains disabled until explicit review rules exist.',
+      'Programme semantics are read-only; reward automation remains disabled until explicit review rules exist. Rule model: shared Sale shell baseline; triggers: Contract Signed, Bond Approved; required conditions: 1.',
     );
   });
 

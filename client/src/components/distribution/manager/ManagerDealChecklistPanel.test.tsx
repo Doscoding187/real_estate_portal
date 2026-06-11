@@ -316,6 +316,15 @@ describe('ManagerDealChecklistPanel', () => {
                 automationAllowed: false,
                 automationBlockedReason:
                   'Readiness metadata is display-only until programme terms, document review rules, and payout triggers are explicitly configured.',
+                transactionRuleModel: {
+                  implementationStatus: 'transaction_specific_rules_required',
+                  payoutTriggers: ['lease_signed', 'deposit_received', 'first_rent_paid', 'manual_approval'],
+                  requiredConditions: [
+                    'Rental programme payout trigger is explicitly selected.',
+                    'Manager manual rental readiness review is accepted.',
+                    'DLE let outcome is linked as review context or explicitly configured as a required condition.',
+                  ],
+                },
               },
             },
           } as any
@@ -334,6 +343,25 @@ describe('ManagerDealChecklistPanel', () => {
     expect(screen.getAllByText('Payout').length).toBeGreaterThanOrEqual(2);
     expect(
       screen.getByText('Sale Agreement looks like a payout document for another transaction lane.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Transaction rule model')).toBeInTheDocument();
+    expect(screen.getByText('Transaction-specific rules required')).toBeInTheDocument();
+    expect(screen.getByText('Payout trigger vocabulary')).toBeInTheDocument();
+    expect(screen.getByText('Lease Signed')).toBeInTheDocument();
+    expect(screen.getByText('Deposit Received')).toBeInTheDocument();
+    expect(screen.getByText('First Rent Paid')).toBeInTheDocument();
+    expect(screen.getByText('Manual Approval')).toBeInTheDocument();
+    expect(screen.getByText('Required conditions before automation')).toBeInTheDocument();
+    expect(
+      screen.getByText('Rental programme payout trigger is explicitly selected.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Manager manual rental readiness review is accepted.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'DLE let outcome is linked as review context or explicitly configured as a required condition.',
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Readiness metadata is display-only/i)).toBeInTheDocument();
   });

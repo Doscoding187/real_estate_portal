@@ -66,6 +66,11 @@ type DealChecklist = {
       }>;
       automationAllowed: false;
       automationBlockedReason: string;
+      transactionRuleModel?: {
+        payoutTriggers: string[];
+        requiredConditions: string[];
+        implementationStatus: 'shared_sale_shell' | 'transaction_specific_rules_required';
+      };
     };
     manualReadinessReviews?: Array<{
       reviewType: ManualReadinessReviewType;
@@ -104,6 +109,12 @@ function formatReadinessRole(role: string) {
     .filter(Boolean)
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function formatRuleStatus(status: string | undefined) {
+  if (status === 'shared_sale_shell') return 'Shared Sale shell baseline';
+  if (status === 'transaction_specific_rules_required') return 'Transaction-specific rules required';
+  return 'Rule model unavailable';
 }
 
 type ChecklistTransactionLane = 'sale' | 'rent' | 'auction';
@@ -236,6 +247,7 @@ export function ManagerDealChecklistPanel({
   const transactionCopy = getChecklistTransactionCopy(checklist.transactionType);
   const semanticsCopy = getChecklistProgrammeSemanticsCopy(checklist.transactionType);
   const semanticsReadModel = checklist.computed.programmeSemantics;
+  const transactionRuleModel = semanticsReadModel?.transactionRuleModel;
   const missingReadinessRoles = semanticsReadModel?.missingRoles || [];
   const configuredReadinessRoles = semanticsReadModel?.configuredRoles || [];
 
@@ -373,6 +385,30 @@ export function ManagerDealChecklistPanel({
                   <li key={item}>{item}</li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+          {transactionRuleModel ? (
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold text-slate-500">Transaction rule model</p>
+              <p className="mt-1 text-sm font-medium">
+                {formatRuleStatus(transactionRuleModel.implementationStatus)}
+              </p>
+              <div className="mt-2">
+                <p className="text-xs font-semibold text-slate-500">Payout trigger vocabulary</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                  {transactionRuleModel.payoutTriggers.map(trigger => (
+                    <li key={trigger}>{formatReadinessRole(trigger)}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-2">
+                <p className="text-xs font-semibold text-slate-500">Required conditions before automation</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                  {transactionRuleModel.requiredConditions.map(condition => (
+                    <li key={condition}>{condition}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ) : null}
           <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">

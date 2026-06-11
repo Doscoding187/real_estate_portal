@@ -92,6 +92,12 @@ function formatProgrammeRole(role: unknown) {
     .join(' ');
 }
 
+function formatRuleModelStatus(status: unknown) {
+  if (status === 'shared_sale_shell') return 'shared Sale shell baseline';
+  if (status === 'transaction_specific_rules_required') return 'transaction-specific rules required';
+  return 'rule model unavailable';
+}
+
 export function getAdminProgrammeSemanticsNotice(programmeSemantics: any) {
   if (!programmeSemantics) return null;
 
@@ -101,11 +107,29 @@ export function getAdminProgrammeSemanticsNotice(programmeSemantics: any) {
   const wrongLaneWarnings = Array.isArray(programmeSemantics.wrongLaneWarnings)
     ? programmeSemantics.wrongLaneWarnings
     : [];
+  const transactionRuleModel = programmeSemantics.transactionRuleModel;
+  const payoutTriggers = Array.isArray(transactionRuleModel?.payoutTriggers)
+    ? transactionRuleModel.payoutTriggers
+    : [];
+  const requiredConditions = Array.isArray(transactionRuleModel?.requiredConditions)
+    ? transactionRuleModel.requiredConditions
+    : [];
+  const ruleModelNotice = transactionRuleModel
+    ? `Rule model: ${formatRuleModelStatus(
+        transactionRuleModel.implementationStatus,
+      )}; triggers: ${payoutTriggers.map(formatProgrammeRole).join(', ') || 'Not configured'}; required conditions: ${
+        requiredConditions.length
+      }.`
+    : null;
 
   if (!missingRoles.length && !wrongLaneWarnings.length) {
-    return programmeSemantics.automationAllowed === false
-      ? 'Programme semantics are read-only; reward automation remains disabled until explicit review rules exist.'
-      : null;
+    if (programmeSemantics.automationAllowed !== false) return ruleModelNotice;
+    return [
+      'Programme semantics are read-only; reward automation remains disabled until explicit review rules exist.',
+      ruleModelNotice,
+    ]
+      .filter(Boolean)
+      .join(' ');
   }
 
   const parts: string[] = [];
@@ -114,6 +138,9 @@ export function getAdminProgrammeSemanticsNotice(programmeSemantics: any) {
   }
   if (wrongLaneWarnings.length) {
     parts.push(`Wrong-lane templates: ${wrongLaneWarnings.join(' ')}`);
+  }
+  if (ruleModelNotice) {
+    parts.push(ruleModelNotice);
   }
   parts.push('Reward automation remains disabled.');
 

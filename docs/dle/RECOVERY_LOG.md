@@ -5240,3 +5240,49 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): expose transaction rule model`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Transaction Rule Model Review Visibility
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Surface the Sale/Rental/Auction transaction rule model in manager and super-admin review
+surfaces as read-only operating context without enabling Rental/Auction payout, stage, commission,
+document, lead, inventory, or operating automation.
+Files changed:
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx
+- client/src/pages/admin/DistributionNetworkPage.tsx
+- client/src/pages/admin/DistributionNetworkPage.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx`
+  passed with 10 tests.
+- `pnpm vitest run client/src/pages/admin/DistributionNetworkPage.test.ts` passed with 10 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Manager deal checklist semantics card now renders `transactionRuleModel` when present.
+- The manager surface shows implementation status, payout trigger vocabulary, and required
+  conditions before automation.
+- Super-admin deal/reward notices now summarize the transaction rule-model status, trigger
+  vocabulary, and condition count.
+- Focused tests prove Rental rule visibility without claiming reward readiness and keep Sale
+  read-only baseline language intact.
+Guardrails:
+- No schema, migration, API mutation, payout calculation, commission entry creation, deal-stage
+  transition, document verification, lead mutation, DLE inventory mutation, or operating-event
+  mutation was added.
+- This slice is display/readback only. Runtime Rental/Auction automation remains blocked by
+  `computed.payoutAutomation`.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The rule model is visible but not yet admin-configurable programme data. Rental/Auction
+  automation still needs a future rule authoring and approval model before runtime enablement.
+Next recommended slice:
+- Add an admin-authored draft rule configuration surface or continue browser proof that manager
+  and admin rows display the transaction rule model correctly for seeded Rental/Auction deals.
+Commit hash/tag: This entry will be included in
+`feat(dle): show transaction rule model in review`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

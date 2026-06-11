@@ -460,6 +460,9 @@ Recommended next architecture work:
   Auction payout trigger vocabulary plus required conditions. Sale is identified as the current
   shared-shell baseline, while Rental and Auction are explicitly marked as requiring
   transaction-specific rules before automation.
+- Manager checklist and super-admin deal/reward review surfaces now show the transaction rule
+  model as read-only context. Ops users can see the trigger vocabulary and condition count without
+  the UI implying Rental/Auction reward automation is enabled.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.
