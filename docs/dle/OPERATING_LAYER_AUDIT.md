@@ -472,6 +472,10 @@ Recommended next architecture work:
 - Saved draft transaction-rule notes are now parsed into the programme semantics read model and
   surfaced in manager/admin review as read-only trigger context when the saved lane matches the
   development transaction lane.
+- Browser proof in `e2e/dle/distribution-handoff.spec.ts` verifies saved Rental and Auction draft
+  transaction-rule notes render back to manager checklist pages and super-admin deal/reward rows
+  as read-only context while manual readiness, distribution stage, commission state, payout
+  readiness, document verification, lead state, and DLE inventory remain unchanged.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

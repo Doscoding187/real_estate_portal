@@ -5442,3 +5442,52 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): read draft transaction rules`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Draft Transaction Rule Browser Proof
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-prove that saved Rental/Auction draft transaction-rule notes render back to manager
+and super-admin review surfaces as read-only context while automation remains disabled.
+Files changed:
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-manager-rental.png
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-manager-auction.png
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-admin-deal-pipeline.png
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-admin-reward-rows.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1 -g "shows manager manual readiness"`
+  passed with 1 test.
+Functional proof:
+- The seeded Rental programme saves structured draft notes using the Deposit Received trigger and
+  the seeded Auction programme saves structured draft notes using the Winning Bidder Confirmed
+  trigger.
+- Manager Rental and Auction checklist pages show the transaction rule model, saved draft rule
+  notes, selected trigger, and draft required-condition text.
+- Super-admin deal and reward rows show the saved draft rule summary for Rental and Auction.
+- Existing assertions still verify manual readiness decisions appear in admin readback and that
+  distribution stage/commission state remain unchanged.
+Guardrails:
+- No app runtime code, schema, migration, route, payout calculation, commission movement, stage
+  transition, document verification, lead mutation, DLE inventory mutation, or operating-event
+  mutation was added.
+- Draft transaction-rule notes remain review context only. Rental/Auction reward automation stays
+  blocked until explicit transaction-specific programme terms, document rules, manager/admin gates,
+  and DLE outcome conditions are implemented and tested.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Notes:
+- The first browser run exposed locator ambiguity because the same trigger/condition copy now
+  appears in both the rule vocabulary/conditions and saved draft notes. The spec was tightened to
+  distinguish list-item vocabulary from saved `Trigger:` readback instead of weakening coverage.
+Remaining risks:
+- Draft notes are still text-based context, not structured persisted rule records. Runtime gates
+  should not consume them until an explicit persisted rule model exists.
+Next recommended slice:
+- Design the persisted transaction-rule review/publish model behind read-only admin gates, or move
+  back to the next DLE transaction proof slice if the operating layer is intentionally paused.
+Commit hash/tag: This entry will be included in
+`test(dle): prove draft transaction rule readback`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

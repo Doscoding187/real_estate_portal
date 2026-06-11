@@ -69,6 +69,36 @@ function parseJsonObject(value: unknown): Record<string, any> {
   }
 }
 
+function buildSeedDraftTransactionRuleNotes(transactionType: HandoffTransactionType) {
+  if (transactionType === 'auction') {
+    return [
+      '[DLE draft transaction rule]',
+      'Lane: Auction',
+      'Trigger: winning_bidder_confirmed',
+      'Required conditions:',
+      '- Auction programme payout trigger is explicitly selected.',
+      '- Winning-bidder evidence is verified when required by the selected trigger.',
+      '- Manager manual auction bidder readiness review is accepted.',
+      'Automation: disabled until programme terms, document review rules, manager/admin approval gates, and DLE outcome conditions are explicitly implemented and tested.',
+    ].join('\n');
+  }
+
+  if (transactionType === 'for_rent') {
+    return [
+      '[DLE draft transaction rule]',
+      'Lane: Rental',
+      'Trigger: deposit_received',
+      'Required conditions:',
+      '- Rental programme payout trigger is explicitly selected.',
+      '- Deposit evidence is verified when required by the selected trigger.',
+      '- Manager manual rental readiness review is accepted.',
+      'Automation: disabled until programme terms, document review rules, manager/admin approval gates, and DLE outcome conditions are explicitly implemented and tested.',
+    ].join('\n');
+  }
+
+  return null;
+}
+
 async function loginAsSeededDeveloper(page: Page, seed: Seed) {
   const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
   const sessionToken = await authService.createSessionToken(
@@ -356,6 +386,17 @@ async function seedManualReadinessPrerequisites(seed: Seed) {
 
   const requiredDocumentIds: number[] = [];
   const dealDocumentIds: number[] = [];
+  const draftRuleNotes = buildSeedDraftTransactionRuleNotes(seed.transactionType);
+  if (draftRuleNotes) {
+    await db!
+      .update(distributionPrograms)
+      .set({
+        payoutMilestone: 'custom',
+        payoutMilestoneNotes: draftRuleNotes,
+      } as any)
+      .where(eq(distributionPrograms.id, seed.programId));
+  }
+
   for (const [index, documentInput] of requiredDocumentInputs.entries()) {
     const [documentInsert] = await db!.insert(developmentRequiredDocuments).values({
       developmentId: seed.developmentId,
@@ -788,10 +829,15 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     });
     await expect(page.getByText('Transaction rule model')).toBeVisible();
     await expect(page.getByText('Transaction-specific rules required')).toBeVisible();
-    await expect(page.getByText('Lease Signed')).toBeVisible();
-    await expect(page.getByText('Deposit Received')).toBeVisible();
-    await expect(page.getByText('First Rent Paid')).toBeVisible();
-    await expect(page.getByText('Manager manual rental readiness review is accepted.')).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: /^Lease Signed$/ })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: /^Deposit Received$/ })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: /^First Rent Paid$/ })).toBeVisible();
+    await expect(
+      page.getByRole('listitem').filter({ hasText: /^Manager manual rental readiness review is accepted\.$/ }).first(),
+    ).toBeVisible();
+    await expect(page.getByText('Saved draft rule notes')).toBeVisible();
+    await expect(page.getByText(/Trigger: Deposit Received/i)).toBeVisible();
+    await expect(page.getByText('Deposit evidence is verified when required by the selected trigger.')).toBeVisible();
     await expect(page.getByText('Lease readiness review')).toBeVisible();
     await page.getByPlaceholder('Manual review note').fill('Lease readiness accepted in browser proof.');
     await page.getByRole('button', { name: 'Accept readiness' }).click();
@@ -811,10 +857,18 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     });
     await expect(page.getByText('Transaction rule model')).toBeVisible();
     await expect(page.getByText('Transaction-specific rules required')).toBeVisible();
-    await expect(page.getByText('Winning Bidder Confirmed')).toBeVisible();
-    await expect(page.getByText('Auction Terms Signed')).toBeVisible();
-    await expect(page.getByText('Settlement Confirmed')).toBeVisible();
-    await expect(page.getByText('Manager manual auction bidder readiness review is accepted.')).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: /^Winning Bidder Confirmed$/ })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: /^Auction Terms Signed$/ })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: /^Settlement Confirmed$/ })).toBeVisible();
+    await expect(
+      page
+        .getByRole('listitem')
+        .filter({ hasText: /^Manager manual auction bidder readiness review is accepted\.$/ })
+        .first(),
+    ).toBeVisible();
+    await expect(page.getByText('Saved draft rule notes')).toBeVisible();
+    await expect(page.getByText(/Trigger: Winning Bidder Confirmed/i)).toBeVisible();
+    await expect(page.getByText('Winning-bidder evidence is verified when required by the selected trigger.')).toBeVisible();
     await expect(page.getByText('Bidder readiness review', { exact: true })).toBeVisible();
     await page.getByPlaceholder('Manual review note').fill('Bidder readiness accepted in browser proof.');
     await page.getByRole('button', { name: 'Accept readiness' }).click();
@@ -854,6 +908,11 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
       }),
     ).toBeVisible();
     await expect(rentalDealRow.getByText('required conditions: 5.', { exact: false })).toBeVisible();
+    await expect(
+      rentalDealRow.getByText('Draft rule saved: Deposit Received; automation disabled.', {
+        exact: false,
+      }),
+    ).toBeVisible();
 
     const auctionDealRow = page.locator('div.rounded.border').filter({
       hasText: auctionSeed.developmentName,
@@ -879,6 +938,11 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
       ),
     ).toBeVisible();
     await expect(auctionDealRow.getByText('required conditions: 5.', { exact: false })).toBeVisible();
+    await expect(
+      auctionDealRow.getByText('Draft rule saved: Winning Bidder Confirmed; automation disabled.', {
+        exact: false,
+      }),
+    ).toBeVisible();
     await page.screenshot({
       path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-deal-pipeline.png`,
     });
@@ -911,6 +975,11 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
         exact: false,
       }),
     ).toBeVisible();
+    await expect(
+      rentalRewardRow.getByText('Draft rule saved: Deposit Received; automation disabled.', {
+        exact: false,
+      }),
+    ).toBeVisible();
 
     const auctionRewardRow = page.locator('div.rounded.border').filter({
       hasText: auctionSeed.developmentName,
@@ -933,6 +1002,11 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
         'triggers: Winning Bidder Confirmed, Auction Terms Signed, Deposit Paid, Settlement Confirmed, Manual Approval',
         { exact: false },
       ),
+    ).toBeVisible();
+    await expect(
+      auctionRewardRow.getByText('Draft rule saved: Winning Bidder Confirmed; automation disabled.', {
+        exact: false,
+      }),
     ).toBeVisible();
     await page.screenshot({
       path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-reward-rows.png`,
