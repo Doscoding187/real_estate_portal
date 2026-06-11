@@ -5286,3 +5286,57 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): show transaction rule model in review`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Transaction Rule Model Browser Proof
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove in-browser that seeded Rental and Auction manager/admin review surfaces show the
+transaction rule model as read-only context while manual readiness remains non-automating and
+distribution stage/commission state remains unchanged.
+Files changed:
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-manager-rental.png
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-manager-auction.png
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-admin-deal-pipeline.png
+- docs/dle/evidence/2026-06-11/qa-dle-transaction-rule-admin-reward-rows.png
+Tests run:
+- Initial
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1 -g "shows manager manual readiness"`
+  failed because the new Auction required-condition copy made a loose `Bidder readiness review`
+  locator ambiguous.
+- Rerun of the same focused Playwright command passed after tightening the locator.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The manager Rental checklist shows `Transaction rule model`,
+  `Transaction-specific rules required`, Rental trigger vocabulary, and the Rental manual-review
+  condition.
+- The manager Auction checklist shows the same rule-model section with Auction trigger vocabulary
+  and the Auction manual-review condition.
+- Super-admin deal pipeline rows show transaction-specific rule-model status, trigger vocabulary,
+  and required-condition count for seeded Rental and Auction deals.
+- Super-admin reward rows show the same rule-model readback.
+- Existing DB assertions continue proving manual readiness acceptance does not change deal stage,
+  commission status, or payout-readiness metadata.
+Guardrails:
+- No schema, migration, route mutation, payout calculation, commission entry creation, deal-stage
+  transition, document verification, lead mutation, DLE inventory mutation, or operating-event
+  mutation was added.
+- This slice extends browser proof only. Runtime Rental/Auction automation remains blocked by
+  `computed.payoutAutomation`.
+- The focused test regenerated older 2026-06-10 manual-readiness evidence screenshots; those files
+  were already dirty and are not part of this slice.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The rule model is visible and browser-proven but still not configurable programme data.
+Next recommended slice:
+- Add an admin-authored draft rule configuration surface for Rental/Auction payout triggers and
+  required conditions, keeping it read-only/non-automating until approval gates and mutation tests
+  exist.
+Commit hash/tag: This entry will be included in
+`test(dle): prove transaction rule model review`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

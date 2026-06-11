@@ -27,6 +27,8 @@ const evidenceDir = 'docs/dle/evidence/2026-06-07';
 fs.mkdirSync(evidenceDir, { recursive: true });
 const manualReadinessEvidenceDir = 'docs/dle/evidence/2026-06-10';
 fs.mkdirSync(manualReadinessEvidenceDir, { recursive: true });
+const transactionRuleEvidenceDir = 'docs/dle/evidence/2026-06-11';
+fs.mkdirSync(transactionRuleEvidenceDir, { recursive: true });
 
 type HandoffTransactionType = 'for_sale' | 'for_rent' | 'auction';
 
@@ -784,6 +786,12 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     await expect(page.getByRole('heading', { name: 'Manual Readiness Review' })).toBeVisible({
       timeout: 15_000,
     });
+    await expect(page.getByText('Transaction rule model')).toBeVisible();
+    await expect(page.getByText('Transaction-specific rules required')).toBeVisible();
+    await expect(page.getByText('Lease Signed')).toBeVisible();
+    await expect(page.getByText('Deposit Received')).toBeVisible();
+    await expect(page.getByText('First Rent Paid')).toBeVisible();
+    await expect(page.getByText('Manager manual rental readiness review is accepted.')).toBeVisible();
     await expect(page.getByText('Lease readiness review')).toBeVisible();
     await page.getByPlaceholder('Manual review note').fill('Lease readiness accepted in browser proof.');
     await page.getByRole('button', { name: 'Accept readiness' }).click();
@@ -792,19 +800,31 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     await page.screenshot({
       path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-manager-rental.png`,
     });
+    await page.screenshot({
+      path: `${transactionRuleEvidenceDir}/qa-dle-transaction-rule-manager-rental.png`,
+    });
 
     await loginAsSeededManager(page, auctionSeed);
     await page.goto(`/distribution/manager/deals/${auctionSeed.dealId}`);
     await expect(page.getByRole('heading', { name: 'Manual Readiness Review' })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText('Bidder readiness review')).toBeVisible();
+    await expect(page.getByText('Transaction rule model')).toBeVisible();
+    await expect(page.getByText('Transaction-specific rules required')).toBeVisible();
+    await expect(page.getByText('Winning Bidder Confirmed')).toBeVisible();
+    await expect(page.getByText('Auction Terms Signed')).toBeVisible();
+    await expect(page.getByText('Settlement Confirmed')).toBeVisible();
+    await expect(page.getByText('Manager manual auction bidder readiness review is accepted.')).toBeVisible();
+    await expect(page.getByText('Bidder readiness review', { exact: true })).toBeVisible();
     await page.getByPlaceholder('Manual review note').fill('Bidder readiness accepted in browser proof.');
     await page.getByRole('button', { name: 'Accept readiness' }).click();
     await expect(page.getByText('Manual readiness accepted.')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Accepted', { exact: true })).toBeVisible({ timeout: 15_000 });
     await page.screenshot({
       path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-manager-auction.png`,
+    });
+    await page.screenshot({
+      path: `${transactionRuleEvidenceDir}/qa-dle-transaction-rule-manager-auction.png`,
     });
 
     await page.goto('/admin/distribution/deal-pipeline');
@@ -823,6 +843,17 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
         'Manual readiness: Lease readiness review accepted by Referral Manager. Note: Lease readiness accepted in browser proof. Reward automation remains disabled.',
       ),
     ).toBeVisible();
+    await expect(
+      rentalDealRow.getByText('Rule model: transaction-specific rules required', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      rentalDealRow.getByText('triggers: Lease Signed, Deposit Received, First Rent Paid, Manual Approval', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(rentalDealRow.getByText('required conditions: 5.', { exact: false })).toBeVisible();
 
     const auctionDealRow = page.locator('div.rounded.border').filter({
       hasText: auctionSeed.developmentName,
@@ -836,8 +867,23 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
         'Manual readiness: Bidder readiness review accepted by Referral Manager. Note: Bidder readiness accepted in browser proof. Reward automation remains disabled.',
       ),
     ).toBeVisible();
+    await expect(
+      auctionDealRow.getByText('Rule model: transaction-specific rules required', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      auctionDealRow.getByText(
+        'triggers: Winning Bidder Confirmed, Auction Terms Signed, Deposit Paid, Settlement Confirmed, Manual Approval',
+        { exact: false },
+      ),
+    ).toBeVisible();
+    await expect(auctionDealRow.getByText('required conditions: 5.', { exact: false })).toBeVisible();
     await page.screenshot({
       path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-deal-pipeline.png`,
+    });
+    await page.screenshot({
+      path: `${transactionRuleEvidenceDir}/qa-dle-transaction-rule-admin-deal-pipeline.png`,
     });
 
     await page.goto('/admin/distribution/commission-incentives');
@@ -855,6 +901,16 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
         'Manual readiness: Lease readiness review accepted by Referral Manager. Note: Lease readiness accepted in browser proof. Reward automation remains disabled.',
       ),
     ).toBeVisible();
+    await expect(
+      rentalRewardRow.getByText('Rule model: transaction-specific rules required', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      rentalRewardRow.getByText('triggers: Lease Signed, Deposit Received, First Rent Paid, Manual Approval', {
+        exact: false,
+      }),
+    ).toBeVisible();
 
     const auctionRewardRow = page.locator('div.rounded.border').filter({
       hasText: auctionSeed.developmentName,
@@ -867,8 +923,22 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
         'Manual readiness: Bidder readiness review accepted by Referral Manager. Note: Bidder readiness accepted in browser proof. Reward automation remains disabled.',
       ),
     ).toBeVisible();
+    await expect(
+      auctionRewardRow.getByText('Rule model: transaction-specific rules required', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      auctionRewardRow.getByText(
+        'triggers: Winning Bidder Confirmed, Auction Terms Signed, Deposit Paid, Settlement Confirmed, Manual Approval',
+        { exact: false },
+      ),
+    ).toBeVisible();
     await page.screenshot({
       path: `${manualReadinessEvidenceDir}/qa-dle-admin-manual-readiness-reward-rows.png`,
+    });
+    await page.screenshot({
+      path: `${transactionRuleEvidenceDir}/qa-dle-transaction-rule-admin-reward-rows.png`,
     });
 
     const [rentalAfterDeal] = await db!

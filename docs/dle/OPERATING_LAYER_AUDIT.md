@@ -463,6 +463,9 @@ Recommended next architecture work:
 - Manager checklist and super-admin deal/reward review surfaces now show the transaction rule
   model as read-only context. Ops users can see the trigger vocabulary and condition count without
   the UI implying Rental/Auction reward automation is enabled.
+- Browser proof in `e2e/dle/distribution-handoff.spec.ts` verifies seeded Rental and Auction
+  manager pages plus super-admin deal/reward rows render the transaction rule model while manual
+  readiness remains read-only and stage/commission state stays unchanged.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.
