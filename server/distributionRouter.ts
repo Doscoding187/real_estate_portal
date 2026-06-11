@@ -1901,12 +1901,25 @@ async function getProgrammeSemanticsByDevelopmentId(
   }
 
   const result = new Map<number, ReturnType<typeof buildDistributionProgrammeSemanticsReadModel>>();
+  const programRows = uniqueRows.size
+    ? await db
+        .select({
+          developmentId: distributionPrograms.developmentId,
+          payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+        })
+        .from(distributionPrograms)
+        .where(inArray(distributionPrograms.developmentId, Array.from(uniqueRows.keys())))
+    : [];
+  const programNotesByDevelopmentId = new Map<number, unknown>(
+    programRows.map((row: any) => [Number(row.developmentId), row.payoutMilestoneNotes || null]),
+  );
   for (const [developmentId, transactionType] of uniqueRows.entries()) {
     const documents = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
     result.set(
       developmentId,
       buildDistributionProgrammeSemanticsReadModel({
         transactionType,
+        payoutMilestoneNotes: programNotesByDevelopmentId.get(developmentId) || null,
         documents: documents.map(document => ({
           templateId: Number(document.id),
           documentCode: document.documentCode,

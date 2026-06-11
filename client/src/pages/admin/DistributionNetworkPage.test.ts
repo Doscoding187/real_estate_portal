@@ -86,10 +86,17 @@ describe('admin distribution transaction lane copy', () => {
             'Rental programme payout trigger is explicitly selected.',
             'Manager manual rental readiness review is accepted.',
           ],
+          draftRule: {
+            source: 'payout_milestone_notes',
+            lane: 'rent',
+            trigger: 'deposit_received',
+            requiredConditions: ['Deposit evidence is verified.'],
+            automationStatus: 'disabled',
+          },
         },
       }),
     ).toBe(
-      'Missing readiness: Lease Rule model: transaction-specific rules required; triggers: Lease Signed, Deposit Received, First Rent Paid, Manual Approval; required conditions: 2. Reward automation remains disabled.',
+      'Missing readiness: Lease Rule model: transaction-specific rules required; triggers: Lease Signed, Deposit Received, First Rent Paid, Manual Approval; required conditions: 2. Draft rule saved: Deposit Received; automation disabled. Reward automation remains disabled.',
     );
   });
 

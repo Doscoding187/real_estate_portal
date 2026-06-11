@@ -114,12 +114,19 @@ export function getAdminProgrammeSemanticsNotice(programmeSemantics: any) {
   const requiredConditions = Array.isArray(transactionRuleModel?.requiredConditions)
     ? transactionRuleModel.requiredConditions
     : [];
+  const draftRule = transactionRuleModel?.draftRule;
   const ruleModelNotice = transactionRuleModel
     ? `Rule model: ${formatRuleModelStatus(
         transactionRuleModel.implementationStatus,
       )}; triggers: ${payoutTriggers.map(formatProgrammeRole).join(', ') || 'Not configured'}; required conditions: ${
         requiredConditions.length
-      }.`
+      }.${
+        draftRule?.trigger
+          ? ` Draft rule saved: ${formatProgrammeRole(draftRule.trigger)}; automation ${formatProgrammeRole(
+              draftRule.automationStatus || 'disabled',
+            ).toLowerCase()}.`
+          : ''
+      }`
     : null;
 
   if (!missingRoles.length && !wrongLaneWarnings.length) {

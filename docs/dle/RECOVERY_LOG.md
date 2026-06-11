@@ -5387,3 +5387,58 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `feat(dle): draft transaction rule notes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Draft Transaction Rule Readback
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Parse saved `[DLE draft transaction rule]` programme notes into manager/admin rule-model
+readback while keeping Rental/Auction runtime payout, stage, commission, document, lead, inventory,
+and operating automation disabled.
+Files changed:
+- server/services/distributionProgrammeSemanticsService.ts
+- server/services/__tests__/distributionProgrammeSemanticsService.test.ts
+- server/services/distributionDealDocumentsService.ts
+- server/distributionRouter.ts
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx
+- client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx
+- client/src/pages/admin/DistributionNetworkPage.tsx
+- client/src/pages/admin/DistributionNetworkPage.test.ts
+- docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/distributionProgrammeSemanticsService.test.ts`
+  passed with 7 tests.
+- `pnpm vitest run client/src/components/distribution/manager/ManagerDealChecklistPanel.test.tsx client/src/pages/admin/DistributionNetworkPage.test.ts`
+  passed with 20 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `parseDraftTransactionRuleNotes` recognizes structured `[DLE draft transaction rule]` notes from
+  programme payout milestone notes.
+- Parsed draft context includes source, lane, trigger, required conditions, and disabled automation
+  status.
+- The read model only includes parsed draft context when the saved note lane matches the
+  development transaction lane.
+- Manager deal checklist readback now receives programme payout milestone notes and shows saved
+  draft trigger context.
+- Super-admin deal/reward readback now receives programme payout milestone notes and summarizes
+  saved draft trigger context.
+Guardrails:
+- No schema, migration, route mutation, payout calculation, commission entry creation, deal-stage
+  transition, document verification, lead mutation, DLE inventory mutation, or operating-event
+  mutation was added.
+- Parsed draft notes are readback context only. Runtime Rental/Auction automation remains blocked
+  by `computed.payoutAutomation`.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Draft notes are still text-based context, not structured persisted rule records. A future slice
+  should add explicit persisted rule state before runtime gates can consume it.
+Next recommended slice:
+- Add browser proof that a saved draft Rental/Auction rule note appears in manager/admin rule-model
+  readback, or design a persisted transaction-rule table behind read-only admin gates.
+Commit hash/tag: This entry will be included in
+`feat(dle): read draft transaction rules`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

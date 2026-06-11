@@ -469,6 +469,9 @@ Recommended next architecture work:
 - The partner-development onboarding drawer now lets admins draft Rental/Auction transaction-rule
   notes from the approved trigger vocabulary. The notes save through the existing custom payout
   milestone notes field and remain non-automating programme context.
+- Saved draft transaction-rule notes are now parsed into the programme semantics read model and
+  surfaced in manager/admin review as read-only trigger context when the saved lane matches the
+  development transaction lane.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

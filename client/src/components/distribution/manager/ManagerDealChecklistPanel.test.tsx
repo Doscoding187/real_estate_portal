@@ -324,6 +324,15 @@ describe('ManagerDealChecklistPanel', () => {
                     'Manager manual rental readiness review is accepted.',
                     'DLE let outcome is linked as review context or explicitly configured as a required condition.',
                   ],
+                  draftRule: {
+                    source: 'payout_milestone_notes',
+                    lane: 'rent',
+                    trigger: 'deposit_received',
+                    requiredConditions: [
+                      'Deposit evidence is verified when required by the selected trigger.',
+                    ],
+                    automationStatus: 'disabled',
+                  },
                 },
               },
             },
@@ -362,6 +371,11 @@ describe('ManagerDealChecklistPanel', () => {
       screen.getByText(
         'DLE let outcome is linked as review context or explicitly configured as a required condition.',
       ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Saved draft rule notes')).toBeInTheDocument();
+    expect(screen.getByText(/Trigger: Deposit Received/i)).toBeInTheDocument();
+    expect(
+      screen.getByText('Deposit evidence is verified when required by the selected trigger.'),
     ).toBeInTheDocument();
     expect(screen.getByText(/Readiness metadata is display-only/i)).toBeInTheDocument();
   });

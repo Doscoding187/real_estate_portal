@@ -70,6 +70,13 @@ type DealChecklist = {
         payoutTriggers: string[];
         requiredConditions: string[];
         implementationStatus: 'shared_sale_shell' | 'transaction_specific_rules_required';
+        draftRule?: {
+          source: 'payout_milestone_notes';
+          lane: 'sale' | 'rent' | 'auction';
+          trigger: string;
+          requiredConditions: string[];
+          automationStatus: 'disabled';
+        } | null;
       };
     };
     manualReadinessReviews?: Array<{
@@ -409,6 +416,22 @@ export function ManagerDealChecklistPanel({
                   ))}
                 </ul>
               </div>
+              {transactionRuleModel.draftRule ? (
+                <div className="mt-2 rounded border border-amber-200 bg-white p-2">
+                  <p className="text-xs font-semibold text-amber-900">Saved draft rule notes</p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    Trigger: {formatReadinessRole(transactionRuleModel.draftRule.trigger)} |
+                    Automation: {formatReadinessRole(transactionRuleModel.draftRule.automationStatus)}
+                  </p>
+                  {transactionRuleModel.draftRule.requiredConditions.length ? (
+                    <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-amber-800">
+                      {transactionRuleModel.draftRule.requiredConditions.map(condition => (
+                        <li key={condition}>{condition}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
           <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">

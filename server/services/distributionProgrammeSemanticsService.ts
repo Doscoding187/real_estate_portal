@@ -70,6 +70,13 @@ export type DistributionProgrammeSemanticsReadModel = {
     payoutTriggers: DistributionProgrammePayoutTrigger[];
     requiredConditions: string[];
     implementationStatus: 'shared_sale_shell' | 'transaction_specific_rules_required';
+    draftRule: {
+      source: 'payout_milestone_notes';
+      lane: DistributionProgrammeLane;
+      trigger: string;
+      requiredConditions: string[];
+      automationStatus: 'disabled';
+    } | null;
   };
 };
 
@@ -185,6 +192,7 @@ function expectedRolesForLane(lane: DistributionProgrammeLane): DistributionRead
 
 function transactionRuleModelForLane(
   lane: DistributionProgrammeLane,
+  draftRule: DistributionProgrammeSemanticsReadModel['transactionRuleModel']['draftRule'],
 ): DistributionProgrammeSemanticsReadModel['transactionRuleModel'] {
   if (lane === 'rent') {
     return {
@@ -197,6 +205,7 @@ function transactionRuleModelForLane(
         'DLE let outcome is linked as review context or explicitly configured as a required condition.',
       ],
       implementationStatus: 'transaction_specific_rules_required',
+      draftRule,
     };
   }
 
@@ -217,6 +226,7 @@ function transactionRuleModelForLane(
         'DLE auction sold outcome is linked as review context or explicitly configured as a required condition.',
       ],
       implementationStatus: 'transaction_specific_rules_required',
+      draftRule,
     };
   }
 
@@ -229,14 +239,64 @@ function transactionRuleModelForLane(
       'Commission entry creation uses the configured programme amount model.',
     ],
     implementationStatus: 'shared_sale_shell',
+    draftRule,
+  };
+}
+
+function normalizeDraftRuleLane(value: string): DistributionProgrammeLane | null {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'rental' || normalized === 'rent') return 'rent';
+  if (normalized === 'auction') return 'auction';
+  if (normalized === 'sale') return 'sale';
+  return null;
+}
+
+export function parseDraftTransactionRuleNotes(
+  payoutMilestoneNotes: unknown,
+): DistributionProgrammeSemanticsReadModel['transactionRuleModel']['draftRule'] {
+  const raw = String(payoutMilestoneNotes || '').trim();
+  if (!raw.includes('[DLE draft transaction rule]')) return null;
+
+  const lines = raw
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const laneLine = lines.find(line => line.toLowerCase().startsWith('lane:'));
+  const triggerLine = lines.find(line => line.toLowerCase().startsWith('trigger:'));
+  const lane = laneLine ? normalizeDraftRuleLane(laneLine.replace(/^lane:\s*/i, '')) : null;
+  const trigger = triggerLine ? triggerLine.replace(/^trigger:\s*/i, '').trim() : '';
+  if (!lane || !trigger) return null;
+
+  const requiredConditions: string[] = [];
+  let inConditions = false;
+  for (const line of lines) {
+    if (/^required conditions:$/i.test(line)) {
+      inConditions = true;
+      continue;
+    }
+    if (/^automation:/i.test(line)) break;
+    if (inConditions && line.startsWith('- ')) {
+      requiredConditions.push(line.slice(2).trim());
+    }
+  }
+
+  return {
+    source: 'payout_milestone_notes',
+    lane,
+    trigger,
+    requiredConditions,
+    automationStatus: 'disabled',
   };
 }
 
 export function buildDistributionProgrammeSemanticsReadModel(input: {
   transactionType: unknown;
   documents: DistributionProgrammeSemanticsDocument[];
+  payoutMilestoneNotes?: unknown;
 }): DistributionProgrammeSemanticsReadModel {
   const transactionLane = normalizeDistributionProgrammeLane(input.transactionType);
+  const parsedDraftRule = parseDraftTransactionRuleNotes(input.payoutMilestoneNotes);
+  const draftRule = parsedDraftRule?.lane === transactionLane ? parsedDraftRule : null;
   const expectedRoles = expectedRolesForLane(transactionLane);
   const documentRoles = input.documents
     .filter(document => document.isRequired)
@@ -284,6 +344,6 @@ export function buildDistributionProgrammeSemanticsReadModel(input: {
     automationAllowed: false,
     automationBlockedReason:
       'Readiness metadata is display-only until programme terms, document review rules, and payout triggers are explicitly configured.',
-    transactionRuleModel: transactionRuleModelForLane(transactionLane),
+    transactionRuleModel: transactionRuleModelForLane(transactionLane, draftRule),
   };
 }

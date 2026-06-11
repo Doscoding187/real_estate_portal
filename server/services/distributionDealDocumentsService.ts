@@ -320,6 +320,7 @@ export async function getDealChecklist(
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
       payoutMilestone: distributionPrograms.payoutMilestone,
+      payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
       currencyCode: distributionPrograms.currencyCode,
     })
     .from(distributionPrograms)
@@ -472,6 +473,7 @@ export async function getDealChecklist(
   });
   const programmeSemantics = buildDistributionProgrammeSemanticsReadModel({
     transactionType: dealScope.transactionType,
+    payoutMilestoneNotes: program?.payoutMilestoneNotes || null,
     documents: requiredDocuments.map(document => ({
       templateId: document.templateId,
       documentCode: document.documentCode,

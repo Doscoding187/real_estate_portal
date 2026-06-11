@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildDistributionProgrammeSemanticsReadModel } from '../distributionProgrammeSemanticsService';
+import {
+  buildDistributionProgrammeSemanticsReadModel,
+  parseDraftTransactionRuleNotes,
+} from '../distributionProgrammeSemanticsService';
 
 describe('distributionProgrammeSemanticsService', () => {
   it('derives rental readiness roles without enabling automation', () => {
@@ -158,7 +161,72 @@ describe('distributionProgrammeSemanticsService', () => {
         'Manager or admin review accepts the deal for reward movement.',
         'Commission entry creation uses the configured programme amount model.',
       ],
+      draftRule: null,
     });
+  });
+
+  it('parses saved draft transaction-rule notes as read-only context', () => {
+    const draftRule = parseDraftTransactionRuleNotes([
+      '[DLE draft transaction rule]',
+      'Lane: Rental',
+      'Trigger: deposit_received',
+      'Required conditions:',
+      '- Rental programme payout trigger is explicitly selected.',
+      '- Manager manual rental readiness review is accepted.',
+      'Automation: disabled until explicitly implemented and tested.',
+    ].join('\n'));
+
+    expect(draftRule).toEqual({
+      source: 'payout_milestone_notes',
+      lane: 'rent',
+      trigger: 'deposit_received',
+      requiredConditions: [
+        'Rental programme payout trigger is explicitly selected.',
+        'Manager manual rental readiness review is accepted.',
+      ],
+      automationStatus: 'disabled',
+    });
+  });
+
+  it('includes matching draft rule notes in the lane read model only', () => {
+    const notes = [
+      '[DLE draft transaction rule]',
+      'Lane: Rental',
+      'Trigger: first_rent_paid',
+      'Required conditions:',
+      '- First-rent payment evidence is verified when required by the selected trigger.',
+      'Automation: disabled until explicitly implemented and tested.',
+    ].join('\n');
+
+    const rentalReadModel = buildDistributionProgrammeSemanticsReadModel({
+      transactionType: 'for_rent',
+      payoutMilestoneNotes: notes,
+      documents: [
+        {
+          templateId: 50,
+          documentCode: 'custom',
+          documentLabel: 'Signed Lease Agreement',
+          category: 'client_required_document',
+          transactionType: 'rent',
+          participantType: 'renter',
+          readinessRole: 'lease',
+          blocksPayout: true,
+          isRequired: true,
+        },
+      ],
+    });
+    const auctionReadModel = buildDistributionProgrammeSemanticsReadModel({
+      transactionType: 'auction',
+      payoutMilestoneNotes: notes,
+      documents: [],
+    });
+
+    expect(rentalReadModel.transactionRuleModel.draftRule).toMatchObject({
+      lane: 'rent',
+      trigger: 'first_rent_paid',
+      automationStatus: 'disabled',
+    });
+    expect(auctionReadModel.transactionRuleModel.draftRule).toBeNull();
   });
 
   it('warns when a required template looks like the wrong transaction lane', () => {

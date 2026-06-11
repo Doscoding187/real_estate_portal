@@ -287,6 +287,10 @@ Current admin-authoring status:
 - These draft notes save through the existing programme-owned `custom` payout milestone notes.
 - Draft notes are programme terms context only. They do not create runtime payout rules, move
   stages, create reward entries, verify documents, or approve commissions.
+- The programme semantics read model parses saved `[DLE draft transaction rule]` notes as
+  read-only draft context when the saved lane matches the development transaction lane.
+- Manager and admin review surfaces show parsed draft trigger context while automation remains
+  disabled.
 
 ## DLE Handoff Rules
 
