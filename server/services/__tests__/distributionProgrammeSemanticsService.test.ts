@@ -46,6 +46,17 @@ describe('distributionProgrammeSemanticsService', () => {
     ]);
     expect(readModel.missingRoles).toEqual([]);
     expect(readModel.automationAllowed).toBe(false);
+    expect(readModel.transactionRuleModel).toMatchObject({
+      implementationStatus: 'transaction_specific_rules_required',
+      payoutTriggers: ['lease_signed', 'deposit_received', 'first_rent_paid', 'manual_approval'],
+      requiredConditions: [
+        'Rental programme payout trigger is explicitly selected.',
+        'Rental document templates define renter, lease, and payout readiness roles.',
+        'Lease, deposit, or first-rent evidence is verified when required by the selected trigger.',
+        'Manager manual rental readiness review is accepted.',
+        'DLE let outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    });
     expect(readModel.documentRoles.find(role => role.templateId === 4)).toMatchObject({
       readinessRole: 'payout',
       appliesToLane: true,
@@ -97,6 +108,57 @@ describe('distributionProgrammeSemanticsService', () => {
     ]);
     expect(readModel.missingRoles).toEqual(['payout']);
     expect(readModel.automationAllowed).toBe(false);
+    expect(readModel.transactionRuleModel).toMatchObject({
+      implementationStatus: 'transaction_specific_rules_required',
+      payoutTriggers: [
+        'winning_bidder_confirmed',
+        'auction_terms_signed',
+        'deposit_paid',
+        'settlement_confirmed',
+        'manual_approval',
+      ],
+      requiredConditions: [
+        'Auction programme payout trigger is explicitly selected.',
+        'Auction document templates define bidder, registration, terms, and payout readiness roles.',
+        'Winning-bidder, auction-terms, deposit, or settlement evidence is verified when required by the selected trigger.',
+        'Manager manual auction bidder readiness review is accepted.',
+        'DLE auction sold outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    });
+  });
+
+  it('documents the existing sale shell as the only shared automation baseline', () => {
+    const readModel = buildDistributionProgrammeSemanticsReadModel({
+      transactionType: 'for_sale',
+      documents: [
+        {
+          templateId: 40,
+          documentCode: 'id_document',
+          documentLabel: 'Buyer ID Document',
+          category: 'client_required_document',
+          isRequired: true,
+        },
+        {
+          templateId: 41,
+          documentCode: 'sale_agreement',
+          documentLabel: 'Sale Agreement',
+          category: 'client_required_document',
+          isRequired: true,
+        },
+      ],
+    });
+
+    expect(readModel.transactionLane).toBe('sale');
+    expect(readModel.transactionRuleModel).toEqual({
+      implementationStatus: 'shared_sale_shell',
+      payoutTriggers: ['contract_signed', 'bond_approved', 'transfer_registered', 'manual_approval'],
+      requiredConditions: [
+        'Required buyer documents are verified.',
+        'Configured distribution payout milestone is satisfied.',
+        'Manager or admin review accepts the deal for reward movement.',
+        'Commission entry creation uses the configured programme amount model.',
+      ],
+    });
   });
 
   it('warns when a required template looks like the wrong transaction lane', () => {

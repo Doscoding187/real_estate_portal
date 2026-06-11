@@ -456,6 +456,10 @@ Recommended next architecture work:
   can be manually reviewed as ready context, but they cannot move into reward automation until
   explicit transaction-specific programme terms, document requirements, manager approval, and DLE
   outcome conditions are represented.
+- The programme semantics read model now exposes `transactionRuleModel` with Sale, Rental, and
+  Auction payout trigger vocabulary plus required conditions. Sale is identified as the current
+  shared-shell baseline, while Rental and Auction are explicitly marked as requiring
+  transaction-specific rules before automation.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

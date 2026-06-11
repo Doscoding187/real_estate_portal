@@ -271,6 +271,15 @@ Minimum future payout trigger vocabulary:
 - Auction: `winning_bidder_confirmed`, `auction_terms_signed`, `deposit_paid`,
   `settlement_confirmed`, `manual_approval`.
 
+Current read-model status:
+
+- `server/services/distributionProgrammeSemanticsService.ts` exposes the trigger vocabulary and
+  required conditions as `transactionRuleModel`.
+- Sale is marked as the current `shared_sale_shell` baseline.
+- Rental and Auction are marked as `transaction_specific_rules_required`.
+- This model is readback/design context only. It does not create payout rules, move stages, create
+  reward entries, verify documents, or approve commissions.
+
 ## DLE Handoff Rules
 
 DLE operating outcomes can create review context, not automatic reward truth.
@@ -307,8 +316,10 @@ Status:
   implemented.
 - Step 4 is implemented as manager manual readiness review actions for Rental lease readiness and
   Auction bidder readiness. The actions record validation events and visible readback only.
-- Step 5 remains explicitly out of scope. Manual review acceptance does not move stages, approve
-  rewards, change commission state, or automate payout readiness.
+- Step 5 has a read-only rule-model surface: transaction-specific trigger vocabulary and required
+  conditions are represented in the programme semantics read model, but automation remains blocked.
+- Step 5 runtime automation remains explicitly out of scope. Manual review acceptance does not
+  move stages, approve rewards, change commission state, or automate payout readiness.
 
 Each implementation slice must prove:
 

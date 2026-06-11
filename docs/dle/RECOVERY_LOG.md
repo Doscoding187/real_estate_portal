@@ -5193,3 +5193,50 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `fix(dle): guard rental auction payout automation`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Transaction Rule Model Readback
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Represent the explicit Sale/Rental/Auction payout-trigger vocabulary and required conditions
+in the distribution programme semantics read model without enabling Rental/Auction payout, stage,
+commission, document, lead, inventory, or operating automation.
+Files changed:
+- server/services/distributionProgrammeSemanticsService.ts
+- server/services/__tests__/distributionProgrammeSemanticsService.test.ts
+- docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/distributionProgrammeSemanticsService.test.ts`
+  passed with 5 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `DistributionProgrammeSemanticsReadModel` now includes `transactionRuleModel`.
+- Sale exposes the current shared-shell trigger vocabulary:
+  `contract_signed`, `bond_approved`, `transfer_registered`, and `manual_approval`.
+- Rental exposes transaction-specific trigger vocabulary:
+  `lease_signed`, `deposit_received`, `first_rent_paid`, and `manual_approval`.
+- Auction exposes transaction-specific trigger vocabulary:
+  `winning_bidder_confirmed`, `auction_terms_signed`, `deposit_paid`,
+  `settlement_confirmed`, and `manual_approval`.
+- Rental and Auction rule models are explicitly marked `transaction_specific_rules_required`;
+  Sale is marked `shared_sale_shell`.
+Guardrails:
+- No schema, migration, route mutation, payout calculation, commission entry creation,
+  deal-stage transition, document verification, lead mutation, DLE inventory mutation, or
+  operating-event mutation was added.
+- The model is readback/design context only. Runtime Rental/Auction automation remains blocked by
+  `computed.payoutAutomation`.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The rule model is not yet configurable programme data. Rental/Auction automation still needs a
+  future admin-authored rule surface and tests before it can become runtime behavior.
+Next recommended slice:
+- Surface `transactionRuleModel` in manager/admin review copy so ops users can see which explicit
+  Rental/Auction rule conditions are still missing before any reward movement is possible.
+Commit hash/tag: This entry will be included in
+`feat(dle): expose transaction rule model`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
