@@ -466,6 +466,9 @@ Recommended next architecture work:
 - Browser proof in `e2e/dle/distribution-handoff.spec.ts` verifies seeded Rental and Auction
   manager pages plus super-admin deal/reward rows render the transaction rule model while manual
   readiness remains read-only and stage/commission state stays unchanged.
+- The partner-development onboarding drawer now lets admins draft Rental/Auction transaction-rule
+  notes from the approved trigger vocabulary. The notes save through the existing custom payout
+  milestone notes field and remain non-automating programme context.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

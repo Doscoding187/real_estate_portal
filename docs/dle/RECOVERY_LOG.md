@@ -5340,3 +5340,50 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `test(dle): prove transaction rule model review`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Draft Transaction Rule Authoring
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add the first admin-authored Rental/Auction transaction-rule draft surface without enabling
+runtime payout, stage, commission, document, lead, inventory, or operating automation.
+Files changed:
+- client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx
+- client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.test.tsx
+- docs/dle/DISTRIBUTION_PROGRAMME_SEMANTICS_CONTRACT.md
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.test.tsx`
+  passed with 18 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The partner-development onboarding drawer now detects Rental and Auction developments from
+  development transaction type.
+- Rental exposes draft trigger options: `lease_signed`, `deposit_received`, `first_rent_paid`, and
+  `manual_approval`.
+- Auction exposes draft trigger options: `winning_bidder_confirmed`, `auction_terms_signed`,
+  `deposit_paid`, `settlement_confirmed`, and `manual_approval`.
+- Applying a draft rule sets the existing payout milestone to `custom` and writes structured
+  `[DLE draft transaction rule]` notes with lane, trigger, required conditions, and automation
+  disabled copy.
+- Focused tests prove Rental draft notes save with `isReferralEnabled: false`, `payoutMilestone:
+  custom`, and the expected trigger note.
+Guardrails:
+- No schema, migration, route mutation, payout calculation, commission entry creation, deal-stage
+  transition, document verification, lead mutation, DLE inventory mutation, or operating-event
+  mutation was added.
+- Draft transaction-rule notes are programme context only. Runtime Rental/Auction automation
+  remains blocked by `computed.payoutAutomation`.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Draft notes are not yet structured persisted rule records. A future slice must parse, review, or
+  persist explicit rule state before any runtime gate can consume it.
+Next recommended slice:
+- Surface saved draft transaction-rule notes in manager/admin rule-model readback, or add a
+  server-side parser that recognizes draft notes as context while keeping automation disabled.
+Commit hash/tag: This entry will be included in
+`feat(dle): draft transaction rule notes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  buildDraftTransactionRuleNote,
+  getDraftTransactionRuleOptions,
+  normalizeDraftTransactionRuleLane,
   PartnerDevelopmentOnboardingDrawer,
   ReadinessStatusChips,
 } from './PartnerDevelopmentOnboardingDrawer';
@@ -206,6 +209,43 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByText('Application docs: Ready')).toBeInTheDocument();
   });
 
+  it('builds Rental and Auction draft transaction rule notes without sale automation', () => {
+    expect(normalizeDraftTransactionRuleLane('for_rent')).toBe('rent');
+    expect(normalizeDraftTransactionRuleLane('auction')).toBe('auction');
+    expect(normalizeDraftTransactionRuleLane('for_sale')).toBe('sale');
+
+    expect(getDraftTransactionRuleOptions('for_rent').map(option => option.trigger)).toEqual([
+      'lease_signed',
+      'deposit_received',
+      'first_rent_paid',
+      'manual_approval',
+    ]);
+    expect(getDraftTransactionRuleOptions('auction').map(option => option.trigger)).toEqual([
+      'winning_bidder_confirmed',
+      'auction_terms_signed',
+      'deposit_paid',
+      'settlement_confirmed',
+      'manual_approval',
+    ]);
+    expect(getDraftTransactionRuleOptions('for_sale')).toEqual([]);
+
+    expect(
+      buildDraftTransactionRuleNote({
+        transactionType: 'for_rent',
+        trigger: 'deposit_received',
+      }),
+    ).toContain('Trigger: deposit_received');
+    expect(
+      buildDraftTransactionRuleNote({
+        transactionType: 'auction',
+        trigger: 'winning_bidder_confirmed',
+      }),
+    ).toContain('DLE auction sold outcome is linked as review context');
+    expect(buildDraftTransactionRuleNote({ transactionType: 'sale', trigger: 'manual_approval' })).toBe(
+      '',
+    );
+  });
+
   it('separates developer and client document configuration sections', () => {
     mockGetDevelopmentRequiredDocumentsUseQuery.mockReturnValue({
       data: [
@@ -345,6 +385,59 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
               documentLabel: 'Signed Lease Agreement',
             }),
           ],
+        }),
+      ),
+    );
+  });
+
+  it('authors Rental draft transaction rule notes without enabling referrals', async () => {
+    const upsertMutateAsync = vi.fn().mockResolvedValue({ success: true, programId: 91 });
+    mockUpsertProgramUseMutation.mockReturnValue({
+      mutateAsync: upsertMutateAsync,
+      isPending: false,
+    });
+
+    render(
+      <PartnerDevelopmentOnboardingDrawer
+        open
+        onOpenChange={vi.fn()}
+        brandProfileId={44}
+        brandProfileName="Cosmopolitan"
+        developments={[
+          {
+            developmentId: 1001,
+            developmentName: 'Sky City',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            transactionType: 'for_rent',
+            program: {},
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        onRetry={vi.fn()}
+        managerOptions={[]}
+        onRefreshCatalog={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Rental draft transaction rule')).toBeInTheDocument();
+    expect(screen.getByText(/Draft-only programme terms/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Draft Rule Notes' }));
+    expect(screen.getByDisplayValue(/\[DLE draft transaction rule\]/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/Trigger: lease_signed/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/Automation: disabled/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Save setup'));
+
+    await waitFor(() =>
+      expect(upsertMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1001,
+          isReferralEnabled: false,
+          payoutMilestone: 'custom',
+          payoutMilestoneNotes: expect.stringContaining('Trigger: lease_signed'),
         }),
       ),
     );

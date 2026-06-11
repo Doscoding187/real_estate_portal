@@ -280,6 +280,14 @@ Current read-model status:
 - This model is readback/design context only. It does not create payout rules, move stages, create
   reward entries, verify documents, or approve commissions.
 
+Current admin-authoring status:
+
+- The partner-development onboarding drawer can draft Rental/Auction transaction-rule notes from
+  the approved trigger vocabulary.
+- These draft notes save through the existing programme-owned `custom` payout milestone notes.
+- Draft notes are programme terms context only. They do not create runtime payout rules, move
+  stages, create reward entries, verify documents, or approve commissions.
+
 ## DLE Handoff Rules
 
 DLE operating outcomes can create review context, not automatic reward truth.

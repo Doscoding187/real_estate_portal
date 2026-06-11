@@ -33,6 +33,7 @@ type DevelopmentRow = {
   developmentName: string;
   city?: string | null;
   province?: string | null;
+  transactionType?: string | null;
   program?: any;
 };
 
@@ -150,6 +151,155 @@ const payoutMilestones = [
   'occupation',
   'custom',
 ] as const;
+
+type TransactionRuleLane = 'sale' | 'rent' | 'auction';
+
+type DraftTransactionRuleOption = {
+  trigger: string;
+  label: string;
+  conditions: string[];
+};
+
+const draftTransactionRuleOptions: Record<'rent' | 'auction', DraftTransactionRuleOption[]> = {
+  rent: [
+    {
+      trigger: 'lease_signed',
+      label: 'Lease signed',
+      conditions: [
+        'Rental programme payout trigger is explicitly selected.',
+        'Rental document templates define renter, lease, and payout readiness roles.',
+        'Lease evidence is verified when required by the selected trigger.',
+        'Manager manual rental readiness review is accepted.',
+        'DLE let outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+    {
+      trigger: 'deposit_received',
+      label: 'Deposit received',
+      conditions: [
+        'Rental programme payout trigger is explicitly selected.',
+        'Rental document templates define renter, lease, deposit, and payout readiness roles.',
+        'Deposit evidence is verified when required by the selected trigger.',
+        'Manager manual rental readiness review is accepted.',
+        'DLE let outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+    {
+      trigger: 'first_rent_paid',
+      label: 'First rent paid',
+      conditions: [
+        'Rental programme payout trigger is explicitly selected.',
+        'Rental document templates define renter, lease, first-rent, and payout readiness roles.',
+        'First-rent payment evidence is verified when required by the selected trigger.',
+        'Manager manual rental readiness review is accepted.',
+        'DLE let outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+    {
+      trigger: 'manual_approval',
+      label: 'Manual approval',
+      conditions: [
+        'Rental programme payout trigger is explicitly selected.',
+        'Rental document templates define renter and supporting readiness roles.',
+        'Manager manual rental readiness review is accepted.',
+        'Admin approval records the Rental reward movement decision.',
+        'DLE let outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+  ],
+  auction: [
+    {
+      trigger: 'winning_bidder_confirmed',
+      label: 'Winning bidder confirmed',
+      conditions: [
+        'Auction programme payout trigger is explicitly selected.',
+        'Auction document templates define bidder, registration, terms, and payout readiness roles.',
+        'Winning-bidder evidence is verified when required by the selected trigger.',
+        'Manager manual auction bidder readiness review is accepted.',
+        'DLE auction sold outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+    {
+      trigger: 'auction_terms_signed',
+      label: 'Auction terms signed',
+      conditions: [
+        'Auction programme payout trigger is explicitly selected.',
+        'Auction document templates define bidder, registration, terms, and payout readiness roles.',
+        'Signed auction terms evidence is verified when required by the selected trigger.',
+        'Manager manual auction bidder readiness review is accepted.',
+        'DLE auction sold outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+    {
+      trigger: 'deposit_paid',
+      label: 'Deposit paid',
+      conditions: [
+        'Auction programme payout trigger is explicitly selected.',
+        'Auction document templates define bidder, registration, terms, deposit, and payout readiness roles.',
+        'Deposit evidence is verified when required by the selected trigger.',
+        'Manager manual auction bidder readiness review is accepted.',
+        'DLE auction sold outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+    {
+      trigger: 'settlement_confirmed',
+      label: 'Settlement confirmed',
+      conditions: [
+        'Auction programme payout trigger is explicitly selected.',
+        'Auction document templates define bidder, terms, settlement, and payout readiness roles.',
+        'Settlement evidence is verified when required by the selected trigger.',
+        'Manager manual auction bidder readiness review is accepted.',
+        'DLE auction sold outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+    {
+      trigger: 'manual_approval',
+      label: 'Manual approval',
+      conditions: [
+        'Auction programme payout trigger is explicitly selected.',
+        'Auction document templates define bidder, registration, terms, and supporting readiness roles.',
+        'Manager manual auction bidder readiness review is accepted.',
+        'Admin approval records the Auction reward movement decision.',
+        'DLE auction sold outcome is linked as review context or explicitly configured as a required condition.',
+      ],
+    },
+  ],
+};
+
+export function normalizeDraftTransactionRuleLane(transactionType: unknown): TransactionRuleLane {
+  const normalized = String(transactionType || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (['for_rent', 'rent', 'rental', 'to_rent'].includes(normalized)) return 'rent';
+  if (['auction', 'on_auction'].includes(normalized)) return 'auction';
+  return 'sale';
+}
+
+export function getDraftTransactionRuleOptions(transactionType: unknown) {
+  const lane = normalizeDraftTransactionRuleLane(transactionType);
+  if (lane === 'rent' || lane === 'auction') return draftTransactionRuleOptions[lane];
+  return [];
+}
+
+export function buildDraftTransactionRuleNote(input: {
+  transactionType: unknown;
+  trigger: string;
+}) {
+  const lane = normalizeDraftTransactionRuleLane(input.transactionType);
+  if (lane !== 'rent' && lane !== 'auction') return '';
+
+  const option =
+    draftTransactionRuleOptions[lane].find(candidate => candidate.trigger === input.trigger) ||
+    draftTransactionRuleOptions[lane][0];
+  const laneLabel = lane === 'rent' ? 'Rental' : 'Auction';
+
+  return [
+    '[DLE draft transaction rule]',
+    `Lane: ${laneLabel}`,
+    `Trigger: ${option.trigger}`,
+    'Required conditions:',
+    ...option.conditions.map(condition => `- ${condition}`),
+    'Automation: disabled until programme terms, document review rules, manager/admin approval gates, and DLE outcome conditions are explicitly implemented and tested.',
+  ].join('\n');
+}
 
 const clientDocumentCodeOptions: Array<{ value: RequiredDocumentDraft['documentCode']; label: string }> = [
   { value: 'id_document', label: 'ID Document' },
@@ -796,6 +946,7 @@ function DevelopmentProgramConfigPanel({
   const [payoutMilestone, setPayoutMilestone] =
     useState<(typeof payoutMilestones)[number]>('attorney_signing');
   const [payoutMilestoneNotes, setPayoutMilestoneNotes] = useState('');
+  const [draftTransactionRuleTrigger, setDraftTransactionRuleTrigger] = useState('');
   const [currencyCode, setCurrencyCode] = useState('ZAR');
   const [isActive, setIsActive] = useState(true);
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
@@ -805,6 +956,17 @@ function DevelopmentProgramConfigPanel({
   );
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
   const [uploadingDocumentIndex, setUploadingDocumentIndex] = useState<number | null>(null);
+  const draftTransactionRuleLane = normalizeDraftTransactionRuleLane(development.transactionType);
+  const draftTransactionRuleLabel =
+    draftTransactionRuleLane === 'rent'
+      ? 'Rental'
+      : draftTransactionRuleLane === 'auction'
+        ? 'Auction'
+        : 'Sale';
+  const draftRuleOptions = useMemo(
+    () => getDraftTransactionRuleOptions(development.transactionType),
+    [development.transactionType],
+  );
 
   const applyPresetToForm = useCallback((preset: BrandOnboardingPreset) => {
     setCommissionModel(preset.commissionModel);
@@ -866,6 +1028,10 @@ function DevelopmentProgramConfigPanel({
     setPrimaryManagerUserId(primaryManager ? String(primaryManager.managerUserId) : '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [development.developmentId, readinessQuery.data]);
+
+  useEffect(() => {
+    setDraftTransactionRuleTrigger(draftRuleOptions[0]?.trigger || '');
+  }, [development.developmentId, draftRuleOptions]);
 
   useEffect(() => {
     const list = (docsQuery.data || [])
@@ -1511,6 +1677,17 @@ function DevelopmentProgramConfigPanel({
     };
   }
 
+  function applyDraftTransactionRule() {
+    if (!draftTransactionRuleTrigger) return;
+    const note = buildDraftTransactionRuleNote({
+      transactionType: development.transactionType,
+      trigger: draftTransactionRuleTrigger,
+    });
+    if (!note) return;
+    setPayoutMilestone('custom');
+    setPayoutMilestoneNotes(note);
+  }
+
   function buildDocumentsInput(targetDevelopmentId: number, preserveIds: boolean) {
     return {
       developmentId: targetDevelopmentId,
@@ -1939,6 +2116,40 @@ function DevelopmentProgramConfigPanel({
               </Select>
             </div>
           </div>
+
+          {draftRuleOptions.length ? (
+            <div className="rounded border border-amber-200 bg-amber-50 p-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-amber-900">
+                    {draftTransactionRuleLabel} draft transaction rule
+                  </p>
+                  <p className="text-[11px] text-amber-800">
+                    Draft-only programme terms. Applying this writes custom payout notes; it does
+                    not enable reward automation, move stages, or approve payouts.
+                  </p>
+                  <Select
+                    value={draftTransactionRuleTrigger}
+                    onValueChange={setDraftTransactionRuleTrigger}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {draftRuleOptions.map(option => (
+                        <SelectItem key={option.trigger} value={option.trigger}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="button" variant="outline" onClick={applyDraftTransactionRule}>
+                  Apply Draft Rule Notes
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           {payoutMilestone === 'custom' ? (
             <Textarea
