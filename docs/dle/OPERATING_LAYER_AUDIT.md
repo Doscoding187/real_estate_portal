@@ -451,6 +451,11 @@ Recommended next architecture work:
 - Rental and Auction manager checklist copy now describes the top readiness card as checklist
   readiness for manual review, not referral/reward readiness. The note explicitly says reward
   movement still needs transaction-specific programme rules and manual review.
+- The manager/admin payout gate now exposes `computed.payoutAutomation` and blocks Rental/Auction
+  commission-stage automation even when the shared checklist reports `payoutReady`. Rental/Auction
+  can be manually reviewed as ready context, but they cannot move into reward automation until
+  explicit transaction-specific programme terms, document requirements, manager approval, and DLE
+  outcome conditions are represented.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

@@ -5144,3 +5144,52 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `fix(dle): clarify manager checklist readiness copy`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-10 - Rental/Auction Payout Automation Guard
+
+Date: 2026-06-10
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the next Rental/Auction payout/stage automation boundary explicit in code and tests:
+shared checklist readiness may be true, but Rental/Auction commission-stage automation must remain
+blocked until transaction-specific programme terms, document requirements, manager approval, and
+DLE outcome conditions are represented.
+Files changed:
+- server/services/distributionDealDocumentsService.ts
+- server/__tests__/distributionManagerChecklist.integration.test.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Initial sandboxed `pnpm vitest run server/__tests__/distributionManagerChecklist.integration.test.ts`
+  failed with `EPERM 127.0.0.1:3306` while connecting to the local MySQL test DB.
+- Escalated `pnpm vitest run server/__tests__/distributionManagerChecklist.integration.test.ts`
+  passed with 16 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `getDealChecklist` now exposes `computed.payoutAutomation` with transaction lane, allowed flag,
+  and blockers.
+- Sale remains the only lane where the existing shared payout-ready shell can allow commission
+  stage automation.
+- Rental and Auction produce explicit automation blockers even when shared `payoutReady` is true.
+- `assertDealPayoutReady` now blocks Rental/Auction commission-stage transitions with a
+  transaction-specific guard message.
+- Integration tests prove Rental and Auction deals with verified readiness docs and accepted manual
+  readiness reviews still cannot move to `commission_pending`.
+- The tests also prove the failed transition leaves deal stage, commission status, and commission
+  entries unchanged.
+Guardrails:
+- No schema, migration, payout calculation, commission amount, reward-entry creation, document
+  mutation, DLE inventory mutation, lead mutation, or operating-event mutation was added.
+- Rental/Auction manual readiness remains review context only.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- Sale remains backed by the existing shared stage/milestone model. Full Rental/Auction payout
+  automation still requires a separate product-rules slice before it can be enabled.
+Next recommended slice:
+- Design the explicit Rental/Auction programme rule model for payout triggers such as lease signed,
+  deposit received, first rent paid, winning bidder confirmed, auction terms signed, deposit paid,
+  and settlement confirmed, then keep implementation behind tests and admin/manual approval gates.
+Commit hash/tag: This entry will be included in
+`fix(dle): guard rental auction payout automation`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

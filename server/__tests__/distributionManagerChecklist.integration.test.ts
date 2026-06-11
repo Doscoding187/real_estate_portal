@@ -665,6 +665,13 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       blockers: [],
     });
     expect(reviewedChecklist.computed.payoutReady).toBe(true);
+    expect(reviewedChecklist.computed.payoutAutomation).toMatchObject({
+      transactionLane: 'rent',
+      allowed: false,
+      blockers: [
+        'Rental payout/stage automation is disabled until explicit Rental programme terms, document requirements, manager approval, and DLE outcome conditions are represented.',
+      ],
+    });
 
     const db = await getDb();
     const [deal] = await db!
@@ -700,6 +707,68 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         }),
       }),
     ]);
+  });
+
+  it('blocks rental transition to commission_pending even when shared checklist readiness is satisfied', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+      transactionType: 'for_rent',
+      templateDocumentCodes: ['custom'],
+      templateSemantics: [
+        {
+          transactionType: 'rent',
+          participantType: 'renter',
+          readinessRole: 'lease',
+          blocksPayout: true,
+        },
+      ],
+    });
+    const caller = buildCaller(seed.managerUserId);
+    await setDealStage(seed.dealId, 'bond_approved');
+
+    await caller.distribution.manager.updateDealDocumentStatus({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+      status: 'verified',
+    });
+    const checklist = await caller.distribution.manager.updateManualReadinessReview({
+      dealId: seed.dealId,
+      reviewType: 'rental_lease_readiness',
+      status: 'accepted',
+      notes: 'Lease evidence ready for manual review.',
+    });
+
+    expect(checklist.computed.payoutReady).toBe(true);
+    expect(checklist.computed.payoutAutomation.allowed).toBe(false);
+
+    await expect(
+      caller.distribution.manager.advanceDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_pending',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('Rental payout/stage automation is disabled'),
+    });
+
+    const db = await getDb();
+    const [deal] = await db!
+      .select({
+        currentStage: distributionDeals.currentStage,
+        commissionStatus: distributionDeals.commissionStatus,
+      })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, seed.dealId))
+      .limit(1);
+    expect(deal?.currentStage).toBe('bond_approved');
+    expect(deal?.commissionStatus).toBe('not_ready');
+
+    const commissionEntries = await db!
+      .select({ id: distributionCommissionEntries.id })
+      .from(distributionCommissionEntries)
+      .where(eq(distributionCommissionEntries.dealId, seed.dealId));
+    expect(commissionEntries).toEqual([]);
   });
 
   it('requires auction registration and terms evidence before bidder readiness review can be accepted', async () => {
@@ -764,6 +833,83 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         ],
       },
     });
+  });
+
+  it('blocks auction transition to commission_pending even when bidder readiness review is accepted', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+      transactionType: 'auction',
+      templateDocumentCodes: ['custom', 'custom'],
+      templateSemantics: [
+        {
+          transactionType: 'auction',
+          participantType: 'bidder',
+          readinessRole: 'auction_registration',
+          blocksPayout: true,
+        },
+        {
+          transactionType: 'auction',
+          participantType: 'bidder',
+          readinessRole: 'auction_terms',
+          blocksPayout: true,
+        },
+      ],
+    });
+    const caller = buildCaller(seed.managerUserId);
+    await setDealStage(seed.dealId, 'bond_approved');
+
+    for (const templateId of seed.templateIds) {
+      await caller.distribution.manager.updateDealDocumentStatus({
+        dealId: seed.dealId,
+        templateId,
+        status: 'verified',
+      });
+    }
+
+    const checklist = await caller.distribution.manager.updateManualReadinessReview({
+      dealId: seed.dealId,
+      reviewType: 'auction_bidder_readiness',
+      status: 'accepted',
+      notes: 'Bidder registration and terms ready for manual review.',
+    });
+
+    expect(checklist.computed.payoutReady).toBe(true);
+    expect(checklist.computed.payoutAutomation).toMatchObject({
+      transactionLane: 'auction',
+      allowed: false,
+      blockers: [
+        'Auction payout/stage automation is disabled until explicit Auction programme terms, document requirements, manager approval, and DLE outcome conditions are represented.',
+      ],
+    });
+
+    await expect(
+      caller.distribution.manager.advanceDealStage({
+        dealId: seed.dealId,
+        toStage: 'commission_pending',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('Auction payout/stage automation is disabled'),
+    });
+
+    const db = await getDb();
+    const [deal] = await db!
+      .select({
+        currentStage: distributionDeals.currentStage,
+        commissionStatus: distributionDeals.commissionStatus,
+      })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, seed.dealId))
+      .limit(1);
+    expect(deal?.currentStage).toBe('bond_approved');
+    expect(deal?.commissionStatus).toBe('not_ready');
+
+    const commissionEntries = await db!
+      .select({ id: distributionCommissionEntries.id })
+      .from(distributionCommissionEntries)
+      .where(eq(distributionCommissionEntries.dealId, seed.dealId));
+    expect(commissionEntries).toEqual([]);
   });
 
   it('blocks manager transition to commission_pending until payout readiness is satisfied', async () => {

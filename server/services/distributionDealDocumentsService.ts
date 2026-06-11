@@ -15,6 +15,7 @@ import { assertDealIsMutable } from './distributionDealMutationGuards';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
 import {
   buildDistributionProgrammeSemanticsReadModel,
+  normalizeDistributionProgrammeLane,
   type DistributionProgrammeSemanticsReadModel,
 } from './distributionProgrammeSemanticsService';
 
@@ -85,6 +86,11 @@ export type DealChecklistPayload = {
     payoutReady: boolean;
     blockers: string[];
     programmeSemantics: DistributionProgrammeSemanticsReadModel;
+    payoutAutomation: {
+      transactionLane: 'sale' | 'rent' | 'auction';
+      allowed: boolean;
+      blockers: string[];
+    };
     manualReadinessReviews: Array<{
       reviewType: DealManualReadinessReviewType;
       label: string;
@@ -147,10 +153,7 @@ function sqlDateNow() {
 }
 
 function normalizeChecklistLane(transactionType: unknown): 'sale' | 'rent' | 'auction' {
-  const normalized = String(transactionType || '').trim().toLowerCase();
-  if (['for_rent', 'rent', 'rental', 'to_rent', 'to-rent'].includes(normalized)) return 'rent';
-  if (['auction', 'on_auction', 'on-auction'].includes(normalized)) return 'auction';
-  return 'sale';
+  return normalizeDistributionProgrammeLane(transactionType);
 }
 
 function getManualReviewDefinitions(transactionType: unknown): Array<{
@@ -193,6 +196,32 @@ function getManualReviewMetadata(row: any): {
   const metadata = row?.metadata;
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return {};
   return metadata as any;
+}
+
+function buildPayoutAutomationEligibility(input: {
+  transactionLane: 'sale' | 'rent' | 'auction';
+  payoutReady: boolean;
+}) {
+  const blockers: string[] = [];
+  if (!input.payoutReady) {
+    blockers.push('Shared document and milestone checks are not payout-ready.');
+  }
+  if (input.transactionLane === 'rent') {
+    blockers.push(
+      'Rental payout/stage automation is disabled until explicit Rental programme terms, document requirements, manager approval, and DLE outcome conditions are represented.',
+    );
+  }
+  if (input.transactionLane === 'auction') {
+    blockers.push(
+      'Auction payout/stage automation is disabled until explicit Auction programme terms, document requirements, manager approval, and DLE outcome conditions are represented.',
+    );
+  }
+
+  return {
+    transactionLane: input.transactionLane,
+    allowed: input.transactionLane === 'sale' && input.payoutReady,
+    blockers,
+  };
 }
 
 async function assertAssignedManagerForDevelopment(
@@ -462,6 +491,10 @@ export async function getDealChecklist(
   });
   const payoutMilestoneSatisfied = payoutMilestoneEvaluation.satisfied;
   const payoutReady = allRequiredVerified && payoutMilestoneSatisfied;
+  const payoutAutomation = buildPayoutAutomationEligibility({
+    transactionLane: programmeSemantics.transactionLane,
+    payoutReady,
+  });
   const blockers: string[] = [];
   const latestManualReviewByType = new Map<
     DealManualReadinessReviewType,
@@ -559,6 +592,7 @@ export async function getDealChecklist(
       payoutReady,
       blockers,
       programmeSemantics,
+      payoutAutomation,
       manualReadinessReviews,
     },
   };
@@ -764,6 +798,14 @@ export async function assertDealPayoutReady(
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: `Deal is not payout-ready: ${checklist.computed.blockers.join(', ') || 'unknown blockers'}.`,
+    });
+  }
+  if (!checklist.computed.payoutAutomation.allowed) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `Deal payout automation is blocked: ${checklist.computed.payoutAutomation.blockers.join(
+        ', ',
+      ) || 'transaction-specific guardrails are not satisfied'}.`,
     });
   }
   return checklist;
