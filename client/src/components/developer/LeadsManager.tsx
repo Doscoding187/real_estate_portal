@@ -30,6 +30,10 @@ import { trpc } from '@/lib/trpc';
 import { stageGroupMatches, useDeveloperLeadsQuery } from '@/hooks/useDeveloperLeadsQuery';
 import { useLocation } from 'wouter';
 import { getLeadQualificationDisplay } from './leadQualificationDisplay';
+import {
+  getLeadNextActionDisplayLabel,
+  getLeadStageDisplayLabel,
+} from './leadOperatingStageDisplay';
 
 type StageTab = 'new' | 'contacted' | 'qualified' | 'viewing' | 'offer' | 'deal' | 'won' | 'lost';
 
@@ -717,7 +721,12 @@ export default function LeadsManager() {
                               <p className="text-xs text-muted-foreground">{lead.contact.email || '-'}</p>
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                              <Badge className={stageBadgeClass(lead.stage)}>{lead.stage}</Badge>
+                              <Badge
+                                className={stageBadgeClass(lead.stage)}
+                                data-testid={`dle-lead-stage-label-${lead.id}`}
+                              >
+                                {getLeadStageDisplayLabel(lead.stage, leadTransactionType)}
+                              </Badge>
                               {outcomeLabel && (
                                 <Badge
                                   data-testid={`dle-lead-outcome-label-${lead.id}`}
@@ -806,7 +815,12 @@ export default function LeadsManager() {
                   <div className="border rounded-md p-2 space-y-1">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Stage</span>
-                      <Badge className={stageBadgeClass(selectedLead.stage)}>{selectedLead.stage}</Badge>
+                      <Badge
+                        className={stageBadgeClass(selectedLead.stage)}
+                        data-testid={`dle-lead-stage-detail-${selectedLead.id}`}
+                      >
+                        {getLeadStageDisplayLabel(selectedLead.stage, selectedLeadTransactionType)}
+                      </Badge>
                     </div>
                     {getLeadOutcomeDisplayLabel(selectedLead, selectedLeadTransactionType) && (
                       <div className="flex justify-between gap-3">
@@ -893,7 +907,7 @@ export default function LeadsManager() {
                     <SelectContent>
                       {(selectedLead.allowedTransitions || []).map(next => (
                         <SelectItem key={next} value={next}>
-                          {next}
+                          {getLeadStageDisplayLabel(next, selectedLeadTransactionType)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1005,21 +1019,21 @@ export default function LeadsManager() {
                   <p className="text-sm font-medium">Next Action</p>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => quickActionPreset('call', 1)}>
-                      Call in 1h
+                      {getLeadNextActionDisplayLabel('call', selectedLeadTransactionType)} in 1h
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => quickActionPreset('whatsapp', 24)}
                     >
-                      WhatsApp tomorrow
+                      {getLeadNextActionDisplayLabel('whatsapp', selectedLeadTransactionType)} tomorrow
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => quickActionPreset('email', 48)}
                     >
-                      Follow up in 2 days
+                      {getLeadNextActionDisplayLabel('email', selectedLeadTransactionType)} in 2 days
                     </Button>
                   </div>
 
@@ -1029,12 +1043,27 @@ export default function LeadsManager() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="call">Call</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                        <SelectItem value="schedule_viewing">Schedule viewing</SelectItem>
-                        <SelectItem value="send_brochure">Send brochure</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="call">
+                          {getLeadNextActionDisplayLabel('call', selectedLeadTransactionType)}
+                        </SelectItem>
+                        <SelectItem value="email">
+                          {getLeadNextActionDisplayLabel('email', selectedLeadTransactionType)}
+                        </SelectItem>
+                        <SelectItem value="whatsapp">
+                          {getLeadNextActionDisplayLabel('whatsapp', selectedLeadTransactionType)}
+                        </SelectItem>
+                        <SelectItem value="schedule_viewing">
+                          {getLeadNextActionDisplayLabel(
+                            'schedule_viewing',
+                            selectedLeadTransactionType,
+                          )}
+                        </SelectItem>
+                        <SelectItem value="send_brochure">
+                          {getLeadNextActionDisplayLabel('send_brochure', selectedLeadTransactionType)}
+                        </SelectItem>
+                        <SelectItem value="other">
+                          {getLeadNextActionDisplayLabel('other', selectedLeadTransactionType)}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <Input
@@ -1088,7 +1117,12 @@ export default function LeadsManager() {
                     {selectedLead.nextAction?.at && (
                       <p>
                         <CalendarClock className="inline h-3 w-3 mr-1" />
-                        Next action: {selectedLead.nextAction.type || 'follow-up'} @{' '}
+                        Next action:{' '}
+                        {getLeadNextActionDisplayLabel(
+                          selectedLead.nextAction.type,
+                          selectedLeadTransactionType,
+                        )}{' '}
+                        @{' '}
                         {new Date(selectedLead.nextAction.at).toLocaleString()}
                       </p>
                     )}

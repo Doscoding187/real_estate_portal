@@ -6217,3 +6217,44 @@ Next recommended slice:
   deeper into Rental/Auction document/readiness capture before automating any readiness movement.
 Commit hash/tag: Included in `feat(dle): show lead qualification context`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Transaction-Aware Lead Operating Labels
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the developer lead operating surface read as Sale, Rental, or Auction work instead of
+showing one generic sales pipeline vocabulary for every transaction lane.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- client/src/components/developer/leadOperatingStageDisplay.ts
+- client/src/components/developer/leadOperatingStageDisplay.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadOperatingStageDisplay.test.ts` passed with 4 tests.
+- `pnpm vitest run client/src/components/developer/leadQualificationDisplay.test.ts` passed with 4 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Lead row and detail stage badges now show transaction-aware labels while preserving canonical
+  stage values underneath.
+- Transition options now display transaction-aware labels without changing mutation payloads.
+- Next-action quick buttons, selector labels, and timeline readback now adapt to Sale, Rental, and
+  Auction context.
+- Helper tests cover Sale buyer/sale language, Rental renter/lease language, Auction bidder/pack
+  language, and fallback handling.
+Guardrails:
+- No schema, migration, lead-stage transition graph, mutation payload, SLA rule, distribution gate,
+  outcome sync, autosave, draft, publish, or lead-capture behavior is intended in this slice.
+- Canonical stages remain shared; this slice only improves operator-facing language.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- Rental still needs true lease application/document readiness workflows.
+- Auction still needs bidder registration, legal-pack acceptance, and proof-of-funds workflows.
+- Deeper dashboards and operating audit history remain future.
+Next recommended slice:
+- Continue lead operations with transaction-specific stage guidance/readiness prompts, or move into
+  Rental/Auction document readiness capture before automating any readiness state.
+Commit hash/tag: Included in `feat(dle): label lead operations by transaction`.
+Uncommitted reason, if any: None.

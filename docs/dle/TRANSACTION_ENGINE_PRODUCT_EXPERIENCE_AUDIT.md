@@ -446,6 +446,23 @@ lead came through a sale affordability, rental fit, or bidder readiness model wh
 pipeline. It remains a read-only operating signal. It does not approve leases, register bidders,
 verify proof of funds, or move distribution readiness.
 
+## Twenty-Fourth Product-Visibility Slice
+
+Make lead operating stage/action language transaction-aware.
+
+The Leads Control Center still uses one canonical lead pipeline underneath, but visible labels now
+adapt per transaction lane:
+
+- Sale uses buyer/sale language such as Buyer qualified and Sale in progress;
+- Rental uses renter/lease language such as Rental fit checked, Application received, Lease review,
+  Send rental pack, and Let;
+- Auction uses bidder/auction language such as Bidder readiness checked, Pack review scheduled, Bid
+  intent captured, Auction follow-up, Send auction pack, and Sold at auction.
+
+This makes the operating surface feel less like Sale with relabelled inventory. It is still a
+display-layer improvement only: canonical stages, allowed transitions, mutations, SLA logic,
+distribution gates, and outcome sync remain unchanged.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -460,8 +477,9 @@ verify proof of funds, or move distribution readiness.
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
   Auction registration open/rollback, and Auction time-gated activation are now browser-proven.
-  Qualification model visibility is now present in the lead center, but sold/let/auction outcomes,
-  pricing adjustments, release phases, and deeper dashboards remain future.
+  Qualification model visibility and transaction-aware lead stage/action labels are now present in
+  the lead center, but sold/let/auction outcomes, pricing adjustments, release phases, and deeper
+  dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -488,5 +506,7 @@ verify proof of funds, or move distribution readiness.
 - Component-helper and service-contract proof that saved qualification model metadata reaches the
   developer lead operating surface. Status: complete for lead qualification display helper and
   developer funnel read-model normalization.
+- Component-helper proof that lead operating stage/action labels are transaction-aware. Status:
+  complete for Sale, Rental, and Auction label helpers.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
