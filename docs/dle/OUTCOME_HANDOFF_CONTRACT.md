@@ -433,6 +433,10 @@ Implemented readback:
 - Missing states must be explicit, such as `Inventory outcome not recorded`,
   `Lead sync not recorded`, and `Distribution handoff not requested`, so the UI never implies
   automation happened in the background.
+- Browser proof now covers a Rental flow where a held unit is marked let, the selected renter lead
+  is synced as `Lease signed / Let`, and a referral handoff review is requested. The dashboard
+  shows all three lanes as recorded while the linked distribution deal stage and commission status
+  remain unchanged.
 
 The developer dashboard should eventually show:
 

@@ -236,6 +236,7 @@ describe('Developer Overview operating readiness', () => {
 
     expect(review.inventory).toMatchObject({
       state: 'recorded',
+      label: 'Inventory outcome',
       detail: 'Rental unit marked let.',
     });
     expect(review.lead).toMatchObject({

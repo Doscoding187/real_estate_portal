@@ -16,6 +16,8 @@ import {
   distributionDeals,
   distributionManagerAssignments,
   distributionPrograms,
+  leadActivities,
+  leads,
   users,
 } from '../../drizzle/schema';
 import { authService } from '../../server/_core/auth';
@@ -45,6 +47,9 @@ type Seed = {
   requiredDocumentIds?: number[];
   dealDocumentIds?: number[];
   managerAssignmentId?: number;
+  leadIds?: number[];
+  unitTypeId: string;
+  unitTypeName: string;
   buyerName: string;
   email: string;
   managerEmail: string;
@@ -313,6 +318,12 @@ async function seedDistributionHandoffDevelopment(
   const programId = getInsertId(programInsert);
 
   const buyerName = `Referral Buyer ${suffix}`;
+  const unitTypeName =
+    transactionType === 'for_rent'
+      ? `Referral Handoff Rental Unit ${suffix}`
+      : transactionType === 'auction'
+        ? `Referral Handoff Auction Lot ${suffix}`
+        : `Referral Handoff Sale Unit ${suffix}`;
   const dealInsert = await db!.insert(distributionDeals).values({
     programId,
     developmentId,
@@ -336,6 +347,8 @@ async function seedDistributionHandoffDevelopment(
     developmentName: String(created.name),
     programId,
     dealId,
+    unitTypeId,
+    unitTypeName,
     buyerName,
     email,
     managerEmail,
@@ -478,6 +491,12 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
       await db
         .delete(developmentOperatingEvents)
         .where(eq(developmentOperatingEvents.developmentId, cleanup.developmentId));
+      if (cleanup.leadIds?.length) {
+        for (const leadId of cleanup.leadIds) {
+          await db.delete(leadActivities).where(eq(leadActivities.leadId, leadId));
+          await db.delete(leads).where(eq(leads.id, leadId));
+        }
+      }
       await db.delete(distributionDeals).where(eq(distributionDeals.id, cleanup.dealId));
       await db.delete(distributionPrograms).where(eq(distributionPrograms.id, cleanup.programId));
       if (cleanup.requiredDocumentIds?.length) {
@@ -733,6 +752,136 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     expect(operatingEvents[0].distributionDealId).toBe(rentalSeed.dealId);
     expect(parseJsonObject(operatingEvents[0].afterData).stageChanged).toBe(false);
     expect(parseJsonObject(operatingEvents[0].afterData).commissionChanged).toBe(false);
+  });
+
+  test('shows Rental operating review with inventory outcome, lead sync, and referral handoff recorded', async ({
+    page,
+  }) => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const rentalSeed = await seedDistributionHandoffDevelopment(suffix, 'for_rent');
+    cleanupSeeds.push(rentalSeed);
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const leadName = `Operating Review Renter ${suffix}`;
+    const leadInsert = await db!.insert(leads).values({
+      developmentId: rentalSeed.developmentId,
+      name: leadName,
+      email: `operating-review-renter-${suffix}@example.com`,
+      phone: '0825550304',
+      unitId: rentalSeed.unitTypeId,
+      unitName: rentalSeed.unitTypeName,
+      unitPriceFrom: 13_500,
+      leadType: 'inquiry',
+      status: 'converted',
+      funnelStage: 'bond',
+      leadSource: 'development_detail_contact',
+      source: 'development_detail',
+    });
+    const leadId = getInsertId(leadInsert);
+    rentalSeed.leadIds = [leadId];
+
+    const [beforeDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, rentalSeed.dealId))
+      .limit(1);
+
+    await loginAsSeededDeveloper(page, rentalSeed);
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, rentalSeed.developmentName);
+
+    await page.getByRole('button', { name: 'Mark Let' }).click();
+    await expect(page.getByText('Rental unit marked let.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText(
+      'Inventory outcome',
+      { timeout: 15_000 },
+    );
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText('held -> let');
+
+    await page.goto(
+      `/developer/leads?developmentId=${rentalSeed.developmentId}&stage=deal&leadId=${leadId}`,
+    );
+    await expect(page.getByRole('heading', { name: 'Leads Control Center' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(leadName).first()).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Sync Outcome' }).click();
+    await expect(page.getByText('Lead synced: Lease signed / Let.')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, rentalSeed.developmentName);
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText('Lead synced', {
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText(
+      'Lease signed / Let',
+    );
+
+    await page.getByTestId(`dle-distribution-handoff-open-${rentalSeed.dealId}`).click();
+    await page
+      .getByTestId('dle-distribution-handoff-note')
+      .fill('Lease signed and selected renter synced. Please review referral handoff only.');
+    await page.getByTestId('dle-distribution-handoff-submit').click();
+    await expect(page.getByText('Referral handoff review requested')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText(
+      'Inventory outcome',
+      { timeout: 15_000 },
+    );
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText('held -> let');
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText('Lead synced');
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText(
+      'Lease signed / Let',
+    );
+    await expect(page.getByTestId('dle-operating-review-handoff')).toContainText(
+      'Review requested',
+    );
+    await expect(page.getByTestId('dle-operating-review-handoff')).toContainText(
+      'Lease signed and selected renter synced',
+    );
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-operating-review-rental-linked-lanes.png`,
+    });
+
+    const [afterDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, rentalSeed.dealId))
+      .limit(1);
+    expect(afterDeal.currentStage).toBe(beforeDeal.currentStage);
+    expect(afterDeal.commissionStatus).toBe(beforeDeal.commissionStatus);
+
+    const operatingEvents = await db!
+      .select()
+      .from(developmentOperatingEvents)
+      .where(eq(developmentOperatingEvents.developmentId, rentalSeed.developmentId))
+      .orderBy(desc(developmentOperatingEvents.id));
+    expect(operatingEvents.map(event => event.eventType)).toEqual([
+      'distribution_handoff_created',
+      'lead_stage_changed',
+      'inventory_status_changed',
+    ]);
+    expect(operatingEvents[0].distributionDealId).toBe(rentalSeed.dealId);
+    expect(operatingEvents[0].transactionType).toBe('for_rent');
+    expect(parseJsonObject(operatingEvents[0].afterData).stageChanged).toBe(false);
+    expect(parseJsonObject(operatingEvents[0].afterData).commissionChanged).toBe(false);
+    expect(operatingEvents[1].leadId).toBe(leadId);
+    expect(parseJsonObject(operatingEvents[1].metadata).displayLabel).toBe(
+      'Lease signed / Let',
+    );
+    expect(operatingEvents[2].fromStatus).toBe('held');
+    expect(operatingEvents[2].toStatus).toBe('let');
   });
 
   test('requests Auction referral handoff review without changing stage or commission', async ({

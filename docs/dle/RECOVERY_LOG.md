@@ -5618,8 +5618,8 @@ Tests run:
 - `pnpm vitest run client/src/components/developer/Overview.test.ts` passed with 12 tests.
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1 -g "requests referral handoff review without changing"`
   passed with 1 test after tightening stale/ambiguous selectors.
-- `pnpm run check` will be run before commit.
-- `git diff --check` will be run before commit.
+- `pnpm run check` passed.
+- `git diff --check` passed.
 Functional proof:
 - The Developer Control Tower now shows an `Operating Review` card for the selected development.
 - The card reads back separate `Inventory outcome`, `Selected lead sync`, and `Referral handoff`
@@ -5648,4 +5648,58 @@ Next recommended slice:
   operating review linkage model before using the card for manager/admin decision workflows.
 Commit hash/tag: This entry will be included in
 `feat(dle): show operating review context`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-11 - Rental Operating Review Linked Lanes
+
+Date: 2026-06-11
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-prove that the developer dashboard Operating Review can show a Rental inventory
+outcome, selected-renter lead sync, and referral handoff review together as separate recorded
+lanes without changing distribution stage, commission status, payout readiness, or DLE inventory
+ownership beyond the explicit Rental outcome.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-07/qa-dle-operating-review-rental-linked-lanes.png
+Tests run:
+- `pnpm vitest run client/src/components/developer/Overview.test.ts` passed with 12 tests.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1 -g "shows Rental operating review"`
+  passed with 1 test after rerunning outside the restricted sandbox so Chromium could launch.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- A seeded Rental development starts with held rental inventory and a selected renter lead in the
+  deal stage.
+- The developer dashboard marks the held unit `let`, creating an `inventory_status_changed` event
+  and showing `Inventory outcome` / `held -> let` in Operating Review.
+- The Leads Control Center syncs the selected renter lead and shows `Lease signed / Let`.
+- The developer dashboard then requests a referral handoff review and the Operating Review card
+  shows `Review requested` with the handoff note.
+- DB assertions verify the operating event order:
+  `distribution_handoff_created`, `lead_stage_changed`, and `inventory_status_changed`.
+- DB assertions verify the distribution deal stage and commission status remain unchanged.
+Guardrails:
+- No schema, migration, route, payout calculation, commission movement, distribution stage
+  transition, document verification, or hidden Rental reward automation was added.
+- The Operating Review card remains readback only. It links recorded facts without becoming the
+  authority for lead transitions, referral deal movement, rewards, or payouts.
+- The dashboard now fetches up to 20 operating events for selected-development review context so
+  unrelated notes do not easily push inventory/lead/handoff lanes out of the readback window.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Remaining risks:
+- The three lanes are still matched by latest event per lane, not by a typed review bundle linking
+  one inventory outcome to one lead sync and one distribution handoff.
+- Auction still needs the same all-three-lanes Operating Review proof before using this card as a
+  mature cross-transaction review surface.
+Next recommended slice:
+- Add Auction Operating Review linked-lanes browser proof: active auction outcome, selected bidder
+  lead sync, and referral handoff readback with unchanged distribution stage and commission status.
+Commit hash/tag: This entry will be included in
+`test(dle): prove rental operating review lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

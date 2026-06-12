@@ -488,6 +488,10 @@ Recommended next architecture work:
   statuses. Missing states are explicit, and handoff state can read from the latest referral deal
   handoff without moving distribution stages, reward state, commission state, payout readiness, or
   DLE inventory.
+- Rental now has browser proof that the `Operating Review` card can show all three lanes recorded
+  together: a real `held` -> `let` inventory outcome, explicit selected-renter lead sync as
+  `Lease signed / Let`, and a referral handoff review request. The proof keeps the distribution
+  deal stage and commission status unchanged.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.

@@ -431,6 +431,8 @@ function formatOperatingEventTime(value?: string | null): string {
 function getOverviewOperatingEventLabel(eventType?: string | null): string {
   if (eventType === 'operating_note_added') return 'Operating note';
   if (eventType === 'distribution_handoff_created') return 'Referral handoff';
+  if (eventType === 'inventory_status_changed') return 'Inventory outcome';
+  if (eventType === 'auction_outcome_recorded') return 'Auction outcome';
   return String(eventType || 'Operating event').replace(/_/g, ' ');
 }
 
@@ -585,7 +587,7 @@ export default function Overview() {
   const operatingEventsQuery = trpc.developer.getOperatingEvents.useQuery(
     {
       developmentId: selectedDevelopmentId || 0,
-      limit: 5,
+      limit: 20,
     },
     {
       enabled: !!developerProfile && !!selectedDevelopmentId,
