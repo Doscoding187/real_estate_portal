@@ -6,6 +6,7 @@ import {
   deriveLeadOutcomeReadbackFromEvent,
   evaluateDistributionAssignmentGate,
   getAvailableLeadOwnerTypes,
+  normalizeLeadAffordabilityData,
 } from '../developerFunnelService';
 
 describe('developer funnel contract', () => {
@@ -123,5 +124,24 @@ describe('developer funnel contract', () => {
         metadata: {},
       }),
     ).toBeNull();
+  });
+
+  it('normalizes saved qualification context for developer lead read models', () => {
+    expect(
+      normalizeLeadAffordabilityData(
+        JSON.stringify({
+          qualificationModel: 'rental_fit',
+          qualificationCapacityLabel: 'Estimated rent capacity',
+          qualificationMonthlyCapacity: 18000,
+        }),
+      ),
+    ).toEqual({
+      qualificationModel: 'rental_fit',
+      qualificationCapacityLabel: 'Estimated rent capacity',
+      qualificationMonthlyCapacity: 18000,
+    });
+
+    expect(normalizeLeadAffordabilityData('not-json')).toBeNull();
+    expect(normalizeLeadAffordabilityData(null)).toBeNull();
   });
 });

@@ -29,6 +29,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { stageGroupMatches, useDeveloperLeadsQuery } from '@/hooks/useDeveloperLeadsQuery';
 import { useLocation } from 'wouter';
+import { getLeadQualificationDisplay } from './leadQualificationDisplay';
 
 type StageTab = 'new' | 'contacted' | 'qualified' | 'viewing' | 'offer' | 'deal' | 'won' | 'lost';
 
@@ -50,6 +51,7 @@ type LeadItem = {
     toStage?: string | null;
     source?: string;
   } | null;
+  affordabilityData?: Record<string, unknown> | string | null;
   owner: { ownerType: string; ownerId: string | null; ownerName?: string | null };
   sla: { status: 'ok' | 'warning' | 'breach'; timeToFirstContactMins?: number | null };
   nextAction: { type?: string | null; at?: string | null };
@@ -694,6 +696,10 @@ export default function LeadsManager() {
                     {pagedLeads.map(lead => {
                       const leadTransactionType = developmentTransactionById.get(String(lead.developmentId)) || null;
                       const outcomeLabel = getLeadOutcomeDisplayLabel(lead, leadTransactionType);
+                      const qualificationDisplay = getLeadQualificationDisplay(
+                        lead.affordabilityData,
+                        leadTransactionType,
+                      );
 
                       return (
                         <button
@@ -718,6 +724,14 @@ export default function LeadsManager() {
                                   variant="outline"
                                 >
                                   {outcomeLabel}
+                                </Badge>
+                              )}
+                              {qualificationDisplay && (
+                                <Badge
+                                  data-testid={`dle-lead-qualification-label-${lead.id}`}
+                                  variant="outline"
+                                >
+                                  {qualificationDisplay.modelLabel}
                                 </Badge>
                               )}
                             </div>
@@ -815,6 +829,36 @@ export default function LeadsManager() {
                     </div>
                   </div>
                 </div>
+
+                {getLeadQualificationDisplay(selectedLead.affordabilityData, selectedLeadTransactionType) && (
+                  <div
+                    className="space-y-2 border rounded-md p-3"
+                    data-testid={`dle-lead-qualification-detail-${selectedLead.id}`}
+                  >
+                    <p className="text-sm font-medium">Qualification Context</p>
+                    {(() => {
+                      const qualification = getLeadQualificationDisplay(
+                        selectedLead.affordabilityData,
+                        selectedLeadTransactionType,
+                      );
+                      if (!qualification) return null;
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                          <div className="rounded-md bg-slate-50 p-2">
+                            <p className="text-xs text-muted-foreground">Model</p>
+                            <p className="font-medium">{qualification.modelLabel}</p>
+                          </div>
+                          <div className="rounded-md bg-slate-50 p-2">
+                            <p className="text-xs text-muted-foreground">
+                              {qualification.capacityLabel}
+                            </p>
+                            <p className="font-medium">{qualification.capacityValue || 'Not captured'}</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 <div className="space-y-2 border rounded-md p-3">
                   <p className="text-sm font-medium">Assignment</p>

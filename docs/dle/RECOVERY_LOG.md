@@ -6174,3 +6174,46 @@ Next recommended slice:
   operating-dashboard visibility for post-publish lead stages and inventory outcomes.
 Commit hash/tag: Included in `feat(dle): add qualification models`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Lead Qualification Operating Visibility
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Carry saved Sale/Rental/Auction qualification model metadata from lead capture into the
+developer lead operating surface.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- client/src/components/developer/leadQualificationDisplay.ts
+- client/src/components/developer/leadQualificationDisplay.test.ts
+- server/services/developerFunnelService.ts
+- server/services/__tests__/developerFunnelService.contract.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadQualificationDisplay.test.ts` passed with 4 tests.
+- `pnpm vitest run server/services/__tests__/developerFunnelService.contract.test.ts` passed with 8 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Developer lead read models now include parsed saved `affordabilityData` when present.
+- The Leads Control Center shows a qualification badge on lead rows when saved qualification
+  context exists.
+- The selected lead detail shows Qualification Context with model and capacity language.
+- Sale affordability, Rental fit, and Bidder readiness labels are covered by helper tests.
+- The server funnel contract covers safe parsing of saved qualification JSON for read-model use.
+Guardrails:
+- No schema, migration, lead-capture mutation, qualification calculation, autosave, publish,
+  distribution automation, or operating-stage mutation is intended in this slice.
+- The surfaced context is read-only. It does not approve a lease, register a bidder, verify proof
+  of funds, or move payout/readiness stages.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- Rental proof-of-income capture and lease application review remain future semantics.
+- Auction legal-pack acceptance, bidder registration, and proof-of-funds workflows remain future
+  semantics.
+Next recommended slice:
+- Continue operating-layer depth with transaction-specific lead stage language/actions, or move
+  deeper into Rental/Auction document/readiness capture before automating any readiness movement.
+Commit hash/tag: Included in `feat(dle): show lead qualification context`.
+Uncommitted reason, if any: None.

@@ -139,6 +139,11 @@ function parseJsonObject(value: unknown): Record<string, any> {
   }
 }
 
+export function normalizeLeadAffordabilityData(value: unknown): Record<string, any> | null {
+  const data = parseJsonObject(value);
+  return Object.keys(data).length ? data : null;
+}
+
 export function deriveLeadOutcomeReadbackFromEvent(event: {
   id: number;
   eventType?: string | null;
@@ -441,6 +446,7 @@ function normalizeLeadRow(
   const sla = computeLeadSla(lead);
   const lostReason = (lead.lostReason || '').toLowerCase();
   const availableOwnerTypes = getAvailableLeadOwnerTypes(distributionEnabledForDevelopment);
+  const affordabilityData = normalizeLeadAffordabilityData(lead.affordabilityData);
 
   return {
     id: String(lead.id),
@@ -471,6 +477,7 @@ function normalizeLeadRow(
       at: sla.nextActionAt,
     },
     outcome,
+    affordabilityData,
     flags: {
       duplicate: lostReason === 'duplicate',
       spam: lostReason === 'spam',

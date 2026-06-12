@@ -429,6 +429,23 @@ The selected model is visible in the qualification UI and is included in the sub
 a relabelled sale affordability check while still being explicit that these are early estimates, not
 lease approval, auction registration, or proof-of-funds approval.
 
+## Twenty-Third Product-Visibility Slice
+
+Surface qualification model context in the developer lead operating surface.
+
+The public qualification route already captures Sale, Rental, and Auction model metadata. The
+developer lead read model now returns saved `affordabilityData`, and the Leads Control Center shows
+that context on lead rows and lead detail:
+
+- Sale leads show Sale affordability context;
+- Rental leads show Rental fit context and monthly capacity language;
+- Auction leads show Bidder readiness context without calling it approval or registration.
+
+This closes a visibility gap between conversion and operations: a developer can now see whether a
+lead came through a sale affordability, rental fit, or bidder readiness model while working the
+pipeline. It remains a read-only operating signal. It does not approve leases, register bidders,
+verify proof of funds, or move distribution readiness.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -443,8 +460,8 @@ lease approval, auction registration, or proof-of-funds approval.
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
   Auction registration open/rollback, and Auction time-gated activation are now browser-proven.
-  Sold/let/auction outcomes, lead stages, pricing adjustments, release phases, and deeper
-  dashboards remain future.
+  Qualification model visibility is now present in the lead center, but sold/let/auction outcomes,
+  pricing adjustments, release phases, and deeper dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -468,5 +485,8 @@ lease approval, auction registration, or proof-of-funds approval.
 - Component and router-contract proof that qualification uses transaction-specific models and
   persists model metadata. Status: complete for helper-level Rental/Auction and
   `developer.createLead` contract.
+- Component-helper and service-contract proof that saved qualification model metadata reaches the
+  developer lead operating surface. Status: complete for lead qualification display helper and
+  developer funnel read-model normalization.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
