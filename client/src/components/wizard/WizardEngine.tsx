@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Gavel,
+  Home,
   Image as ImageIcon,
   KeyRound,
   ListChecks,
@@ -118,6 +119,18 @@ export function getWizardTransactionEngineCopy(value: unknown) {
 
 const asTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
+const asPositiveNumber = (value: unknown) => {
+  const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    maximumFractionDigits: 0,
+  }).format(value);
+
 const getMediaUrl = (value: unknown) => {
   if (typeof value === 'string') return value.trim();
   if (value && typeof value === 'object' && 'url' in value) {
@@ -161,6 +174,75 @@ export function getWizardPublicPreviewFeedback(data: Partial<WizardData>): Publi
       detail: hasHero
         ? `Hero media ready with ${usablePhotoCount} gallery photo${usablePhotoCount === 1 ? '' : 's'}.`
         : 'Add hero media so the public page and search cards do not launch visually empty.',
+    },
+  ];
+}
+
+export function getWizardRentalPackagingFeedback(data: Partial<WizardData>): PublicPreviewSignal[] {
+  const units = Array.isArray((data as any).unitTypes) ? ((data as any).unitTypes as any[]) : [];
+  const rentValues = units
+    .map(unit => asPositiveNumber(unit?.monthlyRentFrom ?? unit?.monthlyRent))
+    .filter(Boolean);
+  const depositValues = units.map(unit => asPositiveNumber(unit?.depositRequired)).filter(Boolean);
+  const leaseTerms = units
+    .map(unit => asTrimmedString(unit?.leaseTerm))
+    .filter(term => term.length > 0);
+  const furnishedStates = units.filter(unit => typeof unit?.isFurnished === 'boolean');
+  const availableUnits = units.reduce(
+    (sum, unit) => sum + asPositiveNumber(unit?.availableUnits),
+    0,
+  );
+  const hasRent = rentValues.length > 0;
+  const hasDeposit = depositValues.length > 0;
+  const hasLeaseTerm = leaseTerms.length > 0;
+  const hasFurnishedState = furnishedStates.length > 0;
+  const hasAvailability = availableUnits > 0;
+
+  return [
+    {
+      label: 'Rent range',
+      state: hasRent ? 'complete' : 'attention',
+      detail: hasRent
+        ? `Rent from ${formatCurrency(Math.min(...rentValues))} / month.`
+        : 'Add monthly rent so renters understand the lease offer.',
+    },
+    {
+      label: 'Deposit',
+      state: hasDeposit ? 'complete' : 'attention',
+      detail: hasDeposit
+        ? `Deposit from ${formatCurrency(Math.min(...depositValues))}.`
+        : 'Add deposit expectations for renter qualification.',
+    },
+    {
+      label: 'Lease term',
+      state: hasLeaseTerm ? 'complete' : 'attention',
+      detail: hasLeaseTerm
+        ? `${leaseTerms[0]} lease term ready.`
+        : 'Add the lease term renters should expect.',
+    },
+    {
+      label: 'Furnished state',
+      state: hasFurnishedState ? 'complete' : 'attention',
+      detail: hasFurnishedState
+        ? furnishedStates.some(unit => unit?.isFurnished)
+          ? 'Furnished option visible.'
+          : 'Unfurnished status visible.'
+        : 'Confirm whether units are furnished or unfurnished.',
+    },
+    {
+      label: 'Availability',
+      state: hasAvailability ? 'complete' : 'attention',
+      detail: hasAvailability
+        ? `${availableUnits} rental units available.`
+        : 'Add available units so renters see live leasing inventory.',
+    },
+    {
+      label: 'Renter qualification',
+      state: hasRent && hasDeposit && hasLeaseTerm ? 'complete' : 'attention',
+      detail:
+        hasRent && hasDeposit && hasLeaseTerm
+          ? 'Lead context can carry rent, deposit, and lease expectations.'
+          : 'Complete rent, deposit, and lease term before qualification feels clear.',
     },
   ];
 }
@@ -292,6 +374,71 @@ function PublicPreviewFeedback({ wizardData }: { wizardData: WizardData }) {
   );
 }
 
+function RentalPackagingFeedback({ wizardData }: { wizardData: WizardData }) {
+  const signals = getWizardRentalPackagingFeedback(wizardData);
+  const readyCount = signals.filter(signal => signal.state === 'complete').length;
+
+  return (
+    <section
+      aria-label="Rental packaging feedback"
+      className="mb-6 rounded-lg border border-sky-200 bg-white p-4 shadow-sm"
+    >
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+            Rental packaging feedback
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-950">
+            Lease-ready renter journey
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+            Package rentals around rent, deposit, lease terms, furnishing, availability, and renter
+            qualification before leads arrive.
+          </p>
+        </div>
+        <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-800">
+          {readyCount} of {signals.length} ready
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {signals.map(signal => {
+          const isComplete = signal.state === 'complete';
+          const Icon =
+            signal.label === 'Availability'
+              ? Home
+              : signal.label === 'Renter qualification'
+                ? ListChecks
+                : KeyRound;
+
+          return (
+            <div
+              key={signal.label}
+              className={`rounded-lg border p-3 ${
+                isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-sky-200 bg-sky-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-md border ${
+                    isComplete
+                      ? 'border-emerald-200 bg-white text-emerald-700'
+                      : 'border-sky-200 bg-white text-sky-700'
+                  }`}
+                >
+                  {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                </span>
+                <p className="text-sm font-semibold text-slate-900">{signal.label}</p>
+              </div>
+              <p className="mt-2 text-sm leading-5 text-slate-700">{signal.detail}</p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 interface WizardEngineProps {
   onExit?: () => void;
   saveStatus?: 'saved' | 'saving' | 'error' | 'unsaved';
@@ -372,7 +519,8 @@ export function WizardEngine({
 
   const StepComponent = STEP_COMPONENTS[currentStep.componentKey];
   const progress = ((currentStepIndex + 1) / visibleSteps.length) * 100;
-  const activeTransactionType = developmentData.transactionType ?? transactionType;
+  const activeTransactionType = wizardData.transactionType ?? developmentData.transactionType ?? transactionType;
+  const activeTransactionEngine = normalizeWizardTransactionEngine(activeTransactionType);
 
   // Validation Display
   const currentErrors = currentStepId ? stepErrors[currentStepId] : [];
@@ -397,6 +545,7 @@ export function WizardEngine({
             transactionType={activeTransactionType}
           />
           <PublicPreviewFeedback wizardData={wizardData} />
+          {activeTransactionEngine === 'rental' && <RentalPackagingFeedback wizardData={wizardData} />}
 
           {/* Validation Errors for Current Step */}
           {currentErrors && currentErrors.length > 0 && (

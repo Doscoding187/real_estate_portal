@@ -337,6 +337,23 @@ async function proveDraftListAndResume(page: Page, scenario: DraftScenario, seed
   await expect(engineContext.getByText(scenario.expectedEngineSignal)).toBeVisible();
   await expect(engineContext).toContainText(scenario.expectedEngineOutcome);
   await expect(engineContext).toContainText('readiness, publish safety, and public conversion');
+
+  if (scenario.lane === 'rental') {
+    const rentalFeedback = page.getByLabel('Rental packaging feedback');
+    await expect(rentalFeedback).toBeVisible();
+    await expect(rentalFeedback.getByText('Lease-ready renter journey')).toBeVisible();
+    await expect(rentalFeedback.getByText('6 of 6 ready')).toBeVisible();
+    await expect(rentalFeedback.getByText(/Rent from/i)).toBeVisible();
+    await expect(rentalFeedback.getByText(/Deposit from/i)).toBeVisible();
+    await expect(rentalFeedback.getByText('12 months lease term ready.')).toBeVisible();
+    await expect(rentalFeedback.getByText('Furnished option visible.')).toBeVisible();
+    await expect(rentalFeedback.getByText('8 rental units available.')).toBeVisible();
+    await expect(rentalFeedback.getByText(/rent, deposit, and lease expectations/i)).toBeVisible();
+    await rentalFeedback.screenshot({
+      path: `${evidenceDir}/qa-dle-rental-wizard-packaging-feedback.png`,
+    });
+  }
+
   await page.screenshot({
     path: `${evidenceDir}/qa-dle-${scenario.lane}-wizard-engine-band.png`,
   });

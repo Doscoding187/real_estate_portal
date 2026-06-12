@@ -317,12 +317,31 @@ see whether the public page, search card, and lead-entry context have enough ide
 and visual material while they are still building the package, instead of discovering it only at
 publish time.
 
+## Seventeenth Product-Visibility Slice
+
+Add Rental-native packaging feedback to the wizard shell.
+
+Rental now gets its own `Rental packaging feedback` panel from canonical unit inventory. The panel
+summarizes whether the lease package is ready across:
+
+- rent range;
+- deposit expectations;
+- lease term;
+- furnished/unfurnished state;
+- rental availability;
+- renter qualification context.
+
+This moves Rental closer to being a real sub-engine rather than a relabelled Sale flow. The browser
+proof resumes a saved Rental canonical draft and verifies the real wizard shell shows `6 of 6 ready`
+with rent, deposit, lease term, furnished state, availability, and qualification context before the
+same run continues through manual save, publish, public merchandising, search, and lead capture.
+
 ## Remaining Product Gaps
 
-- Make Rental packaging feel lease-native: deposit, lease term, furnished state, availability, and
-  renter qualification should feel intentional rather than optional add-ons.
 - Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal
   pack, and urgency should become first-class product language.
+- Deepen Rental qualification beyond packaging signals, including lease qualification ratios and
+  proof-of-income validation where product semantics require them.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
   labels, availability, primary CTAs, unit-card copy, unit-detail CTAs, and search-card inventory
   labels.
@@ -341,5 +360,7 @@ publish time.
   band. Status: complete for saved canonical draft resume.
 - Component and Sale browser proof that the wizard shell renders public-preview feedback for
   identity, highlights, and media. Status: complete for canonical saved Sale draft resume.
+- Component and Rental browser proof that the wizard shell renders lease-native Rental packaging
+  feedback. Status: complete for canonical saved Rental draft resume.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

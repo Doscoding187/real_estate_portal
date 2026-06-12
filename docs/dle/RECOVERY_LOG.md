@@ -5886,3 +5886,47 @@ Next recommended slice:
   with deposit, lease term, furnished state, availability, and renter qualification feedback.
 Commit hash/tag: Included in `feat(dle): show wizard public preview feedback`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Rental Wizard Packaging Feedback
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make Rental feel lease-native in the wizard shell by surfacing aggregate packaging feedback
+for rent, deposit, lease term, furnished state, availability, and renter qualification context.
+Files changed:
+- client/src/components/wizard/WizardEngine.tsx
+- client/src/components/wizard/WizardEngine.test.tsx
+- e2e/dle/rental-auction-wizard-save-publish.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-packaging-feedback.png
+Tests run:
+- `pnpm vitest run client/src/components/wizard/WizardEngine.test.tsx` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 2 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The wizard shell now renders `Rental packaging feedback` only for the Rental engine.
+- The feedback reads canonical unit inventory and reports readiness for rent range, deposit, lease
+  term, furnished state, rental availability, and renter qualification context.
+- Component proof verifies a complete rental package shows `6 of 6 ready` and incomplete rental
+  inventory asks for deposit, lease term, furnished state, availability, and qualification clarity.
+- Browser proof resumes a saved Rental canonical draft and verifies the real wizard shell shows
+  `Lease-ready renter journey`, `6 of 6 ready`, rent, deposit, `12 months` lease term, furnished
+  state, 8 available rental units, and lead qualification context before continuing through the
+  existing Rental/Auction manual save, publish, public page, search, and lead assertions.
+Guardrails:
+- No schema, migration, route, save, publish, lead, distribution, or operating mutation is intended
+  in this slice.
+- The panel reads canonical wizard unit inventory and does not create another persistence source.
+- Existing unrelated homepage files, older evidence screenshots outside this slice, Playwright
+  report output, and test-results changes must not be staged.
+Remaining risks:
+- Rental qualification is still packaging-level guidance. Deeper qualification semantics such as
+  lease ratios and proof-of-income workflows remain future product work.
+Next recommended slice:
+- Make Auction packaging feel auction-native inside the wizard, starting with auction window,
+  reserve strategy, bidder registration, legal-pack readiness, and urgency.
+Commit hash/tag: Included in `feat(dle): show rental packaging feedback`.
+Uncommitted reason, if any: None.

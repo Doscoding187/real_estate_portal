@@ -3,7 +3,11 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { getWizardPublicPreviewFeedback, WizardEngine } from './WizardEngine';
+import {
+  getWizardPublicPreviewFeedback,
+  getWizardRentalPackagingFeedback,
+  WizardEngine,
+} from './WizardEngine';
 
 vi.mock('../development-wizard/phases/IdentityPhase', () => ({
   IdentityPhase: () => <div>Identity phase</div>,
@@ -164,6 +168,97 @@ describe('WizardEngine public preview feedback', () => {
         label: 'Media',
         state: 'attention',
         detail: expect.stringMatching(/Add hero media/i),
+      }),
+    ]);
+  });
+});
+
+describe('WizardEngine rental packaging feedback', () => {
+  beforeEach(() => {
+    setRentalIdentityStep();
+  });
+
+  it('surfaces lease-native readiness for rental inventory', () => {
+    useDevelopmentWizard.setState({
+      workflowId: 'residential_rent',
+      currentStepId: 'identity_market' as any,
+      developmentType: 'residential',
+      transactionType: 'for_rent' as any,
+      unitTypes: [
+        {
+          id: 'rental-unit',
+          name: 'Two Bed Rental',
+          monthlyRentFrom: 18_500,
+          depositRequired: 37_000,
+          leaseTerm: '12 months',
+          isFurnished: true,
+          availableUnits: 8,
+        },
+      ] as any,
+      developmentData: {
+        name: 'Lease Ready Rental',
+        status: 'leasing',
+        developmentType: 'residential',
+        transactionType: 'for_rent',
+      } as any,
+    });
+
+    render(<WizardEngine />);
+
+    expect(screen.getByLabelText('Rental packaging feedback')).toBeTruthy();
+    expect(screen.getByText('Lease-ready renter journey')).toBeTruthy();
+    expect(screen.getByText('6 of 6 ready')).toBeTruthy();
+    expect(screen.getByText(/Rent from/i)).toBeTruthy();
+    expect(screen.getByText(/Deposit from/i)).toBeTruthy();
+    expect(screen.getByText('12 months lease term ready.')).toBeTruthy();
+    expect(screen.getByText('Furnished option visible.')).toBeTruthy();
+    expect(screen.getByText('8 rental units available.')).toBeTruthy();
+    expect(screen.getByText(/rent, deposit, and lease expectations/i)).toBeTruthy();
+  });
+
+  it('shows lease-native gaps before rental qualification is clear', () => {
+    const feedback = getWizardRentalPackagingFeedback({
+      transactionType: 'for_rent',
+      unitTypes: [
+        {
+          id: 'rental-unit',
+          name: 'Incomplete Rental',
+          monthlyRentFrom: 16_000,
+          availableUnits: 0,
+        },
+      ],
+    } as any);
+
+    expect(feedback).toEqual([
+      expect.objectContaining({
+        label: 'Rent range',
+        state: 'complete',
+        detail: expect.stringMatching(/Rent from/i),
+      }),
+      expect.objectContaining({
+        label: 'Deposit',
+        state: 'attention',
+        detail: expect.stringMatching(/deposit expectations/i),
+      }),
+      expect.objectContaining({
+        label: 'Lease term',
+        state: 'attention',
+        detail: 'Add the lease term renters should expect.',
+      }),
+      expect.objectContaining({
+        label: 'Furnished state',
+        state: 'attention',
+        detail: 'Confirm whether units are furnished or unfurnished.',
+      }),
+      expect.objectContaining({
+        label: 'Availability',
+        state: 'attention',
+        detail: expect.stringMatching(/live leasing inventory/i),
+      }),
+      expect.objectContaining({
+        label: 'Renter qualification',
+        state: 'attention',
+        detail: 'Complete rent, deposit, and lease term before qualification feels clear.',
       }),
     ]);
   });
