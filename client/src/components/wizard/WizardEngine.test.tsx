@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import {
+  getWizardAuctionPackagingFeedback,
   getWizardPublicPreviewFeedback,
   getWizardRentalPackagingFeedback,
   WizardEngine,
@@ -102,10 +103,11 @@ describe('WizardEngine transaction engine guidance', () => {
 
       render(<WizardEngine />);
 
-      expect(screen.getByLabelText(`${engine} packaging context`)).toBeTruthy();
-      expect(screen.getByText(engine)).toBeTruthy();
-      expect(screen.getByText(signal)).toBeTruthy();
-      expect(screen.getByText(new RegExp(outcome))).toBeTruthy();
+      const engineContext = screen.getByLabelText(`${engine} packaging context`);
+      expect(engineContext).toBeTruthy();
+      expect(engineContext).toHaveTextContent(engine);
+      expect(engineContext).toHaveTextContent(signal);
+      expect(engineContext).toHaveTextContent(new RegExp(outcome));
       expect(screen.getByText(/market identity, launch posture, and developer promise/i)).toBeTruthy();
     },
   );
@@ -259,6 +261,102 @@ describe('WizardEngine rental packaging feedback', () => {
         label: 'Renter qualification',
         state: 'attention',
         detail: 'Complete rent, deposit, and lease term before qualification feels clear.',
+      }),
+    ]);
+  });
+});
+
+describe('WizardEngine auction packaging feedback', () => {
+  beforeEach(() => {
+    setRentalIdentityStep();
+  });
+
+  it('surfaces bid-native readiness for auction inventory', () => {
+    useDevelopmentWizard.setState({
+      workflowId: 'residential_auction',
+      currentStepId: 'identity_market' as any,
+      developmentType: 'residential',
+      transactionType: 'auction' as any,
+      unitTypes: [
+        {
+          id: 'auction-unit',
+          name: 'Auction Three Bed',
+          startingBid: 920_000,
+          reservePrice: 1_080_000,
+          auctionStartDate: '2030-03-01T09:00:00.000Z',
+          auctionEndDate: '2030-03-08T17:00:00.000Z',
+          auctionStatus: 'scheduled',
+          availableUnits: 2,
+        },
+      ] as any,
+      developmentData: {
+        name: 'Bid Ready Auction',
+        status: 'launching-soon',
+        developmentType: 'residential',
+        transactionType: 'auction',
+        media: {
+          documents: [{ url: 'https://cdn.example.com/legal-pack.pdf' }],
+        },
+      } as any,
+    });
+
+    render(<WizardEngine />);
+
+    expect(screen.getByLabelText('Auction packaging feedback')).toBeTruthy();
+    expect(screen.getByText('Bid-ready auction journey')).toBeTruthy();
+    expect(screen.getByText('6 of 6 ready')).toBeTruthy();
+    expect(screen.getByText(/Bid from/i)).toBeTruthy();
+    expect(screen.getByText('Auction window scheduled.')).toBeTruthy();
+    expect(screen.getByText('Reserve tracked internally.')).toBeTruthy();
+    expect(screen.getByText('scheduled lifecycle ready.')).toBeTruthy();
+    expect(screen.getByText('1 bidder document attached.')).toBeTruthy();
+    expect(screen.getByText('2 lots open inside a scheduled auction window.')).toBeTruthy();
+  });
+
+  it('shows auction-native gaps before bidder routing is clear', () => {
+    const feedback = getWizardAuctionPackagingFeedback({
+      transactionType: 'auction',
+      unitTypes: [
+        {
+          id: 'auction-unit',
+          name: 'Incomplete Auction',
+          startingBid: 900_000,
+          availableUnits: 0,
+        },
+      ],
+      media: { documents: [] },
+    } as any);
+
+    expect(feedback).toEqual([
+      expect.objectContaining({
+        label: 'Starting bid',
+        state: 'complete',
+        detail: expect.stringMatching(/Bid from/i),
+      }),
+      expect.objectContaining({
+        label: 'Auction window',
+        state: 'attention',
+        detail: 'Set when bidding opens and closes.',
+      }),
+      expect.objectContaining({
+        label: 'Reserve strategy',
+        state: 'attention',
+        detail: 'Confirm the reserve before registration opens.',
+      }),
+      expect.objectContaining({
+        label: 'Bidder registration',
+        state: 'attention',
+        detail: 'Set the auction lifecycle before bidder routing starts.',
+      }),
+      expect.objectContaining({
+        label: 'Legal pack',
+        state: 'attention',
+        detail: 'Attach bidder documents, auction terms, or legal-pack material.',
+      }),
+      expect.objectContaining({
+        label: 'Auction urgency',
+        state: 'attention',
+        detail: 'Pair an auction window with open lots so urgency feels real.',
       }),
     ]);
   });

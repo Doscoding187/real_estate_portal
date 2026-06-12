@@ -354,6 +354,24 @@ async function proveDraftListAndResume(page: Page, scenario: DraftScenario, seed
     });
   }
 
+  if (scenario.lane === 'auction') {
+    const auctionFeedback = page.getByLabel('Auction packaging feedback');
+    await expect(auctionFeedback).toBeVisible();
+    await expect(auctionFeedback.getByText('Bid-ready auction journey')).toBeVisible();
+    await expect(auctionFeedback.getByText('6 of 6 ready')).toBeVisible();
+    await expect(auctionFeedback.getByText(/Bid from/i)).toBeVisible();
+    await expect(auctionFeedback.getByText('Auction window scheduled.')).toBeVisible();
+    await expect(auctionFeedback.getByText('Reserve tracked internally.')).toBeVisible();
+    await expect(auctionFeedback.getByText('scheduled lifecycle ready.')).toBeVisible();
+    await expect(auctionFeedback.getByText('1 bidder document attached.')).toBeVisible();
+    await expect(
+      auctionFeedback.getByText('2 lots open inside a scheduled auction window.'),
+    ).toBeVisible();
+    await auctionFeedback.screenshot({
+      path: `${evidenceDir}/qa-dle-auction-wizard-packaging-feedback.png`,
+    });
+  }
+
   await page.screenshot({
     path: `${evidenceDir}/qa-dle-${scenario.lane}-wizard-engine-band.png`,
   });

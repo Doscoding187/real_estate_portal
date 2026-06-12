@@ -336,12 +336,31 @@ proof resumes a saved Rental canonical draft and verifies the real wizard shell 
 with rent, deposit, lease term, furnished state, availability, and qualification context before the
 same run continues through manual save, publish, public merchandising, search, and lead capture.
 
+## Eighteenth Product-Visibility Slice
+
+Add Auction-native packaging feedback to the wizard shell.
+
+Auction now gets its own `Auction packaging feedback` panel from canonical unit inventory and
+media documents. The panel summarizes whether the bidder package is ready across:
+
+- starting bid;
+- auction window;
+- reserve strategy;
+- bidder registration lifecycle;
+- legal-pack or bidder documents;
+- auction urgency from open lots inside a scheduled window.
+
+This moves Auction closer to being a real sub-engine rather than a sale listing with a bid label.
+The browser proof resumes a saved Auction canonical draft and verifies the real wizard shell shows
+`6 of 6 ready` with bid, auction window, reserve, lifecycle, legal-pack, and urgency context before
+the same run continues through manual save, publish, public merchandising, search, and lead capture.
+
 ## Remaining Product Gaps
 
-- Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal
-  pack, and urgency should become first-class product language.
 - Deepen Rental qualification beyond packaging signals, including lease qualification ratios and
   proof-of-income validation where product semantics require them.
+- Deepen Auction bidder qualification beyond packaging signals, including bidder registration
+  state, legal-pack acceptance, and proof-of-funds workflows where product semantics require them.
 - Strengthen public development pages with transaction-specific merchandising sections beyond price
   labels, availability, primary CTAs, unit-card copy, unit-detail CTAs, and search-card inventory
   labels.
@@ -362,5 +381,7 @@ same run continues through manual save, publish, public merchandising, search, a
   identity, highlights, and media. Status: complete for canonical saved Sale draft resume.
 - Component and Rental browser proof that the wizard shell renders lease-native Rental packaging
   feedback. Status: complete for canonical saved Rental draft resume.
+- Component and Auction browser proof that the wizard shell renders bid-native Auction packaging
+  feedback. Status: complete for canonical saved Auction draft resume.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

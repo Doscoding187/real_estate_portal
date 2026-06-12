@@ -5930,3 +5930,51 @@ Next recommended slice:
   reserve strategy, bidder registration, legal-pack readiness, and urgency.
 Commit hash/tag: Included in `feat(dle): show rental packaging feedback`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Auction Wizard Packaging Feedback
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make Auction feel bid-native in the wizard shell by surfacing aggregate packaging feedback
+for starting bid, auction window, reserve strategy, bidder registration lifecycle, legal-pack
+documents, and auction urgency.
+Files changed:
+- client/src/components/wizard/WizardEngine.tsx
+- client/src/components/wizard/WizardEngine.test.tsx
+- e2e/dle/rental-auction-wizard-save-publish.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-packaging-feedback.png
+Tests run:
+- `pnpm vitest run client/src/components/wizard/WizardEngine.test.tsx` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 2 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The wizard shell now renders `Auction packaging feedback` only for the Auction engine.
+- The feedback reads canonical unit inventory plus media documents and reports readiness for
+  starting bid, auction window, reserve strategy, bidder registration lifecycle, legal-pack
+  documents, and auction urgency.
+- Component proof verifies a complete auction package shows `6 of 6 ready` and incomplete auction
+  inventory asks for auction window, reserve, registration lifecycle, legal-pack, and urgency
+  clarity.
+- Browser proof resumes a saved Auction canonical draft and verifies the real wizard shell shows
+  `Bid-ready auction journey`, `6 of 6 ready`, bid, auction window, reserve, scheduled lifecycle,
+  1 bidder document, and 2 open lots inside a scheduled auction window before continuing through
+  the existing Rental/Auction manual save, publish, public page, search, and lead assertions.
+Guardrails:
+- No schema, migration, route, save, publish, lead, distribution, or operating mutation is intended
+  in this slice.
+- The panel reads canonical wizard unit inventory and media documents and does not create another
+  persistence source.
+- Existing unrelated homepage files, older evidence screenshots outside this slice, Playwright
+  report output, and test-results changes must not be staged.
+Remaining risks:
+- Auction bidder qualification is still packaging-level guidance. Deeper bidder registration,
+  legal-pack acceptance, and proof-of-funds workflows remain future product work.
+Next recommended slice:
+- Decide whether to move to deeper Rental/Auction qualification semantics, or strengthen public
+  development pages with transaction-specific merchandising beyond current wizard feedback.
+Commit hash/tag: Included in `feat(dle): show auction packaging feedback`.
+Uncommitted reason, if any: None.

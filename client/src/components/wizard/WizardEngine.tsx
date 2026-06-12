@@ -5,6 +5,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  FileText,
   Gavel,
   Home,
   Image as ImageIcon,
@@ -247,6 +249,74 @@ export function getWizardRentalPackagingFeedback(data: Partial<WizardData>): Pub
   ];
 }
 
+export function getWizardAuctionPackagingFeedback(data: Partial<WizardData>): PublicPreviewSignal[] {
+  const units = Array.isArray((data as any).unitTypes) ? ((data as any).unitTypes as any[]) : [];
+  const bidValues = units.map(unit => asPositiveNumber(unit?.startingBid)).filter(Boolean);
+  const reserveValues = units.map(unit => asPositiveNumber(unit?.reservePrice)).filter(Boolean);
+  const hasAuctionWindow = units.some(
+    unit => asTrimmedString(unit?.auctionStartDate) && asTrimmedString(unit?.auctionEndDate),
+  );
+  const lifecycleValues = units
+    .map(unit => asTrimmedString(unit?.auctionStatus))
+    .filter(status => status.length > 0);
+  const availableLots = units.reduce((sum, unit) => sum + asPositiveNumber(unit?.availableUnits), 0);
+  const media = ((data as any).media ?? {}) as Record<string, any>;
+  const documents = [
+    ...(Array.isArray(media.documents) ? media.documents : []),
+    ...(Array.isArray(media.brochures) ? media.brochures : []),
+  ].filter(document => getMediaUrl(document).length > 0);
+  const hasStartingBid = bidValues.length > 0;
+  const hasReserve = reserveValues.length > 0;
+  const hasLifecycle = lifecycleValues.length > 0;
+  const hasLegalPack = documents.length > 0;
+  const hasUrgency = hasAuctionWindow && availableLots > 0;
+
+  return [
+    {
+      label: 'Starting bid',
+      state: hasStartingBid ? 'complete' : 'attention',
+      detail: hasStartingBid
+        ? `Bid from ${formatCurrency(Math.min(...bidValues))}.`
+        : 'Add the opening bid before sending bidders to this lot.',
+    },
+    {
+      label: 'Auction window',
+      state: hasAuctionWindow ? 'complete' : 'attention',
+      detail: hasAuctionWindow
+        ? 'Auction window scheduled.'
+        : 'Set when bidding opens and closes.',
+    },
+    {
+      label: 'Reserve strategy',
+      state: hasReserve ? 'complete' : 'attention',
+      detail: hasReserve
+        ? 'Reserve tracked internally.'
+        : 'Confirm the reserve before registration opens.',
+    },
+    {
+      label: 'Bidder registration',
+      state: hasLifecycle ? 'complete' : 'attention',
+      detail: hasLifecycle
+        ? `${lifecycleValues[0].replace(/-/g, ' ').replace(/_/g, ' ')} lifecycle ready.`
+        : 'Set the auction lifecycle before bidder routing starts.',
+    },
+    {
+      label: 'Legal pack',
+      state: hasLegalPack ? 'complete' : 'attention',
+      detail: hasLegalPack
+        ? `${documents.length} bidder document${documents.length === 1 ? '' : 's'} attached.`
+        : 'Attach bidder documents, auction terms, or legal-pack material.',
+    },
+    {
+      label: 'Auction urgency',
+      state: hasUrgency ? 'complete' : 'attention',
+      detail: hasUrgency
+        ? `${availableLots} lots open inside a scheduled auction window.`
+        : 'Pair an auction window with open lots so urgency feels real.',
+    },
+  ];
+}
+
 function TransactionEngineGuidance({
   currentStepId,
   remediationIntent,
@@ -439,6 +509,73 @@ function RentalPackagingFeedback({ wizardData }: { wizardData: WizardData }) {
   );
 }
 
+function AuctionPackagingFeedback({ wizardData }: { wizardData: WizardData }) {
+  const signals = getWizardAuctionPackagingFeedback(wizardData);
+  const readyCount = signals.filter(signal => signal.state === 'complete').length;
+
+  return (
+    <section
+      aria-label="Auction packaging feedback"
+      className="mb-6 rounded-lg border border-amber-200 bg-white p-4 shadow-sm"
+    >
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+            Auction packaging feedback
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-950">
+            Bid-ready auction journey
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+            Package auctions around opening bid, auction window, reserve posture, bidder
+            registration, legal-pack readiness, and urgency before traffic starts.
+          </p>
+        </div>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+          {readyCount} of {signals.length} ready
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {signals.map(signal => {
+          const isComplete = signal.state === 'complete';
+          const Icon =
+            signal.label === 'Auction window'
+              ? Clock
+              : signal.label === 'Legal pack'
+                ? FileText
+                : signal.label === 'Bidder registration'
+                  ? ListChecks
+                  : Gavel;
+
+          return (
+            <div
+              key={signal.label}
+              className={`rounded-lg border p-3 ${
+                isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-md border ${
+                    isComplete
+                      ? 'border-emerald-200 bg-white text-emerald-700'
+                      : 'border-amber-200 bg-white text-amber-700'
+                  }`}
+                >
+                  {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                </span>
+                <p className="text-sm font-semibold text-slate-900">{signal.label}</p>
+              </div>
+              <p className="mt-2 text-sm leading-5 text-slate-700">{signal.detail}</p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 interface WizardEngineProps {
   onExit?: () => void;
   saveStatus?: 'saved' | 'saving' | 'error' | 'unsaved';
@@ -546,6 +683,7 @@ export function WizardEngine({
           />
           <PublicPreviewFeedback wizardData={wizardData} />
           {activeTransactionEngine === 'rental' && <RentalPackagingFeedback wizardData={wizardData} />}
+          {activeTransactionEngine === 'auction' && <AuctionPackagingFeedback wizardData={wizardData} />}
 
           {/* Validation Errors for Current Step */}
           {currentErrors && currentErrors.length > 0 && (
