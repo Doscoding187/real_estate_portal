@@ -252,6 +252,20 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(rentalJourney.getByText('Check rental fit')).toBeVisible();
     await expect(rentalJourney.getByText('Leasing team follow-up')).toBeVisible();
 
+    const rentalTrust = page.locator('#trust-preview');
+    await expect(rentalTrust).toBeVisible();
+    await expect(rentalTrust.getByText('Rental trust preview')).toBeVisible();
+    await expect(rentalTrust.getByText('Lease documents and cost context')).toBeVisible();
+    await expect(rentalTrust.getByText('Rental pack available before enquiry')).toBeVisible();
+    await expect(rentalTrust.getByText('Developer profile', { exact: true })).toBeVisible();
+    await expect(rentalTrust.getByText(/Developer profile displayed|Verified developer profile/)).toBeVisible();
+    await expect(
+      rentalTrust.getByText(
+        /levies from R\s*1\s*100.*rates from R\s*850|Lease costs confirmed by leasing team/i,
+      ),
+    ).toBeVisible();
+    await expect(rentalTrust.getByText(/Proof of income.*lease documents/i)).toBeVisible();
+
     const auction = await seedAuctionDevelopment(suffix, tracker);
     await page.goto(`/development/${auction.slug}`);
     await expect(page.getByRole('heading', { name: auction.name })).toBeVisible({ timeout: 15_000 });
@@ -282,6 +296,20 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(auctionJourney.getByText('Check bidder readiness')).toBeVisible();
     await expect(auctionJourney.getByText('Auction team follow-up')).toBeVisible();
 
+    const auctionTrust = page.locator('#trust-preview');
+    await expect(auctionTrust).toBeVisible();
+    await expect(auctionTrust.getByText('Auction trust preview')).toBeVisible();
+    await expect(auctionTrust.getByText('Bidder documents and auction rules')).toBeVisible();
+    await expect(auctionTrust.getByText('Auction legal pack available before enquiry')).toBeVisible();
+    await expect(auctionTrust.getByText('Developer profile', { exact: true })).toBeVisible();
+    await expect(auctionTrust.getByText(/Developer profile displayed|Verified developer profile/)).toBeVisible();
+    await expect(
+      auctionTrust.getByText(
+        /levies from R\s*1\s*350.*rates from R\s*900|Auction costs confirmed by auction team/i,
+      ),
+    ).toBeVisible();
+    await expect(auctionTrust.getByText(/FICA.*proof of funds.*auction terms/i)).toBeVisible();
+
     await page.setViewportSize({ width: 390, height: 844 });
 
     await page.goto(`/development/${rental.slug}`);
@@ -290,6 +318,7 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(mobileRentalPack.getByText('Lease path at a glance')).toBeVisible();
     await expect(mobileRentalPack.getByRole('button', { name: 'Check Rental Fit' })).toBeVisible();
     await expect(page.locator('#transaction-journey').getByText('Rental journey')).toBeVisible();
+    await expect(page.locator('#trust-preview').getByText('Rental trust preview')).toBeVisible();
 
     await page.goto(`/development/${auction.slug}`);
     const mobileAuctionPack = page.locator('#commercial-pack');
@@ -299,5 +328,6 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
       mobileAuctionPack.getByRole('button', { name: 'Check Bidder Readiness' }),
     ).toBeVisible();
     await expect(page.locator('#transaction-journey').getByText('Auction journey')).toBeVisible();
+    await expect(page.locator('#trust-preview').getByText('Auction trust preview')).toBeVisible();
   });
 });

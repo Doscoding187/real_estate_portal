@@ -6077,3 +6077,53 @@ Next recommended slice:
   storytelling.
 Commit hash/tag: Included in `feat(dle): show public transaction journey`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Public Detail Trust Preview
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add transaction-native document, developer-profile, cost, and review trust signals to the
+public development detail page, strengthening Rental and Auction buyer-facing trust before unit
+inventory and enquiry.
+Files changed:
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- e2e/dle/public-detail-commercial-pack.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/DevelopmentDetail.test.ts` passed with 25 tests.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/public-detail-commercial-pack.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 1 test.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The public detail page now renders a `trust-preview` section after the transaction journey and
+  before available-unit inventory.
+- Sale trust copy covers brochure, developer profile, ownership context, and buyer cost context.
+- Rental trust copy covers rental pack, developer profile, lease cost context, and leasing review
+  expectations.
+- Auction trust copy covers legal pack, developer profile, cost context, and bidder review
+  expectations.
+- Component proof verifies Rental and Auction trust-preview helper output.
+- Browser proof seeds real published Rental and Auction developments, opens their public
+  `/development/:slug` pages, and verifies the trust preview appears on desktop and mobile.
+Guardrails:
+- No schema, migration, route, save, publish, lead, distribution, or operating mutation is intended
+  in this slice.
+- The trust preview is presentation-only and reuses existing public-detail transaction, document,
+  developer-profile, and cost helpers.
+- Public route data is treated truthfully: if verified-developer or levy/rates fields are not
+  present on the public detail response, the UI shows developer-profile or team-confirmed cost
+  fallback text rather than claiming unavailable facts.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- This is not a dedicated document portal. Rich document metadata, legal-pack acceptance,
+  proof-of-income workflows, proof-of-funds workflows, and operating-status history remain future
+  product semantics.
+Next recommended slice:
+- Move from public trust preview into either richer document metadata/pack previews or deeper
+  Rental/Auction qualification semantics if conversion correctness is the next priority.
+Commit hash/tag: Included in `feat(dle): show public trust preview`.
+Uncommitted reason, if any: None.

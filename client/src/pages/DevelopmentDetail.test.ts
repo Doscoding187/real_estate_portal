@@ -10,6 +10,7 @@ import {
   getDevelopmentDetailMediaBuckets,
   getDevelopmentDetailPricingContext,
   getDevelopmentDetailTransactionJourney,
+  getDevelopmentDetailTrustPreview,
   getDevelopmentDetailUnitAvailabilityState,
   getDevelopmentDetailUnitPricingContext,
   normalizeDevelopmentDetailTransactionType,
@@ -249,6 +250,39 @@ describe('DevelopmentDetail pricing context', () => {
     );
   });
 
+  it('builds rental trust preview copy for lease documents and costs', () => {
+    const preview = getDevelopmentDetailTrustPreview(
+      {
+        transactionType: 'for_rent',
+        monthlyLevyFrom: 1_100,
+        ratesFrom: 850,
+      },
+      [{ monthlyRentFrom: 12_500 }],
+      { hasBrochure: true, isVerified: true },
+    );
+
+    expect(preview).toMatchObject({
+      eyebrow: 'Rental trust preview',
+      title: 'Lease documents and cost context',
+    });
+    expect(preview.items.find(item => item.label === 'Rental pack')).toMatchObject({
+      value: 'Rental pack available before enquiry',
+      isReady: true,
+    });
+    expect(preview.items.find(item => item.label === 'Lease cost context')).toMatchObject({
+      isReady: true,
+    });
+    expect(preview.items.find(item => item.label === 'Lease cost context')?.value).toMatch(
+      /levies from R\s*1\s*100/,
+    );
+    expect(preview.items.find(item => item.label === 'Leasing review')).toMatchObject({
+      isReady: true,
+    });
+    expect(preview.items.find(item => item.label === 'Leasing review')?.value).toContain(
+      'Proof of income',
+    );
+  });
+
   it('builds auction commercial pack copy for bidder packaging', () => {
     const pack = getDevelopmentDetailCommercialPack(
       { transactionType: 'auction' },
@@ -342,6 +376,39 @@ describe('DevelopmentDetail pricing context', () => {
           detail: expect.stringContaining('registration open'),
         }),
       ]),
+    );
+  });
+
+  it('builds auction trust preview copy for legal pack and bidder review', () => {
+    const preview = getDevelopmentDetailTrustPreview(
+      {
+        transactionType: 'auction',
+        monthlyLevyFrom: 1_350,
+        ratesFrom: 900,
+      },
+      [{ startingBid: 850_000 }],
+      { hasBrochure: true, isVerified: true },
+    );
+
+    expect(preview).toMatchObject({
+      eyebrow: 'Auction trust preview',
+      title: 'Bidder documents and auction rules',
+    });
+    expect(preview.items.find(item => item.label === 'Legal pack')).toMatchObject({
+      value: 'Auction legal pack available before enquiry',
+      isReady: true,
+    });
+    expect(preview.items.find(item => item.label === 'Cost context')).toMatchObject({
+      isReady: true,
+    });
+    expect(preview.items.find(item => item.label === 'Cost context')?.value).toMatch(
+      /rates from R\s*900/,
+    );
+    expect(preview.items.find(item => item.label === 'Bidder review')).toMatchObject({
+      isReady: true,
+    });
+    expect(preview.items.find(item => item.label === 'Bidder review')?.value).toContain(
+      'proof of funds',
     );
   });
 

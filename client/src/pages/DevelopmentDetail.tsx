@@ -485,6 +485,19 @@ export type DevelopmentDetailTransactionJourney = {
   steps: DevelopmentDetailTransactionJourneyStep[];
 };
 
+type DevelopmentDetailTrustPreviewItem = {
+  label: string;
+  value: string;
+  isReady: boolean;
+};
+
+export type DevelopmentDetailTrustPreview = {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  items: DevelopmentDetailTrustPreviewItem[];
+};
+
 const getInventoryTotals = (
   development: Record<string, unknown>,
   units: Array<Record<string, unknown>>,
@@ -899,6 +912,112 @@ export function getDevelopmentDetailTransactionJourney(
       {
         label: 'Sales team follow-up',
         detail: 'A sales consultant can confirm availability, incentives, viewings, and reservation next steps.',
+      },
+    ],
+  };
+}
+
+export function getDevelopmentDetailTrustPreview(
+  development: Record<string, unknown>,
+  units: Array<Record<string, unknown>> = [],
+  options: { hasBrochure?: boolean; isVerified?: boolean } = {},
+): DevelopmentDetailTrustPreview {
+  const pricing = getDevelopmentDetailPricingContext(development, units);
+  const levy = toPositiveNumber(development.monthlyLevyFrom);
+  const rates = toPositiveNumber(development.ratesFrom);
+  const ownership = String(development.ownershipType || '').trim();
+  const costSignals = [
+    levy ? `levies from ${formatSARandShort(levy)}` : null,
+    rates ? `rates from ${formatSARandShort(rates)}` : null,
+  ].filter((item): item is string => !!item);
+
+  if (pricing.transactionType === 'rent') {
+    return {
+      eyebrow: 'Rental trust preview',
+      title: 'Lease documents and cost context',
+      summary:
+        'Key renter trust signals are grouped before enquiry so renters can understand documents, costs, and leasing review expectations.',
+      items: [
+        {
+          label: 'Rental pack',
+          value: options.hasBrochure ? 'Rental pack available before enquiry' : 'Rental pack request available',
+          isReady: Boolean(options.hasBrochure),
+        },
+        {
+          label: 'Developer profile',
+          value: options.isVerified ? 'Verified developer profile' : 'Developer profile displayed',
+          isReady: true,
+        },
+        {
+          label: 'Lease cost context',
+          value: costSignals.length > 0 ? costSignals.join(' · ') : 'Lease costs confirmed by leasing team',
+          isReady: costSignals.length > 0,
+        },
+        {
+          label: 'Leasing review',
+          value: 'Proof of income, deposit readiness, and lease documents are confirmed by the leasing team.',
+          isReady: true,
+        },
+      ],
+    };
+  }
+
+  if (pricing.transactionType === 'auction') {
+    return {
+      eyebrow: 'Auction trust preview',
+      title: 'Bidder documents and auction rules',
+      summary:
+        'Key bidder trust signals are grouped before registration so bidders can understand legal pack, costs, and auction review expectations.',
+      items: [
+        {
+          label: 'Legal pack',
+          value: options.hasBrochure ? 'Auction legal pack available before enquiry' : 'Auction legal pack request available',
+          isReady: Boolean(options.hasBrochure),
+        },
+        {
+          label: 'Developer profile',
+          value: options.isVerified ? 'Verified developer profile' : 'Developer profile displayed',
+          isReady: true,
+        },
+        {
+          label: 'Cost context',
+          value: costSignals.length > 0 ? costSignals.join(' · ') : 'Auction costs confirmed by auction team',
+          isReady: costSignals.length > 0,
+        },
+        {
+          label: 'Bidder review',
+          value: 'FICA, deposit proof, proof of funds, and auction terms are confirmed by the auction team.',
+          isReady: true,
+        },
+      ],
+    };
+  }
+
+  return {
+    eyebrow: 'Buyer trust preview',
+    title: 'Buyer documents and ownership context',
+    summary:
+      'Key buyer trust signals are grouped before enquiry so buyers can understand documents, ownership, and cost expectations.',
+    items: [
+      {
+        label: 'Brochure',
+        value: options.hasBrochure ? 'Brochure available before enquiry' : 'Brochure request available',
+        isReady: Boolean(options.hasBrochure),
+      },
+      {
+        label: 'Developer profile',
+        value: options.isVerified ? 'Verified developer profile' : 'Developer profile displayed',
+        isReady: true,
+      },
+      {
+        label: 'Ownership context',
+        value: ownership ? formatDevelopmentDetailLabel(ownership) : 'Ownership details confirmed by sales team',
+        isReady: Boolean(ownership),
+      },
+      {
+        label: 'Buyer cost context',
+        value: costSignals.length > 0 ? costSignals.join(' · ') : 'Buyer costs confirmed by sales team',
+        isReady: costSignals.length > 0,
       },
     ],
   };
@@ -2040,7 +2159,13 @@ export default function DevelopmentDetail() {
 
     indices: galleryIndices,
     amenities: amenities,
-    isVerified: !!(dev.developerDisplay as any)?.isVerified,
+    isVerified: Boolean(
+      (dev.developerDisplay as any)?.isVerified ||
+        publisher?.isVerified ||
+        publisher?.verified ||
+        dev.developer?.isVerified ||
+        dev.developer?.verified,
+    ),
 
     // CRITICAL: Ensure we rely on unitTypes, not mixed sources
     units: units.map((u: any) => {
@@ -2080,6 +2205,10 @@ export default function DevelopmentDetail() {
   });
   const transactionJourney = getDevelopmentDetailTransactionJourney(dev, development.units || [], {
     hasBrochure: !!brochureUrl,
+  });
+  const trustPreview = getDevelopmentDetailTrustPreview(dev, development.units || [], {
+    hasBrochure: !!brochureUrl,
+    isVerified: development.isVerified,
   });
   const developmentHighlights = getDevelopmentDetailHighlights(dev);
   const derivedPriceFrom = detailPricing.priceFrom;
@@ -2732,6 +2861,47 @@ export default function DevelopmentDetail() {
                               <p className="text-sm font-semibold text-slate-900">{step.label}</p>
                             </div>
                             <p className="mt-3 text-xs leading-5 text-slate-600">{step.detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+
+                <Separator className="bg-slate-200" />
+
+                <section id="trust-preview" className="w-full">
+                  <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                        {trustPreview.eyebrow}
+                      </p>
+                      <CardTitle className="mt-2 font-bold text-slate-900">
+                        {trustPreview.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                        {trustPreview.summary}
+                      </p>
+
+                      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {trustPreview.items.map(item => (
+                          <div
+                            key={`${item.label}-${item.value}`}
+                            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3"
+                          >
+                            <CheckCircle2
+                              className={`mt-0.5 h-4 w-4 shrink-0 ${
+                                item.isReady ? 'text-emerald-600' : 'text-slate-400'
+                              }`}
+                            />
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+                              <p className="mt-1 text-xs leading-5 text-slate-600">
+                                {item.value}
+                              </p>
+                            </div>
                           </div>
                         ))}
                       </div>
