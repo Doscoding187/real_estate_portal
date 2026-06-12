@@ -6258,3 +6258,47 @@ Next recommended slice:
   Rental/Auction document readiness capture before automating any readiness state.
 Commit hash/tag: Included in `feat(dle): label lead operations by transaction`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Transaction-Aware Lead Stage Guidance
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add operator-facing guidance to the lead detail surface so Sale, Rental, and Auction stages
+explain their lane-specific next proof and guardrail.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- client/src/components/developer/leadStageGuidance.ts
+- client/src/components/developer/leadStageGuidance.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadStageGuidance.test.ts` passed with 4 tests.
+- `pnpm vitest run client/src/components/developer/leadOperatingStageDisplay.test.ts` passed with 4 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The selected lead detail now shows a Stage Guidance panel.
+- Guidance is selected from the canonical lead stage and normalized development transaction type.
+- Sale guidance covers buyer intent, finance/deposit path, offer tracking, and sale completion proof.
+- Rental guidance covers renter intent, rental fit, proof-of-income/deposit readiness, application
+  review, and lease review.
+- Auction guidance covers bidder intent, auction-pack/legal-pack access, bid intent, bidder
+  readiness, and manual auction outcome evidence.
+- Helper tests cover Sale, Rental, Auction, and fallback guidance.
+Guardrails:
+- No schema, migration, transition graph, mutation payload, SLA rule, distribution gate, outcome
+  sync, lead-capture behavior, autosave, draft, or publish behavior is intended in this slice.
+- Guidance is read-only and does not approve leases, register bidders, verify proof of funds, or
+  automate readiness movement.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- Rental still needs real document capture and lease application workflow semantics.
+- Auction still needs real bidder registration, legal-pack acceptance, and proof-of-funds workflow
+  semantics.
+- Deeper dashboards and operating audit history remain future.
+Next recommended slice:
+- Move from guidance to explicit Rental/Auction document/readiness capture models, or add
+  transaction-specific lead detail evidence fields before automating any readiness state.
+Commit hash/tag: Included in `feat(dle): guide lead stages by transaction`.
+Uncommitted reason, if any: None.

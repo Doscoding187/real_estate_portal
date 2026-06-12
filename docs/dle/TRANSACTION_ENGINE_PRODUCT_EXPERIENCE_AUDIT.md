@@ -463,6 +463,26 @@ This makes the operating surface feel less like Sale with relabelled inventory. 
 display-layer improvement only: canonical stages, allowed transitions, mutations, SLA logic,
 distribution gates, and outcome sync remain unchanged.
 
+## Twenty-Fifth Product-Visibility Slice
+
+Add transaction-specific lead stage guidance.
+
+The Leads Control Center now shows a read-only Stage Guidance panel for the selected lead. The panel
+uses the canonical stage plus the development transaction lane to explain:
+
+- the current operating intent;
+- the next proof the operator should collect;
+- the guardrail that prevents over-claiming readiness.
+
+Sale guidance focuses on buyer intent, finance/deposit path, viewing or offer follow-up, and sale
+completion proof. Rental guidance focuses on renter intent, rental fit, application review,
+proof-of-income/deposit readiness, and lease review. Auction guidance focuses on bidder intent,
+auction-pack access, bidder readiness, bid intent, legal-pack review, and manual outcome evidence.
+
+This improves operational usefulness without changing workflow state. It does not approve leases,
+register bidders, verify proof of funds, change allowed transitions, or automate distribution
+readiness.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -477,9 +497,9 @@ distribution gates, and outcome sync remain unchanged.
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
   Auction registration open/rollback, and Auction time-gated activation are now browser-proven.
-  Qualification model visibility and transaction-aware lead stage/action labels are now present in
-  the lead center, but sold/let/auction outcomes, pricing adjustments, release phases, and deeper
-  dashboards remain future.
+  Qualification model visibility, transaction-aware lead stage/action labels, and stage guidance are
+  now present in the lead center, but sold/let/auction outcomes, pricing adjustments, release
+  phases, and deeper dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -508,5 +528,7 @@ distribution gates, and outcome sync remain unchanged.
   developer funnel read-model normalization.
 - Component-helper proof that lead operating stage/action labels are transaction-aware. Status:
   complete for Sale, Rental, and Auction label helpers.
+- Component-helper proof that lead stage guidance is transaction-aware. Status: complete for Sale,
+  Rental, and Auction guidance helpers.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

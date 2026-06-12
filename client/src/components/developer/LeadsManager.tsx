@@ -34,6 +34,7 @@ import {
   getLeadNextActionDisplayLabel,
   getLeadStageDisplayLabel,
 } from './leadOperatingStageDisplay';
+import { getLeadStageGuidance } from './leadStageGuidance';
 
 type StageTab = 'new' | 'contacted' | 'qualified' | 'viewing' | 'offer' | 'deal' | 'won' | 'lost';
 
@@ -419,6 +420,9 @@ export default function LeadsManager() {
   const selectedLeadTransactionType = normalizeDevelopmentTransactionType(
     (selectedLeadDevelopment as any)?.transactionType,
   );
+  const selectedLeadStageGuidance = selectedLead
+    ? getLeadStageGuidance(selectedLead.stage, selectedLeadTransactionType)
+    : null;
   const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
   const developmentTransactionById = useMemo(() => {
     const map = new Map<string, 'sale' | 'rent' | 'auction' | null>();
@@ -843,6 +847,33 @@ export default function LeadsManager() {
                     </div>
                   </div>
                 </div>
+
+                {selectedLeadStageGuidance && (
+                  <div
+                    className="space-y-2 border rounded-md p-3 bg-slate-50/60"
+                    data-testid={`dle-lead-stage-guidance-${selectedLead.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">{selectedLeadStageGuidance.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getLeadStageDisplayLabel(selectedLead.stage, selectedLeadTransactionType)}
+                        </p>
+                      </div>
+                      <Badge variant="outline">Guidance</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-md bg-white p-2">
+                        <p className="text-xs text-muted-foreground">Next proof</p>
+                        <p>{selectedLeadStageGuidance.nextProof}</p>
+                      </div>
+                      <div className="rounded-md bg-white p-2">
+                        <p className="text-xs text-muted-foreground">Guardrail</p>
+                        <p>{selectedLeadStageGuidance.caution}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {getLeadQualificationDisplay(selectedLead.affordabilityData, selectedLeadTransactionType) && (
                   <div
