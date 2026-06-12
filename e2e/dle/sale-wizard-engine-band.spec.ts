@@ -308,8 +308,19 @@ test.describe.serial('DLE sale wizard engine-band proof', () => {
     await expect(engineContext).toContainText(/price ranges, unit cards, buyer CTAs, and purchase lead context/i);
     await expect(engineContext).toContainText('readiness, publish safety, and public conversion');
 
+    const previewFeedback = page.getByLabel('Public preview feedback');
+    await expect(previewFeedback).toBeVisible();
+    await expect(previewFeedback.getByText('Buyer-facing basics before publish')).toBeVisible();
+    await expect(previewFeedback.getByText('3 of 3 ready')).toBeVisible();
+    await expect(previewFeedback.getByText(/is ready to anchor the public preview/i)).toBeVisible();
+    await expect(previewFeedback.getByText(/3 highlights ready for buyer-facing chips/i)).toBeVisible();
+    await expect(previewFeedback.getByText(/Hero media ready with 1 gallery photo/i)).toBeVisible();
+
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-sale-wizard-engine-band.png`,
+    });
+    await previewFeedback.screenshot({
+      path: `${evidenceDir}/qa-dle-sale-wizard-public-preview-feedback.png`,
     });
   });
 });

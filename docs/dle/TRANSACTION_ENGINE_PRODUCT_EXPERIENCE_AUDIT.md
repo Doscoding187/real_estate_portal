@@ -300,9 +300,25 @@ The browser proof now seeds a real saved Sale canonical draft, resumes it throug
 This closes the remaining Sale evidence gap for the wizard engine band, bringing browser-level
 proof across Sale, Rental, and Auction resume flows before the next UI/product upgrade slice.
 
+## Sixteenth Product-Visibility Slice
+
+Add live public-preview feedback for wizard identity, highlights, and media.
+
+The wizard shell now shows a `Public preview feedback` panel from canonical wizard data, beside the
+transaction-engine guidance. The panel tells developers whether the buyer-facing basics are ready
+before publish:
+
+- Identity: development name and market status for public pages and cards;
+- Highlights: at least three buyer-facing chips;
+- Media: hero media or usable gallery imagery so public surfaces do not launch visually empty.
+
+This turns part of the public merchandising layer into live packaging feedback. Developers can now
+see whether the public page, search card, and lead-entry context have enough identity, highlight,
+and visual material while they are still building the package, instead of discovering it only at
+publish time.
+
 ## Remaining Product Gaps
 
-- Add live public-preview feedback for identity, highlights, and media.
 - Make Rental packaging feel lease-native: deposit, lease term, furnished state, availability, and
   renter qualification should feel intentional rather than optional add-ons.
 - Make Auction packaging feel auction-native: auction window, reserve, bidder registration, legal
@@ -323,5 +339,7 @@ proof across Sale, Rental, and Auction resume flows before the next UI/product u
   complete for `WizardEngine`.
 - Browser proof that active Sale, Rental, and Auction draft/resume flows render the correct engine
   band. Status: complete for saved canonical draft resume.
+- Component and Sale browser proof that the wizard shell renders public-preview feedback for
+  identity, highlights, and media. Status: complete for canonical saved Sale draft resume.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

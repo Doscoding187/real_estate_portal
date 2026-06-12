@@ -5842,3 +5842,47 @@ Next recommended slice:
   highlights, and media.
 Commit hash/tag: Included in `test(dle): prove sale wizard engine band`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Wizard Public Preview Feedback
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add live wizard-shell feedback that tells developers whether identity, highlights, and media
+are ready to support buyer-facing public pages, search cards, and unit enquiries before publish.
+Files changed:
+- client/src/components/wizard/WizardEngine.tsx
+- client/src/components/wizard/WizardEngine.test.tsx
+- e2e/dle/sale-wizard-engine-band.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-12/qa-dle-sale-wizard-engine-band.png
+- docs/dle/evidence/2026-06-12/qa-dle-sale-wizard-public-preview-feedback.png
+Tests run:
+- `pnpm vitest run client/src/components/wizard/WizardEngine.test.tsx` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/sale-wizard-engine-band.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 1 test.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The wizard shell now renders `Public preview feedback` from canonical wizard data.
+- The feedback reports readiness for identity, highlights, and media, with attention-state messages
+  when any public-preview basic is missing.
+- Component proof verifies a fully ready package shows `3 of 3 ready` and that an incomplete
+  package asks for missing identity, two more highlights, and hero media.
+- Browser proof resumes a saved Sale canonical draft and verifies the real wizard shell shows the
+  feedback panel with ready identity, three highlights, and hero media/gallery feedback.
+Guardrails:
+- No schema, migration, route, save, publish, lead, distribution, or operating mutation is intended
+  in this slice.
+- The panel reads canonical wizard data and does not create another persistence source.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- This first preview-feedback slice covers shared identity/highlights/media basics. Rental-native
+  deposit/lease/furnished/availability feedback and Auction-native timing/reserve/legal-pack
+  feedback remain separate transaction-engine slices.
+Next recommended slice:
+- If verification passes, make Rental packaging feel more lease-native inside the wizard, starting
+  with deposit, lease term, furnished state, availability, and renter qualification feedback.
+Commit hash/tag: Included in `feat(dle): show wizard public preview feedback`.
+Uncommitted reason, if any: None.
