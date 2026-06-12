@@ -483,6 +483,21 @@ This improves operational usefulness without changing workflow state. It does no
 register bidders, verify proof of funds, change allowed transitions, or automate distribution
 readiness.
 
+## Twenty-Sixth Product-Visibility Slice
+
+Add transaction-specific lead evidence checklists.
+
+The selected lead detail now shows a read-only evidence checklist selected by transaction lane:
+
+- Sale prompts buyer intent, finance path, unit context, and sale completion proof;
+- Rental prompts rental fit, proof of income, deposit readiness, and lease review;
+- Auction prompts bidder intent, legal-pack access, proof of funds, and registration review.
+
+Checklist statuses use explicit language: Capture, Manual review, or Optional. This makes the next
+operating proof visible without implying that the proof has already been collected. The checklist is
+not persisted readiness state and does not approve leases, register bidders, verify funds, update
+inventory, or move distribution stages.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -497,9 +512,10 @@ readiness.
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
   Auction registration open/rollback, and Auction time-gated activation are now browser-proven.
-  Qualification model visibility, transaction-aware lead stage/action labels, and stage guidance are
-  now present in the lead center, but sold/let/auction outcomes, pricing adjustments, release
-  phases, and deeper dashboards remain future.
+  Qualification model visibility, transaction-aware lead stage/action labels, stage guidance, and
+  evidence checklist prompts are now present in the lead center, but sold/let/auction outcomes,
+  pricing adjustments, release phases, persisted evidence capture, and deeper dashboards remain
+  future.
 
 ## Evidence To Attach Over Time
 
@@ -530,5 +546,7 @@ readiness.
   complete for Sale, Rental, and Auction label helpers.
 - Component-helper proof that lead stage guidance is transaction-aware. Status: complete for Sale,
   Rental, and Auction guidance helpers.
+- Component-helper proof that lead evidence checklist prompts are transaction-aware. Status:
+  complete for Sale, Rental, and Auction checklist helpers.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

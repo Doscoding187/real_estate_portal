@@ -35,6 +35,10 @@ import {
   getLeadStageDisplayLabel,
 } from './leadOperatingStageDisplay';
 import { getLeadStageGuidance } from './leadStageGuidance';
+import {
+  getLeadEvidenceChecklist,
+  getLeadEvidenceStatusLabel,
+} from './leadEvidenceChecklist';
 
 type StageTab = 'new' | 'contacted' | 'qualified' | 'viewing' | 'offer' | 'deal' | 'won' | 'lost';
 
@@ -422,6 +426,9 @@ export default function LeadsManager() {
   );
   const selectedLeadStageGuidance = selectedLead
     ? getLeadStageGuidance(selectedLead.stage, selectedLeadTransactionType)
+    : null;
+  const selectedLeadEvidenceChecklist = selectedLead
+    ? getLeadEvidenceChecklist(selectedLeadTransactionType)
     : null;
   const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
   const developmentTransactionById = useMemo(() => {
@@ -871,6 +878,31 @@ export default function LeadsManager() {
                         <p className="text-xs text-muted-foreground">Guardrail</p>
                         <p>{selectedLeadStageGuidance.caution}</p>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedLeadEvidenceChecklist && (
+                  <div
+                    className="space-y-2 border rounded-md p-3"
+                    data-testid={`dle-lead-evidence-checklist-${selectedLead.id}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">{selectedLeadEvidenceChecklist.title}</p>
+                      <Badge variant="outline">Evidence</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      {selectedLeadEvidenceChecklist.items.map(item => (
+                        <div key={item.label} className="rounded-md bg-slate-50 p-2 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-medium">{item.label}</p>
+                            <Badge variant="outline">
+                              {getLeadEvidenceStatusLabel(item.status)}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

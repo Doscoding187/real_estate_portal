@@ -6302,3 +6302,46 @@ Next recommended slice:
   transaction-specific lead detail evidence fields before automating any readiness state.
 Commit hash/tag: Included in `feat(dle): guide lead stages by transaction`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Transaction-Aware Lead Evidence Checklist
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the developer lead detail surface show lane-specific evidence prompts for Sale, Rental,
+and Auction without claiming readiness has been achieved.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- client/src/components/developer/leadEvidenceChecklist.ts
+- client/src/components/developer/leadEvidenceChecklist.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts` passed with 4 tests.
+- `pnpm vitest run client/src/components/developer/leadStageGuidance.test.ts` passed with 4 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The selected lead detail now shows a transaction-specific Evidence checklist.
+- Sale checklist prompts buyer intent, finance path, unit context, and sale completion proof.
+- Rental checklist prompts rental fit, proof of income, deposit readiness, and lease review.
+- Auction checklist prompts bidder intent, legal-pack access, proof of funds, and registration review.
+- Checklist items use explicit Capture, Manual review, or Optional status labels.
+- Helper tests cover Sale, Rental, Auction, and status-label rendering.
+Guardrails:
+- No schema, migration, persistence, readiness state, lead mutation, transition graph, SLA rule,
+  distribution gate, outcome sync, autosave, draft, publish, or inventory update behavior is
+  intended in this slice.
+- The checklist is a prompt for required evidence. It does not claim evidence is collected, approve
+  leases, register bidders, verify funds, or automate readiness movement.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- Rental still needs persisted document capture and lease application workflow semantics.
+- Auction still needs persisted bidder registration, legal-pack acceptance, and proof-of-funds
+  workflow semantics.
+- Deeper dashboards and operating audit history remain future.
+Next recommended slice:
+- Add persisted Rental/Auction evidence capture/readiness models, or create browser proof for the
+  lead operating panels before moving toward automation.
+Commit hash/tag: Included in `feat(dle): show lead evidence checklist`.
+Uncommitted reason, if any: None.
