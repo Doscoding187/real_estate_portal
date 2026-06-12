@@ -5978,3 +5978,52 @@ Next recommended slice:
   development pages with transaction-specific merchandising beyond current wizard feedback.
 Commit hash/tag: Included in `feat(dle): show auction packaging feedback`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Public Detail Transaction Package Proof
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the buyer-facing public development page echo the transaction package proof now visible
+inside the wizard, so Sale, Rental, and Auction commercial packs show concrete readiness signals
+before users reach unit cards or lead forms.
+Files changed:
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- e2e/dle/public-detail-commercial-pack.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/DevelopmentDetail.test.ts` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/public-detail-commercial-pack.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 1 test.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The public `commercial-pack` section now renders a `Package proof` strip from the existing
+  transaction-aware commercial-pack helper.
+- Sale proof items cover price package, inventory package, ownership signal, and buyer next step.
+- Rental proof items cover monthly rent package, lease terms, deposit expectation, rental
+  availability, and renter next step.
+- Auction proof items cover starting bid package, auction window, reserve strategy, registration
+  lifecycle, bidder next step, legal pack, and lot urgency.
+- Component proof verifies helper output for Sale, Rental, and Auction.
+- Browser proof seeds real published Rental and Auction developments, opens their public
+  `/development/:slug` pages, and verifies the proof strip appears beside existing commercial-pack
+  pricing, availability, document, CTA, and mobile fit checks.
+Guardrails:
+- No schema, migration, route, save, publish, lead, distribution, or operating mutation is intended
+  in this slice.
+- The new proof strip is presentation-only and reuses the existing public-detail pricing,
+  inventory, document, and transaction helpers.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- Rental and Auction qualification remain packaging-level public signals. Dedicated lease
+  qualification ratios, proof-of-income workflows, bidder registration acceptance, and proof-of-funds
+  workflows remain future product semantics.
+Next recommended slice:
+- Move from public-package proof into either richer public transaction storytelling modules or the
+  deeper Rental/Auction qualification semantics that turn these signals into dedicated next-step
+  workflows.
+Commit hash/tag: Included in `feat(dle): surface public package proof`.
+Uncommitted reason, if any: None.

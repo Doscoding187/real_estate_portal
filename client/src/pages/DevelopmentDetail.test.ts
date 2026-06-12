@@ -140,6 +140,20 @@ describe('DevelopmentDetail pricing context', () => {
         expect.objectContaining({ label: 'Ownership', value: 'Sectional Title' }),
       ]),
     );
+    expect(pack.proofItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Price package',
+          value: expect.stringContaining('sales range published'),
+          isReady: true,
+        }),
+        expect.objectContaining({
+          label: 'Buyer next step',
+          value: 'Qualification and sales-team lead context ready',
+          isReady: true,
+        }),
+      ]),
+    );
   });
 
   it('builds rental commercial pack copy for lease packaging', () => {
@@ -175,6 +189,25 @@ describe('DevelopmentDetail pricing context', () => {
         }),
       ]),
     );
+    expect(pack.proofItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Monthly rent package',
+          value: expect.stringContaining('monthly range published'),
+          isReady: true,
+        }),
+        expect.objectContaining({
+          label: 'Lease terms packaged',
+          value: '12 months',
+          isReady: true,
+        }),
+        expect.objectContaining({
+          label: 'Renter next step',
+          value: 'Rental fit and leasing-team lead context ready',
+          isReady: true,
+        }),
+      ]),
+    );
   });
 
   it('builds auction commercial pack copy for bidder packaging', () => {
@@ -185,6 +218,8 @@ describe('DevelopmentDetail pricing context', () => {
           startingBid: 850_000,
           reservePrice: 950_000,
           auctionStatus: 'registration_open',
+          auctionStartDate: '2030-02-01T09:00:00.000Z',
+          auctionEndDate: '2030-02-08T17:00:00.000Z',
           totalUnits: 1,
           availableUnits: 1,
         },
@@ -209,6 +244,25 @@ describe('DevelopmentDetail pricing context', () => {
           value: expect.stringContaining('Registration Open'),
         }),
         expect.objectContaining({ label: 'Lots', value: '1 of 1 lots open' }),
+      ]),
+    );
+    expect(pack.proofItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Auction window',
+          value: expect.stringContaining('1 Feb 2030'),
+          isReady: true,
+        }),
+        expect.objectContaining({
+          label: 'Registration lifecycle',
+          value: 'Registration Open',
+          isReady: true,
+        }),
+        expect.objectContaining({
+          label: 'Legal pack',
+          value: 'Auction documents available',
+          isReady: true,
+        }),
       ]),
     );
   });

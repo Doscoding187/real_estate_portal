@@ -355,15 +355,35 @@ The browser proof resumes a saved Auction canonical draft and verifies the real 
 `6 of 6 ready` with bid, auction window, reserve, lifecycle, legal-pack, and urgency context before
 the same run continues through manual save, publish, public merchandising, search, and lead capture.
 
+## Nineteenth Product-Visibility Slice
+
+Add public-detail package proof to the transaction commercial pack.
+
+The public development detail page now adds a `Package proof` strip inside the existing commercial
+pack section. It translates the transaction package into buyer-facing readiness signals:
+
+- Sale shows price package, inventory package, ownership signal, and buyer next step;
+- Rental shows monthly rent package, lease terms, deposit expectation, rental availability, and
+  renter next step;
+- Auction shows starting bid package, auction window, reserve strategy, registration lifecycle,
+  bidder next step, legal pack, and lot urgency.
+
+This strengthens the public merchandising layer after the wizard feedback work: the developer sees
+packaging feedback while building, and the public page now echoes the same commercial proof for
+buyers, renters, and bidders before they reach the unit carousel or lead form. Browser proof seeds
+real published Rental and Auction developments, opens their public pages, and verifies the new proof
+strip alongside the existing commercial-pack pricing, availability, document, CTA, and mobile fit
+checks.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond packaging signals, including lease qualification ratios and
   proof-of-income validation where product semantics require them.
 - Deepen Auction bidder qualification beyond packaging signals, including bidder registration
   state, legal-pack acceptance, and proof-of-funds workflows where product semantics require them.
-- Strengthen public development pages with transaction-specific merchandising sections beyond price
-  labels, availability, primary CTAs, unit-card copy, unit-detail CTAs, and search-card inventory
-  labels.
+- Continue strengthening public development pages beyond package proof with richer transaction
+  storytelling, document previews, trust cues, timeline modules, and operating-status history where
+  product semantics require them.
 - Add deeper Rental/Auction qualification rules where needed, such as lease qualification ratios,
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
@@ -383,5 +403,8 @@ the same run continues through manual save, publish, public merchandising, searc
   feedback. Status: complete for canonical saved Rental draft resume.
 - Component and Auction browser proof that the wizard shell renders bid-native Auction packaging
   feedback. Status: complete for canonical saved Auction draft resume.
+- Component and browser proof that the public detail commercial pack renders transaction-native
+  package proof. Status: complete for helper-level Sale/Rental/Auction and browser-level
+  Rental/Auction public detail.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

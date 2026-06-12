@@ -457,11 +457,18 @@ type DevelopmentDetailCommercialPackItem = {
   value: string;
 };
 
+type DevelopmentDetailCommercialPackProofItem = {
+  label: string;
+  value: string;
+  isReady: boolean;
+};
+
 export type DevelopmentDetailCommercialPack = {
   eyebrow: string;
   title: string;
   summary: string;
   items: DevelopmentDetailCommercialPackItem[];
+  proofItems: DevelopmentDetailCommercialPackProofItem[];
   primaryActionLabel: string;
   secondaryActionLabel: string;
 };
@@ -514,6 +521,41 @@ const firstPositiveUnitValue = (units: Array<Record<string, unknown>>, keys: str
   return null;
 };
 
+const firstUnitStringValue = (units: Array<Record<string, unknown>>, keys: string[]) => {
+  for (const unit of units) {
+    for (const key of keys) {
+      const value = String(unit[key] || '').trim();
+      if (value) return value;
+    }
+  }
+  return null;
+};
+
+const formatCommercialPackDate = (value: unknown) => {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return null;
+
+  const date = new Date(rawValue);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
+
+const getAuctionWindowLabel = (units: Array<Record<string, unknown>>) => {
+  const start = firstUnitStringValue(units, ['auctionStartDate']);
+  const end = firstUnitStringValue(units, ['auctionEndDate']);
+  const startLabel = formatCommercialPackDate(start);
+  const endLabel = formatCommercialPackDate(end);
+
+  if (startLabel && endLabel) return `${startLabel} - ${endLabel}`;
+  if (startLabel) return `Starts ${startLabel}`;
+  return null;
+};
+
 export function getDevelopmentDetailCommercialPack(
   development: Record<string, unknown>,
   units: Array<Record<string, unknown>> = [],
@@ -527,14 +569,16 @@ export function getDevelopmentDetailCommercialPack(
 
   if (pricing.transactionType === 'rent') {
     const deposit = firstPositiveUnitValue(units, ['depositRequired', 'depositAmount']);
-    const leaseTerm = units
-      .map(unit => String(unit.leaseTerm || '').trim())
-      .find(Boolean);
+    const leaseTerm = firstUnitStringValue(units, ['leaseTerm', 'leaseTerms']);
     const furnished = units.some(unit => Boolean(unit.isFurnished));
+    const availableFromLabel = formatCommercialPackDate(firstUnitStringValue(units, ['availableFrom']));
+    const hasRentRange = pricing.priceFrom > 0;
+    const hasAvailability = inventory.total > 0;
     const leaseSignals = [
       deposit ? `deposit from ${formatSARandShort(deposit)}` : null,
       leaseTerm || null,
       furnished ? 'furnished options' : null,
+      availableFromLabel ? `available from ${availableFromLabel}` : null,
     ].filter((item): item is string => !!item);
 
     return {
@@ -563,6 +607,35 @@ export function getDevelopmentDetailCommercialPack(
         },
         { label: 'Documents', value: documentLabel },
       ],
+      proofItems: [
+        {
+          label: 'Monthly rent package',
+          value: hasRentRange ? `${priceRange} monthly range published` : 'Monthly rent on request',
+          isReady: hasRentRange,
+        },
+        {
+          label: 'Lease terms packaged',
+          value: leaseTerm || 'Lease term still request-led',
+          isReady: Boolean(leaseTerm),
+        },
+        {
+          label: 'Deposit expectation',
+          value: deposit ? `Deposit from ${formatSARandShort(deposit)}` : 'Deposit to confirm',
+          isReady: Boolean(deposit),
+        },
+        {
+          label: 'Rental availability',
+          value: hasAvailability
+            ? `${inventory.available} rentals ready to enquire`
+            : 'Rental stock to confirm',
+          isReady: hasAvailability,
+        },
+        {
+          label: 'Renter next step',
+          value: 'Rental fit and leasing-team lead context ready',
+          isReady: true,
+        },
+      ],
     };
   }
 
@@ -572,9 +645,13 @@ export function getDevelopmentDetailCommercialPack(
       .find(Boolean);
     const reserve =
       firstPositiveUnitValue(units, ['reservePrice']) ?? toPositiveNumber(development.reservePriceFrom);
+    const auctionWindow = getAuctionWindowLabel(units);
+    const hasBidGuidance = pricing.priceFrom > 0;
+    const hasAvailability = inventory.total > 0;
     const auctionSignals = [
       auctionStatus ? formatDevelopmentDetailLabel(auctionStatus) : 'Auction timing on request',
       reserve ? `reserve guidance from ${formatSARandShort(reserve)}` : null,
+      auctionWindow ? `auction window ${auctionWindow}` : null,
     ].filter((item): item is string => !!item);
 
     return {
@@ -603,10 +680,53 @@ export function getDevelopmentDetailCommercialPack(
         },
         { label: 'Documents', value: documentLabel },
       ],
+      proofItems: [
+        {
+          label: 'Starting bid package',
+          value: hasBidGuidance ? `${priceRange} bid guidance published` : 'Starting bid on request',
+          isReady: hasBidGuidance,
+        },
+        {
+          label: 'Auction window',
+          value: auctionWindow || 'Auction window to confirm',
+          isReady: Boolean(auctionWindow),
+        },
+        {
+          label: 'Reserve strategy',
+          value: reserve
+            ? `Reserve guidance from ${formatSARandShort(reserve)}`
+            : 'Reserve guidance to confirm',
+          isReady: Boolean(reserve),
+        },
+        {
+          label: 'Registration lifecycle',
+          value: auctionStatus
+            ? formatDevelopmentDetailLabel(auctionStatus)
+            : 'Registration status to confirm',
+          isReady: Boolean(auctionStatus),
+        },
+        {
+          label: 'Bidder next step',
+          value: 'Bidder readiness and auction-team lead context ready',
+          isReady: true,
+        },
+        {
+          label: 'Legal pack',
+          value: options.hasBrochure ? 'Auction documents available' : 'Auction documents request-led',
+          isReady: Boolean(options.hasBrochure),
+        },
+        {
+          label: 'Lot urgency',
+          value: hasAvailability ? `${inventory.available} lots open for interest` : 'Lot status to confirm',
+          isReady: hasAvailability,
+        },
+      ],
     };
   }
 
   const ownership = String(development.ownershipType || '').trim();
+  const hasPrice = pricing.priceFrom > 0;
+  const hasAvailability = inventory.total > 0;
 
   return {
     eyebrow: 'Buyer Pack',
@@ -633,6 +753,30 @@ export function getDevelopmentDetailCommercialPack(
         value: ownership ? formatDevelopmentDetailLabel(ownership) : 'Ownership details on request',
       },
       { label: 'Documents', value: documentLabel },
+    ],
+    proofItems: [
+      {
+        label: 'Price package',
+        value: hasPrice ? `${priceRange} sales range published` : 'Pricing on request',
+        isReady: hasPrice,
+      },
+      {
+        label: 'Inventory package',
+        value: hasAvailability
+          ? `${inventory.available} homes ready to enquire`
+          : 'Inventory to confirm',
+        isReady: hasAvailability,
+      },
+      {
+        label: 'Ownership signal',
+        value: ownership ? formatDevelopmentDetailLabel(ownership) : 'Ownership details on request',
+        isReady: Boolean(ownership),
+      },
+      {
+        label: 'Buyer next step',
+        value: 'Qualification and sales-team lead context ready',
+        isReady: true,
+      },
     ],
   };
 }
@@ -2381,6 +2525,34 @@ export default function DevelopmentDetail() {
                             </p>
                           </div>
                         ))}
+                      </div>
+
+                      <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          Package proof
+                        </p>
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {commercialPack.proofItems.map(item => (
+                            <div
+                              key={`${item.label}-${item.value}`}
+                              className="flex items-start gap-3 rounded-md bg-white px-3 py-3"
+                            >
+                              <CheckCircle2
+                                className={`mt-0.5 h-4 w-4 shrink-0 ${
+                                  item.isReady ? 'text-emerald-600' : 'text-slate-400'
+                                }`}
+                              />
+                              <div>
+                                <p className="text-sm font-semibold text-slate-800">
+                                  {item.label}
+                                </p>
+                                <p className="mt-0.5 text-xs leading-5 text-slate-600">
+                                  {item.value}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="mt-5 flex flex-col gap-2 sm:flex-row">

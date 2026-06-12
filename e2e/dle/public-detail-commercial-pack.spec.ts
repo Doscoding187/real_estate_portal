@@ -233,8 +233,13 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(rentalPack.getByText('Lease path at a glance')).toBeVisible();
     await expect(rentalPack.getByText('Rent From R 12 500 - R 14 500')).toBeVisible();
     await expect(rentalPack.getByText('4 of 6 rentals available')).toBeVisible();
-    await expect(rentalPack.getByText(/deposit from R\s*25\s*000/i)).toBeVisible();
+    await expect(rentalPack.getByText(/deposit from R\s*25\s*000/i).first()).toBeVisible();
     await expect(rentalPack.getByText('Pack available')).toBeVisible();
+    await expect(rentalPack.getByText('Package proof')).toBeVisible();
+    await expect(rentalPack.getByText('Monthly rent package')).toBeVisible();
+    await expect(rentalPack.getByText('R 12 500 - R 14 500 monthly range published')).toBeVisible();
+    await expect(rentalPack.getByText('Lease terms packaged')).toBeVisible();
+    await expect(rentalPack.getByText('Rental fit and leasing-team lead context ready')).toBeVisible();
     await expect(rentalPack.getByRole('button', { name: 'Check Rental Fit' })).toBeVisible();
     await expect(rentalPack.getByRole('button', { name: 'Download Rental Pack' })).toBeVisible();
 
@@ -250,6 +255,12 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(auctionPack.getByText(/Registration Open.*reserve guidance from R\s*950\s*000/i)).toBeVisible();
     await expect(auctionPack.getByText('1 of 2 lots open')).toBeVisible();
     await expect(auctionPack.getByText('Pack available')).toBeVisible();
+    await expect(auctionPack.getByText('Package proof')).toBeVisible();
+    await expect(auctionPack.getByText('Starting bid package')).toBeVisible();
+    await expect(auctionPack.getByText('R 850 000 - R 950 000 bid guidance published')).toBeVisible();
+    await expect(auctionPack.getByText('Auction window').last()).toBeVisible();
+    await expect(auctionPack.getByText(/1 Feb 2030.*8 Feb 2030/i).last()).toBeVisible();
+    await expect(auctionPack.getByText('Bidder readiness and auction-team lead context ready')).toBeVisible();
     await expect(auctionPack.getByRole('button', { name: 'Check Bidder Readiness' })).toBeVisible();
     await expect(auctionPack.getByRole('button', { name: 'Download Auction Pack' })).toBeVisible();
 
