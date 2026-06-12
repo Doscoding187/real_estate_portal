@@ -437,6 +437,10 @@ Implemented readback:
   is synced as `Lease signed / Let`, and a referral handoff review is requested. The dashboard
   shows all three lanes as recorded while the linked distribution deal stage and commission status
   remain unchanged.
+- Browser proof now covers the matching Auction flow where an active lot is marked sold, the
+  selected bidder lead is synced as `Sold at auction`, and a referral handoff review is requested.
+  The dashboard shows all three lanes as recorded while the linked distribution deal stage and
+  commission status remain unchanged.
 
 The developer dashboard should eventually show:
 

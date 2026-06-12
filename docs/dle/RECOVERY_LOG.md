@@ -5695,11 +5695,62 @@ Guardrails:
 Remaining risks:
 - The three lanes are still matched by latest event per lane, not by a typed review bundle linking
   one inventory outcome to one lead sync and one distribution handoff.
-- Auction still needs the same all-three-lanes Operating Review proof before using this card as a
-  mature cross-transaction review surface.
+- Auction now has the same all-three-lanes Operating Review proof, but the readback still uses
+  latest-event-per-lane matching rather than a typed review bundle.
 Next recommended slice:
-- Add Auction Operating Review linked-lanes browser proof: active auction outcome, selected bidder
-  lead sync, and referral handoff readback with unchanged distribution stage and commission status.
+- Design typed operating-review linkage if the dashboard should support manager/admin decisions
+  against one specific inventory outcome, lead sync, and distribution handoff bundle.
 Commit hash/tag: This entry will be included in
 `test(dle): prove rental operating review lanes`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-12 - Auction Operating Review Linked Lanes
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-prove that the developer dashboard Operating Review can show an Auction outcome,
+selected-bidder lead sync, and referral handoff review together as separate recorded lanes without
+changing distribution stage, commission status, payout readiness, or Auction packaging ownership
+beyond the explicit Auction outcome.
+Files changed:
+- e2e/dle/distribution-handoff.spec.ts
+- docs/dle/OPERATING_LAYER_AUDIT.md
+- docs/dle/OUTCOME_HANDOFF_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-07/qa-dle-operating-review-auction-linked-lanes.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/distribution-handoff.spec.ts --project="Desktop Chrome" --workers=1 -g "shows Auction operating review"`
+  passed with 1 test after rerunning outside the restricted sandbox so Chromium could launch.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- A seeded Auction development starts with an active auction lot and a selected bidder lead in the
+  deal stage.
+- The developer dashboard marks the active lot `sold`, creating an `auction_outcome_recorded`
+  event and showing `Auction outcome` / `active -> sold` in Operating Review.
+- The Leads Control Center syncs the selected bidder lead and shows `Sold at auction`.
+- The developer dashboard then requests a referral handoff review and the Operating Review card
+  shows `Review requested` with the handoff note.
+- DB assertions verify the operating event order:
+  `distribution_handoff_created`, `lead_stage_changed`, and `auction_outcome_recorded`.
+- DB assertions verify the distribution deal stage and commission status remain unchanged.
+Guardrails:
+- No schema, migration, route, payout calculation, commission movement, distribution stage
+  transition, document verification, or hidden Auction reward automation was added.
+- The Operating Review card remains readback only. It links recorded facts without becoming the
+  authority for bidder lead transitions, referral deal movement, rewards, or payouts.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Notes:
+- The first browser run exposed that the Auction outcome button's accessible name includes the lot
+  name. The selector was tightened to match the real accessible label instead of visible text only.
+Remaining risks:
+- Rental and Auction now have all-three-lanes proof, but the card still matches latest event per
+  lane. A future typed review bundle is needed before the surface becomes a decision-grade
+  manager/admin workflow.
+Next recommended slice:
+- Decide whether to design typed operating-review linkage next, or return to packaging/product
+  experience upgrades now that Rental and Auction have stronger operating readback parity.
+Commit hash/tag: This entry will be included in
+`test(dle): prove auction operating review lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

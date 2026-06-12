@@ -958,6 +958,136 @@ test.describe.serial('DLE distribution handoff browser proof', () => {
     expect(parseJsonObject(operatingEvents[0].afterData).commissionChanged).toBe(false);
   });
 
+  test('shows Auction operating review with outcome, bidder sync, and referral handoff recorded', async ({
+    page,
+  }) => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const auctionSeed = await seedDistributionHandoffDevelopment(suffix, 'auction');
+    cleanupSeeds.push(auctionSeed);
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    const leadName = `Operating Review Bidder ${suffix}`;
+    const leadInsert = await db!.insert(leads).values({
+      developmentId: auctionSeed.developmentId,
+      name: leadName,
+      email: `operating-review-bidder-${suffix}@example.com`,
+      phone: '0825550305',
+      unitId: auctionSeed.unitTypeId,
+      unitName: auctionSeed.unitTypeName,
+      unitPriceFrom: 850_000,
+      leadType: 'inquiry',
+      status: 'converted',
+      funnelStage: 'bond',
+      leadSource: 'development_detail_contact',
+      source: 'development_detail',
+    });
+    const leadId = getInsertId(leadInsert);
+    auctionSeed.leadIds = [leadId];
+
+    const [beforeDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, auctionSeed.dealId))
+      .limit(1);
+
+    await loginAsSeededDeveloper(page, auctionSeed);
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, auctionSeed.developmentName);
+
+    await page.getByRole('button', { name: /Mark .* sold/ }).click();
+    await expect(page.getByText('Auction lot marked sold.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText(
+      'Auction outcome',
+      { timeout: 15_000 },
+    );
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText(
+      'active -> sold',
+    );
+
+    await page.goto(
+      `/developer/leads?developmentId=${auctionSeed.developmentId}&stage=deal&leadId=${leadId}`,
+    );
+    await expect(page.getByRole('heading', { name: 'Leads Control Center' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(leadName).first()).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Sync Outcome' }).click();
+    await expect(page.getByText('Lead synced: Sold at auction.')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.goto('/developer/dashboard');
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await selectDevelopment(page, auctionSeed.developmentName);
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText('Lead synced', {
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText(
+      'Sold at auction',
+    );
+
+    await page.getByTestId(`dle-distribution-handoff-open-${auctionSeed.dealId}`).click();
+    await page
+      .getByTestId('dle-distribution-handoff-note')
+      .fill('Winning bidder synced after auction sold outcome. Please review handoff only.');
+    await page.getByTestId('dle-distribution-handoff-submit').click();
+    await expect(page.getByText('Referral handoff review requested')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText(
+      'Auction outcome',
+      { timeout: 15_000 },
+    );
+    await expect(page.getByTestId('dle-operating-review-inventory')).toContainText(
+      'active -> sold',
+    );
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText('Lead synced');
+    await expect(page.getByTestId('dle-operating-review-lead')).toContainText('Sold at auction');
+    await expect(page.getByTestId('dle-operating-review-handoff')).toContainText(
+      'Review requested',
+    );
+    await expect(page.getByTestId('dle-operating-review-handoff')).toContainText(
+      'Winning bidder synced after auction sold outcome',
+    );
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-operating-review-auction-linked-lanes.png`,
+    });
+
+    const [afterDeal] = await db!
+      .select()
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, auctionSeed.dealId))
+      .limit(1);
+    expect(afterDeal.currentStage).toBe(beforeDeal.currentStage);
+    expect(afterDeal.commissionStatus).toBe(beforeDeal.commissionStatus);
+
+    const operatingEvents = await db!
+      .select()
+      .from(developmentOperatingEvents)
+      .where(eq(developmentOperatingEvents.developmentId, auctionSeed.developmentId))
+      .orderBy(desc(developmentOperatingEvents.id));
+    expect(operatingEvents.map(event => event.eventType)).toEqual([
+      'distribution_handoff_created',
+      'lead_stage_changed',
+      'auction_outcome_recorded',
+    ]);
+    expect(operatingEvents[0].distributionDealId).toBe(auctionSeed.dealId);
+    expect(operatingEvents[0].transactionType).toBe('auction');
+    expect(parseJsonObject(operatingEvents[0].afterData).stageChanged).toBe(false);
+    expect(parseJsonObject(operatingEvents[0].afterData).commissionChanged).toBe(false);
+    expect(operatingEvents[1].leadId).toBe(leadId);
+    expect(parseJsonObject(operatingEvents[1].metadata).displayLabel).toBe('Sold at auction');
+    expect(operatingEvents[2].fromStatus).toBe('active');
+    expect(operatingEvents[2].toStatus).toBe('sold');
+  });
+
   test('shows manager manual readiness decisions in admin deal and reward rows without automation', async ({
     page,
   }) => {

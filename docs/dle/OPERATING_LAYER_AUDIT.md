@@ -492,6 +492,10 @@ Recommended next architecture work:
   together: a real `held` -> `let` inventory outcome, explicit selected-renter lead sync as
   `Lease signed / Let`, and a referral handoff review request. The proof keeps the distribution
   deal stage and commission status unchanged.
+- Auction now has browser proof for the same three-lane Operating Review pattern: an active lot is
+  marked sold, the selected bidder lead is synced as `Sold at auction`, and a referral handoff
+  review is requested. The proof keeps the distribution deal stage and commission status
+  unchanged.
 - The partner referral submission wizard now uses the selected development transaction type so
   Sale captures buyers, Rental captures renters, and Auction captures bidders while preserving the
   existing distribution-owned submission, stage, payout, and commission contract.
