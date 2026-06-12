@@ -375,15 +375,34 @@ real published Rental and Auction developments, opens their public pages, and ve
 strip alongside the existing commercial-pack pricing, availability, document, CTA, and mobile fit
 checks.
 
+## Twentieth Product-Visibility Slice
+
+Add a public transaction journey module to the development detail page.
+
+The public development detail page now shows a transaction-native `transaction-journey` section
+between the commercial pack and the unit inventory:
+
+- Sale shows a buyer journey from buyer package, qualification, brochure request, and sales-team
+  follow-up;
+- Rental shows a rental journey from lease package, rental fit, rental-pack request, and
+  leasing-team follow-up;
+- Auction shows an auction journey from bid package, bidder readiness, auction-pack request, and
+  auction-team follow-up.
+
+This makes the public page explain the buyer/renter/bidder path rather than only exposing price,
+availability, proof items, and CTAs. Component proof covers helper output for Rental and Auction,
+and browser proof verifies real published Rental and Auction pages render the correct journey copy
+on desktop and mobile.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond packaging signals, including lease qualification ratios and
   proof-of-income validation where product semantics require them.
 - Deepen Auction bidder qualification beyond packaging signals, including bidder registration
   state, legal-pack acceptance, and proof-of-funds workflows where product semantics require them.
-- Continue strengthening public development pages beyond package proof with richer transaction
-  storytelling, document previews, trust cues, timeline modules, and operating-status history where
-  product semantics require them.
+- Continue strengthening public development pages beyond package proof and journey copy with
+  document previews, trust cues, richer incentives, and operating-status history where product
+  semantics require them.
 - Add deeper Rental/Auction qualification rules where needed, such as lease qualification ratios,
   proof-of-income validation, bidder registration state, and proof-of-funds workflows.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
@@ -406,5 +425,7 @@ checks.
 - Component and browser proof that the public detail commercial pack renders transaction-native
   package proof. Status: complete for helper-level Sale/Rental/Auction and browser-level
   Rental/Auction public detail.
+- Component and browser proof that public detail renders transaction-native journey copy. Status:
+  complete for helper-level Rental/Auction and browser-level Rental/Auction public detail.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

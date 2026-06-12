@@ -9,6 +9,7 @@ import {
   getDevelopmentDetailLeadUnitContext,
   getDevelopmentDetailMediaBuckets,
   getDevelopmentDetailPricingContext,
+  getDevelopmentDetailTransactionJourney,
   getDevelopmentDetailUnitAvailabilityState,
   getDevelopmentDetailUnitPricingContext,
   normalizeDevelopmentDetailTransactionType,
@@ -210,6 +211,44 @@ describe('DevelopmentDetail pricing context', () => {
     );
   });
 
+  it('builds rental transaction journey copy for lease follow-up', () => {
+    const journey = getDevelopmentDetailTransactionJourney(
+      { transactionType: 'for_rent' },
+      [
+        {
+          monthlyRentFrom: 12_500,
+          monthlyRentTo: 14_500,
+          depositRequired: 25_000,
+          leaseTerm: '12 months',
+          totalUnits: 6,
+          availableUnits: 4,
+        },
+      ],
+      { hasBrochure: true },
+    );
+
+    expect(journey).toMatchObject({
+      eyebrow: 'Rental journey',
+      title: 'From rental fit to lease follow-up',
+    });
+    expect(journey.steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Review lease package',
+          detail: expect.stringContaining('4 rental homes currently available'),
+        }),
+        expect.objectContaining({
+          label: 'Check rental fit',
+          detail: expect.stringContaining('Estimate monthly rent fit'),
+        }),
+        expect.objectContaining({
+          label: 'Leasing team follow-up',
+          detail: expect.stringContaining('application documents'),
+        }),
+      ]),
+    );
+  });
+
   it('builds auction commercial pack copy for bidder packaging', () => {
     const pack = getDevelopmentDetailCommercialPack(
       { transactionType: 'auction' },
@@ -262,6 +301,45 @@ describe('DevelopmentDetail pricing context', () => {
           label: 'Legal pack',
           value: 'Auction documents available',
           isReady: true,
+        }),
+      ]),
+    );
+  });
+
+  it('builds auction transaction journey copy for bidder registration', () => {
+    const journey = getDevelopmentDetailTransactionJourney(
+      { transactionType: 'auction' },
+      [
+        {
+          startingBid: 850_000,
+          reservePrice: 950_000,
+          auctionStartDate: '2030-02-01T09:00:00.000Z',
+          auctionEndDate: '2030-02-08T17:00:00.000Z',
+          auctionStatus: 'registration_open',
+          totalUnits: 2,
+          availableUnits: 1,
+        },
+      ],
+      { hasBrochure: true },
+    );
+
+    expect(journey).toMatchObject({
+      eyebrow: 'Auction journey',
+      title: 'From bidder readiness to auction registration',
+    });
+    expect(journey.steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Review bid package',
+          detail: expect.stringContaining('1 Feb 2030'),
+        }),
+        expect.objectContaining({
+          label: 'Check bidder readiness',
+          detail: expect.stringContaining('Estimate bidding capacity'),
+        }),
+        expect.objectContaining({
+          label: 'Auction team follow-up',
+          detail: expect.stringContaining('registration open'),
         }),
       ]),
     );

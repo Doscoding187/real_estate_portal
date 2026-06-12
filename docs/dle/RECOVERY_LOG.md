@@ -6027,3 +6027,53 @@ Next recommended slice:
   workflows.
 Commit hash/tag: Included in `feat(dle): surface public package proof`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Public Detail Transaction Journey
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make the public development detail page explain the transaction-specific buyer, renter, or
+bidder journey, not only the price/proof/CTA layer, so Rental and Auction feel like real
+sub-engines on the public page.
+Files changed:
+- client/src/pages/DevelopmentDetail.tsx
+- client/src/pages/DevelopmentDetail.test.ts
+- e2e/dle/public-detail-commercial-pack.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/DevelopmentDetail.test.ts` passed with 23 tests.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/public-detail-commercial-pack.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 1 test.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The public detail page now renders a `transaction-journey` section between the commercial pack
+  and available-unit inventory.
+- Sale journey copy covers buyer package, qualification, brochure request, and sales-team
+  follow-up.
+- Rental journey copy covers lease package, rental fit, rental-pack request, and leasing-team
+  follow-up.
+- Auction journey copy covers bid package, bidder readiness, auction-pack request, and auction-team
+  follow-up.
+- Component proof verifies Rental and Auction journey helper output.
+- Browser proof seeds real published Rental and Auction developments, opens their public
+  `/development/:slug` pages, and verifies the transaction journey appears on desktop and mobile
+  alongside the existing commercial-pack proof.
+Guardrails:
+- No schema, migration, route, save, publish, lead, distribution, or operating mutation is intended
+  in this slice.
+- The journey section is presentation-only and reuses existing public-detail transaction, pricing,
+  document, and inventory helpers.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- The journey is explanatory. Dedicated Rental qualification ratios, proof-of-income workflows,
+  bidder registration acceptance, legal-pack acceptance, proof-of-funds workflows, and live
+  operating history remain future product semantics.
+Next recommended slice:
+- Add public document/trust preview for Rental and Auction packs, or move deeper into dedicated
+  Rental/Auction qualification semantics if the next priority is conversion correctness over page
+  storytelling.
+Commit hash/tag: Included in `feat(dle): show public transaction journey`.
+Uncommitted reason, if any: None.

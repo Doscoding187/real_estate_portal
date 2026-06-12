@@ -243,6 +243,15 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(rentalPack.getByRole('button', { name: 'Check Rental Fit' })).toBeVisible();
     await expect(rentalPack.getByRole('button', { name: 'Download Rental Pack' })).toBeVisible();
 
+    const rentalJourney = page.locator('#transaction-journey');
+    await expect(rentalJourney).toBeVisible();
+    await expect(rentalJourney.getByText('Rental journey')).toBeVisible();
+    await expect(rentalJourney.getByText('From rental fit to lease follow-up')).toBeVisible();
+    await expect(rentalJourney.getByText('Review lease package')).toBeVisible();
+    await expect(rentalJourney.getByText(/4 rental homes currently available/i)).toBeVisible();
+    await expect(rentalJourney.getByText('Check rental fit')).toBeVisible();
+    await expect(rentalJourney.getByText('Leasing team follow-up')).toBeVisible();
+
     const auction = await seedAuctionDevelopment(suffix, tracker);
     await page.goto(`/development/${auction.slug}`);
     await expect(page.getByRole('heading', { name: auction.name })).toBeVisible({ timeout: 15_000 });
@@ -264,6 +273,15 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(auctionPack.getByRole('button', { name: 'Check Bidder Readiness' })).toBeVisible();
     await expect(auctionPack.getByRole('button', { name: 'Download Auction Pack' })).toBeVisible();
 
+    const auctionJourney = page.locator('#transaction-journey');
+    await expect(auctionJourney).toBeVisible();
+    await expect(auctionJourney.getByText('Auction journey')).toBeVisible();
+    await expect(auctionJourney.getByText('From bidder readiness to auction registration')).toBeVisible();
+    await expect(auctionJourney.getByText('Review bid package')).toBeVisible();
+    await expect(auctionJourney.getByText(/1 Feb 2030.*8 Feb 2030/i)).toBeVisible();
+    await expect(auctionJourney.getByText('Check bidder readiness')).toBeVisible();
+    await expect(auctionJourney.getByText('Auction team follow-up')).toBeVisible();
+
     await page.setViewportSize({ width: 390, height: 844 });
 
     await page.goto(`/development/${rental.slug}`);
@@ -271,6 +289,7 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expectPackFitsViewport(page);
     await expect(mobileRentalPack.getByText('Lease path at a glance')).toBeVisible();
     await expect(mobileRentalPack.getByRole('button', { name: 'Check Rental Fit' })).toBeVisible();
+    await expect(page.locator('#transaction-journey').getByText('Rental journey')).toBeVisible();
 
     await page.goto(`/development/${auction.slug}`);
     const mobileAuctionPack = page.locator('#commercial-pack');
@@ -279,5 +298,6 @@ test.describe.serial('DLE public detail commercial pack browser proof', () => {
     await expect(
       mobileAuctionPack.getByRole('button', { name: 'Check Bidder Readiness' }),
     ).toBeVisible();
+    await expect(page.locator('#transaction-journey').getByText('Auction journey')).toBeVisible();
   });
 });

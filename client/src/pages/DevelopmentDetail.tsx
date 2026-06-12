@@ -473,6 +473,18 @@ export type DevelopmentDetailCommercialPack = {
   secondaryActionLabel: string;
 };
 
+type DevelopmentDetailTransactionJourneyStep = {
+  label: string;
+  detail: string;
+};
+
+export type DevelopmentDetailTransactionJourney = {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  steps: DevelopmentDetailTransactionJourneyStep[];
+};
+
 const getInventoryTotals = (
   development: Record<string, unknown>,
   units: Array<Record<string, unknown>>,
@@ -776,6 +788,117 @@ export function getDevelopmentDetailCommercialPack(
         label: 'Buyer next step',
         value: 'Qualification and sales-team lead context ready',
         isReady: true,
+      },
+    ],
+  };
+}
+
+export function getDevelopmentDetailTransactionJourney(
+  development: Record<string, unknown>,
+  units: Array<Record<string, unknown>> = [],
+  options: { hasBrochure?: boolean } = {},
+): DevelopmentDetailTransactionJourney {
+  const pricing = getDevelopmentDetailPricingContext(development, units);
+  const inventory = getInventoryTotals(development, units);
+  const documentReadyLabel = options.hasBrochure ? 'document pack' : 'document request';
+
+  if (pricing.transactionType === 'rent') {
+    const leaseTerm = firstUnitStringValue(units, ['leaseTerm', 'leaseTerms']);
+    const deposit = firstPositiveUnitValue(units, ['depositRequired', 'depositAmount']);
+    const availability =
+      inventory.total > 0
+        ? `${inventory.available} rental homes currently available`
+        : 'rental availability confirmed by the leasing team';
+
+    return {
+      eyebrow: 'Rental journey',
+      title: 'From rental fit to lease follow-up',
+      summary:
+        'This rental path shows renters what happens after they review the pack, without forcing a sales-style buying journey.',
+      steps: [
+        {
+          label: 'Review lease package',
+          detail: `${availability}; ${leaseTerm || 'lease term to confirm'}; ${
+            deposit ? `deposit from ${formatSARandShort(deposit)}` : 'deposit to confirm'
+          }.`,
+        },
+        {
+          label: 'Check rental fit',
+          detail: 'Estimate monthly rent fit before sharing renter details with the leasing team.',
+        },
+        {
+          label: 'Request rental pack',
+          detail: `Use the ${documentReadyLabel} path for lease terms, costs, and unit-specific details.`,
+        },
+        {
+          label: 'Leasing team follow-up',
+          detail: 'A leasing consultant can confirm application documents, viewing options, and next available homes.',
+        },
+      ],
+    };
+  }
+
+  if (pricing.transactionType === 'auction') {
+    const auctionStatus = firstUnitStringValue(units, ['auctionStatus']);
+    const auctionWindow = getAuctionWindowLabel(units);
+    const reserve =
+      firstPositiveUnitValue(units, ['reservePrice']) ?? toPositiveNumber(development.reservePriceFrom);
+
+    return {
+      eyebrow: 'Auction journey',
+      title: 'From bidder readiness to auction registration',
+      summary:
+        'This auction path separates bidder preparation from normal sales enquiry, so bidders understand timing, registration, and documents before they act.',
+      steps: [
+        {
+          label: 'Review bid package',
+          detail: `${auctionWindow || 'Auction window to confirm'}; ${
+            reserve ? `reserve guidance from ${formatSARandShort(reserve)}` : 'reserve guidance to confirm'
+          }.`,
+        },
+        {
+          label: 'Check bidder readiness',
+          detail: 'Estimate bidding capacity before registering auction interest or requesting documents.',
+        },
+        {
+          label: 'Request auction pack',
+          detail: `Use the ${documentReadyLabel} path for legal pack, bidder rules, FICA, and deposit guidance.`,
+        },
+        {
+          label: 'Auction team follow-up',
+          detail: `Auction team confirms ${
+            auctionStatus ? formatDevelopmentDetailLabel(auctionStatus).toLowerCase() : 'registration status'
+          }, documents, and next bidder steps.`,
+        },
+      ],
+    };
+  }
+
+  const ownership = String(development.ownershipType || '').trim();
+
+  return {
+    eyebrow: 'Buyer journey',
+    title: 'From qualification to sales follow-up',
+    summary:
+      'This sales path helps buyers understand the next steps from affordability to unit-specific enquiry.',
+    steps: [
+      {
+        label: 'Review buyer package',
+        detail: `${inventory.total > 0 ? `${inventory.available} homes currently available` : 'Inventory confirmed by the sales team'}; ${
+          ownership ? `${formatDevelopmentDetailLabel(ownership)} ownership` : 'ownership details to confirm'
+        }.`,
+      },
+      {
+        label: 'Start qualification',
+        detail: 'Estimate affordability before sharing buyer details with the sales team.',
+      },
+      {
+        label: 'Request brochure',
+        detail: `Use the ${documentReadyLabel} path for plans, costs, and launch information.`,
+      },
+      {
+        label: 'Sales team follow-up',
+        detail: 'A sales consultant can confirm availability, incentives, viewings, and reservation next steps.',
       },
     ],
   };
@@ -1955,6 +2078,9 @@ export default function DevelopmentDetail() {
   const commercialPack = getDevelopmentDetailCommercialPack(dev, development.units || [], {
     hasBrochure: !!brochureUrl,
   });
+  const transactionJourney = getDevelopmentDetailTransactionJourney(dev, development.units || [], {
+    hasBrochure: !!brochureUrl,
+  });
   const developmentHighlights = getDevelopmentDetailHighlights(dev);
   const derivedPriceFrom = detailPricing.priceFrom;
   const priceToDisplay = detailPricing.priceTo;
@@ -2571,6 +2697,43 @@ export default function DevelopmentDetail() {
                           <Download className="mr-2 h-4 w-4" />
                           {commercialPack.secondaryActionLabel}
                         </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+
+                <Separator className="bg-slate-200" />
+
+                <section id="transaction-journey" className="w-full">
+                  <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                        {transactionJourney.eyebrow}
+                      </p>
+                      <CardTitle className="mt-2 font-bold text-slate-900">
+                        {transactionJourney.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                        {transactionJourney.summary}
+                      </p>
+
+                      <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+                        {transactionJourney.steps.map((step, index) => (
+                          <div
+                            key={`${step.label}-${index}`}
+                            className="rounded-lg border border-slate-200 bg-white px-4 py-4"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">
+                                {index + 1}
+                              </span>
+                              <p className="text-sm font-semibold text-slate-900">{step.label}</p>
+                            </div>
+                            <p className="mt-3 text-xs leading-5 text-slate-600">{step.detail}</p>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
