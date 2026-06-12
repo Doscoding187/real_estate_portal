@@ -412,12 +412,30 @@ instead of pretending the data is present. Component proof covers Rental and Auc
 and browser proof verifies real published Rental and Auction pages render the trust preview on
 desktop and mobile.
 
+## Twenty-Second Product-Visibility Slice
+
+Add transaction-specific qualification models to the development qualification flow.
+
+The qualification route now separates the estimate model by transaction lane:
+
+- Sale uses `sale_affordability`, based on a bond-style affordability model and commitment-adjusted
+  repayment budget;
+- Rental uses `rental_fit`, based on a 30% income-to-rent guide after monthly commitments;
+- Auction uses `bidder_readiness`, based on a conservative 28% income guide plus available cash
+  contribution.
+
+The selected model is visible in the qualification UI and is included in the submitted
+`affordabilityData` payload as model metadata. This makes Rental and Auction qualification less like
+a relabelled sale affordability check while still being explicit that these are early estimates, not
+lease approval, auction registration, or proof-of-funds approval.
+
 ## Remaining Product Gaps
 
-- Deepen Rental qualification beyond packaging signals, including lease qualification ratios and
-  proof-of-income validation where product semantics require them.
-- Deepen Auction bidder qualification beyond packaging signals, including bidder registration
-  state, legal-pack acceptance, and proof-of-funds workflows where product semantics require them.
+- Deepen Rental qualification beyond model metadata into proof-of-income capture, document
+  readiness, and lease application review where product semantics require them.
+- Deepen Auction bidder qualification beyond model metadata into bidder registration acceptance,
+  legal-pack acceptance, proof-of-funds workflows, and auction terms where product semantics require
+  them.
 - Continue strengthening public development pages beyond package proof and journey copy with
   richer document previews, downloadable document metadata, incentive treatment, and
   operating-status history where product semantics require them.
@@ -447,5 +465,8 @@ desktop and mobile.
   complete for helper-level Rental/Auction and browser-level Rental/Auction public detail.
 - Component and browser proof that public detail renders transaction-native trust preview. Status:
   complete for helper-level Rental/Auction and browser-level Rental/Auction public detail.
+- Component and router-contract proof that qualification uses transaction-specific models and
+  persists model metadata. Status: complete for helper-level Rental/Auction and
+  `developer.createLead` contract.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

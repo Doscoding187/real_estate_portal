@@ -13,6 +13,10 @@ interface AffordabilityData {
   monthlyDebts?: number;
   availableDeposit?: number;
   maxAffordable?: number;
+  qualificationModel?: string;
+  qualificationCapacityLabel?: string;
+  qualificationMonthlyCapacity?: number;
+  qualificationRatio?: number;
   calculatedAt?: string;
   leadContext?: LeadContextData;
 }

@@ -39,6 +39,16 @@ const parseNumberInput = (value: string) => {
 
 type QualificationTransactionType = 'sale' | 'rent' | 'auction';
 
+type DevelopmentQualificationModel = {
+  model: 'sale_affordability' | 'rental_fit' | 'bidder_readiness';
+  capacityLabel: string;
+  capacityAmount: number;
+  monthlyCapacity: number;
+  comfortFloor: number;
+  ratio: number;
+  note: string;
+};
+
 function toPositiveNumber(value: unknown): number {
   const numeric = Number(value || 0);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
@@ -306,6 +316,70 @@ const calculateAffordableLoanAmount = (
   return Math.round((monthlyBudget * (factor - 1)) / (monthlyRate * factor));
 };
 
+export function getDevelopmentQualificationModel(input: {
+  transactionType: QualificationTransactionType;
+  totalIncome: number;
+  monthlyCommitments: number;
+  availableDeposit: number;
+}): DevelopmentQualificationModel {
+  const totalIncome = Math.max(input.totalIncome, 0);
+  const monthlyCommitments = Math.max(input.monthlyCommitments, 0);
+  const availableDeposit = Math.max(input.availableDeposit, 0);
+
+  if (input.transactionType === 'rent') {
+    const ratio = 0.3;
+    const monthlyCapacity = Math.max(totalIncome * ratio - monthlyCommitments, 0);
+    return {
+      model: 'rental_fit',
+      capacityLabel: 'monthly rental capacity',
+      capacityAmount: monthlyCapacity,
+      monthlyCapacity,
+      comfortFloor: Math.max(Math.round(monthlyCapacity * 0.82), 0),
+      ratio,
+      note: 'Rental fit uses a 30% income-to-rent guide after monthly commitments. It is not lease approval.',
+    };
+  }
+
+  if (input.transactionType === 'auction') {
+    const ratio = 0.28;
+    const monthlyCapacity = Math.max(totalIncome * ratio - monthlyCommitments, 0);
+    const loanCapacity = calculateAffordableLoanAmount(
+      monthlyCapacity,
+      SA_PRIME_RATE,
+      DEFAULT_BOND_TERM_YEARS,
+    );
+    const capacityAmount = Math.max(loanCapacity + availableDeposit, 0);
+    return {
+      model: 'bidder_readiness',
+      capacityLabel: 'auction bidder capacity',
+      capacityAmount,
+      monthlyCapacity,
+      comfortFloor: Math.max(Math.round(capacityAmount * 0.82), 0),
+      ratio,
+      note: 'Bidder readiness uses a conservative 28% income guide plus available cash contribution. It is not auction registration or proof-of-funds approval.',
+    };
+  }
+
+  const ratio = 1 / 3;
+  const commitmentRatio = totalIncome > 0 ? Math.min(monthlyCommitments / totalIncome, 0.7) : 0;
+  const monthlyCapacity = Math.max(totalIncome * ratio * (1 - commitmentRatio * 0.7), 0);
+  const loanCapacity = calculateAffordableLoanAmount(
+    monthlyCapacity,
+    SA_PRIME_RATE,
+    DEFAULT_BOND_TERM_YEARS,
+  );
+  const capacityAmount = Math.max(loanCapacity + availableDeposit, 0);
+  return {
+    model: 'sale_affordability',
+    capacityLabel: 'purchase affordability',
+    capacityAmount,
+    monthlyCapacity,
+    comfortFloor: Math.max(Math.round(capacityAmount * 0.82), 0),
+    ratio,
+    note: `Sale affordability uses a ${DEFAULT_BOND_TERM_YEARS}-year bond estimate and commitment-adjusted repayment budget. It is not finance approval.`,
+  };
+}
+
 export default function DevelopmentQualificationPage() {
   const { slug } = useParams();
   const [, setLocation] = useLocation();
@@ -392,19 +466,15 @@ export default function DevelopmentQualificationPage() {
   const availableDeposit = parseNumberInput(financials.availableDeposit);
   const totalIncome = monthlyIncome + coApplicantIncome;
 
-  const baseRepaymentBudget = totalIncome / 3;
   const monthlyCommitments = monthlyExpenses + monthlyDebts;
-  const commitmentRatio = totalIncome > 0 ? Math.min(monthlyCommitments / totalIncome, 0.7) : 0;
-  const adjustedRepaymentBudget = Math.max(baseRepaymentBudget * (1 - commitmentRatio * 0.7), 0);
-  const affordableLoan = calculateAffordableLoanAmount(
-    adjustedRepaymentBudget,
-    SA_PRIME_RATE,
-    DEFAULT_BOND_TERM_YEARS,
-  );
-  const maxAffordable = Math.max(affordableLoan + availableDeposit, 0);
-  const affordabilityCapacity =
-    developmentPricing.transactionType === 'rent' ? adjustedRepaymentBudget : maxAffordable;
-  const comfortFloor = Math.max(Math.round(affordabilityCapacity * 0.82), 0);
+  const qualificationModel = getDevelopmentQualificationModel({
+    transactionType: developmentPricing.transactionType,
+    totalIncome,
+    monthlyCommitments,
+    availableDeposit,
+  });
+  const affordabilityCapacity = qualificationModel.capacityAmount;
+  const comfortFloor = qualificationModel.comfortFloor;
   const targetPrice = developmentPricing.minPrice;
   const depositGap = Math.max(targetPrice - affordabilityCapacity, 0);
   const estimatedTargetRepayment =
@@ -499,6 +569,10 @@ export default function DevelopmentQualificationPage() {
         monthlyDebts,
         availableDeposit,
         maxAffordable: affordabilityCapacity,
+        qualificationModel: qualificationModel.model,
+        qualificationCapacityLabel: qualificationModel.capacityLabel,
+        qualificationMonthlyCapacity: qualificationModel.monthlyCapacity,
+        qualificationRatio: qualificationModel.ratio,
         calculatedAt: new Date().toISOString(),
       },
     });
@@ -876,6 +950,9 @@ export default function DevelopmentQualificationPage() {
                           <p className="mt-1 text-sm text-slate-600">
                             {qualificationCopy.resultAssumption}
                           </p>
+                          <p className="mt-2 text-sm text-slate-600">
+                            {qualificationModel.note}
+                          </p>
                         </div>
 
                         <div className="grid gap-5 md:grid-cols-2">
@@ -1012,6 +1089,27 @@ export default function DevelopmentQualificationPage() {
                       <Phone className="h-4 w-4 text-blue-600" />
                       {qualificationCopy.followUp}
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="p-5 space-y-3">
+                  <h3 className="text-base font-bold text-slate-900">Qualification model</h3>
+                  <div className="space-y-2 text-sm text-slate-600">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Model</span>
+                      <span className="font-semibold text-slate-900">
+                        {qualificationModel.model.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Income guide</span>
+                      <span className="font-semibold text-slate-900">
+                        {Math.round(qualificationModel.ratio * 100)}%
+                      </span>
+                    </div>
+                    <p>{qualificationModel.note}</p>
                   </div>
                 </CardContent>
               </Card>

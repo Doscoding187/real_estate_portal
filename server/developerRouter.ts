@@ -1512,6 +1512,10 @@ export const developerRouter = router({
             monthlyDebts: z.number().optional(),
             availableDeposit: z.number().optional(),
             maxAffordable: z.number().optional(),
+            qualificationModel: z.string().trim().max(80).optional(),
+            qualificationCapacityLabel: z.string().trim().max(120).optional(),
+            qualificationMonthlyCapacity: z.number().optional(),
+            qualificationRatio: z.number().optional(),
             calculatedAt: z.string().optional(),
           })
           .optional(),

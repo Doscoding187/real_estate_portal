@@ -6127,3 +6127,50 @@ Next recommended slice:
   Rental/Auction qualification semantics if conversion correctness is the next priority.
 Commit hash/tag: Included in `feat(dle): show public trust preview`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Qualification Transaction Models
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Move Rental and Auction qualification from relabelled affordability copy toward
+transaction-specific estimate semantics and persist the selected model metadata with qualification
+leads.
+Files changed:
+- client/src/pages/DevelopmentQualificationPage.tsx
+- client/src/pages/DevelopmentQualificationPage.test.ts
+- server/developerRouter.ts
+- server/services/publicLeadCaptureService.ts
+- server/__tests__/contract.developer-create-lead.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/pages/DevelopmentQualificationPage.test.ts` passed with 6 tests.
+- `pnpm vitest run server/__tests__/contract.developer-create-lead.test.ts` initially failed inside
+  sandbox with `EPERM 127.0.0.1:3306`; rerun with local DB access passed with 3 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The qualification route now uses `getDevelopmentQualificationModel` to select a model per
+  transaction lane.
+- Sale uses `sale_affordability` with bond-style affordability semantics.
+- Rental uses `rental_fit` with a 30% income-to-rent guide after monthly commitments.
+- Auction uses `bidder_readiness` with a conservative 28% income guide plus available cash
+  contribution.
+- The selected model, capacity label, monthly capacity, and ratio are visible in the qualification
+  UI and included in `affordabilityData`.
+- `developer.createLead` now accepts and passes qualification model metadata to public lead capture.
+Guardrails:
+- No autosave, draft, publish, schema, migration, public detail, search card, unit card, operating
+  mutation, or distribution automation is intended in this slice.
+- The model remains an early estimate. It does not approve leases, register bidders, verify proof of
+  funds, or move distribution payout/readiness stages.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- Rental proof-of-income capture, lease application workflow, Auction legal-pack acceptance,
+  bidder registration, and proof-of-funds workflows remain future product semantics.
+Next recommended slice:
+- Continue qualification depth with document/readiness capture for Rental and Auction, or move to
+  operating-dashboard visibility for post-publish lead stages and inventory outcomes.
+Commit hash/tag: Included in `feat(dle): add qualification models`.
+Uncommitted reason, if any: None.

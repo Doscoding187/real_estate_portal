@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getDevelopmentQualificationExperienceCopy,
   getDevelopmentQualificationLeadUnitContext,
+  getDevelopmentQualificationModel,
   getDevelopmentQualificationPricingContext,
   normalizeQualificationTransactionType,
 } from './DevelopmentQualificationPage';
@@ -88,6 +89,38 @@ describe('DevelopmentQualificationPage pricing context', () => {
         'Does not register you for the auction or approve proof of funds.',
       ]),
     });
+  });
+
+  it('uses transaction-specific qualification models', () => {
+    expect(
+      getDevelopmentQualificationModel({
+        transactionType: 'rent',
+        totalIncome: 50_000,
+        monthlyCommitments: 5_000,
+        availableDeposit: 20_000,
+      }),
+    ).toMatchObject({
+      model: 'rental_fit',
+      capacityLabel: 'monthly rental capacity',
+      capacityAmount: 10_000,
+      monthlyCapacity: 10_000,
+      ratio: 0.3,
+    });
+
+    const auctionModel = getDevelopmentQualificationModel({
+      transactionType: 'auction',
+      totalIncome: 80_000,
+      monthlyCommitments: 6_000,
+      availableDeposit: 150_000,
+    });
+
+    expect(auctionModel).toMatchObject({
+      model: 'bidder_readiness',
+      capacityLabel: 'auction bidder capacity',
+      ratio: 0.28,
+    });
+    expect(auctionModel.capacityAmount).toBeGreaterThan(150_000);
+    expect(auctionModel.note).toContain('not auction registration');
   });
 
   it('builds qualification lead context with canonical unit identity and commercial values', () => {

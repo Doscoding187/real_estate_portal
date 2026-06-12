@@ -86,4 +86,40 @@ describe('developer.createLead contract', () => {
 
     expect(capturePublicLeadMock).not.toHaveBeenCalled();
   });
+
+  it('passes transaction-specific qualification model metadata to public lead capture', async () => {
+    await createPublicCaller().developer.createLead({
+      developmentId: 88,
+      transactionType: 'auction',
+      name: 'Auction Bidder',
+      email: 'bidder@example.com',
+      phone: '0830000000',
+      leadSource: 'development_full_qualification',
+      affordabilityData: {
+        monthlyIncome: 80_000,
+        monthlyExpenses: 4_000,
+        monthlyDebts: 2_000,
+        availableDeposit: 150_000,
+        maxAffordable: 1_250_000,
+        qualificationModel: 'bidder_readiness',
+        qualificationCapacityLabel: 'auction bidder capacity',
+        qualificationMonthlyCapacity: 16_400,
+        qualificationRatio: 0.28,
+        calculatedAt: '2030-01-01T00:00:00.000Z',
+      },
+    });
+
+    expect(capturePublicLeadMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developmentId: 88,
+        transactionType: 'auction',
+        affordabilityData: expect.objectContaining({
+          qualificationModel: 'bidder_readiness',
+          qualificationCapacityLabel: 'auction bidder capacity',
+          qualificationMonthlyCapacity: 16_400,
+          qualificationRatio: 0.28,
+        }),
+      }),
+    );
+  });
 });
