@@ -26,10 +26,15 @@ type DraftSeed = {
 };
 
 type DraftScenario = {
+  expectedEngineLabel: 'Rental Engine' | 'Auction Engine';
+  expectedEngineOutcome: RegExp;
+  expectedEngineSignal: string;
+  expectedLeadCta: RegExp;
   expectedPriceLabel: string;
   expectedPublicPricing: RegExp;
   expectedReviewPricing: RegExp;
   expectedSearchPricing: RegExp;
+  expectedSubmitCta: RegExp;
   expectedTransactionType: 'rent' | 'auction';
   highlights: string[];
   lane: TransactionLane;
@@ -326,6 +331,15 @@ async function proveDraftListAndResume(page: Page, scenario: DraftScenario, seed
   await expect(page.getByText(scenario.highlights[0]).first()).toBeVisible();
   await expect(page.getByText(scenario.expectedReviewPricing).first()).toBeVisible();
   await expect(page.locator(`img[src="${`https://example.com/dle-${scenario.lane}-wizard-hero.jpg`}"]`).first()).toBeVisible();
+  const engineContext = page.getByLabel(`${scenario.expectedEngineLabel} packaging context`);
+  await expect(engineContext).toBeVisible();
+  await expect(engineContext.getByText(scenario.expectedEngineLabel)).toBeVisible();
+  await expect(engineContext.getByText(scenario.expectedEngineSignal)).toBeVisible();
+  await expect(engineContext).toContainText(scenario.expectedEngineOutcome);
+  await expect(engineContext).toContainText('readiness, publish safety, and public conversion');
+  await page.screenshot({
+    path: `${evidenceDir}/qa-dle-${scenario.lane}-wizard-engine-band.png`,
+  });
   await page.screenshot({
     path: `${evidenceDir}/qa-dle-${scenario.lane}-wizard-resume-hydrated.png`,
   });
@@ -458,7 +472,7 @@ async function provePublicSearchAndLead(page: Page, scenario: DraftScenario, dev
   });
 
   await page.goto(`/development/${development.slug}`);
-  await page.getByRole('button', { name: /Request Callback|Join Waitlist/i }).first().click();
+  await page.getByRole('button', { name: scenario.expectedLeadCta }).first().click();
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
@@ -473,7 +487,7 @@ async function provePublicSearchAndLead(page: Page, scenario: DraftScenario, dev
   await page.screenshot({
     path: `${evidenceDir}/qa-dle-${scenario.lane}-wizard-lead-context.png`,
   });
-  await page.getByRole('button', { name: 'Send Enquiry' }).click();
+  await page.getByRole('button', { name: scenario.expectedSubmitCta }).click();
 
   const db = await getDb();
   expect(db).toBeTruthy();
@@ -531,6 +545,11 @@ test.describe.serial('DLE rental and auction wizard save-resume-publish proof', 
       unitId: 'wizard-rental-unit',
       unitName: 'Wizard Rental Two Bed',
       highlights: ['Lease-ready homes', 'Managed tenant onboarding', 'Furnished option'],
+      expectedEngineLabel: 'Rental Engine',
+      expectedEngineSignal: 'Monthly rent ranges',
+      expectedEngineOutcome: /rent language, unit fit, rental CTAs, and lease lead context/i,
+      expectedLeadCta: /Request Rental Details/i,
+      expectedSubmitCta: /Send Rental Enquiry/i,
       expectedTransactionType: 'rent',
       expectedPriceLabel: 'Rent from',
       expectedPublicPricing: /R\s*18[\s,]500\s*-\s*R\s*21[\s,]000/i,
@@ -544,6 +563,11 @@ test.describe.serial('DLE rental and auction wizard save-resume-publish proof', 
       unitId: 'wizard-auction-unit',
       unitName: 'Wizard Auction Three Bed',
       highlights: ['Bid window scheduled', 'Reserve guidance ready', 'Legal pack prepared'],
+      expectedEngineLabel: 'Auction Engine',
+      expectedEngineSignal: 'Auction window',
+      expectedEngineOutcome: /bid language, auction timing, registration CTAs, and auction lead context/i,
+      expectedLeadCta: /Register Auction Interest|Request Auction Details/i,
+      expectedSubmitCta: /Register Auction Interest|Send Auction Enquiry/i,
       expectedTransactionType: 'auction',
       expectedPriceLabel: 'Starting bid',
       expectedPublicPricing: /R\s*920[\s,]000/i,
@@ -556,6 +580,7 @@ test.describe.serial('DLE rental and auction wizard save-resume-publish proof', 
     test(`proves ${scenario.lane} wizard draft resume, manual save, publish, public output, search, and lead context`, async ({
       page,
     }) => {
+      test.setTimeout(120_000);
       const suffix = `${scenario.lane}-${Date.now()}`;
       const seed = await seedDeveloperAndDraft(
         {

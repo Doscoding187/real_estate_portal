@@ -5754,3 +5754,52 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `test(dle): prove auction operating review lanes`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-12 - Wizard Engine Band Browser Proof
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-prove that Rental and Auction saved-draft resume flows show the transaction-engine
+guidance band in the real wizard shell before publish, then continue through manual save, publish,
+public merchandising, search, and transaction-native lead capture.
+Files changed:
+- e2e/dle/rental-auction-wizard-save-publish.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-engine-band.png
+- docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-engine-band.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-wizard-save-publish.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 2 tests after rerunning outside the restricted sandbox so Chromium could launch.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Rental saved draft resume shows `Rental Engine`, `Monthly rent ranges`, rental public-output
+  language, and the `review_publish` packaging focus before publish.
+- Auction saved draft resume shows `Auction Engine`, `Auction window`, auction public-output
+  language, and the `review_publish` packaging focus before publish.
+- The same browser run still verifies manual Save Draft, canonical draft data, publish, public
+  page, search card, unit-level lead dialog context, transaction-native lead submit labels, and DB
+  lead context for both lanes.
+Guardrails:
+- No app runtime behavior, schema, migration, route, save, publish, lead, distribution, or
+  operating mutation was changed.
+- The spec now follows the current transaction-native public CTA labels:
+  `Request Rental Details` and `Register Auction Interest` / `Request Auction Details`.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes were not staged.
+Notes:
+- The first browser run exposed stale generic lead CTA selectors after the product UI had already
+  moved to transaction-native labels. The spec was tightened to assert the current labels rather
+  than preserving generic `Request Callback` / `Send Enquiry` wording.
+- The full browser path now has a 120-second per-test timeout because each lane covers draft
+  resume, manual save, publish, public page, search, lead dialog, lead submission, and DB readback.
+Remaining risks:
+- Sale engine-band browser proof is still component-level only in this slice. Rental and Auction
+  were prioritized because they needed parity before broader UI upgrades.
+Next recommended slice:
+- Add Sale browser proof for the wizard engine band if we want all three lanes browser-proven, or
+  move to the next product gap: live public-preview feedback for identity, highlights, and media.
+Commit hash/tag: This entry will be included in
+`test(dle): prove wizard engine band`.
+Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.

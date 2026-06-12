@@ -268,6 +268,23 @@ This confirms the new public-detail merchandising section survives the real back
 approval, route rendering, browser-visible text path, and a mobile viewport fit check for the two
 transaction lanes that needed to earn more proof.
 
+## Fourteenth Product-Visibility Slice
+
+Browser-proof the wizard transaction-engine guidance band for Rental and Auction draft resume.
+
+The browser proof now resumes real saved Rental and Auction canonical drafts through
+`/developer/drafts`, then verifies the active wizard shell shows the correct engine guidance before
+publish:
+
+- Rental shows `Rental Engine`, monthly-rent signals, rental public-output language, and the
+  review/publish packaging focus;
+- Auction shows `Auction Engine`, auction-window signals, auction public-output language, and the
+  review/publish packaging focus.
+
+The same browser run continues through manual save, publish, public page, search card, and
+transaction-native lead capture. This closes the previous evidence gap where the engine band was
+component-proven but not yet proven in the real draft-resume browser path.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -287,7 +304,9 @@ transaction lanes that needed to earn more proof.
 
 ## Evidence To Attach Over Time
 
-- Component proof that Sale, Rental, and Auction show distinct wizard engine context.
-- Browser proof that active draft/resume flows render the correct engine band.
+- Component proof that Sale, Rental, and Auction show distinct wizard engine context. Status:
+  complete for `WizardEngine`.
+- Browser proof that active Rental and Auction draft/resume flows render the correct engine band.
+  Status: complete for saved canonical draft resume.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
