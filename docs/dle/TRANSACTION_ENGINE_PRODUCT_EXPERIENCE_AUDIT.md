@@ -285,6 +285,21 @@ The same browser run continues through manual save, publish, public page, search
 transaction-native lead capture. This closes the previous evidence gap where the engine band was
 component-proven but not yet proven in the real draft-resume browser path.
 
+## Fifteenth Product-Visibility Slice
+
+Browser-proof the wizard transaction-engine guidance band for Sale draft resume.
+
+The browser proof now seeds a real saved Sale canonical draft, resumes it through
+`/developer/drafts`, and verifies the active wizard shell shows:
+
+- `Sale Engine` packaging context;
+- sale price bands, buyer costs, and inventory signals;
+- sale public-output language for price ranges, unit cards, buyer CTAs, and purchase lead context;
+- the `review_publish` packaging focus for readiness, publish safety, and public conversion.
+
+This closes the remaining Sale evidence gap for the wizard engine band, bringing browser-level
+proof across Sale, Rental, and Auction resume flows before the next UI/product upgrade slice.
+
 ## Remaining Product Gaps
 
 - Add live public-preview feedback for identity, highlights, and media.
@@ -306,7 +321,7 @@ component-proven but not yet proven in the real draft-resume browser path.
 
 - Component proof that Sale, Rental, and Auction show distinct wizard engine context. Status:
   complete for `WizardEngine`.
-- Browser proof that active Rental and Auction draft/resume flows render the correct engine band.
-  Status: complete for saved canonical draft resume.
+- Browser proof that active Sale, Rental, and Auction draft/resume flows render the correct engine
+  band. Status: complete for saved canonical draft resume.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

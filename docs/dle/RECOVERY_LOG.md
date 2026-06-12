@@ -5803,3 +5803,42 @@ Next recommended slice:
 Commit hash/tag: This entry will be included in
 `test(dle): prove wizard engine band`.
 Uncommitted reason, if any: None. Slice will be committed after final hygiene checks.
+
+## 2026-06-12 - Sale Wizard Engine Band Browser Proof
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Browser-prove that a saved Sale canonical draft resumes into the real wizard shell with the
+Sale Engine guidance band visible before the next UI/product upgrade slice.
+Files changed:
+- e2e/dle/sale-wizard-engine-band.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-12/qa-dle-sale-wizard-engine-band.png
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/sale-wizard-engine-band.spec.ts --project="Desktop Chrome" --workers=1`
+  passed with 1 test after rerunning outside the restricted sandbox so Chromium could launch.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- A seeded Sale canonical draft appears in `/developer/drafts` with one unit type.
+- Resuming the saved draft lands on `/developer/create-development?draftId=...` at the
+  review/publish shell with `Publishing Controls`, `Save Draft`, and enabled `Publish Listing`.
+- The resumed wizard shows the saved sale identity, sale unit, highlight, sale price, and hero
+  media.
+- The active wizard shell renders `Sale Engine packaging context` with sale price bands, buyer
+  costs, sale public-output language, and the `readiness, publish safety, and public conversion`
+  step focus.
+Guardrails:
+- No app runtime behavior, schema, migration, route, save, publish, lead, distribution, or
+  operating mutation is intended in this slice.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- This is a narrow saved-draft resume proof. It does not re-run Sale publish/public/search/lead
+  proof, which was already handled in prior Sale flow slices.
+Next recommended slice:
+- If this proof passes, move to the next product gap: live public-preview feedback for identity,
+  highlights, and media.
+Commit hash/tag: Included in `test(dle): prove sale wizard engine band`.
+Uncommitted reason, if any: None.
