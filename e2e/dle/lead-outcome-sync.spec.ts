@@ -620,6 +620,15 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     await expect(page.getByTestId(`dle-lead-evidence-checklist-${rentalSeed.leadId}`)).toContainText(
       'Proof of income',
     );
+    await expect(page.getByTestId(`dle-lead-evidence-readiness-${rentalSeed.leadId}`)).toContainText(
+      'Rental readiness model',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-readiness-${rentalSeed.leadId}`)).toContainText(
+      'Manual lease review required',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-readiness-${rentalSeed.leadId}`)).toContainText(
+      'Do not mark inventory as let or distribution-ready',
+    );
     await page.getByTestId(`dle-lead-prepare-evidence-note-${rentalSeed.leadId}`).click();
     await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Rental evidence checklist review/);
     await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Decision: pending manual review\./);
@@ -666,6 +675,15 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     );
     await expect(page.getByTestId(`dle-lead-evidence-checklist-${auctionSeed.leadId}`)).toContainText(
       'Proof of funds',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-readiness-${auctionSeed.leadId}`)).toContainText(
+      'Auction readiness model',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-readiness-${auctionSeed.leadId}`)).toContainText(
+      'Manual bidder review required',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-readiness-${auctionSeed.leadId}`)).toContainText(
+      'Do not treat the bidder as registered or funds-ready',
     );
     await page.getByTestId(`dle-lead-prepare-evidence-note-${auctionSeed.leadId}`).click();
     await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Auction evidence checklist review/);

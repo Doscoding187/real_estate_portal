@@ -11,6 +11,16 @@ export type LeadEvidenceChecklist = {
   items: LeadEvidenceChecklistItem[];
 };
 
+export type LeadEvidenceReadinessSummary = {
+  title: string;
+  statusLabel: string;
+  summary: string;
+  guardrail: string;
+  captureCount: number;
+  manualReviewCount: number;
+  optionalCount: number;
+};
+
 const STATUS_ORDER: Record<LeadEvidenceChecklistItem['status'], number> = {
   capture: 0,
   manual_review: 1,
@@ -113,6 +123,52 @@ export function getLeadEvidenceStatusLabel(status: LeadEvidenceChecklistItem['st
   if (status === 'manual_review') return 'Manual review';
   if (status === 'optional') return 'Optional';
   return 'Capture';
+}
+
+export function getLeadEvidenceReadinessSummary(
+  transactionType: LeadTransactionType,
+): LeadEvidenceReadinessSummary {
+  const checklist = getLeadEvidenceChecklist(transactionType);
+  const captureCount = checklist.items.filter(item => item.status === 'capture').length;
+  const manualReviewCount = checklist.items.filter(item => item.status === 'manual_review').length;
+  const optionalCount = checklist.items.filter(item => item.status === 'optional').length;
+
+  if (transactionType === 'rent') {
+    return {
+      title: 'Rental readiness model',
+      statusLabel: 'Manual lease review required',
+      summary: `${captureCount} rental evidence items to capture before lease readiness can be reviewed.`,
+      guardrail:
+        'Do not mark inventory as let or distribution-ready until proof of income, deposit readiness, and lease review are manually accepted.',
+      captureCount,
+      manualReviewCount,
+      optionalCount,
+    };
+  }
+
+  if (transactionType === 'auction') {
+    return {
+      title: 'Auction readiness model',
+      statusLabel: 'Manual bidder review required',
+      summary: `${captureCount} bidder evidence items to capture before auction readiness can be reviewed.`,
+      guardrail:
+        'Do not treat the bidder as registered or funds-ready until legal-pack access, proof of funds, and registration terms are manually accepted.',
+      captureCount,
+      manualReviewCount,
+      optionalCount,
+    };
+  }
+
+  return {
+    title: 'Sale readiness model',
+    statusLabel: 'Manual sale review required',
+    summary: `${captureCount} sale evidence items to capture before sale completion can be reviewed.`,
+    guardrail:
+      'Do not mark inventory as sold or distribution-ready until finance path, buyer intent, and completion proof are manually accepted.',
+    captureCount,
+    manualReviewCount,
+    optionalCount,
+  };
 }
 
 export function getLeadEvidenceReviewNote(transactionType: LeadTransactionType): string {

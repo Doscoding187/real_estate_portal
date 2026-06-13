@@ -551,6 +551,28 @@ now both persisted and operator-visible. It is still not a structured evidence r
 not upload documents, does not mark checklist items complete, and does not automate Rental lease
 review or Auction bidder readiness.
 
+## Thirtieth Product-Visibility Slice
+
+Expose transaction-specific evidence readiness models in the lead detail panel.
+
+The evidence checklist now includes a structured readiness summary selected by transaction lane:
+
+- Sale shows a Sale readiness model with manual sale review required before inventory is treated as
+  sold or distribution-ready;
+- Rental shows a Rental readiness model with manual lease review required before inventory is
+  treated as let or distribution-ready;
+- Auction shows an Auction readiness model with manual bidder review required before the bidder is
+  treated as registered or funds-ready.
+
+The summary counts capture, manual-review, and optional evidence items, then states the operating
+guardrail in plain language. Focused browser proof verifies the Rental and Auction readiness model
+copy in the lead detail panel. This improves the operating layer from a flat checklist into a
+transaction-specific review model while still avoiding premature readiness automation.
+
+This is not a persisted document checklist. It does not upload documents, mark evidence complete,
+approve leases, register bidders, verify proof of funds, move lead stages, or enable distribution
+reward automation.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -568,8 +590,9 @@ review or Auction bidder readiness.
   Qualification model visibility, transaction-aware lead stage/action labels, stage guidance, and
   evidence checklist prompts are now present in the lead center. Evidence review can now be captured
   as lead activity notes, read back in the lead timeline, and browser-proven for Rental/Auction
-  panels, but sold/let/auction outcomes, pricing adjustments, release phases, persisted structured
-  evidence capture, and deeper dashboards remain future.
+  panels. Evidence readiness is now summarized as a transaction-specific manual review model, but
+  sold/let/auction outcomes, pricing adjustments, release phases, persisted structured evidence
+  capture, and deeper dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -610,5 +633,8 @@ review or Auction bidder readiness.
   `lead-outcome-sync` proof.
 - Browser proof that saved Rental evidence review activity reads back in the lead detail timeline
   after reload. Status: complete for focused `lead-outcome-sync` proof.
+- Component and browser proof that Rental/Auction evidence readiness summaries are
+  transaction-specific and do not imply automatic lease/bidder approval. Status: complete for
+  `leadEvidenceChecklist` helper tests and focused `lead-outcome-sync` proof.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

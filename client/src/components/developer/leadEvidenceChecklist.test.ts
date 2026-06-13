@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getLeadEvidenceChecklist,
+  getLeadEvidenceReadinessSummary,
   getLeadEvidenceReviewNote,
   getLeadEvidenceStatusLabel,
 } from './leadEvidenceChecklist';
@@ -64,5 +65,31 @@ describe('lead evidence checklist', () => {
         'Decision: pending manual review.',
       ].join('\n'),
     );
+  });
+
+  it('summarizes rental evidence as a manual lease readiness model', () => {
+    expect(getLeadEvidenceReadinessSummary('rent')).toEqual({
+      title: 'Rental readiness model',
+      statusLabel: 'Manual lease review required',
+      summary: '3 rental evidence items to capture before lease readiness can be reviewed.',
+      guardrail:
+        'Do not mark inventory as let or distribution-ready until proof of income, deposit readiness, and lease review are manually accepted.',
+      captureCount: 3,
+      manualReviewCount: 1,
+      optionalCount: 0,
+    });
+  });
+
+  it('summarizes auction evidence as a manual bidder readiness model', () => {
+    expect(getLeadEvidenceReadinessSummary('auction')).toEqual({
+      title: 'Auction readiness model',
+      statusLabel: 'Manual bidder review required',
+      summary: '3 bidder evidence items to capture before auction readiness can be reviewed.',
+      guardrail:
+        'Do not treat the bidder as registered or funds-ready until legal-pack access, proof of funds, and registration terms are manually accepted.',
+      captureCount: 3,
+      manualReviewCount: 1,
+      optionalCount: 0,
+    });
   });
 });

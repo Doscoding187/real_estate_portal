@@ -37,6 +37,7 @@ import {
 import { getLeadStageGuidance } from './leadStageGuidance';
 import {
   getLeadEvidenceChecklist,
+  getLeadEvidenceReadinessSummary,
   getLeadEvidenceReviewNote,
   getLeadEvidenceStatusLabel,
 } from './leadEvidenceChecklist';
@@ -436,6 +437,9 @@ export default function LeadsManager() {
     : null;
   const selectedLeadEvidenceChecklist = selectedLead
     ? getLeadEvidenceChecklist(selectedLeadTransactionType)
+    : null;
+  const selectedLeadEvidenceReadiness = selectedLead
+    ? getLeadEvidenceReadinessSummary(selectedLeadTransactionType)
     : null;
   const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
   const developmentTransactionById = useMemo(() => {
@@ -929,6 +933,49 @@ export default function LeadsManager() {
                         <Badge variant="outline">Evidence</Badge>
                       </div>
                     </div>
+                    {selectedLeadEvidenceReadiness && (
+                      <div
+                        className="rounded-md bg-amber-50 border border-amber-100 p-2 space-y-2"
+                        data-testid={`dle-lead-evidence-readiness-${selectedLead.id}`}
+                      >
+                        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-amber-950">
+                              {selectedLeadEvidenceReadiness.title}
+                            </p>
+                            <p className="text-xs text-amber-900">
+                              {selectedLeadEvidenceReadiness.summary}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="bg-white">
+                            {selectedLeadEvidenceReadiness.statusLabel}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="rounded bg-white p-2">
+                            <p className="text-muted-foreground">Capture</p>
+                            <p className="font-semibold">
+                              {selectedLeadEvidenceReadiness.captureCount}
+                            </p>
+                          </div>
+                          <div className="rounded bg-white p-2">
+                            <p className="text-muted-foreground">Manual review</p>
+                            <p className="font-semibold">
+                              {selectedLeadEvidenceReadiness.manualReviewCount}
+                            </p>
+                          </div>
+                          <div className="rounded bg-white p-2">
+                            <p className="text-muted-foreground">Optional</p>
+                            <p className="font-semibold">
+                              {selectedLeadEvidenceReadiness.optionalCount}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-amber-950">
+                          {selectedLeadEvidenceReadiness.guardrail}
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                       {selectedLeadEvidenceChecklist.items.map(item => (
                         <div key={item.label} className="rounded-md bg-slate-50 p-2 space-y-1">

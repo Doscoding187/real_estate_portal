@@ -6483,3 +6483,51 @@ Next recommended slice:
   model before coding it.
 Commit hash/tag: Included in `test(dle): read back lead evidence activity`.
 Uncommitted reason, if any: None.
+
+## 2026-06-13 - Lead Evidence Readiness Model Summary
+
+Date: 2026-06-13
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make Rental and Auction lead evidence panels show an explicit transaction-specific readiness
+model without adding premature readiness automation.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- client/src/components/developer/leadEvidenceChecklist.ts
+- client/src/components/developer/leadEvidenceChecklist.test.ts
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts` passed with 7 tests.
+- `pnpm run check` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1 -g "renders transaction evidence panels"` passed with 1 test.
+- `git diff --check` passed.
+Functional proof:
+- `getLeadEvidenceReadinessSummary` now returns transaction-specific readiness model copy, guardrail
+  copy, and evidence status counts.
+- Rental lead detail shows `Rental readiness model`, `Manual lease review required`, and a guardrail
+  that inventory must not be marked let or distribution-ready until evidence is manually accepted.
+- Auction lead detail shows `Auction readiness model`, `Manual bidder review required`, and a
+  guardrail that bidders must not be treated as registered or funds-ready until manual acceptance.
+- Focused browser proof verifies the Rental and Auction readiness model copy inside the evidence
+  panel before preparing evidence notes.
+Guardrails:
+- No schema, migration, persisted document checklist, evidence completion state, readiness
+  transition, lead-stage movement, distribution gate, reward automation, autosave, draft, publish,
+  inventory, or public listing behavior is intended in this slice.
+- The readiness model is a visible operating summary only. It does not approve leases, register
+  bidders, verify proof of funds, mark evidence complete, or mutate inventory.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Rental still needs persisted document capture and lease application review semantics before it can
+  become true structured readiness.
+- Auction still needs persisted bidder registration, legal-pack acceptance, and proof-of-funds
+  workflow semantics before it can become true structured readiness.
+- Dashboard-level evidence review and audit history remain future.
+Next recommended slice:
+- Define or implement the persisted evidence artifact model for Rental/Auction only after agreeing
+  on document roles, acceptance states, and operating ownership, or continue improving dashboard
+  visibility using the current non-mutating readiness summaries.
+Commit hash/tag: Included in `feat(dle): summarize lead evidence readiness`.
+Uncommitted reason, if any: None.
