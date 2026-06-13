@@ -6618,3 +6618,48 @@ Next recommended slice:
   states, ownership, and readback before implementing true evidence completion.
 Commit hash/tag: Included in `feat(dle): show dashboard evidence review demand`.
 Uncommitted reason, if any: None.
+
+## 2026-06-13 - Evidence Artifact Contract
+
+Date: 2026-06-13
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the persisted Rental/Auction evidence artifact contract before implementing evidence
+completion runtime behavior.
+Files changed:
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `test -f docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md` passed.
+- `rg "EVIDENCE_ARTIFACT_CONTRACT|Evidence Artifact Semantics|Thirty-Third Product-Visibility Slice" docs/dle` passed.
+- `git diff --check` passed.
+Functional proof:
+- A dedicated evidence artifact contract now defines DLE-owned proof records for Rental/Auction
+  evidence without collapsing them into Sale or distribution payout assumptions.
+- The contract defines scope, artifact roles, artifact types, statuses, review owners, read models,
+  event/audit requirements, source surfaces, security/privacy requirements, implementation gates,
+  and the first safe runtime slice.
+- The DLE source of truth now states that future Rental/Auction proof-of-income, signed-lease,
+  legal-pack, auction-terms, bidder-registration, proof-of-funds, evidence acceptance, or evidence
+  completion work must follow the contract.
+- The product audit now records the evidence artifact contract as the gate before true structured
+  evidence completion.
+Guardrails:
+- Documentation-only slice. No schema, migration, API, runtime, readiness, stage, inventory,
+  distribution, payout, reward, autosave, draft, publish, or public listing behavior changed.
+- The contract explicitly states that current evidence prompts, activity notes, timeline readback,
+  lead queue labels, and dashboard review-demand counts are operating visibility only.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Runtime evidence artifact persistence still needs implementation.
+- File-upload/storage authorization for sensitive proof documents still needs design before public
+  or external applicant upload.
+- Distribution/admin ownership boundaries must be preserved when artifacts are linked to referral
+  deals or platform review.
+Next recommended slice:
+- Implement the first narrow runtime artifact model for DLE lead-level Rental/Auction evidence
+  request/submission/readback, with status-only audit and no readiness/inventory/stage movement.
+Commit hash/tag: Included in `docs(dle): define evidence artifact contract`.
+Uncommitted reason, if any: None.

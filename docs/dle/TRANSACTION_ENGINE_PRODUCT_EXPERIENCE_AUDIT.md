@@ -611,6 +611,29 @@ inventory, or payout readiness.
 This gives developers dashboard-level operating visibility while preserving the boundary between
 review demand and true structured evidence acceptance.
 
+## Thirty-Third Product-Visibility Slice
+
+Define the persisted evidence artifact contract.
+
+`docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md` now defines the required semantics before DLE moves from
+manual evidence prompts into persisted Rental/Auction evidence completion:
+
+- artifact scope and ownership;
+- Rental and Auction evidence roles;
+- artifact types;
+- requested/submitted/under-review/accepted/rejected/expired/withdrawn statuses;
+- review owners;
+- read-model expectations;
+- audit events;
+- security/privacy requirements;
+- implementation gates and the first safe runtime slice.
+
+This contract formalizes that current evidence checklist panels, activity notes, timeline readback,
+lead queue labels, and dashboard review-demand counts are not document completion. Future runtime
+work must use this contract before claiming proof-of-income, signed-lease, legal-pack,
+auction-terms, bidder-registration, proof-of-funds, lease-readiness, or bidder-readiness
+completion.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -631,7 +654,8 @@ review demand and true structured evidence acceptance.
   panels. Evidence readiness is now summarized as a transaction-specific manual review model, but
   the lead queue and dashboard now surface manual review demand/status. Sold/let/auction outcomes,
   pricing adjustments, release phases, persisted structured evidence capture, and deeper audit
-  dashboards remain future.
+  dashboards remain future. The persisted evidence artifact contract now exists as the required
+  implementation gate for true Rental/Auction evidence completion.
 
 ## Evidence To Attach Over Time
 
@@ -679,5 +703,7 @@ review demand and true structured evidence acceptance.
   readiness before opening lead detail. Status: complete for focused `lead-outcome-sync` proof.
 - Component proof that the Developer Control Tower summarizes Rental/Auction evidence review demand
   without claiming lease/bidder readiness. Status: complete for `Overview` helper tests.
+- Documentation proof that persisted Rental/Auction evidence artifacts have an implementation
+  contract before runtime work. Status: complete for `EVIDENCE_ARTIFACT_CONTRACT.md`.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

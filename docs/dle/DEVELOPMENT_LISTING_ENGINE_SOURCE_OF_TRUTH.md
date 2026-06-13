@@ -184,6 +184,25 @@ Until those semantics are represented in product terms, read models, and tests, 
 outcomes may create review context only. They must not bypass distribution-owned manager review,
 document readiness, milestone checks, or reward/commission guardrails.
 
+## 9B. Evidence Artifact Semantics
+
+Rental lease readiness and Auction bidder readiness require persisted evidence artifacts before the
+system can claim evidence completion.
+
+The current evidence checklist, review notes, lead timeline readback, lead-queue labels, and
+dashboard review-demand counts are operating visibility only. They do not prove that documents were
+submitted, accepted, or sufficient for lease/bidder readiness.
+
+Future work that touches Rental/Auction proof-of-income, deposit readiness, signed lease,
+legal-pack acknowledgement, auction terms, bidder registration, proof-of-funds, evidence
+acceptance, or evidence completion must follow
+`docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md`.
+
+Until that artifact model is implemented and tested, DLE may show review demand and manual-review
+context only. It must not claim lease readiness, bidder registration, proof-of-funds readiness,
+distribution reward readiness, or automatic inventory outcome readiness from evidence prompts or
+activity notes.
+
 ## 10. Autosave Principle
 
 Autosave must stay behind manual save/resume proof.
