@@ -6531,3 +6531,46 @@ Next recommended slice:
   visibility using the current non-mutating readiness summaries.
 Commit hash/tag: Included in `feat(dle): summarize lead evidence readiness`.
 Uncommitted reason, if any: None.
+
+## 2026-06-13 - Lead Queue Evidence Readiness Labels
+
+Date: 2026-06-13
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make Rental and Auction evidence readiness visible in the lead queue, not only inside the
+selected lead detail panel.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm run check` passed.
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts` passed with 7 tests.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1 -g "renders transaction evidence panels"` passed with 1 test.
+- `git diff --check` passed.
+Functional proof:
+- Lead queue rows now show the transaction-specific evidence readiness status from
+  `getLeadEvidenceReadinessSummary`.
+- Rental lead rows show `Manual lease review required`.
+- Auction lead rows show `Manual bidder review required`.
+- Focused browser proof verifies the Rental and Auction queue labels before checking the detail
+  evidence panel.
+Guardrails:
+- No schema, migration, persisted document checklist, evidence completion state, readiness
+  transition, lead-stage movement, distribution gate, reward automation, autosave, draft, publish,
+  inventory, or public listing behavior is intended in this slice.
+- The lead queue label is display-only; it does not approve leases, register bidders, verify proof
+  of funds, mark evidence complete, or mutate inventory.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Rental still needs persisted document capture and lease application review semantics before the
+  queue can show true evidence completion state.
+- Auction still needs persisted bidder registration, legal-pack acceptance, and proof-of-funds
+  workflow semantics before the queue can show true bidder readiness state.
+- Broader dashboard aggregation and audit history remain future.
+Next recommended slice:
+- Either define the persisted evidence artifact model for Rental/Auction or add a non-mutating
+  dashboard aggregate that counts leads needing manual lease/bidder review.
+Commit hash/tag: Included in `feat(dle): show lead queue evidence readiness`.
+Uncommitted reason, if any: None.

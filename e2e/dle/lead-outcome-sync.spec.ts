@@ -611,6 +611,9 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     await expect(page.getByRole('heading', { name: 'Leads Control Center' })).toBeVisible({
       timeout: 15_000,
     });
+    await expect(
+      page.getByTestId(`dle-lead-evidence-readiness-label-${rentalSeed.leadId}`),
+    ).toContainText('Manual lease review required');
     await expect(page.getByTestId(`dle-lead-stage-guidance-${rentalSeed.leadId}`)).toContainText(
       'Complete lease review',
     );
@@ -667,6 +670,9 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       `/developer/leads?developmentId=${auctionSeed.developmentId}&stage=deal&leadId=${auctionSeed.leadId}`,
     );
     await expect(page.getByText(auctionSeed.leadName).first()).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByTestId(`dle-lead-evidence-readiness-label-${auctionSeed.leadId}`),
+    ).toContainText('Manual bidder review required');
     await expect(page.getByTestId(`dle-lead-stage-guidance-${auctionSeed.leadId}`)).toContainText(
       'Manage auction follow-up',
     );

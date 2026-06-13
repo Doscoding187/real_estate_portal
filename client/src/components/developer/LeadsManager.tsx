@@ -747,6 +747,7 @@ export default function LeadsManager() {
                         lead.affordabilityData,
                         leadTransactionType,
                       );
+                      const evidenceReadiness = getLeadEvidenceReadinessSummary(leadTransactionType);
 
                       return (
                         <button
@@ -786,6 +787,12 @@ export default function LeadsManager() {
                                   {qualificationDisplay.modelLabel}
                                 </Badge>
                               )}
+                              <Badge
+                                data-testid={`dle-lead-evidence-readiness-label-${lead.id}`}
+                                variant="outline"
+                              >
+                                {evidenceReadiness.statusLabel}
+                              </Badge>
                             </div>
                           </div>
 

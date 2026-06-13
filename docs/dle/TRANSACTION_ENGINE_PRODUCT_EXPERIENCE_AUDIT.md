@@ -573,6 +573,24 @@ This is not a persisted document checklist. It does not upload documents, mark e
 approve leases, register bidders, verify proof of funds, move lead stages, or enable distribution
 reward automation.
 
+## Thirty-First Product-Visibility Slice
+
+Surface evidence readiness in the lead queue.
+
+The developer lead list now shows the same transaction-specific evidence readiness status used by
+the detail panel:
+
+- Rental lead rows show `Manual lease review required`;
+- Auction lead rows show `Manual bidder review required`;
+- Sale lead rows show `Manual sale review required`.
+
+Focused browser proof verifies the Rental and Auction readiness labels before the operator opens the
+lead detail panel. This makes operating risk visible at the queue level and helps developers triage
+Rental/Auction leads without relying only on generic stage or SLA labels.
+
+This remains display-only. It does not mutate lead stage, inventory, readiness state, distribution
+eligibility, payout/reward state, or evidence completion.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -591,8 +609,9 @@ reward automation.
   evidence checklist prompts are now present in the lead center. Evidence review can now be captured
   as lead activity notes, read back in the lead timeline, and browser-proven for Rental/Auction
   panels. Evidence readiness is now summarized as a transaction-specific manual review model, but
-  sold/let/auction outcomes, pricing adjustments, release phases, persisted structured evidence
-  capture, and deeper dashboards remain future.
+  the lead queue also surfaces the manual review status. Sold/let/auction outcomes, pricing
+  adjustments, release phases, persisted structured evidence capture, and deeper dashboards remain
+  future.
 
 ## Evidence To Attach Over Time
 
@@ -636,5 +655,7 @@ reward automation.
 - Component and browser proof that Rental/Auction evidence readiness summaries are
   transaction-specific and do not imply automatic lease/bidder approval. Status: complete for
   `leadEvidenceChecklist` helper tests and focused `lead-outcome-sync` proof.
+- Browser proof that Rental/Auction lead queue rows show transaction-specific manual evidence
+  readiness before opening lead detail. Status: complete for focused `lead-outcome-sync` proof.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
