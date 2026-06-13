@@ -6574,3 +6574,47 @@ Next recommended slice:
   dashboard aggregate that counts leads needing manual lease/bidder review.
 Commit hash/tag: Included in `feat(dle): show lead queue evidence readiness`.
 Uncommitted reason, if any: None.
+
+## 2026-06-13 - Dashboard Evidence Review Demand Aggregate
+
+Date: 2026-06-13
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make Rental and Auction manual evidence review demand visible in the Developer Control Tower
+without adding persisted evidence acceptance or readiness automation.
+Files changed:
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/Overview.test.ts` passed with 14 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `buildOverviewEvidenceReviewAggregate` now derives a non-mutating review-demand count from active
+  qualified/viewing/offer/deal funnel stages.
+- Rental dashboards show `Leads needing lease evidence review` with
+  `Manual lease review required`.
+- Auction dashboards show `Leads needing bidder evidence review` with
+  `Manual bidder review required`.
+- Overview helper tests prove Rental/Auction language does not claim verified lease readiness,
+  bidder registration, proof-of-funds readiness, or inventory mutation.
+Guardrails:
+- No schema, migration, persisted document checklist, evidence completion state, readiness
+  transition, lead-stage movement, distribution gate, reward automation, autosave, draft, publish,
+  inventory, or public listing behavior is intended in this slice.
+- The dashboard aggregate is review-demand visibility only; it does not approve leases, register
+  bidders, verify proof of funds, mark evidence complete, or mutate inventory.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Rental still needs persisted document capture and lease application review semantics before the
+  dashboard can report true evidence completion state.
+- Auction still needs persisted bidder registration, legal-pack acceptance, and proof-of-funds
+  workflow semantics before the dashboard can report true bidder readiness state.
+- Audit-history and acceptance-state dashboards remain future.
+Next recommended slice:
+- Define the persisted evidence artifact contract for Rental/Auction document roles, acceptance
+  states, ownership, and readback before implementing true evidence completion.
+Commit hash/tag: Included in `feat(dle): show dashboard evidence review demand`.
+Uncommitted reason, if any: None.

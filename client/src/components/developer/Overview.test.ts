@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOverviewEvidenceReviewAggregate,
   buildOverviewOperatingReview,
   buildOverviewOperatingReadiness,
   buildOverviewPricingHealth,
@@ -95,6 +96,53 @@ describe('Developer Overview operating readiness', () => {
 
   it('returns null without a selected development', () => {
     expect(buildOverviewOperatingReadiness({ development: null })).toBeNull();
+  });
+
+  it('summarizes Rental evidence review demand without claiming lease readiness', () => {
+    expect(
+      buildOverviewEvidenceReviewAggregate({
+        development: { name: 'Rental Quarter', transactionType: 'for_rent' },
+        stageCounts: {
+          new: 4,
+          qualified: 2,
+          viewing_scheduled: 1,
+          viewing_completed: 1,
+          offer_made: 1,
+          deal_in_progress: 1,
+          closed_won: 3,
+        },
+      }),
+    ).toMatchObject({
+      title: 'Rental evidence review',
+      statusLabel: 'Manual lease review required',
+      countLabel: 'Leads needing lease evidence review',
+      activeReviewCount: 6,
+      leadStage: 'qualified',
+      guardrail: 'This is not verified lease readiness and does not mark inventory as let.',
+    });
+  });
+
+  it('summarizes Auction evidence review demand without claiming bidder registration', () => {
+    const aggregate = buildOverviewEvidenceReviewAggregate({
+      development: { name: 'Auction Quarter', transactionType: 'auction' },
+      stageCounts: {
+        qualified: 3,
+        viewing_scheduled: 0,
+        viewing_completed: 1,
+        offer_made: 2,
+        deal_in_progress: 1,
+        closed_won: 4,
+      },
+    });
+
+    expect(aggregate).toMatchObject({
+      title: 'Auction evidence review',
+      statusLabel: 'Manual bidder review required',
+      countLabel: 'Leads needing bidder evidence review',
+      activeReviewCount: 7,
+    });
+    expect(aggregate?.help).toContain('legal-pack access');
+    expect(aggregate?.guardrail).toContain('not verified bidder registration');
   });
 
   it('builds Sale pricing health from public mirrors and live unit inventory', () => {

@@ -144,6 +144,62 @@ export function buildOverviewOperatingReadiness(input: {
   };
 }
 
+export function buildOverviewEvidenceReviewAggregate(input: {
+  development?: any | null;
+  stageCounts?: Record<string, any> | null;
+}) {
+  if (!input.development) return null;
+
+  const transactionType = normalizeOverviewTransactionType(input.development.transactionType);
+  const stageCounts = input.stageCounts || {};
+  const activeReviewCount =
+    Number(stageCounts.qualified || 0) +
+    Number(stageCounts.viewing_scheduled || 0) +
+    Number(stageCounts.viewing_completed || 0) +
+    Number(stageCounts.offer_made || 0) +
+    Number(stageCounts.deal_in_progress || 0);
+
+  if (transactionType === 'rent') {
+    return {
+      transactionType,
+      title: 'Rental evidence review',
+      statusLabel: 'Manual lease review required',
+      countLabel: 'Leads needing lease evidence review',
+      activeReviewCount,
+      help:
+        'Counts active rental-fit, viewing, offer, and deal leads where proof of income, deposit readiness, or lease review may still need manual acceptance.',
+      guardrail: 'This is not verified lease readiness and does not mark inventory as let.',
+      leadStage: activeReviewCount > 0 ? 'qualified' : 'deal',
+    };
+  }
+
+  if (transactionType === 'auction') {
+    return {
+      transactionType,
+      title: 'Auction evidence review',
+      statusLabel: 'Manual bidder review required',
+      countLabel: 'Leads needing bidder evidence review',
+      activeReviewCount,
+      help:
+        'Counts active bidder-ready, viewing, offer, and deal leads where legal-pack access, proof of funds, or registration review may still need manual acceptance.',
+      guardrail: 'This is not verified bidder registration or proof-of-funds readiness.',
+      leadStage: activeReviewCount > 0 ? 'qualified' : 'deal',
+    };
+  }
+
+  return {
+    transactionType,
+    title: 'Sale evidence review',
+    statusLabel: 'Manual sale review required',
+    countLabel: 'Leads needing sale evidence review',
+    activeReviewCount,
+    help:
+      'Counts active qualified, viewing, offer, and deal leads where buyer intent, finance path, or completion proof may still need manual acceptance.',
+    guardrail: 'This is not verified sold inventory or payout readiness.',
+    leadStage: activeReviewCount > 0 ? 'qualified' : 'deal',
+  };
+}
+
 function toOverviewPositiveNumber(value: unknown): number | null {
   const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -901,6 +957,10 @@ export default function Overview() {
     distributionSettings,
     distributionSummary,
   });
+  const evidenceReviewAggregate = buildOverviewEvidenceReviewAggregate({
+    development: selectedDevelopment,
+    stageCounts,
+  });
   const operatingEvents = operatingEventsQuery.data?.items || [];
   const operatingReview = useMemo(
     () =>
@@ -1184,7 +1244,7 @@ export default function Overview() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
               <button
                 className="text-left"
                 onClick={() => goToLeads({ view: 'attention' })}
@@ -1248,10 +1308,46 @@ export default function Overview() {
                   {formatNumber(operatingReadiness.referralDealCount)} referral deal(s)
                 </p>
               </div>
+
+              {evidenceReviewAggregate && (
+                <button
+                  className="text-left"
+                  data-testid="dle-overview-evidence-review-aggregate"
+                  onClick={() =>
+                    goToLeads({
+                      view: 'pipeline',
+                      stage: evidenceReviewAggregate.leadStage,
+                    })
+                  }
+                  type="button"
+                >
+                  <div className="h-full rounded-md border border-slate-200 p-3 transition-colors hover:border-amber-300">
+                    <p className="text-xs text-muted-foreground">
+                      {evidenceReviewAggregate.countLabel}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold text-slate-900">
+                      {formatNumber(evidenceReviewAggregate.activeReviewCount)}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-amber-700">
+                      {evidenceReviewAggregate.statusLabel}
+                    </p>
+                  </div>
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between">
-              <p className="text-sm text-slate-600">{operatingReadiness.distributionHelp}</p>
+              <div className="space-y-1">
+                <p className="text-sm text-slate-600">{operatingReadiness.distributionHelp}</p>
+                {evidenceReviewAggregate && (
+                  <p
+                    className="text-xs text-muted-foreground"
+                    data-testid="dle-overview-evidence-review-guardrail"
+                  >
+                    {evidenceReviewAggregate.guardrail}
+                  </p>
+                )}
+              </div>
               <Button variant="outline" onClick={() => goToLeads({ view: 'attention' })}>
                 {operatingReadiness.queueLabel}
               </Button>

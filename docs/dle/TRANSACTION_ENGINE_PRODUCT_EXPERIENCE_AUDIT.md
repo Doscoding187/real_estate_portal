@@ -591,6 +591,26 @@ Rental/Auction leads without relying only on generic stage or SLA labels.
 This remains display-only. It does not mutate lead stage, inventory, readiness state, distribution
 eligibility, payout/reward state, or evidence completion.
 
+## Thirty-Second Product-Visibility Slice
+
+Add dashboard evidence review demand.
+
+The Developer Control Tower Operating Readiness panel now includes a non-mutating evidence review
+aggregate derived from active funnel stages:
+
+- Rental dashboards show `Leads needing lease evidence review` with `Manual lease review required`;
+- Auction dashboards show `Leads needing bidder evidence review` with
+  `Manual bidder review required`;
+- Sale dashboards show `Leads needing sale evidence review` with `Manual sale review required`.
+
+The count uses active qualified/viewing/offer/deal leads as review demand. It explicitly excludes
+closed outcomes and does not claim document completion. The panel also shows a guardrail explaining
+that the count is not verified lease readiness, bidder registration, proof-of-funds readiness, sold
+inventory, or payout readiness.
+
+This gives developers dashboard-level operating visibility while preserving the boundary between
+review demand and true structured evidence acceptance.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -609,9 +629,9 @@ eligibility, payout/reward state, or evidence completion.
   evidence checklist prompts are now present in the lead center. Evidence review can now be captured
   as lead activity notes, read back in the lead timeline, and browser-proven for Rental/Auction
   panels. Evidence readiness is now summarized as a transaction-specific manual review model, but
-  the lead queue also surfaces the manual review status. Sold/let/auction outcomes, pricing
-  adjustments, release phases, persisted structured evidence capture, and deeper dashboards remain
-  future.
+  the lead queue and dashboard now surface manual review demand/status. Sold/let/auction outcomes,
+  pricing adjustments, release phases, persisted structured evidence capture, and deeper audit
+  dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -657,5 +677,7 @@ eligibility, payout/reward state, or evidence completion.
   `leadEvidenceChecklist` helper tests and focused `lead-outcome-sync` proof.
 - Browser proof that Rental/Auction lead queue rows show transaction-specific manual evidence
   readiness before opening lead detail. Status: complete for focused `lead-outcome-sync` proof.
+- Component proof that the Developer Control Tower summarizes Rental/Auction evidence review demand
+  without claiming lease/bidder readiness. Status: complete for `Overview` helper tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
