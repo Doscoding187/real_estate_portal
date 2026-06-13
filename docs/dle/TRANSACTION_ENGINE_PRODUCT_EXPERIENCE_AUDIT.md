@@ -498,6 +498,22 @@ operating proof visible without implying that the proof has already been collect
 not persisted readiness state and does not approve leases, register bidders, verify funds, update
 inventory, or move distribution stages.
 
+## Twenty-Seventh Product-Visibility Slice
+
+Make evidence prompts actionable through lead activity notes.
+
+The evidence checklist can now generate a transaction-specific evidence review note and place it in
+the existing activity log composer:
+
+- Sale notes list buyer intent, finance path, unit context, and sale completion proof;
+- Rental notes list rental fit, proof of income, deposit readiness, and lease review;
+- Auction notes list bidder intent, legal-pack access, proof of funds, and registration review.
+
+The generated note ends with `Decision: pending manual review.` This creates a practical capture
+path using the existing lead activity flow while keeping readiness truthful. It is not a persisted
+document checklist, does not mark checklist items complete, and does not automate readiness,
+distribution, inventory, lease, or bidder-registration state.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -513,9 +529,9 @@ inventory, or move distribution stages.
 - Continue operating-layer surfaces after publish. Sale reserve/release, Rental hold/release,
   Auction registration open/rollback, and Auction time-gated activation are now browser-proven.
   Qualification model visibility, transaction-aware lead stage/action labels, stage guidance, and
-  evidence checklist prompts are now present in the lead center, but sold/let/auction outcomes,
-  pricing adjustments, release phases, persisted evidence capture, and deeper dashboards remain
-  future.
+  evidence checklist prompts are now present in the lead center. Evidence review can now be captured
+  as lead activity notes, but sold/let/auction outcomes, pricing adjustments, release phases,
+  persisted structured evidence capture, and deeper dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -548,5 +564,8 @@ inventory, or move distribution stages.
   Rental, and Auction guidance helpers.
 - Component-helper proof that lead evidence checklist prompts are transaction-aware. Status:
   complete for Sale, Rental, and Auction checklist helpers.
+- Component-helper proof that evidence checklist prompts can generate transaction-aware review
+  notes for the activity log. Status: complete for Auction note generation and checklist helper
+  coverage.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

@@ -37,6 +37,7 @@ import {
 import { getLeadStageGuidance } from './leadStageGuidance';
 import {
   getLeadEvidenceChecklist,
+  getLeadEvidenceReviewNote,
   getLeadEvidenceStatusLabel,
 } from './leadEvidenceChecklist';
 
@@ -545,6 +546,11 @@ export default function LeadsManager() {
     setNextActionAtLocal(toLocalDateTimeInput(new Date(Date.now() + hoursFromNow * 60 * 60 * 1000)));
   };
 
+  const prepareEvidenceReviewNote = () => {
+    setActivityType('note');
+    setActivityDescription(getLeadEvidenceReviewNote(selectedLeadTransactionType));
+  };
+
   const timeline = useMemo(() => {
     if (!selectedLead?.notes) return [];
     return selectedLead.notes
@@ -889,7 +895,17 @@ export default function LeadsManager() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-medium">{selectedLeadEvidenceChecklist.title}</p>
-                      <Badge variant="outline">Evidence</Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={prepareEvidenceReviewNote}
+                          data-testid={`dle-lead-prepare-evidence-note-${selectedLead.id}`}
+                        >
+                          Prepare note
+                        </Button>
+                        <Badge variant="outline">Evidence</Badge>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                       {selectedLeadEvidenceChecklist.items.map(item => (

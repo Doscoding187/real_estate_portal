@@ -114,3 +114,12 @@ export function getLeadEvidenceStatusLabel(status: LeadEvidenceChecklistItem['st
   if (status === 'optional') return 'Optional';
   return 'Capture';
 }
+
+export function getLeadEvidenceReviewNote(transactionType: LeadTransactionType): string {
+  const checklist = getLeadEvidenceChecklist(transactionType);
+  const lines = checklist.items.map(item => {
+    return `- ${item.label} (${getLeadEvidenceStatusLabel(item.status)}): ${item.description}`;
+  });
+
+  return [`${checklist.title} review`, ...lines, 'Decision: pending manual review.'].join('\n');
+}

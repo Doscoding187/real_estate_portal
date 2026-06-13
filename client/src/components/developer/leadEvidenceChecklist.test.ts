@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getLeadEvidenceChecklist,
+  getLeadEvidenceReviewNote,
   getLeadEvidenceStatusLabel,
 } from './leadEvidenceChecklist';
 
@@ -50,5 +51,18 @@ describe('lead evidence checklist', () => {
     expect(getLeadEvidenceStatusLabel('capture')).toBe('Capture');
     expect(getLeadEvidenceStatusLabel('manual_review')).toBe('Manual review');
     expect(getLeadEvidenceStatusLabel('optional')).toBe('Optional');
+  });
+
+  it('builds an evidence review note without claiming readiness is complete', () => {
+    expect(getLeadEvidenceReviewNote('auction')).toBe(
+      [
+        'Auction evidence checklist review',
+        '- Bidder intent (Capture): Target lot/unit, intended bid range, and auction attendance path.',
+        '- Legal-pack access (Capture): Confirm the bidder has received or reviewed the required legal pack.',
+        '- Proof of funds (Capture): Cash contribution, finance route, or funds evidence before bidder readiness.',
+        '- Registration review (Manual review): Manual registration and auction-term acceptance before calling the bidder ready.',
+        'Decision: pending manual review.',
+      ].join('\n'),
+    );
   });
 });

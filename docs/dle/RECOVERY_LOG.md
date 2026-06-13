@@ -6345,3 +6345,46 @@ Next recommended slice:
   lead operating panels before moving toward automation.
 Commit hash/tag: Included in `feat(dle): show lead evidence checklist`.
 Uncommitted reason, if any: None.
+
+## 2026-06-12 - Lead Evidence Review Activity Notes
+
+Date: 2026-06-12
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Let operators turn transaction-specific evidence prompts into a lead activity note without
+introducing premature readiness automation.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- client/src/components/developer/leadEvidenceChecklist.ts
+- client/src/components/developer/leadEvidenceChecklist.test.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts` passed with 5 tests.
+- `pnpm vitest run client/src/components/developer/leadStageGuidance.test.ts` passed with 4 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The Evidence checklist panel now includes a Prepare note action.
+- Prepare note sets the activity type to `note` and pre-fills the activity description with a
+  transaction-specific evidence review template.
+- The generated note lists each evidence item with its Capture or Manual review status and ends
+  with `Decision: pending manual review.`
+- Helper tests cover the generated Auction evidence review note and status-label rendering.
+Guardrails:
+- No schema, migration, structured evidence persistence, readiness state, lead transition, SLA rule,
+  distribution gate, outcome sync, autosave, draft, publish, or inventory update behavior is
+  intended in this slice.
+- The generated note uses the existing activity log path. It does not mark evidence complete,
+  approve leases, register bidders, verify funds, or automate readiness movement.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  test-results changes must not be staged.
+Remaining risks:
+- Rental still needs persisted document capture and lease application workflow semantics.
+- Auction still needs persisted bidder registration, legal-pack acceptance, and proof-of-funds
+  workflow semantics.
+- Deeper dashboards and operating audit history remain future.
+Next recommended slice:
+- Create browser proof for the lead operating panels, or move to a structured evidence/readiness
+  model once the manual note flow is proven enough for the product direction.
+Commit hash/tag: Included in `feat(dle): prepare evidence review notes`.
+Uncommitted reason, if any: None.
