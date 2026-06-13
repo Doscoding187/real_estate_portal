@@ -6388,3 +6388,51 @@ Next recommended slice:
   model once the manual note flow is proven enough for the product direction.
 Commit hash/tag: Included in `feat(dle): prepare evidence review notes`.
 Uncommitted reason, if any: None.
+
+## 2026-06-13 - Lead Evidence Panel Browser Proof
+
+Date: 2026-06-13
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove the Rental/Auction lead operating evidence panels in browser and keep the activity-note
+capture path working against the local schema.
+Files changed:
+- e2e/dle/lead-outcome-sync.spec.ts
+- server/services/developerFunnelService.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1 -g "renders transaction evidence panels"` passed with 1 test.
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts` passed with 5 tests.
+- `pnpm vitest run server/services/__tests__/developerFunnelService.contract.test.ts` passed with 8 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- Rental lead detail renders Stage Guidance and Rental evidence checklist in browser.
+- Rental Prepare note fills the activity composer and saves through the existing activity log path.
+- Database proof verifies a saved `note` activity containing Rental evidence review and Proof of
+  income language.
+- Auction lead detail renders Stage Guidance and Auction evidence checklist in browser.
+- Auction Prepare note fills the activity composer with Auction evidence checklist, Registration
+  review, and pending-manual-review language.
+- Existing lead outcome browser assertions now expect transaction-aware stage labels instead of raw
+  canonical stage IDs.
+- `logDeveloperLeadActivity`, lead transition activity, and next-action activity now write to
+  local `lead_activities` via compatibility SQL using the actual `activityType` column.
+Guardrails:
+- No schema, migration, structured evidence persistence, readiness state, transition graph, SLA rule,
+  distribution gate, outcome sync semantics, autosave, draft, publish, or inventory update behavior
+  is intended in this slice.
+- The activity compatibility insert preserves the manual activity path; it does not automate
+  readiness movement or claim evidence completion.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Rental still needs persisted document capture and lease application workflow semantics.
+- Auction still needs persisted bidder registration, legal-pack acceptance, and proof-of-funds
+  workflow semantics.
+- Deeper dashboards and operating audit history remain future.
+Next recommended slice:
+- Move toward a structured evidence/readiness model only after deciding the manual note flow is
+  insufficient, or add dashboard/readback proof for saved lead activity notes.
+Commit hash/tag: Included in `test(dle): prove lead evidence panels`.
+Uncommitted reason, if any: None.

@@ -126,6 +126,17 @@ function appendOwnerOverride(existing: string | null | undefined, ownerType: Lea
   return appendNote(existing, `owner_override:${ownerType}`);
 }
 
+async function insertLeadActivity(params: {
+  leadId: number;
+  type: 'note' | 'call' | 'email' | 'meeting' | 'status_change';
+  description: string | null;
+}) {
+  await db.execute(sql`
+    insert into lead_activities (leadId, activityType, description)
+    values (${params.leadId}, ${params.type}, ${params.description})
+  `);
+}
+
 function parseJsonObject(value: unknown): Record<string, any> {
   if (!value) return {};
   if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -746,9 +757,8 @@ export async function transitionDeveloperLead(params: TransitionParams) {
 
   await db.update(leads).set(updateSet).where(eq(leads.id, params.leadId));
 
-  await db.insert(leadActivities).values({
+  await insertLeadActivity({
     leadId: params.leadId,
-    userId: params.userId,
     type: 'status_change',
     description: `Transitioned ${fromStage} -> ${toStage}`,
   });
@@ -770,16 +780,14 @@ export async function transitionDeveloperLead(params: TransitionParams) {
 
 export async function logDeveloperLeadActivity(params: ActivityParams) {
   const row = await getDeveloperLeadRow(params.developerId, params.leadId);
-  const dbType: (typeof leadActivities.type.enumValues)[number] =
-    params.type === 'whatsapp' ? 'note' : params.type;
+  const dbType = params.type === 'whatsapp' ? 'note' : params.type;
   const description =
     params.type === 'whatsapp'
       ? `[whatsapp] ${params.description || 'WhatsApp follow-up'}`
       : params.description || null;
 
-  await db.insert(leadActivities).values({
+  await insertLeadActivity({
     leadId: params.leadId,
-    userId: params.userId,
     type: dbType,
     description,
   });
@@ -823,9 +831,8 @@ export async function setDeveloperLeadNextAction(params: NextActionParams) {
     })
     .where(eq(leads.id, params.leadId));
 
-  await db.insert(leadActivities).values({
+  await insertLeadActivity({
     leadId: params.leadId,
-    userId: params.userId,
     type: 'note',
     description: `Next action set: ${params.type} @ ${params.at}`,
   });

@@ -514,6 +514,25 @@ path using the existing lead activity flow while keeping readiness truthful. It 
 document checklist, does not mark checklist items complete, and does not automate readiness,
 distribution, inventory, lease, or bidder-registration state.
 
+## Twenty-Eighth Product-Visibility Slice
+
+Browser-proof lead evidence panels and activity-note capture.
+
+The lead operating panels now have browser proof through `e2e/dle/lead-outcome-sync.spec.ts`:
+
+- Rental lead detail renders Stage Guidance and the Rental evidence checklist;
+- Rental Prepare note fills the activity composer and saves through the existing lead activity path;
+- The saved activity is verified in the database as a note containing the Rental evidence review;
+- Auction lead detail renders Stage Guidance and the Auction evidence checklist;
+- Auction Prepare note fills the activity composer with legal-pack, proof-of-funds, registration
+  review, and pending-manual-review language.
+
+The browser proof exposed a real local schema mismatch: the developer funnel service wrote activity
+rows with `userId`/`type`, while the local `lead_activities` table expects `activityType`. The
+service now writes lead activities through a compatibility insert against the actual table shape.
+This preserves the manual activity path needed for operating evidence without adding readiness
+automation.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -530,8 +549,9 @@ distribution, inventory, lease, or bidder-registration state.
   Auction registration open/rollback, and Auction time-gated activation are now browser-proven.
   Qualification model visibility, transaction-aware lead stage/action labels, stage guidance, and
   evidence checklist prompts are now present in the lead center. Evidence review can now be captured
-  as lead activity notes, but sold/let/auction outcomes, pricing adjustments, release phases,
-  persisted structured evidence capture, and deeper dashboards remain future.
+  as lead activity notes and browser-proven for Rental/Auction panels, but sold/let/auction
+  outcomes, pricing adjustments, release phases, persisted structured evidence capture, and deeper
+  dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -567,5 +587,8 @@ distribution, inventory, lease, or bidder-registration state.
 - Component-helper proof that evidence checklist prompts can generate transaction-aware review
   notes for the activity log. Status: complete for Auction note generation and checklist helper
   coverage.
+- Browser proof that Rental/Auction lead evidence panels render and evidence review notes can be
+  prepared/saved through the existing activity path. Status: complete for focused
+  `lead-outcome-sync` proof.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

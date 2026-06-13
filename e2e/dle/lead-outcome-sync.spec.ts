@@ -475,7 +475,7 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       `/developer/leads?developmentId=${seed.developmentId}&stage=won&leadId=${seed.wonLeadId}`,
     );
     await expect(page.getByText(seed.wonLeadName).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('closed_won').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-stage-detail-${seed.wonLeadId}`)).toHaveText('Sold');
     await expect(page.getByTestId(`dle-lead-outcome-label-${seed.wonLeadId}`)).toHaveText('Sold');
     await expect(page.getByTestId(`dle-lead-outcome-detail-${seed.wonLeadId}`)).toHaveText('Sold');
     await page.screenshot({
@@ -579,7 +579,7 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       `/developer/leads?developmentId=${rentalSeed.developmentId}&stage=won&leadId=${rentalSeed.leadId}`,
     );
     await expect(page.getByText(rentalSeed.leadName).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('closed_won').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-stage-detail-${rentalSeed.leadId}`)).toHaveText('Let');
     await expect(page.getByTestId(`dle-lead-outcome-label-${rentalSeed.leadId}`)).toHaveText(
       'Lease signed / Let',
     );
@@ -588,6 +588,80 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     );
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-lead-outcome-sync-rental-let.png`,
+    });
+  });
+
+  test('renders transaction evidence panels and prepares review activity notes', async ({ page }) => {
+    const rentalSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const rentalSeed = await seedRentalLeadOutcomeSyncDevelopment(rentalSuffix);
+    cleanupSeeds.push(rentalSeed);
+    const auctionSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const auctionSeed = await seedAuctionLeadOutcomeSyncDevelopment(
+      auctionSuffix,
+      'Auction Evidence Panel Lead',
+    );
+    cleanupSeeds.push(auctionSeed);
+    const db = await getDb();
+    expect(db).toBeTruthy();
+
+    await loginAsSeededDeveloper(page, rentalSeed);
+    await page.goto(
+      `/developer/leads?developmentId=${rentalSeed.developmentId}&stage=deal&leadId=${rentalSeed.leadId}`,
+    );
+    await expect(page.getByRole('heading', { name: 'Leads Control Center' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId(`dle-lead-stage-guidance-${rentalSeed.leadId}`)).toContainText(
+      'Complete lease review',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-checklist-${rentalSeed.leadId}`)).toContainText(
+      'Rental evidence checklist',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-checklist-${rentalSeed.leadId}`)).toContainText(
+      'Proof of income',
+    );
+    await page.getByTestId(`dle-lead-prepare-evidence-note-${rentalSeed.leadId}`).click();
+    await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Rental evidence checklist review/);
+    await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Decision: pending manual review\./);
+    await page.getByRole('button', { name: 'Save Activity' }).click();
+    await expect(page.getByText('Activity logged.')).toBeVisible({ timeout: 15_000 });
+
+    const [rentalActivityRows] = await db!.execute(sql`
+      select leadId, activityType, description
+      from lead_activities
+      where leadId = ${rentalSeed.leadId}
+    `);
+    const rentalActivities = Array.isArray(rentalActivityRows) ? rentalActivityRows : [];
+    expect(rentalActivities).toHaveLength(1);
+    expect((rentalActivities[0] as any).activityType).toBe('note');
+    expect((rentalActivities[0] as any).description).toContain(
+      'Rental evidence checklist review',
+    );
+    expect((rentalActivities[0] as any).description).toContain('Proof of income');
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-lead-evidence-panel-rental-note.png`,
+    });
+
+    await loginAsSeededDeveloper(page, auctionSeed);
+    await page.goto(
+      `/developer/leads?developmentId=${auctionSeed.developmentId}&stage=deal&leadId=${auctionSeed.leadId}`,
+    );
+    await expect(page.getByText(auctionSeed.leadName).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-stage-guidance-${auctionSeed.leadId}`)).toContainText(
+      'Manage auction follow-up',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-checklist-${auctionSeed.leadId}`)).toContainText(
+      'Auction evidence checklist',
+    );
+    await expect(page.getByTestId(`dle-lead-evidence-checklist-${auctionSeed.leadId}`)).toContainText(
+      'Proof of funds',
+    );
+    await page.getByTestId(`dle-lead-prepare-evidence-note-${auctionSeed.leadId}`).click();
+    await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Auction evidence checklist review/);
+    await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Registration review/);
+    await expect(page.getByPlaceholder('What happened?')).toHaveValue(/Decision: pending manual review\./);
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-lead-evidence-panel-auction-note.png`,
     });
   });
 
@@ -737,7 +811,9 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     await expect(page.getByText(withdrawnSeed.leadName).first()).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText('closed_lost').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`dle-lead-stage-detail-${withdrawnSeed.leadId}`)).toHaveText(
+      'Auction follow-up closed',
+    );
     await expect(page.getByTestId(`dle-lead-outcome-label-${withdrawnSeed.leadId}`)).toHaveText(
       'Withdrawn follow-up',
     );
