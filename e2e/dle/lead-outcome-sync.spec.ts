@@ -638,6 +638,17 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       'Rental evidence checklist review',
     );
     expect((rentalActivities[0] as any).description).toContain('Proof of income');
+    await page.reload();
+    await expect(page.getByText(rentalSeed.leadName).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Rental evidence checklist review')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId(`dle-lead-activity-timeline-${rentalSeed.leadId}`)).toContainText(
+      'Proof of income',
+    );
+    await expect(page.getByTestId(`dle-lead-activity-timeline-${rentalSeed.leadId}`)).toContainText(
+      'Income/employment evidence',
+    );
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-lead-evidence-panel-rental-note.png`,
     });

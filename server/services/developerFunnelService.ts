@@ -31,6 +31,13 @@ type LeadOutcomeReadback = {
   source: 'development_operating_events';
 };
 
+type LeadActivityReadback = {
+  id: number;
+  type: string;
+  description: string | null;
+  createdAt: string | null;
+};
+
 type FunnelListParams = {
   developerId: number;
   developmentId?: number;
@@ -451,6 +458,7 @@ function normalizeLeadRow(
   ownerName: string | null,
   distributionEnabledForDevelopment: boolean,
   outcome: LeadOutcomeReadback | null = null,
+  activities: LeadActivityReadback[] = [],
 ) {
   const stage = deriveCanonicalLeadStage(lead);
   const owner = deriveOwner(lead, ownerName);
@@ -489,6 +497,7 @@ function normalizeLeadRow(
     },
     outcome,
     affordabilityData,
+    activities,
     flags: {
       duplicate: lostReason === 'duplicate',
       spam: lostReason === 'spam',
@@ -496,6 +505,38 @@ function normalizeLeadRow(
     },
     notes: lead.notes || null,
   };
+}
+
+async function getLeadActivityReadbackByLeadIds(
+  leadIds: number[],
+): Promise<Map<number, LeadActivityReadback[]>> {
+  const validIds = Array.from(new Set(leadIds.filter(id => Number.isFinite(id) && id > 0)));
+  const map = new Map<number, LeadActivityReadback[]>();
+  if (!validIds.length) return map;
+
+  const [rows] = await db.execute(sql`
+    select id, leadId, activityType, description, createdAt
+    from lead_activities
+    where leadId in (${sql.join(validIds, sql`, `)})
+    order by createdAt desc, id desc
+  `);
+
+  const activities = Array.isArray(rows) ? rows : [];
+  for (const row of activities as any[]) {
+    const leadId = Number(row.leadId || 0);
+    if (!leadId) continue;
+    const list = map.get(leadId) || [];
+    if (list.length >= 12) continue;
+    list.push({
+      id: Number(row.id),
+      type: row.activityType ? String(row.activityType) : 'note',
+      description: row.description ? String(row.description) : null,
+      createdAt: row.createdAt ? String(row.createdAt) : null,
+    });
+    map.set(leadId, list);
+  }
+
+  return map;
 }
 
 async function getDeveloperLeadRow(developerId: number, leadId: number) {
@@ -573,6 +614,7 @@ export async function listDeveloperLeads(params: FunnelListParams) {
   const distributionEnabledMap = await getDistributionEnabledMapForDevelopments(developmentIds);
   const leadIds = rows.map(row => Number(row.lead.id)).filter(id => Number.isFinite(id) && id > 0);
   const outcomeReadbackByLeadId = new Map<number, LeadOutcomeReadback>();
+  const activityReadbackByLeadId = await getLeadActivityReadbackByLeadIds(leadIds);
 
   if (leadIds.length) {
     const outcomeRows = await db
@@ -613,6 +655,7 @@ export async function listDeveloperLeads(params: FunnelListParams) {
       row.ownerName || null,
       distributionEnabledForDevelopment,
       outcomeReadbackByLeadId.get(Number(row.lead.id)) || null,
+      activityReadbackByLeadId.get(Number(row.lead.id)) || [],
     );
   });
 

@@ -6436,3 +6436,50 @@ Next recommended slice:
   insufficient, or add dashboard/readback proof for saved lead activity notes.
 Commit hash/tag: Included in `test(dle): prove lead evidence panels`.
 Uncommitted reason, if any: None.
+
+## 2026-06-13 - Lead Evidence Activity Timeline Readback
+
+Date: 2026-06-13
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Make evidence review notes saved through the existing lead activity path visible again in the
+developer lead detail timeline after reload.
+Files changed:
+- client/src/components/developer/LeadsManager.tsx
+- server/services/developerFunnelService.ts
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1 -g "renders transaction evidence panels"` passed with 1 test.
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts` passed with 5 tests.
+- `pnpm vitest run server/services/__tests__/developerFunnelService.contract.test.ts` passed with 8 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `listDeveloperLeads` now reads recent rows from the actual local `lead_activities` table shape
+  and attaches them to the lead read model.
+- Lead detail Activity Timeline now renders saved activity rows with type, relative timestamp, and
+  note body instead of relying only on legacy `lead.notes`.
+- The timeline still falls back to `lead.notes` if no activity rows exist.
+- Browser proof saves a Rental evidence review note, reloads the lead detail, and verifies the
+  timeline contains the saved Proof of income and Income/employment evidence language.
+Guardrails:
+- No schema, migration, structured evidence persistence, readiness state, transition graph,
+  distribution gate, outcome sync semantics, autosave, draft, publish, inventory, or public listing
+  behavior is intended in this slice.
+- The activity timeline readback makes saved manual notes visible; it does not mark evidence
+  complete, verify documents, approve leases, register bidders, or automate readiness.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Rental still needs a structured document/evidence workflow when the product moves beyond manual
+  evidence review notes.
+- Auction still needs persisted bidder registration, legal-pack acceptance, and proof-of-funds
+  readiness semantics.
+- Deeper manager dashboards and operating audit views remain future.
+Next recommended slice:
+- Continue with the next transaction-operating proof only if it advances Rental/Auction from
+  visible evidence prompts into structured readiness, or pause to define the structured evidence
+  model before coding it.
+Commit hash/tag: Included in `test(dle): read back lead evidence activity`.
+Uncommitted reason, if any: None.

@@ -62,6 +62,12 @@ type LeadItem = {
     source?: string;
   } | null;
   affordabilityData?: Record<string, unknown> | string | null;
+  activities?: Array<{
+    id: number | string;
+    type: string;
+    description?: string | null;
+    createdAt?: string | null;
+  }>;
   owner: { ownerType: string; ownerId: string | null; ownerName?: string | null };
   sla: { status: 'ok' | 'warning' | 'breach'; timeToFirstContactMins?: number | null };
   nextAction: { type?: string | null; at?: string | null };
@@ -552,13 +558,29 @@ export default function LeadsManager() {
   };
 
   const timeline = useMemo(() => {
+    const activities = selectedLead?.activities || [];
+    if (activities.length > 0) {
+      return activities.map(activity => ({
+        key: String(activity.id),
+        label: activity.type || 'note',
+        body: activity.description || 'Activity recorded',
+        timestamp: activity.createdAt || null,
+      }));
+    }
+
     if (!selectedLead?.notes) return [];
     return selectedLead.notes
       .split('\n')
       .map(line => line.trim())
       .filter(Boolean)
-      .reverse();
-  }, [selectedLead?.notes]);
+      .reverse()
+      .map((line, idx) => ({
+        key: `note-${idx}`,
+        label: 'note',
+        body: line,
+        timestamp: null,
+      }));
+  }, [selectedLead?.activities, selectedLead?.notes]);
 
   return (
     <div className="space-y-4">
@@ -1168,11 +1190,22 @@ export default function LeadsManager() {
                     <p className="text-xs text-muted-foreground">No timeline entries yet.</p>
                   )}
                   {timeline.length > 0 && (
-                    <ScrollArea className="h-36">
+                    <ScrollArea
+                      className="h-36"
+                      data-testid={`dle-lead-activity-timeline-${selectedLead.id}`}
+                    >
                       <div className="space-y-2 pr-2">
-                        {timeline.slice(0, 12).map((line, idx) => (
-                          <div key={`${line}-${idx}`} className="text-xs border rounded p-2 bg-slate-50">
-                            {line}
+                        {timeline.slice(0, 12).map(entry => (
+                          <div key={entry.key} className="text-xs border rounded p-2 bg-slate-50">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-medium">{entry.label}</span>
+                              {entry.timestamp && (
+                                <span className="text-muted-foreground">
+                                  {formatRelative(entry.timestamp)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="whitespace-pre-wrap">{entry.body}</p>
                           </div>
                         ))}
                       </div>
