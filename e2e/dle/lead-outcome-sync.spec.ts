@@ -9,6 +9,7 @@ import {
   developers,
   developmentOperatingEvents,
   developments,
+  dleEvidenceArtifacts,
   leadActivities,
   leads,
   users,
@@ -401,6 +402,9 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       await db
         .delete(developmentOperatingEvents)
         .where(eq(developmentOperatingEvents.developmentId, cleanup.developmentId));
+      await db
+        .delete(dleEvidenceArtifacts)
+        .where(eq(dleEvidenceArtifacts.developmentId, cleanup.developmentId));
       await db.delete(leadActivities).where(inArray(leadActivities.leadId, cleanup.leadIds));
       await db.delete(leads).where(inArray(leads.id, cleanup.leadIds));
       await db.delete(developments).where(eq(developments.id, cleanup.developmentId));
@@ -661,6 +665,67 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     await expect(page.getByTestId(`dle-lead-activity-timeline-${rentalSeed.leadId}`)).toContainText(
       'Income/employment evidence',
     );
+    const [rentalLeadBeforeEvidence] = await db!
+      .select()
+      .from(leads)
+      .where(eq(leads.id, rentalSeed.leadId))
+      .limit(1);
+    await page.getByPlaceholder('Evidence display name').fill('Proof of income attestation');
+    await page
+      .getByPlaceholder('Evidence note or manual attestation')
+      .fill('Applicant payslip was received for manual leasing-team review.');
+    await page.getByTestId(`dle-lead-save-evidence-artifact-${rentalSeed.leadId}`).click();
+    await expect(page.getByText('Evidence artifact saved.')).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByTestId(`dle-lead-evidence-artifacts-${rentalSeed.leadId}`),
+    ).toContainText('Proof of income attestation');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-artifacts-${rentalSeed.leadId}`),
+    ).toContainText('proof_of_income | leasing_team');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-artifacts-${rentalSeed.leadId}`),
+    ).toContainText('submitted');
+
+    const rentalArtifacts = await db!
+      .select()
+      .from(dleEvidenceArtifacts)
+      .where(eq(dleEvidenceArtifacts.leadId, rentalSeed.leadId));
+    expect(rentalArtifacts).toHaveLength(1);
+    expect(rentalArtifacts[0]).toMatchObject({
+      developmentId: rentalSeed.developmentId,
+      transactionType: 'for_rent',
+      artifactRole: 'proof_of_income',
+      artifactType: 'manual_attestation',
+      displayName: 'Proof of income attestation',
+      status: 'submitted',
+      reviewOwner: 'leasing_team',
+    });
+
+    const evidenceEvents = await db!
+      .select()
+      .from(developmentOperatingEvents)
+      .where(eq(developmentOperatingEvents.developmentId, rentalSeed.developmentId));
+    expect(evidenceEvents).toHaveLength(1);
+    expect(evidenceEvents[0]).toMatchObject({
+      leadId: rentalSeed.leadId,
+      transactionType: 'for_rent',
+      eventType: 'evidence_artifact_submitted',
+      toStatus: 'submitted',
+      sourceSurface: 'developer_leads_manager',
+    });
+    expect(parseJsonObject(evidenceEvents[0].metadata)).toMatchObject({
+      artifactRole: 'proof_of_income',
+      displayName: 'Proof of income attestation',
+      reviewOwner: 'leasing_team',
+    });
+
+    const [rentalLeadAfterEvidence] = await db!
+      .select()
+      .from(leads)
+      .where(eq(leads.id, rentalSeed.leadId))
+      .limit(1);
+    expect(rentalLeadAfterEvidence.status).toBe(rentalLeadBeforeEvidence.status);
+    expect(rentalLeadAfterEvidence.funnelStage).toBe(rentalLeadBeforeEvidence.funnelStage);
     await page.screenshot({
       path: `${evidenceDir}/qa-dle-lead-evidence-panel-rental-note.png`,
     });
@@ -783,7 +848,7 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     await expect(page.getByText(withdrawnSeed.leadName).first()).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByRole('combobox').filter({ hasText: 'Sold at auction' }).click();
+    await page.getByTestId(`dle-lead-outcome-select-${withdrawnSeed.leadId}`).click();
     await page.getByRole('option', { name: 'Withdrawn follow-up' }).click();
     await page
       .getByPlaceholder('Outcome note...')

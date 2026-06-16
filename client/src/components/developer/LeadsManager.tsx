@@ -36,6 +36,7 @@ import {
 } from './leadOperatingStageDisplay';
 import { getLeadStageGuidance } from './leadStageGuidance';
 import {
+  getLeadEvidenceArtifactOptions,
   getLeadEvidenceChecklist,
   getLeadEvidenceReadinessSummary,
   getLeadEvidenceReviewNote,
@@ -74,6 +75,17 @@ type LeadItem = {
   nextAction: { type?: string | null; at?: string | null };
   flags?: { duplicate?: boolean; spam?: boolean; priority?: 'low' | 'med' | 'high' };
   notes?: string | null;
+};
+
+type LeadEvidenceArtifactItem = {
+  id: number;
+  artifactRole: string;
+  artifactType: string;
+  displayName: string;
+  description?: string | null;
+  status: string;
+  reviewOwner: string;
+  createdAt?: string | null;
 };
 
 type OutcomeSyncAction =
@@ -222,6 +234,12 @@ export default function LeadsManager() {
     'note' | 'call' | 'email' | 'meeting' | 'status_change' | 'whatsapp'
   >('call');
   const [activityDescription, setActivityDescription] = useState('');
+  const [evidenceArtifactRole, setEvidenceArtifactRole] = useState('');
+  const [evidenceArtifactStatus, setEvidenceArtifactStatus] = useState<'requested' | 'submitted'>(
+    'submitted',
+  );
+  const [evidenceArtifactDisplayName, setEvidenceArtifactDisplayName] = useState('');
+  const [evidenceArtifactDescription, setEvidenceArtifactDescription] = useState('');
   const [transitionTarget, setTransitionTarget] = useState('');
   const [transitionNotes, setTransitionNotes] = useState('');
   const [outcomeSyncAction, setOutcomeSyncAction] = useState<OutcomeSyncAction | ''>('');
@@ -441,6 +459,32 @@ export default function LeadsManager() {
   const selectedLeadEvidenceReadiness = selectedLead
     ? getLeadEvidenceReadinessSummary(selectedLeadTransactionType)
     : null;
+  const selectedLeadEvidenceArtifactOptions = selectedLead
+    ? getLeadEvidenceArtifactOptions(selectedLeadTransactionType)
+    : [];
+  const selectedLeadEvidenceArtifactsEnabled =
+    !!selectedLead &&
+    (selectedLeadTransactionType === 'rent' || selectedLeadTransactionType === 'auction');
+  const evidenceArtifactsQuery = trpc.developer.listLeadEvidenceArtifacts.useQuery(
+    {
+      leadId: Number(selectedLead?.id || 0),
+    },
+    {
+      enabled: selectedLeadEvidenceArtifactsEnabled,
+      refetchOnWindowFocus: false,
+    },
+  );
+  const createEvidenceArtifactMutation = trpc.developer.createLeadEvidenceArtifact.useMutation({
+    onSuccess: async () => {
+      toast.success('Evidence artifact saved.');
+      setEvidenceArtifactDescription('');
+      setEvidenceArtifactDisplayName('');
+      await evidenceArtifactsQuery.refetch();
+    },
+    onError: error => toast.error(error.message || 'Could not save evidence artifact.'),
+  });
+  const selectedLeadEvidenceArtifacts = ((evidenceArtifactsQuery.data?.items ||
+    []) as LeadEvidenceArtifactItem[]);
   const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
   const developmentTransactionById = useMemo(() => {
     const map = new Map<string, 'sale' | 'rent' | 'auction' | null>();
@@ -460,6 +504,13 @@ export default function LeadsManager() {
       return;
     }
     setTransitionTarget(selectedLead.allowedTransitions?.[0] || '');
+    const evidenceOptions = getLeadEvidenceArtifactOptions(
+      normalizeDevelopmentTransactionType((selectedLeadDevelopment as any)?.transactionType),
+    );
+    setEvidenceArtifactRole(evidenceOptions[0]?.role || '');
+    setEvidenceArtifactDescription('');
+    setEvidenceArtifactDisplayName('');
+    setEvidenceArtifactStatus('submitted');
     const actions = getOutcomeSyncActions(
       normalizeDevelopmentTransactionType((selectedLeadDevelopment as any)?.transactionType),
     );
@@ -559,6 +610,22 @@ export default function LeadsManager() {
   const prepareEvidenceReviewNote = () => {
     setActivityType('note');
     setActivityDescription(getLeadEvidenceReviewNote(selectedLeadTransactionType));
+  };
+
+  const handleCreateEvidenceArtifact = () => {
+    if (!selectedLead || !evidenceArtifactRole) return;
+    const option = selectedLeadEvidenceArtifactOptions.find(item => item.role === evidenceArtifactRole);
+    createEvidenceArtifactMutation.mutate({
+      leadId: Number(selectedLead.id),
+      artifactRole: evidenceArtifactRole,
+      artifactType: 'manual_attestation',
+      displayName:
+        evidenceArtifactDisplayName.trim() ||
+        option?.label ||
+        'Evidence artifact',
+      description: evidenceArtifactDescription.trim() || option?.description,
+      status: evidenceArtifactStatus,
+    });
   };
 
   const timeline = useMemo(() => {
@@ -996,6 +1063,104 @@ export default function LeadsManager() {
                         </div>
                       ))}
                     </div>
+                    {selectedLeadEvidenceArtifactOptions.length > 0 && (
+                      <div
+                        className="rounded-md border border-slate-200 p-3 space-y-3"
+                        data-testid={`dle-lead-evidence-artifacts-${selectedLead.id}`}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm font-medium">Persisted evidence artifacts</p>
+                          <p className="text-xs text-muted-foreground">
+                            Request or submit lead-level evidence context. This does not approve
+                            lease readiness, bidder registration, inventory, or rewards.
+                          </p>
+                        </div>
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <Select
+                            value={evidenceArtifactRole}
+                            onValueChange={setEvidenceArtifactRole}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Evidence role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {selectedLeadEvidenceArtifactOptions.map(option => (
+                                <SelectItem key={option.role} value={option.role}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={evidenceArtifactStatus}
+                            onValueChange={value =>
+                              setEvidenceArtifactStatus(value as 'requested' | 'submitted')
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Evidence status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="requested">Requested</SelectItem>
+                              <SelectItem value="submitted">Submitted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Input
+                          placeholder="Evidence display name"
+                          value={evidenceArtifactDisplayName}
+                          onChange={event => setEvidenceArtifactDisplayName(event.target.value)}
+                        />
+                        <Textarea
+                          className="min-h-20"
+                          placeholder="Evidence note or manual attestation"
+                          value={evidenceArtifactDescription}
+                          onChange={event => setEvidenceArtifactDescription(event.target.value)}
+                        />
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            type="button"
+                            disabled={!evidenceArtifactRole || createEvidenceArtifactMutation.isPending}
+                            onClick={handleCreateEvidenceArtifact}
+                            data-testid={`dle-lead-save-evidence-artifact-${selectedLead.id}`}
+                          >
+                            Save Evidence Artifact
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {evidenceArtifactsQuery.isLoading && (
+                            <p className="text-xs text-muted-foreground">Loading evidence...</p>
+                          )}
+                          {!evidenceArtifactsQuery.isLoading &&
+                            selectedLeadEvidenceArtifacts.length === 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                No persisted evidence artifacts yet.
+                              </p>
+                            )}
+                          {selectedLeadEvidenceArtifacts.map(artifact => (
+                            <div
+                              key={artifact.id}
+                              className="rounded-md bg-slate-50 p-2 text-xs"
+                              data-testid={`dle-lead-evidence-artifact-${artifact.id}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-medium">{artifact.displayName}</p>
+                                  <p className="text-muted-foreground">
+                                    {artifact.artifactRole} | {artifact.reviewOwner}
+                                  </p>
+                                </div>
+                                <Badge variant="outline">{artifact.status}</Badge>
+                              </div>
+                              {artifact.description && (
+                                <p className="mt-1 whitespace-pre-wrap">{artifact.description}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1094,7 +1259,7 @@ export default function LeadsManager() {
                       value={outcomeSyncAction}
                       onValueChange={value => setOutcomeSyncAction(value as OutcomeSyncAction)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger data-testid={`dle-lead-outcome-select-${selectedLead.id}`}>
                         <SelectValue placeholder="Select outcome" />
                       </SelectTrigger>
                       <SelectContent>

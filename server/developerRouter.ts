@@ -48,6 +48,10 @@ import {
   transitionSaleUnitReservation,
 } from './services/developmentOperatingEventsService';
 import {
+  createLeadEvidenceArtifact,
+  listLeadEvidenceArtifacts,
+} from './services/dleEvidenceArtifactService';
+import {
   developmentDrafts,
   developments,
   developers,
@@ -1654,6 +1658,48 @@ export const developerRouter = router({
         sourceOutcomeEventId: input.sourceOutcomeEventId ?? null,
         note: input.note,
         sourceSurface: 'developer_leads_manager',
+      });
+    }),
+
+  listLeadEvidenceArtifacts: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await listLeadEvidenceArtifacts({
+        developerId: profile.id,
+        leadId: input.leadId,
+      });
+    }),
+
+  createLeadEvidenceArtifact: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        artifactRole: z.string().trim().min(1).max(80),
+        artifactType: z
+          .enum(['manual_attestation', 'system_note', 'external_link'])
+          .optional(),
+        displayName: z.string().trim().min(1).max(160),
+        description: z.string().trim().max(2000).optional(),
+        status: z.enum(['requested', 'submitted']).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await createLeadEvidenceArtifact({
+        developerId: profile.id,
+        userId: user.id,
+        leadId: input.leadId,
+        artifactRole: input.artifactRole,
+        artifactType: input.artifactType,
+        displayName: input.displayName,
+        description: input.description,
+        status: input.status,
       });
     }),
 

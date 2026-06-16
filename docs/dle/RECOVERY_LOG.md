@@ -6663,3 +6663,66 @@ Next recommended slice:
   request/submission/readback, with status-only audit and no readiness/inventory/stage movement.
 Commit hash/tag: Included in `docs(dle): define evidence artifact contract`.
 Uncommitted reason, if any: None.
+
+## 2026-06-16 - Runtime Lead Evidence Artifacts
+
+Date: 2026-06-16
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first narrow runtime evidence artifact model for DLE lead-level Rental/Auction
+request/submission/readback, with audit only and no evidence completion automation.
+Files changed:
+- drizzle/schema/developmentOperations.ts
+- server/migrations/0072_create_dle_evidence_artifacts.sql
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- server/developerRouter.ts
+- client/src/components/developer/leadEvidenceChecklist.ts
+- client/src/components/developer/leadEvidenceChecklist.test.ts
+- client/src/components/developer/LeadsManager.tsx
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 13 tests.
+- `pnpm db:migrate:local` passed against `listify_local` and applied `0072_create_dle_evidence_artifacts.sql`.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1` passed with 4 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `dle_evidence_artifacts` now persists lead-level evidence artifacts with transaction lane,
+  artifact role, artifact type, requested/submitted status, review owner, creator, metadata, and
+  timestamps.
+- Developer lead detail can request or submit Rental/Auction manual-attestation evidence artifacts
+  and read them back in the evidence panel.
+- Rental roles are validated against Rental-only semantics such as proof of income, deposit
+  readiness, and signed lease.
+- Auction roles are validated against Auction-only semantics such as legal-pack acknowledgement,
+  proof of funds, and bidder registration.
+- Each request/submission writes a `development_operating_events` audit row using
+  `evidence_artifact_requested` or `evidence_artifact_submitted`.
+- Browser/API/DB proof creates a Rental proof-of-income manual attestation, reads it back in the
+  lead detail panel, verifies the DB artifact row, verifies the operating audit event, and confirms
+  the lead status/funnel stage did not move.
+Guardrails:
+- No uploaded-file evidence, public applicant/bidder upload, acceptance/rejection workflow,
+  evidence completion, readiness transition, lead-stage movement, inventory mutation, distribution
+  deal movement, payout/reward readiness, autosave, draft, publish, public listing, search-card, or
+  wizard behavior is intended in this slice.
+- Sale leads do not call the Rental/Auction-only evidence artifact endpoint from the lead detail UI.
+- The UI copy explicitly states persisted evidence artifacts do not approve lease readiness, bidder
+  registration, inventory, or rewards.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Evidence artifact file upload/storage authorization still needs a dedicated privacy/security
+  slice before accepting sensitive proof documents from applicants or bidders.
+- `under_review`, `accepted`, `rejected`, `expired`, and `withdrawn` mutations remain future.
+- Evidence completion read models, admin/distribution review linkage, and readiness automation
+  remain future and must preserve transaction ownership boundaries.
+Next recommended slice:
+- Add the artifact review-state slice for Rental/Auction: under-review/accepted/rejected status
+  transitions, review notes, role-owned authorization, readback, and audit, still without inventory,
+  lead-stage, payout/reward, public listing, or autosave mutation.
+Commit hash/tag: Included in `feat(dle): persist lead evidence artifacts`.
+Uncommitted reason, if any: None.

@@ -1,8 +1,10 @@
 # DLE Evidence Artifact Contract
 
 Date: 2026-06-13
-Status: Contract only. No schema, API, runtime, readiness, stage, inventory, payout, or autosave
-behavior is implemented by this document.
+Status: Contract active. The first runtime slice now implements DLE-owned lead-level Rental/Auction
+evidence artifacts for `requested` and `submitted` manual attestations with lead-detail readback and
+operating-event audit. Evidence acceptance, rejection, completion, readiness, lead-stage movement,
+inventory movement, payout/reward movement, and autosave behavior remain explicitly unimplemented.
 
 ## Purpose
 
@@ -11,9 +13,9 @@ readback, lead-queue labels, and dashboard review demand. Those surfaces are int
 non-mutating. They show what operators should review, but they do not prove that evidence exists or
 that evidence has been accepted.
 
-This contract defines the next persisted artifact model before implementation. The goal is to move
-from manual note capture toward structured evidence without collapsing Rental and Auction into Sale
-workflow assumptions.
+This contract defines the persisted artifact model before evidence completion implementation. The
+goal is to move from manual note capture toward structured evidence without collapsing Rental and
+Auction into Sale workflow assumptions.
 
 ## Hard Boundary
 
@@ -303,7 +305,8 @@ Minimum requirements before implementation:
 
 ## Implementation Gates
 
-Before code implementation starts, confirm:
+Before evidence completion, file upload, acceptance/rejection, admin review, distribution linkage,
+or readiness automation starts, confirm:
 
 1. Required artifact roles for Rental and Auction first pass.
 2. Which roles are mandatory versus optional per transaction lane.
@@ -318,7 +321,7 @@ Before code implementation starts, confirm:
 
 ## First Safe Implementation Slice
 
-The first runtime slice should be narrow:
+Implemented first runtime slice:
 
 - create a DLE-owned artifact model for lead-level Rental and Auction evidence;
 - support `manual_attestation` or metadata-only submitted artifacts before file upload if needed;
@@ -327,10 +330,18 @@ The first runtime slice should be narrow:
 - write audit events;
 - do not move lead stages, inventory, distribution deals, rewards, or public availability.
 
-Recommended first proof:
+Implemented first proof:
 
 - Rental lead can request/submit proof-of-income evidence and read it back as `submitted`;
 - Auction lead can request/submit proof-of-funds or legal-pack acknowledgement and read it back as
   `submitted`;
-- accepting or rejecting evidence changes only artifact status and audit events;
 - no inventory, lead stage, distribution deal, reward, public listing, or wizard data changes.
+
+Not implemented in the first runtime slice:
+
+- uploaded evidence files;
+- public applicant/bidder evidence upload;
+- `under_review`, `accepted`, `rejected`, `expired`, or `withdrawn` mutations;
+- evidence completion/readiness read models;
+- distribution/admin review linkage;
+- inventory, lead-stage, public listing, payout, reward, or autosave mutations.

@@ -4,6 +4,7 @@ export type LeadEvidenceChecklistItem = {
   label: string;
   description: string;
   status: 'capture' | 'optional' | 'manual_review';
+  artifactRole?: string;
 };
 
 export type LeadEvidenceChecklist = {
@@ -60,16 +61,19 @@ const RENTAL_ITEMS: LeadEvidenceChecklistItem[] = [
     label: 'Proof of income',
     description: 'Income/employment evidence required before treating the application as ready.',
     status: 'capture',
+    artifactRole: 'proof_of_income',
   },
   {
     label: 'Deposit readiness',
     description: 'Deposit amount, first-month payment readiness, and occupation timing.',
     status: 'capture',
+    artifactRole: 'deposit_readiness',
   },
   {
     label: 'Lease review',
     description: 'Signed lease and compliance checks before marking inventory as let.',
     status: 'manual_review',
+    artifactRole: 'signed_lease',
   },
 ];
 
@@ -83,16 +87,19 @@ const AUCTION_ITEMS: LeadEvidenceChecklistItem[] = [
     label: 'Legal-pack access',
     description: 'Confirm the bidder has received or reviewed the required legal pack.',
     status: 'capture',
+    artifactRole: 'legal_pack_acknowledgement',
   },
   {
     label: 'Proof of funds',
     description: 'Cash contribution, finance route, or funds evidence before bidder readiness.',
     status: 'capture',
+    artifactRole: 'proof_of_funds',
   },
   {
     label: 'Registration review',
     description: 'Manual registration and auction-term acceptance before calling the bidder ready.',
     status: 'manual_review',
+    artifactRole: 'bidder_registration',
   },
 ];
 
@@ -178,4 +185,16 @@ export function getLeadEvidenceReviewNote(transactionType: LeadTransactionType):
   });
 
   return [`${checklist.title} review`, ...lines, 'Decision: pending manual review.'].join('\n');
+}
+
+export function getLeadEvidenceArtifactOptions(transactionType: LeadTransactionType) {
+  return getLeadEvidenceChecklist(transactionType)
+    .items
+    .filter(item => item.artifactRole)
+    .map(item => ({
+      label: item.label,
+      role: item.artifactRole as string,
+      description: item.description,
+      status: item.status,
+    }));
 }

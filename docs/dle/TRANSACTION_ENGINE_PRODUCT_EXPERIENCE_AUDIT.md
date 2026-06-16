@@ -634,6 +634,35 @@ work must use this contract before claiming proof-of-income, signed-lease, legal
 auction-terms, bidder-registration, proof-of-funds, lease-readiness, or bidder-readiness
 completion.
 
+## Thirty-Fourth Product-Visibility Slice
+
+Implement first runtime evidence artifact request/submission/readback.
+
+DLE now has a persisted, lead-level Rental/Auction evidence artifact model for the first safe
+runtime slice:
+
+- `dle_evidence_artifacts` stores lead-linked evidence artifacts with transaction lane, artifact
+  role, artifact type, status, review owner, creator, metadata, and timestamps;
+- the Developer Leads Manager can request or submit manual-attestation evidence artifacts for
+  Rental and Auction leads;
+- Rental artifact roles are constrained to Rental evidence semantics such as proof of income,
+  deposit readiness, and signed lease;
+- Auction artifact roles are constrained to Auction evidence semantics such as legal-pack
+  acknowledgement, proof of funds, and bidder registration;
+- lead detail reads persisted artifacts back below the evidence checklist;
+- each request/submission writes a `development_operating_events` audit row using
+  `evidence_artifact_requested` or `evidence_artifact_submitted`;
+- the UI copy explicitly states that artifacts do not approve lease readiness, bidder registration,
+  inventory, or rewards.
+
+The focused browser proof creates a Rental proof-of-income manual attestation, reads it back in the
+lead detail panel, verifies the DB artifact row, verifies the operating audit event, and confirms
+the lead status/funnel stage did not move.
+
+This is still not evidence completion. Uploaded files, public applicant/bidder upload, artifact
+acceptance/rejection, evidence completion read models, admin/distribution review linkage, inventory
+movement, public availability changes, payout/reward readiness, and autosave remain future slices.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -651,11 +680,11 @@ completion.
   Qualification model visibility, transaction-aware lead stage/action labels, stage guidance, and
   evidence checklist prompts are now present in the lead center. Evidence review can now be captured
   as lead activity notes, read back in the lead timeline, and browser-proven for Rental/Auction
-  panels. Evidence readiness is now summarized as a transaction-specific manual review model, but
-  the lead queue and dashboard now surface manual review demand/status. Sold/let/auction outcomes,
-  pricing adjustments, release phases, persisted structured evidence capture, and deeper audit
-  dashboards remain future. The persisted evidence artifact contract now exists as the required
-  implementation gate for true Rental/Auction evidence completion.
+  panels. Evidence readiness is now summarized as a transaction-specific manual review model, and
+  the lead queue and dashboard now surface manual review demand/status. First-pass lead-level
+  Rental/Auction evidence request/submission/readback now exists, but accepted/rejected evidence
+  workflows, completion semantics, sold/let/auction outcomes, pricing adjustments, release phases,
+  and deeper audit dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -705,5 +734,8 @@ completion.
   without claiming lease/bidder readiness. Status: complete for `Overview` helper tests.
 - Documentation proof that persisted Rental/Auction evidence artifacts have an implementation
   contract before runtime work. Status: complete for `EVIDENCE_ARTIFACT_CONTRACT.md`.
+- Browser/API/DB proof that a Rental lead can persist and read back a proof-of-income manual
+  attestation without moving lead stage or inventory. Status: complete for focused
+  `lead-outcome-sync` proof.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getLeadEvidenceArtifactOptions,
   getLeadEvidenceChecklist,
   getLeadEvidenceReadinessSummary,
   getLeadEvidenceReviewNote,
@@ -91,5 +92,24 @@ describe('lead evidence checklist', () => {
       manualReviewCount: 1,
       optionalCount: 0,
     });
+  });
+
+  it('maps rental evidence prompts to persisted artifact roles', () => {
+    expect(getLeadEvidenceArtifactOptions('rent')).toEqual([
+      expect.objectContaining({ label: 'Proof of income', role: 'proof_of_income' }),
+      expect.objectContaining({ label: 'Deposit readiness', role: 'deposit_readiness' }),
+      expect.objectContaining({ label: 'Lease review', role: 'signed_lease' }),
+    ]);
+  });
+
+  it('maps auction evidence prompts to persisted artifact roles', () => {
+    expect(getLeadEvidenceArtifactOptions('auction')).toEqual([
+      expect.objectContaining({
+        label: 'Legal-pack access',
+        role: 'legal_pack_acknowledgement',
+      }),
+      expect.objectContaining({ label: 'Proof of funds', role: 'proof_of_funds' }),
+      expect.objectContaining({ label: 'Registration review', role: 'bidder_registration' }),
+    ]);
   });
 });
