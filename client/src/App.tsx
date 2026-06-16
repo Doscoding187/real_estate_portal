@@ -101,7 +101,7 @@ const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const LovableIntegrationHub = lazy(() => import('./pages/LovableIntegrationHub'));
 
 // Import the new Listing Wizard
-const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizard'));
+const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizardV2'));
 const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 
 // Import Development Wizard

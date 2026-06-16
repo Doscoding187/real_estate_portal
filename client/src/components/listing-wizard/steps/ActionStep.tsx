@@ -1,151 +1,104 @@
-// @ts-nocheck
 /**
- * Step 1: Action Selection
+ * ActionStep
  *
- * User selects: Sell / Rent / Auction
+ * Step 1: Select listing action (Sell / Rent / Auction).
+ * In pre-workflow mode this is rendered standalone; once selected
+ * the workflow is resolved and the full WizardEngine renders.
  */
 
 import React from 'react';
+import { useListingWizardContext } from '../contexts/ListingWizardContext';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
-import { Card } from '@/components/ui/card';
-import { Check, Home, Key, Gavel } from 'lucide-react';
-import type { ListingAction } from '@/../../shared/listing-types';
-import { useFieldValidation } from '@/hooks/useFieldValidation';
-import { InlineError } from '@/components/ui/InlineError';
+import { Button } from '@/components/ui/button';
+import { Home, CalendarClock, Gavel } from 'lucide-react';
 
-const ACTION_OPTIONS: {
-  value: ListingAction;
-  label: string;
-  icon: JSX.Element;
-  description: string;
-  color: 'blue' | 'green' | 'purple';
-}[] = [
+const actions = [
   {
-    value: 'sell',
+    value: 'sell' as const,
     label: 'Sell',
-    icon: <Home className="w-8 h-8" />,
+    icon: Home,
     description: 'List your property for sale',
-    color: 'blue',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50 hover:bg-blue-100',
+    borderColor: 'border-blue-200',
   },
   {
-    value: 'rent',
+    value: 'rent' as const,
     label: 'Rent',
-    icon: <Key className="w-8 h-8" />,
-    description: 'Offer your property for rental',
-    color: 'green',
+    icon: CalendarClock,
+    description: 'List your property for rent',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50 hover:bg-emerald-100',
+    borderColor: 'border-emerald-200',
   },
   {
-    value: 'auction',
+    value: 'auction' as const,
     label: 'Auction',
-    icon: <Gavel className="w-8 h-8" />,
-    description: 'Sell via auction process',
-    color: 'purple',
+    icon: Gavel,
+    description: 'Sell via public auction',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50 hover:bg-purple-100',
+    borderColor: 'border-purple-200',
   },
 ];
 
-const ActionStep: React.FC = () => {
-  const { action, setAction } = useListingWizardStore();
+export default function ActionStep() {
+  const ctx = useListingWizardContext();
+  const store = useListingWizardStore();
 
-  // Validation
-  const actionValidation = useFieldValidation({
-    field: 'action',
-    value: action,
-    context: { currentStep: 1 },
-    trigger: 'submit',
-  });
-
-  const handleSelect = (value: ListingAction) => {
-    setAction(value);
-    actionValidation.clearError();
+  const handleSelect = (action: 'sell' | 'rent' | 'auction') => {
+    store.setAction(action);
+    // If property type is already selected too, init the workflow
+    if (store.propertyType) {
+      ctx.initWorkflow(action, store.propertyType);
+    }
   };
 
   return (
-    <div className="py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {ACTION_OPTIONS.map(option => {
-          const isSelected = action === option.value;
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">
+          What would you like to do with your property?
+        </h3>
+        <p className="text-sm text-slate-500">
+          Choose the type of listing you want to create
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {actions.map((action) => {
+          const isSelected = store.action === action.value;
+          const Icon = action.icon;
 
           return (
-            <Card
-              key={option.value}
-              onClick={() => handleSelect(option.value)}
-              className={`relative cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
-                isSelected
-                  ? `border-2 shadow-xl bg-gradient-to-br ${option.color === 'blue' ? 'from-blue-50 to-blue-100 border-blue-400' : option.color === 'green' ? 'from-green-50 to-green-100 border-green-400' : 'from-purple-50 to-purple-100 border-purple-400'}`
-                  : 'border-2 border-gray-200 hover:border-gray-300 bg-white'
-              }`}
+            <button
+              key={action.value}
+              onClick={() => handleSelect(action.value)}
+              className={`
+                relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 text-center
+                transition-all duration-200
+                ${isSelected
+                  ? `${action.bgColor} ${action.borderColor} border-blue-500 shadow-md`
+                  : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                }
+              `}
             >
-              {/* Selection Indicator */}
-              {isSelected && (
-                <div
-                  className={`absolute top-4 right-4 rounded-full p-1 shadow-lg ${
-                    option.color === 'blue'
-                      ? 'bg-blue-500'
-                      : option.color === 'green'
-                        ? 'bg-green-500'
-                        : 'bg-purple-500'
-                  }`}
-                >
-                  <Check className="w-5 h-5 text-white" />
-                </div>
-              )}
-
-              <div className="p-8 flex flex-col items-center text-center space-y-4">
-                {/* Icon */}
-                <div
-                  className={`p-4 rounded-full transition-all shadow-md ${
-                    isSelected
-                      ? option.color === 'blue'
-                        ? 'bg-blue-100 text-blue-600'
-                        : option.color === 'green'
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-purple-100 text-purple-600'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {option.icon}
-                </div>
-
-                {/* Label */}
-                <h3
-                  className={`text-2xl font-bold transition-colors ${
-                    isSelected
-                      ? option.color === 'blue'
-                        ? 'text-blue-600'
-                        : option.color === 'green'
-                          ? 'text-green-600'
-                          : 'text-purple-600'
-                      : 'text-gray-900'
-                  }`}
-                >
-                  {option.label}
-                </h3>
-
-                {/* Description */}
-                <p className="text-gray-600 text-sm">{option.description}</p>
+              <div className={`p-3 rounded-full ${isSelected ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                <Icon className={`w-8 h-8 ${action.color}`} />
               </div>
-            </Card>
+              <div>
+                <h4 className={`font-semibold text-lg ${isSelected ? 'text-slate-900' : 'text-slate-700'}`}>
+                  {action.label}
+                </h4>
+                <p className="text-sm text-slate-500 mt-1">{action.description}</p>
+              </div>
+              {isSelected && (
+                <div className="absolute top-3 right-3 w-3 h-3 bg-blue-500 rounded-full" />
+              )}
+            </button>
           );
         })}
       </div>
-
-      {/* Validation Error */}
-      {actionValidation.error && (
-        <div className="mt-6">
-          <InlineError error={actionValidation.error} show={!!actionValidation.error} />
-        </div>
-      )}
-
-      {/* Info Banner */}
-      <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="font-semibold text-blue-900 mb-2">💡 What happens next?</h4>
-        <p className="text-blue-800 text-sm">
-          After selecting your action, you'll choose the property type and provide relevant details.
-          The form will automatically adapt to show the fields you need based on your selection.
-        </p>
-      </div>
     </div>
   );
-};
-
-export default ActionStep;
+}
