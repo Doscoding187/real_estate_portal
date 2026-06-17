@@ -6,11 +6,11 @@
  * the workflow is resolved and the full WizardEngine renders.
  */
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useListingWizardContext } from '../contexts/ListingWizardContext';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
-import { Button } from '@/components/ui/button';
-import { Home, CalendarClock, Gavel } from 'lucide-react';
+import { Home, CalendarClock, Gavel, CheckCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const actions = [
   {
@@ -74,27 +74,36 @@ export default function ActionStep() {
             <button
               key={action.value}
               onClick={() => handleSelect(action.value)}
-              className={`
-                relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 text-center
-                transition-all duration-200
-                ${isSelected
-                  ? `${action.bgColor} ${action.borderColor} border-blue-500 shadow-md`
-                  : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                }
-              `}
+              aria-pressed={isSelected}
+              aria-label={`${action.label}: ${action.description}`}
+              className={cn(
+                'relative flex flex-col items-center gap-4 p-6 rounded-xl border-2 text-center',
+                'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+                isSelected
+                  ? `${action.bgColor} ${action.borderColor} shadow-md ring-1 ring-blue-500/20`
+                  : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm',
+              )}
             >
-              <div className={`p-3 rounded-full ${isSelected ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
-                <Icon className={`w-8 h-8 ${action.color}`} />
+              <div className={cn('p-4 rounded-full transition-all', isSelected ? 'bg-white shadow-sm scale-110' : 'bg-slate-50')}>
+                <Icon className={cn('w-10 h-10', action.color)} />
               </div>
-              <div>
-                <h4 className={`font-semibold text-lg ${isSelected ? 'text-slate-900' : 'text-slate-700'}`}>
+
+              <div className="space-y-1">
+                <h4 className={cn('font-bold text-xl', isSelected ? 'text-slate-900' : 'text-slate-700')}>
                   {action.label}
                 </h4>
-                <p className="text-sm text-slate-500 mt-1">{action.description}</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{action.description}</p>
               </div>
+
               {isSelected && (
-                <div className="absolute top-3 right-3 w-3 h-3 bg-blue-500 rounded-full" />
+                <div className="absolute top-3 right-3 animate-in fade-in zoom-in">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                </div>
               )}
+
+              <span className="sr-only">
+                {isSelected ? 'Selected' : 'Not selected'}
+              </span>
             </button>
           );
         })}

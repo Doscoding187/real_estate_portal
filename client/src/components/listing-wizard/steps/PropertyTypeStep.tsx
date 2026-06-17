@@ -1,7 +1,8 @@
 import React from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
-import { Building2, Home, Wheat, Map, Store, Users } from 'lucide-react';
+import { Building2, Home, Wheat, Map, Store, Users, CheckCircle2 } from 'lucide-react';
 import type { PropertyType } from '@shared/listing-types';
+import { cn } from '@/lib/utils';
 
 const propertyTypes: { value: PropertyType; label: string; icon: React.ComponentType<any>; description: string }[] = [
   { value: 'apartment', label: 'Apartment', icon: Building2, description: 'Flats, units, and sectional title properties' },
@@ -28,17 +29,32 @@ export default function PropertyTypeStep() {
             <button
               key={value}
               onClick={() => store.setPropertyType(value)}
-              className={`relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 text-center transition-all duration-200 ${
-                isSelected ? 'bg-blue-50 border-blue-500 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
-              }`}
+              aria-pressed={isSelected}
+              aria-label={`${label}: ${description}`}
+              className={cn(
+                'relative flex flex-col items-center gap-4 p-6 rounded-xl border-2 text-center',
+                'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+                isSelected
+                  ? 'bg-blue-50 border-blue-500 shadow-md ring-1 ring-blue-500/20'
+                  : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm',
+              )}
             >
-              <div className={`p-3 rounded-full ${isSelected ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
-                <Icon className={`w-8 h-8 ${isSelected ? 'text-blue-600' : 'text-slate-600'}`} />
+              <div className={cn('p-4 rounded-full transition-all', isSelected ? 'bg-white shadow-sm scale-110' : 'bg-slate-50')}>
+                <Icon className={cn('w-10 h-10', isSelected ? 'text-blue-600' : 'text-slate-600')} />
               </div>
-              <div>
-                <h4 className={`font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-700'}`}>{label}</h4>
-                <p className="text-sm text-slate-500 mt-1">{description}</p>
+
+              <div className="space-y-1">
+                <h4 className={cn('font-bold text-lg', isSelected ? 'text-slate-900' : 'text-slate-700')}>{label}</h4>
+                <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
               </div>
+
+              {isSelected && (
+                <div className="absolute top-3 right-3 animate-in fade-in zoom-in">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                </div>
+              )}
+
+              <span className="sr-only">{isSelected ? 'Selected' : 'Not selected'}</span>
             </button>
           );
         })}
