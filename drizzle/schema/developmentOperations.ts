@@ -40,6 +40,7 @@ export const DEVELOPMENT_OPERATING_EVENT_TYPES = [
   'evidence_artifact_rejected',
   'evidence_artifact_expired',
   'evidence_artifact_withdrawn',
+  'evidence_artifact_downloaded',
   'publish_status_changed',
   'operating_note_added',
 ] as const;

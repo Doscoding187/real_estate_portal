@@ -1,0 +1,26 @@
+ALTER TABLE development_operating_events
+  MODIFY COLUMN event_type ENUM(
+    'inventory_status_changed',
+    'inventory_quantity_adjusted',
+    'price_changed',
+    'rent_changed',
+    'auction_window_changed',
+    'auction_outcome_recorded',
+    'lead_stage_changed',
+    'showing_scheduled',
+    'application_status_changed',
+    'registration_status_changed',
+    'distribution_enabled',
+    'distribution_disabled',
+    'distribution_handoff_created',
+    'evidence_artifact_requested',
+    'evidence_artifact_submitted',
+    'evidence_artifact_review_started',
+    'evidence_artifact_accepted',
+    'evidence_artifact_rejected',
+    'evidence_artifact_expired',
+    'evidence_artifact_withdrawn',
+    'evidence_artifact_downloaded',
+    'publish_status_changed',
+    'operating_note_added'
+  ) NOT NULL;

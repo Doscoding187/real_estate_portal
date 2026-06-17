@@ -417,12 +417,20 @@ Implemented eighth runtime slice:
 - guarded local behavior: when private storage is not configured, download URL issuance fails
   without adding download metadata, public URLs, lead-stage movement, inventory movement, or
   readiness claims;
-- download URL issuance currently updates artifact metadata after successful signing. Dedicated
-  operating-event audit for downloads remains a future schema slice.
+- download URL issuance updates artifact metadata after successful signing.
+
+Implemented ninth runtime slice:
+
+- schema and migration support for `evidence_artifact_downloaded` operating events;
+- successful protected download URL issuance writes `evidence_artifact_downloaded` after the signed
+  URL is issued;
+- event metadata includes artifact id, role, display name, private storage namespace, expiry, and
+  download count, without storage keys, signed URLs, public URLs, or document contents;
+- denial paths still do not write download metadata or download events.
 
 Not implemented in the runtime slices:
 
-- download operating events and audit dashboards;
+- download audit dashboards;
 - public applicant/bidder evidence upload;
 - `expired` or `withdrawn` mutations;
 - evidence completion/readiness automation;

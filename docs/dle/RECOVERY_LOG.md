@@ -7133,3 +7133,52 @@ Next recommended slice:
   metadata in the Developer Leads Manager before broadening upload/download to admin/distribution.
 Commit hash/tag: Included in `feat(dle): broker protected evidence downloads`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Evidence Download Operating Event Audit
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add operating-event audit support for protected Rental/Auction evidence download URL
+issuance without exposing signed URLs, storage keys, public URLs, or document contents.
+Files changed:
+- server/migrations/0073_add_dle_evidence_download_event.sql
+- drizzle/schema/developmentOperations.ts
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm db:migrate:test` passed and applied `0073_add_dle_evidence_download_event.sql` to the
+  test DB.
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 18 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `development_operating_events.event_type` now supports `evidence_artifact_downloaded`.
+- The Drizzle schema contract includes `evidence_artifact_downloaded`.
+- Successful protected evidence download URL issuance now writes an
+  `evidence_artifact_downloaded` operating event after the signed URL is issued.
+- Download event metadata contains artifact id, role, display name, private storage namespace,
+  expiry, and download count only.
+- DB-backed proof confirms protected download denial paths do not write download metadata or
+  `evidence_artifact_downloaded` events.
+Guardrails:
+- Audit-event-only slice. No public applicant/bidder upload, artifact acceptance, evidence
+  completion/readiness automation, lead-stage movement, inventory mutation, distribution deal
+  movement, reward/payout readiness, autosave, draft, publish, public listing, search-card, lead
+  form, or wizard behavior is intended.
+- Download audit events must not include storage keys, signed URLs, public URLs, or document
+  contents.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Download audit dashboard/readback, admin/distribution download authorization, malware
+  scanning/quarantine, public applicant/bidder upload, file metadata client readback, and readiness
+  automation remain future.
+Next recommended slice:
+- Expose submitted uploaded-file metadata and audit status in the Developer Leads Manager so
+  operators can see uploaded/downloadable evidence without exposing private storage details.
+Commit hash/tag: Included in `feat(dle): audit evidence downloads`.
+Uncommitted reason, if any: None.

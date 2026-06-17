@@ -1,7 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { developers, developments, dleEvidenceArtifacts, leads, users } from '../../../drizzle/schema';
+import {
+  DEVELOPMENT_OPERATING_EVENT_TYPES,
+  developers,
+  developments,
+  developmentOperatingEvents,
+  dleEvidenceArtifacts,
+  leads,
+  users,
+} from '../../../drizzle/schema';
 import { getDb } from '../../db-connection';
 import {
   assertEvidenceArtifactReviewTransition,
@@ -98,6 +106,10 @@ describe('dleEvidenceArtifactService helpers', () => {
     );
     expect(getEvidenceArtifactReviewEventType('accepted')).toBe('evidence_artifact_accepted');
     expect(getEvidenceArtifactReviewEventType('rejected')).toBe('evidence_artifact_rejected');
+  });
+
+  it('includes evidence file download in the operating-event schema contract', () => {
+    expect(DEVELOPMENT_OPERATING_EVENT_TYPES).toContain('evidence_artifact_downloaded');
   });
 
   it('allows review transitions without allowing requested evidence to be accepted directly', () => {
@@ -744,6 +756,17 @@ describe('dleEvidenceArtifactService helpers', () => {
     expect(artifactAfter.metadata).not.toMatchObject({
       lastDownloadRequestedByUserId: userId,
     });
+    const downloadEvents = await db!
+      .select()
+      .from(developmentOperatingEvents)
+      .where(
+        and(
+          eq(developmentOperatingEvents.developmentId, developmentId),
+          eq(developmentOperatingEvents.leadId, leadId),
+          eq(developmentOperatingEvents.eventType, 'evidence_artifact_downloaded'),
+        ),
+      );
+    expect(downloadEvents).toHaveLength(0);
 
     const [leadAfter] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);
     expect(leadAfter.status).toBe('qualified');

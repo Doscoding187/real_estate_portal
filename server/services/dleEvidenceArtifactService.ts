@@ -1337,6 +1337,46 @@ export async function getLeadEvidenceFileDownloadUrl(params: {
     where id = ${params.artifactId}
   `);
 
+  await db.execute(sql`
+    insert into development_operating_events (
+      development_id,
+      lead_id,
+      transaction_type,
+      event_type,
+      from_status,
+      to_status,
+      after_data,
+      metadata,
+      actor_user_id,
+      source_surface
+    )
+    values (
+      ${artifact.developmentId},
+      ${artifact.leadId},
+      ${artifact.transactionType},
+      'evidence_artifact_downloaded',
+      ${artifact.status},
+      ${artifact.status},
+      ${JSON.stringify({
+        artifactId: artifact.id,
+        artifactRole: artifact.artifactRole,
+        artifactType: artifact.artifactType,
+        status: artifact.status,
+        reviewOwner: artifact.reviewOwner,
+      })},
+      ${JSON.stringify({
+        artifactId: artifact.id,
+        artifactRole: artifact.artifactRole,
+        displayName: artifact.displayName,
+        storageNamespace: 'private_dle_evidence',
+        downloadExpiresInSeconds: expiresInSeconds,
+        downloadCount: Number(metadata.downloadCount || 0) + 1,
+      })},
+      ${params.userId},
+      'developer_leads_manager'
+    )
+  `);
+
   return {
     artifact,
     downloadUrl,

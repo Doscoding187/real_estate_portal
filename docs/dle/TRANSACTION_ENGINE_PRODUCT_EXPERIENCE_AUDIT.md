@@ -894,5 +894,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Service proof that authenticated Rental/Auction evidence download rejects pending uploads and
   refuses to issue URLs when private storage is not configured. Status: complete for
   `dleEvidenceArtifactService` helper/integration tests.
+- Schema/service proof that `evidence_artifact_downloaded` is a valid operating event and is not
+  written on protected download denial paths. Status: complete for SQL migration
+  `0073_add_dle_evidence_download_event.sql` and `dleEvidenceArtifactService` tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

@@ -117,9 +117,8 @@ Current runtime note:
   URL only after upload completion is verified.
 - The endpoint refuses pending uploads, non-uploaded artifacts, non-private storage keys, public
   external URLs, unrelated developers, and environments without private storage configuration.
-- Download URL issuance currently updates artifact metadata only after a signed URL is issued.
-  A dedicated `evidence_artifact_downloaded` operating event should be added in a later schema
-  slice before audit dashboards depend on download events.
+- Download URL issuance updates artifact metadata and writes an `evidence_artifact_downloaded`
+  operating event only after a signed URL is issued.
 
 ## Authorization Matrix
 
