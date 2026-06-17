@@ -18,6 +18,7 @@ import { useListingWizardContext } from './contexts/ListingWizardContext';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ListingWizardHeader } from './ui/ListingWizardHeader';
+import { ValidationErrorsPanel, StepProgressIndicator } from './ui/ValidationErrorsPanel';
 
 // ─── Step Component Registry ─────────────────────────────────────────
 // Lazy-load heavy step components to keep the initial bundle small.
@@ -130,19 +131,8 @@ export function ListingWizardEngine({
       {/* ── Step Content ─────────────────────────────────────────── */}
       <main className="flex-1 py-8 px-4">
         <div className="max-w-5xl mx-auto">
-          {/* Validation errors */}
-          {stepErrors.length > 0 && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-              <h4 className="text-red-800 font-semibold mb-2">
-                Please fix the following:
-              </h4>
-              <ul className="list-disc list-inside text-red-700 text-sm space-y-1 ml-1">
-                {stepErrors.map((err, idx) => (
-                  <li key={idx}>{err.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Validation errors panel */}
+          <ValidationErrorsPanel errors={stepErrors as any} />
 
           {/* Step component */}
           <div className="mb-20">
