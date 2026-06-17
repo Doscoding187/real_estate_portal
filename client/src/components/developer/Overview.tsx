@@ -200,6 +200,53 @@ export function buildOverviewEvidenceReviewAggregate(input: {
   };
 }
 
+export function buildOverviewEvidenceCoverageAggregate(input: {
+  development?: any | null;
+  coverage?: any | null;
+}) {
+  if (!input.development || !input.coverage) return null;
+
+  const transactionType = normalizeOverviewTransactionType(input.development.transactionType);
+  if (transactionType !== 'rent' && transactionType !== 'auction') return null;
+
+  const totalActiveLeadCount = Number(input.coverage.totalActiveLeadCount || 0);
+  const completeLeadCount = Number(input.coverage.completeLeadCount || 0);
+  const partialLeadCount = Number(input.coverage.partialLeadCount || 0);
+  const noAcceptedLeadCount = Number(input.coverage.noAcceptedLeadCount || 0);
+  const missingRoleCounts = Array.isArray(input.coverage.missingRoleCounts)
+    ? input.coverage.missingRoleCounts
+    : [];
+  const acceptedRoleCounts = Array.isArray(input.coverage.acceptedRoleCounts)
+    ? input.coverage.acceptedRoleCounts
+    : [];
+  const topMissingRoles = missingRoleCounts
+    .filter((role: any) => Number(role.count || 0) > 0)
+    .map((role: any) => ({
+      label: String(role.label || role.role || 'Evidence role'),
+      count: Number(role.count || 0),
+    }));
+
+  return {
+    transactionType,
+    title: input.coverage.title || 'Evidence coverage',
+    statusLabel:
+      input.coverage.statusLabel ||
+      (completeLeadCount > 0
+        ? `${completeLeadCount} lead${completeLeadCount === 1 ? '' : 's'} with complete accepted coverage`
+        : 'No leads have complete accepted coverage'),
+    totalActiveLeadCount,
+    completeLeadCount,
+    partialLeadCount,
+    noAcceptedLeadCount,
+    acceptedRoleCounts,
+    missingRoleCounts,
+    topMissingRoles,
+    guardrail:
+      input.coverage.guardrail ||
+      'Coverage is operating visibility only and does not trigger readiness automation.',
+  };
+}
+
 function toOverviewPositiveNumber(value: unknown): number | null {
   const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -640,6 +687,20 @@ export default function Overview() {
     },
   );
 
+  const evidenceCoverageQuery = trpc.developer.getDevelopmentEvidenceCoverageSummary.useQuery(
+    {
+      developmentId: selectedDevelopmentId || 0,
+    },
+    {
+      enabled:
+        !!developerProfile &&
+        !!selectedDevelopmentId &&
+        (selectedDevelopmentTransactionType === 'rent' ||
+          selectedDevelopmentTransactionType === 'auction'),
+      refetchOnWindowFocus: false,
+    },
+  );
+
   const operatingEventsQuery = trpc.developer.getOperatingEvents.useQuery(
     {
       developmentId: selectedDevelopmentId || 0,
@@ -960,6 +1021,10 @@ export default function Overview() {
   const evidenceReviewAggregate = buildOverviewEvidenceReviewAggregate({
     development: selectedDevelopment,
     stageCounts,
+  });
+  const evidenceCoverageAggregate = buildOverviewEvidenceCoverageAggregate({
+    development: selectedDevelopment,
+    coverage: evidenceCoverageQuery.data,
   });
   const operatingEvents = operatingEventsQuery.data?.items || [];
   const operatingReview = useMemo(
@@ -1352,6 +1417,61 @@ export default function Overview() {
                 {operatingReadiness.queueLabel}
               </Button>
             </div>
+
+            {evidenceCoverageAggregate && (
+              <div
+                className="rounded-md border border-amber-200 bg-amber-50 p-3"
+                data-testid="dle-overview-evidence-coverage-aggregate"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{evidenceCoverageAggregate.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatNumber(evidenceCoverageAggregate.completeLeadCount)} of{' '}
+                      {formatNumber(evidenceCoverageAggregate.totalActiveLeadCount)} active lead(s)
+                      have all required accepted evidence roles.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="w-fit">
+                    {evidenceCoverageAggregate.statusLabel}
+                  </Badge>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <div className="rounded-md bg-white/70 p-2">
+                    <p className="text-xs text-muted-foreground">Complete coverage</p>
+                    <p className="text-lg font-semibold">
+                      {formatNumber(evidenceCoverageAggregate.completeLeadCount)}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-white/70 p-2">
+                    <p className="text-xs text-muted-foreground">Partial coverage</p>
+                    <p className="text-lg font-semibold">
+                      {formatNumber(evidenceCoverageAggregate.partialLeadCount)}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-white/70 p-2">
+                    <p className="text-xs text-muted-foreground">No accepted evidence</p>
+                    <p className="text-lg font-semibold">
+                      {formatNumber(evidenceCoverageAggregate.noAcceptedLeadCount)}
+                    </p>
+                  </div>
+                </div>
+                {evidenceCoverageAggregate.topMissingRoles.length > 0 && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Missing roles:{' '}
+                    {evidenceCoverageAggregate.topMissingRoles
+                      .map(role => `${role.label} (${formatNumber(role.count)})`)
+                      .join(', ')}
+                  </p>
+                )}
+                <p
+                  className="mt-2 text-xs text-amber-950"
+                  data-testid="dle-overview-evidence-coverage-guardrail"
+                >
+                  {evidenceCoverageAggregate.guardrail}
+                </p>
+              </div>
+            )}
 
             {pricingHealth && (
               <div

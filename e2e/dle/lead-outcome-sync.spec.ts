@@ -795,6 +795,34 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       path: `${evidenceDir}/qa-dle-lead-evidence-panel-rental-note.png`,
     });
 
+    await page.goto(`/developer/dashboard?developmentId=${rentalSeed.developmentId}&range=30d`);
+    await expect(page.getByRole('heading', { name: 'Developer Control Tower' })).toBeVisible({
+      timeout: 15_000,
+    });
+    const rentalCoverageAggregate = page.getByTestId(
+      'dle-overview-evidence-coverage-aggregate',
+    );
+    await expect(rentalCoverageAggregate).toBeVisible({ timeout: 15_000 });
+    await expect(rentalCoverageAggregate).toContainText('Rental evidence coverage');
+    await expect(rentalCoverageAggregate).toContainText(
+      '0 of 1 active lead(s) have all required accepted evidence roles.',
+    );
+    await expect(rentalCoverageAggregate).toContainText(
+      'No leads have complete accepted coverage',
+    );
+    await expect(rentalCoverageAggregate).toContainText('Complete coverage');
+    await expect(rentalCoverageAggregate).toContainText('Partial coverage');
+    await expect(rentalCoverageAggregate).toContainText('No accepted evidence');
+    await expect(rentalCoverageAggregate).toContainText(
+      'Missing roles: Deposit readiness (1), Lease review (1)',
+    );
+    await expect(page.getByTestId('dle-overview-evidence-coverage-guardrail')).toContainText(
+      'not verified lease readiness',
+    );
+    await page.screenshot({
+      path: `${evidenceDir}/qa-dle-overview-evidence-coverage-rental.png`,
+    });
+
     await loginAsSeededDeveloper(page, auctionSeed);
     await page.goto(
       `/developer/leads?developmentId=${auctionSeed.developmentId}&stage=deal&leadId=${auctionSeed.leadId}`,

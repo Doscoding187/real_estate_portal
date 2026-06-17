@@ -6830,3 +6830,58 @@ Next recommended slice:
   roles across Rental/Auction leads, still without readiness automation.
 Commit hash/tag: Included in `feat(dle): summarize evidence coverage`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Dashboard Evidence Coverage Aggregate
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add a non-mutating Developer Control Tower aggregate for accepted Rental/Auction evidence
+coverage versus missing required roles across active leads.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- server/developerRouter.ts
+- client/src/components/developer/Overview.tsx
+- client/src/components/developer/Overview.test.ts
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-07/*.png
+Tests run:
+- `pnpm vitest run client/src/components/developer/Overview.test.ts client/src/components/developer/leadEvidenceChecklist.test.ts server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 35 tests.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1` passed with 4 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `buildDevelopmentEvidenceCoverageSummary` now aggregates accepted required evidence roles across
+  active Rental/Auction leads.
+- The aggregate returns complete, partial, and no-accepted-evidence lead counts plus accepted and
+  missing role counts.
+- `developer.getDevelopmentEvidenceCoverageSummary` exposes the aggregate for a developer-owned
+  selected development and returns no aggregate for non Rental/Auction transaction lanes.
+- The Developer Control Tower shows the selected development's Rental/Auction evidence coverage
+  aggregate, top missing roles, and a guardrail below the operating-readiness review demand panel.
+- Browser proof accepts Rental proof-of-income, opens the selected Rental development dashboard,
+  verifies `0 of 1 active lead(s)` have complete accepted coverage, verifies deposit readiness and
+  lease review remain missing, and verifies the guardrail says this is not verified lease
+  readiness.
+Guardrails:
+- Read-model/dashboard-only slice. No artifact status mutation, lead-stage movement, inventory
+  mutation, distribution deal movement, reward/payout readiness, autosave, draft, publish, public
+  listing, search-card, or wizard behavior is intended.
+- Accepted coverage is not evidence completion automation and must not be used as lease readiness,
+  bidder registration, proof-of-funds readiness, let/sold status, or payout readiness.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Uploaded sensitive proof files still need protected storage and authorization.
+- Evidence completion automation remains future and requires transaction-specific mandatory role
+  rules plus explicit owner approval.
+- Lead queue row aggregate badges and admin/distribution readback of accepted-role coverage remain
+  future.
+Next recommended slice:
+- Add lead queue row accepted/missing evidence coverage labels for Rental/Auction active leads,
+  still without readiness automation.
+Commit hash/tag: Included in `feat(dle): show evidence coverage dashboard`.
+Uncommitted reason, if any: None.

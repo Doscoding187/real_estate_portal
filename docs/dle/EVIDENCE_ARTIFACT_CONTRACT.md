@@ -360,6 +360,18 @@ Implemented third runtime slice:
 - explicit guardrails that accepted-role coverage is not lease readiness, bidder readiness,
   inventory movement, distribution payout readiness, or autosave safety.
 
+Implemented fourth runtime slice:
+
+- Developer Control Tower aggregate for Rental/Auction accepted evidence coverage across active
+  leads;
+- complete, partial, and no-accepted-evidence lead counts;
+- top missing required evidence roles across the selected development;
+- component proof for Rental and Auction aggregate summaries;
+- browser proof that accepted Rental proof-of-income appears on the dashboard as partial coverage
+  with deposit readiness and lease review still missing;
+- explicit guardrails that dashboard coverage is not lease readiness, bidder registration,
+  proof-of-funds readiness, inventory movement, distribution payout readiness, or autosave safety.
+
 Not implemented in the runtime slices:
 
 - uploaded evidence files;

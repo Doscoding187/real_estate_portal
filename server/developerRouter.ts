@@ -49,6 +49,7 @@ import {
 } from './services/developmentOperatingEventsService';
 import {
   createLeadEvidenceArtifact,
+  getDevelopmentEvidenceCoverageSummary,
   listLeadEvidenceArtifacts,
   updateLeadEvidenceArtifactReviewStatus,
 } from './services/dleEvidenceArtifactService';
@@ -1721,6 +1722,20 @@ export const developerRouter = router({
         artifactId: input.artifactId,
         status: input.status,
         reviewNote: input.reviewNote,
+      });
+    }),
+
+  getDevelopmentEvidenceCoverageSummary: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await getDevelopmentEvidenceCoverageSummary({
+        developerId: profile.id,
+        developmentId: input.developmentId,
       });
     }),
 

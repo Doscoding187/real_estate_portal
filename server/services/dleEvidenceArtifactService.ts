@@ -46,6 +46,23 @@ export type RentalEvidenceRole = (typeof RENTAL_EVIDENCE_ROLES)[number];
 export type AuctionEvidenceRole = (typeof AUCTION_EVIDENCE_ROLES)[number];
 export type DleEvidenceArtifactRole = RentalEvidenceRole | AuctionEvidenceRole;
 
+type RequiredEvidenceRole = {
+  role: DleEvidenceArtifactRole;
+  label: string;
+};
+
+const REQUIRED_RENTAL_EVIDENCE_ROLES: RequiredEvidenceRole[] = [
+  { role: 'proof_of_income', label: 'Proof of income' },
+  { role: 'deposit_readiness', label: 'Deposit readiness' },
+  { role: 'signed_lease', label: 'Lease review' },
+];
+
+const REQUIRED_AUCTION_EVIDENCE_ROLES: RequiredEvidenceRole[] = [
+  { role: 'legal_pack_acknowledgement', label: 'Legal-pack access' },
+  { role: 'proof_of_funds', label: 'Proof of funds' },
+  { role: 'bidder_registration', label: 'Registration review' },
+];
+
 type LeadEvidenceScope = {
   leadId: number;
   developmentId: number;
@@ -70,6 +87,25 @@ type EvidenceArtifactRow = {
   createdByUserId: number | null;
   createdAt: string | null;
   updatedAt: string | null;
+};
+
+export type DevelopmentEvidenceCoverageLeadInput = {
+  leadId: number;
+  acceptedRoles: string[];
+};
+
+export type DevelopmentEvidenceCoverageSummary = {
+  transactionType: 'for_rent' | 'auction';
+  title: string;
+  statusLabel: string;
+  totalActiveLeadCount: number;
+  completeLeadCount: number;
+  partialLeadCount: number;
+  noAcceptedLeadCount: number;
+  requiredRoles: RequiredEvidenceRole[];
+  acceptedRoleCounts: Array<RequiredEvidenceRole & { count: number }>;
+  missingRoleCounts: Array<RequiredEvidenceRole & { count: number }>;
+  guardrail: string;
 };
 
 export function isRentalEvidenceRole(role: string): role is RentalEvidenceRole {
@@ -121,6 +157,72 @@ export function getEvidenceArtifactReviewEventType(
   if (status === 'under_review') return 'evidence_artifact_review_started';
   if (status === 'accepted') return 'evidence_artifact_accepted';
   return 'evidence_artifact_rejected';
+}
+
+export function getRequiredEvidenceRolesForTransaction(
+  transactionType: 'for_rent' | 'auction',
+): RequiredEvidenceRole[] {
+  return transactionType === 'for_rent'
+    ? REQUIRED_RENTAL_EVIDENCE_ROLES
+    : REQUIRED_AUCTION_EVIDENCE_ROLES;
+}
+
+export function buildDevelopmentEvidenceCoverageSummary(params: {
+  transactionType: 'for_rent' | 'auction';
+  leads: DevelopmentEvidenceCoverageLeadInput[];
+}): DevelopmentEvidenceCoverageSummary {
+  const requiredRoles = getRequiredEvidenceRolesForTransaction(params.transactionType);
+  const acceptedRoleCounts = requiredRoles.map(role => ({ ...role, count: 0 }));
+  const missingRoleCounts = requiredRoles.map(role => ({ ...role, count: 0 }));
+  let completeLeadCount = 0;
+  let partialLeadCount = 0;
+  let noAcceptedLeadCount = 0;
+
+  for (const lead of params.leads) {
+    const accepted = new Set(lead.acceptedRoles);
+    const acceptedRequiredCount = requiredRoles.filter(role => accepted.has(role.role)).length;
+    if (acceptedRequiredCount === requiredRoles.length && requiredRoles.length > 0) {
+      completeLeadCount += 1;
+    } else if (acceptedRequiredCount > 0) {
+      partialLeadCount += 1;
+    } else {
+      noAcceptedLeadCount += 1;
+    }
+
+    for (const roleCount of acceptedRoleCounts) {
+      if (accepted.has(roleCount.role)) roleCount.count += 1;
+    }
+    for (const roleCount of missingRoleCounts) {
+      if (!accepted.has(roleCount.role)) roleCount.count += 1;
+    }
+  }
+
+  const title =
+    params.transactionType === 'for_rent'
+      ? 'Rental evidence coverage'
+      : 'Auction evidence coverage';
+  const statusLabel =
+    completeLeadCount > 0
+      ? `${completeLeadCount} lead${completeLeadCount === 1 ? '' : 's'} with complete accepted coverage`
+      : 'No leads have complete accepted coverage';
+  const guardrail =
+    params.transactionType === 'for_rent'
+      ? 'Coverage is not verified lease readiness, inventory let status, or distribution payout readiness.'
+      : 'Coverage is not verified bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.';
+
+  return {
+    transactionType: params.transactionType,
+    title,
+    statusLabel,
+    totalActiveLeadCount: params.leads.length,
+    completeLeadCount,
+    partialLeadCount,
+    noAcceptedLeadCount,
+    requiredRoles,
+    acceptedRoleCounts,
+    missingRoleCounts,
+    guardrail,
+  };
 }
 
 export function assertEvidenceArtifactReviewTransition(params: {
@@ -559,4 +661,74 @@ export async function updateLeadEvidenceArtifactReviewStatus(params: {
   return {
     artifact: normalizeArtifactRow(getRows(readback)[0]),
   };
+}
+
+export async function getDevelopmentEvidenceCoverageSummary(params: {
+  developerId: number;
+  developmentId: number;
+}): Promise<DevelopmentEvidenceCoverageSummary | null> {
+  const developmentResult = await db.execute(sql`
+    select id, transaction_type as transactionType
+    from developments
+    where id = ${params.developmentId}
+      and developer_id = ${params.developerId}
+    limit 1
+  `);
+  const development = getRows(developmentResult)[0];
+
+  if (!development) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Development not found for this developer.',
+    });
+  }
+
+  const transactionType = String(development.transactionType || '');
+  if (transactionType !== 'for_rent' && transactionType !== 'auction') {
+    return null;
+  }
+
+  const activeLeadResult = await db.execute(sql`
+    select id
+    from leads
+    where developmentId = ${params.developmentId}
+      and status in ('qualified', 'viewing_scheduled', 'offer_sent', 'converted')
+    order by id
+  `);
+  const leadIds = getRows(activeLeadResult)
+    .map(row => Number(row.id))
+    .filter(id => Number.isFinite(id) && id > 0);
+
+  if (leadIds.length === 0) {
+    return buildDevelopmentEvidenceCoverageSummary({
+      transactionType: transactionType as 'for_rent' | 'auction',
+      leads: [],
+    });
+  }
+
+  const acceptedArtifactsResult = await db.execute(sql`
+    select lead_id as leadId, artifact_role as artifactRole
+    from dle_evidence_artifacts
+    where development_id = ${params.developmentId}
+      and status = 'accepted'
+      and lead_id in (${sql.join(leadIds, sql`, `)})
+  `);
+  const acceptedByLead = new Map<number, Set<string>>();
+  for (const leadId of leadIds) {
+    acceptedByLead.set(leadId, new Set());
+  }
+  for (const row of getRows(acceptedArtifactsResult)) {
+    const leadId = Number(row.leadId);
+    const role = String(row.artifactRole || '');
+    if (!acceptedByLead.has(leadId)) continue;
+    acceptedByLead.get(leadId)!.add(role);
+  }
+
+  return buildDevelopmentEvidenceCoverageSummary({
+    transactionType: transactionType as 'for_rent' | 'auction',
+    leads: leadIds.map(leadId => ({
+      leadId,
+      acceptedRoles: Array.from(acceptedByLead.get(leadId) || []),
+    })),
+  });
 }

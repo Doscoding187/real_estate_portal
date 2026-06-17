@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assertEvidenceArtifactReviewTransition,
   assertEvidenceRoleForTransaction,
+  buildDevelopmentEvidenceCoverageSummary,
   getDefaultReviewOwnerForEvidence,
   getEvidenceArtifactEventType,
   getEvidenceArtifactReviewEventType,
@@ -75,5 +76,78 @@ describe('dleEvidenceArtifactService helpers', () => {
         toStatus: 'accepted',
       }),
     ).toThrow('Evidence can only be accepted or rejected after submission or review start.');
+  });
+
+  it('summarizes Rental accepted coverage across active leads without readiness automation', () => {
+    expect(
+      buildDevelopmentEvidenceCoverageSummary({
+        transactionType: 'for_rent',
+        leads: [
+          {
+            leadId: 1,
+            acceptedRoles: ['proof_of_income'],
+          },
+          {
+            leadId: 2,
+            acceptedRoles: ['proof_of_income', 'deposit_readiness', 'signed_lease'],
+          },
+          {
+            leadId: 3,
+            acceptedRoles: [],
+          },
+        ],
+      }),
+    ).toMatchObject({
+      title: 'Rental evidence coverage',
+      statusLabel: '1 lead with complete accepted coverage',
+      totalActiveLeadCount: 3,
+      completeLeadCount: 1,
+      partialLeadCount: 1,
+      noAcceptedLeadCount: 1,
+      acceptedRoleCounts: [
+        { role: 'proof_of_income', label: 'Proof of income', count: 2 },
+        { role: 'deposit_readiness', label: 'Deposit readiness', count: 1 },
+        { role: 'signed_lease', label: 'Lease review', count: 1 },
+      ],
+      missingRoleCounts: [
+        { role: 'proof_of_income', label: 'Proof of income', count: 1 },
+        { role: 'deposit_readiness', label: 'Deposit readiness', count: 2 },
+        { role: 'signed_lease', label: 'Lease review', count: 2 },
+      ],
+      guardrail:
+        'Coverage is not verified lease readiness, inventory let status, or distribution payout readiness.',
+    });
+  });
+
+  it('summarizes Auction accepted coverage without bidder-readiness claims', () => {
+    expect(
+      buildDevelopmentEvidenceCoverageSummary({
+        transactionType: 'auction',
+        leads: [
+          {
+            leadId: 10,
+            acceptedRoles: [
+              'legal_pack_acknowledgement',
+              'proof_of_funds',
+              'bidder_registration',
+            ],
+          },
+        ],
+      }),
+    ).toMatchObject({
+      title: 'Auction evidence coverage',
+      statusLabel: '1 lead with complete accepted coverage',
+      totalActiveLeadCount: 1,
+      completeLeadCount: 1,
+      partialLeadCount: 0,
+      noAcceptedLeadCount: 0,
+      missingRoleCounts: [
+        { role: 'legal_pack_acknowledgement', label: 'Legal-pack access', count: 0 },
+        { role: 'proof_of_funds', label: 'Proof of funds', count: 0 },
+        { role: 'bidder_registration', label: 'Registration review', count: 0 },
+      ],
+      guardrail:
+        'Coverage is not verified bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.',
+    });
   });
 });

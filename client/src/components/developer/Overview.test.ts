@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOverviewEvidenceCoverageAggregate,
   buildOverviewEvidenceReviewAggregate,
   buildOverviewOperatingReview,
   buildOverviewOperatingReadiness,
@@ -143,6 +144,79 @@ describe('Developer Overview operating readiness', () => {
     });
     expect(aggregate?.help).toContain('legal-pack access');
     expect(aggregate?.guardrail).toContain('not verified bidder registration');
+  });
+
+  it('summarizes Rental accepted evidence coverage without lease readiness automation', () => {
+    expect(
+      buildOverviewEvidenceCoverageAggregate({
+        development: { name: 'Rental Quarter', transactionType: 'for_rent' },
+        coverage: {
+          title: 'Rental evidence coverage',
+          statusLabel: '1 lead with complete accepted coverage',
+          totalActiveLeadCount: 3,
+          completeLeadCount: 1,
+          partialLeadCount: 1,
+          noAcceptedLeadCount: 1,
+          missingRoleCounts: [
+            { role: 'proof_of_income', label: 'Proof of income', count: 1 },
+            { role: 'deposit_readiness', label: 'Deposit readiness', count: 2 },
+            { role: 'signed_lease', label: 'Lease review', count: 2 },
+          ],
+          guardrail:
+            'Coverage is not verified lease readiness, inventory let status, or distribution payout readiness.',
+        },
+      }),
+    ).toMatchObject({
+      title: 'Rental evidence coverage',
+      statusLabel: '1 lead with complete accepted coverage',
+      totalActiveLeadCount: 3,
+      completeLeadCount: 1,
+      partialLeadCount: 1,
+      noAcceptedLeadCount: 1,
+      topMissingRoles: [
+        { label: 'Proof of income', count: 1 },
+        { label: 'Deposit readiness', count: 2 },
+        { label: 'Lease review', count: 2 },
+      ],
+      guardrail:
+        'Coverage is not verified lease readiness, inventory let status, or distribution payout readiness.',
+    });
+  });
+
+  it('summarizes Auction accepted evidence coverage without bidder readiness automation', () => {
+    expect(
+      buildOverviewEvidenceCoverageAggregate({
+        development: { name: 'Auction Quarter', transactionType: 'auction' },
+        coverage: {
+          title: 'Auction evidence coverage',
+          totalActiveLeadCount: 2,
+          completeLeadCount: 0,
+          partialLeadCount: 1,
+          noAcceptedLeadCount: 1,
+          missingRoleCounts: [
+            { role: 'legal_pack_acknowledgement', label: 'Legal-pack access', count: 1 },
+            { role: 'proof_of_funds', label: 'Proof of funds', count: 2 },
+            { role: 'bidder_registration', label: 'Registration review', count: 2 },
+          ],
+          guardrail:
+            'Coverage is not verified bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.',
+        },
+      }),
+    ).toMatchObject({
+      title: 'Auction evidence coverage',
+      statusLabel: 'No leads have complete accepted coverage',
+      totalActiveLeadCount: 2,
+      completeLeadCount: 0,
+      partialLeadCount: 1,
+      noAcceptedLeadCount: 1,
+      topMissingRoles: [
+        { label: 'Legal-pack access', count: 1 },
+        { label: 'Proof of funds', count: 2 },
+        { label: 'Registration review', count: 2 },
+      ],
+      guardrail:
+        'Coverage is not verified bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.',
+    });
   });
 
   it('builds Sale pricing health from public mirrors and live unit inventory', () => {
