@@ -198,6 +198,10 @@ legal-pack acknowledgement, auction terms, bidder registration, proof-of-funds, 
 acceptance, or evidence completion must follow
 `docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md`.
 
+Future work that uploads, stores, downloads, previews, or exposes Rental/Auction evidence files must
+also follow `docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md`. Evidence files are private proof
+documents, not public media assets.
+
 Until that artifact model is implemented and tested, DLE may show review demand and manual-review
 context only. It must not claim lease readiness, bidder registration, proof-of-funds readiness,
 distribution reward readiness, or automatic inventory outcome readiness from evidence prompts or

@@ -750,6 +750,25 @@ the row is not lease readiness.
 This makes the lead queue more operationally useful without changing artifact state, lead stage,
 inventory, distribution deals, rewards, public availability, wizard data, or autosave state.
 
+## Thirty-Ninth Product-Visibility Slice
+
+Define protected evidence-file upload semantics.
+
+DLE now has a security contract for uploaded Rental/Auction evidence files before any runtime file
+upload work starts:
+
+- evidence files must use a private storage namespace, not public media URLs;
+- uploads require lead/development/developer ownership checks;
+- downloads require an authenticated broker or short-lived signed URL;
+- raw storage keys and public URLs must not appear on public pages, search cards, lead forms, or
+  generic client read models;
+- uploaded files remain submitted evidence awaiting manual review, not lease readiness, bidder
+  readiness, inventory movement, distribution payout readiness, or autosave safety.
+
+This keeps the operating layer moving toward true proof documents while avoiding a serious product
+and privacy error: treating payslips, proof-of-funds files, legal packs, or signed leases like
+marketing images.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -773,8 +792,10 @@ inventory, distribution deals, rewards, public availability, wizard data, or aut
   accepted-role coverage readback now exist. The Developer Control Tower now aggregates accepted
   coverage versus missing roles for selected Rental/Auction developments, and lead queue rows now
   surface per-lead accepted/missing evidence coverage before opening detail. Evidence completion
-  automation, uploaded proof files, public applicant/bidder upload, sold/let/auction outcomes,
-  pricing adjustments, release phases, and deeper audit dashboards remain future.
+  automation, runtime uploaded proof files, public applicant/bidder upload, sold/let/auction
+  outcomes, pricing adjustments, release phases, and deeper audit dashboards remain future. Uploaded
+  evidence files now have a security contract that must be implemented before runtime upload is
+  enabled.
 
 ## Evidence To Attach Over Time
 
@@ -839,5 +860,8 @@ inventory, distribution deals, rewards, public availability, wizard data, or aut
 - Service and browser proof that Rental/Auction lead queue rows show accepted/missing evidence
   coverage without claiming lease/bidder readiness. Status: complete for
   `dleEvidenceArtifactService` helper tests and focused `lead-outcome-sync` proof.
+- Documentation proof that Rental/Auction evidence files have a private upload/download security
+  contract before runtime upload work. Status: complete for
+  `EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md`.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

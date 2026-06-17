@@ -6935,3 +6935,49 @@ Next recommended slice:
   accepting sensitive uploaded documents.
 Commit hash/tag: Included in `feat(dle): show lead evidence coverage rows`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Evidence File Upload Security Contract
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the protected storage, authorization, download, audit, and product guardrails required
+before DLE Rental/Auction evidence artifacts can support uploaded files.
+Files changed:
+- docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `test -f docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md` passed.
+- `rg "EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT|private storage namespace|authenticated download broker|public media" docs/dle` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The new contract states that uploaded Rental/Auction evidence files are private proof documents,
+  not public media assets.
+- The contract rejects direct reuse of `upload.presign` unless wrapped by evidence-specific
+  ownership, validation, and download authorization.
+- The contract defines private storage keys, file metadata, upload intent/completion/download API
+  shape, authorization matrix, MIME/size validation, local development behavior, UI requirements,
+  audit requirements, and implementation gates.
+- The DLE source-of-truth and evidence artifact contract now require future upload/download work to
+  follow the file-upload security contract.
+Guardrails:
+- Documentation-only slice. No schema, migration, API, runtime upload, download, artifact mutation,
+  lead-stage movement, inventory mutation, distribution deal movement, reward/payout readiness,
+  autosave, draft, publish, public listing, search-card, or wizard behavior changed.
+- Uploaded evidence files remain future runtime work and must not use public media URLs, raw
+  storage keys, public development pages, search cards, or unauthenticated lead forms.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Runtime upload intent, upload completion, authenticated download broker, file metadata readback,
+  and denial tests still need implementation.
+- Malware scanning/quarantine remains future and should be added before broad public applicant or
+  bidder upload.
+Next recommended slice:
+- Implement developer-only protected evidence-file upload intent for existing Rental/Auction lead
+  artifacts with private storage keys and no public download URL.
+Commit hash/tag: Included in `docs(dle): define evidence file upload security`.
+Uncommitted reason, if any: None.

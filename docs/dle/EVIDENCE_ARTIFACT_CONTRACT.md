@@ -288,6 +288,7 @@ Allowed first-pass source surfaces:
 
 Public users may submit enquiry information, but public submission should create lead context first.
 Public upload of sensitive evidence needs a separate privacy/security contract before implementation.
+That contract is `docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md`.
 
 ## Security And Privacy Requirements
 
@@ -298,6 +299,7 @@ Minimum requirements before implementation:
 - authorization checks for every read and write;
 - no public unauthenticated artifact access;
 - storage keys must not be exposed as direct unrestricted download paths;
+- uploaded evidence files must follow `docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md`;
 - audit events must avoid storing full sensitive document contents;
 - rejected/expired/withdrawn artifacts must remain auditable but should not be reused as accepted
   proof;
